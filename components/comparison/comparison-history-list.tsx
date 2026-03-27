@@ -37,14 +37,8 @@ export function ComparisonHistoryList({
           variant="outline"
           className={cn(
             'h-auto w-full justify-start border-ctp-mauve/12 px-4 py-3 text-left',
-            comparison.id === selectedComparisonId && 'border-ctp-mauve/35'
+            comparison.id === selectedComparisonId ? 'border-ctp-mauve/35 aurora-bg-selected' : 'aurora-bg-muted'
           )}
-          style={comparison.id === selectedComparisonId ? {
-            background: 'linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.12), hsl(var(--ctp-sapphire) / 0.08))',
-            boxShadow: '0 0 10px hsl(var(--ctp-mauve) / 0.08)',
-          } : {
-            background: 'hsl(var(--ctp-mauve) / 0.04)',
-          }}
           onClick={() => onSelect(comparison.id)}
         >
           <div className="min-w-0 space-y-1">

@@ -11,9 +11,8 @@ interface StatCardTheme {
   barGradient: string;
   /** CSS var name for glow color */
   glowVar: string;
-  /** Gradient background from/to CSS var names */
-  gradientFrom: string;
-  gradientTo: string;
+  /** Aurora utility class for card background + glow */
+  auroraClass: string;
 }
 
 const STAT_THEMES: Record<string, StatCardTheme> = {
@@ -22,32 +21,28 @@ const STAT_THEMES: Record<string, StatCardTheme> = {
     border: 'border-ctp-yellow/25',
     barGradient: 'bg-ctp-yellow',
     glowVar: '--ctp-yellow',
-    gradientFrom: '--ctp-yellow',
-    gradientTo: '--ctp-peach',
+    auroraClass: 'aurora-stat-yellow',
   },
   Duration: {
     text: 'text-ctp-sapphire',
     border: 'border-ctp-sapphire/25',
     barGradient: 'bg-ctp-sapphire',
     glowVar: '--ctp-sapphire',
-    gradientFrom: '--ctp-sapphire',
-    gradientTo: '--ctp-mauve',
+    auroraClass: 'aurora-stat-blue',
   },
   'Quality Score': {
     text: 'text-ctp-mauve',
     border: 'border-ctp-mauve/25',
     barGradient: 'bg-ctp-mauve',
     glowVar: '--ctp-mauve',
-    gradientFrom: '--ctp-mauve',
-    gradientTo: '--ctp-pink',
+    auroraClass: 'aurora-stat-mauve',
   },
   'Files Changed': {
     text: 'text-ctp-pink',
     border: 'border-ctp-pink/25',
     barGradient: 'bg-ctp-pink',
     glowVar: '--ctp-pink',
-    gradientFrom: '--ctp-pink',
-    gradientTo: '--ctp-peach',
+    auroraClass: 'aurora-stat-pink',
   },
 };
 
@@ -150,11 +145,7 @@ export function ComparisonStatCards({ winner, participants }: ComparisonStatCard
           <Card
             key={config.label}
             data-testid="stat-card"
-            className={`border ${theme.border}`}
-            style={{
-              background: `linear-gradient(135deg, hsl(var(${theme.gradientFrom}) / 0.06), hsl(var(${theme.gradientTo}) / 0.09))`,
-              boxShadow: `0 0 8px hsl(var(${theme.glowVar}) / 0.05)`,
-            }}
+            className={`border ${theme.border} ${theme.auroraClass}`}
           >
             <CardContent className="pt-4">
               <div className={`text-xs font-medium ${theme.text}`}>{config.label}</div>

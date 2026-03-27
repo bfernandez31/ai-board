@@ -743,12 +743,8 @@ export function TicketDetailModal({
           !top-0 !translate-y-0
           sm:grid sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:p-10
           sm:!top-[50%] sm:!-translate-y-1/2
-          border-ctp-mauve/15 text-foreground
+          border-ctp-mauve/15 text-foreground aurora-bg-dialog
         "
-        style={{
-          background: 'linear-gradient(160deg, hsl(var(--ctp-sapphire) / 0.06) 0%, hsl(var(--ctp-mauve) / 0.08) 40%, hsl(var(--ctp-pink) / 0.05) 100%), hsl(var(--ctp-crust))',
-          boxShadow: '0 0 60px hsl(var(--ctp-mauve) / 0.08), 0 0 120px hsl(var(--ctp-sapphire) / 0.04)',
-        }}
       >
         {/* Header with editable title */}
         <DialogHeader className="flex-shrink-0 pb-2 sm:pb-4 space-y-1 sm:space-y-1.5 text-left">
@@ -1140,8 +1136,7 @@ export function TicketDetailModal({
                           setDocViewerOpen(true);
                         }}
                         size="sm"
-                        className="border font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5 border-ctp-sapphire/25 text-ctp-sapphire hover:text-ctp-sapphire bg-transparent"
-                        style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.12), hsl(var(--ctp-mauve) / 0.1))' }}
+                        className="border font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5 border-ctp-sapphire/25 text-ctp-sapphire hover:text-ctp-sapphire bg-transparent aurora-btn-blue"
                         title="View specification document"
                       >
                         <FileText className="w-3.5 h-3.5" />
@@ -1155,8 +1150,7 @@ export function TicketDetailModal({
                           setDocViewerOpen(true);
                         }}
                         size="sm"
-                        className="border font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5 border-ctp-mauve/25 text-ctp-mauve hover:text-ctp-mauve bg-transparent"
-                        style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.12), hsl(var(--ctp-pink) / 0.08))' }}
+                        className="border font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5 border-ctp-mauve/25 text-ctp-mauve hover:text-ctp-mauve bg-transparent aurora-btn-mauve"
                         title="View implementation plan"
                       >
                         <Settings2 className="w-3.5 h-3.5" />
@@ -1170,8 +1164,7 @@ export function TicketDetailModal({
                           setDocViewerOpen(true);
                         }}
                         size="sm"
-                        className="border font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5 border-ctp-green/25 text-ctp-green hover:text-ctp-green bg-transparent"
-                        style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-green) / 0.12), hsl(var(--ctp-teal) / 0.08))' }}
+                        className="border font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5 border-ctp-green/25 text-ctp-green hover:text-ctp-green bg-transparent aurora-btn-green"
                         title="View task breakdown"
                       >
                         <CheckSquare className="w-3.5 h-3.5" />
@@ -1185,8 +1178,7 @@ export function TicketDetailModal({
                           setDocViewerOpen(true);
                         }}
                         size="sm"
-                        className="border font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5 border-ctp-yellow/25 text-ctp-yellow hover:text-ctp-yellow bg-transparent"
-                        style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-yellow) / 0.12), hsl(var(--ctp-peach) / 0.08))' }}
+                        className="border font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5 border-ctp-yellow/25 text-ctp-yellow hover:text-ctp-yellow bg-transparent aurora-btn-yellow"
                         title="View implementation summary"
                       >
                         <FileOutput className="w-3.5 h-3.5" />
@@ -1198,8 +1190,7 @@ export function TicketDetailModal({
                       <Button
                         onClick={() => setComparisonViewerOpen(true)}
                         size="sm"
-                        className="border font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5 border-ctp-pink/25 text-ctp-pink hover:text-ctp-pink bg-transparent"
-                        style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-pink) / 0.12), hsl(var(--ctp-mauve) / 0.1))' }}
+                        className="border font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5 border-ctp-pink/25 text-ctp-pink hover:text-ctp-pink bg-transparent aurora-btn-pink"
                         title={`View comparison reports (${comparisonCheck.count})`}
                         data-testid="compare-button"
                       >

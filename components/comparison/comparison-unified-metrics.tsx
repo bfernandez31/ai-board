@@ -55,8 +55,7 @@ function getMetricValue(
 export function ComparisonUnifiedMetrics({ participants }: ComparisonUnifiedMetricsProps) {
   return (
     <Card
-      className="border-ctp-mauve/15"
-      style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+      className="border-ctp-mauve/15 aurora-bg-subtle"
     >
       <CardHeader>
         <CardTitle className="text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">

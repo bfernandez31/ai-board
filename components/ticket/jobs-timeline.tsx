@@ -77,8 +77,7 @@ function JobRow({ job }: { job: TicketJobWithTelemetry }) {
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger
-        className="w-full flex items-center justify-between p-3 border border-ctp-mauve/15 rounded-lg transition-colors"
-        style={{ background: 'hsl(var(--ctp-mauve) / 0.04)' }}
+        className="w-full flex items-center justify-between p-3 border border-ctp-mauve/15 rounded-lg transition-colors aurora-bg-muted"
         data-testid={`job-row-${job.id}`}
         disabled={!hasTelemetry}
       >

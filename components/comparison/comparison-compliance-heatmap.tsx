@@ -10,34 +10,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ComparisonComplianceHeatmapProps } from './types';
 
 /** Aurora-styled status colors with visible gradients */
-const statusStyles: Record<string, { className: string; style: React.CSSProperties }> = {
+const statusStyles: Record<string, { className: string }> = {
   pass: {
-    className: 'h-8 w-full cursor-pointer rounded',
-    style: {
-      background: 'linear-gradient(135deg, hsl(var(--ctp-green) / 0.25), hsl(var(--ctp-teal) / 0.15))',
-      border: '1px solid hsl(var(--ctp-green) / 0.3)',
-      boxShadow: '0 0 8px hsl(var(--ctp-green) / 0.08)',
-    },
+    className: 'h-8 w-full cursor-pointer rounded aurora-cell-pass',
   },
   mixed: {
-    className: 'h-8 w-full cursor-pointer rounded',
-    style: {
-      background: 'linear-gradient(135deg, hsl(var(--ctp-yellow) / 0.25), hsl(var(--ctp-peach) / 0.15))',
-      border: '1px solid hsl(var(--ctp-yellow) / 0.3)',
-      boxShadow: '0 0 8px hsl(var(--ctp-yellow) / 0.08)',
-    },
+    className: 'h-8 w-full cursor-pointer rounded aurora-cell-mixed',
   },
   fail: {
-    className: 'h-8 w-full cursor-pointer rounded',
-    style: {
-      background: 'linear-gradient(135deg, hsl(var(--ctp-red) / 0.25), hsl(var(--ctp-maroon) / 0.15))',
-      border: '1px solid hsl(var(--ctp-red) / 0.3)',
-      boxShadow: '0 0 8px hsl(var(--ctp-red) / 0.08)',
-    },
+    className: 'h-8 w-full cursor-pointer rounded aurora-cell-fail',
   },
 };
 
-const defaultStatusStyle = { className: 'h-8 w-full rounded bg-muted', style: {} };
+const defaultStatusStyle = { className: 'h-8 w-full rounded bg-muted' };
 
 export function ComparisonComplianceHeatmap({
   rows,
@@ -46,8 +31,7 @@ export function ComparisonComplianceHeatmap({
   if (rows.length === 0) {
     return (
       <Card
-        className="border-ctp-mauve/15"
-        style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+        className="border-ctp-mauve/15 aurora-bg-subtle"
       >
         <CardHeader>
           <CardTitle className="text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
@@ -67,8 +51,7 @@ export function ComparisonComplianceHeatmap({
 
   return (
     <Card
-      className="border-ctp-mauve/15"
-      style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+      className="border-ctp-mauve/15 aurora-bg-subtle"
     >
       <CardHeader>
         <CardTitle className="text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
@@ -80,7 +63,7 @@ export function ComparisonComplianceHeatmap({
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-ctp-mauve/10">
-                <th className="sticky left-0 z-10 px-3 py-2 text-left font-medium text-muted-foreground" style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}>
+                <th className="sticky left-0 z-10 px-3 py-2 text-left font-medium text-muted-foreground aurora-bg-subtle">
                   Principle
                 </th>
                 {participants.map((p) => (
@@ -93,7 +76,7 @@ export function ComparisonComplianceHeatmap({
             <tbody>
               {sortedRows.map((row) => (
                 <tr key={row.principleKey} className="border-b border-ctp-mauve/10 last:border-0">
-                  <td className="sticky left-0 z-10 px-3 py-2 font-medium text-foreground" style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}>
+                  <td className="sticky left-0 z-10 px-3 py-2 font-medium text-foreground aurora-bg-subtle">
                     {row.principleName}
                   </td>
                   {participants.map((p) => {
@@ -122,7 +105,6 @@ export function ComparisonComplianceHeatmap({
                               data-testid="heatmap-cell"
                               data-status={assessment.status}
                               className={cellStyle.className}
-                              style={cellStyle.style}
                             />
                           </TooltipTrigger>
                           <TooltipContent>

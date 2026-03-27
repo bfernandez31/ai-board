@@ -262,11 +262,7 @@ export function NewTicketModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto border-ctp-mauve/15"
-        style={{
-          background: 'linear-gradient(160deg, hsl(var(--ctp-sapphire) / 0.06) 0%, hsl(var(--ctp-mauve) / 0.08) 40%, hsl(var(--ctp-pink) / 0.05) 100%), hsl(var(--ctp-crust))',
-          boxShadow: '0 0 60px hsl(var(--ctp-mauve) / 0.08), 0 0 120px hsl(var(--ctp-sapphire) / 0.04)',
-        }}
+        className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto border-ctp-mauve/15 aurora-bg-dialog"
       >
         <DialogHeader>
           <DialogTitle>Create New Ticket</DialogTitle>

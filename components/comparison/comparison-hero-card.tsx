@@ -86,27 +86,21 @@ export function ComparisonHeroCard({
 
   return (
     <Card
-      className="relative overflow-hidden border-ctp-mauve/20"
-      style={{
-        background: 'linear-gradient(160deg, hsl(var(--ctp-sapphire) / 0.06) 0%, hsl(var(--ctp-mauve) / 0.08) 50%, hsl(var(--ctp-pink) / 0.05) 100%)',
-      }}
+      className="relative overflow-hidden border-ctp-mauve/20 aurora-bg-section"
     >
       {/* Aurora ambient glow */}
       <div
         data-testid="glow-orb"
-        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full blur-3xl"
-        style={{ background: 'radial-gradient(circle, hsl(var(--ctp-sapphire) / 0.12) 0%, transparent 70%)' }}
+        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full blur-3xl aurora-orb-blue"
       />
       <div
-        className="pointer-events-none absolute -bottom-20 left-8 h-40 w-40 rounded-full blur-3xl"
-        style={{ background: 'radial-gradient(circle, hsl(var(--ctp-pink) / 0.08) 0%, transparent 70%)' }}
+        className="pointer-events-none absolute -bottom-20 left-8 h-40 w-40 rounded-full blur-3xl aurora-orb-pink"
       />
 
       <CardContent className="relative pt-6">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
           <div
-            className="rounded-full"
-            style={{ boxShadow: `0 0 20px hsl(var(--ctp-sapphire) / 0.2), 0 0 40px hsl(var(--ctp-mauve) / 0.08)` }}
+            className="rounded-full aurora-glow-score"
           >
             <ScoreGauge score={winner.score} size={120} strokeWidth={8} accentColor={accent.hsl} />
           </div>
@@ -115,12 +109,7 @@ export function ComparisonHeroCard({
             <div className="flex items-center gap-3">
               <h3 className="text-2xl font-bold text-foreground">{winner.ticketKey}</h3>
               <span
-                className="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-ctp-lavender"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.18), hsl(var(--ctp-mauve) / 0.22))',
-                  border: '1px solid hsl(var(--ctp-mauve) / 0.3)',
-                  boxShadow: '0 0 8px hsl(var(--ctp-mauve) / 0.12)',
-                }}
+                className="inline-flex items-center rounded-full px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-ctp-lavender aurora-badge-winner"
               >
                 WINNER
               </span>
@@ -128,8 +117,7 @@ export function ComparisonHeroCard({
 
             <div
               data-testid="recommendation-container"
-              className="rounded-lg border border-ctp-mauve/15 px-4 py-2"
-              style={{ background: 'hsl(var(--ctp-mauve) / 0.04)' }}
+              className="rounded-lg border border-ctp-mauve/15 px-4 py-2 aurora-bg-recommendation"
             >
               <p className="text-sm text-foreground">{recommendation}</p>
             </div>

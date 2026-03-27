@@ -58,8 +58,7 @@ export function ComparisonDecisionPoints(
 
   return (
     <Card
-      className="border-ctp-mauve/15"
-      style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+      className="border-ctp-mauve/15 aurora-bg-subtle"
     >
       <CardHeader>
         <CardTitle className="text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
@@ -81,10 +80,7 @@ export function ComparisonDecisionPoints(
             <Collapsible key={point.id} defaultOpen={point.displayOrder === 0}>
               <div
                 data-testid="decision-point-card"
-                className="rounded-lg border border-ctp-mauve/15"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.03), hsl(var(--ctp-mauve) / 0.05))',
-                }}
+                className="rounded-lg border border-ctp-mauve/15 aurora-bg-decision"
               >
                 <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left">
                   <div className="flex items-start gap-2">

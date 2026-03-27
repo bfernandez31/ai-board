@@ -54,8 +54,7 @@ export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
         />
 
         <section
-          className={sectionClass}
-          style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+          className={`${sectionClass} aurora-bg-subtle`}
         >
           <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
             Participants
@@ -64,8 +63,7 @@ export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
         </section>
 
         <section
-          className={sectionClass}
-          style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+          className={`${sectionClass} aurora-bg-subtle`}
         >
           <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
             Overview
@@ -154,11 +152,7 @@ export function ComparisonViewer({
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="max-h-[90vh] max-w-5xl text-card-foreground sm:max-w-[90vw]"
-        style={{
-          background: 'linear-gradient(160deg, hsl(var(--ctp-sapphire) / 0.07) 0%, hsl(var(--ctp-mauve) / 0.09) 40%, hsl(var(--ctp-pink) / 0.06) 100%), hsl(var(--ctp-crust))',
-          boxShadow: '0 0 60px hsl(var(--ctp-mauve) / 0.08), 0 0 120px hsl(var(--ctp-sapphire) / 0.04)',
-        }}
+        className="max-h-[90vh] max-w-5xl text-card-foreground sm:max-w-[90vw] aurora-bg-dialog"
       >
         <DialogHeader className="pr-12">
           <DialogDescription className="sr-only">
@@ -174,11 +168,7 @@ export function ComparisonViewer({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="border-ctp-mauve/35 text-ctp-lavender"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.1), hsl(var(--ctp-pink) / 0.06))',
-                  boxShadow: '0 0 8px hsl(var(--ctp-mauve) / 0.1)',
-                }}
+                className="border-ctp-mauve/35 text-ctp-lavender aurora-btn-history"
                 onClick={() => setShowHistory((value) => !value)}
               >
                 <History className="mr-2 h-4 w-4" />

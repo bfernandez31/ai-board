@@ -68,8 +68,7 @@ export function QualityScoreSection({
     <div className="mb-6" data-testid="quality-score-section">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <Card
-          className="border-ctp-mauve/15"
-          style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.04), hsl(var(--ctp-mauve) / 0.06))' }}
+          className="border-ctp-mauve/15 aurora-bg-card-blue"
         >
           <CollapsibleTrigger
             className="w-full text-left"

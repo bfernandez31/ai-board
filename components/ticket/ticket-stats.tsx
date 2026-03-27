@@ -40,8 +40,7 @@ function StatsSummaryCards({ stats }: { stats: TicketStatsType }) {
     <div className="grid grid-cols-2 gap-3 mb-6" data-testid="stats-summary-cards">
       {/* Total Cost Card */}
       <Card
-        className="border-ctp-green/20"
-        style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-green) / 0.06), hsl(var(--ctp-teal) / 0.04))' }}
+        className="border-ctp-green/20 aurora-bg-card-green"
       >
         <CardContent className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
@@ -56,8 +55,7 @@ function StatsSummaryCards({ stats }: { stats: TicketStatsType }) {
 
       {/* Total Duration Card */}
       <Card
-        className="border-ctp-sapphire/20"
-        style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.06), hsl(var(--ctp-mauve) / 0.04))' }}
+        className="border-ctp-sapphire/20 aurora-bg-card-blue"
       >
         <CardContent className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
@@ -72,8 +70,7 @@ function StatsSummaryCards({ stats }: { stats: TicketStatsType }) {
 
       {/* Total Tokens Card */}
       <Card
-        className="border-ctp-yellow/20"
-        style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-yellow) / 0.06), hsl(var(--ctp-peach) / 0.04))' }}
+        className="border-ctp-yellow/20 aurora-bg-card-yellow"
       >
         <CardContent className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
@@ -88,8 +85,7 @@ function StatsSummaryCards({ stats }: { stats: TicketStatsType }) {
 
       {/* Cache Efficiency Card */}
       <Card
-        className="border-ctp-mauve/20"
-        style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.06), hsl(var(--ctp-pink) / 0.04))' }}
+        className="border-ctp-mauve/20 aurora-bg-card-mauve"
       >
         <CardContent className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
@@ -134,8 +130,7 @@ function ToolsUsageSection({ toolsUsage }: { toolsUsage: TicketStatsType['toolsU
           <Badge
             key={tool}
             variant="secondary"
-            className="text-foreground border-ctp-mauve/20 text-xs px-2 py-1"
-            style={{ background: 'hsl(var(--ctp-mauve) / 0.08)' }}
+            className="text-foreground border-ctp-mauve/20 text-xs px-2 py-1 aurora-bg-tint"
             data-testid={`tool-badge-${tool}`}
           >
             {tool}

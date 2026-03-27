@@ -252,4 +252,93 @@
       transparent
     );
   }
+
+  /* ── Aurora B+ Theme Utilities ── */
+  /* Centralized gradient and glow styles for the aurora visual theme. */
+  /* All values reference --ctp-* design tokens for consistency. */
+
+  /* Dialog/modal backgrounds */
+  .aurora-bg-dialog {
+    background:
+      linear-gradient(160deg,
+        hsl(var(--ctp-sapphire) / 0.07) 0%,
+        hsl(var(--ctp-mauve) / 0.09) 40%,
+        hsl(var(--ctp-pink) / 0.06) 100%),
+      hsl(var(--ctp-crust));
+    box-shadow:
+      0 0 60px hsl(var(--ctp-mauve) / 0.08),
+      0 0 120px hsl(var(--ctp-sapphire) / 0.04);
+  }
+
+  /* Section/card backgrounds */
+  .aurora-bg-section {
+    background: linear-gradient(160deg,
+      hsl(var(--ctp-sapphire) / 0.06) 0%,
+      hsl(var(--ctp-mauve) / 0.08) 50%,
+      hsl(var(--ctp-pink) / 0.05) 100%);
+  }
+  .aurora-bg-subtle { background: hsl(var(--ctp-mauve) / 0.03); }
+  .aurora-bg-muted  { background: hsl(var(--ctp-mauve) / 0.04); }
+  .aurora-bg-tint   { background: hsl(var(--ctp-mauve) / 0.08); }
+
+  /* Per-color card gradients (stat cards, overview cards) */
+  .aurora-bg-card-green   { background: linear-gradient(135deg, hsl(var(--ctp-green) / 0.06), hsl(var(--ctp-teal) / 0.04)); }
+  .aurora-bg-card-blue    { background: linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.06), hsl(var(--ctp-mauve) / 0.04)); }
+  .aurora-bg-card-yellow  { background: linear-gradient(135deg, hsl(var(--ctp-yellow) / 0.06), hsl(var(--ctp-peach) / 0.04)); }
+  .aurora-bg-card-mauve   { background: linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.06), hsl(var(--ctp-pink) / 0.04)); }
+  .aurora-bg-card-pink    { background: linear-gradient(135deg, hsl(var(--ctp-pink) / 0.06), hsl(var(--ctp-peach) / 0.04)); }
+
+  /* Button gradients (action buttons) */
+  .aurora-btn-blue   { background: linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.12), hsl(var(--ctp-mauve) / 0.1)); }
+  .aurora-btn-mauve  { background: linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.12), hsl(var(--ctp-pink) / 0.08)); }
+  .aurora-btn-green  { background: linear-gradient(135deg, hsl(var(--ctp-green) / 0.12), hsl(var(--ctp-teal) / 0.08)); }
+  .aurora-btn-yellow { background: linear-gradient(135deg, hsl(var(--ctp-yellow) / 0.12), hsl(var(--ctp-peach) / 0.08)); }
+  .aurora-btn-pink   { background: linear-gradient(135deg, hsl(var(--ctp-pink) / 0.12), hsl(var(--ctp-mauve) / 0.1)); }
+
+  /* Stat card gradients (stronger than card, with border glow) */
+  .aurora-stat-green  { background: linear-gradient(135deg, hsl(var(--ctp-green) / 0.06), hsl(var(--ctp-teal) / 0.09)); box-shadow: 0 0 8px hsl(var(--ctp-green) / 0.05); }
+  .aurora-stat-blue   { background: linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.06), hsl(var(--ctp-mauve) / 0.09)); box-shadow: 0 0 8px hsl(var(--ctp-sapphire) / 0.05); }
+  .aurora-stat-yellow { background: linear-gradient(135deg, hsl(var(--ctp-yellow) / 0.06), hsl(var(--ctp-peach) / 0.09)); box-shadow: 0 0 8px hsl(var(--ctp-yellow) / 0.05); }
+  .aurora-stat-mauve  { background: linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.06), hsl(var(--ctp-pink) / 0.09)); box-shadow: 0 0 8px hsl(var(--ctp-mauve) / 0.05); }
+  .aurora-stat-pink   { background: linear-gradient(135deg, hsl(var(--ctp-pink) / 0.06), hsl(var(--ctp-peach) / 0.09)); box-shadow: 0 0 8px hsl(var(--ctp-pink) / 0.05); }
+
+  /* Compliance heatmap cells */
+  .aurora-cell-pass  { background: linear-gradient(135deg, hsl(var(--ctp-green) / 0.25), hsl(var(--ctp-teal) / 0.15)); border: 1px solid hsl(var(--ctp-green) / 0.3); box-shadow: 0 0 8px hsl(var(--ctp-green) / 0.08); }
+  .aurora-cell-mixed { background: linear-gradient(135deg, hsl(var(--ctp-yellow) / 0.25), hsl(var(--ctp-peach) / 0.15)); border: 1px solid hsl(var(--ctp-yellow) / 0.3); box-shadow: 0 0 8px hsl(var(--ctp-yellow) / 0.08); }
+  .aurora-cell-fail  { background: linear-gradient(135deg, hsl(var(--ctp-red) / 0.25), hsl(var(--ctp-maroon) / 0.15)); border: 1px solid hsl(var(--ctp-red) / 0.3); box-shadow: 0 0 8px hsl(var(--ctp-red) / 0.08); }
+
+  /* Glow orbs (ambient light effects) */
+  .aurora-orb-blue { background: radial-gradient(circle, hsl(var(--ctp-sapphire) / 0.12) 0%, transparent 70%); }
+  .aurora-orb-pink { background: radial-gradient(circle, hsl(var(--ctp-pink) / 0.08) 0%, transparent 70%); }
+
+  /* Score gauge glow */
+  .aurora-glow-score { box-shadow: 0 0 20px hsl(var(--ctp-sapphire) / 0.2), 0 0 40px hsl(var(--ctp-mauve) / 0.08); }
+
+  /* Winner badge */
+  .aurora-badge-winner {
+    background: linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.18), hsl(var(--ctp-mauve) / 0.22));
+    border: 1px solid hsl(var(--ctp-mauve) / 0.3);
+    box-shadow: 0 0 8px hsl(var(--ctp-mauve) / 0.12);
+  }
+
+  /* History list selected item */
+  .aurora-bg-selected {
+    background: linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.12), hsl(var(--ctp-sapphire) / 0.08));
+    box-shadow: 0 0 10px hsl(var(--ctp-mauve) / 0.08);
+  }
+
+  /* History button */
+  .aurora-btn-history {
+    background: linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.1), hsl(var(--ctp-pink) / 0.06));
+    box-shadow: 0 0 8px hsl(var(--ctp-mauve) / 0.1);
+  }
+
+  /* Decision point card */
+  .aurora-bg-decision { background: linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.03), hsl(var(--ctp-mauve) / 0.05)); }
+
+  /* Participant card */
+  .aurora-bg-participant { background: linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.04), hsl(var(--ctp-mauve) / 0.05)); }
+
+  /* Recommendation container */
+  .aurora-bg-recommendation { background: hsl(var(--ctp-mauve) / 0.04); }
 }
