@@ -152,10 +152,10 @@
 
 **Purpose**: Final verification, edge case validation, and regression testing
 
-- [ ] T017 Run full unit test suite via `bun run test:unit` and fix any regressions across all comparison components
-- [ ] T018 Run `bun run type-check` and fix any TypeScript errors
-- [ ] T019 Run `bun run lint` and fix any linting violations
-- [ ] T020 Run quickstart.md validation — verify all 10 implementation steps are satisfied and verify commands pass
+- [x] T017 Run full unit test suite via `bun run test:unit` and fix any regressions across all comparison components
+- [x] T018 Run `bun run type-check` and fix any TypeScript errors
+- [x] T019 Run `bun run lint` and fix any linting violations
+- [x] T020 Run quickstart.md validation — verify all 10 implementation steps are satisfied and verify commands pass
 
 ---
 
