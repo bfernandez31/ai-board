@@ -1440,6 +1440,28 @@ test('creates ticket with optimistic update', async () => {
 });
 ```
 
+### Project Comparisons Hooks
+
+Four hooks in `hooks/use-project-comparisons.ts` manage data for the Comparisons hub page. They use a dedicated `projectComparisonKeys` factory separate from the global `queryKeys` object.
+
+**Query key factory**:
+```typescript
+export const projectComparisonKeys = {
+  all: ['comparisons', 'project'] as const,
+  list: (projectId, limit, offset) => ['comparisons', 'project', projectId, limit, offset],
+  detail: (projectId, comparisonId) => ['comparisons', 'project', projectId, 'detail', comparisonId],
+  verifyTickets: (projectId) => ['tickets', 'verify', projectId],
+};
+```
+
+**`useProjectComparisons(projectId, limit?, offset?)`** — Fetches the paginated project-level comparison list (`GET /api/projects/:projectId/comparisons`). Stale time: 30s.
+
+**`useProjectComparisonDetail(projectId, comparisonId)`** — Fetches full enriched comparison detail (`GET /api/projects/:projectId/comparisons/:comparisonId`). Disabled when `comparisonId` is null. Stale time: 5min, gc time: 30min.
+
+**`useVerifyStageTickets(projectId, enabled?)`** — Fetches tickets in VERIFY stage (`GET /api/projects/:projectId/tickets/verify`). Stale time: 30s.
+
+**`useLaunchComparison(projectId)`** — Mutation that POSTs to `/api/projects/:projectId/comparisons/launch` with `{ ticketIds: number[] }`. On success, invalidates all `projectComparisonKeys.all` queries to refresh the list.
+
 ## Best Practices
 
 ### Query Keys

@@ -1900,6 +1900,140 @@ Comparison endpoints provide access to structured ticket comparison data stored 
 
 A ticket discovers comparisons it participates in via two paths: as a `ComparisonParticipant` (compared ticket) or as the `sourceTicketId` on the `ComparisonRecord` (the ticket that triggered `/compare`).
 
+### GET /api/projects/:projectId/comparisons
+
+Fetch all comparisons for a project (project-level hub, not scoped to a single ticket).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (via `verifyProjectAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters**:
+- `limit` (number, optional): Maximum results to return (default: 20, max: 100)
+- `offset` (number, optional): Number of records to skip (default: 0)
+
+**Response** (200 OK):
+```json
+{
+  "comparisons": [
+    {
+      "id": 1,
+      "generatedAt": "2026-01-02T14:30:00.000Z",
+      "sourceTicketKey": "AIB-123",
+      "sourceTicketTitle": "Feature implementation",
+      "winnerTicketKey": "AIB-125",
+      "winnerTicketTitle": "Alternative implementation",
+      "winnerScore": 92,
+      "participantCount": 2,
+      "participantTicketKeys": ["AIB-124", "AIB-125"],
+      "summary": "AIB-125 demonstrates superior code quality...",
+      "keyDifferentiators": ["Better test coverage", "Proper error handling"]
+    }
+  ],
+  "total": 42,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID or query parameters
+- `401`: Unauthorized
+
+---
+
+### GET /api/projects/:projectId/comparisons/:comparisonId
+
+Fetch full comparison detail for a specific comparison, scoped to the project (not requiring a ticket context).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (via `verifyProjectAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `comparisonId` (number, required): Comparison record ID
+
+**Response** (200 OK): Same `ComparisonDetail` shape as `GET /api/projects/:projectId/tickets/:id/comparisons/:comparisonId`, with live-enriched quality scores and telemetry.
+
+**Errors**:
+- `400`: Invalid project or comparison ID
+- `401`: Unauthorized
+- `404`: Comparison not found within this project
+
+---
+
+### POST /api/projects/:projectId/comparisons/launch
+
+Launch a new comparison by selecting VERIFY-stage tickets. Uses the same underlying workflow dispatch as the `@ai-board /compare` comment command.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (via `verifyProjectAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "ticketIds": [5, 6]
+}
+```
+
+**Validation**:
+- `ticketIds`: Array of 2–5 unique ticket IDs. All tickets must belong to the project, be in VERIFY stage, and have a branch.
+
+**Response** (201 Created):
+```json
+{
+  "jobId": 123,
+  "status": "PENDING",
+  "sourceTicketKey": "AIB-125",
+  "participantTicketKeys": ["AIB-124", "AIB-125"]
+}
+```
+
+**Errors**:
+- `400`: Fewer than 2 tickets, more than 5, duplicate IDs, or a ticket not in VERIFY stage / missing branch
+- `401`: Unauthorized
+- `404`: One or more ticket IDs not found in the project
+
+---
+
+### GET /api/projects/:projectId/tickets/verify
+
+Returns all tickets currently in VERIFY stage for a project. Used by the Comparisons hub to populate the "New Comparison" ticket selection UI.
+
+**Authentication**: Required (session or workflow Bearer token)
+**Authorization**: Must be project owner or member (via `verifyProjectAccess`), or valid workflow token
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Response** (200 OK):
+```json
+{
+  "tickets": [
+    {
+      "id": 5,
+      "ticketKey": "AIB-125",
+      "title": "Alternative implementation",
+      "branch": "AIB-125-alternative-implementation",
+      "stage": "VERIFY",
+      "updatedAt": "2026-01-02T14:30:00.000Z"
+    }
+  ]
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID
+- `401`: Unauthorized
+- `404`: Project not found
+
+---
+
 ### GET /api/projects/:projectId/tickets/:id/comparisons
 
 Fetch paginated list of comparisons for a ticket.

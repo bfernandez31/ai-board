@@ -552,9 +552,10 @@ On desktop viewports (≥1024px), a fixed 48px-wide vertical icon rail provides 
 - **Board** (LayoutDashboard icon) — navigates to `/projects/{projectId}/board`
 - **Activity** (Activity icon) — navigates to `/projects/{projectId}/activity`
 - **Analytics** (BarChart3 icon) — navigates to `/projects/{projectId}/analytics`
+- **Comparisons** (GitCompare icon) — navigates to `/projects/{projectId}/comparisons`
 - **Settings** (Settings icon, anchored to bottom) — navigates to `/projects/{projectId}/settings`
 
-Board, Activity, and Analytics are grouped at the top with a subtle divider separating them from Settings at the bottom.
+Board, Activity, Analytics, and Comparisons are grouped at the top with a subtle divider separating them from Settings at the bottom.
 
 **Active State**: The currently active page's icon receives a distinct background highlight (`bg-accent`). Active icons also carry `aria-current="page"`.
 

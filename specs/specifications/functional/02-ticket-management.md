@@ -432,6 +432,57 @@ Three TanStack Query hooks manage data:
 - `useComparisonList`: Paginated history (30s stale time)
 - `useComparisonDetail`: Full detail for selected comparison (5min stale time)
 
+## Comparisons Hub Page
+
+### Purpose
+
+A dedicated project-level page at `/projects/{projectId}/comparisons` surfaces all past comparisons for a project in a single view. Users can browse the full comparison history, expand any comparison inline to see the full dashboard, and launch new comparisons against VERIFY-stage tickets — without opening individual ticket modals or typing comment commands.
+
+### Access
+
+The Comparisons page is accessible via the **Comparisons** (GitCompare) icon in the project sidebar, available on all desktop viewports (≥1024px). Clicking the icon navigates to `/projects/{projectId}/comparisons`; the icon is highlighted as the active view while on this page.
+
+### Comparison List
+
+The page lists all comparisons for the project in reverse chronological order (most recent first). Each list entry shows:
+- Winner ticket key and title
+- All participant ticket keys
+- Winner score
+- Summary text (1-2 lines)
+- Key differentiator badges
+- Generation date
+
+**Pagination**: The first 20 comparisons load immediately. A "Load More" button fetches the next page (offset-based). The button is hidden when all records have been loaded.
+
+**Empty state**: When a project has no comparisons, the page shows an explanatory empty state describing how to create one.
+
+### Inline Detail View
+
+Clicking a comparison entry expands the full comparison dashboard inline on the page — no modal or separate route. The expanded view reuses the same sub-components as the ticket-level viewer:
+- Hero card (winner, summary, recommendation)
+- Participant grid (rank, score, ticket key, title)
+- Stat cards and unified operational metrics
+- Decision points (collapsible sections)
+- Constitution compliance heatmap
+
+Only one comparison is expanded at a time. Clicking a different entry collapses the current detail and expands the new one. Clicking the same entry again (or a close control) collapses back to list-only view.
+
+### New Comparison Launcher
+
+A **"New Comparison"** button opens a ticket selection interface showing all tickets currently in VERIFY stage with their ticket key, title, and quality score. Each ticket has a checkbox.
+
+- The **"Compare"** button is disabled until at least 2 tickets are selected (maximum 5).
+- When 2+ tickets are selected and the user confirms, the comparison workflow is triggered via `POST /api/projects/:projectId/comparisons/launch`.
+- A pending/loading state appears on the page until the comparison result arrives.
+- If no tickets are in VERIFY stage, the selection UI shows an empty state.
+
+The launched comparison uses the same underlying workflow as the `@ai-board /compare` comment command, ensuring consistent results regardless of entry point.
+
+### Responsive Layout
+
+- Desktop (≥768px): list and expanded detail render side-by-side or stacked with full column widths.
+- Mobile (<768px): comparisons render as stacked cards; the expanded detail view stacks all sub-components vertically.
+
 ## Ticket Duplication
 
 ### Duplicate Dropdown Menu
