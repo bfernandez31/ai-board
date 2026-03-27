@@ -101,7 +101,7 @@ export function ComparisonViewer({
   const [selectedComparisonIdOverride, setSelectedComparisonIdOverride] = useState<
     number | null
   >(null);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(true);
   const { toast } = useToast();
 
   const { data: checkData, isLoading: checkLoading, error: checkError } =
@@ -141,7 +141,7 @@ export function ComparisonViewer({
 
   function handleOpenChange(open: boolean): void {
     if (!open) {
-      setShowHistory(false);
+      setShowHistory(true);
       setSelectedComparisonIdOverride(null);
       onClose?.();
     }
@@ -214,8 +214,8 @@ export function ComparisonViewer({
           )}
 
           {!hasNoComparisons && !isLoading && (
-            <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-              <div className={showHistory ? 'block' : 'hidden lg:block'}>
+            <div className={showHistory ? 'grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]' : 'grid gap-4'}>
+              <div className={showHistory ? 'block' : 'hidden'}>
                 <ComparisonHistoryList
                   comparisons={historyData?.comparisons ?? []}
                   selectedComparisonId={selectedComparisonId}
