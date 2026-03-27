@@ -375,6 +375,7 @@ export interface ProjectComparisonSummary extends ComparisonSummary {
   sourceTicketId: number;
   winnerTicketId: number;
   winnerTicketTitle: string;
+  winnerScore: number | null;
   participantTicketIds: number[];
   overallRecommendation: string;
   keyDifferentiators: string[];

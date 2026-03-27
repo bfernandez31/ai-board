@@ -561,24 +561,16 @@ A dedicated project-level page at `/projects/{projectId}/comparisons` provides c
 - Title: "Comparisons" with subtitle describing the page purpose
 - "Compare VERIFY tickets" button opens a launch sheet for initiating new comparisons
 
-**Layout**: Two-column grid on desktop (xl breakpoint):
-- Left panel (340px): History list with pagination
-- Right panel (flexible): Comparison detail view with internal scroll area
+**Layout**: Single-column vertical list using the full page width. The page has one scroll context — no nested scroll containers or fixed-height panels.
 
-On viewports below xl breakpoint, panels stack vertically.
-
-**History List**:
-- Displays comparisons in reverse chronological order (newest first)
-- Each item shows: winner ticket key, participant ticket keys, generation timestamp, and summary (line-clamped to 2 lines)
-- Selected comparison highlighted with primary border and background tint
-- Refresh button to manually refetch the list
-- Paginated with Previous/Next controls and page counter (offset-based, 10 per page, max 50)
-
-**Detail View**:
-- Renders the full comparison dashboard for the selected comparison
-- Reuses all existing dashboard sub-components: Hero Card, Participant Grid, Stat Cards, Unified Metrics, Decision Points, Compliance Heatmap
-- Contained within a scroll area for long content
-- Shows loading skeleton while fetching detail data
+**Comparison List**:
+- Displays compact cards in reverse chronological order (newest first)
+- Each card shows: winner ticket key, winner ticket title, summary snippet, winner score, and creation date
+- Clicking a card expands the full comparison detail inline below it (accordion behavior — only one card expanded at a time)
+- Clicking an expanded card collapses it; clicking a different card collapses the current and expands the new one
+- Expanded detail renders all six sub-components at full page width: Hero Card, Participant Grid, Stat Cards, Unified Metrics, Decision Points, Compliance Heatmap
+- Expand/collapse uses a smooth CSS height transition
+- "Load More" button below the list appends the next batch of comparisons (10 per page) without replacing existing items or resetting scroll position
 
 **Launch Sheet**:
 - Opens as a slide-over sheet from the page header button
@@ -591,17 +583,17 @@ On viewports below xl breakpoint, panels stack vertically.
 **Pending Launch Tracking**:
 - After launch, an alert appears at the top of the page showing in-flight comparisons
 - Job status polled every 2 seconds while PENDING or RUNNING
-- On completion, the comparison list auto-refreshes and the new comparison becomes selected
+- On completion, the new comparison appears at the top of the list
 
-**Deep Linking**: URL parameters `?comparisonId=X` and `?page=Y` support direct navigation to a specific comparison and page. The first comparison on the current page is auto-selected if no `comparisonId` is specified.
+**Deep Linking**: URL parameter `?comparisonId=X` auto-expands the targeted comparison on page load. If the comparison is not in the initial page, additional pages are fetched until it is found. Invalid IDs degrade gracefully — the list loads normally with no expansion.
 
 **Empty States**:
 - No comparisons: Message encouraging the user to launch their first comparison
 - No VERIFY candidates: Message explaining that tickets must reach VERIFY stage before they can be compared
 
 **Data Freshness**:
-- List: 30-second stale time (TanStack Query)
-- Detail: 5-minute stale time
+- List: accumulated via `useInfiniteQuery` (infinite scroll pagination)
+- Detail: fetched on-demand when a card is expanded
 - Candidates: fetched on-demand when launch sheet opens
 
 ### Response Format

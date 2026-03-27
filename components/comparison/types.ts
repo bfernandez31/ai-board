@@ -5,6 +5,7 @@ import type {
   ComparisonLaunchRequest,
   ComparisonParticipantDetail,
   ComparisonSummary,
+  ProjectComparisonSummary,
   VerifyComparisonCandidate,
 } from '@/lib/types/comparison';
 
@@ -68,6 +69,14 @@ export interface ComparisonDecisionPointsEnhancedProps {
   participants?: ComparisonParticipantDetail[];
 }
 
+export interface ComparisonCardProps {
+  comparison: ProjectComparisonSummary;
+  isExpanded: boolean;
+  detail: ComparisonDetail | undefined;
+  isDetailLoading: boolean;
+  onToggle: () => void;
+}
+
 export interface ComparisonDashboardProps {
   detail: ComparisonDetail;
 }
@@ -75,7 +84,6 @@ export interface ComparisonDashboardProps {
 export interface ProjectComparisonsPageProps {
   projectId: number;
   projectName: string;
-  initialPage?: number;
   initialComparisonId?: number | null;
 }
 
