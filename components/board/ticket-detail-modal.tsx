@@ -741,7 +741,7 @@ export function TicketDetailModal({
         className="
           flex flex-col h-screen w-screen p-4
           !top-0 !translate-y-0
-          sm:grid sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:p-10
+          sm:grid sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:p-6
           sm:!top-[50%] sm:!-translate-y-1/2
           border-ctp-mauve/15 text-foreground aurora-bg-dialog
         "
@@ -829,8 +829,8 @@ export function TicketDetailModal({
             </div>
           </div>
 
-          {/* Row 2: Metadata badges (workflow, agent, branch) */}
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
+          {/* Row 2: Metadata (workflow, agent, branch) — small, secondary */}
+          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
             {localTicket?.project && (
               <PolicyBadge
                 policy={
@@ -838,24 +838,19 @@ export function TicketDetailModal({
                   localTicket.project.clarificationPolicy
                 }
                 isOverride={localTicket.clarificationPolicy !== null}
-                variant={
-                  localTicket.clarificationPolicy !== null
-                    ? 'default'
-                    : 'secondary'
-                }
+                variant="secondary"
+                className="text-[10px] py-0 px-1.5 font-normal"
               />
             )}
             {effectiveAgent && (
               <Badge
                 variant={isAgentOverride ? 'default' : 'secondary'}
-                className="gap-1"
+                className="gap-1 text-[10px] py-0 px-1.5 font-normal"
                 data-testid="agent-badge"
               >
-                <AgentIcon agent={effectiveAgent} size={14} />
-                <span className="text-xs">{getAgentLabel(effectiveAgent)}</span>
-                {!isAgentOverride && (
-                  <span className="text-xs text-muted-foreground">(default)</span>
-                )}
+                <AgentIcon agent={effectiveAgent} size={12} />
+                <span>{getAgentLabel(effectiveAgent)}</span>
+                {!isAgentOverride && <span className="text-muted-foreground">(default)</span>}
               </Badge>
             )}
             {localTicket?.branch &&
