@@ -78,7 +78,7 @@ export function ComparisonUnifiedMetrics({ participants }: ComparisonUnifiedMetr
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-ctp-mauve/10">
-              <th className="sticky left-0 z-10 bg-transparent px-3 py-2 text-left font-medium text-muted-foreground">
+              <th className="sticky left-0 z-10 bg-ctp-base px-3 py-2 text-left font-medium text-muted-foreground">
                 Metric
               </th>
               {participants.map((p) => (
@@ -103,7 +103,7 @@ export function ComparisonUnifiedMetrics({ participants }: ComparisonUnifiedMetr
 
               return (
                 <tr key={config.key} className="border-b border-border last:border-0">
-                  <td className="sticky left-0 z-10 bg-transparent px-3 py-2 font-medium text-foreground">
+                  <td className="sticky left-0 z-10 bg-ctp-base px-3 py-2 font-medium text-foreground">
                     {config.label}
                   </td>
                   {participants.map((p) => {
@@ -155,7 +155,7 @@ export function ComparisonUnifiedMetrics({ participants }: ComparisonUnifiedMetr
 
             {/* Quality Score row - special handling with popover */}
             <tr className="border-b border-border last:border-0">
-              <td className="sticky left-0 z-10 bg-transparent px-3 py-2 font-medium text-foreground">
+              <td className="sticky left-0 z-10 bg-ctp-base px-3 py-2 font-medium text-foreground">
                 Quality Score
               </td>
               {participants.map((p) => {
