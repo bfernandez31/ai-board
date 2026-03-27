@@ -2178,6 +2178,7 @@ Fetch paginated list of all comparisons for a project.
       "winnerTicketId": 12,
       "winnerTicketKey": "AIB-125",
       "winnerTicketTitle": "Feature implementation",
+      "winnerScore": 87.5,
       "participantTicketIds": [11, 12],
       "participantTicketKeys": ["AIB-124", "AIB-125"],
       "summary": "AIB-125 demonstrates superior code quality...",
