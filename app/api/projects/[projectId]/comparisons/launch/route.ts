@@ -130,6 +130,14 @@ export async function POST(
       });
     } catch (workflowError) {
       console.error('[comparisons/launch] Failed to dispatch workflow:', workflowError);
+      await prisma.job.update({
+        where: { id: job.id },
+        data: { status: 'FAILED', completedAt: new Date(), updatedAt: new Date() },
+      });
+      return NextResponse.json(
+        { error: 'Failed to dispatch comparison workflow' },
+        { status: 502 }
+      );
     }
 
     return NextResponse.json(
