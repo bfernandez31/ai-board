@@ -51,7 +51,6 @@ interface StatPillProps {
 }
 
 function StatPill({ label, value, index }: StatPillProps) {
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- array always has index 0
   const theme = (STAT_PILL_STYLES[index] ?? STAT_PILL_STYLES[0])!;
   return (
     <div
@@ -138,7 +137,6 @@ export function ComparisonHeroCard({
             {keyDifferentiators.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {keyDifferentiators.map((diff, i) => {
-                  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- modulo guarantees valid index
                   const gradient = PILL_GRADIENTS[i % PILL_GRADIENTS.length]!;
                   return (
                     <span
