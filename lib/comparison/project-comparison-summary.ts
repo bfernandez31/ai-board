@@ -21,7 +21,7 @@ interface ProjectComparisonRecord {
   winnerTicketId: number;
   sourceTicket: { ticketKey: string };
   winnerTicket: { ticketKey: string; title: string };
-  participants: Array<{ ticketId: number; ticket: { ticketKey: string } }>;
+  participants: Array<{ ticketId: number; score: number | null; ticket: { ticketKey: string } }>;
 }
 
 function normalizePositiveInteger(value: number | undefined, fallback: number): number {
@@ -66,6 +66,7 @@ function normalizeProjectComparisonSummary(record: ProjectComparisonRecord): Pro
     winnerTicketId: record.winnerTicketId,
     winnerTicketKey: record.winnerTicket.ticketKey,
     winnerTicketTitle: record.winnerTicket.title,
+    winnerScore: record.participants.find((p) => p.ticketId === record.winnerTicketId)?.score ?? null,
     summary: record.summary,
     recommendation: record.overallRecommendation,
     overallRecommendation: record.overallRecommendation,
@@ -104,6 +105,7 @@ export async function listProjectComparisons(
           },
           select: {
             ticketId: true,
+            score: true,
             ticket: {
               select: {
                 ticketKey: true,

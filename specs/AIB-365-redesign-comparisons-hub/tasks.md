@@ -18,9 +18,9 @@
 
 **Purpose**: Add winnerScore to the API response and define new TypeScript interfaces needed by all user stories.
 
-- [ ] T001 Add `winnerScore: number | null` field to `ProjectComparisonSummary` interface in `lib/types/comparison.ts`
-- [ ] T002 Update Prisma query in `lib/comparison/project-comparison-summary.ts` to select `score` from winner participant and map it to `winnerScore` in `normalizeProjectComparisonSummary`
-- [ ] T003 [P] Add `ComparisonCardProps` interface to `components/comparison/types.ts`
+- [x] T001 Add `winnerScore: number | null` field to `ProjectComparisonSummary` interface in `lib/types/comparison.ts`
+- [x] T002 Update Prisma query in `lib/comparison/project-comparison-summary.ts` to select `score` from winner participant and map it to `winnerScore` in `normalizeProjectComparisonSummary`
+- [x] T003 [P] Add `ComparisonCardProps` interface to `components/comparison/types.ts`
 
 ---
 
