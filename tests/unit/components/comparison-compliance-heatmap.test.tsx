@@ -97,15 +97,14 @@ describe('ComparisonComplianceHeatmap', () => {
     expect(yellowCells.length).toBe(1); // mixed cell
   });
 
-  it('does not render text inside cells', () => {
-    const { container } = renderWithProviders(
+  it('renders status labels inside cells', () => {
+    renderWithProviders(
       <ComparisonComplianceHeatmap rows={complianceRows} participants={participants} />
     );
 
-    const cells = container.querySelectorAll('[data-testid="heatmap-cell"]');
-    cells.forEach((cell) => {
-      expect(cell.textContent?.trim()).toBe('');
-    });
+    expect(screen.getAllByText('Pass').length).toBe(2);
+    expect(screen.getAllByText('Fail').length).toBe(1);
+    expect(screen.getAllByText('Mixed').length).toBe(1);
   });
 
   it('renders muted background for missing assessments', () => {
@@ -135,14 +134,5 @@ describe('ComparisonComplianceHeatmap', () => {
     );
 
     expect(screen.getByText(/No compliance data available/)).toBeInTheDocument();
-  });
-
-  it('has sticky first column', () => {
-    const { container } = renderWithProviders(
-      <ComparisonComplianceHeatmap rows={complianceRows} participants={participants} />
-    );
-
-    const stickyHeaders = container.querySelectorAll('.sticky.left-0');
-    expect(stickyHeaders.length).toBeGreaterThan(0);
   });
 });

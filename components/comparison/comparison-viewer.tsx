@@ -91,7 +91,7 @@ export function ComparisonViewer({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-5xl bg-card text-card-foreground sm:max-w-[90vw]">
+      <DialogContent className="max-h-[90vh] max-w-5xl bg-background text-foreground sm:max-w-[90vw]">
         <DialogHeader className="pr-12">
           <DialogDescription className="sr-only">
             Review saved comparison history and structured dashboard details for this ticket.
@@ -157,7 +157,7 @@ export function ComparisonViewer({
               <div>
                 {detail && winner ? (
                   <ScrollArea className="h-[68vh] pr-4">
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       <ComparisonHeroCard
                         winner={winner}
                         recommendation={detail.overallRecommendation}

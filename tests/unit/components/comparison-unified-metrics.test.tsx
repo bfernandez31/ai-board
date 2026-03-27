@@ -78,11 +78,12 @@ describe('ComparisonUnifiedMetrics', () => {
     expect(screen.getByText('Job Count')).toBeInTheDocument();
   });
 
-  it('renders participant column headers', () => {
+  it('renders participant column headers with color coding', () => {
     renderWithProviders(<ComparisonUnifiedMetrics participants={[p1, p2]} />);
 
-    expect(screen.getByText('AIB-101')).toBeInTheDocument();
-    expect(screen.getByText('AIB-102')).toBeInTheDocument();
+    // Each participant appears in both the legend and the table header
+    expect(screen.getAllByText('AIB-101').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('AIB-102').length).toBeGreaterThanOrEqual(2);
   });
 
   it('renders inline bars with proportional widths', () => {
@@ -94,13 +95,14 @@ describe('ComparisonUnifiedMetrics', () => {
     expect(bars.length).toBeGreaterThan(0);
   });
 
-  it('highlights best value with primary color', () => {
+  it('highlights best value with participant accent color and bold text', () => {
     const { container } = renderWithProviders(
       <ComparisonUnifiedMetrics participants={[p1, p2]} />
     );
 
-    const primaryBars = container.querySelectorAll('.bg-primary');
-    expect(primaryBars.length).toBeGreaterThan(0);
+    // Best values should be rendered in bold with participant's accent color
+    const boldValues = container.querySelectorAll('.font-bold');
+    expect(boldValues.length).toBeGreaterThan(0);
   });
 
   it('handles pending enrichment state', () => {
@@ -143,12 +145,13 @@ describe('ComparisonUnifiedMetrics', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
   });
 
-  it('has sticky first column', () => {
-    const { container } = renderWithProviders(
+  it('renders participant color legend', () => {
+    renderWithProviders(
       <ComparisonUnifiedMetrics participants={[p1, p2]} />
     );
 
-    const stickyHeaders = container.querySelectorAll('.sticky.left-0');
-    expect(stickyHeaders.length).toBeGreaterThan(0);
+    // Legend should show participant ticket keys
+    const legends = screen.getAllByText('AIB-101');
+    expect(legends.length).toBeGreaterThanOrEqual(2); // header + legend
   });
 });

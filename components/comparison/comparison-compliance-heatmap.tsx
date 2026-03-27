@@ -6,13 +6,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getParticipantColor } from './participant-colors';
 import type { ComparisonComplianceHeatmapProps } from './types';
 
-const statusColors: Record<string, string> = {
-  pass: 'bg-ctp-green/20',
-  mixed: 'bg-ctp-yellow/20',
-  fail: 'bg-ctp-red/20',
+const statusConfig: Record<string, { bg: string; label: string; textColor: string }> = {
+  pass: { bg: 'bg-ctp-green/20', label: 'Pass', textColor: 'text-ctp-green' },
+  mixed: { bg: 'bg-ctp-yellow/20', label: 'Mixed', textColor: 'text-ctp-yellow' },
+  fail: { bg: 'bg-ctp-red/20', label: 'Fail', textColor: 'text-ctp-red' },
 };
 
 export function ComparisonComplianceHeatmap({
@@ -21,87 +21,96 @@ export function ComparisonComplianceHeatmap({
 }: ComparisonComplianceHeatmapProps) {
   if (rows.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Compliance</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="space-y-1">
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Compliance
+        </h3>
+        <div className="rounded-xl border border-foreground/10 bg-foreground/[0.02] p-5">
           <div className="text-sm text-muted-foreground">
             No compliance data available for this comparison.
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   const sortedRows = [...rows].sort((a, b) => a.displayOrder - b.displayOrder);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Compliance</CardTitle>
-      </CardHeader>
-      <CardContent className="overflow-x-auto">
+    <div className="space-y-1">
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Compliance
+      </h3>
+      <div className="rounded-xl border border-foreground/10 bg-foreground/[0.02] p-5">
         <TooltipProvider>
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="sticky left-0 z-10 bg-card px-3 py-2 text-left font-medium text-muted-foreground">
-                  Principle
-                </th>
-                {participants.map((p) => (
-                  <th key={p.ticketId} className="px-3 py-2 text-left font-medium text-muted-foreground">
-                    {p.ticketKey}
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-foreground/10">
+                  <th className="sticky left-0 z-10 bg-transparent px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Principle
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sortedRows.map((row) => (
-                <tr key={row.principleKey} className="border-b border-border last:border-0">
-                  <td className="sticky left-0 z-10 bg-card px-3 py-2 font-medium text-foreground">
-                    {row.principleName}
-                  </td>
                   {participants.map((p) => {
-                    const assessment = row.assessments.find(
-                      (a) => a.participantTicketId === p.ticketId
-                    );
-
-                    if (!assessment) {
-                      return (
-                        <td key={p.ticketId} className="px-3 py-2">
-                          <div
-                            data-testid="heatmap-cell"
-                            className="h-8 w-full rounded bg-muted"
-                          />
-                        </td>
-                      );
-                    }
-
-                    const colorClass = statusColors[assessment.status] ?? 'bg-muted';
-
+                    const color = getParticipantColor(p.rank);
                     return (
-                      <td key={p.ticketId} className="px-3 py-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div
-                              data-testid="heatmap-cell"
-                              className={`h-8 w-full cursor-pointer rounded ${colorClass}`}
-                            />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="max-w-xs text-sm">{assessment.notes}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </td>
+                      <th key={p.ticketId} className={`px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider ${color.text}`}>
+                        {p.ticketKey}
+                      </th>
                     );
                   })}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sortedRows.map((row) => (
+                  <tr key={row.principleKey} className="border-b border-foreground/5 last:border-0">
+                    <td className="sticky left-0 z-10 bg-transparent px-3 py-2.5 font-medium text-foreground">
+                      {row.principleName}
+                    </td>
+                    {participants.map((p) => {
+                      const assessment = row.assessments.find(
+                        (a) => a.participantTicketId === p.ticketId
+                      );
+
+                      if (!assessment) {
+                        return (
+                          <td key={p.ticketId} className="px-3 py-2.5">
+                            <div
+                              data-testid="heatmap-cell"
+                              className="flex h-8 w-full items-center justify-center rounded-md bg-muted"
+                            />
+                          </td>
+                        );
+                      }
+
+                      const config = statusConfig[assessment.status] ?? { bg: 'bg-muted', label: '?', textColor: 'text-muted-foreground' };
+
+                      return (
+                        <td key={p.ticketId} className="px-3 py-2.5">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div
+                                data-testid="heatmap-cell"
+                                className={`flex h-8 w-full cursor-pointer items-center justify-center rounded-md ${config.bg}`}
+                              >
+                                <span className={`text-xs font-semibold ${config.textColor}`}>
+                                  {config.label}
+                                </span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs text-sm">{assessment.notes}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </TooltipProvider>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

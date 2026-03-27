@@ -99,6 +99,18 @@ describe('ComparisonStatCards', () => {
     expect(markers.length).toBe(8);
   });
 
+  it('each stat card has a unique color theme', () => {
+    const { container } = renderWithProviders(
+      <ComparisonStatCards winner={winner} participants={[winner, runner]} />
+    );
+
+    // Cost card: yellow, Duration: blue, Quality: green, Files: mauve
+    expect(container.querySelector('.border-ctp-yellow\\/20')).toBeTruthy();
+    expect(container.querySelector('.border-ctp-blue\\/20')).toBeTruthy();
+    expect(container.querySelector('.border-ctp-green\\/20')).toBeTruthy();
+    expect(container.querySelector('.border-ctp-mauve\\/20')).toBeTruthy();
+  });
+
   it('handles pending enrichment values', () => {
     const pendingWinner = makeParticipant({
       telemetry: {

@@ -47,6 +47,10 @@ interface ScoreGaugeProps {
   strokeWidth?: number;
   /** Whether to animate on mount */
   animated?: boolean;
+  /** Override stroke color (HSL string) — uses score-based color if omitted */
+  strokeColor?: string;
+  /** Optional CSS box-shadow glow value */
+  glow?: string;
 }
 
 export function ScoreGauge({
@@ -54,12 +58,17 @@ export function ScoreGauge({
   size = 120,
   strokeWidth = 8,
   animated = true,
+  strokeColor,
+  glow,
 }: ScoreGaugeProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clampedScore = Math.max(0, Math.min(100, score));
   const offset = circumference - (clampedScore / 100) * circumference;
   const colors = getComparisonScoreColor(clampedScore);
+  const resolvedStroke = strokeColor ?? colors.stroke;
+
+  const gradientId = `gauge-gradient-${size}-${clampedScore}`;
 
   return (
     <svg
@@ -68,7 +77,14 @@ export function ScoreGauge({
       viewBox={`0 0 ${size} ${size}`}
       aria-label={`Score: ${clampedScore}`}
       role="img"
+      style={glow ? { filter: `drop-shadow(${glow})` } : undefined}
     >
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={resolvedStroke} stopOpacity="1" />
+          <stop offset="100%" stopColor={resolvedStroke} stopOpacity="0.4" />
+        </linearGradient>
+      </defs>
       {/* Background track */}
       <circle
         cx={size / 2}
@@ -78,13 +94,13 @@ export function ScoreGauge({
         stroke="hsl(var(--muted))"
         strokeWidth={strokeWidth}
       />
-      {/* Score arc */}
+      {/* Score arc with gradient */}
       <circle
         cx={size / 2}
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke={colors.stroke}
+        stroke={`url(#${gradientId})`}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeDasharray={circumference}
@@ -101,7 +117,8 @@ export function ScoreGauge({
         dominantBaseline="central"
         className={`fill-current ${colors.text}`}
         fontSize={size * 0.28}
-        fontWeight="bold"
+        fontWeight="800"
+        letterSpacing="-0.02em"
       >
         {clampedScore}
       </text>

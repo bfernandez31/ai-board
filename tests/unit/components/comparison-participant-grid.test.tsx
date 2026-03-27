@@ -63,10 +63,10 @@ describe('ComparisonParticipantGrid', () => {
     expect(screen.getByText('Second place')).toBeInTheDocument();
   });
 
-  it('renders score rings with correct colors per threshold', () => {
+  it('renders score rings for each participant', () => {
     const participants = [
-      makeParticipant({ ticketId: 2, score: 90 }), // green
-      makeParticipant({ ticketId: 3, ticketKey: 'AIB-103', score: 45 }), // red
+      makeParticipant({ ticketId: 2, score: 90 }),
+      makeParticipant({ ticketId: 3, ticketKey: 'AIB-103', score: 45 }),
     ];
 
     const { container } = renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
@@ -74,13 +74,11 @@ describe('ComparisonParticipantGrid', () => {
     const svgs = container.querySelectorAll('svg');
     expect(svgs.length).toBe(2);
 
-    // First participant (90) should have green stroke
-    const firstScoreCircle = svgs[0].querySelectorAll('circle')[1];
-    expect(firstScoreCircle.getAttribute('stroke')).toBe('hsl(var(--ctp-green))');
-
-    // Second participant (45) should have red stroke
-    const secondScoreCircle = svgs[1].querySelectorAll('circle')[1];
-    expect(secondScoreCircle.getAttribute('stroke')).toBe('hsl(var(--ctp-red))');
+    // Each gauge should have a gradient definition and two circles (track + arc)
+    svgs.forEach((svg) => {
+      expect(svg.querySelector('linearGradient')).toBeTruthy();
+      expect(svg.querySelectorAll('circle').length).toBe(2);
+    });
   });
 
   it('renders workflow type and agent badges', () => {
@@ -108,5 +106,20 @@ describe('ComparisonParticipantGrid', () => {
     renderWithProviders(<ComparisonParticipantGrid participants={[]} />);
     // No cards rendered, no errors
     expect(screen.queryByText('AIB-')).not.toBeInTheDocument();
+  });
+
+  it('applies unique color per participant rank', () => {
+    const participants = [
+      makeParticipant({ ticketId: 2, ticketKey: 'AIB-102', rank: 2 }),
+      makeParticipant({ ticketId: 3, ticketKey: 'AIB-103', rank: 3 }),
+    ];
+
+    const { container } = renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
+
+    // Rank 2 card should have blue tint, rank 3 should have mauve tint
+    const cards = container.querySelectorAll('.border-ctp-blue\\/20');
+    expect(cards.length).toBe(1);
+    const mauveCards = container.querySelectorAll('.border-ctp-mauve\\/20');
+    expect(mauveCards.length).toBe(1);
   });
 });
