@@ -50,7 +50,7 @@
 ### Implementation for User Story 1
 
 - [x] T007 [US1] Create `ComparisonCard` component with compact header layout (winner ticket key, title, summary snippet, score badge, formatted date) using Radix `Collapsible` in `components/comparison/comparison-card.tsx`
-- [ ] T008 [US1] Rewrite `ProjectComparisonsPage` to replace 2-column grid with single-column vertical list of `ComparisonCard` components, using `useProjectComparisonListInfinite` for data, in `components/comparison/project-comparisons-page.tsx`
+- [x] T008 [US1] Rewrite `ProjectComparisonsPage` to replace 2-column grid with single-column vertical list of `ComparisonCard` components, using `useProjectComparisonListInfinite` for data, in `components/comparison/project-comparisons-page.tsx`
 
 **Checkpoint**: Comparisons display as scannable compact cards in a single-column layout with native page scroll.
 
@@ -68,8 +68,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Add CSS grid animation (`grid-template-rows: 0fr -> 1fr`) and Radix `data-[state]` attributes for smooth expand/collapse transition in `components/comparison/comparison-card.tsx`
-- [ ] T011 [US2] Wire `expandedId` state management and on-demand detail fetching via `useProjectComparisonDetail` in `components/comparison/project-comparisons-page.tsx`, rendering `ComparisonDashboard` inside the expanded `Collapsible` content
+- [x] T010 [US2] Add CSS grid animation (`grid-template-rows: 0fr -> 1fr`) and Radix `data-[state]` attributes for smooth expand/collapse transition in `components/comparison/comparison-card.tsx`
+- [x] T011 [US2] Wire `expandedId` state management and on-demand detail fetching via `useProjectComparisonDetail` in `components/comparison/project-comparisons-page.tsx`, rendering `ComparisonDashboard` inside the expanded `Collapsible` content
 
 **Checkpoint**: Cards expand/collapse with smooth animation; only one card expanded at a time; all 6 sub-components render at full page width.
 
@@ -87,7 +87,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] Add "Load More" button below the card list using `hasNextPage` and `fetchNextPage` from `useProjectComparisonListInfinite`, with `isFetchingNextPage` loading state, in `components/comparison/project-comparisons-page.tsx`
+- [x] T013 [US3] Add "Load More" button below the card list using `hasNextPage` and `fetchNextPage` from `useProjectComparisonListInfinite`, with `isFetchingNextPage` loading state, in `components/comparison/project-comparisons-page.tsx`
 
 **Checkpoint**: Load More appends older comparisons; button shows loading state; disappears when all loaded; scroll position preserved.
 
@@ -105,8 +105,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T015 [US4] Implement deep link auto-expand: initialize `expandedId` from `initialComparisonId` prop, add `useEffect` with ref guard to `fetchNextPage` in a loop until target comparison is found or all pages exhausted, in `components/comparison/project-comparisons-page.tsx`
-- [ ] T016 [US4] Add `scrollIntoView({ behavior: 'smooth' })` to scroll the deep-linked `ComparisonCard` into view after expansion, using a ref callback in `components/comparison/project-comparisons-page.tsx`
+- [x] T015 [US4] Implement deep link auto-expand: initialize `expandedId` from `initialComparisonId` prop, add `useEffect` with ref guard to `fetchNextPage` in a loop until target comparison is found or all pages exhausted, in `components/comparison/project-comparisons-page.tsx`
+- [x] T016 [US4] Add `scrollIntoView({ behavior: 'smooth' })` to scroll the deep-linked `ComparisonCard` into view after expansion, using a ref callback in `components/comparison/project-comparisons-page.tsx`
 
 **Checkpoint**: Deep-linked comparisons auto-expand and scroll into view; invalid IDs degrade gracefully (normal list, no error).
 
@@ -120,7 +120,7 @@
 
 ### Implementation for User Story 5
 
-- [ ] T017 [US5] Verify "Compare VERIFY tickets" button and `ProjectComparisonLaunchSheet` remain accessible in the page header, and pending comparison indicator displays correctly, in `components/comparison/project-comparisons-page.tsx`
+- [x] T017 [US5] Verify "Compare VERIFY tickets" button and `ProjectComparisonLaunchSheet` remain accessible in the page header, and pending comparison indicator displays correctly, in `components/comparison/project-comparisons-page.tsx`
 
 **Checkpoint**: Launch flow works identically to before the redesign; new comparisons appear at the top of the list.
 

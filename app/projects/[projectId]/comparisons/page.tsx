@@ -57,7 +57,6 @@ export default async function ComparisonsPage({
       <ProjectComparisonsPage
         projectId={projectId}
         projectName={project.name}
-        initialPage={parsePositiveInteger(search.page) ?? 1}
         initialComparisonId={parsePositiveInteger(search.comparisonId)}
       />
     </main>

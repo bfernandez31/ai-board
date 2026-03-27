@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, GitCompare, Loader2, RefreshCcw, Sparkles } from 'lucide-react';
+import { GitCompare, Loader2, RefreshCcw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { ComparisonLaunchRequest } from '@/lib/types/comparison';
@@ -11,10 +11,10 @@ import {
   useProjectComparisonCandidates,
   useProjectComparisonDetail,
   useProjectComparisonLaunch,
-  useProjectComparisonList,
+  useProjectComparisonListInfinite,
   useProjectComparisonPendingJobs,
 } from '@/hooks/use-comparisons';
-import { ComparisonDashboard } from './comparison-viewer';
+import { ComparisonCard } from './comparison-card';
 import { ProjectComparisonLaunchSheet } from './project-comparison-launch-sheet';
 import type { ProjectComparisonsPageProps } from './types';
 
@@ -54,36 +54,44 @@ function mergePendingLaunches(
 export function ProjectComparisonsPage({
   projectId,
   projectName,
-  initialPage = 1,
   initialComparisonId = null,
 }: ProjectComparisonsPageProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(initialPage);
-  const [selectedComparisonIdOverride, setSelectedComparisonIdOverride] = useState<number | null>(
-    initialComparisonId
-  );
+  const [expandedId, setExpandedId] = useState<number | null>(initialComparisonId);
   const [launchOpen, setLaunchOpen] = useState(false);
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<number[]>([]);
   const [pendingLaunches, setPendingLaunches] = useState<ComparisonLaunchRequest[]>([]);
+  const deepLinkAttemptedRef = useRef(false);
+  const deepLinkCardRef = useRef<HTMLDivElement | null>(null);
 
-  const listQuery = useProjectComparisonList(projectId, page, PAGE_SIZE, true);
-  const selectedComparisonId =
-    selectedComparisonIdOverride ?? listQuery.data?.comparisons[0]?.id ?? null;
+  const infiniteQuery = useProjectComparisonListInfinite(projectId, PAGE_SIZE, true);
+  const comparisons = useMemo(
+    () => infiniteQuery.data?.comparisons ?? [],
+    [infiniteQuery.data?.comparisons]
+  );
+
   const detailQuery = useProjectComparisonDetail(
     projectId,
-    selectedComparisonId,
-    selectedComparisonId != null
+    expandedId,
+    expandedId != null
   );
   const candidatesQuery = useProjectComparisonCandidates(projectId, launchOpen);
   const launchMutation = useProjectComparisonLaunch(projectId);
 
   const pendingJobIds = useMemo(
-    () => pendingLaunches.filter((launch) => hasLaunchStatus(launch, ACTIVE_LAUNCH_STATUSES)).map((launch) => launch.jobId),
+    () =>
+      pendingLaunches
+        .filter((launch) => hasLaunchStatus(launch, ACTIVE_LAUNCH_STATUSES))
+        .map((launch) => launch.jobId),
     [pendingLaunches]
   );
 
-  const pendingJobsQuery = useProjectComparisonPendingJobs(projectId, pendingJobIds, pendingJobIds.length > 0);
+  const pendingJobsQuery = useProjectComparisonPendingJobs(
+    projectId,
+    pendingJobIds,
+    pendingJobIds.length > 0
+  );
   const mergedPendingLaunches = useMemo(
     () => mergePendingLaunches(pendingLaunches, pendingJobsQuery.data),
     [pendingJobsQuery.data, pendingLaunches]
@@ -96,9 +104,10 @@ export function ProjectComparisonsPage({
     hasLaunchStatus(launch, TERMINAL_LAUNCH_STATUSES)
   );
 
+  // Error toast
   useEffect(() => {
     const error =
-      listQuery.error ??
+      infiniteQuery.error ??
       detailQuery.error ??
       candidatesQuery.error ??
       launchMutation.error ??
@@ -116,24 +125,13 @@ export function ProjectComparisonsPage({
   }, [
     candidatesQuery.error,
     detailQuery.error,
+    infiniteQuery.error,
     launchMutation.error,
-    listQuery.error,
     pendingJobsQuery.error,
     toast,
   ]);
 
-  async function handleLaunch() {
-    try {
-      const launch = await launchMutation.mutateAsync(selectedCandidateIds);
-      setPendingLaunches((current) => [launch, ...current]);
-      setSelectedCandidateIds([]);
-      setLaunchOpen(false);
-      setSelectedComparisonIdOverride(null);
-    } catch {
-      // Toast handled by effect above.
-    }
-  }
-
+  // Handle terminal pending jobs
   useEffect(() => {
     if (!hasTerminalPendingJob) {
       return;
@@ -143,13 +141,68 @@ export function ProjectComparisonsPage({
     void queryClient.invalidateQueries({
       queryKey: comparisonKeys.projectCandidates(projectId),
     });
+    void infiniteQuery.refetch();
 
     setPendingLaunches((current) =>
       current.filter((launch) => !hasLaunchStatus(launch, TERMINAL_LAUNCH_STATUSES))
     );
-  }, [hasTerminalPendingJob, projectId, queryClient]);
+  }, [hasTerminalPendingJob, projectId, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totalPages = listQuery.data?.totalPages ?? 0;
+  // Deep link auto-expand: fetch pages until target comparison is found
+  useEffect(() => {
+    if (
+      !initialComparisonId ||
+      deepLinkAttemptedRef.current ||
+      infiniteQuery.isLoading ||
+      infiniteQuery.isFetchingNextPage
+    ) {
+      return;
+    }
+
+    const found = comparisons.some((c) => c.id === initialComparisonId);
+    if (found) {
+      deepLinkAttemptedRef.current = true;
+      return;
+    }
+
+    if (infiniteQuery.hasNextPage) {
+      void infiniteQuery.fetchNextPage();
+    } else {
+      // All pages exhausted, target not found — degrade gracefully
+      deepLinkAttemptedRef.current = true;
+    }
+  }, [initialComparisonId, comparisons, infiniteQuery.isLoading, infiniteQuery.isFetchingNextPage, infiniteQuery.hasNextPage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scroll deep-linked card into view
+  useEffect(() => {
+    if (!initialComparisonId || !deepLinkCardRef.current) {
+      return;
+    }
+
+    const found = comparisons.some((c) => c.id === initialComparisonId);
+    if (found && expandedId === initialComparisonId) {
+      deepLinkCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [initialComparisonId, expandedId, comparisons]);
+
+  const handleToggle = useCallback(
+    (comparisonId: number) => {
+      setExpandedId((current) => (current === comparisonId ? null : comparisonId));
+    },
+    []
+  );
+
+  async function handleLaunch() {
+    try {
+      const launch = await launchMutation.mutateAsync(selectedCandidateIds);
+      setPendingLaunches((current) => [launch, ...current]);
+      setSelectedCandidateIds([]);
+      setLaunchOpen(false);
+      setExpandedId(null);
+    } catch {
+      // Toast handled by effect above.
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -188,85 +241,69 @@ export function ProjectComparisonsPage({
         </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-        <section className="rounded-2xl border border-border bg-card p-4">
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <div>
-              <h2 className="font-medium text-foreground">History</h2>
-              <p className="text-sm text-muted-foreground">Newest comparisons first</p>
-            </div>
-            <Button type="button" variant="ghost" size="icon" onClick={() => void listQuery.refetch()}>
-              <RefreshCcw className="h-4 w-4" />
-            </Button>
+      <section>
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <div>
+            <h2 className="font-medium text-foreground">History</h2>
+            <p className="text-sm text-muted-foreground">Newest comparisons first</p>
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => void infiniteQuery.refetch()}
+          >
+            <RefreshCcw className="h-4 w-4" />
+          </Button>
+        </div>
 
-          {listQuery.isLoading ? (
-            <div className="py-8 text-sm text-muted-foreground">Loading project comparisons...</div>
-          ) : (listQuery.data?.comparisons.length ?? 0) === 0 ? (
-            <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-              No saved comparisons yet. Launch one from VERIFY tickets to populate the hub.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {listQuery.data?.comparisons.map((comparison) => (
-                <button
-                  key={comparison.id}
-                  type="button"
-                  className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${
-                    comparison.id === selectedComparisonId
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border bg-card hover:bg-muted/40'
-                  }`}
-                  onClick={() => setSelectedComparisonIdOverride(comparison.id)}
-                >
-                  <div className="font-medium text-foreground">{comparison.winnerTicketKey}</div>
-                  <div className="mt-1 text-sm text-muted-foreground">{comparison.winnerTicketTitle}</div>
-                  <div className="mt-2 line-clamp-2 text-sm text-muted-foreground">{comparison.summary}</div>
-                </button>
-              ))}
+        {infiniteQuery.isLoading ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            Loading project comparisons...
+          </div>
+        ) : comparisons.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+            No saved comparisons yet. Launch one from VERIFY tickets to populate the hub.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {comparisons.map((comparison) => (
+              <div
+                key={comparison.id}
+                ref={comparison.id === initialComparisonId ? deepLinkCardRef : undefined}
+              >
+                <ComparisonCard
+                  comparison={comparison}
+                  isExpanded={comparison.id === expandedId}
+                  detail={comparison.id === expandedId ? detailQuery.data ?? undefined : undefined}
+                  isDetailLoading={comparison.id === expandedId && detailQuery.isLoading}
+                  onToggle={() => handleToggle(comparison.id)}
+                />
+              </div>
+            ))}
 
-              <div className="flex items-center justify-between gap-3 pt-2">
+            {infiniteQuery.hasNextPage && (
+              <div className="flex justify-center pt-2">
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((value) => Math.max(1, value - 1))}
+                  onClick={() => void infiniteQuery.fetchNextPage()}
+                  disabled={infiniteQuery.isFetchingNextPage}
                 >
-                  <ChevronLeft className="mr-2 h-4 w-4" />
-                  Previous
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {listQuery.data?.page ?? page}
-                  {totalPages > 0 ? ` of ${totalPages}` : ''}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={totalPages === 0 || page >= totalPages}
-                  onClick={() => setPage((value) => value + 1)}
-                >
-                  Next
-                  <ChevronRight className="ml-2 h-4 w-4" />
+                  {infiniteQuery.isFetchingNextPage ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Load More'
+                  )}
                 </Button>
               </div>
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-border bg-card p-4">
-          {detailQuery.isLoading ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">Loading comparison detail...</div>
-          ) : detailQuery.data ? (
-            <ComparisonDashboard detail={detailQuery.data} />
-          ) : (
-            <div className="rounded-lg border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
-              Select a saved comparison to review the full dashboard inline.
-            </div>
-          )}
-        </section>
-      </div>
+            )}
+          </div>
+        )}
+      </section>
 
       <ProjectComparisonLaunchSheet
         open={launchOpen}
