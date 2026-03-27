@@ -57,6 +57,10 @@ export async function GET(
       return jsonError(404, 'Project not found', 'PROJECT_NOT_FOUND');
     }
 
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return jsonError(401, 'Unauthorized', 'AUTH_REQUIRED');
+    }
+
     return jsonError(500, 'Internal server error', 'INTERNAL_ERROR');
   }
 }

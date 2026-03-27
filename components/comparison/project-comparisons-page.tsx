@@ -143,6 +143,10 @@ export function ProjectComparisonsPage({
     void queryClient.invalidateQueries({
       queryKey: comparisonKeys.projectCandidates(projectId),
     });
+
+    setPendingLaunches((current) =>
+      current.filter((launch) => !hasLaunchStatus(launch, TERMINAL_LAUNCH_STATUSES))
+    );
   }, [hasTerminalPendingJob, projectId, queryClient]);
 
   const totalPages = listQuery.data?.totalPages ?? 0;
