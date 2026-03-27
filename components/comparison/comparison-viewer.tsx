@@ -29,8 +29,7 @@ const sectionClass = 'rounded-xl border border-ctp-mauve/15 p-6';
 
 export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
   const winner = detail.participants.find((p) => p.ticketId === detail.winnerTicketId);
-  const nonWinners =
-    detail.participants.filter((p) => p.ticketId !== detail.winnerTicketId) ?? [];
+  const nonWinners = detail.participants.filter((p) => p.ticketId !== detail.winnerTicketId);
 
   if (!winner) {
     return (

@@ -72,25 +72,18 @@ export function ComparisonCard({
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div
-          className="grid transition-[grid-template-rows] duration-300 ease-in-out"
-          style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
-        >
-          <div className="overflow-hidden">
-            <div className="pt-4">
-              {isDetailLoading && (
-                <div className="py-8 text-center text-sm text-muted-foreground">
-                  Loading comparison detail...
-                </div>
-              )}
-              {detail && <ComparisonDashboard detail={detail} />}
-              {!isDetailLoading && !detail && isExpanded && (
-                <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-                  Unable to load comparison detail.
-                </div>
-              )}
+        <div className="pt-4">
+          {isDetailLoading && (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Loading comparison detail...
             </div>
-          </div>
+          )}
+          {detail && <ComparisonDashboard detail={detail} />}
+          {!isDetailLoading && !detail && isExpanded && (
+            <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+              Unable to load comparison detail.
+            </div>
+          )}
         </div>
       </CollapsibleContent>
     </Collapsible>

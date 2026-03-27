@@ -225,7 +225,7 @@ export function ProjectComparisonsPage({
         </div>
       </section>
 
-      {activePendingLaunches.length > 0 ? (
+      {activePendingLaunches.length > 0 && (
         <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2 font-medium text-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -239,7 +239,7 @@ export function ProjectComparisonsPage({
             ))}
           </div>
         </div>
-      ) : null}
+      )}
 
       <section>
         <div className="mb-4 flex items-center justify-between gap-2">
