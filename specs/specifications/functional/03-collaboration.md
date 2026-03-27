@@ -513,12 +513,24 @@ When comparison runs, AI analyzes **ALL tickets** (source AND compared) across m
 
 **Dashboard Sections** (rendered in order):
 
-1. **Hero Card** — winner ticket key (large), recommendation summary, key differentiator badges, animated circular score gauge, generation date, source ticket key, and three stat pills (Cost, Duration, Quality Score)
-2. **Participant Grid** — non-winner participants as horizontal cards showing rank, ticket key, title, workflow/agent/quality badges, rationale, and a mini score ring
-3. **Stat Cards** — four cards (Cost, Duration, Quality Score, Files Changed) with the winner's value and a micro-bar showing all participants' relative positions
-4. **Unified Metrics Table** — single table with 9 rows (Lines Changed, Files Changed, Test Files Changed, Total Tokens, Input Tokens, Output Tokens, Duration, Cost, Job Count); each cell has a proportional inline bar; first column sticky for horizontal scroll
-5. **Compliance Heatmap** — colored grid with principles as rows and participants as columns; cells colored green (pass), yellow (mixed), red (fail); hover/tap reveals assessment notes tooltip
-6. **Decision Points** — accordions with colored verdict dots (green = winner, yellow = other participant, neutral = no verdict); first accordion open by default; verdict summary visible without expanding
+1. **Hero Card** — winner ticket key (large), recommendation summary, key differentiator badges with per-category colors and semi-transparent borders, SVG score ring with gradient stroke and drop-shadow glow, generation date, source ticket key, and three stat pills (Cost, Duration, Quality Score); card has a gradient background tinted with the winner's accent color at 12% opacity and a subtle radial glow orb in the top-left corner; WINNER badge uses a gradient background pill; recommendation text appears in its own subtle bordered container
+2. **Participant Grid** — non-winner participants as horizontal cards showing rank, ticket key, title, workflow/agent/quality badges, rationale, and a mini score ring; each card has a unique rank-based accent color applied to its background tint, border, mini score ring, and rank badge
+3. **Stat Cards** — four cards with per-category color themes: Cost (yellow), Duration (blue), Quality Score (green), Files Changed (purple); each card applies its theme color to the label text, gradient progress bar, background tint, and border; score values display at 18px font-weight 800
+4. **Unified Metrics Table** — single table with 9 rows (Lines Changed, Files Changed, Test Files Changed, Total Tokens, Input Tokens, Output Tokens, Duration, Cost, Job Count); color legend at top maps each participant to their accent color; each metric row shows stacked gradient bars per participant (solid to transparent); winner values display in bold with their accent color; first column sticky for horizontal scroll
+5. **Compliance Heatmap** — grid with principles as rows and participants as columns; cells use subtle colored backgrounds: pass (green/10 opacity), fail (red/10 opacity), mixed (yellow/10 opacity); hover/tap reveals assessment notes tooltip
+6. **Decision Points** — each point renders as an individual card with background tint matching the verdict winner's accent color; glowing dot indicators (colored box-shadow) instead of plain dots; verdict displayed as a colored pill badge on the right side; first accordion open by default; verdict summary visible without expanding
+
+**Participant Color Identity** (rank-based, consistent across all sections):
+| Rank | Color | Catppuccin Token |
+|------|-------|-----------------|
+| 1 (winner) | Green | `ctp-green` |
+| 2 | Blue | `ctp-blue` |
+| 3 | Mauve/Purple | `ctp-mauve` |
+| 4 | Peach/Orange | `ctp-peach` |
+| 5 | Pink | `ctp-pink` |
+| 6 | Yellow | `ctp-yellow` |
+
+Each participant's color is applied consistently across hero card, participant grid, stat cards, decision points, and metrics. Color assignments are rank-based (not identity-based) — the same ticket may appear in a different color if its rank changes across comparisons.
 
 **Score Color Thresholds** (applied to score gauges and rings throughout the dashboard):
 - Green: ≥ 85
