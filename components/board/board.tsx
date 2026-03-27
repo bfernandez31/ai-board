@@ -204,7 +204,7 @@ export function Board({
 
   const handleNewTicketShortcut = useCallback(() => setIsNewTicketModalOpen(true), []);
   const handleFocusSearchShortcut = useCallback(() => {
-    document.querySelector<HTMLInputElement>('[data-testid="ticket-search-input"]')?.focus();
+    window.dispatchEvent(new CustomEvent('open-command-palette'));
   }, []);
   const handleColumnNavShortcut = useCallback((columnIndex: number) => {
     const stage = STAGE_BY_NUMBER[columnIndex];
