@@ -34,13 +34,7 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 
 **Tailwind Classes**: NEVER construct Tailwind class names dynamically (e.g., `.replace('text-', 'bg-')`, `` `bg-${color}` ``). Tailwind's purger only detects classes that appear as complete literal strings in source code. Always return full static class strings from helper functions.
 
-**Aurora B+ Theme**: Dialogs, modals, and card components use the Aurora B+ visual theme — subtle blue→violet→pink gradients on dark backgrounds. All aurora styles are defined as `aurora-*` utility classes in `globals.css` (`@layer utilities`). NEVER use inline `style={{}}` for aurora gradients; always use the existing classes or create new ones in globals.css. Key classes:
-- **Containers**: `aurora-bg-dialog` (modals), `aurora-bg-section` (hero areas), `aurora-bg-subtle` (cards/sections), `aurora-bg-muted` (low emphasis)
-- **Per-color cards**: `aurora-bg-card-green`, `aurora-bg-card-blue`, `aurora-bg-card-yellow`, `aurora-bg-card-mauve`, `aurora-bg-card-pink`
-- **Stat cards**: `aurora-stat-green`, `aurora-stat-blue`, `aurora-stat-yellow`, `aurora-stat-mauve`, `aurora-stat-pink` (includes glow)
-- **Buttons**: `aurora-btn-blue`, `aurora-btn-mauve`, `aurora-btn-green`, `aurora-btn-yellow`, `aurora-btn-pink`
-- **Special**: `aurora-badge-winner`, `aurora-glow-score`, `aurora-orb-blue`, `aurora-orb-pink`, `aurora-cell-pass/mixed/fail`
-- **Borders**: Use `border-ctp-mauve/15` (subtle) or `border-ctp-mauve/25` (visible) instead of `border-border` on aurora-styled components
+**Aurora B+ Theme**: Dialogs, modals, and cards use `aurora-*` CSS utility classes (defined in `globals.css` under `@layer utilities`) for blue→violet→pink gradient backgrounds and glows. Use these classes instead of inline `style={{}}`. See the `/* Aurora B+ Theme Utilities */` section in `globals.css` for all available classes. Use `border-ctp-mauve/15` instead of `border-border` on aurora-styled components.
 
 ## Commands
 
