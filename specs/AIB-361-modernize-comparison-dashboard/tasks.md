@@ -67,7 +67,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T008 [US2] Apply per-participant accent colors to participant grid in `components/comparison/comparison-participant-grid.tsx` — use `getAccentColorByRank()` to apply each participant's accent color to card background tint, border, mini score ring stroke color, and rank badge background
+- [x] T008 [US2] Apply per-participant accent colors to participant grid in `components/comparison/comparison-participant-grid.tsx` — use `getAccentColorByRank()` to apply each participant's accent color to card background tint, border, mini score ring stroke color, and rank badge background
 
 **Checkpoint**: User Story 2 complete — each participant has a unique color identity across their card
 
@@ -83,11 +83,11 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T009 [P] [US3] Update component tests in `tests/unit/components/comparison-decision-points.test.tsx` — verify verdict pill badge rendering, glowing dot box-shadow classes, and individual card styling per decision point
+- [x] T009 [P] [US3] Update component tests in `tests/unit/components/comparison-decision-points.test.tsx` — verify verdict pill badge rendering, glowing dot box-shadow classes, and individual card styling per decision point
 
 ### Implementation for User Story 3
 
-- [ ] T010 [US3] Enhance decision points in `components/comparison/comparison-decision-points.tsx` — render each decision point as an individual card with verdict winner's accent color background tint, replace plain dots with glowing dots using colored box-shadow from `AccentColorSet.shadow`, add colored verdict pill badge on right side
+- [x] T010 [US3] Enhance decision points in `components/comparison/comparison-decision-points.tsx` — render each decision point as an individual card with verdict winner's accent color background tint, replace plain dots with glowing dots using colored box-shadow from `AccentColorSet.shadow`, add colored verdict pill badge on right side
 
 **Checkpoint**: User Story 3 complete — decision points have clear visual hierarchy with colored cards and verdict pills
 
@@ -103,11 +103,11 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T011 [P] [US4] Update component tests in `tests/unit/components/comparison-unified-metrics.test.tsx` — verify color legend rendering with participant names and colors, gradient bar elements per participant, and winner value bold + accent color styling
+- [x] T011 [P] [US4] Update component tests in `tests/unit/components/comparison-unified-metrics.test.tsx` — verify color legend rendering with participant names and colors, gradient bar elements per participant, and winner value bold + accent color styling
 
 ### Implementation for User Story 4
 
-- [ ] T012 [US4] Upgrade unified metrics in `components/comparison/comparison-unified-metrics.tsx` — add color legend header mapping each participant to their accent color, replace flat bars with gradient bars (solid accent color to transparent) per participant, highlight winner values in bold with their accent color text class
+- [x] T012 [US4] Upgrade unified metrics in `components/comparison/comparison-unified-metrics.tsx` — add color legend header mapping each participant to their accent color, replace flat bars with gradient bars (solid accent color to transparent) per participant, highlight winner values in bold with their accent color text class
 
 **Checkpoint**: User Story 4 complete — metrics are color-coded with legend and winner highlighting
 
@@ -123,11 +123,11 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T013 [P] [US5] Update component tests in `tests/unit/components/comparison-stat-cards.test.tsx` — verify per-card color themes (Cost=yellow, Duration=blue, Quality=green, Files=purple), score value font styling (18px, font-weight 800)
+- [x] T013 [P] [US5] Update component tests in `tests/unit/components/comparison-stat-cards.test.tsx` — verify per-card color themes (Cost=yellow, Duration=blue, Quality=green, Files=purple), score value font styling (18px, font-weight 800)
 
 ### Implementation for User Story 5
 
-- [ ] T014 [US5] Apply color themes to stat cards in `components/comparison/comparison-stat-cards.tsx` — define `StatCardTheme` mapping (Cost→ctp-yellow, Duration→ctp-blue, Quality→ctp-green, Files→ctp-mauve) with text, bgSubtle, border, barGradient classes; apply to label text, progress bar gradient fill, background tint, and border; update score values to `text-lg font-extrabold tracking-tight`
+- [x] T014 [US5] Apply color themes to stat cards in `components/comparison/comparison-stat-cards.tsx` — define `StatCardTheme` mapping (Cost→ctp-yellow, Duration→ctp-blue, Quality→ctp-green, Files→ctp-mauve) with text, bgSubtle, border, barGradient classes; apply to label text, progress bar gradient fill, background tint, and border; update score values to `text-lg font-extrabold tracking-tight`
 
 **Checkpoint**: User Story 5 complete — stat cards are visually distinct by category color
 

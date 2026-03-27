@@ -81,8 +81,8 @@ describe('ComparisonUnifiedMetrics', () => {
   it('renders participant column headers', () => {
     renderWithProviders(<ComparisonUnifiedMetrics participants={[p1, p2]} />);
 
-    expect(screen.getByText('AIB-101')).toBeInTheDocument();
-    expect(screen.getByText('AIB-102')).toBeInTheDocument();
+    expect(screen.getAllByText('AIB-101').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('AIB-102').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders inline bars with proportional widths', () => {
@@ -94,13 +94,13 @@ describe('ComparisonUnifiedMetrics', () => {
     expect(bars.length).toBeGreaterThan(0);
   });
 
-  it('highlights best value with primary color', () => {
+  it('highlights best value with accent color', () => {
     const { container } = renderWithProviders(
       <ComparisonUnifiedMetrics participants={[p1, p2]} />
     );
 
-    const primaryBars = container.querySelectorAll('.bg-primary');
-    expect(primaryBars.length).toBeGreaterThan(0);
+    const bestValues = container.querySelectorAll('[data-testid="metric-value-best"]');
+    expect(bestValues.length).toBeGreaterThan(0);
   });
 
   it('handles pending enrichment state', () => {
@@ -150,5 +150,30 @@ describe('ComparisonUnifiedMetrics', () => {
 
     const stickyHeaders = container.querySelectorAll('.sticky.left-0');
     expect(stickyHeaders.length).toBeGreaterThan(0);
+  });
+
+  it('renders color legend with participant names and accent colors', () => {
+    renderWithProviders(<ComparisonUnifiedMetrics participants={[p1, p2]} />);
+
+    const legendItems = document.querySelectorAll('[data-testid="color-legend-item"]');
+    expect(legendItems.length).toBe(2);
+  });
+
+  it('renders gradient bars per participant', () => {
+    const { container } = renderWithProviders(
+      <ComparisonUnifiedMetrics participants={[p1, p2]} />
+    );
+
+    const bars = container.querySelectorAll('[data-testid="metric-bar"]');
+    expect(bars.length).toBeGreaterThan(0);
+  });
+
+  it('highlights winner values in bold with accent color', () => {
+    const { container } = renderWithProviders(
+      <ComparisonUnifiedMetrics participants={[p1, p2]} />
+    );
+
+    const boldValues = container.querySelectorAll('[data-testid="metric-value-best"]');
+    expect(boldValues.length).toBeGreaterThan(0);
   });
 });

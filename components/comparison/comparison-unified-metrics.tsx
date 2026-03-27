@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ComparisonEnrichmentValue, ComparisonParticipantDetail } from '@/lib/types/comparison';
 import { formatDurationMs } from '@/lib/comparison/format-duration';
 import { getScoreThreshold } from '@/lib/quality-score';
+import { getAccentColorByRank } from '@/lib/comparison/accent-colors';
 import { ComparisonQualityPopover } from './comparison-quality-popover';
 import type { ComparisonUnifiedMetricsProps } from './types';
 
@@ -58,6 +59,17 @@ export function ComparisonUnifiedMetrics({ participants }: ComparisonUnifiedMetr
         <CardTitle>Metrics Comparison</CardTitle>
       </CardHeader>
       <CardContent className="overflow-x-auto">
+        <div className="mb-4 flex flex-wrap gap-3">
+          {participants.map((p) => {
+            const accent = getAccentColorByRank(p.rank);
+            return (
+              <div key={p.ticketId} data-testid="color-legend-item" className="flex items-center gap-1.5">
+                <div className={`h-2.5 w-2.5 rounded-full ${accent.bgMedium}`} />
+                <span className={`text-xs font-medium ${accent.text}`}>{p.ticketKey}</span>
+              </div>
+            );
+          })}
+        </div>
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-border">
@@ -91,6 +103,7 @@ export function ComparisonUnifiedMetrics({ participants }: ComparisonUnifiedMetr
                   </td>
                   {participants.map((p) => {
                     const ev = getMetricValue(p, config);
+                    const accent = getAccentColorByRank(p.rank);
 
                     if (ev.state === 'pending') {
                       return (
@@ -115,11 +128,15 @@ export function ComparisonUnifiedMetrics({ participants }: ComparisonUnifiedMetr
                     return (
                       <td key={p.ticketId} className="px-3 py-2">
                         <div className="space-y-1">
-                          <span className="text-foreground">{formatted}</span>
+                          {isBest ? (
+                            <span data-testid="metric-value-best" className={`font-bold ${accent.text}`}>{formatted}</span>
+                          ) : (
+                            <span className="text-foreground">{formatted}</span>
+                          )}
                           <div className="h-1.5 w-full rounded-full bg-muted">
                             <div
                               data-testid="metric-bar"
-                              className={`h-1.5 rounded-full ${isBest ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                              className={`h-1.5 rounded-full ${isBest ? accent.bgMedium : 'bg-muted-foreground/30'}`}
                               style={{ width: `${barWidth}%` }}
                             />
                           </div>

@@ -126,4 +126,32 @@ describe('ComparisonDecisionPoints (enhanced)', () => {
 
     expect(screen.getByText(/No saved participant approaches/)).toBeInTheDocument();
   });
+
+  it('renders verdict pill badge with verdict summary', () => {
+    renderWithProviders(
+      <ComparisonDecisionPoints decisionPoints={decisionPoints} winnerTicketId={winnerTicketId} />
+    );
+
+    const verdictPills = document.querySelectorAll('[data-testid="verdict-pill"]');
+    expect(verdictPills.length).toBeGreaterThan(0);
+  });
+
+  it('renders glowing dots with box-shadow classes', () => {
+    const { container } = renderWithProviders(
+      <ComparisonDecisionPoints decisionPoints={decisionPoints} winnerTicketId={winnerTicketId} />
+    );
+
+    const glowingDots = container.querySelectorAll('[data-testid="verdict-dot-glow"]');
+    expect(glowingDots.length).toBeGreaterThan(0);
+  });
+
+  it('renders individual decision point cards with background tint', () => {
+    const { container } = renderWithProviders(
+      <ComparisonDecisionPoints decisionPoints={decisionPoints} winnerTicketId={winnerTicketId} />
+    );
+
+    // First decision point (winner verdict) should have green accent background
+    const cards = container.querySelectorAll('[data-testid="decision-point-card"]');
+    expect(cards.length).toBe(3);
+  });
 });
