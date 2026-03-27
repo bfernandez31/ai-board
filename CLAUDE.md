@@ -34,7 +34,7 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 
 **Tailwind Classes**: NEVER construct Tailwind class names dynamically (e.g., `.replace('text-', 'bg-')`, `` `bg-${color}` ``). Tailwind's purger only detects classes that appear as complete literal strings in source code. Always return full static class strings from helper functions.
 
-**Aurora B+ Theme**: Dialogs, modals, and cards use `aurora-*` CSS utility classes (defined in `globals.css` under `@layer utilities`) for blue→violet→pink gradient backgrounds and glows. Use these classes instead of inline `style={{}}`. See the `/* Aurora B+ Theme Utilities */` section in `globals.css` for all available classes. Use `border-ctp-mauve/15` instead of `border-border` on aurora-styled components.
+**Aurora B+ Theme**: Dialogs, modals, and cards use `aurora-*` CSS utility classes (defined in `globals.css` under `@layer utilities`) for blue→violet→pink gradient backgrounds and glows.
 
 ## Commands
 
