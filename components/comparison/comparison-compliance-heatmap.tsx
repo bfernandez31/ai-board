@@ -9,27 +9,30 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ComparisonComplianceHeatmapProps } from './types';
 
-/** Aurora-styled status colors with gradients */
+/** Aurora-styled status colors with visible gradients */
 const statusStyles: Record<string, { className: string; style: React.CSSProperties }> = {
   pass: {
     className: 'h-8 w-full cursor-pointer rounded',
     style: {
-      background: 'linear-gradient(135deg, hsl(var(--ctp-green) / 0.12), hsl(var(--ctp-teal) / 0.08))',
-      border: '1px solid hsl(var(--ctp-green) / 0.15)',
+      background: 'linear-gradient(135deg, hsl(var(--ctp-green) / 0.25), hsl(var(--ctp-teal) / 0.15))',
+      border: '1px solid hsl(var(--ctp-green) / 0.3)',
+      boxShadow: '0 0 8px hsl(var(--ctp-green) / 0.08)',
     },
   },
   mixed: {
     className: 'h-8 w-full cursor-pointer rounded',
     style: {
-      background: 'linear-gradient(135deg, hsl(var(--ctp-yellow) / 0.12), hsl(var(--ctp-peach) / 0.08))',
-      border: '1px solid hsl(var(--ctp-yellow) / 0.15)',
+      background: 'linear-gradient(135deg, hsl(var(--ctp-yellow) / 0.25), hsl(var(--ctp-peach) / 0.15))',
+      border: '1px solid hsl(var(--ctp-yellow) / 0.3)',
+      boxShadow: '0 0 8px hsl(var(--ctp-yellow) / 0.08)',
     },
   },
   fail: {
     className: 'h-8 w-full cursor-pointer rounded',
     style: {
-      background: 'linear-gradient(135deg, hsl(var(--ctp-red) / 0.12), hsl(var(--ctp-maroon) / 0.08))',
-      border: '1px solid hsl(var(--ctp-red) / 0.15)',
+      background: 'linear-gradient(135deg, hsl(var(--ctp-red) / 0.25), hsl(var(--ctp-maroon) / 0.15))',
+      border: '1px solid hsl(var(--ctp-red) / 0.3)',
+      boxShadow: '0 0 8px hsl(var(--ctp-red) / 0.08)',
     },
   },
 };
