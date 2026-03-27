@@ -561,23 +561,20 @@ A dedicated project-level page at `/projects/{projectId}/comparisons` provides c
 - Title: "Comparisons" with subtitle describing the page purpose
 - "Compare VERIFY tickets" button opens a launch sheet for initiating new comparisons
 
-**Layout**: Two-column grid on desktop (xl breakpoint):
-- Left panel (340px): History list with pagination
-- Right panel (flexible): Comparison detail view with internal scroll area
-
-On viewports below xl breakpoint, panels stack vertically.
+**Layout**: Single-column vertical list. Comparisons are displayed as stacked cards in reverse chronological order (newest first) spanning the full page width.
 
 **History List**:
-- Displays comparisons in reverse chronological order (newest first)
-- Each item shows: winner ticket key, participant ticket keys, generation timestamp, and summary (line-clamped to 2 lines)
-- Selected comparison highlighted with primary border and background tint
+- Each card shows: winner ticket key, winner title, summary, and date
+- Clicking a card expands the full comparison detail inline below the card (accordion pattern)
+- Clicking the same card again, or clicking another card, collapses the open detail
+- Only one comparison can be expanded at a time
+- Expanded comparison is highlighted; detail content flows naturally within the page scroll (no nested scroll container)
 - Refresh button to manually refetch the list
-- Paginated with Previous/Next controls and page counter (offset-based, 10 per page, max 50)
+- "Load More" button at the bottom loads the next page of comparisons (10 per page); a progress indicator shows how many are loaded vs. the total
 
 **Detail View**:
-- Renders the full comparison dashboard for the selected comparison
+- Renders the full comparison dashboard inline below the expanded card
 - Reuses all existing dashboard sub-components: Hero Card, Participant Grid, Stat Cards, Unified Metrics, Decision Points, Compliance Heatmap
-- Contained within a scroll area for long content
 - Shows loading skeleton while fetching detail data
 
 **Launch Sheet**:
@@ -593,14 +590,14 @@ On viewports below xl breakpoint, panels stack vertically.
 - Job status polled every 2 seconds while PENDING or RUNNING
 - On completion, the comparison list auto-refreshes and the new comparison becomes selected
 
-**Deep Linking**: URL parameters `?comparisonId=X` and `?page=Y` support direct navigation to a specific comparison and page. The first comparison on the current page is auto-selected if no `comparisonId` is specified.
+**Deep Linking**: The `?comparisonId=X` URL parameter supports direct navigation to a specific comparison. The targeted comparison is auto-expanded and scrolled into view on load.
 
 **Empty States**:
 - No comparisons: Message encouraging the user to launch their first comparison
 - No VERIFY candidates: Message explaining that tickets must reach VERIFY stage before they can be compared
 
 **Data Freshness**:
-- List: 30-second stale time (TanStack Query)
+- List: 30-second stale time (TanStack Query, infinite query accumulating pages)
 - Detail: 5-minute stale time
 - Candidates: fetched on-demand when launch sheet opens
 
