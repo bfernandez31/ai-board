@@ -2148,6 +2148,166 @@ Idempotency is handled inside a database transaction: if a record with the same 
 - `404`: Source ticket or participant not found in project
 - `500`: Internal persistence error
 
+## Project-Level Comparison Endpoints
+
+Project-level comparison endpoints serve the Comparisons Hub page, providing paginated history, detail views, candidate listing, and comparison launch capabilities at the project scope (as opposed to the ticket-scoped endpoints above).
+
+### GET /api/projects/:projectId/comparisons
+
+Fetch paginated list of all comparisons for a project.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (via `verifyProjectAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters**:
+- `page` (number, optional): Page number, positive integer (default: 1)
+- `pageSize` (number, optional): Items per page, positive integer (default: 10, max: 50)
+
+**Response** (200 OK):
+```json
+{
+  "comparisons": [
+    {
+      "id": 1,
+      "generatedAt": "2026-03-27T14:30:00.000Z",
+      "sourceTicketId": 10,
+      "sourceTicketKey": "AIB-123",
+      "winnerTicketId": 12,
+      "winnerTicketKey": "AIB-125",
+      "winnerTicketTitle": "Feature implementation",
+      "participantTicketIds": [11, 12],
+      "participantTicketKeys": ["AIB-124", "AIB-125"],
+      "summary": "AIB-125 demonstrates superior code quality...",
+      "overallRecommendation": "Ship AIB-125",
+      "keyDifferentiators": ["Better test coverage", "Proper error handling"],
+      "markdownPath": "specs/AIB-123-feature/comparisons/20260327-143000-vs-AIB-124-AIB-125.md"
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 25,
+  "totalPages": 3
+}
+```
+
+**Pagination**: Offset-based. `skip = (page - 1) * pageSize`. Results ordered by `generatedAt DESC`, then `id DESC`.
+
+**Errors**:
+- `400`: Invalid project ID or pagination parameters
+- `401`: Not authenticated
+- `404`: Project not found or user has no access
+
+### GET /api/projects/:projectId/comparisons/:comparisonId
+
+Fetch full comparison detail at project scope.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (via `verifyProjectAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `comparisonId` (number, required): Comparison record ID
+
+**Response** (200 OK): Same shape as the ticket-scoped `GET /api/projects/:projectId/tickets/:id/comparisons/:comparisonId` endpoint — includes participants with enriched telemetry, quality, metrics, plus decision points and compliance rows.
+
+**Errors**:
+- `400`: Invalid project ID or comparison ID
+- `401`: Not authenticated
+- `404`: Project not found, user has no access, or comparison not found in this project
+
+### GET /api/projects/:projectId/comparisons/candidates
+
+List VERIFY-stage tickets eligible for comparison launch.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (via `verifyProjectAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Response** (200 OK):
+```json
+{
+  "candidates": [
+    {
+      "id": 5,
+      "ticketKey": "AIB-125",
+      "title": "Feature implementation",
+      "branch": "AIB-125-feature-implementation",
+      "stage": "VERIFY",
+      "workflowType": "FULL",
+      "agent": "CLAUDE",
+      "qualityScore": 85,
+      "updatedAt": "2026-03-27T10:00:00.000Z",
+      "hasActiveJob": false
+    }
+  ]
+}
+```
+
+**Fields**:
+- `qualityScore`: Latest quality score if available, null otherwise
+- `hasActiveJob`: Whether the ticket has an active (PENDING/RUNNING) AI-BOARD job
+
+**Errors**:
+- `400`: Invalid project ID
+- `401`: Not authenticated
+- `404`: Project not found or user has no access
+
+### POST /api/projects/:projectId/comparisons/launch
+
+Launch a new comparison workflow for selected VERIFY-stage tickets.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (via `verifyProjectAccess`). Also requires authenticated user identity (via `requireAuth`) for workflow dispatch.
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "ticketIds": [5, 6, 7]
+}
+```
+
+**Validation**:
+- `ticketIds`: Array of positive integers, minimum 2, maximum 5, all unique
+- All tickets must exist in the specified project
+- All tickets must be in VERIFY stage
+- No ticket can have an active (PENDING/RUNNING) AI-BOARD job
+
+**Response** (202 Accepted):
+```json
+{
+  "jobId": 42,
+  "commentId": 123,
+  "projectId": 3,
+  "sourceTicketId": 5,
+  "sourceTicketKey": "AIB-125",
+  "selectedTicketIds": [5, 6, 7],
+  "selectedTicketKeys": ["AIB-125", "AIB-126", "AIB-127"],
+  "status": "PENDING",
+  "commentContent": "...",
+  "createdAt": "2026-03-27T14:30:00.000Z"
+}
+```
+
+**Side Effects**:
+- Creates a Job record with command `compare`
+- Creates a Comment on the source ticket with the comparison request
+- Dispatches a GitHub workflow (`speckit.yml`) with the comparison parameters
+
+**Errors**:
+- `400`: Invalid project ID, malformed body, fewer than 2 or more than 5 tickets, or duplicate ticket IDs
+- `401`: Not authenticated
+- `404`: Project not found, user has no access, or ticket not found in project
+- `409`: Ticket not in VERIFY stage, or ticket already has an active AI-BOARD job
+- `500`: Internal error or workflow dispatch failure
+
 ## Job Status Endpoints
 
 ### GET /api/projects/:projectId/jobs/status
