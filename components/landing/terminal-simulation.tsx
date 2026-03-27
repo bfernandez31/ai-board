@@ -80,7 +80,7 @@ export function TerminalSimulation() {
 
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced) {
-      setLines(LOG_SEQUENCES.flat());
+      requestAnimationFrame(() => setLines(LOG_SEQUENCES.flat()));
       return;
     }
 

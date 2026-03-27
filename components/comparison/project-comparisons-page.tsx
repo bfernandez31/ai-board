@@ -143,8 +143,10 @@ export function ProjectComparisonsPage({
     });
     void infiniteQuery.refetch();
 
-    setPendingLaunches((current) =>
-      current.filter((launch) => !hasLaunchStatus(launch, TERMINAL_LAUNCH_STATUSES))
+    requestAnimationFrame(() =>
+      setPendingLaunches((current) =>
+        current.filter((launch) => !hasLaunchStatus(launch, TERMINAL_LAUNCH_STATUSES))
+      )
     );
   }, [hasTerminalPendingJob, projectId, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -23,9 +23,11 @@ export function TypewriterText({
     // Check reduced motion preference
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced) {
-      setDisplayed(text);
-      setStarted(true);
-      setDone(true);
+      requestAnimationFrame(() => {
+        setDisplayed(text);
+        setStarted(true);
+        setDone(true);
+      });
       return;
     }
 
@@ -37,7 +39,7 @@ export function TypewriterText({
     if (!started || done) return;
 
     if (displayed.length >= text.length) {
-      setDone(true);
+      requestAnimationFrame(() => setDone(true));
       return;
     }
 

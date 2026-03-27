@@ -27,7 +27,7 @@ export function AnimatedCounter({
 
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced) {
-      setCount(target);
+      requestAnimationFrame(() => setCount(target));
       return;
     }
 
