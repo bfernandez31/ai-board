@@ -11,6 +11,7 @@ export interface TicketSearchCandidate {
   projectId: number;
   ticketKey: string;
   title: string;
+  description: string | null;
   stage: Stage;
 }
 
@@ -53,7 +54,7 @@ function isSubsequence(query: string, value: string): boolean {
 
 function getTicketMatchDetails(
   query: string,
-  ticket: Pick<TicketSearchCandidate, 'ticketKey' | 'title'>
+  ticket: Pick<TicketSearchCandidate, 'ticketKey' | 'title' | 'description'>
 ): MatchDetails | null {
   if (!query) {
     return {
@@ -65,6 +66,7 @@ function getTicketMatchDetails(
 
   const key = ticket.ticketKey.toLowerCase();
   const title = ticket.title.toLowerCase();
+  const description = (ticket.description ?? '').toLowerCase();
   const combined = `${key} ${title}`;
 
   if (key === query) {
@@ -77,6 +79,10 @@ function getTicketMatchDetails(
 
   if (combined.includes(query)) {
     return { score: 600 - combined.indexOf(query), rank: 2, matchType: 'substring' };
+  }
+
+  if (description.includes(query)) {
+    return { score: 500 - description.indexOf(query), rank: 2, matchType: 'substring' };
   }
 
   if (isSubsequence(query, combined)) {

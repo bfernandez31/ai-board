@@ -66,15 +66,23 @@ export async function GET(
     }
 
     const tickets = await prisma.ticket.findMany({
-      where: { projectId },
+      where: {
+        projectId,
+        OR: [
+          { ticketKey: { contains: query, mode: 'insensitive' } },
+          { title: { contains: query, mode: 'insensitive' } },
+          { description: { contains: query, mode: 'insensitive' } },
+        ],
+      },
       select: {
         id: true,
         projectId: true,
         ticketKey: true,
         title: true,
+        description: true,
         stage: true,
       },
-      take: 100,
+      take: limit,
       orderBy: { updatedAt: 'desc' },
     });
 

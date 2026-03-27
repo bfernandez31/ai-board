@@ -49,6 +49,7 @@ export async function GET(
             projectId: true,
             ticketKey: true,
             title: true,
+            description: true,
             stage: true,
           },
           orderBy: { updatedAt: 'desc' },
