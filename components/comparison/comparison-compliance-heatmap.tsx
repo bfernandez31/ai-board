@@ -11,10 +11,26 @@ import { cn } from '@/lib/utils';
 import { getComplianceTheme } from './comparison-theme';
 import type { ComparisonComplianceHeatmapProps } from './types';
 
+function getComplianceLabel(status: string): string {
+  if (status === 'pass') {
+    return 'Pass';
+  }
+
+  if (status === 'mixed') {
+    return 'Mixed';
+  }
+
+  if (status === 'fail') {
+    return 'Fail';
+  }
+
+  return 'N/A';
+}
+
 export function ComparisonComplianceHeatmap({
   rows,
   participants,
-}: ComparisonComplianceHeatmapProps) {
+}: ComparisonComplianceHeatmapProps): React.JSX.Element {
   if (rows.length === 0) {
     return (
       <Card>
@@ -74,15 +90,6 @@ export function ComparisonComplianceHeatmap({
                       );
                     }
 
-                    const label =
-                      assessment.status === 'pass'
-                        ? 'Pass'
-                        : assessment.status === 'mixed'
-                          ? 'Mixed'
-                          : assessment.status === 'fail'
-                            ? 'Fail'
-                            : 'N/A';
-
                     return (
                       <td key={p.ticketId} className="px-3 py-2">
                         <Tooltip>
@@ -94,7 +101,7 @@ export function ComparisonComplianceHeatmap({
                                 getComplianceTheme(assessment.status)
                               )}
                             >
-                              {label}
+                              {getComplianceLabel(assessment.status)}
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>

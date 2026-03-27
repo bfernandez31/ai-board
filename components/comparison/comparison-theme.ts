@@ -143,9 +143,11 @@ export function getDecisionVerdictTheme(
     return 'border-border/80 bg-background/30 text-muted-foreground';
   }
 
-  return verdictTicketId === winnerTicketId
-    ? cn(winnerTheme.border, winnerTheme.surface, winnerTheme.text)
-    : cn(alternateTheme.border, alternateTheme.surface, alternateTheme.text);
+  if (verdictTicketId === winnerTicketId) {
+    return cn(winnerTheme.border, winnerTheme.surface, winnerTheme.text);
+  }
+
+  return cn(alternateTheme.border, alternateTheme.surface, alternateTheme.text);
 }
 
 export function getDecisionDotTheme(
@@ -156,7 +158,11 @@ export function getDecisionDotTheme(
     return 'bg-muted-foreground/30';
   }
 
-  return verdictTicketId === winnerTicketId ? winnerTheme.dot : alternateTheme.dot;
+  if (verdictTicketId === winnerTicketId) {
+    return winnerTheme.dot;
+  }
+
+  return alternateTheme.dot;
 }
 
 export function getComplianceTheme(status: string): string {

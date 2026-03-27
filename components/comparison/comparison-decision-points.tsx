@@ -12,13 +12,25 @@ import { Badge } from '@/components/ui/badge';
 import { getDecisionDotTheme, getDecisionVerdictTheme } from './comparison-theme';
 import type { ComparisonDecisionPointsProps, ComparisonDecisionPointsEnhancedProps } from './types';
 
+function getVerdictLabel(verdictTicketId: number | null, winnerTicketId: number | null): string {
+  if (verdictTicketId == null) {
+    return 'Mixed';
+  }
+
+  if (verdictTicketId === winnerTicketId) {
+    return 'Winner';
+  }
+
+  return 'Alternate';
+}
+
 function VerdictDot({
   verdictTicketId,
   winnerTicketId,
 }: {
   verdictTicketId: number | null;
   winnerTicketId: number;
-}) {
+}): React.JSX.Element {
   if (verdictTicketId === null) {
     return (
       <div
@@ -35,7 +47,7 @@ function VerdictDot({
 
 export function ComparisonDecisionPoints(
   props: ComparisonDecisionPointsProps | ComparisonDecisionPointsEnhancedProps
-) {
+): React.JSX.Element {
   const { decisionPoints } = props;
   const winnerTicketId = 'winnerTicketId' in props ? props.winnerTicketId : null;
 
@@ -84,7 +96,7 @@ export function ComparisonDecisionPoints(
                       getDecisionVerdictTheme(point.verdictTicketId, winnerTicketId)
                     )}
                   >
-                    {point.verdictTicketId == null ? 'Mixed' : point.verdictTicketId === winnerTicketId ? 'Winner' : 'Alternate'}
+                    {getVerdictLabel(point.verdictTicketId, winnerTicketId)}
                   </Badge>
                   <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
                 </div>
