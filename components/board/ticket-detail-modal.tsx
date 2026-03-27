@@ -751,8 +751,8 @@ export function TicketDetailModal({
           <DialogDescription className="sr-only">
             View and edit ticket details, including title, description, stage, clarification policy, and documentation.
           </DialogDescription>
-          {/* Row 1: Identity (left) + Actions (right) */}
-          <div className="flex items-center justify-between mb-2">
+          {/* Row 1: Identity (left) + Actions (right) — pr-10 clears the close button */}
+          <div className="flex items-center justify-between mb-2 pr-10">
             <div className="flex items-center gap-2">
               <span className="text-sm font-mono font-bold text-muted-foreground" data-testid="ticket-key">
                 {localTicket?.ticketKey || ticket.ticketKey}
