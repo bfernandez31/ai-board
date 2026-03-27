@@ -56,6 +56,7 @@ const comparisonRecordInclude = {
 } satisfies Prisma.ComparisonRecordInclude;
 
 function getWinnerTicketKey(report: ComparisonReport): string {
+  // Primary: highest constitution compliance score
   const complianceScores = Object.entries(report.compliance).sort(
     (a, b) => b[1].overall - a[1].overall
   );
@@ -63,13 +64,19 @@ function getWinnerTicketKey(report: ComparisonReport): string {
     return complianceScores[0][0];
   }
 
-  const metricsScores = Object.values(report.implementation)
-    .filter((metric) => metric.hasData)
-    .sort((a, b) => b.linesChanged - a.linesChanged);
-  if (metricsScores[0]) {
-    return metricsScores[0].ticketKey;
+  // Fallback: ticket with most decision point verdicts (qualitative, not code volume)
+  const verdictCounts = new Map<string, number>();
+  for (const dp of report.decisionPoints ?? []) {
+    if (dp.verdictTicketKey) {
+      verdictCounts.set(dp.verdictTicketKey, (verdictCounts.get(dp.verdictTicketKey) ?? 0) + 1);
+    }
+  }
+  const byVerdicts = [...verdictCounts.entries()].sort((a, b) => b[1] - a[1]);
+  if (byVerdicts[0]) {
+    return byVerdicts[0][0];
   }
 
+  // Last resort: first compared ticket
   return report.metadata.comparedTickets[0] ?? report.metadata.sourceTicket;
 }
 
@@ -86,8 +93,12 @@ function buildRankings(report: ComparisonReport): Array<{
   const sorted = report.metadata.comparedTickets
     .map((ticketKey) => {
       const compliance = report.compliance[ticketKey];
-      const metrics = report.implementation[ticketKey];
-      const score = compliance?.overall ?? (metrics?.hasData ? 50 : 0);
+      // Score from compliance; fallback to decision point win ratio (not code volume)
+      const verdictWins = (report.decisionPoints ?? [])
+        .filter(dp => dp.verdictTicketKey === ticketKey).length;
+      const totalDPs = (report.decisionPoints ?? []).length;
+      const score = compliance?.overall
+        ?? (totalDPs > 0 ? Math.round((verdictWins / totalDPs) * 100) : 0);
       const rankRationale =
         compliance?.principles
           ?.filter((principle) => principle.passed)

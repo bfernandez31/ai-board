@@ -292,8 +292,8 @@ If the feature introduces new behaviors, APIs, or patterns, check if `specs/spec
 | Criterion | Weight | Description |
 |-----------|--------|-------------|
 | Spec Fulfillment | 25% | Does the code deliver what the ticket spec requested? (from Step 5.5) |
-| Code Quality | 25% | Clean code, readability, maintainability |
-| Constitution Compliance | 25% | Adherence to project standards in actual code |
+| Code Quality | 20% | Clean code, readability, maintainability |
+| Project Rules Compliance | 30% | Adherence to `constitution.md` AND `CLAUDE.md` rules in actual code |
 | Implementation Choices | 15% | Architectural decisions, patterns |
 | Test Coverage | 10% | Presence and quality of tests |
 

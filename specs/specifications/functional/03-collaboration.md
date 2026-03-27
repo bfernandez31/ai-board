@@ -484,15 +484,23 @@ When comparison runs, AI analyzes **ALL tickets** (source AND compared) across m
 | Criterion | Weight | Description |
 |-----------|--------|-------------|
 | Spec Fulfillment | 25% | Does the code deliver what the ticket spec requested? |
-| Code Quality | 25% | Clean code, readability, maintainability |
-| Constitution Compliance | 25% | Adherence to project standards in actual code |
+| Code Quality | 20% | Clean code, readability, maintainability |
+| Project Rules Compliance | 30% | Adherence to `constitution.md` AND `CLAUDE.md` rules in actual code |
 | Implementation Choices | 15% | Architectural decisions, patterns |
 | Test Coverage | 10% | Presence and quality of tests |
+
+**Winner Determination** (server-side, in order of precedence):
+1. Highest project rules compliance score (primary)
+2. Most decision point verdicts won (qualitative fallback)
+3. First compared ticket (last resort)
+
+Code volume (lines changed, files changed) is never used as a ranking signal.
 
 **NOT evaluated** (informational only, never influences ranking):
 - Spec document quality (don't compare spec writing quality between tickets)
 - Workflow type, documentation in specs/
 - Cost / telemetry data (displayed for reference, not a quality signal)
+- Code volume / lines changed (displayed for reference, not a quality signal)
 
 **Low Relevance Handling**:
 - Alignment < 30% triggers warning
