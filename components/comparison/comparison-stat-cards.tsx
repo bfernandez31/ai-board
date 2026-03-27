@@ -2,7 +2,7 @@
 
 import type { ComparisonParticipantDetail } from '@/lib/types/comparison';
 import { formatDurationMs } from '@/lib/comparison/format-duration';
-import { STAT_CARD_COLORS } from './participant-colors';
+import { formatEnrichmentValue, STAT_CARD_COLORS } from './participant-colors';
 import type { ComparisonStatCardsProps } from './types';
 
 interface StatCardConfig {
@@ -37,16 +37,6 @@ const statCardConfigs: StatCardConfig[] = [
   },
 ];
 
-function getDisplayValue(
-  enrichment: { state: string; value: number | null },
-  format: (v: number) => string
-): string {
-  if (enrichment.state === 'available' && enrichment.value != null) {
-    return format(enrichment.value);
-  }
-  if (enrichment.state === 'pending') return 'Pending';
-  return 'N/A';
-}
 
 function MicroBar({
   participants,
@@ -91,7 +81,7 @@ export function ComparisonStatCards({ winner, participants }: ComparisonStatCard
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {statCardConfigs.map((config, i) => {
         const enrichment = config.getValue(winner);
-        const displayValue = getDisplayValue(enrichment, config.format);
+        const displayValue = formatEnrichmentValue(enrichment, config.format);
         const theme = STAT_CARD_COLORS[i]!;
 
         return (

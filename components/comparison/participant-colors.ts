@@ -119,3 +119,15 @@ export const STAT_CARD_COLORS = [
     bar: 'bg-ctp-mauve',
   },
 ] as const;
+
+/** Format an enrichment value for display. Returns formatted string, 'Pending', or 'N/A'. */
+export function formatEnrichmentValue(
+  enrichment: { state: string; value: number | null },
+  format: (v: number) => string
+): string {
+  if (enrichment.state === 'available' && enrichment.value != null) {
+    return format(enrichment.value);
+  }
+  if (enrichment.state === 'pending') return 'Pending';
+  return 'N/A';
+}

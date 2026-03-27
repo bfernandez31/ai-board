@@ -58,7 +58,7 @@ function ParticipantLegend({ participants }: { participants: ComparisonParticipa
         const color = getParticipantColor(p.rank);
         return (
           <div key={p.ticketId} className="flex items-center gap-1.5">
-            <div className={`h-2.5 w-2.5 rounded-full ${color.bgMedium}`}
+            <div className="h-2.5 w-2.5 rounded-full"
               style={{ backgroundColor: color.stroke }}
             />
             <span className="text-xs text-muted-foreground">{p.ticketKey}</span>

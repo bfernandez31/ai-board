@@ -4,19 +4,8 @@ import { Trophy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatDurationMs } from '@/lib/comparison/format-duration';
 import { ScoreGauge } from './score-gauge';
-import { getParticipantColor } from './participant-colors';
+import { formatEnrichmentValue, getParticipantColor } from './participant-colors';
 import type { ComparisonHeroCardProps } from './types';
-
-function getEnrichmentDisplay(
-  enrichment: { state: string; value: number | null },
-  format: (v: number) => string
-): string {
-  if (enrichment.state === 'available' && enrichment.value != null) {
-    return format(enrichment.value);
-  }
-  if (enrichment.state === 'pending') return 'Pending';
-  return 'N/A';
-}
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleString('en-US', {
@@ -58,9 +47,9 @@ export function ComparisonHeroCard({
   generatedAt,
   sourceTicketKey,
 }: ComparisonHeroCardProps) {
-  const costValue = getEnrichmentDisplay(winner.telemetry.costUsd, (v) => `$${v.toFixed(2)}`);
-  const durationValue = getEnrichmentDisplay(winner.telemetry.durationMs, formatDurationMs);
-  const qualityValue = getEnrichmentDisplay(winner.quality, String);
+  const costValue = formatEnrichmentValue(winner.telemetry.costUsd, (v) => `$${v.toFixed(2)}`);
+  const durationValue = formatEnrichmentValue(winner.telemetry.durationMs, formatDurationMs);
+  const qualityValue = formatEnrichmentValue(winner.quality, String);
   const winnerColor = getParticipantColor(1);
 
   return (
