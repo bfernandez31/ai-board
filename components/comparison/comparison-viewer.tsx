@@ -26,7 +26,7 @@ import { ComparisonStatCards } from './comparison-stat-cards';
 import { ComparisonUnifiedMetrics } from './comparison-unified-metrics';
 import type { ComparisonDashboardProps, ComparisonViewerProps } from './types';
 
-const sectionClass = 'rounded-xl border border-border bg-card p-6';
+const sectionClass = 'rounded-xl border border-ctp-mauve/15 p-6';
 
 export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
   const winner = detail.participants.find((p) => p.ticketId === detail.winnerTicketId);
@@ -44,7 +44,10 @@ export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
   return (
     <ScrollArea className="h-[68vh] pr-4">
       <div className="space-y-6">
-        <section className={sectionClass}>
+        <section
+          className={sectionClass}
+          style={{ background: 'linear-gradient(160deg, hsl(var(--ctp-sapphire) / 0.06) 0%, hsl(var(--ctp-mauve) / 0.08) 50%, hsl(var(--ctp-pink) / 0.05) 100%)' }}
+        >
           <ComparisonHeroCard
             winner={winner}
             recommendation={detail.overallRecommendation}
@@ -54,25 +57,37 @@ export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
           />
         </section>
 
-        <section className={sectionClass}>
-          <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        <section
+          className={sectionClass}
+          style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+        >
+          <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
             Participants
           </h3>
           <ComparisonParticipantGrid participants={nonWinners} />
         </section>
 
-        <section className={sectionClass}>
-          <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        <section
+          className={sectionClass}
+          style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+        >
+          <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
             Overview
           </h3>
           <ComparisonStatCards winner={winner} participants={detail.participants} />
         </section>
 
-        <section className={sectionClass}>
+        <section
+          className={sectionClass}
+          style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+        >
           <ComparisonUnifiedMetrics participants={detail.participants} />
         </section>
 
-        <section className={sectionClass}>
+        <section
+          className={sectionClass}
+          style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+        >
           <ComparisonDecisionPoints
             decisionPoints={detail.decisionPoints}
             winnerTicketId={detail.winnerTicketId}
@@ -80,7 +95,10 @@ export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
           />
         </section>
 
-        <section className={sectionClass}>
+        <section
+          className={sectionClass}
+          style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+        >
           <ComparisonComplianceHeatmap
             rows={detail.complianceRows}
             participants={detail.participants}
@@ -153,7 +171,13 @@ export function ComparisonViewer({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-5xl bg-card text-card-foreground sm:max-w-[90vw]">
+      <DialogContent
+        className="max-h-[90vh] max-w-5xl text-card-foreground sm:max-w-[90vw]"
+        style={{
+          background: 'linear-gradient(160deg, hsl(var(--ctp-sapphire) / 0.07) 0%, hsl(var(--ctp-mauve) / 0.09) 40%, hsl(var(--ctp-pink) / 0.06) 100%), hsl(var(--ctp-crust))',
+          boxShadow: '0 0 60px hsl(var(--ctp-mauve) / 0.08), 0 0 120px hsl(var(--ctp-sapphire) / 0.04)',
+        }}
+      >
         <DialogHeader className="pr-12">
           <DialogDescription className="sr-only">
             Review saved comparison history and structured dashboard details for this ticket.
@@ -168,6 +192,11 @@ export function ComparisonViewer({
                 type="button"
                 variant="outline"
                 size="sm"
+                className="border-ctp-mauve/35 text-ctp-lavender"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.1), hsl(var(--ctp-pink) / 0.06))',
+                  boxShadow: '0 0 8px hsl(var(--ctp-mauve) / 0.1)',
+                }}
                 onClick={() => setShowHistory((value) => !value)}
               >
                 <History className="mr-2 h-4 w-4" />

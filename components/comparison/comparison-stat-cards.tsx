@@ -7,35 +7,47 @@ import type { ComparisonStatCardsProps } from './types';
 
 interface StatCardTheme {
   text: string;
-  bgSubtle: string;
   border: string;
   barGradient: string;
+  /** CSS var name for glow color */
+  glowVar: string;
+  /** Gradient background from/to CSS var names */
+  gradientFrom: string;
+  gradientTo: string;
 }
 
 const STAT_THEMES: Record<string, StatCardTheme> = {
   Cost: {
     text: 'text-ctp-yellow',
-    bgSubtle: 'bg-ctp-yellow/10',
-    border: 'border-ctp-yellow/20',
+    border: 'border-ctp-yellow/25',
     barGradient: 'bg-ctp-yellow',
+    glowVar: '--ctp-yellow',
+    gradientFrom: '--ctp-yellow',
+    gradientTo: '--ctp-peach',
   },
   Duration: {
-    text: 'text-ctp-blue',
-    bgSubtle: 'bg-ctp-blue/10',
-    border: 'border-ctp-blue/20',
-    barGradient: 'bg-ctp-blue',
+    text: 'text-ctp-sapphire',
+    border: 'border-ctp-sapphire/25',
+    barGradient: 'bg-ctp-sapphire',
+    glowVar: '--ctp-sapphire',
+    gradientFrom: '--ctp-sapphire',
+    gradientTo: '--ctp-mauve',
   },
   'Quality Score': {
-    text: 'text-ctp-green',
-    bgSubtle: 'bg-ctp-green/10',
-    border: 'border-ctp-green/20',
-    barGradient: 'bg-ctp-green',
+    text: 'text-ctp-mauve',
+    border: 'border-ctp-mauve/25',
+    barGradient: 'bg-ctp-mauve',
+    glowVar: '--ctp-mauve',
+    gradientFrom: '--ctp-mauve',
+    gradientTo: '--ctp-pink',
   },
   'Files Changed': {
-    text: 'text-ctp-mauve',
-    bgSubtle: 'bg-ctp-mauve/10',
-    border: 'border-ctp-mauve/20',
-    barGradient: 'bg-ctp-mauve',
+    text: 'text-ctp-pink',
+    border: 'border-ctp-pink/25',
+    barGradient: 'bg-ctp-pink',
+    glowVar: '--ctp-pink',
+    gradientFrom: '--ctp-pink',
+    gradientTo: '--ctp-peach',
   },
 };
 
@@ -103,7 +115,10 @@ function MicroBar({
   const maxValue = Math.max(...availableValues.map((e) => e.value), 1);
 
   return (
-    <div className="relative mt-2 h-2 w-full rounded-full bg-muted">
+    <div
+      className="relative mt-2 h-2 w-full rounded-full"
+      style={{ background: `hsl(var(${theme.glowVar}) / 0.12)` }}
+    >
       {availableValues.map((entry) => {
         const position = (entry.value / maxValue) * 100;
         const isWinner = entry.ticketId === winnerId;
@@ -112,7 +127,10 @@ function MicroBar({
             key={entry.ticketId}
             data-testid="micro-bar-marker"
             className={`absolute top-0 h-2 w-2 rounded-full ${isWinner ? theme.barGradient : 'bg-muted-foreground/50'}`}
-            style={{ left: `calc(${Math.min(position, 100)}% - 4px)` }}
+            style={{
+              left: `calc(${Math.min(position, 100)}% - 4px)`,
+              ...(isWinner ? { boxShadow: `0 0 6px hsl(var(${theme.glowVar}) / 0.4)` } : {}),
+            }}
           />
         );
       })}
@@ -129,7 +147,15 @@ export function ComparisonStatCards({ winner, participants }: ComparisonStatCard
         const theme = (STAT_THEMES[config.label] ?? STAT_THEMES['Cost']) as StatCardTheme;
 
         return (
-          <Card key={config.label} data-testid="stat-card" className={`${theme.bgSubtle} border ${theme.border}`}>
+          <Card
+            key={config.label}
+            data-testid="stat-card"
+            className={`border ${theme.border}`}
+            style={{
+              background: `linear-gradient(135deg, hsl(var(${theme.gradientFrom}) / 0.06), hsl(var(${theme.gradientTo}) / 0.09))`,
+              boxShadow: `0 0 8px hsl(var(${theme.glowVar}) / 0.05)`,
+            }}
+          >
             <CardContent className="pt-4">
               <div className={`text-xs font-medium ${theme.text}`}>{config.label}</div>
               <div className="mt-1 text-lg font-extrabold tracking-tight text-foreground">{displayValue}</div>

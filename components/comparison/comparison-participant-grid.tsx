@@ -17,7 +17,10 @@ export function ComparisonParticipantGrid({
         return (
           <div
             key={participant.ticketId}
-            className={`flex min-w-[200px] flex-1 items-start gap-3 rounded-lg border p-4 ${accent.bgSubtle} ${accent.border}`}
+            className="flex min-w-[200px] flex-1 items-start gap-3 rounded-lg border border-ctp-mauve/18 p-4"
+            style={{
+              background: 'linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.04), hsl(var(--ctp-mauve) / 0.05))',
+            }}
           >
             <ScoreGauge score={participant.score} size={40} strokeWidth={3} animated={false} accentColor={accent.hsl} />
 
