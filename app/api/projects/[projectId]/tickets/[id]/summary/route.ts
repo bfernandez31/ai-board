@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProjectIdSchema } from '@/lib/validations/ticket';
-import { getProjectById } from '@/lib/db/projects';
+import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
 import { fetchDocumentContent } from '@/lib/github/doc-fetcher';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string }> }
 ): Promise<NextResponse> {
   try {
@@ -22,10 +22,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid ticket ID', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
-    const project = await getProjectById(projectId);
-    if (!project) {
-      return NextResponse.json({ error: 'Project not found', code: 'PROJECT_NOT_FOUND' }, { status: 404 });
-    }
+    await verifyProjectAccess(projectId, request);
 
     const ticket = await prisma.ticket.findFirst({
       where: { id: ticketId, projectId },

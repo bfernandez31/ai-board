@@ -23,7 +23,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ProjectIdSchema } from '@/lib/validations/ticket';
-import { getProjectById } from '@/lib/db/projects';
+import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
 import { editDocumentationSchema } from '@/app/lib/schemas/documentation';
 import { commitAndPush } from '@/app/lib/git/operations';
@@ -52,6 +52,9 @@ export async function POST(
     }
 
     const projectId = parseInt(projectIdString, 10);
+
+    // Verify user has access to this project
+    await verifyProjectAccess(projectId, request);
 
     // Parse and validate request body
     const body = await request.json();
@@ -90,16 +93,6 @@ export async function POST(
     }
 
     const { ticketId, docType, content, commitMessage } = parsed.data;
-
-    // Verify project exists
-    const project = await getProjectById(projectId);
-    if (!project) {
-      console.error('[docs/POST] Project not found:', { projectId });
-      return NextResponse.json(
-        { success: false, error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-        { status: 404 }
-      );
-    }
 
     // Get ticket with project-scoped validation
     const ticket = await prisma.ticket.findFirst({
@@ -197,8 +190,8 @@ export async function POST(
     // Commit and push to GitHub
     try {
       const result = await commitAndPush({
-        owner: project.githubOwner,
-        repo: project.githubRepo,
+        owner: ticket.project.githubOwner,
+        repo: ticket.project.githubRepo,
         branch: ticket.branch,
         filePath,
         content,
