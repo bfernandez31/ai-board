@@ -30,8 +30,8 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 Add `useProjectComparisonListInfinite` hook using `useInfiniteQuery` in `hooks/use-comparisons.ts`, following the existing activity feed pattern in `hooks/queries/use-project-activity.ts`
-- [ ] T005 [P] Remove `ScrollArea` wrapper (`h-[68vh]`) from `ComparisonDashboard` in `components/comparison/comparison-viewer.tsx` and add `overflow-y-auto` to the `ComparisonViewer` dialog content wrapper instead
+- [x] T004 Add `useProjectComparisonListInfinite` hook using `useInfiniteQuery` in `hooks/use-comparisons.ts`, following the existing activity feed pattern in `hooks/queries/use-project-activity.ts`
+- [x] T005 [P] Remove `ScrollArea` wrapper (`h-[68vh]`) from `ComparisonDashboard` in `components/comparison/comparison-viewer.tsx` and add `overflow-y-auto` to the `ComparisonViewer` dialog content wrapper instead
 
 **Checkpoint**: Foundation ready - user story implementation can now begin.
 

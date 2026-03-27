@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import {
   useComparisonCheck,
@@ -42,9 +41,8 @@ export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
   }
 
   return (
-    <ScrollArea className="h-[68vh] pr-4">
-      <div className="space-y-6">
-        {/* Hero card — no section wrapper to avoid double box */}
+    <div className="space-y-6">
+      <section className={sectionClass}>
         <ComparisonHeroCard
           winner={winner}
           recommendation={detail.overallRecommendation}
@@ -52,40 +50,41 @@ export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
           generatedAt={detail.generatedAt}
           sourceTicketKey={detail.sourceTicketKey}
         />
+      </section>
 
-        <section
-          className={`${sectionClass} aurora-bg-subtle`}
-        >
-          <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
-            Participants
-          </h3>
-          <ComparisonParticipantGrid participants={nonWinners} />
-        </section>
+      <section className={`${sectionClass} aurora-bg-subtle`}>
+        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
+          Participants
+        </h3>
+        <ComparisonParticipantGrid participants={nonWinners} />
+      </section>
 
-        <section
-          className={`${sectionClass} aurora-bg-subtle`}
-        >
-          <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
-            Overview
-          </h3>
-          <ComparisonStatCards winner={winner} participants={detail.participants} />
-        </section>
+      <section className={`${sectionClass} aurora-bg-subtle`}>
+        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
+          Overview
+        </h3>
+        <ComparisonStatCards winner={winner} participants={detail.participants} />
+      </section>
 
-        {/* Components with internal Card — no section wrapper */}
+      <section className={sectionClass}>
         <ComparisonUnifiedMetrics participants={detail.participants} />
+      </section>
 
+      <section className={sectionClass}>
         <ComparisonDecisionPoints
           decisionPoints={detail.decisionPoints}
           winnerTicketId={detail.winnerTicketId}
           participants={detail.participants}
         />
+      </section>
 
+      <section className={sectionClass}>
         <ComparisonComplianceHeatmap
           rows={detail.complianceRows}
           participants={detail.participants}
         />
-      </div>
-    </ScrollArea>
+      </section>
+    </div>
   );
 }
 
@@ -178,7 +177,7 @@ export function ComparisonViewer({
           </div>
         </DialogHeader>
 
-        <div className="mt-2">
+        <div className="mt-2 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 80px)' }}>
           {isLoading && (
             <div className="py-8 text-center text-sm text-muted-foreground">
               Loading comparison...
