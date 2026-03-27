@@ -365,39 +365,37 @@ The viewer is a modal dialog with two sections:
 - Hidden on small screens
 
 **Main Content** (right):
-- Scrollable area displaying five sections for the selected comparison:
+- Scrollable area displaying six sections for the selected comparison:
 
-**Ranking and Recommendation**:
-- Overall recommendation text and executive summary
-- Key differentiators shown as badges
-- Participant cards ordered by rank showing:
-  - Rank number, ticket key, title
-  - Score percentage badge
-  - "Winner" badge on rank 1
-  - Rank rationale text
-  - Workflow type badge (FULL / QUICK / CLEAN)
-  - Agent badge when agent information is available
-  - Quality score badge with threshold label (e.g., "87 Good") when a score exists
+**Winner Hero Card**:
+- Full-width card with a green gradient background and radial glow orb for the winning ticket
+- Animated `ScoreGauge` SVG (120px) showing the winner's score (green ≥85, blue 70–84, yellow 50–69, red <50)
+- Winner ticket key, "Winner" badge (trophy icon), and overall recommendation text
+- Key differentiators shown as colored Catppuccin palette badges (green, blue, mauve, peach, flamingo, yellow cycling)
+- Stat pills row: Cost, Duration, Quality Score for the winner
+- Generated timestamp and source ticket key shown as metadata
 
-**Implementation Metrics**:
-- Table comparing code metrics across participants
-- Metrics: lines changed, files changed, test files changed
-- "Best value" badge highlights the leading participant per metric
-- "Unavailable" shown when metrics are missing
+**Participant Cards**:
+- Grid of cards for all non-winner participants
+- Each card shows a small (40px) non-animated `ScoreGauge`, rank badge, ticket key, title, and rank rationale
+- Workflow type, agent, and quality score displayed as badges per participant
 
-**Operational Metrics**:
-- Grid with metric labels as rows and participants as columns
-- Metrics: total tokens, input tokens, output tokens, duration, cost, job count, quality score
-- Values aggregated across all completed jobs per participant (sum for tokens/duration/cost, count for job count)
-- Primary AI model determined by the job with the highest total token consumption
-- "Best value" badge per row (lowest wins for tokens/duration/cost/job count; highest wins for quality)
-- Column headers show ticket key, workflow type, and agent
+**Metric Spotlight Cards**:
+- 2×2 grid (lg: 4 columns) for Cost, Duration, Quality Score, and Files Changed
+- Each card shows the winner's value and a MicroBar — a thin bar track with dot markers indicating every participant's relative value (winner dot highlighted, others dimmed)
+
+**Unified Metrics Table**:
+- Single merged table replacing separate implementation and operational metric sections
+- Rows: Lines Changed, Files Changed, Test Files Changed, Total Tokens, Input Tokens, Output Tokens, Duration, Cost, Job Count, Quality Score
+- Columns: one per participant, colored by rank
+- Participant legend (color dot + ticket key) above the table
+- Per-cell gradient mini-bar proportional to the maximum value across participants; best value bolded in the participant's color
 - Metric label column stays fixed (sticky) during horizontal scroll; supports up to 6 compared tickets
-- Pending state shown when a job is in progress but telemetry is not yet available; "N/A" when no data will ever be available
+- Pending state shown when a job is in progress but telemetry is not yet available; "—" when no data will ever be available
 - Clicking a quality score opens a breakdown popover (available for FULL workflow tickets that have completed VERIFY with quality score details)
 
 **Quality Score Breakdown Popover**:
-- Triggered by clicking an eligible quality score cell in the Operational Metrics grid
+- Triggered by clicking an eligible quality score cell in the Unified Metrics table
 - Shows 5 evaluated dimensions: Compliance, Bug Detection, Code Comments, Historical Context, Spec Sync
 - Each dimension shows name, score, weight, and a visual progress bar
 - Overall score with threshold label shown at the bottom
@@ -407,10 +405,11 @@ The viewer is a modal dialog with two sections:
 - Each shows title, verdict summary, rationale, and per-participant approaches
 - First decision point expanded by default
 
-**Constitution Compliance**:
+**Constitution Compliance Heatmap**:
 - Table grid with principles as rows, participants as columns
-- Status badges: pass (green), mixed (outline), fail (red)
-- Assessment notes shown below each status
+- Colored heatmap cells: pass (green/`ctp-green`), mixed (yellow/`ctp-yellow`), fail (red/`ctp-red`)
+- Hovering a cell shows a tooltip with the assessment notes
+- Principles sorted by display order; empty state shown when no compliance data exists
 
 ### Data Enrichment
 
