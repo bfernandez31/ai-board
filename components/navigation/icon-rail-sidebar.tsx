@@ -6,7 +6,6 @@ import { NAVIGATION_ITEMS } from './nav-items';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
@@ -29,7 +28,7 @@ export function IconRailSidebar({ projectId }: IconRailSidebarProps) {
     const Icon = item.icon;
     const active = isActive(item.href);
     return (
-      <Tooltip key={item.id}>
+      <Tooltip key={item.id} delayDuration={300}>
         <TooltipTrigger asChild>
           <Link
             href={`/projects/${projectId}${item.href}`}
@@ -52,19 +51,17 @@ export function IconRailSidebar({ projectId }: IconRailSidebarProps) {
   }
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <nav
-        aria-label="Project navigation"
-        className="hidden lg:flex flex-col justify-between h-[calc(100vh-64px)] w-12 border-r bg-background py-2"
-      >
-        <div className="flex flex-col items-center gap-1">
-          {viewItems.map(renderNavItem)}
-        </div>
+    <nav
+      aria-label="Project navigation"
+      className="hidden lg:flex flex-col justify-between h-[calc(100vh-64px)] w-12 border-r bg-background py-2"
+    >
+      <div className="flex flex-col items-center gap-1">
+        {viewItems.map(renderNavItem)}
+      </div>
 
-        <div className="flex flex-col items-center gap-1 border-t pt-2">
-          {bottomItems.map(renderNavItem)}
-        </div>
-      </nav>
-    </TooltipProvider>
+      <div className="flex flex-col items-center gap-1 border-t pt-2">
+        {bottomItems.map(renderNavItem)}
+      </div>
+    </nav>
   );
 }
