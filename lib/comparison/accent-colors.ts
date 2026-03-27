@@ -87,6 +87,5 @@ const RANK_COLORS: Record<number, AccentColorSet> = {
 
 /** Returns the accent color set for a given rank position (1-6). Falls back to rank 6 for out-of-range. */
 export function getAccentColorByRank(rank: number): AccentColorSet {
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- RANK_COLORS has entries 1-6; fallback to 6 always exists
-  return RANK_COLORS[rank] ?? RANK_COLORS[6]!;
+  return (RANK_COLORS[rank] ?? RANK_COLORS[6]) as AccentColorSet;
 }

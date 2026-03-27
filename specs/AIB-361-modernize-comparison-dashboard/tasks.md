@@ -47,13 +47,13 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T004 [P] [US1] Update component tests in `tests/unit/components/score-gauge.test.tsx` — verify SVG `<defs>` with `<linearGradient>` and `<feDropShadow>` filter elements are rendered, gradient stroke applied to score arc
-- [ ] T005 [P] [US1] Update component tests in `tests/unit/components/comparison-hero-card.test.tsx` — verify gradient winner badge rendering, glow orb element, bordered recommendation container, and colored differentiator pills
+- [x] T004 [P] [US1] Update component tests in `tests/unit/components/score-gauge.test.tsx` — verify SVG `<defs>` with `<linearGradient>` and `<feDropShadow>` filter elements are rendered, gradient stroke applied to score arc
+- [x] T005 [P] [US1] Update component tests in `tests/unit/components/comparison-hero-card.test.tsx` — verify gradient winner badge rendering, glow orb element, bordered recommendation container, and colored differentiator pills
 
 ### Implementation for User Story 1
 
-- [ ] T006 [P] [US1] Enhance score gauge with SVG gradient stroke and glow in `components/comparison/score-gauge.tsx` — add `<defs>` with `<linearGradient>` using accent color HSL stops, add `<filter>` with `<feDropShadow>` for glow effect, apply gradient as `stroke="url(#gradient-id)"` and filter to score arc circle
-- [ ] T007 [US1] Modernize hero card in `components/comparison/comparison-hero-card.tsx` — gradient background with winner accent color at 12% opacity, radial glow orb (absolute positioned div with `bg-ctp-green/10 rounded-full blur-3xl`), gradient winner badge pill, bordered recommendation container, colored differentiator pills with semi-transparent backgrounds
+- [x] T006 [P] [US1] Enhance score gauge with SVG gradient stroke and glow in `components/comparison/score-gauge.tsx` — add `<defs>` with `<linearGradient>` using accent color HSL stops, add `<filter>` with `<feDropShadow>` for glow effect, apply gradient as `stroke="url(#gradient-id)"` and filter to score arc circle
+- [x] T007 [US1] Modernize hero card in `components/comparison/comparison-hero-card.tsx` — gradient background with winner accent color at 12% opacity, radial glow orb (absolute positioned div with `bg-ctp-green/10 rounded-full blur-3xl`), gradient winner badge pill, bordered recommendation container, colored differentiator pills with semi-transparent backgrounds
 
 **Checkpoint**: User Story 1 complete — winner hero card is visually prominent with gradient, glow, and badge
 
