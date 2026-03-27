@@ -62,4 +62,5 @@ export interface ComparisonComplianceHeatmapProps {
 export interface ComparisonDecisionPointsEnhancedProps {
   decisionPoints: ComparisonDecisionPoint[];
   winnerTicketId: number;
+  participants?: ComparisonParticipantDetail[];
 }

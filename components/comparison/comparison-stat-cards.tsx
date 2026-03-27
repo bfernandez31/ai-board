@@ -5,6 +5,40 @@ import type { ComparisonParticipantDetail } from '@/lib/types/comparison';
 import { formatDurationMs } from '@/lib/comparison/format-duration';
 import type { ComparisonStatCardsProps } from './types';
 
+interface StatCardTheme {
+  text: string;
+  bgSubtle: string;
+  border: string;
+  barGradient: string;
+}
+
+const STAT_THEMES: Record<string, StatCardTheme> = {
+  Cost: {
+    text: 'text-ctp-yellow',
+    bgSubtle: 'bg-ctp-yellow/10',
+    border: 'border-ctp-yellow/20',
+    barGradient: 'bg-ctp-yellow',
+  },
+  Duration: {
+    text: 'text-ctp-blue',
+    bgSubtle: 'bg-ctp-blue/10',
+    border: 'border-ctp-blue/20',
+    barGradient: 'bg-ctp-blue',
+  },
+  'Quality Score': {
+    text: 'text-ctp-green',
+    bgSubtle: 'bg-ctp-green/10',
+    border: 'border-ctp-green/20',
+    barGradient: 'bg-ctp-green',
+  },
+  'Files Changed': {
+    text: 'text-ctp-mauve',
+    bgSubtle: 'bg-ctp-mauve/10',
+    border: 'border-ctp-mauve/20',
+    barGradient: 'bg-ctp-mauve',
+  },
+};
+
 interface StatCardConfig {
   label: string;
   getValue: (p: ComparisonParticipantDetail) => { state: string; value: number | null };
@@ -52,10 +86,12 @@ function MicroBar({
   participants,
   getValue,
   winnerId,
+  theme,
 }: {
   participants: ComparisonParticipantDetail[];
   getValue: (p: ComparisonParticipantDetail) => { state: string; value: number | null };
   winnerId: number;
+  theme: StatCardTheme;
 }) {
   const availableValues = participants
     .map((p) => {
@@ -75,7 +111,7 @@ function MicroBar({
           <div
             key={entry.ticketId}
             data-testid="micro-bar-marker"
-            className={`absolute top-0 h-2 w-2 rounded-full ${isWinner ? 'bg-primary' : 'bg-muted-foreground/50'}`}
+            className={`absolute top-0 h-2 w-2 rounded-full ${isWinner ? theme.barGradient : 'bg-muted-foreground/50'}`}
             style={{ left: `calc(${Math.min(position, 100)}% - 4px)` }}
           />
         );
@@ -90,16 +126,18 @@ export function ComparisonStatCards({ winner, participants }: ComparisonStatCard
       {statCardConfigs.map((config) => {
         const enrichment = config.getValue(winner);
         const displayValue = getDisplayValue(enrichment, config.format);
+        const theme = (STAT_THEMES[config.label] ?? STAT_THEMES['Cost']) as StatCardTheme;
 
         return (
-          <Card key={config.label}>
+          <Card key={config.label} data-testid="stat-card" className={`${theme.bgSubtle} border ${theme.border}`}>
             <CardContent className="pt-4">
-              <div className="text-xs text-muted-foreground">{config.label}</div>
-              <div className="mt-1 text-xl font-bold text-foreground">{displayValue}</div>
+              <div className={`text-xs font-medium ${theme.text}`}>{config.label}</div>
+              <div className="mt-1 text-lg font-extrabold tracking-tight text-foreground">{displayValue}</div>
               <MicroBar
                 participants={participants}
                 getValue={config.getValue}
                 winnerId={winner.ticketId}
+                theme={theme}
               />
             </CardContent>
           </Card>

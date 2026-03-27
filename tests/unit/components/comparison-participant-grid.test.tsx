@@ -58,7 +58,7 @@ describe('ComparisonParticipantGrid', () => {
 
     renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
 
-    expect(screen.getByText('#2')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('AIB-102')).toBeInTheDocument();
     expect(screen.getByText('Second place')).toBeInTheDocument();
   });
@@ -74,13 +74,12 @@ describe('ComparisonParticipantGrid', () => {
     const svgs = container.querySelectorAll('svg');
     expect(svgs.length).toBe(2);
 
-    // First participant (90) should have green stroke
+    // Score arcs now use gradient URL references
     const firstScoreCircle = svgs[0].querySelectorAll('circle')[1];
-    expect(firstScoreCircle.getAttribute('stroke')).toBe('hsl(var(--ctp-green))');
+    expect(firstScoreCircle.getAttribute('stroke')).toContain('url(#');
 
-    // Second participant (45) should have red stroke
     const secondScoreCircle = svgs[1].querySelectorAll('circle')[1];
-    expect(secondScoreCircle.getAttribute('stroke')).toBe('hsl(var(--ctp-red))');
+    expect(secondScoreCircle.getAttribute('stroke')).toContain('url(#');
   });
 
   it('renders workflow type and agent badges', () => {

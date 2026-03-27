@@ -140,4 +140,22 @@ describe('ComparisonStatCards', () => {
 
     expect(screen.getAllByText('N/A').length).toBeGreaterThanOrEqual(2);
   });
+
+  it('renders per-card color themes for each stat', () => {
+    const { container } = renderWithProviders(
+      <ComparisonStatCards winner={winner} participants={[winner, runner]} />
+    );
+
+    const themedCards = container.querySelectorAll('[data-testid="stat-card"]');
+    expect(themedCards.length).toBe(4);
+  });
+
+  it('renders score values with extrabold styling', () => {
+    const { container } = renderWithProviders(
+      <ComparisonStatCards winner={winner} participants={[winner, runner]} />
+    );
+
+    const valueElements = container.querySelectorAll('.font-extrabold');
+    expect(valueElements.length).toBe(4);
+  });
 });

@@ -179,4 +179,63 @@ describe('ComparisonHeroCard', () => {
 
     expect(screen.getByRole('img', { name: 'Score: 92' })).toBeInTheDocument();
   });
+
+  it('renders gradient winner badge', () => {
+    renderWithProviders(
+      <ComparisonHeroCard
+        winner={makeWinner()}
+        recommendation="Recommendation"
+        keyDifferentiators={[]}
+        generatedAt="2026-03-26T10:00:00Z"
+        sourceTicketKey="AIB-100"
+      />
+    );
+
+    expect(screen.getByText('WINNER')).toBeInTheDocument();
+  });
+
+  it('renders glow orb element', () => {
+    const { container } = renderWithProviders(
+      <ComparisonHeroCard
+        winner={makeWinner()}
+        recommendation="Recommendation"
+        keyDifferentiators={[]}
+        generatedAt="2026-03-26T10:00:00Z"
+        sourceTicketKey="AIB-100"
+      />
+    );
+
+    const glowOrb = container.querySelector('[data-testid="glow-orb"]');
+    expect(glowOrb).not.toBeNull();
+  });
+
+  it('renders bordered recommendation container', () => {
+    const { container } = renderWithProviders(
+      <ComparisonHeroCard
+        winner={makeWinner()}
+        recommendation="Use AIB-101 for best results."
+        keyDifferentiators={[]}
+        generatedAt="2026-03-26T10:00:00Z"
+        sourceTicketKey="AIB-100"
+      />
+    );
+
+    const recContainer = container.querySelector('[data-testid="recommendation-container"]');
+    expect(recContainer).not.toBeNull();
+  });
+
+  it('renders colored differentiator pills with accent backgrounds', () => {
+    const { container } = renderWithProviders(
+      <ComparisonHeroCard
+        winner={makeWinner()}
+        recommendation="Recommendation"
+        keyDifferentiators={['coverage', 'performance']}
+        generatedAt="2026-03-26T10:00:00Z"
+        sourceTicketKey="AIB-100"
+      />
+    );
+
+    const pills = container.querySelectorAll('[data-testid="differentiator-pill"]');
+    expect(pills.length).toBe(2);
+  });
 });

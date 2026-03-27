@@ -65,10 +65,14 @@ describe('ScoreGauge', () => {
     expect(scoreCircle.getAttribute('class')).toBeNull();
   });
 
-  it('uses correct stroke color based on score threshold', () => {
+  it('uses gradient stroke referencing score-based color', () => {
     const { container } = renderWithProviders(<ScoreGauge score={90} />);
     const scoreCircle = container.querySelectorAll('circle')[1];
-    expect(scoreCircle.getAttribute('stroke')).toBe('hsl(var(--ctp-green))');
+    expect(scoreCircle.getAttribute('stroke')).toContain('url(#');
+    // Verify the gradient stops use the green color
+    const stops = container.querySelectorAll('stop');
+    const stopColors = Array.from(stops).map((s) => s.getAttribute('stop-color'));
+    expect(stopColors.some((c) => c?.includes('ctp-green'))).toBe(true);
   });
 
   it('respects custom size prop', () => {
@@ -76,5 +80,39 @@ describe('ScoreGauge', () => {
     const svg = container.querySelector('svg');
     expect(svg?.getAttribute('width')).toBe('40');
     expect(svg?.getAttribute('height')).toBe('40');
+  });
+
+  it('renders SVG defs with linearGradient element', () => {
+    const { container } = renderWithProviders(<ScoreGauge score={85} />);
+    const defs = container.querySelector('defs');
+    expect(defs).not.toBeNull();
+    const gradient = defs?.querySelector('linearGradient');
+    expect(gradient).not.toBeNull();
+  });
+
+  it('renders SVG filter with feDropShadow for glow effect', () => {
+    const { container } = renderWithProviders(<ScoreGauge score={85} />);
+    const defs = container.querySelector('defs');
+    const filter = defs?.querySelector('filter');
+    expect(filter).not.toBeNull();
+    const dropShadow = filter?.querySelector('feDropShadow');
+    expect(dropShadow).not.toBeNull();
+  });
+
+  it('applies gradient stroke to score arc via url reference', () => {
+    const { container } = renderWithProviders(<ScoreGauge score={85} />);
+    const scoreCircle = container.querySelectorAll('circle')[1];
+    const stroke = scoreCircle.getAttribute('stroke');
+    expect(stroke).toContain('url(#');
+  });
+
+  it('uses accent color HSL stops in gradient when accentColor is provided', () => {
+    const { container } = renderWithProviders(
+      <ScoreGauge score={85} accentColor="hsl(var(--ctp-blue))" />
+    );
+    const stops = container.querySelectorAll('stop');
+    expect(stops.length).toBeGreaterThanOrEqual(2);
+    const stopColors = Array.from(stops).map((s) => s.getAttribute('stop-color'));
+    expect(stopColors.some((c) => c?.includes('ctp-blue'))).toBe(true);
   });
 });

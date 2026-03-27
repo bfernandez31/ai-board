@@ -89,6 +89,8 @@ export function ComparisonViewer({
   const winner = detail?.participants.find((p) => p.ticketId === detail.winnerTicketId);
   const nonWinners = detail?.participants.filter((p) => p.ticketId !== detail.winnerTicketId) ?? [];
 
+  const sectionClass = 'rounded-xl border border-ctp-overlay0/10 bg-ctp-surface0/[0.04] p-6';
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-5xl bg-card text-card-foreground sm:max-w-[90vw]">
@@ -157,28 +159,48 @@ export function ComparisonViewer({
               <div>
                 {detail && winner ? (
                   <ScrollArea className="h-[68vh] pr-4">
-                    <div className="space-y-4">
-                      <ComparisonHeroCard
-                        winner={winner}
-                        recommendation={detail.overallRecommendation}
-                        keyDifferentiators={detail.keyDifferentiators}
-                        generatedAt={detail.generatedAt}
-                        sourceTicketKey={detail.sourceTicketKey}
-                      />
-                      <ComparisonParticipantGrid participants={nonWinners} />
-                      <ComparisonStatCards
-                        winner={winner}
-                        participants={detail.participants}
-                      />
-                      <ComparisonUnifiedMetrics participants={detail.participants} />
-                      <ComparisonDecisionPoints
-                        decisionPoints={detail.decisionPoints}
-                        winnerTicketId={detail.winnerTicketId}
-                      />
-                      <ComparisonComplianceHeatmap
-                        rows={detail.complianceRows}
-                        participants={detail.participants}
-                      />
+                    <div className="space-y-6">
+                      <section className={sectionClass}>
+                        <ComparisonHeroCard
+                          winner={winner}
+                          recommendation={detail.overallRecommendation}
+                          keyDifferentiators={detail.keyDifferentiators}
+                          generatedAt={detail.generatedAt}
+                          sourceTicketKey={detail.sourceTicketKey}
+                        />
+                      </section>
+
+                      <section className={sectionClass}>
+                        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Participants</h3>
+                        <ComparisonParticipantGrid participants={nonWinners} />
+                      </section>
+
+                      <section className={sectionClass}>
+                        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Overview</h3>
+                        <ComparisonStatCards
+                          winner={winner}
+                          participants={detail.participants}
+                        />
+                      </section>
+
+                      <section className={sectionClass}>
+                        <ComparisonUnifiedMetrics participants={detail.participants} />
+                      </section>
+
+                      <section className={sectionClass}>
+                        <ComparisonDecisionPoints
+                          decisionPoints={detail.decisionPoints}
+                          winnerTicketId={detail.winnerTicketId}
+                          participants={detail.participants}
+                        />
+                      </section>
+
+                      <section className={sectionClass}>
+                        <ComparisonComplianceHeatmap
+                          rows={detail.complianceRows}
+                          participants={detail.participants}
+                        />
+                      </section>
                     </div>
                   </ScrollArea>
                 ) : (

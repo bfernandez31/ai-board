@@ -187,6 +187,57 @@ Test coverage:
 
 ---
 
+## Comparison Accent Colors
+
+### Purpose
+
+Maps rank positions (1–6) to complete static Tailwind class string sets for the comparison dashboard. Each rank has a distinct Catppuccin accent color applied consistently across all comparison sections (hero card, participant grid, stat cards, decision points, metrics).
+
+### File Location
+
+`lib/comparison/accent-colors.ts`
+
+### API Reference
+
+**Interface**: `AccentColorSet`
+
+| Field | Type | Example | Description |
+|-------|------|---------|-------------|
+| `text` | `string` | `"text-ctp-green"` | Full-opacity text color |
+| `bgSubtle` | `string` | `"bg-ctp-green/10"` | Low-opacity background (glassmorphism card tint) |
+| `bgMedium` | `string` | `"bg-ctp-green/20"` | Medium-opacity background |
+| `border` | `string` | `"border-ctp-green/20"` | Semi-transparent border |
+| `ring` | `string` | `"ring-ctp-green/30"` | Ring/outline for focused elements |
+| `shadow` | `string` | `"shadow-[0_0_6px_hsl(var(--ctp-green))]"` | Box-shadow glow for dot indicators |
+| `hsl` | `string` | `"hsl(var(--ctp-green))"` | CSS value for SVG gradient `<stop>` elements |
+| `label` | `string` | `"Green"` | Human-readable color name for the legend |
+
+**Function**: `getAccentColorByRank(rank: number): AccentColorSet`
+
+Returns the accent color set for a rank position (1–6). Falls back to rank 6 (yellow) for out-of-range values.
+
+**Rank-to-color mapping**:
+| Rank | Color | Token |
+|------|-------|-------|
+| 1 | Green | `ctp-green` |
+| 2 | Blue | `ctp-blue` |
+| 3 | Mauve | `ctp-mauve` |
+| 4 | Peach | `ctp-peach` |
+| 5 | Pink | `ctp-pink` |
+| 6 | Yellow | `ctp-yellow` |
+
+### Design Considerations
+
+**Static class strings only**: All Tailwind classes are pre-defined as complete literal strings to satisfy Tailwind's purger. Dynamic class construction (e.g., `` `bg-${color}` ``) is never used. The `hsl` field is the only non-Tailwind value and is used exclusively inside SVG `<stop>` elements where Tailwind classes cannot be applied.
+
+**Rank-based, not identity-based**: Color assignment is by rank position, not by participant identity. A ticket that ranks 1st always gets green regardless of its ticket key.
+
+### Testing
+
+**Unit Tests**: `tests/unit/comparison/accent-colors.test.ts`
+
+---
+
 ## Job Display Names
 
 ### Purpose
