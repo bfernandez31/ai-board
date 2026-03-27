@@ -76,17 +76,21 @@ describe('ProjectComparisonsPage', () => {
     } as never);
 
     vi.mocked(hooks.useProjectComparisonDetail).mockImplementation(
-      (_projectId, comparisonId) =>
-        ({
-          data:
-            comparisonId === 22
-              ? { winnerTicketKey: 'AIB-22' }
-              : comparisonId === 11
-                ? { winnerTicketKey: 'AIB-11' }
-                : null,
+      (_projectId, comparisonId) => {
+        let data: { winnerTicketKey: string } | null = null;
+
+        if (comparisonId === 22) {
+          data = { winnerTicketKey: 'AIB-22' };
+        } else if (comparisonId === 11) {
+          data = { winnerTicketKey: 'AIB-11' };
+        }
+
+        return {
+          data,
           isLoading: false,
           error: null,
-        }) as never
+        } as never;
+      }
     );
   });
 

@@ -15,7 +15,7 @@ import type { ProjectComparisonLaunchSheetProps } from './types';
 
 function getQualityLabel(
   qualityScore: ProjectComparisonLaunchSheetProps['candidates'][number]['qualityScore']
-) {
+): string {
   if (qualityScore.state === 'available') {
     return `${qualityScore.value}`;
   }
@@ -25,6 +25,17 @@ function getQualityLabel(
   }
 
   return 'N/A';
+}
+
+function toggleSelectedTicketId(
+  selectedTicketIds: number[],
+  ticketId: number
+): number[] {
+  if (selectedTicketIds.includes(ticketId)) {
+    return selectedTicketIds.filter((selectedId) => selectedId !== ticketId);
+  }
+
+  return [...selectedTicketIds, ticketId];
 }
 
 export function ProjectComparisonLaunchSheet({
@@ -39,6 +50,8 @@ export function ProjectComparisonLaunchSheet({
   onLaunch,
 }: ProjectComparisonLaunchSheetProps) {
   const hasEnoughTickets = selectedTicketIds.length >= 2;
+  const selectedCountLabel =
+    selectedTicketIds.length === 1 ? '1 ticket selected' : `${selectedTicketIds.length} tickets selected`;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -88,13 +101,7 @@ export function ProjectComparisonLaunchSheet({
                         ? 'border-primary bg-primary/5'
                         : 'border-border bg-card hover:bg-muted/40'
                     )}
-                    onClick={() =>
-                      onSelectionChange(
-                        selected
-                          ? selectedTicketIds.filter((ticketId) => ticketId !== candidate.id)
-                          : [...selectedTicketIds, candidate.id]
-                      )
-                    }
+                    onClick={() => onSelectionChange(toggleSelectedTicketId(selectedTicketIds, candidate.id))}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -110,9 +117,7 @@ export function ProjectComparisonLaunchSheet({
           )}
 
           <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4">
-            <div className="text-sm text-muted-foreground">
-              {selectedTicketIds.length} ticket{selectedTicketIds.length === 1 ? '' : 's'} selected
-            </div>
+            <div className="text-sm text-muted-foreground">{selectedCountLabel}</div>
             <Button type="button" onClick={onLaunch} disabled={!hasEnoughTickets || isLaunching}>
               {isLaunching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
               Launch comparison

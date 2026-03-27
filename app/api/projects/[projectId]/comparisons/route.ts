@@ -12,48 +12,51 @@ const querySchema = z.object({
   pageSize: z.coerce.number().int().positive().max(50).default(10),
 });
 
+type RouteParams = { projectId: string };
+
+function jsonError(status: number, error: string, code: string): NextResponse {
+  return NextResponse.json({ error, code }, { status });
+}
+
+async function parseProjectParams(
+  context: { params: Promise<RouteParams> }
+): Promise<{ projectId: number } | null> {
+  const paramsResult = paramsSchema.safeParse(await context.params);
+  if (!paramsResult.success) {
+    return null;
+  }
+
+  return { projectId: paramsResult.data.projectId };
+}
+
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ projectId: string }> }
+  context: { params: Promise<RouteParams> }
 ): Promise<NextResponse> {
   try {
-    const paramsResult = paramsSchema.safeParse(await context.params);
-    if (!paramsResult.success) {
-      return NextResponse.json(
-        { error: 'Invalid project ID', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+    const params = await parseProjectParams(context);
+    if (!params) {
+      return jsonError(400, 'Invalid project ID', 'VALIDATION_ERROR');
     }
 
     const queryResult = querySchema.safeParse({
       page: request.nextUrl.searchParams.get('page') ?? undefined,
       pageSize: request.nextUrl.searchParams.get('pageSize') ?? undefined,
     });
+
     if (!queryResult.success) {
-      return NextResponse.json(
-        { error: 'Invalid pagination parameters', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+      return jsonError(400, 'Invalid pagination parameters', 'VALIDATION_ERROR');
     }
 
-    await verifyProjectAccess(paramsResult.data.projectId, request);
-    const result = await listProjectComparisons(
-      paramsResult.data.projectId,
-      queryResult.data
-    );
+    await verifyProjectAccess(params.projectId, request);
+    const result = await listProjectComparisons(params.projectId, queryResult.data);
 
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof Error && error.message === 'Project not found') {
-      return NextResponse.json(
-        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-        { status: 404 }
-      );
+      return jsonError(404, 'Project not found', 'PROJECT_NOT_FOUND');
     }
 
-    return NextResponse.json(
-      { error: 'Internal server error', code: 'INTERNAL_ERROR' },
-      { status: 500 }
-    );
+    return jsonError(500, 'Internal server error', 'INTERNAL_ERROR');
   }
 }

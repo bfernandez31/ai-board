@@ -16,6 +16,14 @@ type LaunchTicket = Pick<
   };
 };
 
+interface ComparisonLaunchComment {
+  sourceTicketId: number;
+  sourceTicketKey: string;
+  orderedTicketIds: number[];
+  orderedTicketKeys: string[];
+  commentContent: string;
+}
+
 export function getDeterministicSourceTicket<T extends { updatedAt: Date; id: number }>(
   tickets: T[]
 ): T {
@@ -26,20 +34,13 @@ export function getDeterministicSourceTicket<T extends { updatedAt: Date; id: nu
 
 export async function buildComparisonLaunchComment(
   selectedTickets: Array<{ id: number; ticketKey: string; updatedAt: Date }>
-): Promise<{
-  sourceTicketId: number;
-  sourceTicketKey: string;
-  orderedTicketIds: number[];
-  orderedTicketKeys: string[];
-  commentContent: string;
-}> {
+): Promise<ComparisonLaunchComment> {
   const aiBoardUserId = await getAIBoardUserId();
   const sourceTicket = getDeterministicSourceTicket(selectedTickets);
-  const orderedTickets = [sourceTicket].concat(
-    selectedTickets
-      .filter((ticket) => ticket.id !== sourceTicket.id)
-      .sort((a, b) => a.ticketKey.localeCompare(b.ticketKey))
-  );
+  const remainingTickets = selectedTickets
+    .filter((ticket) => ticket.id !== sourceTicket.id)
+    .sort((a, b) => a.ticketKey.localeCompare(b.ticketKey));
+  const orderedTickets = [sourceTicket, ...remainingTickets];
   const compareTargets = orderedTickets
     .filter((ticket) => ticket.id !== sourceTicket.id)
     .map((ticket) => `#${ticket.ticketKey}`)
@@ -62,9 +63,7 @@ export async function createProjectComparisonLaunch(input: {
 }): Promise<ComparisonLaunchRequest> {
   const { projectId, userId, userName, selectedTickets } = input;
   const launchComment = await buildComparisonLaunchComment(selectedTickets);
-  const sourceTicket = selectedTickets.find(
-    (ticket) => ticket.id === launchComment.sourceTicketId
-  );
+  const sourceTicket = selectedTickets.find((ticket) => ticket.id === launchComment.sourceTicketId);
 
   if (!sourceTicket) {
     throw new Error('SOURCE_TICKET_NOT_FOUND');

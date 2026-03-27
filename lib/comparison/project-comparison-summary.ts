@@ -5,25 +5,12 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
 
-export function normalizeComparisonPagination(input: {
+interface ComparisonPaginationInput {
   page?: number;
   pageSize?: number;
-}): { page: number; pageSize: number; skip: number } {
-  const page = Number.isInteger(input.page) && (input.page ?? 0) > 0 ? input.page! : DEFAULT_PAGE;
-  const requestedPageSize =
-    Number.isInteger(input.pageSize) && (input.pageSize ?? 0) > 0
-      ? input.pageSize!
-      : DEFAULT_PAGE_SIZE;
-  const pageSize = Math.min(requestedPageSize, MAX_PAGE_SIZE);
-
-  return {
-    page,
-    pageSize,
-    skip: (page - 1) * pageSize,
-  };
 }
 
-function normalizeProjectComparisonSummary(record: {
+interface ProjectComparisonRecord {
   id: number;
   generatedAt: Date;
   sourceTicketId: number;
@@ -35,11 +22,40 @@ function normalizeProjectComparisonSummary(record: {
   sourceTicket: { ticketKey: string };
   winnerTicket: { ticketKey: string; title: string };
   participants: Array<{ ticketId: number; ticket: { ticketKey: string } }>;
-}): ProjectComparisonSummary {
-  const keyDifferentiators = Array.isArray(record.keyDifferentiators)
-    ? record.keyDifferentiators.filter((item): item is string => typeof item === 'string')
-    : [];
+}
 
+function normalizePositiveInteger(value: number | undefined, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
+    return fallback;
+  }
+
+  return value;
+}
+
+function normalizeKeyDifferentiators(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === 'string');
+}
+
+export function normalizeComparisonPagination(input: {
+  page?: number;
+  pageSize?: number;
+}): { page: number; pageSize: number; skip: number } {
+  const page = normalizePositiveInteger(input.page, DEFAULT_PAGE);
+  const requestedPageSize = normalizePositiveInteger(input.pageSize, DEFAULT_PAGE_SIZE);
+  const pageSize = Math.min(requestedPageSize, MAX_PAGE_SIZE);
+
+  return {
+    page,
+    pageSize,
+    skip: (page - 1) * pageSize,
+  };
+}
+
+function normalizeProjectComparisonSummary(record: ProjectComparisonRecord): ProjectComparisonSummary {
   return {
     id: record.id,
     generatedAt: record.generatedAt.toISOString(),
@@ -53,14 +69,14 @@ function normalizeProjectComparisonSummary(record: {
     summary: record.summary,
     recommendation: record.overallRecommendation,
     overallRecommendation: record.overallRecommendation,
-    keyDifferentiators,
+    keyDifferentiators: normalizeKeyDifferentiators(record.keyDifferentiators),
     markdownPath: record.markdownPath,
   };
 }
 
 export async function listProjectComparisons(
   projectId: number,
-  input: { page?: number; pageSize?: number }
+  input: ComparisonPaginationInput
 ): Promise<ProjectComparisonListResponse> {
   const { page, pageSize, skip } = normalizeComparisonPagination(input);
 

@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, GitCompare, Loader2, RefreshCcw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import type { ComparisonLaunchRequest } from '@/lib/types/comparison';
 import {
   comparisonKeys,
   useProjectComparisonCandidates,
@@ -15,10 +16,40 @@ import {
 } from '@/hooks/use-comparisons';
 import { ComparisonDashboard } from './comparison-viewer';
 import { ProjectComparisonLaunchSheet } from './project-comparison-launch-sheet';
-import type { ComparisonLaunchRequest } from '@/lib/types/comparison';
 import type { ProjectComparisonsPageProps } from './types';
 
 const PAGE_SIZE = 10;
+const ACTIVE_LAUNCH_STATUSES = ['PENDING', 'RUNNING'] as const;
+const TERMINAL_LAUNCH_STATUSES = ['COMPLETED', 'FAILED', 'CANCELLED'] as const;
+
+function hasLaunchStatus(
+  launch: ComparisonLaunchRequest,
+  statuses: readonly ComparisonLaunchRequest['status'][]
+): boolean {
+  return statuses.includes(launch.status);
+}
+
+function mergePendingLaunches(
+  pendingLaunches: ComparisonLaunchRequest[],
+  jobStatuses:
+    | Array<{ id: number; status: ComparisonLaunchRequest['status'] }>
+    | undefined
+): ComparisonLaunchRequest[] {
+  if (!jobStatuses || jobStatuses.length === 0) {
+    return pendingLaunches;
+  }
+
+  const statusByJobId = new Map(jobStatuses.map((job) => [job.id, job.status] as const));
+
+  return pendingLaunches.map((launch) => {
+    const nextStatus = statusByJobId.get(launch.jobId);
+    if (!nextStatus) {
+      return launch;
+    }
+
+    return { ...launch, status: nextStatus };
+  });
+}
 
 export function ProjectComparisonsPage({
   projectId,
@@ -48,28 +79,21 @@ export function ProjectComparisonsPage({
   const launchMutation = useProjectComparisonLaunch(projectId);
 
   const pendingJobIds = useMemo(
-    () =>
-      pendingLaunches
-        .filter((launch) => launch.status === 'PENDING' || launch.status === 'RUNNING')
-        .map((launch) => launch.jobId),
+    () => pendingLaunches.filter((launch) => hasLaunchStatus(launch, ACTIVE_LAUNCH_STATUSES)).map((launch) => launch.jobId),
     [pendingLaunches]
   );
 
   const pendingJobsQuery = useProjectComparisonPendingJobs(projectId, pendingJobIds, pendingJobIds.length > 0);
-  const mergedPendingLaunches = useMemo(() => {
-    if (!pendingJobsQuery.data || pendingJobsQuery.data.length === 0) {
-      return pendingLaunches;
-    }
+  const mergedPendingLaunches = useMemo(
+    () => mergePendingLaunches(pendingLaunches, pendingJobsQuery.data),
+    [pendingJobsQuery.data, pendingLaunches]
+  );
+  const activePendingLaunches = mergedPendingLaunches.filter((launch) =>
+    hasLaunchStatus(launch, ACTIVE_LAUNCH_STATUSES)
+  );
 
-    return pendingLaunches.map((launch) => {
-      const matchingJob = pendingJobsQuery.data.find((job) => job.id === launch.jobId);
-      return matchingJob ? { ...launch, status: matchingJob.status } : launch;
-    });
-  }, [pendingJobsQuery.data, pendingLaunches]);
-
-  const hasTerminalPendingJob = mergedPendingLaunches.some(
-    (launch) =>
-      launch.status === 'COMPLETED' || launch.status === 'FAILED' || launch.status === 'CANCELLED'
+  const hasTerminalPendingJob = mergedPendingLaunches.some((launch) =>
+    hasLaunchStatus(launch, TERMINAL_LAUNCH_STATUSES)
   );
 
   useEffect(() => {
@@ -144,20 +168,18 @@ export function ProjectComparisonsPage({
         </div>
       </section>
 
-      {mergedPendingLaunches.some((launch) => launch.status === 'PENDING' || launch.status === 'RUNNING') ? (
+      {activePendingLaunches.length > 0 ? (
         <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2 font-medium text-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Comparison in progress
           </div>
           <div className="mt-2">
-            {mergedPendingLaunches
-              .filter((launch) => launch.status === 'PENDING' || launch.status === 'RUNNING')
-              .map((launch) => (
-                <div key={launch.jobId}>
-                  {launch.selectedTicketKeys.join(', ')}: {launch.status}
-                </div>
-              ))}
+            {activePendingLaunches.map((launch) => (
+              <div key={launch.jobId}>
+                {launch.selectedTicketKeys.join(', ')}: {launch.status}
+              </div>
+            ))}
           </div>
         </div>
       ) : null}

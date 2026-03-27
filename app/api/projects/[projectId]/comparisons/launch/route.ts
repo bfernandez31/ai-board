@@ -13,37 +13,54 @@ const requestSchema = z.object({
   ticketIds: z.array(z.coerce.number().int().positive()).min(2).max(5),
 });
 
+type RouteParams = { projectId: string };
+
+function jsonError(status: number, error: string, code: string): NextResponse {
+  return NextResponse.json({ error, code }, { status });
+}
+
+async function parseProjectParams(
+  context: { params: Promise<RouteParams> }
+): Promise<{ projectId: number } | null> {
+  const paramsResult = paramsSchema.safeParse(await context.params);
+  if (!paramsResult.success) {
+    return null;
+  }
+
+  return { projectId: paramsResult.data.projectId };
+}
+
+function getUniqueTicketIds(ticketIds: number[]): number[] | null {
+  const uniqueTicketIds = [...new Set(ticketIds)];
+  if (uniqueTicketIds.length < 2 || uniqueTicketIds.length !== ticketIds.length) {
+    return null;
+  }
+
+  return uniqueTicketIds;
+}
+
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ projectId: string }> }
+  context: { params: Promise<RouteParams> }
 ): Promise<NextResponse> {
   try {
-    const paramsResult = paramsSchema.safeParse(await context.params);
-    if (!paramsResult.success) {
-      return NextResponse.json(
-        { error: 'Invalid project ID', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+    const params = await parseProjectParams(context);
+    if (!params) {
+      return jsonError(400, 'Invalid project ID', 'VALIDATION_ERROR');
     }
 
     const bodyResult = requestSchema.safeParse(await request.json());
     if (!bodyResult.success) {
-      return NextResponse.json(
-        { error: 'Invalid launch payload', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+      return jsonError(400, 'Invalid launch payload', 'VALIDATION_ERROR');
     }
 
-    const projectId = paramsResult.data.projectId;
+    const projectId = params.projectId;
     await verifyProjectAccess(projectId, request);
     const userId = await requireAuth(request);
 
-    const uniqueTicketIds = [...new Set(bodyResult.data.ticketIds)];
-    if (uniqueTicketIds.length < 2 || uniqueTicketIds.length !== bodyResult.data.ticketIds.length) {
-      return NextResponse.json(
-        { error: 'Select 2 to 5 unique VERIFY tickets', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+    const uniqueTicketIds = getUniqueTicketIds(bodyResult.data.ticketIds);
+    if (!uniqueTicketIds) {
+      return jsonError(400, 'Select 2 to 5 unique VERIFY tickets', 'VALIDATION_ERROR');
     }
 
     const selectedTickets = await prisma.ticket.findMany({
@@ -71,20 +88,19 @@ export async function POST(
     });
 
     if (selectedTickets.length !== uniqueTicketIds.length) {
-      return NextResponse.json(
-        { error: 'One or more tickets were not found in this project', code: 'TICKET_NOT_FOUND' },
-        { status: 404 }
+      return jsonError(
+        404,
+        'One or more tickets were not found in this project',
+        'TICKET_NOT_FOUND'
       );
     }
 
     const invalidStageTicket = selectedTickets.find((ticket) => ticket.stage !== 'VERIFY');
     if (invalidStageTicket) {
-      return NextResponse.json(
-        {
-          error: `Only VERIFY tickets can be compared from the hub (${invalidStageTicket.ticketKey} is ${invalidStageTicket.stage})`,
-          code: 'INVALID_STAGE',
-        },
-        { status: 409 }
+      return jsonError(
+        409,
+        `Only VERIFY tickets can be compared from the hub (${invalidStageTicket.ticketKey} is ${invalidStageTicket.stage})`,
+        'INVALID_STAGE'
       );
     }
 
@@ -97,16 +113,17 @@ export async function POST(
       const launch = await createProjectComparisonLaunch({
         projectId,
         userId,
-        userName: user?.name || userId,
+        userName: user?.name ?? userId,
         selectedTickets,
       });
 
       return NextResponse.json(launch, { status: 202 });
     } catch (error) {
       if (error instanceof Error && error.message === 'ACTIVE_JOB_EXISTS') {
-        return NextResponse.json(
-          { error: 'A selected source ticket already has an active AI-BOARD job', code: 'ACTIVE_JOB_EXISTS' },
-          { status: 409 }
+        return jsonError(
+          409,
+          'A selected source ticket already has an active AI-BOARD job',
+          'ACTIVE_JOB_EXISTS'
         );
       }
 
@@ -114,22 +131,13 @@ export async function POST(
     }
   } catch (error) {
     if (error instanceof Error && error.message === 'Project not found') {
-      return NextResponse.json(
-        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-        { status: 404 }
-      );
+      return jsonError(404, 'Project not found', 'PROJECT_NOT_FOUND');
     }
 
     if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized', code: 'AUTH_REQUIRED' },
-        { status: 401 }
-      );
+      return jsonError(401, 'Unauthorized', 'AUTH_REQUIRED');
     }
 
-    return NextResponse.json(
-      { error: 'Internal server error', code: 'INTERNAL_ERROR' },
-      { status: 500 }
-    );
+    return jsonError(500, 'Internal server error', 'INTERNAL_ERROR');
   }
 }
