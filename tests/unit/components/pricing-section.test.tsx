@@ -42,9 +42,9 @@ describe('PricingCard', () => {
     expect(screen.getByText('$15')).toBeInTheDocument();
   });
 
-  it('renders $0 for free plan', () => {
+  it('renders "Free" for free plan', () => {
     render(<PricingCard {...defaultProps} name="Free" price={0} />);
-    expect(screen.getByText('$0')).toBeInTheDocument();
+    expect(screen.getByText('Free', { selector: 'span' })).toBeInTheDocument();
   });
 
   it('renders features list', () => {
@@ -79,14 +79,15 @@ describe('PricingSection', () => {
 
   it('renders three pricing cards with correct plan names', () => {
     render(<PricingSection />);
-    expect(screen.getByText('Free')).toBeInTheDocument();
+    expect(screen.getAllByText('Free').length).toBeGreaterThan(0);
     expect(screen.getByText('Pro')).toBeInTheDocument();
     expect(screen.getByText('Team')).toBeInTheDocument();
   });
 
   it('renders correct prices from PLANS config', () => {
     render(<PricingSection />);
-    expect(screen.getByText('$0')).toBeInTheDocument();
+    // Free plan shows "Free" text instead of "$0"
+    expect(screen.getAllByText('Free').length).toBeGreaterThan(0);
     expect(screen.getByText('$15')).toBeInTheDocument();
     expect(screen.getByText('$30')).toBeInTheDocument();
   });

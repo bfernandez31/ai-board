@@ -13,7 +13,7 @@ const SESSION_COOKIE_NAMES = [
   "__Secure-next-auth.session-token",
 ]
 
-const PUBLIC_PREFIXES = ["/auth", "/api/auth", "/api/push", "/api/telemetry/"]
+const PUBLIC_PREFIXES = ["/auth", "/api/auth", "/api/push", "/api/telemetry/", "/legal"]
 
 const PUBLIC_PATTERNS = [
   /^\/api\/jobs\/\d+\/status$/,

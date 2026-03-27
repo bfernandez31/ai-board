@@ -93,7 +93,8 @@ describe('Agent-Agnostic Telemetry', () => {
       expect(response.data).toHaveProperty('status', 'accepted');
 
       const job = await prisma.job.findUnique({ where: { id: jobId } });
-      expect(job!.inputTokens).toBe(500);
+      // Codex input_token_count (500) includes cached (100), so non-cached = 400
+      expect(job!.inputTokens).toBe(400);
       expect(job!.outputTokens).toBe(200);
       expect(job!.cacheReadTokens).toBe(100);
       // Cost is estimated from OpenAI pricing, not reported directly

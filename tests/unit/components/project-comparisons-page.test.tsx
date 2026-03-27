@@ -26,6 +26,7 @@ vi.mock('@/hooks/use-comparisons', () => ({
     projectCandidates: (projectId: number) => ['comparisons', projectId, 'candidates'],
   },
   useProjectComparisonList: vi.fn(),
+  useProjectComparisonListInfinite: vi.fn(),
   useProjectComparisonDetail: vi.fn(),
   useProjectComparisonCandidates: vi.fn(() => ({
     data: { candidates: [] },
@@ -49,7 +50,7 @@ describe('ProjectComparisonsPage', () => {
     launchMutateAsync.mockReset();
 
     const hooks = await import('@/hooks/use-comparisons');
-    vi.mocked(hooks.useProjectComparisonList).mockReturnValue({
+    vi.mocked(hooks.useProjectComparisonListInfinite).mockReturnValue({
       data: {
         comparisons: [
           {
@@ -57,21 +58,22 @@ describe('ProjectComparisonsPage', () => {
             winnerTicketKey: 'AIB-11',
             winnerTicketTitle: 'Winner 11',
             summary: 'First summary',
+            generatedAt: '2026-03-20T00:00:00.000Z',
           },
           {
             id: 22,
             winnerTicketKey: 'AIB-22',
             winnerTicketTitle: 'Winner 22',
             summary: 'Second summary',
+            generatedAt: '2026-03-21T00:00:00.000Z',
           },
         ],
-        page: 1,
-        pageSize: 10,
-        total: 2,
-        totalPages: 1,
       },
       isLoading: false,
       error: null,
+      hasNextPage: false,
+      fetchNextPage: vi.fn(),
+      isFetchingNextPage: false,
       refetch: vi.fn(),
     } as never);
 
@@ -101,8 +103,14 @@ describe('ProjectComparisonsPage', () => {
       <ProjectComparisonsPage projectId={1} projectName="Example Project" />
     );
 
-    expect(screen.getByText('Dashboard for AIB-11')).toBeInTheDocument();
+    // Click first card to expand it
+    await user.click(screen.getByRole('button', { name: /AIB-11/i }));
 
+    await waitFor(() => {
+      expect(screen.getByText('Dashboard for AIB-11')).toBeInTheDocument();
+    });
+
+    // Click second card to switch
     await user.click(screen.getByRole('button', { name: /AIB-22/i }));
 
     await waitFor(() => {

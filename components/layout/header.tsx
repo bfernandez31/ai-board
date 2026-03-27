@@ -98,13 +98,29 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-50 w-full bg-background text-foreground transition-all duration-200 ${
-        isScrolled ? 'border-b shadow-[0_1px_12px_rgba(139,92,246,0.15)]' : ''
+      className={`sticky top-0 z-50 w-full bg-background text-foreground transition-all duration-200 border-b ${
+        isScrolled ? 'shadow-[0_1px_12px_rgba(139,92,246,0.15)]' : 'border-border/50'
       }`}
     >
-      <div className="flex h-16 items-center px-6">
+      <div className={`flex h-16 items-center px-6 ${isProjectPage ? 'lg:px-0' : ''}`}>
         {/* Left: Logo + Title */}
-        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
+        {/* On project pages (lg+), logo sits in a 48px column aligned with sidebar */}
+        {isProjectPage && (
+          <div className="hidden lg:flex items-center justify-center w-12 shrink-0 self-stretch border-r">
+            <Link href="/" aria-label="Home" className="hover:opacity-80 transition-opacity">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.svg"
+                alt="AI-BOARD Logo"
+                width={28}
+                height={28}
+                className="w-7 h-7"
+              />
+            </Link>
+          </div>
+        )}
+        {/* Non-project pages or mobile: standard logo + text */}
+        <Link href="/" className={`flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0 ${isProjectPage ? 'lg:hidden' : ''}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo.svg"
@@ -115,6 +131,12 @@ export function Header() {
           />
           <span className="hidden md:inline text-xl font-bold">AI-BOARD</span>
         </Link>
+        {/* Project pages (lg+): AI-BOARD text outside the 48px column */}
+        {isProjectPage && (
+          <Link href="/" className="hidden lg:flex items-center text-xl font-bold hover:opacity-80 transition-opacity ml-5">
+            AI-BOARD
+          </Link>
+        )}
 
         {/* Center: Project Info (if available) */}
         {projectInfo && (

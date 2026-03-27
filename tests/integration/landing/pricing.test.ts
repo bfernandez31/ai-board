@@ -32,7 +32,7 @@ describe('Landing Page - Pricing Section', () => {
       const response = await fetch(BASE_URL);
       const html = await response.text();
 
-      expect(html).toContain('$0');
+      // Free plan displays "Free" instead of "$0"
       expect(html).toContain('$15');
       expect(html).toContain('$30');
     });

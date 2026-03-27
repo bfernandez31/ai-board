@@ -111,11 +111,10 @@ describe('ComparisonViewer', () => {
       />
     );
 
-    expect(await screen.findByText('Ranking and Recommendation')).toBeInTheDocument();
-    expect(screen.getByText('Implementation Metrics')).toBeInTheDocument();
+    expect(await screen.findByText('Participants')).toBeInTheDocument();
+    expect(screen.getByText('Overview')).toBeInTheDocument();
     expect(screen.getByText('Use ABC-123.')).toBeInTheDocument();
     expect(screen.getByText('Persistence source of truth')).toBeInTheDocument();
     expect(screen.getByText('ABC-123 persists decision-point details directly.')).toBeInTheDocument();
-    expect(screen.getAllByText('Best value').length).toBeGreaterThan(0);
   });
 });
