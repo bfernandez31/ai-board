@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   ComparisonCheckResult,
   ComparisonDetail,
@@ -25,6 +25,8 @@ export const comparisonKeys = {
   project: (projectId: number) => ['comparisons', projectId] as const,
   projectList: (projectId: number, page: number, pageSize: number) =>
     ['comparisons', projectId, 'project-history', page, pageSize] as const,
+  projectInfiniteList: (projectId: number, pageSize: number) =>
+    ['comparisons', projectId, 'project-infinite', pageSize] as const,
   projectDetail: (projectId: number, comparisonId: number | null) =>
     ['comparisons', projectId, 'project-detail', comparisonId ?? 'none'] as const,
   projectCandidates: (projectId: number) => ['comparisons', projectId, 'candidates'] as const,
@@ -152,6 +154,28 @@ export function useProjectComparisonList(
         `/api/projects/${projectId}/comparisons?page=${page}&pageSize=${pageSize}`,
         'Failed to fetch project comparison history'
       ),
+    enabled: enabled && projectId > 0,
+    staleTime: SHORT_STALE_TIME_MS,
+    gcTime: DEFAULT_GC_TIME_MS,
+    ...DEFAULT_QUERY_OPTIONS,
+  });
+}
+
+export function useProjectComparisonInfiniteList(
+  projectId: number,
+  pageSize: number,
+  enabled: boolean = true
+) {
+  return useInfiniteQuery({
+    queryKey: comparisonKeys.projectInfiniteList(projectId, pageSize),
+    queryFn: ({ pageParam }) =>
+      fetchJson<ProjectComparisonListResponse>(
+        `/api/projects/${projectId}/comparisons?page=${pageParam}&pageSize=${pageSize}`,
+        'Failed to fetch project comparison history'
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
     enabled: enabled && projectId > 0,
     staleTime: SHORT_STALE_TIME_MS,
     gcTime: DEFAULT_GC_TIME_MS,

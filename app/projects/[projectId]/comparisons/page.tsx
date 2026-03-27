@@ -22,7 +22,7 @@ export default async function ComparisonsPage({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ page?: string; comparisonId?: string }>;
+  searchParams: Promise<{ comparisonId?: string }>;
 }) {
   const { projectId: projectIdString } = await params;
   const search = await searchParams;
@@ -57,7 +57,6 @@ export default async function ComparisonsPage({
       <ProjectComparisonsPage
         projectId={projectId}
         projectName={project.name}
-        initialPage={parsePositiveInteger(search.page) ?? 1}
         initialComparisonId={parsePositiveInteger(search.comparisonId)}
       />
     </main>

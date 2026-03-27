@@ -1,17 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, GitCompare, Loader2, RefreshCcw, Sparkles } from 'lucide-react';
+import { Calendar, ChevronDown, GitCompare, Loader2, RefreshCcw, Sparkles, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { ComparisonLaunchRequest } from '@/lib/types/comparison';
+import type { ComparisonLaunchRequest, ProjectComparisonSummary } from '@/lib/types/comparison';
 import {
   comparisonKeys,
   useProjectComparisonCandidates,
   useProjectComparisonDetail,
+  useProjectComparisonInfiniteList,
   useProjectComparisonLaunch,
-  useProjectComparisonList,
   useProjectComparisonPendingJobs,
 } from '@/hooks/use-comparisons';
 import { ComparisonDashboard } from './comparison-viewer';
@@ -51,30 +51,105 @@ function mergePendingLaunches(
   });
 }
 
+function formatDate(isoDate: string): string {
+  return new Date(isoDate).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function ComparisonCard({
+  comparison,
+  isExpanded,
+  onToggle,
+}: {
+  comparison: ProjectComparisonSummary;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`w-full rounded-xl border px-5 py-4 text-left transition-colors ${
+        isExpanded
+          ? 'border-primary bg-primary/5'
+          : 'border-border bg-card hover:bg-muted/40'
+      }`}
+      onClick={onToggle}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-4 w-4 shrink-0 text-primary" />
+            <span className="font-medium text-foreground">{comparison.winnerTicketKey}</span>
+            <span className="truncate text-sm text-muted-foreground">{comparison.winnerTicketTitle}</span>
+          </div>
+          <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">{comparison.summary}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            {formatDate(comparison.generatedAt)}
+          </div>
+          <ChevronDown
+            className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          />
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function ExpandedDetail({
+  projectId,
+  comparisonId,
+}: {
+  projectId: number;
+  comparisonId: number;
+}) {
+  const detailQuery = useProjectComparisonDetail(projectId, comparisonId, true);
+
+  if (detailQuery.isLoading) {
+    return (
+      <div className="py-8 text-center text-sm text-muted-foreground">
+        Loading comparison detail...
+      </div>
+    );
+  }
+
+  if (!detailQuery.data) {
+    return (
+      <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+        Failed to load comparison detail.
+      </div>
+    );
+  }
+
+  return <ComparisonDashboard detail={detailQuery.data} />;
+}
+
 export function ProjectComparisonsPage({
   projectId,
   projectName,
-  initialPage = 1,
   initialComparisonId = null,
 }: ProjectComparisonsPageProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(initialPage);
-  const [selectedComparisonIdOverride, setSelectedComparisonIdOverride] = useState<number | null>(
-    initialComparisonId
-  );
+  const [expandedId, setExpandedId] = useState<number | null>(initialComparisonId);
   const [launchOpen, setLaunchOpen] = useState(false);
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<number[]>([]);
   const [pendingLaunches, setPendingLaunches] = useState<ComparisonLaunchRequest[]>([]);
+  const expandedRef = useRef<HTMLDivElement>(null);
+  const hasAutoScrolled = useRef(false);
 
-  const listQuery = useProjectComparisonList(projectId, page, PAGE_SIZE, true);
-  const selectedComparisonId =
-    selectedComparisonIdOverride ?? listQuery.data?.comparisons[0]?.id ?? null;
-  const detailQuery = useProjectComparisonDetail(
-    projectId,
-    selectedComparisonId,
-    selectedComparisonId != null
+  const infiniteQuery = useProjectComparisonInfiniteList(projectId, PAGE_SIZE, true);
+  const allComparisons = useMemo(
+    () => infiniteQuery.data?.pages.flatMap((page) => page.comparisons) ?? [],
+    [infiniteQuery.data]
   );
+  const total = infiniteQuery.data?.pages[0]?.total ?? 0;
+
   const candidatesQuery = useProjectComparisonCandidates(projectId, launchOpen);
   const launchMutation = useProjectComparisonLaunch(projectId);
 
@@ -98,8 +173,7 @@ export function ProjectComparisonsPage({
 
   useEffect(() => {
     const error =
-      listQuery.error ??
-      detailQuery.error ??
+      infiniteQuery.error ??
       candidatesQuery.error ??
       launchMutation.error ??
       pendingJobsQuery.error;
@@ -115,9 +189,8 @@ export function ProjectComparisonsPage({
     });
   }, [
     candidatesQuery.error,
-    detailQuery.error,
+    infiniteQuery.error,
     launchMutation.error,
-    listQuery.error,
     pendingJobsQuery.error,
     toast,
   ]);
@@ -128,7 +201,7 @@ export function ProjectComparisonsPage({
       setPendingLaunches((current) => [launch, ...current]);
       setSelectedCandidateIds([]);
       setLaunchOpen(false);
-      setSelectedComparisonIdOverride(null);
+      setExpandedId(null);
     } catch {
       // Toast handled by effect above.
     }
@@ -149,7 +222,22 @@ export function ProjectComparisonsPage({
     );
   }, [hasTerminalPendingJob, projectId, queryClient]);
 
-  const totalPages = listQuery.data?.totalPages ?? 0;
+  const handleToggle = useCallback((comparisonId: number) => {
+    setExpandedId((current) => (current === comparisonId ? null : comparisonId));
+  }, []);
+
+  // Auto-scroll to deep-linked comparison on initial load
+  useEffect(() => {
+    if (
+      initialComparisonId &&
+      expandedId === initialComparisonId &&
+      expandedRef.current &&
+      !hasAutoScrolled.current
+    ) {
+      hasAutoScrolled.current = true;
+      expandedRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [initialComparisonId, expandedId, allComparisons]);
 
   return (
     <div className="space-y-6">
@@ -165,10 +253,15 @@ export function ProjectComparisonsPage({
               Review durable comparison history for {projectName} and launch fresh comparisons from VERIFY.
             </p>
           </div>
-          <Button type="button" onClick={() => setLaunchOpen(true)}>
-            <Sparkles className="mr-2 h-4 w-4" />
-            Compare VERIFY tickets
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="icon" onClick={() => void infiniteQuery.refetch()}>
+              <RefreshCcw className="h-4 w-4" />
+            </Button>
+            <Button type="button" onClick={() => setLaunchOpen(true)}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Compare VERIFY tickets
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -188,85 +281,60 @@ export function ProjectComparisonsPage({
         </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-        <section className="rounded-2xl border border-border bg-card p-4">
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <div>
-              <h2 className="font-medium text-foreground">History</h2>
-              <p className="text-sm text-muted-foreground">Newest comparisons first</p>
-            </div>
-            <Button type="button" variant="ghost" size="icon" onClick={() => void listQuery.refetch()}>
-              <RefreshCcw className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {listQuery.isLoading ? (
-            <div className="py-8 text-sm text-muted-foreground">Loading project comparisons...</div>
-          ) : (listQuery.data?.comparisons.length ?? 0) === 0 ? (
-            <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-              No saved comparisons yet. Launch one from VERIFY tickets to populate the hub.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {listQuery.data?.comparisons.map((comparison) => (
-                <button
-                  key={comparison.id}
-                  type="button"
-                  className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${
-                    comparison.id === selectedComparisonId
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border bg-card hover:bg-muted/40'
-                  }`}
-                  onClick={() => setSelectedComparisonIdOverride(comparison.id)}
-                >
-                  <div className="font-medium text-foreground">{comparison.winnerTicketKey}</div>
-                  <div className="mt-1 text-sm text-muted-foreground">{comparison.winnerTicketTitle}</div>
-                  <div className="mt-2 line-clamp-2 text-sm text-muted-foreground">{comparison.summary}</div>
-                </button>
-              ))}
-
-              <div className="flex items-center justify-between gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((value) => Math.max(1, value - 1))}
-                >
-                  <ChevronLeft className="mr-2 h-4 w-4" />
-                  Previous
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {listQuery.data?.page ?? page}
-                  {totalPages > 0 ? ` of ${totalPages}` : ''}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={totalPages === 0 || page >= totalPages}
-                  onClick={() => setPage((value) => value + 1)}
-                >
-                  Next
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
+      {infiniteQuery.isLoading ? (
+        <div className="py-8 text-center text-sm text-muted-foreground">Loading project comparisons...</div>
+      ) : allComparisons.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+          No saved comparisons yet. Launch one from VERIFY tickets to populate the hub.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {allComparisons.map((comparison) => {
+            const isExpanded = comparison.id === expandedId;
+            return (
+              <div
+                key={comparison.id}
+                ref={comparison.id === initialComparisonId ? expandedRef : undefined}
+              >
+                <ComparisonCard
+                  comparison={comparison}
+                  isExpanded={isExpanded}
+                  onToggle={() => handleToggle(comparison.id)}
+                />
+                {isExpanded ? (
+                  <div className="mt-3 rounded-2xl border border-border bg-card p-6">
+                    <ExpandedDetail projectId={projectId} comparisonId={comparison.id} />
+                  </div>
+                ) : null}
               </div>
-            </div>
-          )}
-        </section>
+            );
+          })}
 
-        <section className="rounded-2xl border border-border bg-card p-4">
-          {detailQuery.isLoading ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">Loading comparison detail...</div>
-          ) : detailQuery.data ? (
-            <ComparisonDashboard detail={detailQuery.data} />
-          ) : (
-            <div className="rounded-lg border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
-              Select a saved comparison to review the full dashboard inline.
+          {infiniteQuery.hasNextPage ? (
+            <div className="flex justify-center pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={infiniteQuery.isFetchingNextPage}
+                onClick={() => void infiniteQuery.fetchNextPage()}
+              >
+                {infiniteQuery.isFetchingNextPage ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  `Load more (${allComparisons.length} of ${total})`
+                )}
+              </Button>
             </div>
-          )}
-        </section>
-      </div>
+          ) : total > PAGE_SIZE ? (
+            <p className="pt-2 text-center text-sm text-muted-foreground">
+              All {total} comparisons loaded
+            </p>
+          ) : null}
+        </div>
+      )}
 
       <ProjectComparisonLaunchSheet
         open={launchOpen}

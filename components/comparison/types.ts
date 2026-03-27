@@ -75,7 +75,6 @@ export interface ComparisonDashboardProps {
 export interface ProjectComparisonsPageProps {
   projectId: number;
   projectName: string;
-  initialPage?: number;
   initialComparisonId?: number | null;
 }
 
