@@ -44,18 +44,14 @@ export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
   return (
     <ScrollArea className="h-[68vh] pr-4">
       <div className="space-y-6">
-        <section
-          className={sectionClass}
-          style={{ background: 'linear-gradient(160deg, hsl(var(--ctp-sapphire) / 0.06) 0%, hsl(var(--ctp-mauve) / 0.08) 50%, hsl(var(--ctp-pink) / 0.05) 100%)' }}
-        >
-          <ComparisonHeroCard
-            winner={winner}
-            recommendation={detail.overallRecommendation}
-            keyDifferentiators={detail.keyDifferentiators}
-            generatedAt={detail.generatedAt}
-            sourceTicketKey={detail.sourceTicketKey}
-          />
-        </section>
+        {/* Hero card — no section wrapper to avoid double box */}
+        <ComparisonHeroCard
+          winner={winner}
+          recommendation={detail.overallRecommendation}
+          keyDifferentiators={detail.keyDifferentiators}
+          generatedAt={detail.generatedAt}
+          sourceTicketKey={detail.sourceTicketKey}
+        />
 
         <section
           className={sectionClass}
@@ -77,33 +73,19 @@ export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
           <ComparisonStatCards winner={winner} participants={detail.participants} />
         </section>
 
-        <section
-          className={sectionClass}
-          style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
-        >
-          <ComparisonUnifiedMetrics participants={detail.participants} />
-        </section>
+        {/* Components with internal Card — no section wrapper */}
+        <ComparisonUnifiedMetrics participants={detail.participants} />
 
-        <section
-          className={sectionClass}
-          style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
-        >
-          <ComparisonDecisionPoints
-            decisionPoints={detail.decisionPoints}
-            winnerTicketId={detail.winnerTicketId}
-            participants={detail.participants}
-          />
-        </section>
+        <ComparisonDecisionPoints
+          decisionPoints={detail.decisionPoints}
+          winnerTicketId={detail.winnerTicketId}
+          participants={detail.participants}
+        />
 
-        <section
-          className={sectionClass}
-          style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
-        >
-          <ComparisonComplianceHeatmap
-            rows={detail.complianceRows}
-            participants={detail.participants}
-          />
-        </section>
+        <ComparisonComplianceHeatmap
+          rows={detail.complianceRows}
+          participants={detail.participants}
+        />
       </div>
     </ScrollArea>
   );

@@ -49,18 +49,6 @@ function VerdictDot({
   );
 }
 
-function getCardAccent(
-  verdictTicketId: number | null,
-  winnerTicketId: number | null,
-  participants?: ComparisonParticipantDetail[]
-): { bg: string; border: string } {
-  if (verdictTicketId === null || winnerTicketId === null) {
-    return { bg: '', border: 'border-border' };
-  }
-  const accent = resolveAccent(verdictTicketId, winnerTicketId, participants);
-  return { bg: accent.bgSubtle, border: accent.border };
-}
-
 export function ComparisonDecisionPoints(
   props: ComparisonDecisionPointsProps | ComparisonDecisionPointsEnhancedProps
 ) {
@@ -69,9 +57,14 @@ export function ComparisonDecisionPoints(
   const participants = 'participants' in props ? props.participants : undefined;
 
   return (
-    <Card>
+    <Card
+      className="border-ctp-mauve/15"
+      style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+    >
       <CardHeader>
-        <CardTitle>Decision Points</CardTitle>
+        <CardTitle className="text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
+          Decision Points
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {decisionPoints.length === 0 && (
@@ -80,15 +73,19 @@ export function ComparisonDecisionPoints(
           </div>
         )}
         {decisionPoints.map((point) => {
-          const cardStyle = getCardAccent(point.verdictTicketId, winnerTicketId, participants);
-          const verdictParticipant = participants?.find((p) => p.ticketId === point.verdictTicketId);
           const verdictAccent = point.verdictTicketId != null && winnerTicketId != null
             ? resolveAccent(point.verdictTicketId, winnerTicketId, participants)
             : null;
 
           return (
             <Collapsible key={point.id} defaultOpen={point.displayOrder === 0}>
-              <div data-testid="decision-point-card" className={`rounded-lg border ${cardStyle.bg} ${cardStyle.border}`}>
+              <div
+                data-testid="decision-point-card"
+                className="rounded-lg border border-ctp-mauve/15"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.03), hsl(var(--ctp-mauve) / 0.05))',
+                }}
+              >
                 <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left">
                   <div className="flex items-start gap-2">
                     {winnerTicketId != null && (
@@ -108,7 +105,7 @@ export function ComparisonDecisionPoints(
                             data-testid="verdict-pill"
                             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${verdictAccent.bgMedium} ${verdictAccent.text}`}
                           >
-                            {verdictParticipant?.ticketKey ?? (point.verdictTicketId === winnerTicketId ? 'Winner' : 'Other')}
+                            {participants?.find((p) => p.ticketId === point.verdictTicketId)?.ticketKey ?? (point.verdictTicketId === winnerTicketId ? 'Winner' : 'Other')}
                           </span>
                         )}
                       </div>
@@ -119,14 +116,16 @@ export function ComparisonDecisionPoints(
                   </div>
                   <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
                 </CollapsibleTrigger>
-                <CollapsibleContent className="border-t border-border px-4 py-3">
+                <CollapsibleContent
+                  className="border-t border-ctp-mauve/10 px-4 py-3"
+                >
                   <p className="text-sm text-muted-foreground">{point.rationale}</p>
                   {point.participantApproaches.length > 0 ? (
                     <div className="mt-3 space-y-2">
                       {point.participantApproaches.map((approach) => (
                         <div key={approach.ticketId}>
                           <div className="text-sm font-medium text-foreground">
-                            <Badge variant="outline" className="mr-2">
+                            <Badge variant="outline" className="mr-2 border-ctp-mauve/20">
                               {approach.ticketKey}
                             </Badge>
                           </div>

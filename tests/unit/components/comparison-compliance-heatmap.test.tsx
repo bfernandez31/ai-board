@@ -84,13 +84,14 @@ describe('ComparisonComplianceHeatmap', () => {
   });
 
   it('renders colored cells matching status', () => {
-    const { container } = renderWithProviders(
+    renderWithProviders(
       <ComparisonComplianceHeatmap rows={complianceRows} participants={participants} />
     );
 
-    const greenCells = container.querySelectorAll('.bg-ctp-green\\/10');
-    const redCells = container.querySelectorAll('.bg-ctp-red\\/10');
-    const yellowCells = container.querySelectorAll('.bg-ctp-yellow\\/10');
+    const cells = screen.getAllByTestId('heatmap-cell');
+    const greenCells = cells.filter((c) => c.getAttribute('data-status') === 'pass');
+    const redCells = cells.filter((c) => c.getAttribute('data-status') === 'fail');
+    const yellowCells = cells.filter((c) => c.getAttribute('data-status') === 'mixed');
 
     expect(greenCells.length).toBe(2); // pass cells
     expect(redCells.length).toBe(1); // fail cell

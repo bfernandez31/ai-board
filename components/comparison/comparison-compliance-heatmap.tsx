@@ -9,11 +9,32 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ComparisonComplianceHeatmapProps } from './types';
 
-const statusColors: Record<string, string> = {
-  pass: 'bg-ctp-green/10',
-  mixed: 'bg-ctp-yellow/10',
-  fail: 'bg-ctp-red/10',
+/** Aurora-styled status colors with gradients */
+const statusStyles: Record<string, { className: string; style: React.CSSProperties }> = {
+  pass: {
+    className: 'h-8 w-full cursor-pointer rounded',
+    style: {
+      background: 'linear-gradient(135deg, hsl(var(--ctp-green) / 0.12), hsl(var(--ctp-teal) / 0.08))',
+      border: '1px solid hsl(var(--ctp-green) / 0.15)',
+    },
+  },
+  mixed: {
+    className: 'h-8 w-full cursor-pointer rounded',
+    style: {
+      background: 'linear-gradient(135deg, hsl(var(--ctp-yellow) / 0.12), hsl(var(--ctp-peach) / 0.08))',
+      border: '1px solid hsl(var(--ctp-yellow) / 0.15)',
+    },
+  },
+  fail: {
+    className: 'h-8 w-full cursor-pointer rounded',
+    style: {
+      background: 'linear-gradient(135deg, hsl(var(--ctp-red) / 0.12), hsl(var(--ctp-maroon) / 0.08))',
+      border: '1px solid hsl(var(--ctp-red) / 0.15)',
+    },
+  },
 };
+
+const defaultStatusStyle = { className: 'h-8 w-full rounded bg-muted', style: {} };
 
 export function ComparisonComplianceHeatmap({
   rows,
@@ -21,9 +42,14 @@ export function ComparisonComplianceHeatmap({
 }: ComparisonComplianceHeatmapProps) {
   if (rows.length === 0) {
     return (
-      <Card>
+      <Card
+        className="border-ctp-mauve/15"
+        style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+      >
         <CardHeader>
-          <CardTitle>Compliance</CardTitle>
+          <CardTitle className="text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
+            Compliance
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground">
@@ -37,16 +63,21 @@ export function ComparisonComplianceHeatmap({
   const sortedRows = [...rows].sort((a, b) => a.displayOrder - b.displayOrder);
 
   return (
-    <Card>
+    <Card
+      className="border-ctp-mauve/15"
+      style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}
+    >
       <CardHeader>
-        <CardTitle>Compliance</CardTitle>
+        <CardTitle className="text-xs font-semibold uppercase tracking-widest text-ctp-subtext0">
+          Compliance
+        </CardTitle>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         <TooltipProvider>
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-border">
-                <th className="sticky left-0 z-10 bg-card px-3 py-2 text-left font-medium text-muted-foreground">
+              <tr className="border-b border-ctp-mauve/10">
+                <th className="sticky left-0 z-10 px-3 py-2 text-left font-medium text-muted-foreground" style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}>
                   Principle
                 </th>
                 {participants.map((p) => (
@@ -58,8 +89,8 @@ export function ComparisonComplianceHeatmap({
             </thead>
             <tbody>
               {sortedRows.map((row) => (
-                <tr key={row.principleKey} className="border-b border-border last:border-0">
-                  <td className="sticky left-0 z-10 bg-card px-3 py-2 font-medium text-foreground">
+                <tr key={row.principleKey} className="border-b border-ctp-mauve/10 last:border-0">
+                  <td className="sticky left-0 z-10 px-3 py-2 font-medium text-foreground" style={{ background: 'hsl(var(--ctp-mauve) / 0.03)' }}>
                     {row.principleName}
                   </td>
                   {participants.map((p) => {
@@ -78,7 +109,7 @@ export function ComparisonComplianceHeatmap({
                       );
                     }
 
-                    const colorClass = statusColors[assessment.status] ?? 'bg-muted';
+                    const cellStyle = statusStyles[assessment.status] ?? defaultStatusStyle;
 
                     return (
                       <td key={p.ticketId} className="px-3 py-2">
@@ -86,7 +117,9 @@ export function ComparisonComplianceHeatmap({
                           <TooltipTrigger asChild>
                             <div
                               data-testid="heatmap-cell"
-                              className={`h-8 w-full cursor-pointer rounded ${colorClass}`}
+                              data-status={assessment.status}
+                              className={cellStyle.className}
+                              style={cellStyle.style}
                             />
                           </TooltipTrigger>
                           <TooltipContent>
