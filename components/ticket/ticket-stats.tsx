@@ -39,7 +39,10 @@ function StatsSummaryCards({ stats }: { stats: TicketStatsType }) {
   return (
     <div className="grid grid-cols-2 gap-3 mb-6" data-testid="stats-summary-cards">
       {/* Total Cost Card */}
-      <Card className="bg-background border-border">
+      <Card
+        className="border-ctp-green/20"
+        style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-green) / 0.06), hsl(var(--ctp-teal) / 0.04))' }}
+      >
         <CardContent className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <DollarSign className="w-4 h-4" />
@@ -52,7 +55,10 @@ function StatsSummaryCards({ stats }: { stats: TicketStatsType }) {
       </Card>
 
       {/* Total Duration Card */}
-      <Card className="bg-background border-border">
+      <Card
+        className="border-ctp-sapphire/20"
+        style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.06), hsl(var(--ctp-mauve) / 0.04))' }}
+      >
         <CardContent className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <Clock className="w-4 h-4" />
@@ -65,7 +71,10 @@ function StatsSummaryCards({ stats }: { stats: TicketStatsType }) {
       </Card>
 
       {/* Total Tokens Card */}
-      <Card className="bg-background border-border">
+      <Card
+        className="border-ctp-yellow/20"
+        style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-yellow) / 0.06), hsl(var(--ctp-peach) / 0.04))' }}
+      >
         <CardContent className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <Coins className="w-4 h-4" />
@@ -78,7 +87,10 @@ function StatsSummaryCards({ stats }: { stats: TicketStatsType }) {
       </Card>
 
       {/* Cache Efficiency Card */}
-      <Card className="bg-background border-border">
+      <Card
+        className="border-ctp-mauve/20"
+        style={{ background: 'linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.06), hsl(var(--ctp-pink) / 0.04))' }}
+      >
         <CardContent className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <Zap className="w-4 h-4" />
@@ -122,7 +134,8 @@ function ToolsUsageSection({ toolsUsage }: { toolsUsage: TicketStatsType['toolsU
           <Badge
             key={tool}
             variant="secondary"
-            className="bg-secondary text-foreground border-accent text-xs px-2 py-1"
+            className="text-foreground border-ctp-mauve/20 text-xs px-2 py-1"
+            style={{ background: 'hsl(var(--ctp-mauve) / 0.08)' }}
             data-testid={`tool-badge-${tool}`}
           >
             {tool}
