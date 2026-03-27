@@ -751,25 +751,86 @@ export function TicketDetailModal({
           <DialogDescription className="sr-only">
             View and edit ticket details, including title, description, stage, clarification policy, and documentation.
           </DialogDescription>
-          {/* Compact metadata row - ticket key, badges and branch link */}
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            {/* Ticket Key - at the start */}
-            <span className="text-sm font-mono font-bold text-muted-foreground" data-testid="ticket-key">
-              {localTicket?.ticketKey || ticket.ticketKey}
-            </span>
-
-            <Badge
-              className={`${stageBadge.className} text-xs px-2 py-0.5 font-medium pointer-events-none`}
-              data-testid="stage-badge"
-            >
-              {stageBadge.label}
-            </Badge>
-            {/* AIB-148: Read-only indicator for closed tickets */}
-            {isClosedTicket && (
-              <Badge variant="outline" className="text-xs px-2 py-0.5 text-muted-foreground border-muted-foreground/30">
-                Read-only
+          {/* Row 1: Identity (left) + Actions (right) */}
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-mono font-bold text-muted-foreground" data-testid="ticket-key">
+                {localTicket?.ticketKey || ticket.ticketKey}
+              </span>
+              <Badge
+                className={`${stageBadge.className} text-xs px-2 py-0.5 font-medium pointer-events-none`}
+                data-testid="stage-badge"
+              >
+                {stageBadge.label}
               </Badge>
-            )}
+              {isClosedTicket && (
+                <Badge variant="outline" className="text-xs px-2 py-0.5 text-muted-foreground border-muted-foreground/30">
+                  Read-only
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              {localTicket?.project && isInboxStage && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPolicyEditOpen(true)}
+                  className="h-6 px-2 text-xs text-muted-foreground"
+                  data-testid="edit-policy-button"
+                  title="Edit clarification policy"
+                >
+                  <Settings2 className="w-3 h-3 mr-1" />
+                  Edit Policy
+                </Button>
+              )}
+              {localTicket?.project?.defaultAgent && isInboxStage && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAgentEditOpen(true)}
+                  className="h-6 px-2 text-xs text-muted-foreground"
+                  data-testid="edit-agent-button"
+                  title="Edit AI agent"
+                >
+                  <Settings2 className="w-3 h-3 mr-1" />
+                  Edit Agent
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isDuplicating}
+                    className="h-6 px-2 text-xs text-muted-foreground"
+                    data-testid="duplicate-ticket-button"
+                  >
+                    {isDuplicating ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : (
+                      <ChevronDown className="w-3 h-3 mr-1" />
+                    )}
+                    {isDuplicating ? 'Duplicating...' : 'Duplicate'}
+                  </Button>
+                </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleDuplicate('simple')}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Simple copy
+                </DropdownMenuItem>
+                {showFullClone && (
+                  <DropdownMenuItem onClick={() => handleDuplicate('full')}>
+                    <GitBranch className="mr-2 h-4 w-4" />
+                    Full clone
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            </div>
+          </div>
+
+          {/* Row 2: Metadata badges (workflow, agent, branch) */}
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             {localTicket?.project && (
               <PolicyBadge
                 policy={
@@ -784,7 +845,6 @@ export function TicketDetailModal({
                 }
               />
             )}
-            {/* Agent Badge */}
             {effectiveAgent && (
               <Badge
                 variant={isAgentOverride ? 'default' : 'secondary'}
@@ -798,7 +858,6 @@ export function TicketDetailModal({
                 )}
               </Badge>
             )}
-            {/* Branch link - compact icon button */}
             {localTicket?.branch &&
               localTicket.branch.length > 0 &&
               localTicket.stage !== 'SHIP' &&
@@ -812,15 +871,7 @@ export function TicketDetailModal({
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="
-                    inline-flex items-center gap-1.5 px-2 py-0.5
-                    text-xs font-medium
-                    bg-secondary hover:bg-accent
-                    text-ctp-blue hover:text-ctp-lavender
-                    rounded border border-accent
-                    transition-colors duration-200
-                    focus:outline-none focus:ring-2 focus:ring-ctp-blue focus:ring-offset-2 focus:ring-offset-card
-                  "
+                  className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium text-ctp-green hover:text-ctp-teal rounded-full border border-ctp-green/15 aurora-bg-muted transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-ctp-green/30"
                   data-testid="github-branch-link"
                   aria-label={`View branch ${localTicket.branch} in GitHub`}
                   title={`Branch: ${localTicket.branch}`}
@@ -830,65 +881,6 @@ export function TicketDetailModal({
                   <ExternalLink className="w-3 h-3" aria-hidden="true" />
                 </a>
               )}
-            {/* Edit Policy button - compact (only visible in INBOX stage) */}
-            {localTicket?.project && isInboxStage && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPolicyEditOpen(true)}
-                className="ml-auto h-6 px-2 text-xs"
-                data-testid="edit-policy-button"
-                title="Edit clarification policy"
-              >
-                <Settings2 className="w-3 h-3 mr-1" />
-                Edit Policy
-              </Button>
-            )}
-            {/* Edit Agent button - compact (only visible in INBOX stage) */}
-            {localTicket?.project?.defaultAgent && isInboxStage && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setAgentEditOpen(true)}
-                className="h-6 px-2 text-xs"
-                data-testid="edit-agent-button"
-                title="Edit AI agent"
-              >
-                <Settings2 className="w-3 h-3 mr-1" />
-                Edit Agent
-              </Button>
-            )}
-            {/* Duplicate dropdown menu - always visible */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={isDuplicating}
-                  className={`h-6 px-2 text-xs ${!isInboxStage && !localTicket?.project ? 'ml-auto' : ''}`}
-                  data-testid="duplicate-ticket-button"
-                >
-                  {isDuplicating ? (
-                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                  ) : (
-                    <ChevronDown className="w-3 h-3 mr-1" />
-                  )}
-                  {isDuplicating ? 'Duplicating...' : 'Duplicate'}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleDuplicate('simple')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Simple copy
-                </DropdownMenuItem>
-                {showFullClone && (
-                  <DropdownMenuItem onClick={() => handleDuplicate('full')}>
-                    <GitBranch className="mr-2 h-4 w-4" />
-                    Full clone
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
 
           <div className="group">
