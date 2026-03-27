@@ -64,7 +64,7 @@
 
 ### Tests for User Story 2
 
-- [ ] T009 [P] [US2] Write component test for accordion expand/collapse behavior (click to expand, click to collapse, single-expand switching) in `tests/unit/components/comparison-card.test.tsx`
+- [x] T009 [P] [US2] Write component test for accordion expand/collapse behavior (click to expand, click to collapse, single-expand switching) in `tests/unit/components/comparison-card.test.tsx`
 
 ### Implementation for User Story 2
 
@@ -83,7 +83,7 @@
 
 ### Tests for User Story 3
 
-- [ ] T012 [P] [US3] Write integration test for Load More accumulation (button visibility, page append, button disappears when all loaded, expanded card preserved) in `tests/integration/comparisons/comparisons-hub.test.ts`
+- [x] T012 [P] [US3] Write integration test for Load More accumulation (button visibility, page append, button disappears when all loaded, expanded card preserved) in `tests/integration/comparisons/comparisons-hub.test.ts`
 
 ### Implementation for User Story 3
 
@@ -101,7 +101,7 @@
 
 ### Tests for User Story 4
 
-- [ ] T014 [P] [US4] Write integration test for deep link auto-expand (initial page hit, multi-page fetch, invalid ID graceful handling) in `tests/integration/comparisons/comparisons-hub.test.ts`
+- [x] T014 [P] [US4] Write integration test for deep link auto-expand (initial page hit, multi-page fetch, invalid ID graceful handling) in `tests/integration/comparisons/comparisons-hub.test.ts`
 
 ### Implementation for User Story 4
 

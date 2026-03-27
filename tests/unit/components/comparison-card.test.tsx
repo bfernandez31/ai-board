@@ -117,5 +117,49 @@ describe('ComparisonCard', () => {
       const wrapper = chevron!.closest('.transition-transform');
       expect(wrapper?.className).toContain('rotate-180');
     });
+
+    it('should not rotate chevron when collapsed', () => {
+      const { container } = render(<ComparisonCard {...defaultProps} isExpanded={false} />);
+      const chevron = container.querySelector('.lucide-chevron-down');
+      expect(chevron).toBeTruthy();
+      const wrapper = chevron!.closest('.transition-transform');
+      expect(wrapper?.className).not.toContain('rotate-180');
+    });
+  });
+
+  describe('single-expand accordion (US2)', () => {
+    it('should render two cards where only the expanded one has active style', () => {
+      const comparison2 = { ...mockComparison, id: 43, winnerTicketKey: 'AIB-102' };
+
+      const { container } = render(
+        <div>
+          <ComparisonCard {...defaultProps} comparison={mockComparison} isExpanded={true} />
+          <ComparisonCard {...defaultProps} comparison={comparison2} isExpanded={false} />
+        </div>
+      );
+
+      const card1 = container.querySelector('[data-testid="comparison-card-42"]');
+      const card2 = container.querySelector('[data-testid="comparison-card-43"]');
+
+      expect(card1?.className).toContain('border-primary');
+      expect(card2?.className).toContain('border-border');
+    });
+
+    it('should call onToggle with correct comparison when either card is clicked', async () => {
+      const onToggle1 = vi.fn();
+      const onToggle2 = vi.fn();
+      const comparison2 = { ...mockComparison, id: 43, winnerTicketKey: 'AIB-102' };
+
+      render(
+        <div>
+          <ComparisonCard {...defaultProps} comparison={mockComparison} onToggle={onToggle1} />
+          <ComparisonCard {...defaultProps} comparison={comparison2} onToggle={onToggle2} />
+        </div>
+      );
+
+      await userEvent.click(screen.getByTestId('comparison-card-43'));
+      expect(onToggle2).toHaveBeenCalledOnce();
+      expect(onToggle1).not.toHaveBeenCalled();
+    });
   });
 });
