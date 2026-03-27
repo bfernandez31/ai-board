@@ -45,13 +45,13 @@
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Integration test for GET /api/projects/:projectId/comparisons (pagination, empty project, authorization) in tests/integration/comparisons/comparisons-hub-api.test.ts
-- [ ] T009 [P] [US1] Component test for ComparisonsPage empty state and list rendering in tests/unit/components/comparisons-page.test.tsx
+- [x] T008 [P] [US1] Integration test for GET /api/projects/:projectId/comparisons (pagination, empty project, authorization) in tests/integration/comparisons/comparisons-hub-api.test.ts
+- [x] T009 [P] [US1] Component test for ComparisonsPage empty state and list rendering in tests/unit/components/comparisons-page.test.tsx
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Create comparisons page client component at components/comparisons/comparisons-page.tsx with list rendering, empty state (no comparisons message with guidance), loading skeleton, error state, and "Load More" pagination (track offset in state, append results, show button when more available)
-- [ ] T011 [US1] Create comparison list item component at components/comparisons/comparison-list-item.tsx showing winner ticket key/title, participant count and ticket keys, winner score, summary (1-2 lines), generatedAt date, key differentiator badges, click handler for selection, active state styling
+- [x] T010 [US1] Create comparisons page client component at components/comparisons/comparisons-page.tsx with list rendering, empty state (no comparisons message with guidance), loading skeleton, error state, and "Load More" pagination (track offset in state, append results, show button when more available)
+- [x] T011 [US1] Create comparison list item component at components/comparisons/comparison-list-item.tsx showing winner ticket key/title, participant count and ticket keys, winner score, summary (1-2 lines), generatedAt date, key differentiator badges, click handler for selection, active state styling
 
 **Checkpoint**: User Story 1 fully functional - comparisons list with pagination and empty state
 
@@ -65,12 +65,12 @@
 
 ### Tests for User Story 2
 
-- [ ] T012 [P] [US2] Component test for ComparisonInlineDetail expand/collapse behavior in tests/unit/components/comparison-inline-detail.test.tsx
+- [x] T012 [P] [US2] Component test for ComparisonInlineDetail expand/collapse behavior in tests/unit/components/comparison-inline-detail.test.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] Create inline detail wrapper at components/comparisons/comparison-inline-detail.tsx that renders existing sub-components (ComparisonHeroCard, ComparisonParticipantGrid, ComparisonStatCards, ComparisonUnifiedMetrics, ComparisonDecisionPoints, ComparisonComplianceHeatmap), includes loading skeleton while detail fetches, and collapse control
-- [ ] T014 [US2] Integrate inline detail into comparisons-page.tsx: manage selectedComparisonId state, expand detail below selected list item, collapse on re-click or different selection, use useProjectComparisonDetail hook
+- [x] T013 [US2] Create inline detail wrapper at components/comparisons/comparison-inline-detail.tsx that renders existing sub-components (ComparisonHeroCard, ComparisonParticipantGrid, ComparisonStatCards, ComparisonUnifiedMetrics, ComparisonDecisionPoints, ComparisonComplianceHeatmap), includes loading skeleton while detail fetches, and collapse control
+- [x] T014 [US2] Integrate inline detail into comparisons-page.tsx: manage selectedComparisonId state, expand detail below selected list item, collapse on re-click or different selection, use useProjectComparisonDetail hook
 
 **Checkpoint**: User Stories 1 AND 2 fully functional - list with inline detail expansion
 
@@ -84,13 +84,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T015 [P] [US3] Integration test for POST /api/projects/:projectId/comparisons/launch (validation, dispatch, error cases) in tests/integration/comparisons/new-comparison-launch.test.ts
-- [ ] T016 [P] [US3] Component test for NewComparisonLauncher selection, validation, and empty state in tests/unit/components/new-comparison-launcher.test.tsx
+- [x] T015 [P] [US3] Integration test for POST /api/projects/:projectId/comparisons/launch (validation, dispatch, error cases) in tests/integration/comparisons/new-comparison-launch.test.ts
+- [x] T016 [P] [US3] Component test for NewComparisonLauncher selection, validation, and empty state in tests/unit/components/new-comparison-launcher.test.tsx
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Create new comparison launcher component at components/comparisons/new-comparison-launcher.tsx with "New Comparison" button opening shadcn Dialog, fetching VERIFY-stage tickets via useVerifyStageTickets, checkbox selection UI showing ticketKey/title/branch, "Compare" button disabled until 2+ selected, trigger useLaunchComparison mutation, empty state when no VERIFY tickets
-- [ ] T018 [US3] Integrate launcher into comparisons-page.tsx: render NewComparisonLauncher in page header, show pending/loading state in list after launch, handle job completion polling to replace pending entry with real comparison
+- [x] T017 [US3] Create new comparison launcher component at components/comparisons/new-comparison-launcher.tsx with "New Comparison" button opening shadcn Dialog, fetching VERIFY-stage tickets via useVerifyStageTickets, checkbox selection UI showing ticketKey/title/branch, "Compare" button disabled until 2+ selected, trigger useLaunchComparison mutation, empty state when no VERIFY tickets
+- [x] T018 [US3] Integrate launcher into comparisons-page.tsx: render NewComparisonLauncher in page header, show pending/loading state in list after launch, handle job completion polling to replace pending entry with real comparison
 
 **Checkpoint**: User Stories 1, 2, AND 3 functional - full hub page with list, detail, and launch
 
@@ -104,11 +104,11 @@
 
 ### Tests for User Story 4
 
-- [ ] T019 [US4] Unit test for nav-items configuration verifying Comparisons entry exists with correct properties in tests/unit/components/nav-items.test.ts
+- [x] T019 [US4] Unit test for nav-items configuration verifying Comparisons entry exists with correct properties in tests/unit/components/nav-items.test.ts
 
 ### Implementation for User Story 4
 
-- [ ] T020 [US4] Verify sidebar navigation integration: confirm Comparisons nav item (added in T002) renders correctly, navigates to proper URL, and shows active state highlighting on the comparisons page
+- [x] T020 [US4] Verify sidebar navigation integration: confirm Comparisons nav item (added in T002) renders correctly, navigates to proper URL, and shows active state highlighting on the comparisons page
 
 **Checkpoint**: Navigation fully functional - Comparisons accessible from sidebar
 
@@ -122,11 +122,11 @@
 
 ### Tests for User Story 5
 
-- [ ] T021 [US5] E2E test for responsive layout verification at multiple viewports in tests/e2e/comparisons-hub.spec.ts
+- [x] T021 [US5] E2E test for responsive layout verification at multiple viewports in tests/e2e/comparisons-hub.spec.ts
 
 ### Implementation for User Story 5
 
-- [ ] T022 [US5] Add responsive Tailwind classes to components/comparisons/comparisons-page.tsx, comparison-list-item.tsx, and comparison-inline-detail.tsx: stacked card layout on <768px, grid/table on desktop, vertical stacking of detail sub-components on narrow viewports
+- [x] T022 [US5] Add responsive Tailwind classes to components/comparisons/comparisons-page.tsx, comparison-list-item.tsx, and comparison-inline-detail.tsx: stacked card layout on <768px, grid/table on desktop, vertical stacking of detail sub-components on narrow viewports
 
 **Checkpoint**: All user stories functional across all viewport sizes
 
@@ -136,9 +136,9 @@
 
 **Purpose**: Final validation and cross-cutting improvements
 
-- [ ] T023 Verify existing ticket detail modal "Compare (N)" button still works (FR-013 no-regression check) — confirm independent API endpoints/hooks/component tree
-- [ ] T024 Run quickstart.md validation — verify all implementation phases match quickstart steps
-- [ ] T025 Run type-check (`bun run type-check`) and lint (`bun run lint`) across all new and modified files, fix any errors
+- [x] T023 Verify existing ticket detail modal "Compare (N)" button still works (FR-013 no-regression check) — confirm independent API endpoints/hooks/component tree
+- [x] T024 Run quickstart.md validation — verify all implementation phases match quickstart steps
+- [x] T025 Run type-check (`bun run type-check`) and lint (`bun run lint`) across all new and modified files, fix any errors
 
 ---
 
