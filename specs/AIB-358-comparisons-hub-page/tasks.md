@@ -16,8 +16,8 @@
 
 **Purpose**: Create page route and project component structure
 
-- [ ] T001 Create server component page route at app/projects/[projectId]/comparisons/page.tsx that reads projectId from params and renders ComparisonsPage client component
-- [ ] T002 [P] Add sidebar navigation item for Comparisons (GitCompare icon, group: views, after Analytics) in components/navigation/nav-items.ts
+- [x] T001 Create server component page route at app/projects/[projectId]/comparisons/page.tsx that reads projectId from params and renders ComparisonsPage client component
+- [x] T002 [P] Add sidebar navigation item for Comparisons (GitCompare icon, group: views, after Analytics) in components/navigation/nav-items.ts
 
 ---
 
@@ -27,11 +27,11 @@
 
 **Warning**: No user story UI work can begin until this phase is complete
 
-- [ ] T003 Rewrite GET handler in app/api/projects/[projectId]/comparisons/route.ts to query ComparisonRecord from database with Prisma (include participants, sourceTicket, winnerTicket relations), support limit/offset pagination, return ProjectComparisonSummary[] shape per contract
-- [ ] T004 [P] Create GET handler at app/api/projects/[projectId]/comparisons/[comparisonId]/route.ts for project-level comparison detail fetch using verifyProjectAccess, reusing enrichment logic from existing getComparisonDetailForTicket adapted for project context
-- [ ] T005 [P] Create GET handler at app/api/projects/[projectId]/tickets/verify/route.ts to list VERIFY-stage tickets (id, ticketKey, title, branch) for the project
-- [ ] T006 [P] Create POST handler at app/api/projects/[projectId]/comparisons/launch/route.ts with Zod validation (ticketIds min 2, max 5, no duplicates), verify all tickets in VERIFY stage with branches, create Job record, dispatch ai-board-assist.yml workflow
-- [ ] T007 Create TanStack Query hooks in hooks/use-project-comparisons.ts: useProjectComparisons (list with pagination), useProjectComparisonDetail (detail by ID), useVerifyStageTickets, useLaunchComparison (mutation with list invalidation) per contract specs
+- [x] T003 Rewrite GET handler in app/api/projects/[projectId]/comparisons/route.ts to query ComparisonRecord from database with Prisma (include participants, sourceTicket, winnerTicket relations), support limit/offset pagination, return ProjectComparisonSummary[] shape per contract
+- [x] T004 [P] Create GET handler at app/api/projects/[projectId]/comparisons/[comparisonId]/route.ts for project-level comparison detail fetch using verifyProjectAccess, reusing enrichment logic from existing getComparisonDetailForTicket adapted for project context
+- [x] T005 [P] Create GET handler at app/api/projects/[projectId]/tickets/verify/route.ts to list VERIFY-stage tickets (id, ticketKey, title, branch) for the project
+- [x] T006 [P] Create POST handler at app/api/projects/[projectId]/comparisons/launch/route.ts with Zod validation (ticketIds min 2, max 5, no duplicates), verify all tickets in VERIFY stage with branches, create Job record, dispatch ai-board-assist.yml workflow
+- [x] T007 Create TanStack Query hooks in hooks/use-project-comparisons.ts: useProjectComparisons (list with pagination), useProjectComparisonDetail (detail by ID), useVerifyStageTickets, useLaunchComparison (mutation with list invalidation) per contract specs
 
 **Checkpoint**: All API endpoints and data hooks ready - UI component implementation can begin
 
