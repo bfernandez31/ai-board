@@ -157,28 +157,47 @@ export function ComparisonViewer({
               <div>
                 {detail && winner ? (
                   <ScrollArea className="h-[68vh] pr-4">
-                    <div className="space-y-4">
-                      <ComparisonHeroCard
-                        winner={winner}
-                        recommendation={detail.overallRecommendation}
-                        keyDifferentiators={detail.keyDifferentiators}
-                        generatedAt={detail.generatedAt}
-                        sourceTicketKey={detail.sourceTicketKey}
-                      />
-                      <ComparisonParticipantGrid participants={nonWinners} />
-                      <ComparisonStatCards
-                        winner={winner}
-                        participants={detail.participants}
-                      />
-                      <ComparisonUnifiedMetrics participants={detail.participants} />
-                      <ComparisonDecisionPoints
-                        decisionPoints={detail.decisionPoints}
-                        winnerTicketId={detail.winnerTicketId}
-                      />
-                      <ComparisonComplianceHeatmap
-                        rows={detail.complianceRows}
-                        participants={detail.participants}
-                      />
+                    <div className="space-y-6">
+                      <section className="rounded-xl border border-ctp-overlay0/10 bg-ctp-surface0/[0.04] p-6">
+                        <ComparisonHeroCard
+                          winner={winner}
+                          recommendation={detail.overallRecommendation}
+                          keyDifferentiators={detail.keyDifferentiators}
+                          generatedAt={detail.generatedAt}
+                          sourceTicketKey={detail.sourceTicketKey}
+                        />
+                      </section>
+
+                      <section className="rounded-xl border border-ctp-overlay0/10 bg-ctp-surface0/[0.04] p-6">
+                        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Participants</h3>
+                        <ComparisonParticipantGrid participants={nonWinners} />
+                      </section>
+
+                      <section className="rounded-xl border border-ctp-overlay0/10 bg-ctp-surface0/[0.04] p-6">
+                        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Overview</h3>
+                        <ComparisonStatCards
+                          winner={winner}
+                          participants={detail.participants}
+                        />
+                      </section>
+
+                      <section className="rounded-xl border border-ctp-overlay0/10 bg-ctp-surface0/[0.04] p-6">
+                        <ComparisonUnifiedMetrics participants={detail.participants} />
+                      </section>
+
+                      <section className="rounded-xl border border-ctp-overlay0/10 bg-ctp-surface0/[0.04] p-6">
+                        <ComparisonDecisionPoints
+                          decisionPoints={detail.decisionPoints}
+                          winnerTicketId={detail.winnerTicketId}
+                        />
+                      </section>
+
+                      <section className="rounded-xl border border-ctp-overlay0/10 bg-ctp-surface0/[0.04] p-6">
+                        <ComparisonComplianceHeatmap
+                          rows={detail.complianceRows}
+                          participants={detail.participants}
+                        />
+                      </section>
                     </div>
                   </ScrollArea>
                 ) : (

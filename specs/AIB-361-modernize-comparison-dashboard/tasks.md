@@ -18,8 +18,8 @@
 
 **Purpose**: Project initialization — create the shared accent color utility that all components depend on
 
-- [ ] T001 Create accent color utility with `getAccentColorByRank()` function and `AccentColorSet` type in `lib/comparison/accent-colors.ts` — static lookup mapping ranks 1-6 to complete Tailwind class string sets (text, bgSubtle, bgMedium, border, ring, shadow, hsl, label) per research.md and data-model.md
-- [ ] T002 Create unit tests for accent color utility in `tests/unit/comparison/accent-colors.test.ts` — verify all 6 ranks return correct class strings, fallback for out-of-range ranks, and type correctness
+- [x] T001 Create accent color utility with `getAccentColorByRank()` function and `AccentColorSet` type in `lib/comparison/accent-colors.ts` — static lookup mapping ranks 1-6 to complete Tailwind class string sets (text, bgSubtle, bgMedium, border, ring, shadow, hsl, label) per research.md and data-model.md
+- [x] T002 Create unit tests for accent color utility in `tests/unit/comparison/accent-colors.test.ts` — verify all 6 ranks return correct class strings, fallback for out-of-range ranks, and type correctness
 
 **Checkpoint**: Accent color utility ready — all component phases can now begin
 
@@ -31,7 +31,7 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Apply glassmorphism base styling to section containers in `components/comparison/comparison-viewer.tsx` — `bg-ctp-surface0/[0.04]` background, `border border-ctp-overlay0/10` borders, increased `p-6` padding and `gap-6` between sections, uppercase tracking on section labels
+- [x] T003 Apply glassmorphism base styling to section containers in `components/comparison/comparison-viewer.tsx` — `bg-ctp-surface0/[0.04]` background, `border border-ctp-overlay0/10` borders, increased `p-6` padding and `gap-6` between sections, uppercase tracking on section labels
 
 **Checkpoint**: Foundation ready — user story implementation can now begin in parallel
 
