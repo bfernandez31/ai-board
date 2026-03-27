@@ -12,13 +12,6 @@ interface StatCardTheme {
   barGradient: string;
 }
 
-const DEFAULT_THEME: StatCardTheme = {
-  text: 'text-ctp-yellow',
-  bgSubtle: 'bg-ctp-yellow/10',
-  border: 'border-ctp-yellow/20',
-  barGradient: 'bg-ctp-yellow',
-};
-
 const STAT_THEMES: Record<string, StatCardTheme> = {
   Cost: {
     text: 'text-ctp-yellow',
@@ -133,13 +126,13 @@ export function ComparisonStatCards({ winner, participants }: ComparisonStatCard
       {statCardConfigs.map((config) => {
         const enrichment = config.getValue(winner);
         const displayValue = getDisplayValue(enrichment, config.format);
-        const theme = STAT_THEMES[config.label] ?? DEFAULT_THEME;
+        const theme = (STAT_THEMES[config.label] ?? STAT_THEMES['Cost']) as StatCardTheme;
 
         return (
           <Card key={config.label} data-testid="stat-card" className={`${theme.bgSubtle} border ${theme.border}`}>
             <CardContent className="pt-4">
               <div className={`text-xs font-medium ${theme.text}`}>{config.label}</div>
-              <div className={`mt-1 text-lg font-extrabold tracking-tight text-foreground`}>{displayValue}</div>
+              <div className="mt-1 text-lg font-extrabold tracking-tight text-foreground">{displayValue}</div>
               <MicroBar
                 participants={participants}
                 getValue={config.getValue}

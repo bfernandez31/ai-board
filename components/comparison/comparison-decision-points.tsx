@@ -12,6 +12,15 @@ import { getAccentColorByRank } from '@/lib/comparison/accent-colors';
 import type { ComparisonDecisionPointsProps, ComparisonDecisionPointsEnhancedProps } from './types';
 import type { ComparisonParticipantDetail } from '@/lib/types/comparison';
 
+function resolveAccent(
+  verdictTicketId: number,
+  winnerTicketId: number,
+  participants?: ComparisonParticipantDetail[]
+) {
+  const participant = participants?.find((p) => p.ticketId === verdictTicketId);
+  return getAccentColorByRank(participant?.rank ?? (verdictTicketId === winnerTicketId ? 1 : 2));
+}
+
 function VerdictDot({
   verdictTicketId,
   winnerTicketId,
@@ -30,8 +39,7 @@ function VerdictDot({
     );
   }
 
-  const participant = participants?.find((p) => p.ticketId === verdictTicketId);
-  const accent = participant ? getAccentColorByRank(participant.rank) : getAccentColorByRank(verdictTicketId === winnerTicketId ? 1 : 2);
+  const accent = resolveAccent(verdictTicketId, winnerTicketId, participants);
 
   return (
     <div
@@ -44,17 +52,12 @@ function VerdictDot({
 function getCardAccent(
   verdictTicketId: number | null,
   winnerTicketId: number | null,
-  participants?: ComparisonParticipantDetail[] | undefined
+  participants?: ComparisonParticipantDetail[]
 ): { bg: string; border: string } {
   if (verdictTicketId === null || winnerTicketId === null) {
     return { bg: '', border: 'border-border' };
   }
-  const participant = participants?.find((p) => p.ticketId === verdictTicketId);
-  if (participant) {
-    const accent = getAccentColorByRank(participant.rank);
-    return { bg: accent.bgSubtle, border: accent.border };
-  }
-  const accent = getAccentColorByRank(verdictTicketId === winnerTicketId ? 1 : 2);
+  const accent = resolveAccent(verdictTicketId, winnerTicketId, participants);
   return { bg: accent.bgSubtle, border: accent.border };
 }
 
@@ -79,8 +82,8 @@ export function ComparisonDecisionPoints(
         {decisionPoints.map((point) => {
           const cardStyle = getCardAccent(point.verdictTicketId, winnerTicketId, participants);
           const verdictParticipant = participants?.find((p) => p.ticketId === point.verdictTicketId);
-          const verdictAccent = point.verdictTicketId != null
-            ? (verdictParticipant ? getAccentColorByRank(verdictParticipant.rank) : getAccentColorByRank(point.verdictTicketId === winnerTicketId ? 1 : 2))
+          const verdictAccent = point.verdictTicketId != null && winnerTicketId != null
+            ? resolveAccent(point.verdictTicketId, winnerTicketId, participants)
             : null;
 
           return (
