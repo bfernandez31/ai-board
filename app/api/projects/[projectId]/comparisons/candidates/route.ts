@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
-import { listProjectComparisons } from '@/lib/comparison/project-comparison-summary';
+import { listProjectComparisonCandidates } from '@/lib/comparison/project-comparison-candidates';
 
 const paramsSchema = z.object({
   projectId: z.coerce.number().int().positive(),
-});
-
-const querySchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().positive().max(50).default(10),
 });
 
 export async function GET(
@@ -25,24 +20,10 @@ export async function GET(
       );
     }
 
-    const queryResult = querySchema.safeParse({
-      page: request.nextUrl.searchParams.get('page') ?? undefined,
-      pageSize: request.nextUrl.searchParams.get('pageSize') ?? undefined,
-    });
-    if (!queryResult.success) {
-      return NextResponse.json(
-        { error: 'Invalid pagination parameters', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
-    }
-
     await verifyProjectAccess(paramsResult.data.projectId, request);
-    const result = await listProjectComparisons(
-      paramsResult.data.projectId,
-      queryResult.data
-    );
+    const candidates = await listProjectComparisonCandidates(paramsResult.data.projectId);
 
-    return NextResponse.json(result);
+    return NextResponse.json({ candidates });
   } catch (error) {
     if (error instanceof Error && error.message === 'Project not found') {
       return NextResponse.json(

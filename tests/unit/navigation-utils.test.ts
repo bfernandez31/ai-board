@@ -12,6 +12,7 @@ import {
   parseProjectIdFromRoute,
 } from '../../lib/utils/navigation-utils';
 import type { NotificationWithNavData } from '../../lib/types/notification-navigation';
+import { NAVIGATION_ITEMS } from '@/components/navigation/nav-items';
 
 describe('isSameProject', () => {
   it('should return true when project IDs are equal', () => {
@@ -277,6 +278,18 @@ describe('isValidNotificationForNavigation', () => {
   it('should return false for invalid commentId', () => {
     expect(isValidNotificationForNavigation({ ...validNotification, commentId: 0 })).toBe(false);
     expect(isValidNotificationForNavigation({ ...validNotification, commentId: -1 })).toBe(false);
+  });
+});
+
+describe('project navigation items', () => {
+  it('exposes the comparisons destination in project navigation', () => {
+    expect(NAVIGATION_ITEMS).toContainEqual(
+      expect.objectContaining({
+        id: 'comparisons',
+        href: '/comparisons',
+        group: 'views',
+      })
+    );
   });
 });
 

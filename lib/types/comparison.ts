@@ -371,6 +371,24 @@ export interface ComparisonSummary {
   recommendation?: string;
 }
 
+export interface ProjectComparisonSummary extends ComparisonSummary {
+  sourceTicketId: number;
+  winnerTicketId: number;
+  winnerTicketTitle: string;
+  participantTicketIds: number[];
+  overallRecommendation: string;
+  keyDifferentiators: string[];
+  markdownPath: string;
+}
+
+export interface ProjectComparisonListResponse {
+  comparisons: ProjectComparisonSummary[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
 /**
  * ComparisonCheckResult
  *
@@ -477,6 +495,40 @@ export interface ComparisonDetail {
   participants: ComparisonParticipantDetail[];
   decisionPoints: ComparisonDecisionPoint[];
   complianceRows: ComparisonComplianceRow[];
+}
+
+export interface VerifyComparisonCandidate {
+  id: number;
+  ticketKey: string;
+  title: string;
+  stage: 'VERIFY';
+  updatedAt: string;
+  branch: string | null;
+  qualityScore: ComparisonEnrichmentValue<number>;
+}
+
+export interface ProjectComparisonCandidatesResponse {
+  candidates: VerifyComparisonCandidate[];
+}
+
+export type ComparisonLaunchStatus =
+  | 'PENDING'
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED';
+
+export interface ComparisonLaunchRequest {
+  jobId: number;
+  commentId: number;
+  projectId: number;
+  sourceTicketId: number;
+  sourceTicketKey: string;
+  selectedTicketIds: number[];
+  selectedTicketKeys: string[];
+  status: ComparisonLaunchStatus;
+  commentContent: string;
+  createdAt: string;
 }
 
 /**

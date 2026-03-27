@@ -196,6 +196,89 @@ export async function createStructuredComparisonFixture(projectId: number) {
   };
 }
 
+export async function createProjectComparisonHubFixture(projectId: number) {
+  const base = await createStructuredComparisonFixture(projectId);
+  const prisma = getPrismaClient();
+  const verifyCandidate = await createTestTicket(projectId, {
+    title: '[e2e] Verify candidate ticket',
+    description: 'Candidate for project comparison launch',
+    ticketNumber: 104,
+    ticketKey: 'TE2-104',
+    stage: 'VERIFY',
+    branch: 'AIB-362-verify-candidate',
+  });
+  const verifyPending = await createTestTicket(projectId, {
+    title: '[e2e] Pending verify ticket',
+    description: 'Candidate with pending quality',
+    ticketNumber: 105,
+    ticketKey: 'TE2-105',
+    stage: 'VERIFY',
+    branch: 'AIB-362-verify-pending',
+  });
+
+  await prisma.job.createMany({
+    data: [
+      {
+        ticketId: verifyCandidate.id,
+        projectId,
+        command: 'verify',
+        status: 'COMPLETED',
+        qualityScore: 84,
+        startedAt: new Date('2026-03-21T10:00:00.000Z'),
+        completedAt: new Date('2026-03-21T10:01:00.000Z'),
+        updatedAt: new Date('2026-03-21T10:01:00.000Z'),
+      },
+      {
+        ticketId: verifyPending.id,
+        projectId,
+        command: 'verify',
+        status: 'RUNNING',
+        startedAt: new Date('2026-03-21T11:00:00.000Z'),
+        updatedAt: new Date('2026-03-21T11:01:00.000Z'),
+      },
+    ],
+  });
+
+  const olderComparison = await prisma.comparisonRecord.create({
+    data: {
+      projectId,
+      sourceTicketId: base.sourceTicket.id,
+      winnerTicketId: base.otherTicket.id,
+      compareRunKey: 'cmp_fixture_te2_101_103',
+      markdownPath: `specs/${base.sourceTicket.ticketKey}/comparisons/older.md`,
+      summary: 'Older comparison snapshot.',
+      overallRecommendation: 'Use TE2-103 for fallback handling.',
+      keyDifferentiators: ['fallbacks'],
+      generatedAt: new Date('2026-03-18T09:00:00.000Z'),
+      participants: {
+        create: [
+          {
+            ticketId: base.otherTicket.id,
+            rank: 1,
+            score: 80,
+            workflowTypeAtComparison: 'FULL',
+            rankRationale: 'Fallback-first implementation.',
+          },
+          {
+            ticketId: base.winnerTicket.id,
+            rank: 2,
+            score: 70,
+            workflowTypeAtComparison: 'FULL',
+            rankRationale: 'Less resilient historical handling.',
+          },
+        ],
+      },
+    },
+  });
+
+  return {
+    ...base,
+    verifyCandidate,
+    verifyPending,
+    olderComparison,
+  };
+}
+
 export function createWorkflowComparisonReportFixture(sourceTicketKey: string, comparedTickets: string[]) {
   return createComparisonReport(
     sourceTicketKey,

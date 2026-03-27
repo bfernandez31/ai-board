@@ -16,9 +16,9 @@
 
 **Purpose**: Establish shared contracts and reusable fixtures before route and UI work starts.
 
-- [ ] T001 Extend shared project comparison contracts in `/home/runner/work/ai-board/ai-board/target/lib/types/comparison.ts`
-- [ ] T002 [P] Add reusable comparison hub fixtures for project list, detail, candidate, and launch cases in `/home/runner/work/ai-board/ai-board/target/tests/helpers/comparison-fixtures.ts`
-- [ ] T003 [P] Scaffold project comparison query keys and request helpers in `/home/runner/work/ai-board/ai-board/target/hooks/use-comparisons.ts`
+- [X] T001 Extend shared project comparison contracts in `/home/runner/work/ai-board/ai-board/target/lib/types/comparison.ts`
+- [X] T002 [P] Add reusable comparison hub fixtures for project list, detail, candidate, and launch cases in `/home/runner/work/ai-board/ai-board/target/tests/helpers/comparison-fixtures.ts`
+- [X] T003 [P] Scaffold project comparison query keys and request helpers in `/home/runner/work/ai-board/ai-board/target/hooks/use-comparisons.ts`
 
 ---
 
@@ -28,10 +28,10 @@
 
 **⚠️ CRITICAL**: Complete this phase before story implementation.
 
-- [ ] T004 Create project-scoped comparison summary pagination helpers in `/home/runner/work/ai-board/ai-board/target/lib/comparison/project-comparison-summary.ts`
-- [ ] T005 [P] Add project-authorized comparison detail loader reuse in `/home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-detail.ts`
-- [ ] T006 [P] Create VERIFY candidate query and quality-state normalization helpers in `/home/runner/work/ai-board/ai-board/target/lib/comparison/project-comparison-candidates.ts`
-- [ ] T007 Extract reusable compare launch orchestration helpers in `/home/runner/work/ai-board/ai-board/target/lib/comparison/project-comparison-launch.ts`
+- [X] T004 Create project-scoped comparison summary pagination helpers in `/home/runner/work/ai-board/ai-board/target/lib/comparison/project-comparison-summary.ts`
+- [X] T005 [P] Add project-authorized comparison detail loader reuse in `/home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-detail.ts`
+- [X] T006 [P] Create VERIFY candidate query and quality-state normalization helpers in `/home/runner/work/ai-board/ai-board/target/lib/comparison/project-comparison-candidates.ts`
+- [X] T007 Extract reusable compare launch orchestration helpers in `/home/runner/work/ai-board/ai-board/target/lib/comparison/project-comparison-launch.ts`
 
 **Checkpoint**: Shared comparison hub infrastructure is ready for user-story delivery.
 
@@ -45,15 +45,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Add project comparisons list integration coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/project-comparisons-route.test.ts`
-- [ ] T009 [P] [US1] Add project navigation coverage for the comparisons destination in `/home/runner/work/ai-board/ai-board/target/tests/unit/navigation-utils.test.ts`
+- [X] T008 [P] [US1] Add project comparisons list integration coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/project-comparisons-route.test.ts`
+- [X] T009 [P] [US1] Add project navigation coverage for the comparisons destination in `/home/runner/work/ai-board/ai-board/target/tests/unit/navigation-utils.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Rewrite the project comparisons list API to use durable `ComparisonRecord` pagination in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/comparisons/route.ts`
-- [ ] T011 [P] [US1] Add the `Comparisons` project navigation item in `/home/runner/work/ai-board/ai-board/target/components/navigation/nav-items.ts`
-- [ ] T012 [P] [US1] Build the project comparisons page shell and paginated list layout in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/comparisons/page.tsx`
-- [ ] T013 [US1] Implement summary list, pagination controls, and empty/loading/error states in `/home/runner/work/ai-board/ai-board/target/components/comparison/project-comparisons-page.tsx`
+- [X] T010 [US1] Rewrite the project comparisons list API to use durable `ComparisonRecord` pagination in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/comparisons/route.ts`
+- [X] T011 [P] [US1] Add the `Comparisons` project navigation item in `/home/runner/work/ai-board/ai-board/target/components/navigation/nav-items.ts`
+- [X] T012 [P] [US1] Build the project comparisons page shell and paginated list layout in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/comparisons/page.tsx`
+- [X] T013 [US1] Implement summary list, pagination controls, and empty/loading/error states in `/home/runner/work/ai-board/ai-board/target/components/comparison/project-comparisons-page.tsx`
 
 **Checkpoint**: User Story 1 is complete when project members can browse saved comparisons from project navigation without opening a ticket.
 
@@ -67,15 +67,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T014 [P] [US2] Add project comparison detail route coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/project-comparison-detail-route.test.ts`
-- [ ] T015 [P] [US2] Add inline selection and error-state component coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/project-comparisons-page.test.tsx`
+- [X] T014 [P] [US2] Add project comparison detail route coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/project-comparison-detail-route.test.ts`
+- [X] T015 [P] [US2] Add inline selection and error-state component coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/project-comparisons-page.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Add the project-scoped comparison detail API endpoint in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/comparisons/[comparisonId]/route.ts`
-- [ ] T017 [P] [US2] Extend project detail queries and cache keys in `/home/runner/work/ai-board/ai-board/target/hooks/use-comparisons.ts`
-- [ ] T018 [US2] Add inline comparison selection, detail loading, and recoverable error handling in `/home/runner/work/ai-board/ai-board/target/components/comparison/project-comparisons-page.tsx`
-- [ ] T019 [US2] Reuse the saved dashboard renderer for the inline detail panel in `/home/runner/work/ai-board/ai-board/target/components/comparison/comparison-viewer.tsx`
+- [X] T016 [US2] Add the project-scoped comparison detail API endpoint in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/comparisons/[comparisonId]/route.ts`
+- [X] T017 [P] [US2] Extend project detail queries and cache keys in `/home/runner/work/ai-board/ai-board/target/hooks/use-comparisons.ts`
+- [X] T018 [US2] Add inline comparison selection, detail loading, and recoverable error handling in `/home/runner/work/ai-board/ai-board/target/components/comparison/project-comparisons-page.tsx`
+- [X] T019 [US2] Reuse the saved dashboard renderer for the inline detail panel in `/home/runner/work/ai-board/ai-board/target/components/comparison/comparison-viewer.tsx`
 
 **Checkpoint**: User Story 2 is complete when the same page can switch between saved comparisons and show full detail inline.
 
@@ -89,17 +89,17 @@
 
 ### Tests for User Story 3
 
-- [ ] T020 [P] [US3] Add comparison launch orchestration integration coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/project-comparison-launch.test.ts`
-- [ ] T021 [P] [US3] Add candidate selection and launch validation component coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/project-comparison-launch-sheet.test.tsx`
-- [ ] T022 [P] [US3] Extend regression coverage for the existing ticket comparison entry point in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-api.test.ts`
+- [X] T020 [P] [US3] Add comparison launch orchestration integration coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/project-comparison-launch.test.ts`
+- [X] T021 [P] [US3] Add candidate selection and launch validation component coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/project-comparison-launch-sheet.test.tsx`
+- [X] T022 [P] [US3] Extend regression coverage for the existing ticket comparison entry point in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-api.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] Add the VERIFY comparison candidate API endpoint in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/comparisons/candidates/route.ts`
-- [ ] T024 [US3] Add the project comparison launch API endpoint that creates the comment and job workflow records in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/comparisons/launch/route.ts`
-- [ ] T025 [P] [US3] Extend project comparison candidate, launch mutation, and pending-job polling hooks in `/home/runner/work/ai-board/ai-board/target/hooks/use-comparisons.ts`
-- [ ] T026 [P] [US3] Build the VERIFY ticket picker, launch CTA, and candidate empty state UI in `/home/runner/work/ai-board/ai-board/target/components/comparison/project-comparison-launch-sheet.tsx`
-- [ ] T027 [US3] Integrate launch flow, pending banners, and post-completion invalidation into `/home/runner/work/ai-board/ai-board/target/components/comparison/project-comparisons-page.tsx`
+- [X] T023 [US3] Add the VERIFY comparison candidate API endpoint in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/comparisons/candidates/route.ts`
+- [X] T024 [US3] Add the project comparison launch API endpoint that creates the comment and job workflow records in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/comparisons/launch/route.ts`
+- [X] T025 [P] [US3] Extend project comparison candidate, launch mutation, and pending-job polling hooks in `/home/runner/work/ai-board/ai-board/target/hooks/use-comparisons.ts`
+- [X] T026 [P] [US3] Build the VERIFY ticket picker, launch CTA, and candidate empty state UI in `/home/runner/work/ai-board/ai-board/target/components/comparison/project-comparison-launch-sheet.tsx`
+- [X] T027 [US3] Integrate launch flow, pending banners, and post-completion invalidation into `/home/runner/work/ai-board/ai-board/target/components/comparison/project-comparisons-page.tsx`
 
 **Checkpoint**: User Story 3 is complete when hub users can launch a comparison from VERIFY tickets and watch it resolve back into project history.
 
@@ -109,9 +109,9 @@
 
 **Purpose**: Finish shared UX and run the feature validation pass.
 
-- [ ] T028 [P] Add responsive layout polish for mobile and desktop comparison hub states in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/comparisons/page.tsx`
-- [ ] T029 [P] Harden shared fallback copy and partial-data rendering for list, detail, and launch states in `/home/runner/work/ai-board/ai-board/target/components/comparison/project-comparisons-page.tsx`
-- [ ] T030 Run feature validation commands from `/home/runner/work/ai-board/ai-board/target/specs/AIB-362-comparisons-hub-page/quickstart.md`
+- [X] T028 [P] Add responsive layout polish for mobile and desktop comparison hub states in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/comparisons/page.tsx`
+- [X] T029 [P] Harden shared fallback copy and partial-data rendering for list, detail, and launch states in `/home/runner/work/ai-board/ai-board/target/components/comparison/project-comparisons-page.tsx`
+- [X] T030 Run feature validation commands from `/home/runner/work/ai-board/ai-board/target/specs/AIB-362-comparisons-hub-page/quickstart.md`
 
 ---
 

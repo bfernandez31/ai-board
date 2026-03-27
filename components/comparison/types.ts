@@ -1,8 +1,11 @@
 import type {
   ComparisonComplianceRow,
   ComparisonDecisionPoint,
+  ComparisonDetail,
+  ComparisonLaunchRequest,
   ComparisonParticipantDetail,
   ComparisonSummary,
+  VerifyComparisonCandidate,
 } from '@/lib/types/comparison';
 
 export interface ComparisonViewerProps {
@@ -63,4 +66,27 @@ export interface ComparisonDecisionPointsEnhancedProps {
   decisionPoints: ComparisonDecisionPoint[];
   winnerTicketId: number;
   participants?: ComparisonParticipantDetail[];
+}
+
+export interface ComparisonDashboardProps {
+  detail: ComparisonDetail;
+}
+
+export interface ProjectComparisonsPageProps {
+  projectId: number;
+  projectName: string;
+  initialPage?: number;
+  initialComparisonId?: number | null;
+}
+
+export interface ProjectComparisonLaunchSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  candidates: VerifyComparisonCandidate[];
+  selectedTicketIds: number[];
+  pendingLaunches: ComparisonLaunchRequest[];
+  isLoading?: boolean;
+  isLaunching?: boolean;
+  onSelectionChange: (ticketIds: number[]) => void;
+  onLaunch: () => void;
 }
