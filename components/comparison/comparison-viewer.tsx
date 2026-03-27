@@ -191,6 +191,7 @@ export function ComparisonViewer({
                         <ComparisonDecisionPoints
                           decisionPoints={detail.decisionPoints}
                           winnerTicketId={detail.winnerTicketId}
+                          participants={detail.participants}
                         />
                       </section>
 

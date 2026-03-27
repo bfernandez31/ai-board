@@ -66,7 +66,7 @@ export function ComparisonDecisionPoints(
 ) {
   const { decisionPoints } = props;
   const winnerTicketId = 'winnerTicketId' in props ? props.winnerTicketId : null;
-  const participants = 'participants' in props ? (props as { participants?: ComparisonParticipantDetail[] }).participants : undefined;
+  const participants = 'participants' in props ? props.participants : undefined;
 
   return (
     <Card>
