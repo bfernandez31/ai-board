@@ -141,8 +141,8 @@
 
 ### Implementation for User Story 6
 
-- [ ] T015 [US6] Enhance compliance heatmap cell backgrounds in `components/comparison/comparison-compliance-heatmap.tsx` — ensure consistent subtle colored backgrounds for pass (`bg-ctp-green/10`), fail (`bg-ctp-red/10`), and mixed (`bg-ctp-yellow/10`) cells with uniform opacity levels
-- [ ] T016 [US6] Verify existing tests still pass in `tests/unit/components/comparison-compliance-heatmap.test.tsx` — run existing test suite and confirm zero regressions from heatmap color changes
+- [x] T015 [US6] Enhance compliance heatmap cell backgrounds in `components/comparison/comparison-compliance-heatmap.tsx` — ensure consistent subtle colored backgrounds for pass (`bg-ctp-green/10`), fail (`bg-ctp-red/10`), and mixed (`bg-ctp-yellow/10`) cells with uniform opacity levels
+- [x] T016 [US6] Verify existing tests still pass in `tests/unit/components/comparison-compliance-heatmap.test.tsx` — run existing test suite and confirm zero regressions from heatmap color changes
 
 **Checkpoint**: User Story 6 complete — compliance heatmap has clear status-colored cells
 

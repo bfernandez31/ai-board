@@ -10,9 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ComparisonComplianceHeatmapProps } from './types';
 
 const statusColors: Record<string, string> = {
-  pass: 'bg-ctp-green/20',
-  mixed: 'bg-ctp-yellow/20',
-  fail: 'bg-ctp-red/20',
+  pass: 'bg-ctp-green/10',
+  mixed: 'bg-ctp-yellow/10',
+  fail: 'bg-ctp-red/10',
 };
 
 export function ComparisonComplianceHeatmap({
