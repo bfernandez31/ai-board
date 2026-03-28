@@ -10,6 +10,4 @@ export const HEALTH_MODULES: ModuleConfig[] = [
   { type: 'LAST_CLEAN', name: 'Last Clean', icon: Sparkles, isPassive: true },
 ];
 
-export const CONTRIBUTING_MODULES = HEALTH_MODULES.filter(
-  (m) => !m.isPassive && m.type !== 'LAST_CLEAN'
-);
+export const CONTRIBUTING_MODULES = HEALTH_MODULES.filter((m) => !m.isPassive);

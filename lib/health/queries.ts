@@ -10,14 +10,20 @@ export async function getHealthScore(projectId: number) {
 
 export async function getLatestScans(projectId: number) {
   const scanTypes: HealthScanType[] = ['SECURITY', 'COMPLIANCE', 'TESTS', 'SPEC_SYNC'];
-  const results: Record<string, Awaited<ReturnType<typeof prisma.healthScan.findFirst>>> = {};
 
-  for (const scanType of scanTypes) {
-    results[scanType] = await prisma.healthScan.findFirst({
-      where: { projectId, scanType },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
+  const scans = await Promise.all(
+    scanTypes.map((scanType) =>
+      prisma.healthScan.findFirst({
+        where: { projectId, scanType },
+        orderBy: { createdAt: 'desc' },
+      })
+    )
+  );
+
+  const results: Record<string, Awaited<ReturnType<typeof prisma.healthScan.findFirst>>> = {};
+  scanTypes.forEach((type, i) => {
+    results[type] = scans[i] ?? null;
+  });
 
   return results;
 }

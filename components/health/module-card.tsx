@@ -3,8 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getScoreColor, getScoreThreshold } from '@/lib/health/score-calculator';
-import type { ModuleConfig } from '@/lib/health/types';
-import type { ModuleResponse } from '@/lib/health/types';
+import type { ModuleConfig, ModuleResponse } from '@/lib/health/types';
 
 interface ModuleCardProps {
   config: ModuleConfig;
