@@ -134,9 +134,9 @@
 
 **Purpose**: Responsive layout, accessibility, and final validation
 
-- [ ] T030 Verify responsive layout — 2-column grid collapses to single column on small screens, hero zone stacks vertically (FR-021)
-- [ ] T031 Verify all health page elements use semantic color tokens with no hardcoded hex/rgb values (FR-020, SC-008)
-- [ ] T032 Run quickstart.md validation — verify all files created match the specification and implementation order
+- [x] T030 Verify responsive layout — 2-column grid collapses to single column on small screens, hero zone stacks vertically (FR-021)
+- [x] T031 Verify all health page elements use semantic color tokens with no hardcoded hex/rgb values (FR-020, SC-008)
+- [x] T032 Run quickstart.md validation — verify all files created match the specification and implementation order
 
 ---
 
