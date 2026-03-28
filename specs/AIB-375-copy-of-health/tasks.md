@@ -111,11 +111,11 @@
 
 ### Tests for User Story 3
 
-- [ ] T026 [US3] Integration test for incremental scan logic in tests/integration/health/health-scan-api.test.ts (first scan has null baseCommit, second scan derives baseCommit from last COMPLETED scan's headCommit, failed scans are skipped for base commit derivation)
+- [x] T026 [US3] Integration test for incremental scan logic in tests/integration/health/health-scan-api.test.ts (first scan has null baseCommit, second scan derives baseCommit from last COMPLETED scan's headCommit, failed scans are skipped for base commit derivation)
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Enhance POST scan creation in app/api/projects/[projectId]/health/scans/route.ts to query last COMPLETED scan of same type for project and set baseCommit from its headCommit (null if no completed scan exists)
+- [x] T027 [US3] Enhance POST scan creation in app/api/projects/[projectId]/health/scans/route.ts to query last COMPLETED scan of same type for project and set baseCommit from its headCommit (null if no completed scan exists)
 
 **Checkpoint**: Incremental scanning works — base/head commit chain is maintained across scans
 
@@ -129,11 +129,11 @@
 
 ### Tests for User Story 5
 
-- [ ] T028 [US5] Integration test for GET /api/projects/[projectId]/health/scans in tests/integration/health/health-scan-api.test.ts (paginated results, type filter, reverse chronological order, pagination metadata)
+- [x] T028 [US5] Integration test for GET /api/projects/[projectId]/health/scans in tests/integration/health/health-scan-api.test.ts (paginated results, type filter, reverse chronological order, pagination metadata)
 
 ### Implementation for User Story 5
 
-- [ ] T029 [US5] Implement GET scan history in app/api/projects/[projectId]/health/scans/route.ts (verifyProjectAccess, Zod validate query params: type, page, pageSize, return paginated scans per health-scan-api.yaml contract)
+- [x] T029 [US5] Implement GET scan history in app/api/projects/[projectId]/health/scans/route.ts (verifyProjectAccess, Zod validate query params: type, page, pageSize, return paginated scans per health-scan-api.yaml contract)
 
 **Checkpoint**: Scan history API returns filtered, paginated results
 

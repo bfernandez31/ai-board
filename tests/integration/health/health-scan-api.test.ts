@@ -64,6 +64,72 @@ describe('POST /api/projects/[projectId]/health/scans', () => {
 
     expect(response.status).toBe(400);
   });
+
+  it('first scan has null baseCommit', async () => {
+    const response = await ctx.api.post<{ scan: { baseCommit: string | null } }>(
+      `/api/projects/${ctx.projectId}/health/scans`,
+      { scanType: 'SECURITY' }
+    );
+
+    expect(response.status).toBe(201);
+    expect(response.data.scan.baseCommit).toBeNull();
+  });
+
+  it('derives baseCommit from last COMPLETED scan headCommit', async () => {
+    await prisma.healthScan.create({
+      data: {
+        projectId: ctx.projectId,
+        scanType: 'SECURITY',
+        status: 'COMPLETED',
+        score: 85,
+        headCommit: 'abc1234abc1234abc1234abc1234abc1234a',
+        completedAt: new Date(),
+      },
+    });
+
+    const response = await ctx.api.post<{ scan: { baseCommit: string | null } }>(
+      `/api/projects/${ctx.projectId}/health/scans`,
+      { scanType: 'SECURITY' }
+    );
+
+    expect(response.status).toBe(201);
+    expect(response.data.scan.baseCommit).toBe('abc1234abc1234abc1234abc1234abc1234a');
+  });
+
+  it('skips FAILED scans when deriving baseCommit', async () => {
+    // Create a completed scan first
+    await prisma.healthScan.create({
+      data: {
+        projectId: ctx.projectId,
+        scanType: 'SECURITY',
+        status: 'COMPLETED',
+        score: 80,
+        headCommit: 'a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0',
+        completedAt: new Date('2026-03-27T10:00:00Z'),
+      },
+    });
+
+    // Then a failed scan
+    await prisma.healthScan.create({
+      data: {
+        projectId: ctx.projectId,
+        scanType: 'SECURITY',
+        status: 'FAILED',
+        headCommit: 'b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1',
+        errorMessage: 'Workflow failed',
+        completedAt: new Date('2026-03-28T10:00:00Z'),
+      },
+    });
+
+    const response = await ctx.api.post<{ scan: { baseCommit: string | null } }>(
+      `/api/projects/${ctx.projectId}/health/scans`,
+      { scanType: 'SECURITY' }
+    );
+
+    expect(response.status).toBe(201);
+    // Should use the COMPLETED scan's headCommit, not the FAILED one
+    expect(response.data.scan.baseCommit).toBe('a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0');
+  });
 });
 
 describe('GET /api/projects/[projectId]/health/scans', () => {
