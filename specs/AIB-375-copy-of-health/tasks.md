@@ -16,8 +16,8 @@
 
 **Purpose**: Database schema changes and Prisma migration for HealthScan and HealthScore models
 
-- [ ] T001 Add HealthScanType and HealthScanStatus enums, HealthScan model, HealthScore model, and Project relations to prisma/schema.prisma per data-model.md
-- [ ] T002 Run Prisma migration (`bunx prisma migrate dev --name add-health-models`) and verify generated client
+- [x] T001 Add HealthScanType and HealthScanStatus enums, HealthScan model, HealthScore model, and Project relations to prisma/schema.prisma per data-model.md
+- [x] T002 Run Prisma migration (`bunx prisma migrate dev --name add-health-models`) and verify generated client
 
 ---
 
