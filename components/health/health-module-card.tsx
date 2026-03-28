@@ -96,45 +96,7 @@ export function HealthModuleCard({
 
       {!isPassive && (
         <div className="pt-1">
-          {state === 'never_scanned' && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full text-xs"
-              onClick={onTriggerScan}
-              disabled={isTriggerPending}
-            >
-              Run first scan
-            </Button>
-          )}
-          {state === 'scanning' && (
-            <Button size="sm" variant="outline" className="w-full text-xs" disabled>
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-              Scanning...
-            </Button>
-          )}
-          {state === 'completed' && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full text-xs"
-              onClick={onTriggerScan}
-              disabled={isTriggerPending}
-            >
-              Re-run scan
-            </Button>
-          )}
-          {state === 'failed' && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full text-xs"
-              onClick={onTriggerScan}
-              disabled={isTriggerPending}
-            >
-              Retry
-            </Button>
-          )}
+          <ScanButton state={state} onTriggerScan={onTriggerScan} isTriggerPending={isTriggerPending} />
         </div>
       )}
 
@@ -153,6 +115,44 @@ export function HealthModuleCard({
         <div className={`h-1 rounded-full ${scoreColors.fill}`} />
       )}
     </div>
+  );
+}
+
+function ScanButton({
+  state,
+  onTriggerScan,
+  isTriggerPending,
+}: {
+  state: CardState;
+  onTriggerScan?: (() => void) | undefined;
+  isTriggerPending: boolean;
+}) {
+  if (state === 'scanning') {
+    return (
+      <Button size="sm" variant="outline" className="w-full text-xs" disabled>
+        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+        Scanning...
+      </Button>
+    );
+  }
+
+  const BUTTON_LABELS: Record<CardState, string> = {
+    never_scanned: 'Run first scan',
+    completed: 'Re-run scan',
+    failed: 'Retry',
+    scanning: '',
+  };
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="w-full text-xs"
+      onClick={onTriggerScan}
+      disabled={isTriggerPending}
+    >
+      {BUTTON_LABELS[state]}
+    </Button>
   );
 }
 

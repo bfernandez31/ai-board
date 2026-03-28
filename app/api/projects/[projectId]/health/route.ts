@@ -4,18 +4,28 @@ import { prisma } from '@/lib/db/client';
 import { calculateGlobalScore, getScoreLabel, getScoreColorConfig } from '@/lib/health/score-calculator';
 import type { HealthResponse, HealthModuleStatus } from '@/lib/health/types';
 
+function getScoreDisplayLabel(score: number): string {
+  if (score >= 90) return 'Excellent';
+  if (score >= 70) return 'Good';
+  if (score >= 50) return 'Fair';
+  return 'Poor';
+}
+
 function buildModuleStatus(
   score: number | null,
   lastScanDate: Date | null,
   scanStatus: string | null,
   issuesFound: number | null,
 ): HealthModuleStatus {
-  const label = score !== null
-    ? (score >= 90 ? 'Excellent' : score >= 70 ? 'Good' : score >= 50 ? 'Fair' : 'Poor')
-    : null;
-  const summary = score !== null
-    ? (issuesFound !== null && issuesFound > 0 ? `${issuesFound} issues found` : 'All clear')
-    : 'No scan yet';
+  let label: string | null = null;
+  let summary: string;
+
+  if (score !== null) {
+    label = getScoreDisplayLabel(score);
+    summary = issuesFound !== null && issuesFound > 0 ? `${issuesFound} issues found` : 'All clear';
+  } else {
+    summary = 'No scan yet';
+  }
 
   return {
     score,
@@ -130,43 +140,33 @@ export async function GET(
     const specSyncScan = scanStatusMap.get('SPEC_SYNC');
 
     const modules: HealthResponse['modules'] = {
-      security: {
-        ...buildModuleStatus(
-          healthScore?.securityScore ?? null,
-          healthScore?.lastSecurityScan ?? null,
-          activeScanMap.get('SECURITY') ?? securityScan?.status ?? null,
-          securityScan?.issuesFound ?? null,
-        ),
-      },
-      compliance: {
-        ...buildModuleStatus(
-          healthScore?.complianceScore ?? null,
-          healthScore?.lastComplianceScan ?? null,
-          activeScanMap.get('COMPLIANCE') ?? complianceScan?.status ?? null,
-          complianceScan?.issuesFound ?? null,
-        ),
-      },
-      tests: {
-        ...buildModuleStatus(
-          healthScore?.testsScore ?? null,
-          healthScore?.lastTestsScan ?? null,
-          activeScanMap.get('TESTS') ?? testsScan?.status ?? null,
-          testsScan?.issuesFound ?? null,
-        ),
-      },
-      specSync: {
-        ...buildModuleStatus(
-          healthScore?.specSyncScore ?? null,
-          healthScore?.lastSpecSyncScan ?? null,
-          activeScanMap.get('SPEC_SYNC') ?? specSyncScan?.status ?? null,
-          specSyncScan?.issuesFound ?? null,
-        ),
-      },
+      security: buildModuleStatus(
+        healthScore?.securityScore ?? null,
+        healthScore?.lastSecurityScan ?? null,
+        activeScanMap.get('SECURITY') ?? securityScan?.status ?? null,
+        securityScan?.issuesFound ?? null,
+      ),
+      compliance: buildModuleStatus(
+        healthScore?.complianceScore ?? null,
+        healthScore?.lastComplianceScan ?? null,
+        activeScanMap.get('COMPLIANCE') ?? complianceScan?.status ?? null,
+        complianceScan?.issuesFound ?? null,
+      ),
+      tests: buildModuleStatus(
+        healthScore?.testsScore ?? null,
+        healthScore?.lastTestsScan ?? null,
+        activeScanMap.get('TESTS') ?? testsScan?.status ?? null,
+        testsScan?.issuesFound ?? null,
+      ),
+      specSync: buildModuleStatus(
+        healthScore?.specSyncScore ?? null,
+        healthScore?.lastSpecSyncScan ?? null,
+        activeScanMap.get('SPEC_SYNC') ?? specSyncScan?.status ?? null,
+        specSyncScan?.issuesFound ?? null,
+      ),
       qualityGate: {
         score: qualityGateScore,
-        label: qualityGateScore !== null
-          ? (qualityGateScore >= 90 ? 'Excellent' : qualityGateScore >= 70 ? 'Good' : qualityGateScore >= 50 ? 'Fair' : 'Poor')
-          : null,
+        label: qualityGateScore !== null ? getScoreDisplayLabel(qualityGateScore) : null,
         lastScanDate: qualityGateDate?.toISOString() ?? null,
         passive: true,
         summary: qualityGateScore !== null ? 'From latest verify job' : 'No verify jobs yet',

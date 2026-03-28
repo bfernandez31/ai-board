@@ -116,15 +116,13 @@ export async function PATCH(
       updateData.completedAt = now;
     }
 
-    if (data.score !== undefined) updateData.score = data.score;
-    if (data.report !== undefined) updateData.report = data.report;
-    if (data.issuesFound !== undefined) updateData.issuesFound = data.issuesFound;
-    if (data.issuesFixed !== undefined) updateData.issuesFixed = data.issuesFixed;
-    if (data.headCommit !== undefined) updateData.headCommit = data.headCommit;
-    if (data.durationMs !== undefined) updateData.durationMs = data.durationMs;
-    if (data.tokensUsed !== undefined) updateData.tokensUsed = data.tokensUsed;
-    if (data.costUsd !== undefined) updateData.costUsd = data.costUsd;
-    if (data.errorMessage !== undefined) updateData.errorMessage = data.errorMessage;
+    const optionalFields = [
+      'score', 'report', 'issuesFound', 'issuesFixed',
+      'headCommit', 'durationMs', 'tokensUsed', 'costUsd', 'errorMessage',
+    ] as const;
+    for (const field of optionalFields) {
+      if (data[field] !== undefined) updateData[field] = data[field];
+    }
 
     // Update scan record
     const updatedScan = await prisma.healthScan.update({
@@ -137,29 +135,16 @@ export async function PATCH(
       const scoreField = SCAN_TYPE_TO_SCORE_FIELD[scan.scanType];
       const dateField = SCAN_TYPE_TO_DATE_FIELD[scan.scanType];
 
-      // Upsert the HealthScore
-      const existingScore = await prisma.healthScore.findUnique({
-        where: { projectId },
-      });
-
       const scoreUpdate: Record<string, unknown> = {
         [scoreField]: data.score,
         [dateField]: now,
       };
 
-      if (existingScore) {
-        await prisma.healthScore.update({
-          where: { projectId },
-          data: scoreUpdate,
-        });
-      } else {
-        await prisma.healthScore.create({
-          data: {
-            projectId,
-            ...scoreUpdate,
-          },
-        });
-      }
+      await prisma.healthScore.upsert({
+        where: { projectId },
+        update: scoreUpdate,
+        create: { projectId, ...scoreUpdate },
+      });
 
       // Recalculate global score
       const healthScore = await prisma.healthScore.findUnique({

@@ -1,8 +1,4 @@
 import { getScoreThreshold, getScoreColor } from '@/lib/quality-score';
-import type { ScoreThreshold } from '@/lib/quality-score';
-
-export { getScoreThreshold, getScoreColor };
-export type { ScoreThreshold };
 
 interface ModuleScores {
   securityScore: number | null;
