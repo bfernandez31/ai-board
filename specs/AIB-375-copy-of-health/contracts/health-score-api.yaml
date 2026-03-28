@@ -1,0 +1,175 @@
+openapi: "3.1.0"
+info:
+  title: Health Score API
+  version: "1.0.0"
+  description: Retrieve cached health score for a project
+
+paths:
+  /api/projects/{projectId}/health:
+    get:
+      summary: Get project health score
+      description: Returns the cached global health score, sub-scores per module, and module statuses for a project.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Health score retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [globalScore, modules, lastScanAt]
+                properties:
+                  globalScore:
+                    type: integer
+                    nullable: true
+                    minimum: 0
+                    maximum: 100
+                    description: "Weighted average of contributing module scores (null if no scans)"
+                  globalLabel:
+                    type: string
+                    nullable: true
+                    enum: [Excellent, Good, Fair, Poor]
+                  modules:
+                    type: array
+                    items:
+                      type: object
+                      required: [type, name, score, status, isPassive, lastScanAt]
+                      properties:
+                        type:
+                          type: string
+                          enum: [SECURITY, COMPLIANCE, TESTS, SPEC_SYNC, QUALITY_GATE, LAST_CLEAN]
+                        name:
+                          type: string
+                          example: "Security"
+                        score:
+                          type: integer
+                          nullable: true
+                          minimum: 0
+                          maximum: 100
+                        status:
+                          type: string
+                          enum: [idle, scanning, completed, failed, never_scanned]
+                        isPassive:
+                          type: boolean
+                        lastScanAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        summary:
+                          type: string
+                          nullable: true
+                          description: "Compact summary of latest findings"
+                        latestScan:
+                          type: object
+                          nullable: true
+                          properties:
+                            id:
+                              type: integer
+                            status:
+                              type: string
+                              enum: [PENDING, RUNNING, COMPLETED, FAILED]
+                            baseCommit:
+                              type: string
+                              nullable: true
+                            headCommit:
+                              type: string
+                              nullable: true
+                            issuesFound:
+                              type: integer
+                            issuesFixed:
+                              type: integer
+                            errorMessage:
+                              type: string
+                              nullable: true
+                  lastScanAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: "Most recent scan completion across all modules"
+              examples:
+                full-scores:
+                  summary: All modules scanned
+                  value:
+                    globalScore: 82
+                    globalLabel: "Good"
+                    modules:
+                      - type: SECURITY
+                        name: Security
+                        score: 90
+                        status: completed
+                        isPassive: false
+                        lastScanAt: "2026-03-28T10:00:00Z"
+                        summary: "No critical vulnerabilities found"
+                        latestScan:
+                          id: 42
+                          status: COMPLETED
+                          baseCommit: "abc1234"
+                          headCommit: "def5678"
+                          issuesFound: 2
+                          issuesFixed: 1
+                          errorMessage: null
+                      - type: QUALITY_GATE
+                        name: Quality Gate
+                        score: 75
+                        status: completed
+                        isPassive: true
+                        lastScanAt: "2026-03-27T15:00:00Z"
+                        summary: "Average quality score across 12 verify jobs"
+                        latestScan: null
+                    lastScanAt: "2026-03-28T10:00:00Z"
+                no-scans:
+                  summary: No scans run yet
+                  value:
+                    globalScore: null
+                    globalLabel: null
+                    modules:
+                      - type: SECURITY
+                        name: Security
+                        score: null
+                        status: never_scanned
+                        isPassive: false
+                        lastScanAt: null
+                        summary: null
+                        latestScan: null
+                    lastScanAt: null
+        "400":
+          description: Invalid project ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Not authorized to access this project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        code:
+          type: string

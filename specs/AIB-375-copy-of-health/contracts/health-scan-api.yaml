@@ -1,0 +1,380 @@
+openapi: "3.1.0"
+info:
+  title: Health Scan API
+  version: "1.0.0"
+  description: Trigger scans and retrieve scan history for project health modules
+
+paths:
+  /api/projects/{projectId}/health/scans:
+    get:
+      summary: List scan history
+      description: Returns paginated health scan records for a project, optionally filtered by scan type.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [SECURITY, COMPLIANCE, TESTS, SPEC_SYNC]
+          description: "Filter by scan type"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        "200":
+          description: Scan history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [scans, pagination]
+                properties:
+                  scans:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/HealthScan"
+                  pagination:
+                    type: object
+                    required: [page, pageSize, total, totalPages]
+                    properties:
+                      page:
+                        type: integer
+                      pageSize:
+                        type: integer
+                      total:
+                        type: integer
+                      totalPages:
+                        type: integer
+              examples:
+                with-results:
+                  summary: Scan history with results
+                  value:
+                    scans:
+                      - id: 42
+                        projectId: 1
+                        scanType: SECURITY
+                        status: COMPLETED
+                        score: 90
+                        issuesFound: 2
+                        issuesFixed: 1
+                        baseCommit: "abc1234abc1234abc1234abc1234abc1234abc123"
+                        headCommit: "def5678def5678def5678def5678def5678def567"
+                        ticketsCreated: 0
+                        errorMessage: null
+                        durationMs: 45000
+                        startedAt: "2026-03-28T10:00:00Z"
+                        completedAt: "2026-03-28T10:00:45Z"
+                        createdAt: "2026-03-28T09:59:55Z"
+                    pagination:
+                      page: 1
+                      pageSize: 10
+                      total: 1
+                      totalPages: 1
+        "400":
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      summary: Trigger a health scan
+      description: Creates a new scan record and dispatches the health-scan workflow for the specified module type.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scanType]
+              properties:
+                scanType:
+                  type: string
+                  enum: [SECURITY, COMPLIANCE, TESTS, SPEC_SYNC]
+            examples:
+              trigger-security:
+                summary: Trigger security scan
+                value:
+                  scanType: SECURITY
+      responses:
+        "201":
+          description: Scan created and workflow dispatched
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [scan]
+                properties:
+                  scan:
+                    $ref: "#/components/schemas/HealthScan"
+              examples:
+                created:
+                  summary: New scan created
+                  value:
+                    scan:
+                      id: 43
+                      projectId: 1
+                      scanType: SECURITY
+                      status: PENDING
+                      score: null
+                      issuesFound: 0
+                      issuesFixed: 0
+                      baseCommit: "abc1234abc1234abc1234abc1234abc1234abc123"
+                      headCommit: "def5678def5678def5678def5678def5678def567"
+                      ticketsCreated: 0
+                      errorMessage: null
+                      durationMs: null
+                      startedAt: null
+                      completedAt: null
+                      createdAt: "2026-03-28T10:05:00Z"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Scan already in progress for this module type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                conflict:
+                  summary: Duplicate scan prevented
+                  value:
+                    error: "A SECURITY scan is already in progress for this project"
+                    code: "SCAN_IN_PROGRESS"
+
+  /api/projects/{projectId}/health/scans/{scanId}/status:
+    patch:
+      summary: Update scan status (workflow callback)
+      description: Called by the health-scan workflow to update scan status, score, and report. Authenticated via workflow API token.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: scanId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [RUNNING, COMPLETED, FAILED]
+                score:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  description: "Required when status is COMPLETED"
+                report:
+                  type: object
+                  description: "JSON report with scan findings"
+                issuesFound:
+                  type: integer
+                  minimum: 0
+                issuesFixed:
+                  type: integer
+                  minimum: 0
+                ticketsCreated:
+                  type: integer
+                  minimum: 0
+                errorMessage:
+                  type: string
+                  maxLength: 2000
+                  description: "Required when status is FAILED"
+                durationMs:
+                  type: integer
+                  minimum: 0
+                inputTokens:
+                  type: integer
+                  minimum: 0
+                outputTokens:
+                  type: integer
+                  minimum: 0
+                costUsd:
+                  type: number
+                  minimum: 0
+            examples:
+              running:
+                summary: Mark scan as running
+                value:
+                  status: RUNNING
+              completed:
+                summary: Scan completed with score
+                value:
+                  status: COMPLETED
+                  score: 90
+                  report: { vulnerabilities: [], summary: "No critical issues" }
+                  issuesFound: 2
+                  issuesFixed: 1
+                  durationMs: 45000
+                  inputTokens: 12000
+                  outputTokens: 3000
+                  costUsd: 0.05
+              failed:
+                summary: Scan failed
+                value:
+                  status: FAILED
+                  errorMessage: "Workflow timed out after 10 minutes"
+      responses:
+        "200":
+          description: Scan status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [scan]
+                properties:
+                  scan:
+                    $ref: "#/components/schemas/HealthScan"
+        "400":
+          description: Invalid status transition or missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid workflow token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Scan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    HealthScan:
+      type: object
+      required: [id, projectId, scanType, status, issuesFound, issuesFixed, ticketsCreated, createdAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        scanType:
+          type: string
+          enum: [SECURITY, COMPLIANCE, TESTS, SPEC_SYNC]
+        status:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED]
+        score:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 100
+        issuesFound:
+          type: integer
+        issuesFixed:
+          type: integer
+        baseCommit:
+          type: string
+          nullable: true
+        headCommit:
+          type: string
+          nullable: true
+        ticketsCreated:
+          type: integer
+        errorMessage:
+          type: string
+          nullable: true
+        durationMs:
+          type: integer
+          nullable: true
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
