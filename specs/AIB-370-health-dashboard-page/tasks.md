@@ -108,8 +108,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T026 [US4] Verify and harden incremental scan logic in POST handler (app/api/projects/[projectId]/health/scans/route.ts) — ensure baseCommit lookup queries latest COMPLETED scan of same type/project, first scan has null baseCommit, per-type independence
-- [ ] T027 [US4] Integration test for incremental scanning in tests/integration/health/incremental-scan.test.ts (first scan has null baseCommit, second scan uses prior headCommit, type independence between modules)
+- [x] T026 [US4] Verify and harden incremental scan logic in POST handler (app/api/projects/[projectId]/health/scans/route.ts) — ensure baseCommit lookup queries latest COMPLETED scan of same type/project, first scan has null baseCommit, per-type independence
+- [x] T027 [US4] Integration test for incremental scanning in tests/integration/health/incremental-scan.test.ts (first scan has null baseCommit, second scan uses prior headCommit, type independence between modules)
 
 **Checkpoint**: Incremental scans correctly scope to changed commits per module type
 
