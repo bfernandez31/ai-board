@@ -93,8 +93,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Add Health navigation entry to components/navigation/nav-items.ts (id: 'health', label: 'Health', icon: HeartPulse from lucide-react, href: '/health', group: 'views', positioned after Comparisons)
-- [ ] T025 [US3] E2E test for sidebar health navigation in tests/e2e/health-navigation.spec.ts (verify Health entry visible under Views, click navigates to correct URL)
+- [x] T024 [US3] Add Health navigation entry to components/navigation/nav-items.ts (id: 'health', label: 'Health', icon: HeartPulse from lucide-react, href: '/health', group: 'views', positioned after Comparisons)
+- [x] T025 [US3] E2E test for sidebar health navigation in tests/e2e/health-navigation.spec.ts (verify Health entry visible under Views, click navigates to correct URL)
 
 **Checkpoint**: Health is discoverable and accessible from the sidebar on all project pages
 
