@@ -123,8 +123,8 @@
 
 ### Implementation for User Story 5
 
-- [ ] T028 [US5] Implement GET handler in app/api/projects/[projectId]/health/scans/route.ts (Zod validation for type/limit/cursor query params, cursor-based pagination, type filtering, ordered by createdAt DESC, return scans + nextCursor + hasMore)
-- [ ] T029 [US5] Integration test for scan history in tests/integration/health/scan-history.test.ts (pagination, type filtering, empty results, auth checks)
+- [x] T028 [US5] Implement GET handler in app/api/projects/[projectId]/health/scans/route.ts (Zod validation for type/limit/cursor query params, cursor-based pagination, type filtering, ordered by createdAt DESC, return scans + nextCursor + hasMore)
+- [x] T029 [US5] Integration test for scan history in tests/integration/health/scan-history.test.ts (pagination, type filtering, empty results, auth checks)
 
 **Checkpoint**: Scan history API returns paginated, filterable results
 
