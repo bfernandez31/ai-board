@@ -46,11 +46,11 @@
 
 ### Tests for User Story 4
 
-- [ ] T009 [US4] E2E test for sidebar navigation to Health page in tests/e2e/health-navigation.spec.ts (HeartPulse icon visible, positioned after Comparisons, navigates to /projects/[projectId]/health)
+- [x] T009 [US4] E2E test for sidebar navigation to Health page in tests/e2e/health-navigation.spec.ts (HeartPulse icon visible, positioned after Comparisons, navigates to /projects/[projectId]/health)
 
 ### Implementation for User Story 4
 
-- [ ] T010 [US4] Add Health nav entry to components/navigation/nav-items.ts (id: 'health', label: 'Health', icon: HeartPulse, href: '/health', group: 'views', after Comparisons)
+- [x] T010 [US4] Add Health nav entry to components/navigation/nav-items.ts (id: 'health', label: 'Health', icon: HeartPulse, href: '/health', group: 'views', after Comparisons)
 
 **Checkpoint**: Sidebar navigation to Health page works (page itself may be empty)
 
