@@ -41,7 +41,7 @@ export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
 
   return (
     <div className="space-y-6">
-      <section className={sectionClass}>
+      <section>
         <ComparisonHeroCard
           winner={winner}
           recommendation={detail.overallRecommendation}
@@ -65,11 +65,11 @@ export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
         <ComparisonStatCards winner={winner} participants={detail.participants} />
       </section>
 
-      <section className={sectionClass}>
+      <section>
         <ComparisonUnifiedMetrics participants={detail.participants} />
       </section>
 
-      <section className={sectionClass}>
+      <section>
         <ComparisonDecisionPoints
           decisionPoints={detail.decisionPoints}
           winnerTicketId={detail.winnerTicketId}
@@ -77,7 +77,7 @@ export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
         />
       </section>
 
-      <section className={sectionClass}>
+      <section>
         <ComparisonComplianceHeatmap
           rows={detail.complianceRows}
           participants={detail.participants}
