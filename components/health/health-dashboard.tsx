@@ -1,8 +1,10 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { useHealthPolling } from '@/app/lib/hooks/useHealthPolling';
 import { GlobalScoreCard } from './global-score-card';
 import { ModuleCard } from './module-card';
+import { ScanActionButton } from './scan-action-button';
 import { HEALTH_MODULES } from '@/lib/health/constants';
 import type { HealthScoreResponse } from '@/lib/health/types';
 
@@ -12,7 +14,12 @@ interface HealthDashboardProps {
 }
 
 export function HealthDashboard({ projectId, initialData }: HealthDashboardProps) {
+  const queryClient = useQueryClient();
   const { data } = useHealthPolling(projectId, initialData);
+
+  const handleScanTriggered = () => {
+    queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'health'] });
+  };
 
   const healthData = data ?? initialData;
 
@@ -38,6 +45,16 @@ export function HealthDashboard({ projectId, initialData }: HealthDashboardProps
               key={config.type}
               config={config}
               module={moduleData}
+              actionButton={
+                !config.isPassive ? (
+                  <ScanActionButton
+                    projectId={projectId}
+                    scanType={config.type}
+                    status={moduleData.status}
+                    onScanTriggered={handleScanTriggered}
+                  />
+                ) : undefined
+              }
             />
           );
         })}

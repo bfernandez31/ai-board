@@ -89,15 +89,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T020 [P] [US2] Integration test for POST /api/projects/[projectId]/health/scans in tests/integration/health/health-scan-api.test.ts (create scan + dispatch, 409 on concurrent scan, auth checks, Zod validation)
-- [ ] T021 [P] [US2] Integration test for PATCH /api/projects/[projectId]/health/scans/[scanId]/status in tests/integration/health/scan-status-api.test.ts (PENDING->RUNNING->COMPLETED transitions, score upsert on completion, FAILED with errorMessage, invalid transitions rejected, workflow token auth)
+- [x] T020 [P] [US2] Integration test for POST /api/projects/[projectId]/health/scans in tests/integration/health/health-scan-api.test.ts (create scan + dispatch, 409 on concurrent scan, auth checks, Zod validation)
+- [x] T021 [P] [US2] Integration test for PATCH /api/projects/[projectId]/health/scans/[scanId]/status in tests/integration/health/scan-status-api.test.ts (PENDING->RUNNING->COMPLETED transitions, score upsert on completion, FAILED with errorMessage, invalid transitions rejected, workflow token auth)
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Implement POST trigger scan in app/api/projects/[projectId]/health/scans/route.ts (verifyProjectAccess, Zod validate scanType, check concurrent scan prevention, create HealthScan record, derive base/head commits, dispatch health-scan workflow, return 201 per contract)
-- [ ] T023 [US2] Implement PATCH scan status callback in app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts (workflow token auth, validate state transitions, update scan fields, on COMPLETED: upsert HealthScore cache with recomputed global score)
-- [ ] T024 [US2] Create scan action button component in components/health/scan-action-button.tsx (trigger scan on click via POST, disabled + Loader2 spinner while PENDING/RUNNING, "Retry" on FAILED, hidden for passive modules)
-- [ ] T025 [US2] Integrate scan-action-button into module-card.tsx in components/health/module-card.tsx (active modules show scan button, wire up mutation to POST /health/scans, invalidate health query on success)
+- [x] T022 [US2] Implement POST trigger scan in app/api/projects/[projectId]/health/scans/route.ts (verifyProjectAccess, Zod validate scanType, check concurrent scan prevention, create HealthScan record, derive base/head commits, dispatch health-scan workflow, return 201 per contract)
+- [x] T023 [US2] Implement PATCH scan status callback in app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts (workflow token auth, validate state transitions, update scan fields, on COMPLETED: upsert HealthScore cache with recomputed global score)
+- [x] T024 [US2] Create scan action button component in components/health/scan-action-button.tsx (trigger scan on click via POST, disabled + Loader2 spinner while PENDING/RUNNING, "Retry" on FAILED, hidden for passive modules)
+- [x] T025 [US2] Integrate scan-action-button into module-card.tsx in components/health/module-card.tsx (active modules show scan button, wire up mutation to POST /health/scans, invalidate health query on success)
 
 **Checkpoint**: Full scan lifecycle works — trigger scan, see spinner, receive completion callback, score updates
 

@@ -34,7 +34,7 @@ export async function getActiveScan(projectId: number, scanType: HealthScanType)
 
 export async function getScanHistory(
   projectId: number,
-  opts: { type?: HealthScanType; page: number; pageSize: number }
+  opts: { type?: HealthScanType | undefined; page: number; pageSize: number }
 ) {
   const where = {
     projectId,

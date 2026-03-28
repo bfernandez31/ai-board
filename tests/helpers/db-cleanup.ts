@@ -163,6 +163,27 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
     // If projectId specified, only clean that project (worker-specific cleanup)
     // Otherwise clean all worker test projects (1, 2, 4, 5, 6, 7) - SKIP project 3 (dev)
 
+    // Delete health data first (foreign key to projects)
+    await client.healthScan.deleteMany({
+      where: projectId
+        ? { projectId }
+        : {
+            projectId: {
+              in: [1, 2, 4, 5, 6, 7],
+            },
+          },
+    });
+
+    await client.healthScore.deleteMany({
+      where: projectId
+        ? { projectId }
+        : {
+            projectId: {
+              in: [1, 2, 4, 5, 6, 7],
+            },
+          },
+    });
+
     // Delete notifications first (foreign key to tickets)
     await client.notification.deleteMany({
       where: projectId
