@@ -28,8 +28,8 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create score calculator pure function in lib/health/score-calculator.ts (calculateGlobalScore with proportional weight redistribution, getScoreLabel, reuse getScoreThreshold/getScoreColor from lib/quality-score.ts)
-- [ ] T005 [P] Add health query keys to app/lib/query-keys.ts (healthScore, healthScans, scanHistory)
+- [x] T004 Create score calculator pure function in lib/health/score-calculator.ts (calculateGlobalScore with proportional weight redistribution, getScoreLabel, reuse getScoreThreshold/getScoreColor from lib/quality-score.ts)
+- [x] T005 [P] Add health query keys to app/lib/query-keys.ts (healthScore, healthScans, scanHistory)
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 

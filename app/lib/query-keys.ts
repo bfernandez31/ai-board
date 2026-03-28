@@ -52,6 +52,15 @@ export const queryKeys = {
     status: ['push', 'status'] as const,
   },
 
+  health: {
+    score: (projectId: number) => ['health', projectId, 'score'] as const,
+    scans: (projectId: number) => ['health', projectId, 'scans'] as const,
+    scanHistory: (projectId: number, type?: string) =>
+      type
+        ? (['health', projectId, 'history', type] as const)
+        : (['health', projectId, 'history'] as const),
+  },
+
   tokens: {
     all: ['tokens'] as const,
   },
