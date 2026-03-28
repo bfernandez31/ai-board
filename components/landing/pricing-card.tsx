@@ -27,7 +27,7 @@ export function PricingCard({
   const card = (
     <Card
       className={`relative flex flex-col h-full ${
-        isPopular ? 'border-0 bg-ctp-mantle' : 'transition-all hover:shadow-md hover:-translate-y-1'
+        isPopular ? 'border-0 bg-ctp-mantle' : 'bg-card transition-all hover:shadow-md hover:-translate-y-1'
       }`}
     >
       {isPopular && (

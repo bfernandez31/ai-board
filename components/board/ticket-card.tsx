@@ -119,7 +119,7 @@ export const TicketCard = React.memo(
         {...(isMounted ? listeners : {})}
       >
         <Card
-          className="bg-card border-border p-4 transition-all hover:border-accent hover:bg-background hover:-translate-y-0.5 hover:shadow-md overflow-hidden shadow-sm"
+          className="aurora-glass aurora-glass-hover border p-4 transition-all hover:-translate-y-0.5 overflow-hidden"
           role="article"
           aria-label={`Ticket ${ticket.ticketKey}: ${ticket.title}`}
         >

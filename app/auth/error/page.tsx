@@ -42,7 +42,7 @@ export default async function AuthErrorPage({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
-      <Card className="w-[400px]">
+      <Card className="w-[400px] aurora-bg-section">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
             <AlertCircle className="h-6 w-6 text-destructive" />

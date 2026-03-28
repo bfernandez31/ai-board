@@ -65,7 +65,7 @@ export const DeployConfirmationModal = React.memo(
   }: DeployConfirmationModalProps) => {
     return (
       <AlertDialog open={open} onOpenChange={onOpenChange}>
-        <AlertDialogContent className="bg-background border-border">
+        <AlertDialogContent className="border-border">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground">
               {isRetry ? 'Retry' : 'Deploy'} Preview for {ticketKey}

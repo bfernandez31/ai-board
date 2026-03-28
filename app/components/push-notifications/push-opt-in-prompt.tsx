@@ -42,7 +42,7 @@ export function PushOptInPrompt() {
   }
 
   return (
-    <Card className="fixed bottom-4 right-4 w-80 shadow-lg z-50 border-accent bg-background">
+    <Card className="fixed bottom-4 right-4 w-80 shadow-lg z-50 border-accent aurora-bg-dialog">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

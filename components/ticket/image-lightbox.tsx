@@ -101,7 +101,7 @@ export function ImageLightbox({ images, initialIndex, open, onOpenChange }: Imag
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-crust border-surface2">
+      <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 border-surface2">
         {/* Accessibility labels */}
         <VisuallyHidden>
           <DialogTitle>Image Viewer</DialogTitle>

@@ -41,7 +41,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   return (
     <Card
-      className="bg-card border-border transition-all duration-200 hover:border-accent hover:shadow-lg cursor-pointer will-change-transform hover:brightness-110"
+      className="aurora-bg-subtle border-border transition-all duration-200 hover:border-accent hover:shadow-lg cursor-pointer will-change-transform hover:brightness-110"
       onClick={handleClick}
       data-testid="project-card"
       data-project-id={project.id}

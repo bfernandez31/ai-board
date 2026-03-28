@@ -50,7 +50,7 @@ export function DefaultAgentCard({ project }: DefaultAgentCardProps) {
   }
 
   return (
-    <Card>
+    <Card className="aurora-bg-subtle">
       <CardHeader>
         <CardTitle>Default AI Agent</CardTitle>
         <CardDescription>

@@ -21,7 +21,7 @@ export function CacheEfficiencyChart({
 
   if (data.totalTokens === 0) {
     return (
-      <Card>
+      <Card className="aurora-bg-subtle">
         <CardHeader>
           <CardTitle className="text-base text-foreground">Cache Efficiency</CardTitle>
         </CardHeader>
@@ -35,7 +35,7 @@ export function CacheEfficiencyChart({
   }
 
   return (
-    <Card>
+    <Card className="aurora-bg-subtle">
       <CardHeader>
         <CardTitle className="text-base text-foreground">Cache Efficiency</CardTitle>
       </CardHeader>

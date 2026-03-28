@@ -22,6 +22,7 @@ export function NotificationBell() {
           size="icon"
           className="relative"
           data-testid="notification-bell"
+          aria-label="Notifications"
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (

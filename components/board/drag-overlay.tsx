@@ -21,7 +21,7 @@ export const DragOverlay = ({ activeTicket }: DragOverlayProps) => {
     <DndKitDragOverlay>
       {activeTicket ? (
         <div className="opacity-90 cursor-grabbing rotate-2 scale-110 transition-transform touch-none">
-          <Card className="bg-card border-ctp-blue border-2 p-4 shadow-2xl">
+          <Card className="aurora-bg-section border-ctp-blue border-2 p-4 shadow-2xl">
             {/* Header: ID and Version */}
             <div className="flex items-start justify-between mb-3">
               <span className="text-xs text-muted-foreground font-mono font-semibold">

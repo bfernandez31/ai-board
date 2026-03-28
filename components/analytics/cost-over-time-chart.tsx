@@ -13,7 +13,7 @@ interface CostOverTimeChartProps {
 export function CostOverTimeChart({ data, emptyMessage = 'No cost data available' }: CostOverTimeChartProps) {
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className="aurora-bg-subtle">
         <CardHeader>
           <CardTitle className="text-base text-foreground">Cost Over Time</CardTitle>
         </CardHeader>
@@ -27,7 +27,7 @@ export function CostOverTimeChart({ data, emptyMessage = 'No cost data available
   }
 
   return (
-    <Card>
+    <Card className="aurora-bg-subtle">
       <CardHeader>
         <CardTitle className="text-base text-foreground">Cost Over Time</CardTitle>
       </CardHeader>

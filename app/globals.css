@@ -281,6 +281,24 @@
   .aurora-bg-muted  { background: hsl(var(--ctp-mauve) / 0.04); }
   .aurora-bg-tint   { background: hsl(var(--ctp-mauve) / 0.08); }
 
+  /* Elevated card – vivid aurora gradient on dark base */
+  .aurora-glass {
+    background:
+      linear-gradient(145deg,
+        hsl(var(--ctp-sapphire) / 0.18) 0%,
+        hsl(var(--ctp-mauve) / 0.20) 50%,
+        hsl(var(--ctp-pink) / 0.14) 100%),
+      hsl(var(--ctp-crust));
+    border-color: hsl(var(--ctp-mauve) / 0.18);
+    box-shadow: 0 2px 10px hsl(0 0% 0% / 0.30);
+  }
+  .aurora-glass-hover:hover {
+    border-color: hsl(var(--ctp-mauve) / 0.28);
+    box-shadow:
+      0 6px 20px hsl(0 0% 0% / 0.40),
+      0 0 14px hsl(var(--ctp-mauve) / 0.10);
+  }
+
   /* Per-color card gradients (stat cards, overview cards) */
   .aurora-bg-card-green   { background: linear-gradient(135deg, hsl(var(--ctp-green) / 0.06), hsl(var(--ctp-teal) / 0.04)); }
   .aurora-bg-card-blue    { background: linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.06), hsl(var(--ctp-mauve) / 0.04)); }

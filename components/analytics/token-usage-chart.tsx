@@ -24,7 +24,7 @@ export function TokenUsageChart({
 
   if (total === 0) {
     return (
-      <Card>
+      <Card className="aurora-bg-subtle">
         <CardHeader>
           <CardTitle className="text-base text-foreground">Token Usage</CardTitle>
         </CardHeader>
@@ -38,7 +38,7 @@ export function TokenUsageChart({
   }
 
   return (
-    <Card>
+    <Card className="aurora-bg-subtle">
       <CardHeader>
         <CardTitle className="text-base text-foreground">Token Usage</CardTitle>
       </CardHeader>

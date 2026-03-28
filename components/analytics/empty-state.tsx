@@ -13,7 +13,7 @@ export function EmptyState({
   description = 'Analytics will appear once you have completed workflow jobs with telemetry data. Create and run some tickets to see cost trends, token usage, and more.',
 }: EmptyStateProps) {
   return (
-    <Card className="border-dashed">
+    <Card className="border-dashed aurora-bg-subtle">
       <CardContent className="flex flex-col items-center justify-center py-16">
         <BarChart3 className="h-12 w-12 text-muted-foreground/50 mb-4" />
         <h3 className="text-lg font-semibold mb-2">{title}</h3>

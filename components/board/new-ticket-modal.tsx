@@ -262,7 +262,7 @@ export function NewTicketModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto border-ctp-mauve/15 aurora-bg-dialog"
+        className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto border-ctp-mauve/15"
       >
         <DialogHeader>
           <DialogTitle>Create New Ticket</DialogTitle>

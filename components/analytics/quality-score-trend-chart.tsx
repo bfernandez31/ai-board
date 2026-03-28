@@ -15,7 +15,7 @@ export function QualityScoreTrendChart({
 }: QualityScoreTrendChartProps) {
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className="aurora-bg-subtle">
         <CardHeader>
           <CardTitle className="text-base text-foreground">Quality Score Trend</CardTitle>
         </CardHeader>
@@ -29,7 +29,7 @@ export function QualityScoreTrendChart({
   }
 
   return (
-    <Card>
+    <Card className="aurora-bg-subtle">
       <CardHeader>
         <CardTitle className="text-base text-foreground">Quality Score Trend</CardTitle>
       </CardHeader>

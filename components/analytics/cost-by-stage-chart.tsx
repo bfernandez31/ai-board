@@ -31,7 +31,7 @@ export function CostByStageChart({
 }: CostByStageChartProps) {
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className="aurora-bg-subtle">
         <CardHeader>
           <CardTitle className="text-base text-foreground">Cost by Stage</CardTitle>
         </CardHeader>
@@ -45,7 +45,7 @@ export function CostByStageChart({
   }
 
   return (
-    <Card>
+    <Card className="aurora-bg-subtle">
       <CardHeader>
         <CardTitle className="text-base text-foreground">Cost by Stage</CardTitle>
       </CardHeader>

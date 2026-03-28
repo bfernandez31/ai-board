@@ -195,7 +195,7 @@ export default function ConstitutionViewer({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] sm:max-w-[90vw] bg-zinc-950">
+      <DialogContent className="max-w-4xl max-h-[90vh] sm:max-w-[90vw]">
         <DialogHeader className="pr-12">
           <DialogTitle className="text-zinc-50 flex items-center gap-2">
             <Scroll className="h-5 w-5" />

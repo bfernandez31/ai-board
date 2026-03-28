@@ -71,7 +71,7 @@ export default async function SignInPage({
 
   return (
     <div className="flex h-[calc(100vh-4rem)] items-center justify-center px-4">
-      <Card className="w-full max-w-md border-2 border-primary">
+      <Card className="w-full max-w-md border-2 border-primary aurora-bg-section">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Welcome to AI Board</CardTitle>
           <CardDescription className="text-muted-foreground">

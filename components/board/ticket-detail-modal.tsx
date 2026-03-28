@@ -741,7 +741,7 @@ export function TicketDetailModal({
           !top-0 !translate-y-0
           sm:grid sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:px-6 sm:pt-4 sm:pb-6
           sm:!top-[50%] sm:!-translate-y-1/2
-          border-ctp-mauve/15 text-foreground aurora-bg-dialog
+          border-ctp-mauve/15 text-foreground
           [&>button[class*=absolute]]:hidden
         "
       >

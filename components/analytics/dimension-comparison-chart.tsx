@@ -15,7 +15,7 @@ export function DimensionComparisonChart({
 }: DimensionComparisonChartProps) {
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className="aurora-bg-subtle">
         <CardHeader>
           <CardTitle className="text-base text-foreground">Quality Dimensions</CardTitle>
         </CardHeader>
@@ -29,7 +29,7 @@ export function DimensionComparisonChart({
   }
 
   return (
-    <Card>
+    <Card className="aurora-bg-subtle">
       <CardHeader>
         <CardTitle className="text-base text-foreground">Quality Dimensions</CardTitle>
       </CardHeader>

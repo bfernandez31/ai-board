@@ -52,7 +52,7 @@ export function ClarificationPolicyCard({ project }: ClarificationPolicyCardProp
   }
 
   return (
-    <Card>
+    <Card className="aurora-bg-subtle">
       <CardHeader>
         <CardTitle>Default Clarification Policy</CardTitle>
         <CardDescription>

@@ -15,7 +15,7 @@ export function TopToolsChart({
 }: TopToolsChartProps) {
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className="aurora-bg-subtle">
         <CardHeader>
           <CardTitle className="text-base text-foreground">Top Tools</CardTitle>
         </CardHeader>
@@ -29,7 +29,7 @@ export function TopToolsChart({
   }
 
   return (
-    <Card>
+    <Card className="aurora-bg-subtle">
       <CardHeader>
         <CardTitle className="text-base text-foreground">Top Tools</CardTitle>
       </CardHeader>

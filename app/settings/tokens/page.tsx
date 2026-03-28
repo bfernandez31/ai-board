@@ -45,7 +45,7 @@ export default function TokensSettingsPage() {
         </div>
 
         {/* Description */}
-        <div className="rounded-lg border bg-muted/50 p-4">
+        <div className="rounded-lg border aurora-bg-subtle p-4">
           <p className="text-sm text-muted-foreground">
             Personal access tokens allow external tools like MCP servers, CLI applications,
             and CI pipelines to authenticate with the ai-board API. Tokens grant the same

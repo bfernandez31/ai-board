@@ -28,7 +28,7 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-      <Card>
+      <Card className="aurora-bg-card-yellow">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-foreground">Total Cost</CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -46,7 +46,7 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="aurora-bg-card-green">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-foreground">Success Rate</CardTitle>
           <CheckCircle className="h-4 w-4 text-muted-foreground" />
@@ -57,7 +57,7 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="aurora-bg-card-blue">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-foreground">Avg Duration</CardTitle>
           <Clock className="h-4 w-4 text-muted-foreground" />
@@ -68,7 +68,7 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="aurora-bg-card-mauve">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-foreground">Tickets Shipped</CardTitle>
           <Ship className="h-4 w-4 text-muted-foreground" />
@@ -79,7 +79,7 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="aurora-bg-card-pink">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-foreground">Tickets Closed</CardTitle>
           <CircleCheckBig className="h-4 w-4 text-muted-foreground" />

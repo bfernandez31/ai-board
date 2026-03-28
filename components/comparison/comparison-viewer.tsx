@@ -150,7 +150,7 @@ export function ComparisonViewer({
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="max-h-[90vh] max-w-5xl text-card-foreground sm:max-w-[90vw] aurora-bg-dialog"
+        className="max-h-[90vh] max-w-5xl text-card-foreground sm:max-w-[90vw]"
       >
         <DialogHeader className="pr-12">
           <DialogDescription className="sr-only">

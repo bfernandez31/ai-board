@@ -39,7 +39,7 @@ export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
       </SheetTrigger>
       <SheetContent
         side="right"
-        className="bg-[hsl(var(--ctp-mantle))] text-[hsl(var(--ctp-text))]"
+        className="text-foreground"
       >
         <VisuallyHidden>
           <SheetTitle>Navigation Menu</SheetTitle>

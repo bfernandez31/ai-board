@@ -51,7 +51,7 @@ export default async function ActivityPage({
         </div>
 
         {/* Activity Feed */}
-        <div className="bg-zinc-900/50 rounded-lg border border-zinc-800">
+        <div className="aurora-bg-subtle rounded-lg border border-zinc-800">
           <ActivityFeed projectId={projectId} />
         </div>
       </div>

@@ -58,7 +58,7 @@ export function SubscriptionStatus({ subscription }: SubscriptionStatusProps) {
     : null;
 
   return (
-    <Card>
+    <Card className="aurora-bg-subtle">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           Current Plan

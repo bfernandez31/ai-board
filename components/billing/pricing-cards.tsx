@@ -92,7 +92,7 @@ export function PricingCards({
         return (
           <Card
             key={plan.plan}
-            className={isPopular ? 'border-primary shadow-md' : ''}
+            className={isPopular ? 'aurora-bg-section border-primary shadow-md' : 'aurora-bg-subtle'}
           >
             <CardHeader>
               {isPopular && (

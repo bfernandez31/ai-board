@@ -61,10 +61,10 @@ const STAGE_CONFIG: Record<
     headerBgColor: 'bg-ctp-lavender/30',
     headerBorderColor: 'border-ctp-lavender/40',
     headerGlow: 'shadow-[0_2px_12px_hsl(var(--ctp-lavender)/0.12)]',
-    textColor: 'text-ctp-lavender',
+    textColor: 'text-zinc-100',
     borderColor: 'border-ctp-lavender/40',
     badgeBgColor: 'bg-ctp-lavender/70',
-    badgeTextColor: 'text-zinc-50',
+    badgeTextColor: 'text-zinc-950',
     order: 1,
   },
   [Stage.PLAN]: {
@@ -73,10 +73,10 @@ const STAGE_CONFIG: Record<
     headerBgColor: 'bg-ctp-blue/30',
     headerBorderColor: 'border-ctp-blue/40',
     headerGlow: 'shadow-[0_2px_12px_hsl(var(--ctp-blue)/0.12)]',
-    textColor: 'text-ctp-blue',
+    textColor: 'text-zinc-100',
     borderColor: 'border-ctp-blue/40',
     badgeBgColor: 'bg-ctp-blue/70',
-    badgeTextColor: 'text-zinc-50',
+    badgeTextColor: 'text-zinc-950',
     order: 2,
   },
   [Stage.BUILD]: {
@@ -85,10 +85,10 @@ const STAGE_CONFIG: Record<
     headerBgColor: 'bg-ctp-peach-light/30',
     headerBorderColor: 'border-ctp-peach-light/40',
     headerGlow: 'shadow-[0_2px_12px_hsl(var(--ctp-peach-light)/0.12)]',
-    textColor: 'text-ctp-peach-light',
+    textColor: 'text-zinc-100',
     borderColor: 'border-ctp-peach-light/40',
     badgeBgColor: 'bg-ctp-peach-light/70',
-    badgeTextColor: 'text-zinc-50',
+    badgeTextColor: 'text-zinc-950',
     order: 3,
   },
   [Stage.VERIFY]: {
@@ -97,10 +97,10 @@ const STAGE_CONFIG: Record<
     headerBgColor: 'bg-ctp-flamingo/30',
     headerBorderColor: 'border-ctp-flamingo/40',
     headerGlow: 'shadow-[0_2px_12px_hsl(var(--ctp-flamingo)/0.12)]',
-    textColor: 'text-ctp-flamingo',
+    textColor: 'text-zinc-100',
     borderColor: 'border-ctp-flamingo/40',
     badgeBgColor: 'bg-ctp-flamingo/70',
-    badgeTextColor: 'text-zinc-50',
+    badgeTextColor: 'text-zinc-950',
     order: 4,
   },
   [Stage.SHIP]: {
@@ -109,10 +109,10 @@ const STAGE_CONFIG: Record<
     headerBgColor: 'bg-ctp-green/30',
     headerBorderColor: 'border-ctp-green/40',
     headerGlow: 'shadow-[0_2px_12px_hsl(var(--ctp-green)/0.12)]',
-    textColor: 'text-ctp-green',
+    textColor: 'text-zinc-100',
     borderColor: 'border-ctp-green/40',
     badgeBgColor: 'bg-ctp-green/70',
-    badgeTextColor: 'text-zinc-50',
+    badgeTextColor: 'text-zinc-950',
     order: 5,
   },
   [Stage.CLOSED]: {
@@ -121,10 +121,10 @@ const STAGE_CONFIG: Record<
     headerBgColor: 'bg-accent/30',
     headerBorderColor: 'border-accent/40',
     headerGlow: 'shadow-[0_2px_12px_hsl(var(--ctp-overlay-0)/0.08)]',
-    textColor: 'text-accent',
+    textColor: 'text-zinc-100',
     borderColor: 'border-accent/40',
     badgeBgColor: 'bg-accent/70',
-    badgeTextColor: 'text-zinc-50',
+    badgeTextColor: 'text-zinc-950',
     order: 6,
   },
 };
@@ -272,7 +272,7 @@ export const StageColumn = React.memo(
             ) : (
               <div className="flex flex-col items-center justify-center py-12 gap-2">
                 <Inbox className="w-8 h-8 text-muted-foreground/30" strokeWidth={1.5} />
-                <span className="text-sm text-muted-foreground/50 font-medium">No tickets</span>
+                <span className="text-sm text-muted-foreground font-medium">No tickets</span>
               </div>
             )}
           </div>

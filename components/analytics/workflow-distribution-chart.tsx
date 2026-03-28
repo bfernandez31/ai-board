@@ -21,7 +21,7 @@ export function WorkflowDistributionChart({
 }: WorkflowDistributionChartProps) {
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className="aurora-bg-subtle">
         <CardHeader>
           <CardTitle className="text-base text-foreground">Workflow Distribution</CardTitle>
         </CardHeader>
@@ -43,7 +43,7 @@ export function WorkflowDistributionChart({
   }));
 
   return (
-    <Card>
+    <Card className="aurora-bg-subtle">
       <CardHeader>
         <CardTitle className="text-base text-foreground">Workflow Distribution</CardTitle>
       </CardHeader>

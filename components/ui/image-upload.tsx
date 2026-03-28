@@ -280,7 +280,7 @@ export function ImageUpload({
       {images.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {images.map((img, index) => (
-            <Card key={img.preview} className="relative group overflow-hidden">
+            <Card key={img.preview} className="relative group overflow-hidden bg-card">
               <div className="aspect-square relative">
                 <Image
                   src={img.preview}

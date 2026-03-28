@@ -15,7 +15,7 @@ export function VelocityChart({
 }: VelocityChartProps) {
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className="aurora-bg-subtle">
         <CardHeader>
           <CardTitle className="text-base text-foreground">Velocity</CardTitle>
         </CardHeader>
@@ -29,7 +29,7 @@ export function VelocityChart({
   }
 
   return (
-    <Card>
+    <Card className="aurora-bg-subtle">
       <CardHeader>
         <CardTitle className="text-base text-foreground">Velocity</CardTitle>
       </CardHeader>
