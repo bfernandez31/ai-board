@@ -27,12 +27,12 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 [P] Create TypeScript interfaces and API response types in lib/health/types.ts (ModuleConfig, HealthScoreResponse, HealthScanResponse, module status enum)
-- [ ] T004 [P] Create module configuration constants in lib/health/constants.ts (HEALTH_MODULES array with 6 module configs: type, name, icon, isPassive flag; CONTRIBUTING_MODULES subset)
-- [ ] T005 [P] Implement global score calculator in lib/health/score-calculator.ts (calculateGlobalScore with equal weighting and redistribution for missing modules, reuse getScoreThreshold/getScoreColor from lib/quality-score.ts)
-- [ ] T006 Create Prisma query functions in lib/health/queries.ts (getHealthScore, getLatestScans, getActiveScan, getScanHistory, upsertHealthScore, computePassiveModuleScores)
-- [ ] T007 [P] Create workflow dispatch function in lib/workflows/dispatch-health-scan.ts following dispatch-ai-board.ts pattern (inputs: project_id, scan_type, scan_id, base_commit, head_commit, githubRepository)
-- [ ] T008 [P] Unit test for score-calculator.ts in tests/unit/health/score-calculator.test.ts (null when no modules, single module = 100% weight, all 5 modules = 20% each, partial modules with redistribution, edge cases)
+- [x] T003 [P] Create TypeScript interfaces and API response types in lib/health/types.ts (ModuleConfig, HealthScoreResponse, HealthScanResponse, module status enum)
+- [x] T004 [P] Create module configuration constants in lib/health/constants.ts (HEALTH_MODULES array with 6 module configs: type, name, icon, isPassive flag; CONTRIBUTING_MODULES subset)
+- [x] T005 [P] Implement global score calculator in lib/health/score-calculator.ts (calculateGlobalScore with equal weighting and redistribution for missing modules, reuse getScoreThreshold/getScoreColor from lib/quality-score.ts)
+- [x] T006 Create Prisma query functions in lib/health/queries.ts (getHealthScore, getLatestScans, getActiveScan, getScanHistory, upsertHealthScore, computePassiveModuleScores)
+- [x] T007 [P] Create workflow dispatch function in lib/workflows/dispatch-health-scan.ts following dispatch-ai-board.ts pattern (inputs: project_id, scan_type, scan_id, base_commit, head_commit, githubRepository)
+- [x] T008 [P] Unit test for score-calculator.ts in tests/unit/health/score-calculator.test.ts (null when no modules, single module = 100% weight, all 5 modules = 20% each, partial modules with redistribution, edge cases)
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 
