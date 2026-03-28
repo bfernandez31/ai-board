@@ -434,6 +434,59 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - Navigates to `/projects/{projectId}/board`
 - Outline variant styling for secondary action appearance
 
+## Project Health Dashboard
+
+Users can access a dedicated Health Dashboard to monitor overall project quality across six dimensions.
+
+**Navigation**:
+- Accessible from the sidebar Health entry (HeartPulse icon) on any project page
+- URL: `/projects/{projectId}/health`
+
+**Global Score Card**:
+- Displays a global health score (0–100) with a textual label: Excellent (90–100), Good (70–89), Fair (50–69), or Poor (0–49)
+- Score color follows the same thresholds as quality scores
+- Sub-score badges show individual scores for Security, Compliance, Tests, Spec Sync, and Quality Gate
+- "Last full scan: X days ago" reflects the most recent completed scan date across all modules
+- Shows "---" when no scans have been run
+
+**Module Cards**:
+Six module cards are displayed in a 2-column, 3-row grid:
+
+| Column 1 | Column 2 |
+|----------|----------|
+| Security | Compliance |
+| Tests | Quality Gate |
+| Spec Sync | Last Clean |
+
+Each card displays: icon, module name, score badge (0–100 or "---"), compact summary, and last scan/calculation date.
+
+**Active Modules** (Security, Compliance, Tests, Spec Sync):
+- Display a "Run Scan" button and the commit range scanned
+- Support four visual states:
+  - **Never scanned**: "---" score, "No scan yet" label, "Run first scan" button
+  - **Scanning**: disabled button with spinner, "Scanning..." label
+  - **Completed**: numeric score with color, issues summary, active "Run Scan" button
+  - **Failed**: red "Failed" badge, error message, "Retry" button
+
+**Passive Modules** (Quality Gate, Last Clean):
+- Display a "passive" label with no scan trigger button
+- Quality Gate: derived from average quality scores across completed verify jobs
+- Last Clean: derived from the most recent automated cleanup job completion date
+
+**Scan Behavior**:
+- Clicking "Run Scan" creates a scan record and dispatches a `health-scan.yml` GitHub workflow
+- The system prevents duplicate concurrent scans for the same module and project (returns error)
+- Incremental scanning: first scan is full (null base commit); subsequent scans use the last completed scan's head commit as the base commit
+- Failed scans do not update the incremental base; the base is always from the last *completed* scan
+
+**Data Updates**:
+- Health score polling every 15 seconds
+- Score cache updated automatically when a scan completes
+
+**Access Control**:
+- Only project owners and members can view the Health Dashboard
+- All scan actions require project ownership or membership
+
 ## External Repository Support
 
 ### Multi-Repository Architecture

@@ -3387,6 +3387,206 @@ Stripe webhook handler. Receives and processes subscription lifecycle events.
 
 ---
 
+## Health Endpoints
+
+### GET /api/projects/:projectId/health
+
+Fetch the current health score and module status for a project.
+
+**Authentication**: Required (session)
+**Authorization**: `verifyProjectAccess` (owner OR member)
+
+**Response** (200 OK):
+```json
+{
+  "globalScore": 82,
+  "globalLabel": "Good",
+  "lastScanAt": "2026-03-28T12:00:00.000Z",
+  "modules": [
+    {
+      "type": "SECURITY",
+      "name": "Security",
+      "score": 90,
+      "status": "completed",
+      "isPassive": false,
+      "lastScanAt": "2026-03-28T12:00:00.000Z",
+      "summary": "2 issues found, 1 fixed",
+      "latestScan": {
+        "id": 1,
+        "status": "COMPLETED",
+        "baseCommit": "abc123",
+        "headCommit": "def456",
+        "issuesFound": 2,
+        "issuesFixed": 1,
+        "errorMessage": null
+      }
+    }
+  ]
+}
+```
+
+**Module `status` values**: `never_scanned` | `scanning` | `completed` | `failed`
+
+**Score labels**: Excellent (90–100), Good (70–89), Fair (50–69), Poor (0–49)
+
+**Global score**: Weighted average (20% each) of available active module scores. Excludes modules not yet scanned. Returns `null` when no modules have been scanned.
+
+**Errors**:
+- `400`: Invalid project ID
+- `401`: Not authenticated
+- `403`: Not a project member or owner
+- `404`: Project not found
+
+---
+
+### GET /api/projects/:projectId/health/scans
+
+List scan history for a project.
+
+**Authentication**: Required (session)
+**Authorization**: `verifyProjectAccess` (owner OR member)
+
+**Query Parameters**:
+- `type` (string, optional): Filter by scan type — `SECURITY` | `COMPLIANCE` | `TESTS` | `SPEC_SYNC`
+- `page` (integer, default: 1): Page number
+- `pageSize` (integer, default: 10, max: 50): Results per page
+
+**Response** (200 OK):
+```json
+{
+  "scans": [
+    {
+      "id": 1,
+      "projectId": 42,
+      "scanType": "SECURITY",
+      "status": "COMPLETED",
+      "score": 90,
+      "issuesFound": 2,
+      "issuesFixed": 1,
+      "baseCommit": "abc123",
+      "headCommit": "def456",
+      "ticketsCreated": 0,
+      "errorMessage": null,
+      "durationMs": 12000,
+      "startedAt": "2026-03-28T12:00:00.000Z",
+      "completedAt": "2026-03-28T12:00:12.000Z",
+      "createdAt": "2026-03-28T12:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "pageSize": 10,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+**Errors**:
+- `400`: Invalid query parameters or project ID
+- `401`: Not authenticated
+- `403`: Not a project member or owner
+- `404`: Project not found
+
+---
+
+### POST /api/projects/:projectId/health/scans
+
+Trigger a health scan for a specific module.
+
+**Authentication**: Required (session)
+**Authorization**: `verifyProjectAccess` (owner OR member)
+
+**Request Body**:
+```json
+{ "scanType": "SECURITY" }
+```
+
+`scanType`: `SECURITY` | `COMPLIANCE` | `TESTS` | `SPEC_SYNC`
+
+**Response** (201 Created):
+```json
+{
+  "scan": {
+    "id": 1,
+    "projectId": 42,
+    "scanType": "SECURITY",
+    "status": "PENDING",
+    "score": null,
+    "issuesFound": 0,
+    "issuesFixed": 0,
+    "baseCommit": "abc123",
+    "headCommit": null,
+    "ticketsCreated": 0,
+    "errorMessage": null,
+    "durationMs": null,
+    "startedAt": null,
+    "completedAt": null,
+    "createdAt": "2026-03-28T12:00:00.000Z"
+  }
+}
+```
+
+**Behavior**:
+- Creates a scan record with `PENDING` status
+- `baseCommit` is the `headCommit` of the last `COMPLETED` scan of the same type (null for first scan)
+- Dispatches `health-scan.yml` GitHub workflow
+- If workflow dispatch fails, scan is immediately marked `FAILED`
+
+**Errors**:
+- `400`: Invalid request body or project ID
+- `401`: Not authenticated
+- `403`: Not a project member or owner
+- `404`: Project not found
+- `409`: `SCAN_IN_PROGRESS` — a scan of the same type is already running
+
+---
+
+### PATCH /api/projects/:projectId/health/scans/:scanId/status
+
+Update scan status. Called by the health-scan GitHub workflow.
+
+**Authentication**: Workflow Bearer token (`Authorization: Bearer <WORKFLOW_API_TOKEN>`)
+**Authorization**: Workflow token validation only (no session required)
+
+**Request Body**:
+```json
+{
+  "status": "COMPLETED",
+  "score": 90,
+  "issuesFound": 2,
+  "issuesFixed": 1,
+  "ticketsCreated": 0,
+  "durationMs": 12000,
+  "inputTokens": 5000,
+  "outputTokens": 2000,
+  "costUsd": 0.05,
+  "report": { "findings": [] }
+}
+```
+
+**Required fields by status**:
+- `RUNNING`: no additional fields required
+- `COMPLETED`: `score` required (0–100)
+- `FAILED`: `errorMessage` required
+
+**Valid transitions**: `PENDING → RUNNING`, `RUNNING → COMPLETED`, `RUNNING → FAILED`
+
+**Behavior**:
+- On `COMPLETED`: upserts the `HealthScore` cache for the project
+
+**Response** (200 OK):
+```json
+{ "scan": { ...updatedScanObject } }
+```
+
+**Errors**:
+- `400`: Invalid parameters, invalid body, or invalid state transition
+- `401`: Invalid or missing workflow token
+- `404`: Scan not found
+
+---
+
 ## Pagination
 
 Currently not implemented. All endpoints return complete result sets.

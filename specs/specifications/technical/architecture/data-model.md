@@ -115,7 +115,8 @@ model Project {
 
 **Relationships**:
 - Belongs to User (required, cascade delete)
-- One-to-many: Tickets, Jobs, ProjectMembers
+- One-to-many: Tickets, Jobs, ProjectMembers, HealthScans
+- One-to-one: HealthScore
 
 **Constraints**:
 - Unique key (project identifier for ticket prefixes)
@@ -1085,6 +1086,132 @@ type Attachments = TicketAttachment[];  // Max 5 items
 **Comment.content**:
 - Allowed: All printable UTF-8 characters
 - Markdown formatting supported
+
+### HealthScan
+
+Records a single execution of a health scan for one project module.
+
+```prisma
+enum HealthScanType {
+  SECURITY
+  COMPLIANCE
+  TESTS
+  SPEC_SYNC
+}
+
+enum HealthScanStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model HealthScan {
+  id             Int              @id @default(autoincrement())
+  projectId      Int
+  scanType       HealthScanType
+  status         HealthScanStatus @default(PENDING)
+  score          Int?
+  report         Json?
+  issuesFound    Int              @default(0)
+  issuesFixed    Int              @default(0)
+  baseCommit     String?          @db.VarChar(40)
+  headCommit     String?          @db.VarChar(40)
+  ticketsCreated Int              @default(0)
+  errorMessage   String?          @db.VarChar(2000)
+  durationMs     Int?
+  inputTokens    Int?
+  outputTokens   Int?
+  costUsd        Float?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, scanType, createdAt(sort: Desc)])
+  @@index([projectId, status])
+  @@index([projectId, scanType, status])
+}
+```
+
+**Purpose**: Tracks individual scan executions with full telemetry and result data
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `projectId`: Parent project (required, cascade delete)
+- `scanType`: Module being scanned (`SECURITY`, `COMPLIANCE`, `TESTS`, `SPEC_SYNC`)
+- `status`: Lifecycle state (`PENDING → RUNNING → COMPLETED | FAILED`)
+- `score`: Result score 0–100 (null until completed)
+- `report`: Arbitrary JSON report payload from workflow
+- `issuesFound` / `issuesFixed`: Count of findings and resolutions
+- `baseCommit`: Starting commit for incremental scan (null = full scan)
+- `headCommit`: Ending commit for incremental scan (set by workflow)
+- `ticketsCreated`: Number of issues auto-filed
+- `errorMessage`: Failure reason (required when status = FAILED)
+- `durationMs` / `inputTokens` / `outputTokens` / `costUsd`: Telemetry from workflow
+- `startedAt` / `completedAt`: Timing markers set on status transitions
+
+**Business Rules**:
+- Only one active scan (PENDING or RUNNING) allowed per project+scanType at a time
+- `baseCommit` for a new scan = `headCommit` of last COMPLETED scan of same type (null if none)
+- Failed scans do not count as a base for incremental scan calculation
+- Valid transitions: `PENDING → RUNNING`, `RUNNING → COMPLETED`, `RUNNING → FAILED`
+- Status updates are made by the health-scan workflow via `PATCH /api/projects/:projectId/health/scans/:scanId/status`
+
+---
+
+### HealthScore
+
+Cached aggregate health score for a project. One record per project, upserted whenever a scan completes.
+
+```prisma
+model HealthScore {
+  id                   Int       @id @default(autoincrement())
+  projectId            Int       @unique
+  globalScore          Int?
+  securityScore        Int?
+  complianceScore      Int?
+  testsScore           Int?
+  specSyncScore        Int?
+  qualityGateScore     Int?
+  lastScanAt           DateTime?
+  lastSecurityScanAt   DateTime?
+  lastComplianceScanAt DateTime?
+  lastTestsScanAt      DateTime?
+  lastSpecSyncScanAt   DateTime?
+  lastCleanAt          DateTime?
+  lastCleanJobId       Int?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+```
+
+**Purpose**: Denormalized cache for fast health score reads without aggregating scan history on every request
+
+**Fields**:
+- `projectId`: Unique per project (one-to-one)
+- `globalScore`: Weighted average (20% each) of available active module scores
+- `securityScore` / `complianceScore` / `testsScore` / `specSyncScore`: Per-module cached scores
+- `qualityGateScore`: Average quality score derived from completed verify jobs (passive)
+- `lastScanAt`: Most recent scan completion timestamp across all modules
+- `lastSecurityScanAt` etc.: Per-module last scan timestamps
+- `lastCleanAt`: Most recent cleanup job completion date (passive module)
+- `lastCleanJobId`: Reference to the most recent cleanup job
+
+**Business Rules**:
+- Upserted automatically when a scan status transitions to `COMPLETED`
+- Global score is recalculated from all non-null module scores (equal weight, 20% each)
+- Modules with null scores are excluded from the global score calculation
+- `lastScanAt` tracks the most recent completion across all active modules
+- Quality Gate and Last Clean scores are derived from existing job data (not from HealthScan records)
+
+---
 
 ## Migration Strategy
 
