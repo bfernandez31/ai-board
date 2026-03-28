@@ -70,16 +70,16 @@
 
 ### Tests for User Story 2
 
-- [ ] T017 [P] [US2] Integration test for trigger scan POST endpoint in tests/integration/health/trigger-scan.test.ts (successful trigger, concurrent scan prevention 409, invalid scan type, auth checks)
-- [ ] T018 [P] [US2] Integration test for scan status PATCH callback in tests/integration/health/scan-status.test.ts (PENDING→RUNNING, RUNNING→COMPLETED with score recalc, RUNNING→FAILED, invalid transitions)
+- [x] T017 [P] [US2] Integration test for trigger scan POST endpoint in tests/integration/health/trigger-scan.test.ts (successful trigger, concurrent scan prevention 409, invalid scan type, auth checks)
+- [x] T018 [P] [US2] Integration test for scan status PATCH callback in tests/integration/health/scan-status.test.ts (PENDING→RUNNING, RUNNING→COMPLETED with score recalc, RUNNING→FAILED, invalid transitions)
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Create scan workflow dispatch function in lib/health/scan-dispatch.ts (Octokit.actions.createWorkflowDispatch following existing dispatch-ai-board.ts pattern)
-- [ ] T020 [US2] Implement POST handler in app/api/projects/[projectId]/health/scans/route.ts (Zod validation, concurrent scan check, lookup latest COMPLETED scan for base commit, create HealthScan record, dispatch workflow, return 201)
-- [ ] T021 [US2] Implement PATCH handler in app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts (workflow token auth, Zod validation, status transition validation, update scan record, on COMPLETED: update HealthScore sub-score + recalculate globalScore + update last scan timestamp)
-- [ ] T022 [US2] Create useTriggerScan mutation hook in app/lib/hooks/mutations/useTriggerScan.ts (POST to trigger endpoint, invalidate health queries on success)
-- [ ] T023 [US2] Wire scan trigger and real-time states into health-module-card.tsx and health-dashboard.tsx (connect useTriggerScan to action buttons, connect useHealthPolling for live card state updates)
+- [x] T019 [US2] Create scan workflow dispatch function in lib/health/scan-dispatch.ts (Octokit.actions.createWorkflowDispatch following existing dispatch-ai-board.ts pattern)
+- [x] T020 [US2] Implement POST handler in app/api/projects/[projectId]/health/scans/route.ts (Zod validation, concurrent scan check, lookup latest COMPLETED scan for base commit, create HealthScan record, dispatch workflow, return 201)
+- [x] T021 [US2] Implement PATCH handler in app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts (workflow token auth, Zod validation, status transition validation, update scan record, on COMPLETED: update HealthScore sub-score + recalculate globalScore + update last scan timestamp)
+- [x] T022 [US2] Create useTriggerScan mutation hook in app/lib/hooks/mutations/useTriggerScan.ts (POST to trigger endpoint, invalidate health queries on success)
+- [x] T023 [US2] Wire scan trigger and real-time states into health-module-card.tsx and health-dashboard.tsx (connect useTriggerScan to action buttons, connect useHealthPolling for live card state updates)
 
 **Checkpoint**: Scan trigger works end-to-end, cards show real-time state transitions, global score recalculates on completion
 

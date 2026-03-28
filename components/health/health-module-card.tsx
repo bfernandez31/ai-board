@@ -46,8 +46,8 @@ interface HealthModuleCardProps {
   moduleType: HealthModuleType;
   module: HealthModuleStatus;
   isScanning?: boolean;
-  onTriggerScan?: () => void;
-  isTriggerPending?: boolean;
+  onTriggerScan?: (() => void) | undefined;
+  isTriggerPending?: boolean | undefined;
 }
 
 export function HealthModuleCard({

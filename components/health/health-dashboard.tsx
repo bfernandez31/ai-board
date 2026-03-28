@@ -3,7 +3,10 @@
 import { HealthHero } from './health-hero';
 import { HealthModuleCard } from './health-module-card';
 import { useHealthPolling } from '@/app/lib/hooks/useHealthPolling';
+import { useTriggerScan } from '@/app/lib/hooks/mutations/useTriggerScan';
+import { ACTIVE_SCAN_TYPES } from '@/lib/health/types';
 import type { HealthModuleType } from '@/lib/health/types';
+import type { HealthScanType } from '@prisma/client';
 
 interface HealthDashboardProps {
   projectId: number;
@@ -18,8 +21,11 @@ const MODULE_GRID: { type: HealthModuleType; key: keyof NonNullable<ReturnType<t
   { type: 'LAST_CLEAN', key: 'lastClean' },
 ];
 
+const ACTIVE_SCAN_SET = new Set<string>(ACTIVE_SCAN_TYPES);
+
 export function HealthDashboard({ projectId }: HealthDashboardProps) {
   const { data, isLoading, error } = useHealthPolling(projectId);
+  const triggerScan = useTriggerScan();
 
   if (isLoading) {
     return (
@@ -59,7 +65,13 @@ export function HealthDashboard({ projectId }: HealthDashboardProps) {
             key={type}
             moduleType={type}
             module={data.modules[key]}
-            isScanning={activeScanTypes.has(type as 'SECURITY' | 'COMPLIANCE' | 'TESTS' | 'SPEC_SYNC')}
+            isScanning={activeScanTypes.has(type as HealthScanType)}
+            onTriggerScan={
+              ACTIVE_SCAN_SET.has(type)
+                ? () => triggerScan.mutate({ projectId, scanType: type as HealthScanType })
+                : undefined
+            }
+            isTriggerPending={triggerScan.isPending}
           />
         ))}
       </div>
