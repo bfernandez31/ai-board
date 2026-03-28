@@ -64,18 +64,18 @@
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Integration test for GET /api/projects/[projectId]/health in tests/integration/health/health-score-api.test.ts (returns global score, module array with 6 entries, handles no-scans case, auth checks)
-- [ ] T012 [P] [US1] Component test for global-score-card.tsx in tests/unit/components/health/global-score-card.test.tsx (score display with label/color, "---" when null, sub-score badges, "Last full scan" text)
-- [ ] T013 [P] [US1] Component test for module-card.tsx in tests/unit/components/health/module-card.test.tsx (4 visual states: never_scanned, scanning, completed, failed; passive vs active distinction)
+- [x] T011 [P] [US1] Integration test for GET /api/projects/[projectId]/health in tests/integration/health/health-score-api.test.ts (returns global score, module array with 6 entries, handles no-scans case, auth checks)
+- [x] T012 [P] [US1] Component test for global-score-card.tsx in tests/unit/components/health/global-score-card.test.tsx (score display with label/color, "---" when null, sub-score badges, "Last full scan" text)
+- [x] T013 [P] [US1] Component test for module-card.tsx in tests/unit/components/health/module-card.test.tsx (4 visual states: never_scanned, scanning, completed, failed; passive vs active distinction)
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Implement GET health score API route in app/api/projects/[projectId]/health/route.ts (verifyProjectAccess, Zod validation, return global score + 6 module statuses per health-score-api.yaml contract)
-- [ ] T015 [US1] Create TanStack Query polling hook in lib/hooks/useHealthPolling.ts (useQuery wrapping GET /health, refetchInterval: 15_000 when scans active, stops when idle)
-- [ ] T016 [P] [US1] Create global score card component in components/health/global-score-card.tsx (large score with label/color, 5 sub-score badges, "Last full scan: X days ago", Aurora theme styling)
-- [ ] T017 [P] [US1] Create module card component in components/health/module-card.tsx (4 visual states per FR-010, icon + name + score badge + summary + last scan date, passive label for Quality Gate/Last Clean)
-- [ ] T018 [US1] Create health dashboard layout component in components/health/health-dashboard.tsx (Client Component, 2x3 grid for module cards, global score card at top, uses useHealthPolling hook)
-- [ ] T019 [US1] Create Health page route in app/projects/[projectId]/health/page.tsx (Server Component, verifyProjectAccess, fetch initial data, render HealthDashboard client component)
+- [x] T014 [US1] Implement GET health score API route in app/api/projects/[projectId]/health/route.ts (verifyProjectAccess, Zod validation, return global score + 6 module statuses per health-score-api.yaml contract)
+- [x] T015 [US1] Create TanStack Query polling hook in lib/hooks/useHealthPolling.ts (useQuery wrapping GET /health, refetchInterval: 15_000 when scans active, stops when idle)
+- [x] T016 [P] [US1] Create global score card component in components/health/global-score-card.tsx (large score with label/color, 5 sub-score badges, "Last full scan: X days ago", Aurora theme styling)
+- [x] T017 [P] [US1] Create module card component in components/health/module-card.tsx (4 visual states per FR-010, icon + name + score badge + summary + last scan date, passive label for Quality Gate/Last Clean)
+- [x] T018 [US1] Create health dashboard layout component in components/health/health-dashboard.tsx (Client Component, 2x3 grid for module cards, global score card at top, uses useHealthPolling hook)
+- [x] T019 [US1] Create Health page route in app/projects/[projectId]/health/page.tsx (Server Component, verifyProjectAccess, fetch initial data, render HealthDashboard client component)
 
 **Checkpoint**: Health page displays global score and 6 module cards with correct states (never_scanned for new projects)
 
