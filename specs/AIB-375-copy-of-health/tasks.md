@@ -143,10 +143,10 @@
 
 **Purpose**: Final validation and cross-cutting improvements
 
-- [ ] T030 [P] Verify all API endpoints match contracts in specs/AIB-375-copy-of-health/contracts/ (response shapes, status codes, error formats)
-- [ ] T031 [P] Verify Aurora theme compliance — no hardcoded colors, WCAG AA contrast, aurora-* utility classes on cards/dialogs in components/health/
-- [ ] T032 Run full test suite (`bun run test`) and fix any failures
-- [ ] T033 Run type-check (`bun run type-check`) and lint (`bun run lint`) and fix any errors
+- [x] T030 [P] Verify all API endpoints match contracts in specs/AIB-375-copy-of-health/contracts/ (response shapes, status codes, error formats)
+- [x] T031 [P] Verify Aurora theme compliance — no hardcoded colors, WCAG AA contrast, aurora-* utility classes on cards/dialogs in components/health/
+- [x] T032 Run full test suite (`bun run test`) and fix any failures
+- [x] T033 Run type-check (`bun run type-check`) and lint (`bun run lint`) and fix any errors
 
 ---
 
