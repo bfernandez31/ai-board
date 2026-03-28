@@ -36,8 +36,8 @@ export function IconRailSidebar({ projectId }: IconRailSidebarProps) {
             aria-current={active ? 'page' : undefined}
             className={`flex items-center justify-center w-10 h-10 rounded-md transition-colors ${
               active
-                ? 'bg-accent text-accent-foreground'
-                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                ? 'aurora-bg-tint text-ctp-mauve border border-ctp-mauve/20'
+                : 'text-muted-foreground hover:aurora-bg-muted hover:text-foreground'
             }`}
           >
             <Icon className="w-5 h-5" />

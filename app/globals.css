@@ -279,7 +279,7 @@
   }
   .aurora-bg-subtle { background: hsl(var(--ctp-mauve) / 0.03); }
   .aurora-bg-muted  { background: hsl(var(--ctp-mauve) / 0.04); }
-  .aurora-bg-tint   { background: hsl(var(--ctp-mauve) / 0.08); }
+  .aurora-bg-tint   { background: hsl(var(--ctp-mauve) / 0.15); }
 
   /* Elevated card – vivid aurora gradient on dark base */
   .aurora-glass {
