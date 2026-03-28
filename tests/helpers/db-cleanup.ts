@@ -176,6 +176,27 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
           },
     });
 
+    // Delete health data (foreign key to projects)
+    await client.healthScan.deleteMany({
+      where: projectId
+        ? { projectId }
+        : {
+            projectId: {
+              in: [1, 2, 4, 5, 6, 7],
+            },
+          },
+    });
+
+    await client.healthScore.deleteMany({
+      where: projectId
+        ? { projectId }
+        : {
+            projectId: {
+              in: [1, 2, 4, 5, 6, 7],
+            },
+          },
+    });
+
     await client.ticket.deleteMany({
       where: projectId
         ? { projectId }

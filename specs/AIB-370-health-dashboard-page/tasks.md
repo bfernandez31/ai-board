@@ -43,20 +43,20 @@
 
 ### Tests for User Story 1
 
-- [ ] T006 [P] [US1] Unit test for score calculator in tests/unit/health/score-calculator.test.ts (no modules, partial modules, all modules, edge cases)
-- [ ] T007 [P] [US1] Component test for health hero in tests/unit/components/health-hero.test.tsx (score thresholds: Excellent/Good/Fair/Poor, no data state)
-- [ ] T008 [P] [US1] Component test for health module card in tests/unit/components/health-module-card.test.tsx (4 states: never scanned, scanning, completed, failed)
+- [x] T006 [P] [US1] Unit test for score calculator in tests/unit/health/score-calculator.test.ts (no modules, partial modules, all modules, edge cases)
+- [x] T007 [P] [US1] Component test for health hero in tests/unit/components/health-hero.test.tsx (score thresholds: Excellent/Good/Fair/Poor, no data state)
+- [x] T008 [P] [US1] Component test for health module card in tests/unit/components/health-module-card.test.tsx (4 states: never scanned, scanning, completed, failed)
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Implement GET handler in app/api/projects/[projectId]/health/route.ts (fetch HealthScore, active scans, derive qualityGate from latest verify job, derive lastClean from latest cleanup job, return contract response shape)
-- [ ] T010 [P] [US1] Create health sub-score badge component in components/health/health-sub-score-badge.tsx (compact badge with module name, score, and color using semantic tokens)
-- [ ] T011 [P] [US1] Create health hero component in components/health/health-hero.tsx (global score display with label, color, aurora-glow-score, 5 sub-score badges row, "Last full scan" text)
-- [ ] T012 [P] [US1] Create health module card component in components/health/health-module-card.tsx (4 states per FR-008, icon, name, score badge, summary, commit range, severity tags, action button, passive label, aurora-glass styling)
-- [ ] T013 [US1] Create health dashboard client component in components/health/health-dashboard.tsx (compose hero + 6 module cards in 2-col/3-row grid, responsive single-column on small screens, aurora-bg-section)
-- [ ] T014 [US1] Create useHealthPolling hook in app/lib/hooks/useHealthPolling.ts (TanStack Query with 2s conditional polling — active when any scan is PENDING/RUNNING, disabled when all terminal)
-- [ ] T015 [US1] Create Health page server component in app/projects/[projectId]/health/page.tsx (metadata, project access check, render HealthDashboard client component)
-- [ ] T016 [US1] Integration test for health score GET endpoint in tests/integration/health/health-score.test.ts (no data response, partial scores, full scores, auth checks)
+- [x] T009 [US1] Implement GET handler in app/api/projects/[projectId]/health/route.ts (fetch HealthScore, active scans, derive qualityGate from latest verify job, derive lastClean from latest cleanup job, return contract response shape)
+- [x] T010 [P] [US1] Create health sub-score badge component in components/health/health-sub-score-badge.tsx (compact badge with module name, score, and color using semantic tokens)
+- [x] T011 [P] [US1] Create health hero component in components/health/health-hero.tsx (global score display with label, color, aurora-glow-score, 5 sub-score badges row, "Last full scan" text)
+- [x] T012 [P] [US1] Create health module card component in components/health/health-module-card.tsx (4 states per FR-008, icon, name, score badge, summary, commit range, severity tags, action button, passive label, aurora-glass styling)
+- [x] T013 [US1] Create health dashboard client component in components/health/health-dashboard.tsx (compose hero + 6 module cards in 2-col/3-row grid, responsive single-column on small screens, aurora-bg-section)
+- [x] T014 [US1] Create useHealthPolling hook in app/lib/hooks/useHealthPolling.ts (TanStack Query with 2s conditional polling — active when any scan is PENDING/RUNNING, disabled when all terminal)
+- [x] T015 [US1] Create Health page server component in app/projects/[projectId]/health/page.tsx (metadata, project access check, render HealthDashboard client component)
+- [x] T016 [US1] Integration test for health score GET endpoint in tests/integration/health/health-score.test.ts (no data response, partial scores, full scores, auth checks)
 
 **Checkpoint**: Health page renders with correct scores, labels, colors, and module card states
 

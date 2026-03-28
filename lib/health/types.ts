@@ -43,7 +43,7 @@ export interface HealthModuleStatus {
   label: string | null;
   lastScanDate?: string | null;
   lastCleanDate?: string | null;
-  scanStatus?: HealthScanStatus | null;
+  scanStatus?: string | null;
   issuesFound?: number | null;
   passive?: boolean;
   jobId?: number | null;
