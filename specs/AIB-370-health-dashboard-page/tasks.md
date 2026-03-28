@@ -16,9 +16,9 @@
 
 **Purpose**: Prisma schema changes and migration for HealthScan/HealthScore models
 
-- [ ] T001 Add HealthScanType and HealthScanStatus enums, HealthScan and HealthScore models, and Project relations to prisma/schema.prisma
-- [ ] T002 Run prisma migration with `bunx prisma migrate dev --name add-health-models` and regenerate client
-- [ ] T003 Create TypeScript interfaces and type helpers in lib/health/types.ts matching Prisma models (HealthScanType enum, module metadata, API response types)
+- [x] T001 Add HealthScanType and HealthScanStatus enums, HealthScan and HealthScore models, and Project relations to prisma/schema.prisma
+- [x] T002 Run prisma migration with `bunx prisma migrate dev --name add-health-models` and regenerate client
+- [x] T003 Create TypeScript interfaces and type helpers in lib/health/types.ts matching Prisma models (HealthScanType enum, module metadata, API response types)
 
 ---
 
