@@ -106,6 +106,7 @@ This gives you access to all `/ai-board.*` commands locally.
 | Projects | [Multi-Project](./functional/05-projects.md) | [Authentication](./technical/implementation/authentication.md) |
 | UI/UX | [Interface](./functional/06-user-interface.md) | [State Management](./technical/implementation/state-management.md) |
 | Billing | [Billing & Subscriptions](./functional/07-billing.md) | [Stripe Integration](./technical/implementation/integrations.md#stripe-billing-integration) |
+| Health Dashboard | [Health Dashboard](./functional/08-health-dashboard.md) | [Health Endpoints](./technical/api/endpoints.md#health-endpoints), [Health Models](./technical/architecture/data-model.md#health-models) |
 
 ### By Task
 

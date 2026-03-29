@@ -31,20 +31,21 @@ describe('IconRailSidebar', () => {
     mockPathname = '/projects/1/board';
   });
 
-  it('renders 5 navigation icons with correct labels', () => {
+  it('renders 6 navigation icons with correct labels', () => {
     renderSidebar();
 
     const nav = screen.getByRole('navigation', { name: 'Project navigation' });
     expect(nav).toBeInTheDocument();
 
     const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(5);
+    expect(links).toHaveLength(6);
 
     expect(links[0]).toHaveAttribute('href', '/projects/1/board');
     expect(links[1]).toHaveAttribute('href', '/projects/1/activity');
     expect(links[2]).toHaveAttribute('href', '/projects/1/analytics');
     expect(links[3]).toHaveAttribute('href', '/projects/1/comparisons');
-    expect(links[4]).toHaveAttribute('href', '/projects/1/settings');
+    expect(links[4]).toHaveAttribute('href', '/projects/1/health');
+    expect(links[5]).toHaveAttribute('href', '/projects/1/settings');
   });
 
   it('highlights active icon based on pathname for board', () => {

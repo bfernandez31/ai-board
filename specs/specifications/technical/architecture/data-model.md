@@ -790,7 +790,149 @@ Per-principle constitution compliance evaluation for a participant.
 **Constraints**:
 - Unique `(comparisonParticipantId, principleKey)`: One assessment per principle per participant
 
+## Health Models
+
+### HealthScan
+
+An individual scan execution record linked to a project and identified by scan type. Tracks the full lifecycle from PENDING through COMPLETED or FAILED. Stores the commit range analyzed (enabling incremental scanning), scan results, and operational telemetry.
+
+```prisma
+model HealthScan {
+  id           Int              @id @default(autoincrement())
+  projectId    Int
+  scanType     HealthScanType
+  status       HealthScanStatus @default(PENDING)
+
+  score        Int?             // 0-100, null until COMPLETED
+  report       String?          // JSON report data
+  issuesFound  Int?
+  issuesFixed  Int?
+
+  baseCommit   String?          @db.VarChar(40) // null = full scan
+  headCommit   String?          @db.VarChar(40) // HEAD at scan time
+
+  durationMs   Int?
+  tokensUsed   Int?
+  costUsd      Float?
+  errorMessage String?          @db.VarChar(2000)
+
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, scanType, createdAt(sort: Desc)])
+  @@index([projectId, scanType, status])
+  @@index([projectId, status])
+  @@index([createdAt])
+}
+```
+
+**Incremental scanning**: The first scan of a type sets `baseCommit = null` (full scan). Subsequent scans set `baseCommit` to the `headCommit` of the latest COMPLETED scan of the same type for that project.
+
+**Concurrent scan constraint**: Only one PENDING or RUNNING scan per `(projectId, scanType)` is allowed. Enforced at application level (409 on conflict).
+
+**Validation**: `score` is set only when `status = COMPLETED`; `scanType` is limited to the 4 active types (SECURITY, COMPLIANCE, TESTS, SPEC_SYNC).
+
+---
+
+### HealthScore
+
+Cached aggregate health score per project (one record per project). Stores the computed global score and individual sub-scores for each of the 5 contributing modules. Upserted after every successful scan completion.
+
+```prisma
+model HealthScore {
+  id               Int       @id @default(autoincrement())
+  projectId        Int       @unique
+
+  globalScore      Int?      // 0-100, null if no modules scanned
+
+  securityScore    Int?
+  complianceScore  Int?
+  testsScore       Int?
+  specSyncScore    Int?
+  qualityGate      Int?      // derived from latest verify job qualityScore
+
+  lastSecurityScan    DateTime?
+  lastComplianceScan  DateTime?
+  lastTestsScan       DateTime?
+  lastSpecSyncScan    DateTime?
+
+  lastCleanDate    DateTime?
+  lastCleanJobId   Int?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+```
+
+**Global score calculation**:
+```
+availableModules = [security, compliance, tests, specSync, qualityGate].filter(score !== null)
+globalScore = sum(availableModules.map(m => m.score)) / availableModules.length
+```
+
+Equal 20% weighting with proportional redistribution when modules are unscanned. `lastClean` is informational and does not contribute to `globalScore`.
+
+**Derived fields**:
+- `qualityGate`: Latest COMPLETED verify job's `qualityScore` for the project
+- `lastCleanDate` / `lastCleanJobId`: Latest COMPLETED cleanup job for the project
+
+---
+
+### Project (health relations)
+
+The existing `Project` model carries two additional relations:
+
+```prisma
+healthScans  HealthScan[]
+healthScore  HealthScore?
+```
+
+---
+
 ## Enums
+
+### HealthScanType
+
+```prisma
+enum HealthScanType {
+  SECURITY
+  COMPLIANCE
+  TESTS
+  SPEC_SYNC
+}
+```
+
+Only the 4 active types above are stored as `HealthScan` records. Quality Gate and Last Clean are derived from existing `Job` records.
+
+### HealthScanStatus
+
+```prisma
+enum HealthScanStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+```
+
+| Value | Description | Transitions To |
+|-------|-------------|----------------|
+| PENDING | Scan created, workflow dispatched | RUNNING, FAILED |
+| RUNNING | Workflow executing scan | COMPLETED, FAILED |
+| COMPLETED | Scan finished with results | Terminal |
+| FAILED | Scan encountered an error | Terminal |
+
+---
+
+## Core Enums
 
 ### Stage
 

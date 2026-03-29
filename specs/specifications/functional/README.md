@@ -121,6 +121,22 @@ Covers the three-tier subscription model (Free/Pro/Team), Stripe-based payment f
 
 ---
 
+### [08-health-dashboard.md](08-health-dashboard.md)
+**Project Health Dashboard**
+
+Describes the Health Dashboard page, which provides a global health score (0–100) aggregated from up to 6 modules, on-demand scan triggering, and real-time scan status updates.
+
+**Key Topics**:
+- Global health score calculation (weighted average of 5 contributing modules)
+- Six module cards: Security, Compliance, Tests, Quality Gate, Spec Sync, Last Clean
+- Module card states: never scanned, scanning, completed, failed
+- Active vs. passive modules (triggered scans vs. derived from Job records)
+- Incremental scanning (commit-range cursors per module type)
+- Concurrent scan prevention
+- Real-time 2-second polling during active scans
+
+---
+
 ## What's NOT in These Documents
 
 These functional specifications intentionally **exclude**:

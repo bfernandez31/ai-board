@@ -3387,11 +3387,240 @@ Stripe webhook handler. Receives and processes subscription lifecycle events.
 
 ---
 
+## Health Endpoints
+
+### GET /api/projects/[projectId]/health
+
+Returns the aggregate health score and per-module status for a project.
+
+**Authentication**: Session cookie OR Bearer PAT
+**Authorization**: `verifyProjectAccess(projectId)` — owner or member
+
+**Path params**: `projectId` (integer, required)
+
+**Response** (200 OK):
+```json
+{
+  "globalScore": 78,
+  "label": "Good",
+  "color": {
+    "text": "text-ctp-blue",
+    "bg": "bg-ctp-blue/10",
+    "fill": "bg-ctp-blue"
+  },
+  "modules": {
+    "security": {
+      "score": 85,
+      "label": "Good",
+      "lastScanDate": "2026-03-27T14:30:00Z",
+      "scanStatus": "COMPLETED",
+      "issuesFound": 3,
+      "summary": "3 issues found"
+    },
+    "compliance": {
+      "score": 92,
+      "label": "Excellent",
+      "lastScanDate": "2026-03-26T10:00:00Z",
+      "scanStatus": "COMPLETED",
+      "issuesFound": 0,
+      "summary": "All clear"
+    },
+    "tests": {
+      "score": null,
+      "label": null,
+      "lastScanDate": null,
+      "scanStatus": null,
+      "issuesFound": null,
+      "summary": "No scan yet"
+    },
+    "specSync": {
+      "score": 60,
+      "label": "Fair",
+      "lastScanDate": "2026-03-25T08:00:00Z",
+      "scanStatus": "COMPLETED",
+      "issuesFound": 5,
+      "summary": "5 issues found"
+    },
+    "qualityGate": {
+      "score": 75,
+      "label": "Good",
+      "lastScanDate": "2026-03-27T16:00:00Z",
+      "passive": true,
+      "summary": "From latest verify job"
+    },
+    "lastClean": {
+      "score": null,
+      "label": "OK",
+      "lastCleanDate": "2026-03-20T12:00:00Z",
+      "passive": true,
+      "jobId": 456,
+      "summary": "8 days ago"
+    }
+  },
+  "lastFullScanDate": "2026-03-27T14:30:00Z",
+  "activeScans": [
+    {
+      "id": 42,
+      "scanType": "SECURITY",
+      "status": "RUNNING",
+      "startedAt": "2026-03-28T09:00:00Z"
+    }
+  ]
+}
+```
+
+**Score labels**: 90–100 → "Excellent", 70–89 → "Good", 50–69 → "Fair", 0–49 → "Poor", no data → "No data yet" with `globalScore: null`.
+
+**Errors**:
+- `400`: Invalid project ID
+- `401`: Unauthorized
+- `403`: Forbidden
+- `404`: Project not found
+
+---
+
+### POST /api/projects/[projectId]/health/scans
+
+Triggers a new health scan for the specified active module type.
+
+**Authentication**: Session cookie OR Bearer PAT
+**Authorization**: `verifyProjectAccess(projectId)` — owner or member
+
+**Request body**:
+```json
+{ "scanType": "SECURITY" }
+```
+
+**Validation** (Zod): `scanType` required, enum `["SECURITY", "COMPLIANCE", "TESTS", "SPEC_SYNC"]`
+
+**Behavior**:
+1. Validate `scanType`
+2. Check for existing PENDING/RUNNING scan of same type → 409 if found
+3. Look up latest COMPLETED scan of this type for incremental `baseCommit`
+4. Create `HealthScan` record in PENDING status
+5. Dispatch scan workflow via GitHub Actions
+6. Return the created scan record
+
+**Response** (201 Created):
+```json
+{
+  "scan": {
+    "id": 42,
+    "projectId": 1,
+    "scanType": "SECURITY",
+    "status": "PENDING",
+    "baseCommit": "abc1234567890abcdef1234567890abcdef123456",
+    "headCommit": null,
+    "createdAt": "2026-03-28T10:00:00Z"
+  }
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID or invalid scan type (`VALIDATION_ERROR`)
+- `401`: Unauthorized
+- `403`: Forbidden
+- `409`: Concurrent scan already running (`SCAN_IN_PROGRESS`)
+
+---
+
+### GET /api/projects/[projectId]/health/scans
+
+Returns paginated scan history for a project.
+
+**Authentication**: Session cookie OR Bearer PAT
+**Authorization**: `verifyProjectAccess(projectId)` — owner or member
+
+**Query params**:
+- `type` (optional): `"SECURITY" | "COMPLIANCE" | "TESTS" | "SPEC_SYNC"` — filter by scan type
+- `limit` (optional): integer 1–100, default 20
+- `cursor` (optional): scan ID for cursor-based pagination
+
+**Response** (200 OK):
+```json
+{
+  "scans": [
+    {
+      "id": 42,
+      "scanType": "SECURITY",
+      "status": "COMPLETED",
+      "score": 85,
+      "issuesFound": 3,
+      "issuesFixed": 1,
+      "baseCommit": "abc1234567890abcdef1234567890abcdef123456",
+      "headCommit": "def4567890abcdef1234567890abcdef456789ab",
+      "durationMs": 45000,
+      "errorMessage": null,
+      "startedAt": "2026-03-27T14:30:00Z",
+      "completedAt": "2026-03-27T14:30:45Z",
+      "createdAt": "2026-03-27T14:29:55Z"
+    }
+  ],
+  "nextCursor": 35,
+  "hasMore": true
+}
+```
+
+Results ordered by `createdAt DESC`. `nextCursor` is the ID of the last scan returned; pass as `cursor` for the next page.
+
+**Errors**:
+- `400`: Invalid project ID or invalid query params (`VALIDATION_ERROR`)
+- `401`: Unauthorized
+- `403`: Forbidden
+
+---
+
+### PATCH /api/projects/[projectId]/health/scans/[scanId]/status
+
+Workflow callback endpoint to update scan status and results. Uses the same Bearer token authentication pattern as `PATCH /api/jobs/:id/status`.
+
+**Authentication**: `Authorization: Bearer <WORKFLOW_API_TOKEN>`
+
+**Path params**: `projectId` (integer), `scanId` (integer)
+
+**Request body**:
+```json
+{
+  "status": "COMPLETED",
+  "score": 85,
+  "report": "{ ... }",
+  "issuesFound": 3,
+  "issuesFixed": 1,
+  "headCommit": "def4567890abcdef1234567890abcdef456789ab",
+  "durationMs": 45000,
+  "tokensUsed": 12000,
+  "costUsd": 0.15,
+  "errorMessage": null
+}
+```
+
+**Validation** (Zod):
+- `status`: Required, enum `["RUNNING", "COMPLETED", "FAILED"]`
+- `score`: Optional integer 0–100 (required when `status = COMPLETED`)
+- `headCommit`: Optional string, 40 chars
+- `issuesFound` / `issuesFixed`: Optional integers ≥ 0
+- `durationMs` / `tokensUsed`: Optional integers ≥ 0
+- `costUsd`: Optional float ≥ 0
+- `errorMessage`: Optional string, max 2000 chars
+
+**Response** (200 OK):
+```json
+{ "scan": { "id": 42, "status": "COMPLETED", "score": 85 } }
+```
+
+**Side effects on COMPLETED**:
+1. Update corresponding sub-score in `HealthScore` aggregate
+2. Recalculate `globalScore` from all non-null sub-scores
+3. Update the module's last scan timestamp
+
+**Errors**:
+- `400`: Invalid scan ID, or score missing for COMPLETED status
+- `401`: Invalid workflow token
+- `404`: Scan not found or wrong project
+- `409`: Invalid status transition (e.g., COMPLETED → RUNNING)
+
+---
+
 ## Pagination
 
-Currently not implemented. All endpoints return complete result sets.
-
-**Future Enhancement**:
-- Cursor-based pagination for tickets
-- Limit/offset for comments
-- Page size configuration
+Scan history (`GET /api/projects/[projectId]/health/scans`) uses cursor-based pagination. All other endpoints return complete result sets.

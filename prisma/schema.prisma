@@ -82,6 +82,8 @@ model Project {
   tickets             Ticket[]
   members             ProjectMember[]
   comparisonRecords   ComparisonRecord[]
+  healthScans         HealthScan[]
+  healthScore         HealthScore?
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -436,4 +438,91 @@ model ComplianceAssessment {
 
   @@unique([comparisonParticipantId, principleKey])
   @@index([comparisonParticipantId, displayOrder])
+}
+
+enum HealthScanType {
+  SECURITY
+  COMPLIANCE
+  TESTS
+  SPEC_SYNC
+}
+
+enum HealthScanStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model HealthScan {
+  id           Int              @id @default(autoincrement())
+  projectId    Int
+  scanType     HealthScanType
+  status       HealthScanStatus @default(PENDING)
+
+  // Results
+  score        Int?
+  report       String?
+  issuesFound  Int?
+  issuesFixed  Int?
+
+  // Commit range (for incremental scanning)
+  baseCommit   String?          @db.VarChar(40)
+  headCommit   String?          @db.VarChar(40)
+
+  // Operational telemetry
+  durationMs   Int?
+  tokensUsed   Int?
+  costUsd      Float?
+
+  // Error tracking
+  errorMessage String?          @db.VarChar(2000)
+
+  // Timestamps
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, scanType, createdAt(sort: Desc)])
+  @@index([projectId, scanType, status])
+  @@index([projectId, status])
+  @@index([createdAt])
+}
+
+model HealthScore {
+  id                 Int       @id @default(autoincrement())
+  projectId          Int       @unique
+
+  // Global aggregate
+  globalScore        Int?
+
+  // Per-module sub-scores (null = never scanned)
+  securityScore      Int?
+  complianceScore    Int?
+  testsScore         Int?
+  specSyncScore      Int?
+  qualityGate        Int?
+
+  // Last scan timestamps per type
+  lastSecurityScan   DateTime?
+  lastComplianceScan DateTime?
+  lastTestsScan      DateTime?
+  lastSpecSyncScan   DateTime?
+
+  // Last Clean info (derived from Job model)
+  lastCleanDate      DateTime?
+  lastCleanJobId     Int?
+
+  // Timestamps
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relations
+  project            Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
