@@ -32,10 +32,10 @@ export function ComparisonCard({
         <button
           type="button"
           data-testid={`comparison-card-${comparison.id}`}
-          className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${
+          className={`w-full rounded-xl border px-4 py-4 text-left transition-all duration-200 ${
             isExpanded
-              ? 'border-primary bg-primary/5'
-              : 'border-border bg-card hover:bg-muted/40'
+              ? 'border-ctp-mauve/30 aurora-bg-subtle'
+              : 'border-ctp-mauve/12 aurora-bg-muted hover:border-ctp-mauve/25 hover:aurora-bg-subtle'
           }`}
         >
           <div className="flex items-start justify-between gap-3">
@@ -45,7 +45,14 @@ export function ComparisonCard({
                   {comparison.winnerTicketKey}
                 </span>
                 {comparison.winnerScore != null && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                    style={{
+                      background: 'linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.1), hsl(var(--ctp-mauve) / 0.1))',
+                      color: 'hsl(var(--ctp-sapphire))',
+                      border: '1px solid hsl(var(--ctp-sapphire) / 0.2)',
+                    }}
+                  >
                     <Trophy className="h-3 w-3" />
                     {comparison.winnerScore.toFixed(1)}
                   </span>
@@ -63,7 +70,7 @@ export function ComparisonCard({
                 {formatDate(comparison.generatedAt)}
               </span>
               <ChevronDown
-                className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                className={`h-4 w-4 text-ctp-mauve transition-transform duration-200 ${
                   isExpanded ? 'rotate-180' : ''
                 }`}
               />
