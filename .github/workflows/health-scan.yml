@@ -162,7 +162,92 @@ jobs:
             echo "❌ Scan failed"
           fi
 
-      # Step 5: Update status to COMPLETED with results (US1 T010, US4 T017, US6 T021)
+      # Step 5: Create remediation tickets from scan results (US2 T013)
+      # NOTE: Tickets are created BEFORE marking COMPLETED per spec (integrations.md)
+      - name: Create Remediation Tickets
+        if: ${{ steps.scan-exec.outputs.scan_success == 'true' && steps.scan-exec.outputs.issues_found > 0 }}
+        run: |
+          SCAN_TYPE="${{ inputs.scan_type }}"
+          REPORT=$(cat /tmp/scan_report.json)
+
+          # Parse report and create grouped tickets based on scan type
+          case "$SCAN_TYPE" in
+            SECURITY)
+              # Group by severity
+              echo "$REPORT" | jq -r '.issues // [] | group_by(.severity) | .[] | {
+                severity: .[0].severity,
+                count: length,
+                details: [.[] | "\(.file // "unknown"):\(.line // "?"): \(.description)"] | join("\n")
+              }' | jq -c '.' | while read -r group; do
+                SEVERITY=$(echo "$group" | jq -r '.severity')
+                COUNT=$(echo "$group" | jq -r '.count')
+                DETAILS=$(echo "$group" | jq -r '.details')
+                TITLE="[Security] Fix ${COUNT} ${SEVERITY^^} severity issue$([ "$COUNT" -gt 1 ] && echo 's')"
+                DESC="Health scan found ${COUNT} ${SEVERITY^^} severity security issue$([ "$COUNT" -gt 1 ] && echo 's'):\n\n${DETAILS}"
+
+                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
+                  -H "Content-Type: application/json" \
+                  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+                  -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d, stage: "INBOX", workflowType: "QUICK"}')" \
+                  -f -s -S || echo "⚠️ Failed to create ticket: $TITLE"
+              done
+              ;;
+            COMPLIANCE)
+              # Group by category/principle
+              echo "$REPORT" | jq -r '.issues // [] | group_by(.category // "General") | .[] | {
+                category: .[0].category // "General",
+                count: length,
+                details: [.[] | "\(.file // "unknown"):\(.line // "?"): \(.description)"] | join("\n")
+              }' | jq -c '.' | while read -r group; do
+                CATEGORY=$(echo "$group" | jq -r '.category')
+                COUNT=$(echo "$group" | jq -r '.count')
+                DETAILS=$(echo "$group" | jq -r '.details')
+                TITLE="[Compliance] Fix ${COUNT} violation$([ "$COUNT" -gt 1 ] && echo 's') — ${CATEGORY}"
+                DESC="Health scan found ${COUNT} compliance violation$([ "$COUNT" -gt 1 ] && echo 's') for principle \"${CATEGORY}\":\n\n${DETAILS}"
+
+                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
+                  -H "Content-Type: application/json" \
+                  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+                  -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d, stage: "INBOX", workflowType: "QUICK"}')" \
+                  -f -s -S || echo "⚠️ Failed to create ticket: $TITLE"
+              done
+              ;;
+            TESTS)
+              # One ticket per non-fixable test
+              echo "$REPORT" | jq -c '.nonFixable // [] | .[]' | while read -r issue; do
+                DESC_TEXT=$(echo "$issue" | jq -r '.description')
+                FILE=$(echo "$issue" | jq -r '.file // "Unknown"')
+                TITLE="[Tests] Fix failing test: $(echo "$DESC_TEXT" | head -c 80)"
+                DESC="Health scan found a non-fixable test failure:\n\n- **Test**: ${DESC_TEXT}\n- **File**: ${FILE}"
+
+                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
+                  -H "Content-Type: application/json" \
+                  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+                  -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d, stage: "INBOX", workflowType: "QUICK"}')" \
+                  -f -s -S || echo "⚠️ Failed to create ticket: $TITLE"
+              done
+              ;;
+            SPEC_SYNC)
+              # One ticket per drifted spec
+              echo "$REPORT" | jq -c '.specs // [] | .[] | select(.status == "drifted")' | while read -r spec; do
+                SPEC_PATH=$(echo "$spec" | jq -r '.specPath')
+                DRIFT=$(echo "$spec" | jq -r '.drift // "Specification out of sync with implementation"')
+                TITLE="[Spec Sync] Resynchronize ${SPEC_PATH}"
+                DESC="Health scan detected spec drift:\n\n- **Spec**: ${SPEC_PATH}\n- **Drift**: ${DRIFT}"
+
+                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
+                  -H "Content-Type: application/json" \
+                  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+                  -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d, stage: "INBOX", workflowType: "QUICK"}')" \
+                  -f -s -S || echo "⚠️ Failed to create ticket: $TITLE"
+              done
+              ;;
+          esac
+
+          echo "✅ Remediation tickets created"
+
+      # Step 6: Update status to COMPLETED with results (US1 T010, US4 T017, US6 T021)
+      # NOTE: Runs AFTER ticket creation per spec (integrations.md)
       - name: Update Scan Status - COMPLETED
         if: ${{ steps.scan-exec.outputs.scan_success == 'true' }}
         run: |
@@ -211,92 +296,9 @@ jobs:
 
           echo "✅ Scan status updated to COMPLETED (score: ${{ steps.scan-exec.outputs.score }})"
 
-      # Step 6: Create remediation tickets from scan results (US2 T013)
-      - name: Create Remediation Tickets
-        if: ${{ steps.scan-exec.outputs.scan_success == 'true' && steps.scan-exec.outputs.issues_found > 0 }}
-        run: |
-          SCAN_TYPE="${{ inputs.scan_type }}"
-          REPORT=$(cat /tmp/scan_report.json)
-
-          # Parse report and create grouped tickets based on scan type
-          case "$SCAN_TYPE" in
-            SECURITY)
-              # Group by severity
-              echo "$REPORT" | jq -r '.issues // [] | group_by(.severity) | .[] | {
-                severity: .[0].severity,
-                count: length,
-                details: [.[] | "\(.file // "unknown"):\(.line // "?"): \(.description)"] | join("\n")
-              }' | jq -c '.' | while read -r group; do
-                SEVERITY=$(echo "$group" | jq -r '.severity')
-                COUNT=$(echo "$group" | jq -r '.count')
-                DETAILS=$(echo "$group" | jq -r '.details')
-                TITLE="[Security] Fix ${COUNT} ${SEVERITY^^} severity issue$([ "$COUNT" -gt 1 ] && echo 's')"
-                DESC="Health scan found ${COUNT} ${SEVERITY^^} severity security issue$([ "$COUNT" -gt 1 ] && echo 's'):\n\n${DETAILS}"
-
-                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
-                  -H "Content-Type: application/json" \
-                  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-                  -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d}')" \
-                  -f -s -S || echo "⚠️ Failed to create ticket: $TITLE"
-              done
-              ;;
-            COMPLIANCE)
-              # Group by category/principle
-              echo "$REPORT" | jq -r '.issues // [] | group_by(.category // "General") | .[] | {
-                category: .[0].category // "General",
-                count: length,
-                details: [.[] | "\(.file // "unknown"):\(.line // "?"): \(.description)"] | join("\n")
-              }' | jq -c '.' | while read -r group; do
-                CATEGORY=$(echo "$group" | jq -r '.category')
-                COUNT=$(echo "$group" | jq -r '.count')
-                DETAILS=$(echo "$group" | jq -r '.details')
-                TITLE="[Compliance] Fix ${COUNT} violation$([ "$COUNT" -gt 1 ] && echo 's') — ${CATEGORY}"
-                DESC="Health scan found ${COUNT} compliance violation$([ "$COUNT" -gt 1 ] && echo 's') for principle \"${CATEGORY}\":\n\n${DETAILS}"
-
-                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
-                  -H "Content-Type: application/json" \
-                  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-                  -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d}')" \
-                  -f -s -S || echo "⚠️ Failed to create ticket: $TITLE"
-              done
-              ;;
-            TESTS)
-              # One ticket per non-fixable test
-              echo "$REPORT" | jq -c '.nonFixable // [] | .[]' | while read -r issue; do
-                DESC_TEXT=$(echo "$issue" | jq -r '.description')
-                FILE=$(echo "$issue" | jq -r '.file // "Unknown"')
-                TITLE="[Tests] Fix failing test: $(echo "$DESC_TEXT" | head -c 80)"
-                DESC="Health scan found a non-fixable test failure:\n\n- **Test**: ${DESC_TEXT}\n- **File**: ${FILE}"
-
-                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
-                  -H "Content-Type: application/json" \
-                  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-                  -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d}')" \
-                  -f -s -S || echo "⚠️ Failed to create ticket: $TITLE"
-              done
-              ;;
-            SPEC_SYNC)
-              # One ticket per drifted spec
-              echo "$REPORT" | jq -c '.specs // [] | .[] | select(.status == "drifted")' | while read -r spec; do
-                SPEC_PATH=$(echo "$spec" | jq -r '.specPath')
-                DRIFT=$(echo "$spec" | jq -r '.drift // "Specification out of sync with implementation"')
-                TITLE="[Spec Sync] Resynchronize ${SPEC_PATH}"
-                DESC="Health scan detected spec drift:\n\n- **Spec**: ${SPEC_PATH}\n- **Drift**: ${DRIFT}"
-
-                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
-                  -H "Content-Type: application/json" \
-                  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-                  -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d}')" \
-                  -f -s -S || echo "⚠️ Failed to create ticket: $TITLE"
-              done
-              ;;
-          esac
-
-          echo "✅ Remediation tickets created"
-
       # Error handling: Update status to FAILED (US5 T019)
       - name: Update Scan Status - FAILED
-        if: ${{ steps.scan-exec.outputs.scan_success == 'false' || failure() }}
+        if: ${{ steps.scan-exec.outputs.scan_success == 'false' }}
         run: |
           ERROR_MSG="${{ steps.scan-exec.outputs.error_msg }}"
           if [ -z "$ERROR_MSG" ]; then

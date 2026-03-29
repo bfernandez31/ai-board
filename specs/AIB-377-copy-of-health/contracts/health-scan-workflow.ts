@@ -7,6 +7,7 @@
  */
 
 import type { HealthScanType, HealthScanStatus } from '@prisma/client';
+import type { ScanReport } from '@/lib/health/types';
 
 // ─── Workflow Dispatch Inputs ────────────────────────────────────────────────
 
@@ -90,7 +91,7 @@ export interface ScanCommandOutput {
   score: number;             // 0-100
   issuesFound: number;
   issuesFixed: number;
-  report: object;            // Matches ScanReport discriminated union
+  report: ScanReport;
 }
 
 // ─── Valid State Transitions ─────────────────────────────────────────────────
