@@ -1,8 +1,15 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { DimensionComparison } from '@/lib/analytics/types';
+
+function getBarColor(score: number): string {
+  if (score >= 80) return 'hsl(var(--chart-2))'; // teal — strong
+  if (score >= 60) return 'hsl(var(--chart-4))'; // blue — acceptable
+  if (score >= 40) return 'hsl(var(--chart-1))'; // violet — needs work
+  return 'hsl(var(--chart-3))';                  // peach — poor
+}
 
 interface DimensionComparisonChartProps {
   data: DimensionComparison[];
@@ -69,9 +76,12 @@ export function DimensionComparisonChart({
               />
               <Bar
                 dataKey="averageScore"
-                fill="hsl(var(--chart-3))"
                 radius={[0, 4, 4, 0]}
-              />
+              >
+                {data.map((entry, index) => (
+                  <Cell key={index} fill={getBarColor(entry.averageScore)} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
