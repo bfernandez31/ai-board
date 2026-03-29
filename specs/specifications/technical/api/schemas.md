@@ -798,6 +798,75 @@ interface TicketTelemetry {
 - Enables complete cost comparison including source ticket
 - Supports comparison reports with telemetry metrics
 
+## Health Report Schemas
+
+Scan report data is stored as a JSON string in `HealthScan.report` and validated at parse time using Zod. The schema is a discriminated union keyed on `type`.
+
+**Location**: `lib/health/report-schemas.ts` (Zod schemas + `parseScanReport()` helper)
+**Types**: `lib/health/types.ts` (`ScanReport` union, per-module report interfaces)
+
+### Common Structures
+
+```typescript
+// Shared across all active-module reports
+interface ReportIssue {
+  id: string;
+  severity: 'high' | 'medium' | 'low';
+  description: string;
+  file?: string;       // relative path to affected file
+  line?: number;       // line number in affected file
+  category?: string;   // module-specific grouping key
+}
+
+interface GeneratedTicket {
+  ticketKey: string;   // e.g. "AIB-123"
+  stage: string;       // current ticket stage
+}
+```
+
+### ScanReport Discriminated Union
+
+```typescript
+type ScanReport =
+  | SecurityReport
+  | ComplianceReport
+  | TestsReport
+  | SpecSyncReport
+  | QualityGateReport
+  | LastCleanReport;
+```
+
+| `type` value | Module | Grouping strategy |
+|---|---|---|
+| `"SECURITY"` | Security | Issues grouped by `severity` (high → medium → low) |
+| `"COMPLIANCE"` | Compliance | Issues grouped by `category` (constitution principle) |
+| `"TESTS"` | Tests | Two arrays: `autoFixed` / `nonFixable` |
+| `"SPEC_SYNC"` | Spec Sync | `specs[]` with `status: "synced" | "drifted"` and optional `drift` string |
+| `"QUALITY_GATE"` | Quality Gate (passive) | `dimensions[]` score breakdown + `recentTickets[]` |
+| `"LAST_CLEAN"` | Last Clean (passive) | `filesCleaned`, `remainingIssues`, `summary` string |
+
+### Parsing
+
+```typescript
+import { parseScanReport } from '@/lib/health/report-schemas';
+
+// Returns typed ScanReport or null (never throws)
+const report = parseScanReport(moduleType, rawJsonString);
+```
+
+`parseScanReport` uses Zod `safeParse`. Invalid or null inputs return `null`; callers render a fallback message ("Report data unavailable — scan predates structured reporting").
+
+### Hook
+
+`useScanReport(projectId, moduleType)` fetches the latest scan with `includeReport=true` and parses the report via `parseScanReport`. It is used by the Scan Detail Drawer to load report content on demand.
+
+```typescript
+const { data, isLoading } = useScanReport(projectId, 'SECURITY');
+// data: { scan: ScanHistoryItemWithReport | null, report: ScanReport | null }
+```
+
+---
+
 ## Schema Location & Usage
 
 ### File Organization

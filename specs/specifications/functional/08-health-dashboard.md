@@ -30,7 +30,7 @@ The global score is a weighted average of all contributing modules that have bee
 
 ## Module Cards
 
-Below the hero zone, six module cards are arranged in a 2-column, 3-row grid:
+Below the hero zone, six module cards are arranged in a 2-column, 3-row grid. Clicking anywhere on a card (except the action button) opens the Scan Detail Drawer for that module.
 
 | Row | Left | Right |
 |-----|------|-------|
@@ -88,9 +88,51 @@ Clicking the action button on an active module card triggers a scan:
 
 The first scan of any module type performs a full analysis with no base commit. Each subsequent scan of the same type uses the previous scan's `headCommit` as the `baseCommit`, limiting analysis to only the commits introduced since the last scan. Each module type maintains its own independent scan cursor.
 
-## Scan History
+## Scan Detail Drawer
 
-Past scan records are retrievable via the API, ordered most-recent-first, with optional filtering by module type and cursor-based pagination. The UI does not currently surface scan history as a dedicated view; it is available via the API for programmatic access and future UI features.
+Clicking any module card opens a right-side slide-over drawer displaying the full details for that module. The drawer replaces any previously open drawer if the user clicks a different card. It closes when the user clicks the overlay outside the drawer or the close button. Clicking the action button on a card (to trigger a scan) does not open the drawer.
+
+### Drawer Header
+
+The header shows the module icon, module name, a color-coded score badge (matching the card's score color), last scan date, and the commit range analyzed (`baseCommit..headCommit`) for active modules with completed scans. Passive modules (Quality Gate, Last Clean) omit the commit range.
+
+### Drawer States
+
+The drawer renders content appropriate to the module's current state:
+
+| State | Content |
+|-------|---------|
+| **Never scanned** | Explanatory message; "Run first scan" button for active modules; explanation of passive data collection for passive modules |
+| **Scanning** | Progress indicator with "Scanning…" label |
+| **Completed** | Full report content (issues, tickets, history sections) |
+| **Failed** | Error message and relevant logs if available; "Retry" option for active modules |
+
+### Issues Section (Completed Scans)
+
+Issues from the latest scan are displayed in groups according to the module's grouping strategy:
+
+| Module | Grouping |
+|--------|---------|
+| Security | By severity (High → Medium → Low) |
+| Compliance | By constitution principle violated |
+| Tests | Two categories: "Auto-fixed" and "Non-fixable" |
+| Spec Sync | By sync status (synced / drifted) with drift summary |
+| Quality Gate | Dimension breakdown (Compliance, Bug Detection, Code Comments, Historical Context, Spec Sync) |
+| Last Clean | Summary card showing files cleaned and remaining issues |
+
+Each issue entry shows severity/category, description, and affected file with line number when available. Malformed or missing report data renders a fallback message ("Report data unavailable") instead of an error.
+
+### Generated Tickets Section
+
+For active modules, the drawer lists any tickets that were generated from the scan, showing each ticket's key and current stage. Each entry links directly to that ticket on the board. If no tickets were generated, this section is omitted.
+
+### History Section
+
+The History section lists previous scans for the selected module in reverse chronological order. Each entry shows the scan date, score, issue count, and commit range. History is loaded in pages of 20 with a "Load more" button at the bottom. Modules with no scan history display "No scan history."
+
+### Content Refresh
+
+If a scan completes while the drawer is open for that module, the drawer content refreshes automatically via the existing 2-second polling mechanism (shared with the health score endpoint). The drawer remains responsive across all supported viewport widths (375px–2560px).
 
 ## Real-Time Updates
 
