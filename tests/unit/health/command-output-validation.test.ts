@@ -11,8 +11,8 @@ import type {
 
 // --- Helpers ---
 
-function makeIssue(overrides: Partial<ReportIssue> & { id: string; severity: 'high' | 'medium' | 'low'; description: string }): ReportIssue {
-  return { ...overrides };
+function makeIssue(issue: ReportIssue): ReportIssue {
+  return { ...issue };
 }
 
 // --- US1: Security Report Validation ---
