@@ -48,8 +48,10 @@ describe('HealthModuleCard', () => {
     );
     expect(screen.getByText('Tests')).toBeInTheDocument();
     expect(screen.getAllByText('Scanning...').length).toBeGreaterThanOrEqual(1);
-    const scanningBtn = screen.getByRole('button', { name: /scanning/i });
-    expect(scanningBtn).toBeDisabled();
+    const scanningBtns = screen.getAllByRole('button', { name: /scanning/i });
+    // The card itself has role="button" and the scan button inside also matches
+    const disabledBtn = scanningBtns.find(btn => btn.tagName === 'BUTTON');
+    expect(disabledBtn).toBeDisabled();
   });
 
   it('renders "completed" state with score and "Re-run scan" button', () => {
@@ -82,7 +84,10 @@ describe('HealthModuleCard', () => {
     );
     expect(screen.getByText('Quality Gate')).toBeInTheDocument();
     expect(screen.getByText('passive')).toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    // Only the card-level button role exists, no scan action button
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(1); // Just the card div with role="button"
+    expect(buttons[0].tagName).not.toBe('BUTTON'); // Not a real <button>
   });
 
   it('calls onTriggerScan when action button is clicked', async () => {

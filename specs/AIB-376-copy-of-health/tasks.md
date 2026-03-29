@@ -18,7 +18,7 @@
 
 **Purpose**: Query key registration and shared type definitions
 
-- [ ] T001 Add scanReport, scanDetail, and generatedTickets keys to health namespace in app/lib/query-keys.ts
+- [x] T001 Add scanReport, scanDetail, and generatedTickets keys to health namespace in app/lib/query-keys.ts
 
 ---
 
@@ -28,15 +28,15 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T002 [P] Create GET handler for single scan detail in app/api/projects/[projectId]/health/scans/[scanId]/route.ts
-- [ ] T003 [P] Create GET handler for latest scan by module type in app/api/projects/[projectId]/health/scans/latest/route.ts
-- [ ] T004 [P] Create GET handler for generated tickets in app/api/projects/[projectId]/health/scans/[scanId]/tickets/route.ts
-- [ ] T005 [P] Write integration test for scan detail endpoint in tests/integration/health/scan-detail.test.ts
-- [ ] T006 [P] Write integration test for latest scan endpoint in tests/integration/health/scan-latest.test.ts
-- [ ] T007 [P] Write integration test for scan tickets endpoint in tests/integration/health/scan-tickets.test.ts
-- [ ] T008 Create useScanReport hook in app/lib/hooks/useScanReport.ts
-- [ ] T009 [P] Create useScanHistory hook in app/lib/hooks/useScanHistory.ts
-- [ ] T010 [P] Create useGeneratedTickets hook in app/lib/hooks/useGeneratedTickets.ts
+- [x] T002 [P] Create GET handler for single scan detail in app/api/projects/[projectId]/health/scans/[scanId]/route.ts
+- [x] T003 [P] Create GET handler for latest scan by module type in app/api/projects/[projectId]/health/scans/latest/route.ts
+- [x] T004 [P] Create GET handler for generated tickets in app/api/projects/[projectId]/health/scans/[scanId]/tickets/route.ts
+- [x] T005 [P] Write integration test for scan detail endpoint in tests/integration/health/scan-detail.test.ts
+- [x] T006 [P] Write integration test for latest scan endpoint in tests/integration/health/scan-latest.test.ts
+- [x] T007 [P] Write integration test for scan tickets endpoint in tests/integration/health/scan-tickets.test.ts
+- [x] T008 Create useScanReport hook in app/lib/hooks/useScanReport.ts
+- [x] T009 [P] Create useScanHistory hook in app/lib/hooks/useScanHistory.ts
+- [x] T010 [P] Create useGeneratedTickets hook in app/lib/hooks/useGeneratedTickets.ts
 
 **Checkpoint**: All API endpoints and hooks are ready — user story implementation can begin
 
@@ -50,16 +50,16 @@
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Write component test for ScanDetailDrawer completed state in tests/unit/components/health/scan-detail-drawer.test.tsx
-- [ ] T012 [P] [US1] Write component test for ScanReportContent in tests/unit/components/health/scan-report-content.test.tsx
+- [x] T011 [P] [US1] Write component test for ScanDetailDrawer completed state in tests/unit/components/health/scan-detail-drawer.test.tsx
+- [x] T012 [P] [US1] Write component test for ScanReportContent in tests/unit/components/health/scan-report-content.test.tsx
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Create ScanReportContent markdown renderer in components/health/scan-report-content.tsx
-- [ ] T014 [US1] Create ScanDetailDrawer component with completed state in components/health/scan-detail-drawer.tsx
-- [ ] T015 [US1] Add onClick prop to HealthModuleCard with stopPropagation on scan button in components/health/health-module-card.tsx
-- [ ] T016 [US1] Add selectedModule state and render ScanDetailDrawer in components/health/health-dashboard.tsx
-- [ ] T017 [US1] Write component test for card click opens drawer in tests/unit/components/health/health-module-card.test.tsx
+- [x] T013 [P] [US1] Create ScanReportContent markdown renderer in components/health/scan-report-content.tsx
+- [x] T014 [US1] Create ScanDetailDrawer component with completed state in components/health/scan-detail-drawer.tsx
+- [x] T015 [US1] Add onClick prop to HealthModuleCard with stopPropagation on scan button in components/health/health-module-card.tsx
+- [x] T016 [US1] Add selectedModule state and render ScanDetailDrawer in components/health/health-dashboard.tsx
+- [x] T017 [US1] Write component test for card click opens drawer in tests/unit/components/health/health-module-card.test.tsx
 
 **Checkpoint**: User Story 1 is fully functional — clicking a completed module card opens a drawer with the scan report
 
@@ -73,12 +73,12 @@
 
 ### Tests for User Story 2
 
-- [ ] T018 [P] [US2] Write component test for GeneratedTicketsSection in tests/unit/components/health/generated-tickets-section.test.tsx
+- [x] T018 [P] [US2] Write component test for GeneratedTicketsSection in tests/unit/components/health/generated-tickets-section.test.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Create GeneratedTicketsSection component in components/health/generated-tickets-section.tsx
-- [ ] T020 [US2] Integrate GeneratedTicketsSection into ScanDetailDrawer completed state in components/health/scan-detail-drawer.tsx
+- [x] T019 [US2] Create GeneratedTicketsSection component in components/health/generated-tickets-section.tsx
+- [x] T020 [US2] Integrate GeneratedTicketsSection into ScanDetailDrawer completed state in components/health/scan-detail-drawer.tsx
 
 **Checkpoint**: User Stories 1 AND 2 both work — drawer shows report and generated tickets
 
@@ -92,12 +92,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T021 [P] [US3] Write component test for ScanHistorySection in tests/unit/components/health/scan-history-section.test.tsx
+- [x] T021 [P] [US3] Write component test for ScanHistorySection in tests/unit/components/health/scan-history-section.test.tsx
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Create ScanHistorySection component in components/health/scan-history-section.tsx
-- [ ] T023 [US3] Integrate ScanHistorySection into ScanDetailDrawer completed state in components/health/scan-detail-drawer.tsx
+- [x] T022 [US3] Create ScanHistorySection component in components/health/scan-history-section.tsx
+- [x] T023 [US3] Integrate ScanHistorySection into ScanDetailDrawer completed state in components/health/scan-detail-drawer.tsx
 
 **Checkpoint**: User Stories 1-3 work — drawer shows report, tickets, and history
 
@@ -111,12 +111,12 @@
 
 ### Tests for User Story 4
 
-- [ ] T024 [P] [US4] Write component tests for never_scanned, scanning, and failed states in tests/unit/components/health/scan-detail-drawer.test.tsx
+- [x] T024 [P] [US4] Write component tests for never_scanned, scanning, and failed states in tests/unit/components/health/scan-detail-drawer.test.tsx
 
 ### Implementation for User Story 4
 
-- [ ] T025 [US4] Implement never_scanned, scanning, and failed state views in components/health/scan-detail-drawer.tsx
-- [ ] T026 [US4] Wire real-time scan status updates from useHealthPolling to drawer state transitions in components/health/health-dashboard.tsx
+- [x] T025 [US4] Implement never_scanned, scanning, and failed state views in components/health/scan-detail-drawer.tsx
+- [x] T026 [US4] Wire real-time scan status updates from useHealthPolling to drawer state transitions in components/health/health-dashboard.tsx
 
 **Checkpoint**: All 4 drawer states render correctly and update in real-time
 
@@ -128,7 +128,7 @@
 
 **Independent Test**: Open drawer → close via each of the 3 methods and verify dashboard grid is fully visible.
 
-- [ ] T027 [US5] Write E2E test for drawer open/close flow (close button, overlay, Escape) in tests/e2e/health-drawer.spec.ts
+- [x] T027 [US5] Write E2E test for drawer open/close flow (close button, overlay, Escape) in tests/e2e/health-drawer.spec.ts
 
 **Checkpoint**: All dismissal methods work reliably (SC-006)
 
@@ -138,11 +138,11 @@
 
 **Purpose**: Passive module content and final integration
 
-- [ ] T028 [P] Create QualityGateContent component for passive Quality Gate module in components/health/quality-gate-content.tsx
-- [ ] T029 [P] Create LastCleanContent component for passive Last Clean module in components/health/last-clean-content.tsx
-- [ ] T030 Integrate passive module content into ScanDetailDrawer in components/health/scan-detail-drawer.tsx
-- [ ] T031 Verify WCAG AA contrast compliance and aurora theme usage across all drawer components
-- [ ] T032 Run type-check and lint across all new and modified files
+- [x] T028 [P] Create QualityGateContent component for passive Quality Gate module in components/health/quality-gate-content.tsx
+- [x] T029 [P] Create LastCleanContent component for passive Last Clean module in components/health/last-clean-content.tsx
+- [x] T030 Integrate passive module content into ScanDetailDrawer in components/health/scan-detail-drawer.tsx
+- [x] T031 Verify WCAG AA contrast compliance and aurora theme usage across all drawer components
+- [x] T032 Run type-check and lint across all new and modified files
 
 ---
 

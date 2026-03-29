@@ -48,6 +48,7 @@ interface HealthModuleCardProps {
   isScanning?: boolean;
   onTriggerScan?: (() => void) | undefined;
   isTriggerPending?: boolean | undefined;
+  onClick?: () => void;
 }
 
 export function HealthModuleCard({
@@ -56,6 +57,7 @@ export function HealthModuleCard({
   isScanning = false,
   onTriggerScan,
   isTriggerPending = false,
+  onClick,
 }: HealthModuleCardProps) {
   const Icon = MODULE_ICONS[moduleType];
   const label = MODULE_LABELS[moduleType];
@@ -64,7 +66,7 @@ export function HealthModuleCard({
   const scoreColors = module.score !== null ? getScoreColor(module.score) : null;
 
   return (
-    <div className="aurora-glass aurora-glass-hover rounded-lg p-4 space-y-3">
+    <div className="aurora-glass aurora-glass-hover rounded-lg p-4 space-y-3 cursor-pointer" onClick={onClick} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Icon className="h-5 w-5 text-muted-foreground" />
@@ -129,7 +131,7 @@ function ScanButton({
 }) {
   if (state === 'scanning') {
     return (
-      <Button size="sm" variant="outline" className="w-full text-xs" disabled>
+      <Button size="sm" variant="outline" className="w-full text-xs" disabled onClick={(e) => e.stopPropagation()}>
         <Loader2 className="h-3 w-3 mr-1 animate-spin" />
         Scanning...
       </Button>
@@ -148,7 +150,7 @@ function ScanButton({
       size="sm"
       variant="outline"
       className="w-full text-xs"
-      onClick={onTriggerScan}
+      onClick={(e) => { e.stopPropagation(); onTriggerScan?.(); }}
       disabled={isTriggerPending}
     >
       {BUTTON_LABELS[state]}

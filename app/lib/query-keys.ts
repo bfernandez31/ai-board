@@ -59,6 +59,12 @@ export const queryKeys = {
       type
         ? (['health', projectId, 'history', type] as const)
         : (['health', projectId, 'history'] as const),
+    scanReport: (projectId: number, moduleType: string) =>
+      ['health', projectId, 'scanReport', moduleType] as const,
+    scanDetail: (projectId: number, scanId: number) =>
+      ['health', projectId, 'scanDetail', scanId] as const,
+    generatedTickets: (projectId: number, scanId: number) =>
+      ['health', projectId, 'generatedTickets', scanId] as const,
   },
 
   tokens: {
