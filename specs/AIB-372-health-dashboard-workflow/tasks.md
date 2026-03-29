@@ -109,8 +109,8 @@
 
 **Purpose**: Final validation and edge case handling
 
-- [ ] T020 Validate complete workflow by reviewing .github/workflows/health-scan.yml against contracts/health-scan-workflow.md execution flow — verify all 12 steps in the execution flow diagram are implemented, all error scenarios are handled per the contract
-- [ ] T021 Run quickstart.md validation — execute the implementation steps in quickstart.md and verify all acceptance scenarios from spec.md are covered
+- [x] T020 Validate complete workflow by reviewing .github/workflows/health-scan.yml against contracts/health-scan-workflow.md execution flow — verify all 12 steps in the execution flow diagram are implemented, all error scenarios are handled per the contract
+- [x] T021 Run quickstart.md validation — execute the implementation steps in quickstart.md and verify all acceptance scenarios from spec.md are covered
 
 ---
 
