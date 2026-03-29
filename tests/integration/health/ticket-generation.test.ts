@@ -74,13 +74,13 @@ describe('Workflow-Authenticated Ticket Creation', () => {
 
   it('creates a ticket with workflow token auth', async () => {
     const response = await makeWorkflowRequest(ctx.projectId, {
-      title: '[Health:Security] High severity issues',
+      title: '[e2e] Health:Security High severity issues',
       description: '## Security Scan Issues\n\n- SQL Injection in `src/api.ts:15`',
     });
 
     expect(response.status).toBe(201);
     const data = await response.json();
-    expect(data.title).toBe('[Health:Security] High severity issues');
+    expect(data.title).toBe('[e2e] Health:Security High severity issues');
     expect(data.ticketKey).toBeTruthy();
     expect(data.stage).toBe('INBOX');
   });
@@ -89,7 +89,7 @@ describe('Workflow-Authenticated Ticket Creation', () => {
     // Create multiple tickets via workflow auth - should not hit plan limits
     for (let i = 0; i < 3; i++) {
       const response = await makeWorkflowRequest(ctx.projectId, {
-        title: `[Health:Security] Issue batch ${i + 1}`,
+        title: `[e2e] Health:Security Issue batch ${i + 1}`,
         description: `Batch ${i + 1} of security issues`,
       });
       expect(response.status).toBe(201);
@@ -98,7 +98,7 @@ describe('Workflow-Authenticated Ticket Creation', () => {
 
   it('validates projectId exists for workflow auth', async () => {
     const response = await makeWorkflowRequest(99999, {
-      title: '[Health:Security] Test',
+      title: '[e2e] Health:Security Test',
       description: 'Test description',
     });
 
@@ -109,7 +109,7 @@ describe('Workflow-Authenticated Ticket Creation', () => {
 
   it('rejects requests without valid workflow token (falls to user auth)', async () => {
     const response = await makeUserRequest(ctx.projectId, {
-      title: '[Health:Security] Test',
+      title: '[e2e] Health:Security Test',
       description: 'Test description',
     });
 
@@ -135,7 +135,7 @@ describe('Workflow-Authenticated Ticket Creation', () => {
           'Authorization': 'Bearer workflow-test-token',
         },
         body: JSON.stringify({
-          title: '[Health:Security] Test',
+          title: '[e2e] Health:Security Test',
           description: 'Test',
         }),
       }),
