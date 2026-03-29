@@ -70,6 +70,80 @@ Each card displays:
 - Last scan date
 - Action button or "passive" label
 
+## Scan Detail Drawer
+
+Clicking anywhere on a module card (except the action button) opens a right-side slide-over drawer showing the full detail view for that module.
+
+### Drawer Header
+
+Always shown regardless of state:
+- Module icon and name
+- Score badge with semantic color coding
+- Last scan date
+- Commit range (`baseCommit..headCommit`, each truncated to 7 characters)
+
+### Drawer States
+
+| State | Trigger | Content |
+|-------|---------|---------|
+| **Never scanned** | No scan record exists | Invitation message to run a first scan |
+| **Scanning** | Active PENDING or RUNNING scan | Spinner + "Scan in progress…" message |
+| **Completed** | Most recent scan is COMPLETED | Full report, Generated Tickets, Scan History sections |
+| **Failed** | Most recent scan is FAILED | Error icon, error message, available error logs |
+
+When a scan completes while the drawer is open, the drawer content updates in real-time without requiring the user to close and reopen it.
+
+### Scan Report Section (Completed state)
+
+The `report` field from the latest scan is rendered as markdown. Issue grouping varies by module type:
+
+| Module | Grouping |
+|--------|---------|
+| Security | Severity (high → medium → low) |
+| Compliance | Violated constitution principle |
+| Tests | Auto-fixed vs. non-fixable |
+| Spec Sync | Synced vs. drifted status |
+| Quality Gate | Dimension breakdown (Compliance, Bug Detection, Code Comments, Historical Context, Spec Sync) |
+| Last Clean | Cleanup category |
+
+### Generated Tickets Section (Completed state)
+
+Lists tickets created as a result of the current scan's findings. Each entry shows:
+- Ticket key (clickable — navigates to the board ticket detail view)
+- Ticket title
+- Current stage (e.g., INBOX, BUILD, SHIP)
+
+Displays "No tickets were generated from this scan" when the list is empty.
+
+### Scan History Section (Completed state)
+
+Chronological list of past scans for the same module type, ordered newest-first. Each entry shows:
+- Scan date
+- Score badge
+- Issues found count
+- Commit range
+
+Limited to the 10 most recent scans. Scrollable within the drawer for long lists.
+
+### Closing the Drawer
+
+The drawer closes via:
+- Clicking the close (×) button
+- Clicking the overlay/backdrop outside the drawer
+- Pressing the Escape key
+
+### Click Event Separation
+
+The "Run Scan" / "Retry" action buttons on module cards stop click propagation to prevent simultaneously triggering a scan and opening the drawer. Clicking the button always triggers a scan; clicking the card body always opens the drawer.
+
+### Passive Module Drawers
+
+**Quality Gate**: Shows dimension breakdown and recent SHIP tickets with quality scores, sourced from the latest completed verify job.
+
+**Last Clean**: Shows the last cleanup job summary, completion date, and cleanup results.
+
+---
+
 ## Triggering a Scan
 
 Clicking the action button on an active module card triggers a scan:
@@ -90,7 +164,7 @@ The first scan of any module type performs a full analysis with no base commit. 
 
 ## Scan History
 
-Past scan records are retrievable via the API, ordered most-recent-first, with optional filtering by module type and cursor-based pagination. The UI does not currently surface scan history as a dedicated view; it is available via the API for programmatic access and future UI features.
+Past scan records are retrievable via the API, ordered most-recent-first, with optional filtering by module type and cursor-based pagination. The scan detail drawer surfaces per-module history directly in the UI (see Scan History Section above), showing the 10 most recent scans for the selected module.
 
 ## Real-Time Updates
 

@@ -3570,6 +3570,122 @@ Results ordered by `createdAt DESC`. `nextCursor` is the ID of the last scan ret
 
 ---
 
+### GET /api/projects/[projectId]/health/scans/latest
+
+Returns the most recent scan record for the specified module type.
+
+**Authentication**: Session cookie OR Bearer PAT
+**Authorization**: `verifyProjectAccess(projectId)` — owner or member
+
+**Path params**: `projectId` (integer, required)
+
+**Query params**:
+- `type` (required): `"SECURITY" | "COMPLIANCE" | "TESTS" | "SPEC_SYNC"` — module type to query
+
+**Response** (200 OK):
+```json
+{
+  "scan": {
+    "id": 42,
+    "scanType": "SECURITY",
+    "status": "COMPLETED",
+    "score": 85,
+    "report": "## Security Report\n...",
+    "issuesFound": 3,
+    "issuesFixed": 1,
+    "baseCommit": "abc1234",
+    "headCommit": "def4567",
+    "durationMs": 45000,
+    "errorMessage": null,
+    "startedAt": "2026-03-27T14:30:00Z",
+    "completedAt": "2026-03-27T14:30:45Z",
+    "createdAt": "2026-03-27T14:29:55Z"
+  }
+}
+```
+
+Returns `{ "scan": null }` when no scan of the requested type exists for this project.
+
+**Errors**:
+- `400`: Invalid project ID or missing/invalid `type` param (`VALIDATION_ERROR`)
+- `401`: Unauthorized
+- `403`: Forbidden
+
+---
+
+### GET /api/projects/[projectId]/health/scans/[scanId]
+
+Returns the full record for a single scan, including the `report` field.
+
+**Authentication**: Session cookie OR Bearer PAT
+**Authorization**: `verifyProjectAccess(projectId)` — owner or member
+
+**Path params**: `projectId` (integer), `scanId` (integer)
+
+**Response** (200 OK):
+```json
+{
+  "scan": {
+    "id": 42,
+    "projectId": 1,
+    "scanType": "SECURITY",
+    "status": "COMPLETED",
+    "score": 85,
+    "report": "## Security Report\n...",
+    "issuesFound": 3,
+    "issuesFixed": 1,
+    "baseCommit": "abc1234",
+    "headCommit": "def4567",
+    "durationMs": 45000,
+    "errorMessage": null,
+    "startedAt": "2026-03-27T14:30:00Z",
+    "completedAt": "2026-03-27T14:30:45Z",
+    "createdAt": "2026-03-27T14:29:55Z"
+  }
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID or scan ID
+- `401`: Unauthorized
+- `403`: Forbidden
+- `404`: Scan not found or does not belong to this project
+
+---
+
+### GET /api/projects/[projectId]/health/scans/[scanId]/tickets
+
+Returns tickets that were generated as a result of the specified scan. Tickets are identified heuristically: `workflowType = CLEAN` tickets created between `scan.completedAt` and the start of the next scan of the same type (or the current time if no subsequent scan exists).
+
+**Authentication**: Session cookie OR Bearer PAT
+**Authorization**: `verifyProjectAccess(projectId)` — owner or member
+
+**Path params**: `projectId` (integer), `scanId` (integer)
+
+**Response** (200 OK):
+```json
+{
+  "tickets": [
+    {
+      "id": 101,
+      "ticketKey": "AIB-45",
+      "title": "Fix SQL injection in user query",
+      "currentStage": "BUILD"
+    }
+  ]
+}
+```
+
+Returns `{ "tickets": [] }` when no tickets are associated with the scan.
+
+**Errors**:
+- `400`: Invalid project ID or scan ID
+- `401`: Unauthorized
+- `403`: Forbidden
+- `404`: Scan not found or does not belong to this project
+
+---
+
 ### PATCH /api/projects/[projectId]/health/scans/[scanId]/status
 
 Workflow callback endpoint to update scan status and results. Uses the same Bearer token authentication pattern as `PATCH /api/jobs/:id/status`.
