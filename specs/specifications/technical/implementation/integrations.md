@@ -162,6 +162,27 @@ export async function dispatchWorkflow(params: {
 - **Command**: Executes targeted code fixes and syncs documentation
 - **Actions**: Fix issues, update branch specs, synchronize global docs, commit and push
 
+**Health Scan Workflow** (`.github/workflows/health-scan.yml`):
+- **Trigger**: `workflow_dispatch`
+- **Inputs**:
+  - `scan_id`, `project_id`, `scan_type` (SECURITY|COMPLIANCE|TESTS|SPEC_SYNC)
+  - `base_commit` (nullable SHA), `head_commit` (SHA)
+  - `githubRepository` (required) - Target repository in format owner/repo
+- **Repository Checkout**: Checks out external project repository with full history (`fetch-depth: 0`) to support incremental scanning commit ranges
+- **Environment**: ubuntu-latest
+- **Authentication**: `WORKFLOW_API_TOKEN` Bearer token for all status callbacks
+- **Command Mapping**: Maps `scan_type` to Claude Code CLI command via static lookup (`lib/health/scan-commands.ts`) — no dynamic command construction
+- **Steps**:
+  1. Checkout target repository
+  2. `PATCH /api/projects/{project_id}/health/scans/{scan_id}/status` → RUNNING
+  3. Execute scan command with `base_commit`/`head_commit` for incremental support
+  4. Parse JSON report output (score, issuesFound, issuesFixed, report)
+  5. Create remediation tickets via `POST /api/projects/{projectId}/tickets` (grouped by scan type)
+  6. `PATCH` scan status → COMPLETED with score, report, and telemetry
+  7. On any error: `PATCH` scan status → FAILED with error message (max 2000 chars)
+- **Side effects**: COMPLETED callback triggers `HealthScore` upsert and `globalScore` recalculation via existing status endpoint
+- **Telemetry**: Records `durationMs`, `tokensUsed`, `costUsd` on every completion or failure
+
 **Auto-Ship** (`.github/workflows/auto-ship.yml`):
 - **Trigger**: `deployment_status` event
 - **Conditions**: Vercel production deployment success
