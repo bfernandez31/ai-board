@@ -59,6 +59,8 @@ export function QualityScoreTrendChart({
                   borderRadius: '8px',
                   color: 'hsl(var(--foreground))',
                 }}
+                labelStyle={{ color: 'hsl(var(--foreground))' }}
+                itemStyle={{ color: 'hsl(var(--foreground))' }}
                 formatter={(value) => [`${value}/100`, 'Avg Score']}
                 labelFormatter={(label) => `Date: ${label}`}
               />

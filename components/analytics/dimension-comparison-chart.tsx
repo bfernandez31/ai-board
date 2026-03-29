@@ -69,6 +69,8 @@ export function DimensionComparisonChart({
                   borderRadius: '8px',
                   color: 'hsl(var(--foreground))',
                 }}
+                labelStyle={{ color: 'hsl(var(--foreground))' }}
+                itemStyle={{ color: 'hsl(var(--foreground))' }}
                 formatter={(value, _name, props) => [
                   `${value}/100 (weight: ${Math.round(((props.payload as DimensionComparison | undefined)?.weight ?? 0) * 100)}%)`,
                   'Avg Score',
