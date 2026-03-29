@@ -9,6 +9,7 @@ import {
   Sparkles,
   Loader2,
   AlertTriangle,
+  Play,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -95,7 +96,7 @@ export function HealthModuleCard({
       )}
 
       {!isPassive && (
-        <div className="pt-1">
+        <div className="pt-1 flex justify-center">
           <ScanButton state={state} onTriggerScan={onTriggerScan} isTriggerPending={isTriggerPending} />
         </div>
       )}
@@ -119,8 +120,8 @@ export function HealthModuleCard({
 }
 
 const BUTTON_LABELS: Record<CardState, string> = {
-  never_scanned: 'Run first scan',
-  completed: 'Re-run scan',
+  never_scanned: 'Run scan',
+  completed: 'Re-run',
   failed: 'Retry',
   scanning: '',
 };
@@ -136,7 +137,7 @@ function ScanButton({
 }) {
   if (state === 'scanning') {
     return (
-      <Button size="sm" variant="outline" className="w-full text-xs" disabled onClick={(e) => e.stopPropagation()}>
+      <Button size="sm" className="rounded-full px-4 py-1.5 text-xs mx-auto" disabled onClick={(e) => e.stopPropagation()}>
         <Loader2 className="h-3 w-3 mr-1 animate-spin" />
         Scanning...
       </Button>
@@ -146,11 +147,11 @@ function ScanButton({
   return (
     <Button
       size="sm"
-      variant="outline"
-      className="w-full text-xs"
+      className="rounded-full px-4 py-1.5 text-xs mx-auto"
       onClick={(e) => { e.stopPropagation(); onTriggerScan?.(); }}
       disabled={isTriggerPending}
     >
+      <Play className="h-3 w-3 mr-1 fill-current" />
       {BUTTON_LABELS[state]}
     </Button>
   );
