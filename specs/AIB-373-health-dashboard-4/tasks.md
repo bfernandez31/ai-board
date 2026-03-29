@@ -18,9 +18,9 @@
 
 **Purpose**: Verify existing schemas and understand current command state before making changes
 
-- [ ] T001 Read and catalog the existing Zod schemas in lib/health/report-schemas.ts to confirm ReportIssue, SecurityReport, ComplianceReport, TestsReport, SpecSyncReport structures
-- [ ] T002 Read and catalog the existing command files in .claude-plugin/commands/ (ai-board.health-security.md, ai-board.health-compliance.md, ai-board.health-tests.md, ai-board.health-spec-sync.md) to identify all gaps vs Zod schemas
-- [ ] T003 [P] Read parseScanReport() and groupIssuesIntoTickets() in lib/health/report-schemas.ts and lib/health/ticket-creation.ts to understand validation and ticket grouping logic
+- [X] T001 Read and catalog the existing Zod schemas in lib/health/report-schemas.ts to confirm ReportIssue, SecurityReport, ComplianceReport, TestsReport, SpecSyncReport structures
+- [X] T002 Read and catalog the existing command files in .claude-plugin/commands/ (ai-board.health-security.md, ai-board.health-compliance.md, ai-board.health-tests.md, ai-board.health-spec-sync.md) to identify all gaps vs Zod schemas
+- [X] T003 [P] Read parseScanReport() and groupIssuesIntoTickets() in lib/health/report-schemas.ts and lib/health/ticket-creation.ts to understand validation and ticket grouping logic
 
 ---
 
@@ -30,7 +30,7 @@
 
 **⚠️ CRITICAL**: Test file must exist before user story phases begin (TDD approach)
 
-- [ ] T004 Create test file skeleton at tests/unit/health/command-output-validation.test.ts with imports for Zod schemas from lib/health/report-schemas.ts and test suite structure (describe blocks for each scan type)
+- [X] T004 Create test file skeleton at tests/unit/health/command-output-validation.test.ts with imports for Zod schemas from lib/health/report-schemas.ts and test suite structure (describe blocks for each scan type)
 
 **Checkpoint**: Test file skeleton ready — user story implementation can now begin
 
@@ -44,18 +44,18 @@
 
 ### Tests for User Story 1
 
-- [ ] T005 [P] [US1] Add unit test: valid SecurityReport with lowercase severity, id fields, type "SECURITY", and generatedTickets passes Zod validation in tests/unit/health/command-output-validation.test.ts
-- [ ] T006 [P] [US1] Add unit test: SecurityReport with uppercase severity FAILS Zod validation (regression guard) in tests/unit/health/command-output-validation.test.ts
-- [ ] T007 [P] [US1] Add unit test: SecurityReport missing id field FAILS Zod validation in tests/unit/health/command-output-validation.test.ts
-- [ ] T008 [P] [US1] Add unit test: parseScanReport() correctly parses a valid SecurityReport JSON string in tests/unit/health/command-output-validation.test.ts
+- [X] T005 [P] [US1] Add unit test: valid SecurityReport with lowercase severity, id fields, type "SECURITY", and generatedTickets passes Zod validation in tests/unit/health/command-output-validation.test.ts
+- [X] T006 [P] [US1] Add unit test: SecurityReport with uppercase severity FAILS Zod validation (regression guard) in tests/unit/health/command-output-validation.test.ts
+- [X] T007 [P] [US1] Add unit test: SecurityReport missing id field FAILS Zod validation in tests/unit/health/command-output-validation.test.ts
+- [X] T008 [P] [US1] Add unit test: parseScanReport() correctly parses a valid SecurityReport JSON string in tests/unit/health/command-output-validation.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Update .claude-plugin/commands/ai-board.health-security.md: fix output format example to use lowercase severity values (high/medium/low), add id field to each issue (format: sec-NNN), add type "SECURITY" to report, add generatedTickets: [] to report, remove summary field from report
-- [ ] T010 [US1] Update .claude-plugin/commands/ai-board.health-security.md: add category field documentation mapping to security categories (injection, authentication, sensitive-data, access-control, misconfiguration, dependencies, cryptography)
-- [ ] T011 [US1] Update .claude-plugin/commands/ai-board.health-security.md: expand scan instructions with detailed OWASP Top 10 patterns to check (SQL injection, XSS, command injection, exposed secrets, missing auth, insecure dependencies)
-- [ ] T012 [US1] Update .claude-plugin/commands/ai-board.health-security.md: add incremental scan instructions (use git diff --name-only for file list when --base-commit provided)
-- [ ] T013 [US1] Update .claude-plugin/commands/ai-board.health-security.md: add score calculation guidance (HIGH: -15, MEDIUM: -8, LOW: -3, floor at 0)
+- [X] T009 [US1] Update .claude-plugin/commands/ai-board.health-security.md: fix output format example to use lowercase severity values (high/medium/low), add id field to each issue (format: sec-NNN), add type "SECURITY" to report, add generatedTickets: [] to report, remove summary field from report
+- [X] T010 [US1] Update .claude-plugin/commands/ai-board.health-security.md: add category field documentation mapping to security categories (injection, authentication, sensitive-data, access-control, misconfiguration, dependencies, cryptography)
+- [X] T011 [US1] Update .claude-plugin/commands/ai-board.health-security.md: expand scan instructions with detailed OWASP Top 10 patterns to check (SQL injection, XSS, command injection, exposed secrets, missing auth, insecure dependencies)
+- [X] T012 [US1] Update .claude-plugin/commands/ai-board.health-security.md: add incremental scan instructions (use git diff --name-only for file list when --base-commit provided)
+- [X] T013 [US1] Update .claude-plugin/commands/ai-board.health-security.md: add score calculation guidance (HIGH: -15, MEDIUM: -8, LOW: -3, floor at 0)
 
 **Checkpoint**: Security command produces valid SecurityReport JSON — tests pass
 
@@ -69,16 +69,16 @@
 
 ### Tests for User Story 2
 
-- [ ] T014 [P] [US2] Add unit test: valid ComplianceReport with id, severity, type "COMPLIANCE", category mapping to constitution principles, and generatedTickets passes Zod validation in tests/unit/health/command-output-validation.test.ts
-- [ ] T015 [P] [US2] Add unit test: ComplianceReport missing severity field FAILS Zod validation in tests/unit/health/command-output-validation.test.ts
-- [ ] T016 [P] [US2] Add unit test: parseScanReport() correctly parses a valid ComplianceReport JSON string in tests/unit/health/command-output-validation.test.ts
+- [X] T014 [P] [US2] Add unit test: valid ComplianceReport with id, severity, type "COMPLIANCE", category mapping to constitution principles, and generatedTickets passes Zod validation in tests/unit/health/command-output-validation.test.ts
+- [X] T015 [P] [US2] Add unit test: ComplianceReport missing severity field FAILS Zod validation in tests/unit/health/command-output-validation.test.ts
+- [X] T016 [P] [US2] Add unit test: parseScanReport() correctly parses a valid ComplianceReport JSON string in tests/unit/health/command-output-validation.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Update .claude-plugin/commands/ai-board.health-compliance.md: add id field to each issue (format: comp-{principle}-NNN), add severity field with mapping (HIGH for Security-First/Database-Integrity, MEDIUM for TypeScript-First/Test-Driven/Component-Driven, LOW for AI-First/style), add type "COMPLIANCE" to report, add generatedTickets: [] to report, remove summary field
-- [ ] T018 [US2] Update .claude-plugin/commands/ai-board.health-compliance.md: add constitution file discovery instructions (read .ai-board/memory/constitution.md first, fallback to .claude-plugin/memory/constitution.md, error if neither exists)
-- [ ] T019 [US2] Update .claude-plugin/commands/ai-board.health-compliance.md: add per-principle scanning patterns (what to look for per constitution principle: TypeScript-First, Component-Driven, Test-Driven, Security-First, Database-Integrity, AI-First)
-- [ ] T020 [US2] Update .claude-plugin/commands/ai-board.health-compliance.md: add incremental scan instructions and score calculation guidance
+- [X] T017 [US2] Update .claude-plugin/commands/ai-board.health-compliance.md: add id field to each issue (format: comp-{principle}-NNN), add severity field with mapping (HIGH for Security-First/Database-Integrity, MEDIUM for TypeScript-First/Test-Driven/Component-Driven, LOW for AI-First/style), add type "COMPLIANCE" to report, add generatedTickets: [] to report, remove summary field
+- [X] T018 [US2] Update .claude-plugin/commands/ai-board.health-compliance.md: add constitution file discovery instructions (read .ai-board/memory/constitution.md first, fallback to .claude-plugin/memory/constitution.md, error if neither exists)
+- [X] T019 [US2] Update .claude-plugin/commands/ai-board.health-compliance.md: add per-principle scanning patterns (what to look for per constitution principle: TypeScript-First, Component-Driven, Test-Driven, Security-First, Database-Integrity, AI-First)
+- [X] T020 [US2] Update .claude-plugin/commands/ai-board.health-compliance.md: add incremental scan instructions and score calculation guidance
 
 **Checkpoint**: Compliance command produces valid ComplianceReport JSON — tests pass
 
@@ -92,16 +92,16 @@
 
 ### Tests for User Story 3
 
-- [ ] T021 [P] [US3] Add unit test: valid TestsReport with autoFixed and nonFixable arrays using ReportIssue schema, type "TESTS", and generatedTickets passes Zod validation in tests/unit/health/command-output-validation.test.ts
-- [ ] T022 [P] [US3] Add unit test: TestsReport using old issues/nonFixable structure (instead of autoFixed/nonFixable) FAILS Zod validation in tests/unit/health/command-output-validation.test.ts
-- [ ] T023 [P] [US3] Add unit test: parseScanReport() correctly parses a valid TestsReport JSON string in tests/unit/health/command-output-validation.test.ts
+- [X] T021 [P] [US3] Add unit test: valid TestsReport with autoFixed and nonFixable arrays using ReportIssue schema, type "TESTS", and generatedTickets passes Zod validation in tests/unit/health/command-output-validation.test.ts
+- [X] T022 [P] [US3] Add unit test: TestsReport using old issues/nonFixable structure (instead of autoFixed/nonFixable) FAILS Zod validation in tests/unit/health/command-output-validation.test.ts
+- [X] T023 [P] [US3] Add unit test: parseScanReport() correctly parses a valid TestsReport JSON string in tests/unit/health/command-output-validation.test.ts
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Update .claude-plugin/commands/ai-board.health-tests.md: restructure report to use autoFixed and nonFixable arrays (both using ReportIssue schema with id, severity, description, file, line), add type "TESTS" to report, add generatedTickets: [] to report, remove summary and status fields
-- [ ] T025 [US3] Update .claude-plugin/commands/ai-board.health-tests.md: add auto-fix workflow instructions (detect test command, run tests, for each failure: attempt fix, re-run, commit individually if passes, report as nonFixable if fails)
-- [ ] T026 [US3] Update .claude-plugin/commands/ai-board.health-tests.md: document that tests ALWAYS run full suite regardless of --base-commit (FR-005), add issuesFound = autoFixed.length + nonFixable.length, issuesFixed = autoFixed.length
-- [ ] T027 [US3] Update .claude-plugin/commands/ai-board.health-tests.md: add score calculation (100 if all pass, proportional reduction per failure)
+- [X] T024 [US3] Update .claude-plugin/commands/ai-board.health-tests.md: restructure report to use autoFixed and nonFixable arrays (both using ReportIssue schema with id, severity, description, file, line), add type "TESTS" to report, add generatedTickets: [] to report, remove summary and status fields
+- [X] T025 [US3] Update .claude-plugin/commands/ai-board.health-tests.md: add auto-fix workflow instructions (detect test command, run tests, for each failure: attempt fix, re-run, commit individually if passes, report as nonFixable if fails)
+- [X] T026 [US3] Update .claude-plugin/commands/ai-board.health-tests.md: document that tests ALWAYS run full suite regardless of --base-commit (FR-005), add issuesFound = autoFixed.length + nonFixable.length, issuesFixed = autoFixed.length
+- [X] T027 [US3] Update .claude-plugin/commands/ai-board.health-tests.md: add score calculation (100 if all pass, proportional reduction per failure)
 
 **Checkpoint**: Tests command produces valid TestsReport JSON — tests pass
 
@@ -115,16 +115,16 @@
 
 ### Tests for User Story 4
 
-- [ ] T028 [P] [US4] Add unit test: valid SpecSyncReport with specs array containing synced and drifted entries, type "SPEC_SYNC", and generatedTickets passes Zod validation in tests/unit/health/command-output-validation.test.ts
-- [ ] T029 [P] [US4] Add unit test: parseScanReport() correctly parses a valid SpecSyncReport JSON string in tests/unit/health/command-output-validation.test.ts
+- [X] T028 [P] [US4] Add unit test: valid SpecSyncReport with specs array containing synced and drifted entries, type "SPEC_SYNC", and generatedTickets passes Zod validation in tests/unit/health/command-output-validation.test.ts
+- [X] T029 [P] [US4] Add unit test: parseScanReport() correctly parses a valid SpecSyncReport JSON string in tests/unit/health/command-output-validation.test.ts
 
 ### Implementation for User Story 4
 
-- [ ] T030 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md: add type "SPEC_SYNC" to report, add generatedTickets: [] to report, remove summary field
-- [ ] T031 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md: expand spec comparison instructions listing specific files in specs/specifications/ (endpoints.md, schemas.md, data-model.md, functional specs)
-- [ ] T032 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md: add bidirectional drift detection (code without spec AND spec without code)
-- [ ] T033 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md: add incremental scan instructions (only check specs impacted by changed files when --base-commit provided)
-- [ ] T034 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md: add score calculation (100 if all synced, proportional reduction per drifted spec), issuesFound = count of drifted specs, issuesFixed = 0
+- [X] T030 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md: add type "SPEC_SYNC" to report, add generatedTickets: [] to report, remove summary field
+- [X] T031 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md: expand spec comparison instructions listing specific files in specs/specifications/ (endpoints.md, schemas.md, data-model.md, functional specs)
+- [X] T032 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md: add bidirectional drift detection (code without spec AND spec without code)
+- [X] T033 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md: add incremental scan instructions (only check specs impacted by changed files when --base-commit provided)
+- [X] T034 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md: add score calculation (100 if all synced, proportional reduction per drifted spec), issuesFound = count of drifted specs, issuesFixed = 0
 
 **Checkpoint**: Spec sync command produces valid SpecSyncReport JSON — tests pass
 
@@ -134,11 +134,11 @@
 
 **Purpose**: Validate ticket grouping across all report types and run full test suite
 
-- [ ] T035 [P] Add unit test: groupIssuesIntoTickets() produces correct tickets from SecurityReport in tests/unit/health/command-output-validation.test.ts
-- [ ] T036 [P] Add unit test: groupIssuesIntoTickets() produces correct tickets from ComplianceReport in tests/unit/health/command-output-validation.test.ts
-- [ ] T037 [P] Add unit test: groupIssuesIntoTickets() produces correct tickets from TestsReport in tests/unit/health/command-output-validation.test.ts
-- [ ] T038 Run full test suite (bun run test:unit) to verify all new tests pass and no regressions
-- [ ] T039 Run type-check (bun run type-check) and lint (bun run lint) to verify no errors
+- [X] T035 [P] Add unit test: groupIssuesIntoTickets() produces correct tickets from SecurityReport in tests/unit/health/command-output-validation.test.ts
+- [X] T036 [P] Add unit test: groupIssuesIntoTickets() produces correct tickets from ComplianceReport in tests/unit/health/command-output-validation.test.ts
+- [X] T037 [P] Add unit test: groupIssuesIntoTickets() produces correct tickets from TestsReport in tests/unit/health/command-output-validation.test.ts
+- [X] T038 Run full test suite (bun run test:unit) to verify all new tests pass and no regressions
+- [X] T039 Run type-check (bun run type-check) and lint (bun run lint) to verify no errors
 
 ---
 

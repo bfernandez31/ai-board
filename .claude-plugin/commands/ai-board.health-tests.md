@@ -1,58 +1,114 @@
 # Health Scan: Tests
 
-You are executing a **test health scan** on this repository. Analyze test coverage, test quality, and identify failing or missing tests.
+You are executing a **test health scan** on this repository. Run the project's test suite, identify failures, attempt automatic fixes, and produce a structured report.
 
 ## Inputs
 
 Arguments may include:
-- `--base-commit <SHA>`: If provided, only scan changes between this commit and head-commit (incremental scan)
+- `--base-commit <SHA>`: Provided for context, but tests ALWAYS run the full suite regardless
 - `--head-commit <SHA>`: The target commit to scan up to
 
-If `--base-commit` is empty or not provided, perform a **full repository scan**.
+**IMPORTANT**: Tests ALWAYS run the full test suite regardless of whether `--base-commit` is provided. Test failures can originate from unchanged files affected by changed code, so incremental testing is unreliable.
 
-## What to Scan
+## Auto-Fix Workflow
 
-1. **Run existing tests** using the project's test commands (e.g., `bun run test:unit`)
-2. **Identify failing tests** and attempt simple auto-fixes
-3. **Check test coverage** for key modules
-4. **Identify untested code** — files with no corresponding test files
-5. **Assess test quality** — proper assertions, no empty tests, meaningful descriptions
+### Step 1: Detect Test Command
+
+Detect the project's test command from `package.json` scripts:
+- Look for `test`, `test:unit`, `test:ci` scripts
+- Common commands: `vitest run`, `jest`, `mocha`, `bun test`, `npm test`
+- If no test command is found, output a report with score 0 and a single HIGH severity issue explaining no test command was detected
+
+### Step 2: Run Full Test Suite
+
+Execute the detected test command and capture output. Parse the output to identify:
+- Total number of tests
+- Number of passing tests
+- Number of failing tests
+- For each failure: test name, file path, line number, error message
+
+### Step 3: Auto-Fix Loop
 
 For each failing test:
-- Attempt to fix if the fix is obvious and isolated
-- Mark as "nonFixable" if the fix requires architectural changes or is ambiguous
+
+1. **Read** the test file and understand the failure (assertion error, import error, type error, etc.)
+2. **Attempt fix** if the fix is obvious and isolated:
+   - Outdated assertion values (expected value changed)
+   - Import path changes (file moved/renamed)
+   - Renamed function/variable references
+   - Simple type annotation fixes
+3. **Re-run** the specific test to verify the fix works
+4. **If fix succeeds**: Stage and commit the change with a descriptive message:
+   ```
+   fix(tests): update assertion in [test name]
+   ```
+   Add the issue to the `autoFixed` array
+5. **If fix fails** or requires architectural changes: Add the issue to the `nonFixable` array with the reason
+
+### What NOT to Auto-Fix
+- Tests requiring new infrastructure (database seeds, external services)
+- Tests requiring architectural refactoring
+- Tests with ambiguous failures (multiple possible causes)
+- Tests that need new dependencies or configuration
+
+## Score Calculation
+
+- **100**: All tests pass (no failures)
+- **Proportional reduction**: For each failure, reduce score proportionally
+  - Formula: `score = Math.max(0, Math.round(100 * (1 - (autoFixed.length + nonFixable.length) / totalTests)))`
+  - If totalTests is 0, score is 100
 
 ## Output Format
 
-You MUST output valid JSON to stdout with this exact structure:
+You MUST output valid JSON to stdout with this exact structure. Output ONLY the JSON object, no other text.
 
 ```json
 {
-  "score": 75,
-  "issuesFound": 4,
+  "score": 85,
+  "issuesFound": 3,
   "issuesFixed": 2,
   "report": {
-    "issues": [
+    "type": "TESTS",
+    "autoFixed": [
       {
-        "file": "tests/unit/example.test.ts",
-        "description": "Test 'should validate input' fails with assertion error",
-        "status": "fixed"
+        "id": "test-fix-001",
+        "severity": "medium",
+        "description": "Fixed outdated assertion in calculateTotal test — expected 42, was 40",
+        "file": "tests/unit/calc.test.ts",
+        "line": 25
+      },
+      {
+        "id": "test-fix-002",
+        "severity": "medium",
+        "description": "Fixed import path after file rename: utils.ts → helpers.ts",
+        "file": "tests/unit/helpers.test.ts",
+        "line": 1
       }
     ],
     "nonFixable": [
       {
+        "id": "test-fail-001",
+        "severity": "high",
+        "description": "Integration test requires database seed data not present in CI",
         "file": "tests/integration/api.test.ts",
-        "description": "Integration test requires database seed data not present",
-        "reason": "Requires infrastructure changes"
+        "line": 10
       }
     ],
-    "summary": "Brief summary of test health findings"
+    "generatedTickets": []
   },
   "tokensUsed": 0,
   "costUsd": 0
 }
 ```
 
-- `score`: 0-100 (100 = all tests pass, good coverage)
-- `nonFixable`: Tests that could not be auto-fixed (used for ticket creation)
-- Output ONLY the JSON object, no other text
+**Field rules**:
+- `id`: Unique identifier — `test-fix-NNN` for auto-fixed, `test-fail-NNN` for non-fixable
+- `severity`: MUST be lowercase: `high` (blocking failures), `medium` (fixable issues), `low` (warnings)
+- `description`: What failed and what was done (for autoFixed) or why it can't be fixed (for nonFixable)
+- `file`: Relative path from repo root to the test file
+- `line`: Line number of the failing test/assertion
+- `autoFixed`: Array of tests that were successfully auto-fixed and committed (uses ReportIssue schema)
+- `nonFixable`: Array of tests that could not be auto-fixed (uses ReportIssue schema)
+- `generatedTickets`: Always `[]` (tickets are created by the workflow after the scan)
+- `issuesFound`: `autoFixed.length + nonFixable.length`
+- `issuesFixed`: `autoFixed.length`
