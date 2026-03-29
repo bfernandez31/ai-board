@@ -2,28 +2,52 @@
 
 You are executing a **security health scan** on this repository. Analyze the codebase for security vulnerabilities and produce a structured JSON report.
 
-## Inputs
+## Arguments
 
-Arguments may include:
-- `--base-commit <SHA>`: If provided, only scan changes between this commit and head-commit (incremental scan)
-- `--head-commit <SHA>`: The target commit to scan up to
+Arguments are passed inline after the command name:
+- `--base-commit <SHA>`: Optional. If provided, run an **incremental scan** — use `git diff <base-commit>..HEAD` to identify changed files and limit analysis to those files only.
+- `--head-commit <SHA>`: Optional. The target commit reference.
 
-If `--base-commit` is empty or not provided, perform a **full repository scan**.
+If `--base-commit` is **not provided or empty**, perform a **full repository scan** of all source files.
+
+**Edge case — base-commit not found**: If the provided `--base-commit` SHA does not exist in the repository (git rev-parse fails), **fall back to a full repository scan** and include a note in the report summary: "baseCommit not found, performed full scan".
+
+**Edge case — empty repository**: If the repository has no analyzable source files, return score 100 with an empty issues array and summary: "No analyzable code found".
 
 ## What to Scan
 
-Analyze the codebase for OWASP Top 10 and common security issues:
-- **Injection**: SQL injection, command injection, XSS, template injection
-- **Authentication**: Hardcoded credentials, weak auth patterns, missing auth checks
-- **Sensitive Data**: Exposed secrets, API keys, tokens in code or config
-- **Access Control**: Missing authorization checks, privilege escalation paths
-- **Misconfiguration**: Insecure defaults, debug modes, permissive CORS
-- **Dependencies**: Known vulnerable packages (check package.json/lock files)
-- **Cryptography**: Weak algorithms, insecure random, missing encryption
+Analyze the codebase for **all** of the following security categories:
+
+- **Injection**: SQL injection, XSS (cross-site scripting), command injection, template injection, path traversal
+- **Authentication/Authorization**: Hardcoded credentials, weak auth patterns, missing auth checks, privilege escalation paths, broken access control
+- **Exposed Secrets**: API keys, tokens, passwords, private keys in code or config files
+- **Vulnerable Dependencies**: Known vulnerable packages in package.json/lock files, outdated dependencies with CVEs
+- **OWASP Top 10**: Full coverage of current OWASP Top 10 categories
+- **Input Validation**: Missing or insufficient input validation, improper sanitization, type coercion vulnerabilities
+- **Error Message Information Leakage**: Stack traces exposed to users, verbose error messages revealing internal details, debug information in production paths
+- **Misconfiguration**: Insecure defaults, debug modes enabled, permissive CORS, missing security headers
+- **Cryptography**: Weak algorithms, insecure random number generation, missing encryption where required
+
+For each issue found, determine the severity:
+- **HIGH**: Directly exploitable vulnerability, immediate risk (e.g., SQL injection, exposed credentials)
+- **MEDIUM**: Potential risk requiring specific conditions to exploit (e.g., missing CSRF protection, weak crypto)
+- **LOW**: Best practice violation, minimal direct risk (e.g., verbose error messages, missing security headers)
+
+## Score Calculation
+
+Calculate the score using this formula:
+
+```
+score = 100 - (HIGH_count * 15 + MEDIUM_count * 5 + LOW_count * 1)
+```
+
+Floor the result at **0** (score can never be negative).
 
 ## Output Format
 
-You MUST output valid JSON to stdout with this exact structure:
+You **MUST** output **ONLY** valid JSON to stdout. No other text, logs, markdown formatting, or code fences.
+
+The JSON object must have this **exact** structure:
 
 ```json
 {
@@ -36,17 +60,32 @@ You MUST output valid JSON to stdout with this exact structure:
         "severity": "HIGH",
         "file": "path/to/file.ts",
         "line": 42,
-        "description": "SQL injection vulnerability in query builder",
+        "description": "SQL injection vulnerability in query builder — use parameterized queries instead",
         "category": "injection"
       }
     ],
-    "summary": "Brief summary of findings"
+    "summary": "Found 1 HIGH, 1 MEDIUM, 1 LOW security issue. Key concern: SQL injection in query builder."
   },
   "tokensUsed": 0,
   "costUsd": 0
 }
 ```
 
-- `score`: 0-100 (100 = no issues found)
-- `severity`: HIGH, MEDIUM, or LOW
-- Output ONLY the JSON object, no other text
+### Field Requirements
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `score` | `number` | Yes | 0-100 integer, calculated per formula above |
+| `issuesFound` | `number` | Yes | Must equal `report.issues.length` |
+| `issuesFixed` | `number` | Yes | Always `0` for security scans |
+| `report.issues` | `array` | Yes | List of SecurityIssue objects |
+| `report.issues[].severity` | `string` | Yes | `"HIGH"`, `"MEDIUM"`, or `"LOW"` (uppercase) |
+| `report.issues[].file` | `string` | Yes | File path relative to repository root |
+| `report.issues[].line` | `number` | Yes | Positive integer line number |
+| `report.issues[].description` | `string` | Yes | What the vulnerability is and how to fix it |
+| `report.issues[].category` | `string` | Yes | Category (e.g., "injection", "authentication", "secrets", "dependencies", "input-validation", "error-leakage", "misconfiguration", "cryptography") |
+| `report.summary` | `string` | Yes | Brief summary of findings with severity counts |
+| `tokensUsed` | `number` | Yes | Tokens consumed (0 if unknown) |
+| `costUsd` | `number` | Yes | Cost in USD (0 if unknown) |
+
+**CRITICAL**: Output ONLY the JSON object. No explanatory text before or after.

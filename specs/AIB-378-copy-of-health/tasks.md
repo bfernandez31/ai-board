@@ -16,9 +16,9 @@
 
 **Purpose**: Verify existing infrastructure and align shared output format across all commands
 
-- [ ] T001 Verify existing lib/health/types.ts exports match the ScanCommandOutput contract in specs/AIB-378-copy-of-health/contracts/scan-command-output.ts
-- [ ] T002 Verify existing lib/health/report-schemas.ts Zod schemas accept the exact JSON fields defined in specs/AIB-378-copy-of-health/data-model.md (score, issuesFound, issuesFixed, report, tokensUsed, costUsd)
-- [ ] T003 Verify existing lib/health/scan-commands.ts SCAN_COMMAND_MAP maps all 4 types: SECURITY→health-security, COMPLIANCE→health-compliance, TESTS→health-tests, SPEC_SYNC→health-spec-sync
+- [x] T001 Verify existing lib/health/types.ts exports match the ScanCommandOutput contract in specs/AIB-378-copy-of-health/contracts/scan-command-output.ts
+- [x] T002 Verify existing lib/health/report-schemas.ts Zod schemas accept the exact JSON fields defined in specs/AIB-378-copy-of-health/data-model.md (score, issuesFound, issuesFixed, report, tokensUsed, costUsd)
+- [x] T003 Verify existing lib/health/scan-commands.ts SCAN_COMMAND_MAP maps all 4 types: SECURITY→health-security, COMPLIANCE→health-compliance, TESTS→health-tests, SPEC_SYNC→health-spec-sync
 
 ---
 
@@ -28,8 +28,8 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Review and update shared argument handling instructions in all 4 command files (.claude-plugin/commands/ai-board.health-security.md, ai-board.health-compliance.md, ai-board.health-tests.md, ai-board.health-spec-sync.md) to ensure consistent --base-commit and --head-commit parameter documentation
-- [ ] T005 Review and update shared JSON output base structure instructions in all 4 command files to ensure they specify the exact ScanCommandOutput fields: score (0-100), issuesFound, issuesFixed, report, tokensUsed, costUsd
+- [x] T004 Review and update shared argument handling instructions in all 4 command files (.claude-plugin/commands/ai-board.health-security.md, ai-board.health-compliance.md, ai-board.health-tests.md, ai-board.health-spec-sync.md) to ensure consistent --base-commit and --head-commit parameter documentation
+- [x] T005 Review and update shared JSON output base structure instructions in all 4 command files to ensure they specify the exact ScanCommandOutput fields: score (0-100), issuesFound, issuesFixed, report, tokensUsed, costUsd
 
 **Checkpoint**: Foundation ready - all commands share consistent argument handling and base output format
 
@@ -43,11 +43,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Review and update security scan instruction file .claude-plugin/commands/ai-board.health-security.md to ensure scan categories cover all FR-003 requirements: injection (SQL, XSS, command), authentication/authorization flaws, exposed secrets, vulnerable dependencies, OWASP Top 10, input validation gaps, error message information leakage
-- [ ] T007 [US1] Update .claude-plugin/commands/ai-board.health-security.md output format section to ensure SecurityReportPayload matches data-model.md: report.issues[] with severity (HIGH|MEDIUM|LOW), file, line, description, category fields; report.summary string
-- [ ] T008 [US1] Update .claude-plugin/commands/ai-board.health-security.md score calculation instructions to match SCORE_RULES: score = 100 - (HIGH*15 + MEDIUM*5 + LOW*1), floor 0
-- [ ] T009 [US1] Update .claude-plugin/commands/ai-board.health-security.md incremental scan instructions: when --base-commit provided, run git diff to get changed files and limit analysis to diff only; when absent, scan entire repository
-- [ ] T010 [US1] Update .claude-plugin/commands/ai-board.health-security.md edge case handling: baseCommit not found falls back to full scan with note; empty repo returns score 100 with empty issues and summary noting no analyzable code
+- [x] T006 [US1] Review and update security scan instruction file .claude-plugin/commands/ai-board.health-security.md to ensure scan categories cover all FR-003 requirements: injection (SQL, XSS, command), authentication/authorization flaws, exposed secrets, vulnerable dependencies, OWASP Top 10, input validation gaps, error message information leakage
+- [x] T007 [US1] Update .claude-plugin/commands/ai-board.health-security.md output format section to ensure SecurityReportPayload matches data-model.md: report.issues[] with severity (HIGH|MEDIUM|LOW), file, line, description, category fields; report.summary string
+- [x] T008 [US1] Update .claude-plugin/commands/ai-board.health-security.md score calculation instructions to match SCORE_RULES: score = 100 - (HIGH*15 + MEDIUM*5 + LOW*1), floor 0
+- [x] T009 [US1] Update .claude-plugin/commands/ai-board.health-security.md incremental scan instructions: when --base-commit provided, run git diff to get changed files and limit analysis to diff only; when absent, scan entire repository
+- [x] T010 [US1] Update .claude-plugin/commands/ai-board.health-security.md edge case handling: baseCommit not found falls back to full scan with note; empty repo returns score 100 with empty issues and summary noting no analyzable code
 
 **Checkpoint**: health-security command fully specified — produces valid SecurityReportPayload JSON
 
@@ -61,12 +61,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Review and update test scan instruction file .claude-plugin/commands/ai-board.health-tests.md to ensure test command detection logic matches research.md: priority order test:unit > test > vitest > jest, fallback to bun run test
-- [ ] T012 [US2] Update .claude-plugin/commands/ai-board.health-tests.md output format section to ensure TestsReportPayload matches data-model.md: report.issues[] with file, description, status="fixed"; report.nonFixable[] with file, description, reason; report.summary string
-- [ ] T013 [US2] Update .claude-plugin/commands/ai-board.health-tests.md auto-fix workflow instructions: for each failing test analyze error, attempt fix, re-run specific test to verify, commit fix individually to branch; report failed attempts as nonFixable with reason
-- [ ] T014 [US2] Update .claude-plugin/commands/ai-board.health-tests.md score calculation instructions to match SCORE_RULES: score = (passed / total) * 100, adjusted for auto-fixed (auto-fixed count as passed)
-- [ ] T015 [US2] Update .claude-plugin/commands/ai-board.health-tests.md to explicitly state it always runs full suite (FR-011) — ignores --base-commit parameter; document edge case when no test command found in package.json (report error issue)
-- [ ] T016 [US2] Update .claude-plugin/commands/ai-board.health-tests.md edge case handling: all tests pass returns perfect score with zero failures and zero auto-fixes; no test command detected reports error issue
+- [x] T011 [US2] Review and update test scan instruction file .claude-plugin/commands/ai-board.health-tests.md to ensure test command detection logic matches research.md: priority order test:unit > test > vitest > jest, fallback to bun run test
+- [x] T012 [US2] Update .claude-plugin/commands/ai-board.health-tests.md output format section to ensure TestsReportPayload matches data-model.md: report.issues[] with file, description, status="fixed"; report.nonFixable[] with file, description, reason; report.summary string
+- [x] T013 [US2] Update .claude-plugin/commands/ai-board.health-tests.md auto-fix workflow instructions: for each failing test analyze error, attempt fix, re-run specific test to verify, commit fix individually to branch; report failed attempts as nonFixable with reason
+- [x] T014 [US2] Update .claude-plugin/commands/ai-board.health-tests.md score calculation instructions to match SCORE_RULES: score = (passed / total) * 100, adjusted for auto-fixed (auto-fixed count as passed)
+- [x] T015 [US2] Update .claude-plugin/commands/ai-board.health-tests.md to explicitly state it always runs full suite (FR-011) — ignores --base-commit parameter; document edge case when no test command found in package.json (report error issue)
+- [x] T016 [US2] Update .claude-plugin/commands/ai-board.health-tests.md edge case handling: all tests pass returns perfect score with zero failures and zero auto-fixes; no test command detected reports error issue
 
 **Checkpoint**: health-tests command fully specified — produces valid TestsReportPayload JSON with auto-fix commits
 
@@ -80,12 +80,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Review and update compliance scan instruction file .claude-plugin/commands/ai-board.health-compliance.md to ensure constitution discovery matches research.md: check .ai-board/memory/constitution.md > .claude-plugin/memory/constitution.md > CLAUDE.md in order
-- [ ] T018 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md output format section to ensure ComplianceReportPayload matches data-model.md: report.issues[] with category (principle name), file, line, description; report.summary string
-- [ ] T019 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md to ensure per-principle evaluation with pass/partial/fail status is reflected in the report summary and issue categorization
-- [ ] T020 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md score calculation instructions to match SCORE_RULES: score = 100 - (fail*20 + partial*5) per principle, floor 0
-- [ ] T021 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md incremental scan instructions: when --base-commit provided, analyze only diff; when absent, scan entire repository
-- [ ] T022 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md edge case handling: no constitution found reports gracefully with score 0; principles with no corresponding code patterns marked as pass; full compliance returns score 100 with all principles pass
+- [x] T017 [US3] Review and update compliance scan instruction file .claude-plugin/commands/ai-board.health-compliance.md to ensure constitution discovery matches research.md: check .ai-board/memory/constitution.md > .claude-plugin/memory/constitution.md > CLAUDE.md in order
+- [x] T018 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md output format section to ensure ComplianceReportPayload matches data-model.md: report.issues[] with category (principle name), file, line, description; report.summary string
+- [x] T019 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md to ensure per-principle evaluation with pass/partial/fail status is reflected in the report summary and issue categorization
+- [x] T020 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md score calculation instructions to match SCORE_RULES: score = 100 - (fail*20 + partial*5) per principle, floor 0
+- [x] T021 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md incremental scan instructions: when --base-commit provided, analyze only diff; when absent, scan entire repository
+- [x] T022 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md edge case handling: no constitution found reports gracefully with score 0; principles with no corresponding code patterns marked as pass; full compliance returns score 100 with all principles pass
 
 **Checkpoint**: health-compliance command fully specified — produces valid ComplianceReportPayload JSON
 
@@ -99,12 +99,12 @@
 
 ### Implementation for User Story 4
 
-- [ ] T023 [US4] Review and update spec-sync scan instruction file .claude-plugin/commands/ai-board.health-spec-sync.md to ensure it reads each file in specs/specifications/ and compares declared endpoints/models/behaviors against codebase implementation
-- [ ] T024 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md output format section to ensure SpecSyncReportPayload matches data-model.md: report.specs[] with specPath, status (synced|drifted), drift (optional string when drifted); report.summary string
-- [ ] T025 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md to detect drift in both directions per FR-013: features specified but absent/modified in code, and code not covered by any spec
-- [ ] T026 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md score calculation instructions to match SCORE_RULES: score = (synced / total) * 100
-- [ ] T027 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md incremental scan instructions: when --base-commit provided, identify impacted specs from diff and only evaluate those; when absent, compare all specs
-- [ ] T028 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md edge case handling: no specs directory returns score 100 with empty specs list and note; all specs synced returns perfect score; missing implementation identified with spec name and expected behavior
+- [x] T023 [US4] Review and update spec-sync scan instruction file .claude-plugin/commands/ai-board.health-spec-sync.md to ensure it reads each file in specs/specifications/ and compares declared endpoints/models/behaviors against codebase implementation
+- [x] T024 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md output format section to ensure SpecSyncReportPayload matches data-model.md: report.specs[] with specPath, status (synced|drifted), drift (optional string when drifted); report.summary string
+- [x] T025 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md to detect drift in both directions per FR-013: features specified but absent/modified in code, and code not covered by any spec
+- [x] T026 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md score calculation instructions to match SCORE_RULES: score = (synced / total) * 100
+- [x] T027 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md incremental scan instructions: when --base-commit provided, identify impacted specs from diff and only evaluate those; when absent, compare all specs
+- [x] T028 [US4] Update .claude-plugin/commands/ai-board.health-spec-sync.md edge case handling: no specs directory returns score 100 with empty specs list and note; all specs synced returns perfect score; missing implementation identified with spec name and expected behavior
 
 **Checkpoint**: health-spec-sync command fully specified — produces valid SpecSyncReportPayload JSON
 
@@ -114,11 +114,11 @@
 
 **Purpose**: Final validation that all commands produce workflow-compatible output
 
-- [ ] T029 Validate all 4 command files produce JSON output ONLY to stdout — no extra text, logs, markdown formatting, or code fences per plan.md Layer 5 requirement
-- [ ] T030 Validate issuesFound field documentation: must equal total issue count across all arrays (issues.length for security/compliance, issues.length + nonFixable.length for tests, drifted count for spec-sync)
-- [ ] T031 Validate issuesFixed field documentation: must equal issues.length for tests (auto-fixed count), 0 for all other scan types
-- [ ] T032 Cross-check all 4 command files against lib/health/report-schemas.ts Zod schemas to confirm field names, types, and required/optional status are aligned
-- [ ] T033 Run quickstart.md validation — verify command execution flow matches the documented workflow integration in specs/AIB-378-copy-of-health/quickstart.md
+- [x] T029 Validate all 4 command files produce JSON output ONLY to stdout — no extra text, logs, markdown formatting, or code fences per plan.md Layer 5 requirement
+- [x] T030 Validate issuesFound field documentation: must equal total issue count across all arrays (issues.length for security/compliance, issues.length + nonFixable.length for tests, drifted count for spec-sync)
+- [x] T031 Validate issuesFixed field documentation: must equal issues.length for tests (auto-fixed count), 0 for all other scan types
+- [x] T032 Cross-check all 4 command files against lib/health/report-schemas.ts Zod schemas to confirm field names, types, and required/optional status are aligned
+- [x] T033 Run quickstart.md validation — verify command execution flow matches the documented workflow integration in specs/AIB-378-copy-of-health/quickstart.md
 
 ---
 
