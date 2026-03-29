@@ -53,7 +53,7 @@ export function HealthModuleCard({
 }: HealthModuleCardProps) {
   const Icon = MODULE_ICONS[moduleType];
   const label = MODULE_METADATA[moduleType].label;
-  const isPassive = module.passive === true;
+  const isPassive = !!module.passive;
   const state = getCardState(module, isScanning);
   const scoreColors = module.score !== null ? getScoreColor(module.score) : null;
 

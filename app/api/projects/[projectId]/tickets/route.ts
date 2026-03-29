@@ -124,8 +124,7 @@ export async function POST(
     const projectId = parseInt(projectIdString, 10);
 
     // Try workflow token auth first (for health scan workflow ticket creation)
-    const workflowAuth = validateWorkflowAuth(request);
-    const isWorkflowAuth = workflowAuth.isValid;
+    const isWorkflowAuth = validateWorkflowAuth(request).isValid;
 
     if (!isWorkflowAuth) {
       // Fall back to user session auth
@@ -233,7 +232,7 @@ export async function POST(
     if (!result.success) {
       const flattened = result.error.flatten();
 
-        const fieldErrorMessages = Object.entries(flattened.fieldErrors)
+      const fieldErrorMessages = Object.entries(flattened.fieldErrors)
         .map(
           ([field, errors]) =>
             `${field}: ${(errors as string[] | undefined)?.join(', ') || 'error'}`
