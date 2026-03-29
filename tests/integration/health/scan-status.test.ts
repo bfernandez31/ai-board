@@ -114,6 +114,48 @@ describe('Scan Status PATCH Endpoint', () => {
     expect(response.status).toBe(404);
   });
 
+  it('stores telemetry fields on COMPLETED status', async () => {
+    const scan = await createScan('RUNNING');
+    const response = await makeRequest(ctx.projectId, scan.id, {
+      status: 'COMPLETED',
+      score: 75,
+      issuesFound: 5,
+      issuesFixed: 2,
+      headCommit: 'b'.repeat(40),
+      durationMs: 60000,
+      tokensUsed: 150000,
+      costUsd: 1.23,
+    });
+
+    expect(response.status).toBe(200);
+
+    const updatedScan = await prisma.healthScan.findUnique({
+      where: { id: scan.id },
+    });
+    expect(updatedScan!.durationMs).toBe(60000);
+    expect(updatedScan!.tokensUsed).toBe(150000);
+    expect(updatedScan!.costUsd).toBe(1.23);
+    expect(updatedScan!.headCommit).toBe('b'.repeat(40));
+  });
+
+  it('stores durationMs on FAILED status', async () => {
+    const scan = await createScan('RUNNING');
+    const response = await makeRequest(ctx.projectId, scan.id, {
+      status: 'FAILED',
+      errorMessage: 'Scan command failed',
+      durationMs: 5000,
+    });
+
+    expect(response.status).toBe(200);
+
+    const updatedScan = await prisma.healthScan.findUnique({
+      where: { id: scan.id },
+    });
+    expect(updatedScan!.status).toBe('FAILED');
+    expect(updatedScan!.durationMs).toBe(5000);
+    expect(updatedScan!.errorMessage).toBe('Scan command failed');
+  });
+
   it('recalculates globalScore across multiple modules', async () => {
     // Create existing HealthScore with one module
     await prisma.healthScore.create({

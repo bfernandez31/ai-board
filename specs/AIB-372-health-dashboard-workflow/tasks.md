@@ -45,13 +45,13 @@
 
 ### Implementation for User Story 1 + 2
 
-- [ ] T004 [US1] Create workflow file skeleton with inputs, secrets, environment variables, and job definition in .github/workflows/health-scan.yml — define workflow_dispatch inputs (scan_id, project_id, scan_type, base_commit, head_commit, githubRepository, agent), secrets (WORKFLOW_API_TOKEN, GH_PAT, CLAUDE_CODE_OAUTH_TOKEN, CODEX_AUTH_JSON), and env vars (APP_URL, ANTHROPIC_MODEL, OTEL) per contracts/health-scan-workflow.md
-- [ ] T005 [US1] Add RUNNING status update step in .github/workflows/health-scan.yml — first step after job starts: curl PATCH to `{APP_URL}/api/projects/{project_id}/health/scans/{scan_id}/status` with `{"status": "RUNNING"}` and Bearer token auth
-- [ ] T006 [US1] Add repository checkout steps in .github/workflows/health-scan.yml — sparse checkout ai-board repo (`.claude-plugin` + `.github/scripts` only), full checkout target repo to `target/` with `fetch-depth: 0` using GH_PAT, symlink commands directory (`target/.claude/commands` -> ai-board `.claude-plugin/commands`)
-- [ ] T007 [US1] Add Node.js and Bun setup steps in .github/workflows/health-scan.yml — setup Node.js and Bun matching speckit.yml versions, configure git user as `ai-board[bot]`
-- [ ] T008 [US1] Add HEAD capture and scan command execution steps in .github/workflows/health-scan.yml — capture HEAD SHA via `git -C target rev-parse HEAD`, map scan_type to command name (SECURITY->health-security, COMPLIANCE->health-compliance, TESTS->health-tests, SPEC_SYNC->health-spec-sync), execute via `run-agent.sh {agent} {command} "scan_id={scan_id} project_id={project_id} base_commit={base_commit} head_commit={head_commit}"`, capture stdout to report file
-- [ ] T009 [US1] Add report parsing and COMPLETED status update step in .github/workflows/health-scan.yml — validate JSON output with jq, extract score/issuesFound/issuesFixed from report, PATCH status to COMPLETED with score, report JSON, issuesFound, issuesFixed, headCommit, and telemetry data
-- [ ] T010 [US1] Add error handling with FAILED status update in .github/workflows/health-scan.yml — on scan command failure: PATCH status to FAILED with error message and durationMs; on malformed JSON: FAILED with "Invalid scan report format"; use `if: failure()` or bash trap to ensure FAILED status is always sent; truncate errorMessage to 2000 chars
+- [x] T004 [US1] Create workflow file skeleton with inputs, secrets, environment variables, and job definition in .github/workflows/health-scan.yml — define workflow_dispatch inputs (scan_id, project_id, scan_type, base_commit, head_commit, githubRepository, agent), secrets (WORKFLOW_API_TOKEN, GH_PAT, CLAUDE_CODE_OAUTH_TOKEN, CODEX_AUTH_JSON), and env vars (APP_URL, ANTHROPIC_MODEL, OTEL) per contracts/health-scan-workflow.md
+- [x] T005 [US1] Add RUNNING status update step in .github/workflows/health-scan.yml — first step after job starts: curl PATCH to `{APP_URL}/api/projects/{project_id}/health/scans/{scan_id}/status` with `{"status": "RUNNING"}` and Bearer token auth
+- [x] T006 [US1] Add repository checkout steps in .github/workflows/health-scan.yml — sparse checkout ai-board repo (`.claude-plugin` + `.github/scripts` only), full checkout target repo to `target/` with `fetch-depth: 0` using GH_PAT, symlink commands directory (`target/.claude/commands` -> ai-board `.claude-plugin/commands`)
+- [x] T007 [US1] Add Node.js and Bun setup steps in .github/workflows/health-scan.yml — setup Node.js and Bun matching speckit.yml versions, configure git user as `ai-board[bot]`
+- [x] T008 [US1] Add HEAD capture and scan command execution steps in .github/workflows/health-scan.yml — capture HEAD SHA via `git -C target rev-parse HEAD`, map scan_type to command name (SECURITY->health-security, COMPLIANCE->health-compliance, TESTS->health-tests, SPEC_SYNC->health-spec-sync), execute via `run-agent.sh {agent} {command} "scan_id={scan_id} project_id={project_id} base_commit={base_commit} head_commit={head_commit}"`, capture stdout to report file
+- [x] T009 [US1] Add report parsing and COMPLETED status update step in .github/workflows/health-scan.yml — validate JSON output with jq, extract score/issuesFound/issuesFixed from report, PATCH status to COMPLETED with score, report JSON, issuesFound, issuesFixed, headCommit, and telemetry data
+- [x] T010 [US1] Add error handling with FAILED status update in .github/workflows/health-scan.yml — on scan command failure: PATCH status to FAILED with error message and durationMs; on malformed JSON: FAILED with "Invalid scan report format"; use `if: failure()` or bash trap to ensure FAILED status is always sent; truncate errorMessage to 2000 chars
 
 **Checkpoint**: Core workflow executes scans, reports status transitions in real time, and stores results. US1 and US2 are functional.
 
@@ -65,12 +65,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T011 [US3] Add ticket grouping logic for SECURITY scans in .github/workflows/health-scan.yml — use jq to group `report.issues[]` by severity (high/medium/low), create one ticket per non-empty severity group via POST to `{APP_URL}/api/projects/{project_id}/tickets` with title `[Health:Security] {Severity} severity issues` and markdown description listing issues with file paths and line numbers
-- [ ] T012 [US3] Add ticket grouping logic for COMPLIANCE scans in .github/workflows/health-scan.yml — group `report.issues[]` by category (constitution principle), create one ticket per violated principle with title `[Health:Compliance] {Principle} violations`
-- [ ] T013 [US3] Add ticket grouping logic for TESTS scans in .github/workflows/health-scan.yml — iterate `report.nonFixable[]` (skip autoFixed), create one ticket per non-fixable test failure with title `[Health:Tests] {test description}`
-- [ ] T014 [US3] Add ticket grouping logic for SPEC_SYNC scans in .github/workflows/health-scan.yml — filter `report.specs[]` by `status: "drifted"`, create one ticket per drifted spec with title `[Health:SpecSync] {specPath} drift`
-- [ ] T015 [US3] Add generatedTickets tracking and report update in .github/workflows/health-scan.yml — collect ticket keys from POST responses, update report JSON with `generatedTickets` array before sending final COMPLETED status; handle partial ticket creation failures (log error, continue remaining, scan still COMPLETED)
-- [ ] T016 [US3] Add integration test for ticket grouping via workflow-authenticated API in tests/integration/health/ticket-generation.test.ts — test security ticket grouping by severity, compliance by principle, tests by non-fixable items, spec_sync by drifted specs, verify zero-issue scans create no tickets
+- [x] T011 [US3] Add ticket grouping logic for SECURITY scans in .github/workflows/health-scan.yml — use jq to group `report.issues[]` by severity (high/medium/low), create one ticket per non-empty severity group via POST to `{APP_URL}/api/projects/{project_id}/tickets` with title `[Health:Security] {Severity} severity issues` and markdown description listing issues with file paths and line numbers
+- [x] T012 [US3] Add ticket grouping logic for COMPLIANCE scans in .github/workflows/health-scan.yml — group `report.issues[]` by category (constitution principle), create one ticket per violated principle with title `[Health:Compliance] {Principle} violations`
+- [x] T013 [US3] Add ticket grouping logic for TESTS scans in .github/workflows/health-scan.yml — iterate `report.nonFixable[]` (skip autoFixed), create one ticket per non-fixable test failure with title `[Health:Tests] {test description}`
+- [x] T014 [US3] Add ticket grouping logic for SPEC_SYNC scans in .github/workflows/health-scan.yml — filter `report.specs[]` by `status: "drifted"`, create one ticket per drifted spec with title `[Health:SpecSync] {specPath} drift`
+- [x] T015 [US3] Add generatedTickets tracking and report update in .github/workflows/health-scan.yml — collect ticket keys from POST responses, update report JSON with `generatedTickets` array before sending final COMPLETED status; handle partial ticket creation failures (log error, continue remaining, scan still COMPLETED)
+- [x] T016 [US3] Add integration test for ticket grouping via workflow-authenticated API in tests/integration/health/ticket-generation.test.ts — test security ticket grouping by severity, compliance by principle, tests by non-fixable items, spec_sync by drifted specs, verify zero-issue scans create no tickets
 
 **Checkpoint**: Workflow creates grouped tickets after scan completion. US3 is functional.
 
@@ -84,7 +84,7 @@
 
 ### Implementation for User Story 4
 
-- [ ] T017 [US4] Add base_commit validation step in .github/workflows/health-scan.yml — after repo checkout, validate base_commit exists via `git -C target cat-file -t {base_commit}`, if invalid or missing fallback to empty string (full scan) with warning log, set validated base_commit as step output for downstream steps
+- [x] T017 [US4] Add base_commit validation step in .github/workflows/health-scan.yml — after repo checkout, validate base_commit exists via `git -C target cat-file -t {base_commit}`, if invalid or missing fallback to empty string (full scan) with warning log, set validated base_commit as step output for downstream steps
 
 **Checkpoint**: Incremental scanning works. Full scan fallback handles invalid base_commits. US4 is functional.
 
@@ -98,8 +98,8 @@
 
 ### Implementation for User Story 5
 
-- [ ] T018 [US5] Add telemetry capture logic in .github/workflows/health-scan.yml — record `$SECONDS` before command start for wall-clock durationMs, configure OTEL telemetry export with scan_id as resource attribute, parse Claude Code JSON output for tokensUsed and costUsd (use `--output-format json` flag), fallback to duration-only if token parsing fails (Codex compatibility)
-- [ ] T019 [US5] Extend integration test for telemetry fields in tests/integration/health/scan-status.test.ts — verify COMPLETED status updates accept and store durationMs, tokensUsed, costUsd fields; verify FAILED status stores at least durationMs
+- [x] T018 [US5] Add telemetry capture logic in .github/workflows/health-scan.yml — record `$SECONDS` before command start for wall-clock durationMs, configure OTEL telemetry export with scan_id as resource attribute, parse Claude Code JSON output for tokensUsed and costUsd (use `--output-format json` flag), fallback to duration-only if token parsing fails (Codex compatibility)
+- [x] T019 [US5] Extend integration test for telemetry fields in tests/integration/health/scan-status.test.ts — verify COMPLETED status updates accept and store durationMs, tokensUsed, costUsd fields; verify FAILED status stores at least durationMs
 
 **Checkpoint**: All scans record telemetry. US5 is functional.
 
