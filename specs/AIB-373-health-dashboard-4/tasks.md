@@ -134,9 +134,9 @@
 
 **Purpose**: Validate ticket grouping across all report types and run full test suite
 
-- [X] T035 [P] Add unit test: groupIssuesIntoTickets() produces correct tickets from SecurityReport in tests/unit/health/command-output-validation.test.ts
-- [X] T036 [P] Add unit test: groupIssuesIntoTickets() produces correct tickets from ComplianceReport in tests/unit/health/command-output-validation.test.ts
-- [X] T037 [P] Add unit test: groupIssuesIntoTickets() produces correct tickets from TestsReport in tests/unit/health/command-output-validation.test.ts
+- [~~REMOVED~~] T035 ~~groupIssuesIntoTickets() SecurityReport test~~ — Removed: function is dead code; production ticket grouping uses bash/jq in health-scan.yml
+- [~~REMOVED~~] T036 ~~groupIssuesIntoTickets() ComplianceReport test~~ — Removed: same reason as T035
+- [~~REMOVED~~] T037 ~~groupIssuesIntoTickets() TestsReport test~~ — Removed: same reason as T035
 - [X] T038 Run full test suite (bun run test:unit) to verify all new tests pass and no regressions
 - [X] T039 Run type-check (bun run type-check) and lint (bun run lint) to verify no errors
 

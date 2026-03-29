@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { parseScanReport, scanReportSchema } from '@/lib/health/report-schemas';
-import { groupIssuesIntoTickets } from '@/lib/health/ticket-creation';
 import type {
   SecurityReport,
   ComplianceReport,
@@ -290,60 +289,3 @@ describe('SpecSyncReport schema validation', () => {
   });
 });
 
-// --- Cross-cutting: groupIssuesIntoTickets ---
-
-describe('groupIssuesIntoTickets()', () => {
-  it('produces correct tickets from SecurityReport (one per severity)', () => {
-    const report: SecurityReport = {
-      type: 'SECURITY',
-      issues: [
-        makeIssue({ id: 'sec-001', severity: 'high', description: 'SQL injection', file: 'lib/db.ts', line: 10, category: 'injection' }),
-        makeIssue({ id: 'sec-002', severity: 'high', description: 'XSS in template', file: 'lib/render.ts', line: 5, category: 'injection' }),
-        makeIssue({ id: 'sec-003', severity: 'low', description: 'Debug mode on', file: 'config.ts', line: 1, category: 'misconfiguration' }),
-      ],
-      generatedTickets: [],
-    };
-    const tickets = groupIssuesIntoTickets('SECURITY', report);
-    expect(tickets).toHaveLength(2); // high (2 issues) + low (1 issue)
-    expect(tickets.every((t) => t.stage === 'INBOX')).toBe(true);
-    expect(tickets.every((t) => t.workflowType === 'QUICK')).toBe(true);
-    const highTicket = tickets.find((t) => t.title.includes('HIGH'));
-    expect(highTicket).toBeDefined();
-    expect(highTicket!.title).toContain('2');
-  });
-
-  it('produces correct tickets from ComplianceReport (one per category)', () => {
-    const report: ComplianceReport = {
-      type: 'COMPLIANCE',
-      issues: [
-        makeIssue({ id: 'comp-ts-001', severity: 'medium', description: 'any type used', file: 'lib/a.ts', line: 1, category: 'TypeScript-First' }),
-        makeIssue({ id: 'comp-ts-002', severity: 'medium', description: 'missing annotation', file: 'lib/b.ts', line: 2, category: 'TypeScript-First' }),
-        makeIssue({ id: 'comp-sec-001', severity: 'high', description: 'hardcoded color', file: 'ui/c.tsx', line: 3, category: 'Security-First' }),
-      ],
-      generatedTickets: [],
-    };
-    const tickets = groupIssuesIntoTickets('COMPLIANCE', report);
-    expect(tickets).toHaveLength(2); // TypeScript-First + Security-First
-    const tsTicket = tickets.find((t) => t.title.includes('TypeScript-First'));
-    expect(tsTicket).toBeDefined();
-    expect(tsTicket!.title).toContain('2 violation');
-  });
-
-  it('produces correct tickets from TestsReport (one per nonFixable)', () => {
-    const report: TestsReport = {
-      type: 'TESTS',
-      autoFixed: [
-        makeIssue({ id: 'test-fix-001', severity: 'medium', description: 'Fixed assertion', file: 'tests/a.test.ts', line: 1 }),
-      ],
-      nonFixable: [
-        makeIssue({ id: 'test-fail-001', severity: 'high', description: 'Needs DB seed', file: 'tests/b.test.ts', line: 5 }),
-        makeIssue({ id: 'test-fail-002', severity: 'high', description: 'Timeout issue', file: 'tests/c.test.ts', line: 10 }),
-      ],
-      generatedTickets: [],
-    };
-    const tickets = groupIssuesIntoTickets('TESTS', report);
-    expect(tickets).toHaveLength(2); // one per nonFixable
-    expect(tickets[0].title).toContain('Needs DB seed');
-    expect(tickets[1].title).toContain('Timeout issue');
-  });
-});
