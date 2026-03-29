@@ -15,7 +15,7 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 ```
 .claude-plugin/
 ├── plugin.json                          # Plugin metadata (name, version, description)
-├── commands/                            # 17 slash commands (ai-board.*.md)
+├── commands/                            # 21 slash commands (ai-board.*.md)
 │   ├── ai-board.specify.md              # Generate feature specification
 │   ├── ai-board.clarify.md              # Ask clarification questions on spec
 │   ├── ai-board.plan.md                 # Generate implementation plan
@@ -32,7 +32,11 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 │   ├── ai-board.assist.md               # AI assistant for @ai-board mentions
 │   ├── ai-board.compare.md              # Compare tickets (telemetry/specs)
 │   ├── ai-board.analyze.md              # Cross-artifact consistency analysis
-│   └── ai-board.constitution.md         # Create/update project constitution
+│   ├── ai-board.constitution.md         # Create/update project constitution
+│   ├── ai-board.health-security.md      # Health scan: OWASP/security analysis
+│   ├── ai-board.health-compliance.md    # Health scan: constitution compliance analysis
+│   ├── ai-board.health-tests.md         # Health scan: test execution + auto-fix
+│   └── ai-board.health-spec-sync.md     # Health scan: spec/code drift detection
 ├── templates/                           # Document templates used by commands
 │   ├── spec-template.md                 # Specification template
 │   ├── plan-template.md                 # Implementation plan template
@@ -90,6 +94,10 @@ Each command is designed to run at a specific workflow stage. Commands are invok
 | `ai-board.compare` | Any | `ai-board-assist.yml` | Compare tickets (telemetry + specs) |
 | `ai-board.analyze` | Local only | — | Cross-artifact consistency analysis |
 | `ai-board.constitution` | Local only | — | Create/update project constitution |
+| `ai-board.health-security` | Health scan | `health-scan.yml` | OWASP Top 10 security analysis; outputs `SecurityReport` JSON |
+| `ai-board.health-compliance` | Health scan | `health-scan.yml` | Constitution principle compliance analysis; outputs `ComplianceReport` JSON |
+| `ai-board.health-tests` | Health scan | `health-scan.yml` | Full test-suite execution with auto-fix workflow; outputs `TestsReport` JSON |
+| `ai-board.health-spec-sync` | Health scan | `health-scan.yml` | Bidirectional spec/code drift detection; outputs `SpecSyncReport` JSON |
 
 ### Workflow Type → Command Sequence
 
@@ -250,7 +258,7 @@ The `run-agent.sh` script abstracts CLI differences:
 
 ### Command Compatibility
 
-All 17 commands are designed to work with both agents. Key differences:
+All 21 commands are designed to work with both agents. Key differences:
 
 - **Claude**: Commands are invoked as native slash commands (`/ai-board.implement`)
 - **Codex**: Command `.md` file content is read and injected as a prompt via stdin, with arguments appended
