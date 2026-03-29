@@ -1,0 +1,347 @@
+name: Health Scan Execution
+
+on:
+  workflow_dispatch:
+    inputs:
+      scan_id:
+        description: 'Health scan record ID'
+        required: true
+        type: string
+      project_id:
+        description: 'Project ID'
+        required: true
+        type: string
+      scan_type:
+        description: 'Scan type (SECURITY|COMPLIANCE|TESTS|SPEC_SYNC)'
+        required: true
+        type: string
+      base_commit:
+        description: 'Base commit SHA for incremental scan (empty for full scan)'
+        required: false
+        type: string
+        default: ''
+      head_commit:
+        description: 'Head commit SHA (empty to use current HEAD)'
+        required: false
+        type: string
+        default: ''
+      githubRepository:
+        description: 'Target repository in format owner/repo'
+        required: true
+        type: string
+      agent:
+        description: 'Agent type (CLAUDE or CODEX)'
+        required: false
+        type: string
+        default: 'CLAUDE'
+
+jobs:
+  run-health-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      APP_URL: ${{ vars.APP_URL }}
+      WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      ANTHROPIC_MODEL: "claude-opus-4-6"
+
+    steps:
+      - name: Debug Inputs
+        run: |
+          echo "🔍 Health scan inputs:"
+          echo "  scan_id: ${{ inputs.scan_id }}"
+          echo "  project_id: ${{ inputs.project_id }}"
+          echo "  scan_type: ${{ inputs.scan_type }}"
+          echo "  base_commit: ${{ inputs.base_commit }}"
+          echo "  head_commit: ${{ inputs.head_commit }}"
+          echo "  githubRepository: ${{ inputs.githubRepository }}"
+
+      # Checkout ai-board for commands and scripts (sparse, from main = stable tools)
+      - name: Checkout ai-board (sparse - plugin and scripts)
+        uses: actions/checkout@v4
+        with:
+          path: ai-board
+          sparse-checkout: |
+            .claude-plugin
+            .github/scripts
+          sparse-checkout-cone-mode: true
+
+      # Step 1: Checkout target repository (US1 T006)
+      - name: Checkout Target Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.githubRepository }}
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+          path: target
+
+      # Step 2: Update scan status to RUNNING (US1 T007)
+      - name: Update Scan Status - RUNNING
+        run: |
+          curl -X PATCH "${APP_URL}/api/projects/${{ inputs.project_id }}/health/scans/${{ inputs.scan_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d '{"status": "RUNNING"}' \
+            -f -s -S || echo "⚠️ Failed to update scan status to RUNNING"
+
+      # Step 3: Map scan type to command (US1 T008) — static mapping, no dynamic construction (FR-013)
+      - name: Map Scan Type to Command
+        id: scan-command
+        run: |
+          case "${{ inputs.scan_type }}" in
+            SECURITY)
+              echo "command=health-security" >> $GITHUB_OUTPUT
+              ;;
+            COMPLIANCE)
+              echo "command=health-compliance" >> $GITHUB_OUTPUT
+              ;;
+            TESTS)
+              echo "command=health-tests" >> $GITHUB_OUTPUT
+              ;;
+            SPEC_SYNC)
+              echo "command=health-spec-sync" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "❌ Unknown scan type: ${{ inputs.scan_type }}"
+              exit 1
+              ;;
+          esac
+          echo "✅ Mapped ${{ inputs.scan_type }} → ai-board.$(grep command <<< "$(cat $GITHUB_OUTPUT)" | cut -d= -f2)"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.20.0'
+
+      # Step 4: Execute scan command (US1 T009, US3 T015, US6 T021)
+      - name: Execute Scan Command
+        id: scan-exec
+        working-directory: target
+        run: |
+          set -o pipefail
+          SCAN_CMD="${{ steps.scan-command.outputs.command }}"
+          BASE_COMMIT="${{ inputs.base_commit }}"
+          HEAD_COMMIT="${{ inputs.head_commit }}"
+
+          # Build command arguments (US3: incremental vs full scan)
+          SCAN_ARGS=""
+          if [ -n "$BASE_COMMIT" ]; then
+            SCAN_ARGS="--base-commit $BASE_COMMIT"
+          fi
+          if [ -n "$HEAD_COMMIT" ]; then
+            SCAN_ARGS="$SCAN_ARGS --head-commit $HEAD_COMMIT"
+          fi
+
+          echo "🔍 Running scan: $SCAN_CMD $SCAN_ARGS"
+
+          # Track duration (US6: telemetry)
+          SECONDS=0
+
+          # Execute scan via run-agent.sh (established pattern for all workflows)
+          if ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.${SCAN_CMD}" "${SCAN_ARGS}" > /tmp/scan_output.json 2>/tmp/scan_stderr.txt; then
+            DURATION_MS=$((SECONDS * 1000))
+            echo "duration_ms=$DURATION_MS" >> $GITHUB_OUTPUT
+            echo "scan_success=true" >> $GITHUB_OUTPUT
+
+            # Extract results from JSON output
+            SCORE=$(jq -r '.score // 0' /tmp/scan_output.json)
+            ISSUES_FOUND=$(jq -r '.issuesFound // 0' /tmp/scan_output.json)
+            ISSUES_FIXED=$(jq -r '.issuesFixed // 0' /tmp/scan_output.json)
+            REPORT=$(jq -c '.report // {}' /tmp/scan_output.json)
+            TOKENS_USED=$(jq -r '.tokensUsed // empty' /tmp/scan_output.json)
+            COST_USD=$(jq -r '.costUsd // empty' /tmp/scan_output.json)
+
+            echo "score=$SCORE" >> $GITHUB_OUTPUT
+            echo "issues_found=$ISSUES_FOUND" >> $GITHUB_OUTPUT
+            echo "issues_fixed=$ISSUES_FIXED" >> $GITHUB_OUTPUT
+            echo "tokens_used=$TOKENS_USED" >> $GITHUB_OUTPUT
+            echo "cost_usd=$COST_USD" >> $GITHUB_OUTPUT
+
+            # Store report in file (may be large)
+            echo "$REPORT" > /tmp/scan_report.json
+
+            echo "✅ Scan completed: score=$SCORE, issues=$ISSUES_FOUND"
+          else
+            DURATION_MS=$((SECONDS * 1000))
+            echo "duration_ms=$DURATION_MS" >> $GITHUB_OUTPUT
+            echo "scan_success=false" >> $GITHUB_OUTPUT
+
+            # Capture error (truncate to 2000 chars)
+            ERROR_MSG=$(head -c 2000 /tmp/scan_stderr.txt)
+            echo "error_msg<<EOF_ERROR" >> $GITHUB_OUTPUT
+            echo "$ERROR_MSG" >> $GITHUB_OUTPUT
+            echo "EOF_ERROR" >> $GITHUB_OUTPUT
+
+            echo "❌ Scan failed"
+          fi
+
+      # Step 5: Create remediation tickets from scan results (US2 T013)
+      # NOTE: Tickets are created BEFORE marking COMPLETED per spec (integrations.md)
+      - name: Create Remediation Tickets
+        if: ${{ steps.scan-exec.outputs.scan_success == 'true' && steps.scan-exec.outputs.issues_found > 0 }}
+        run: |
+          SCAN_TYPE="${{ inputs.scan_type }}"
+          REPORT=$(cat /tmp/scan_report.json)
+
+          # Parse report and create grouped tickets based on scan type
+          case "$SCAN_TYPE" in
+            SECURITY)
+              # Group by severity
+              echo "$REPORT" | jq -r '.issues // [] | group_by(.severity) | .[] | {
+                severity: .[0].severity,
+                count: length,
+                details: [.[] | "\(.file // "unknown"):\(.line // "?"): \(.description)"] | join("\n")
+              }' | jq -c '.' | while read -r group; do
+                SEVERITY=$(echo "$group" | jq -r '.severity')
+                COUNT=$(echo "$group" | jq -r '.count')
+                DETAILS=$(echo "$group" | jq -r '.details')
+                TITLE="[Security] Fix ${COUNT} ${SEVERITY^^} severity issue$([ "$COUNT" -gt 1 ] && echo 's')"
+                DESC="Health scan found ${COUNT} ${SEVERITY^^} severity security issue$([ "$COUNT" -gt 1 ] && echo 's'):\n\n${DETAILS}"
+
+                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
+                  -H "Content-Type: application/json" \
+                  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+                  -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d, stage: "INBOX", workflowType: "QUICK"}')" \
+                  -f -s -S || echo "⚠️ Failed to create ticket: $TITLE"
+              done
+              ;;
+            COMPLIANCE)
+              # Group by category/principle
+              echo "$REPORT" | jq -r '.issues // [] | group_by(.category // "General") | .[] | {
+                category: .[0].category // "General",
+                count: length,
+                details: [.[] | "\(.file // "unknown"):\(.line // "?"): \(.description)"] | join("\n")
+              }' | jq -c '.' | while read -r group; do
+                CATEGORY=$(echo "$group" | jq -r '.category')
+                COUNT=$(echo "$group" | jq -r '.count')
+                DETAILS=$(echo "$group" | jq -r '.details')
+                TITLE="[Compliance] Fix ${COUNT} violation$([ "$COUNT" -gt 1 ] && echo 's') — ${CATEGORY}"
+                DESC="Health scan found ${COUNT} compliance violation$([ "$COUNT" -gt 1 ] && echo 's') for principle \"${CATEGORY}\":\n\n${DETAILS}"
+
+                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
+                  -H "Content-Type: application/json" \
+                  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+                  -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d, stage: "INBOX", workflowType: "QUICK"}')" \
+                  -f -s -S || echo "⚠️ Failed to create ticket: $TITLE"
+              done
+              ;;
+            TESTS)
+              # One ticket per non-fixable test
+              echo "$REPORT" | jq -c '.nonFixable // [] | .[]' | while read -r issue; do
+                DESC_TEXT=$(echo "$issue" | jq -r '.description')
+                FILE=$(echo "$issue" | jq -r '.file // "Unknown"')
+                TITLE="[Tests] Fix failing test: $(echo "$DESC_TEXT" | head -c 80)"
+                DESC="Health scan found a non-fixable test failure:\n\n- **Test**: ${DESC_TEXT}\n- **File**: ${FILE}"
+
+                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
+                  -H "Content-Type: application/json" \
+                  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+                  -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d, stage: "INBOX", workflowType: "QUICK"}')" \
+                  -f -s -S || echo "⚠️ Failed to create ticket: $TITLE"
+              done
+              ;;
+            SPEC_SYNC)
+              # One ticket per drifted spec
+              echo "$REPORT" | jq -c '.specs // [] | .[] | select(.status == "drifted")' | while read -r spec; do
+                SPEC_PATH=$(echo "$spec" | jq -r '.specPath')
+                DRIFT=$(echo "$spec" | jq -r '.drift // "Specification out of sync with implementation"')
+                TITLE="[Spec Sync] Resynchronize ${SPEC_PATH}"
+                DESC="Health scan detected spec drift:\n\n- **Spec**: ${SPEC_PATH}\n- **Drift**: ${DRIFT}"
+
+                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
+                  -H "Content-Type: application/json" \
+                  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+                  -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d, stage: "INBOX", workflowType: "QUICK"}')" \
+                  -f -s -S || echo "⚠️ Failed to create ticket: $TITLE"
+              done
+              ;;
+          esac
+
+          echo "✅ Remediation tickets created"
+
+      # Step 6: Update status to COMPLETED with results (US1 T010, US4 T017, US6 T021)
+      # NOTE: Runs AFTER ticket creation per spec (integrations.md)
+      - name: Update Scan Status - COMPLETED
+        if: ${{ steps.scan-exec.outputs.scan_success == 'true' }}
+        working-directory: target
+        run: |
+          REPORT=$(cat /tmp/scan_report.json)
+          HEAD_COMMIT="${{ inputs.head_commit }}"
+
+          # If no head_commit provided, use current HEAD
+          if [ -z "$HEAD_COMMIT" ]; then
+            HEAD_COMMIT=$(git rev-parse HEAD)
+          fi
+
+          # Build payload with telemetry (US6)
+          PAYLOAD=$(jq -n \
+            --arg status "COMPLETED" \
+            --argjson score ${{ steps.scan-exec.outputs.score }} \
+            --arg report "$REPORT" \
+            --argjson issuesFound ${{ steps.scan-exec.outputs.issues_found }} \
+            --argjson issuesFixed ${{ steps.scan-exec.outputs.issues_fixed }} \
+            --arg headCommit "$HEAD_COMMIT" \
+            --argjson durationMs ${{ steps.scan-exec.outputs.duration_ms }} \
+            '{
+              status: $status,
+              score: $score,
+              report: $report,
+              issuesFound: $issuesFound,
+              issuesFixed: $issuesFixed,
+              headCommit: $headCommit,
+              durationMs: $durationMs
+            }')
+
+          # Add optional telemetry fields
+          TOKENS="${{ steps.scan-exec.outputs.tokens_used }}"
+          COST="${{ steps.scan-exec.outputs.cost_usd }}"
+          if [ -n "$TOKENS" ]; then
+            PAYLOAD=$(echo "$PAYLOAD" | jq --argjson t "$TOKENS" '. + {tokensUsed: $t}')
+          fi
+          if [ -n "$COST" ]; then
+            PAYLOAD=$(echo "$PAYLOAD" | jq --argjson c "$COST" '. + {costUsd: $c}')
+          fi
+
+          curl -X PATCH "${APP_URL}/api/projects/${{ inputs.project_id }}/health/scans/${{ inputs.scan_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d "$PAYLOAD" \
+            -f -s -S
+
+          echo "✅ Scan status updated to COMPLETED (score: ${{ steps.scan-exec.outputs.score }})"
+
+      # Error handling: Update status to FAILED (US5 T019)
+      - name: Update Scan Status - FAILED
+        if: ${{ steps.scan-exec.outputs.scan_success == 'false' }}
+        run: |
+          ERROR_MSG="${{ steps.scan-exec.outputs.error_msg }}"
+          if [ -z "$ERROR_MSG" ]; then
+            ERROR_MSG="Workflow step failed — check GitHub Actions logs"
+          fi
+
+          # Truncate to 2000 chars
+          ERROR_MSG=$(echo "$ERROR_MSG" | head -c 2000)
+
+          PAYLOAD=$(jq -n \
+            --arg status "FAILED" \
+            --arg errorMessage "$ERROR_MSG" \
+            --argjson durationMs "${{ steps.scan-exec.outputs.duration_ms || 0 }}" \
+            '{status: $status, errorMessage: $errorMessage, durationMs: $durationMs}')
+
+          curl -X PATCH "${APP_URL}/api/projects/${{ inputs.project_id }}/health/scans/${{ inputs.scan_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d "$PAYLOAD" \
+            -f -s -S || echo "⚠️ Failed to update scan status to FAILED"
+
+          echo "❌ Scan marked as FAILED"
+
+      - name: Report Success
+        if: ${{ steps.scan-exec.outputs.scan_success == 'true' }}
+        run: |
+          echo "✅ Health scan completed successfully"
+          echo "  Type: ${{ inputs.scan_type }}"
+          echo "  Score: ${{ steps.scan-exec.outputs.score }}"
+          echo "  Issues: ${{ steps.scan-exec.outputs.issues_found }} found, ${{ steps.scan-exec.outputs.issues_fixed }} fixed"
+          echo "  Duration: ${{ steps.scan-exec.outputs.duration_ms }}ms"

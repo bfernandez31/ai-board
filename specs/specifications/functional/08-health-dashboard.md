@@ -84,6 +84,19 @@ Clicking the action button on an active module card triggers a scan:
 
 **No active scans button when passive**: Quality Gate and Last Clean cards never show an action button.
 
+## Automatic Ticket Creation
+
+When an active module scan completes and issues are found, the system automatically creates remediation tickets in the project's INBOX stage with the QUICK workflow type. Tickets are grouped according to each module's issue structure:
+
+| Module | Grouping Rule |
+|--------|--------------|
+| Security | One ticket per severity level (e.g., one for all HIGH issues, one for MEDIUM) |
+| Compliance | One ticket per violated constitution principle |
+| Tests | One ticket per unfixable failing test |
+| Spec Sync | One ticket per desynchronized spec |
+
+Each ticket includes the affected files, line numbers, and issue descriptions. When a scan finds zero issues, no tickets are created. Tickets created this way appear on the board immediately and are linked from the "Generated Tickets" section of the Scan Detail Drawer.
+
 ## Incremental Scanning
 
 The first scan of any module type performs a full analysis with no base commit. Each subsequent scan of the same type uses the previous scan's `headCommit` as the `baseCommit`, limiting analysis to only the commits introduced since the last scan. Each module type maintains its own independent scan cursor.

@@ -118,6 +118,13 @@ export function HealthModuleCard({
   );
 }
 
+const BUTTON_LABELS: Record<CardState, string> = {
+  never_scanned: 'Run first scan',
+  completed: 'Re-run scan',
+  failed: 'Retry',
+  scanning: '',
+};
+
 function ScanButton({
   state,
   onTriggerScan,
@@ -135,13 +142,6 @@ function ScanButton({
       </Button>
     );
   }
-
-  const BUTTON_LABELS: Record<CardState, string> = {
-    never_scanned: 'Run first scan',
-    completed: 'Re-run scan',
-    failed: 'Retry',
-    scanning: '',
-  };
 
   return (
     <Button
