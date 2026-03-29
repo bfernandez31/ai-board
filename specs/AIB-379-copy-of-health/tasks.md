@@ -28,9 +28,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T001 Extend `HealthModuleStatus` with optional fields (`ticketCount`, `trend`, `trendDelta`, `distribution`, `stalenessStatus`, `filesCleaned`) in `lib/health/types.ts`
-- [ ] T002 [P] Create Quality Gate computation helper with `getQualityGateData(projectId)` returning `QualityGateDetails` in `lib/health/quality-gate.ts`
-- [ ] T003 [P] Create Last Clean computation helper with `getLastCleanData(projectId)` returning `LastCleanDetails` in `lib/health/last-clean.ts`
+- [x] T001 Extend `HealthModuleStatus` with optional fields (`ticketCount`, `trend`, `trendDelta`, `distribution`, `stalenessStatus`, `filesCleaned`) in `lib/health/types.ts`
+- [x] T002 [P] Create Quality Gate computation helper with `getQualityGateData(projectId)` returning `QualityGateDetails` in `lib/health/quality-gate.ts`
+- [x] T003 [P] Create Last Clean computation helper with `getLastCleanData(projectId)` returning `LastCleanDetails` in `lib/health/last-clean.ts`
 
 **Checkpoint**: Foundation ready — type definitions and shared helpers available for all user stories
 
@@ -44,16 +44,16 @@
 
 ### Tests for User Story 1
 
-- [ ] T004 [P] [US1] Create unit tests for Quality Gate aggregation logic (average, trend, distribution) in `tests/unit/health/quality-gate.test.ts`
-- [ ] T005 [P] [US1] Create integration tests for Quality Gate details API endpoint in `tests/integration/health/quality-gate-details.test.ts`
-- [ ] T006 [P] [US1] Extend health score integration tests with 30-day average, trend, and distribution assertions in `tests/integration/health/health-score.test.ts`
+- [x] T004 [P] [US1] Create unit tests for Quality Gate aggregation logic (average, trend, distribution) in `tests/unit/health/quality-gate.test.ts`
+- [x] T005 [P] [US1] Create integration tests for Quality Gate details API endpoint in `tests/integration/health/quality-gate-details.test.ts`
+- [x] T006 [P] [US1] Extend health score integration tests with 30-day average, trend, and distribution assertions in `tests/integration/health/health-score.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Create Quality Gate details API endpoint (`GET` handler with auth) in `app/api/projects/[projectId]/health/quality-gate/route.ts`
-- [ ] T008 [US1] Update health endpoint to use 30-day average from `getQualityGateData()`, add `ticketCount`, `trend`, `trendDelta`, `distribution` to qualityGate module response in `app/api/projects/[projectId]/health/route.ts`
-- [ ] T009 [US1] Update `HealthModuleCard` to render ticket count, trend arrow (up/down/stable with color), and threshold distribution for Quality Gate module in `components/health/health-module-card.tsx`
-- [ ] T010 [US1] Update global Health Score calculation to pass 30-day average `qualityGate` score and update `HealthScore.qualityGate` cache field in `app/api/projects/[projectId]/health/route.ts`
+- [x] T007 [US1] Create Quality Gate details API endpoint (`GET` handler with auth) in `app/api/projects/[projectId]/health/quality-gate/route.ts`
+- [x] T008 [US1] Update health endpoint to use 30-day average from `getQualityGateData()`, add `ticketCount`, `trend`, `trendDelta`, `distribution` to qualityGate module response in `app/api/projects/[projectId]/health/route.ts`
+- [x] T009 [US1] Update `HealthModuleCard` to render ticket count, trend arrow (up/down/stable with color), and threshold distribution for Quality Gate module in `components/health/health-module-card.tsx`
+- [x] T010 [US1] Update global Health Score calculation to pass 30-day average `qualityGate` score and update `HealthScore.qualityGate` cache field in `app/api/projects/[projectId]/health/route.ts`
 
 **Checkpoint**: Quality Gate card displays correct 30-day average, trend, and distribution. Global Health Score uses 30-day average.
 
@@ -67,13 +67,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T011 [P] [US2] Create component tests for Quality Gate drawer (dimensions, tickets, chart, empty/loading states) in `tests/unit/components/quality-gate-drawer.test.tsx`
+- [x] T011 [P] [US2] Create component tests for Quality Gate drawer (dimensions, tickets, chart, empty/loading states) in `tests/unit/components/quality-gate-drawer.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T012 [P] [US2] Create `useQualityGateDetails` TanStack Query hook fetching `GET /api/projects/:projectId/health/quality-gate` in `app/lib/hooks/useQualityGateDetails.ts`
-- [ ] T013 [US2] Create `QualityGateDrawer` component with header (score badge, ticket count, trend), dimension breakdown (5 dimensions with bars), threshold distribution, Recharts trend chart, and recent tickets list in `components/health/drawer/quality-gate-drawer.tsx`
-- [ ] T014 [US2] Make Quality Gate card clickable by removing `ACTIVE_SCAN_SET` gate on `onClick` and routing clicks to `QualityGateDrawer` in `components/health/health-dashboard.tsx`
+- [x] T012 [P] [US2] Create `useQualityGateDetails` TanStack Query hook fetching `GET /api/projects/:projectId/health/quality-gate` in `app/lib/hooks/useQualityGateDetails.ts`
+- [x] T013 [US2] Create `QualityGateDrawer` component with header (score badge, ticket count, trend), dimension breakdown (5 dimensions with bars), threshold distribution, Recharts trend chart, and recent tickets list in `components/health/drawer/quality-gate-drawer.tsx`
+- [x] T014 [US2] Make Quality Gate card clickable by removing `ACTIVE_SCAN_SET` gate on `onClick` and routing clicks to `QualityGateDrawer` in `components/health/health-dashboard.tsx`
 
 **Checkpoint**: Quality Gate card is clickable, drawer shows dimension breakdown, ticket list, and trend chart.
 
@@ -87,14 +87,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T015 [P] [US3] Create unit tests for Last Clean staleness calculation and output parsing in `tests/unit/health/last-clean.test.ts`
-- [ ] T016 [P] [US3] Create integration tests for Last Clean details API endpoint (staleness thresholds, graceful degradation, empty state) in `tests/integration/health/last-clean-details.test.ts`
+- [x] T015 [P] [US3] Create unit tests for Last Clean staleness calculation and output parsing in `tests/unit/health/last-clean.test.ts`
+- [x] T016 [P] [US3] Create integration tests for Last Clean details API endpoint (staleness thresholds, graceful degradation, empty state) in `tests/integration/health/last-clean-details.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Create Last Clean details API endpoint (`GET` handler with auth) in `app/api/projects/[projectId]/health/last-clean/route.ts`
-- [ ] T018 [US3] Update health endpoint to add `stalenessStatus` and `filesCleaned` to lastClean module response in `app/api/projects/[projectId]/health/route.ts`
-- [ ] T019 [US3] Update `HealthModuleCard` to render staleness visual state (green/yellow/red border or background tint), file count, and days since cleanup for Last Clean module in `components/health/health-module-card.tsx`
+- [x] T017 [US3] Create Last Clean details API endpoint (`GET` handler with auth) in `app/api/projects/[projectId]/health/last-clean/route.ts`
+- [x] T018 [US3] Update health endpoint to add `stalenessStatus` and `filesCleaned` to lastClean module response in `app/api/projects/[projectId]/health/route.ts`
+- [x] T019 [US3] Update `HealthModuleCard` to render staleness visual state (green/yellow/red border or background tint), file count, and days since cleanup for Last Clean module in `components/health/health-module-card.tsx`
 
 **Checkpoint**: Last Clean card shows date, file count, and correct staleness visual indicator. Does NOT contribute to global Health Score.
 
@@ -108,13 +108,13 @@
 
 ### Tests for User Story 4
 
-- [ ] T020 [P] [US4] Create component tests for Last Clean drawer (staleness badge, history list, graceful degradation, empty state) in `tests/unit/components/last-clean-drawer.test.tsx`
+- [x] T020 [P] [US4] Create component tests for Last Clean drawer (staleness badge, history list, graceful degradation, empty state) in `tests/unit/components/last-clean-drawer.test.tsx`
 
 ### Implementation for User Story 4
 
-- [ ] T021 [P] [US4] Create `useLastCleanDetails` TanStack Query hook fetching `GET /api/projects/:projectId/health/last-clean` in `app/lib/hooks/useLastCleanDetails.ts`
-- [ ] T022 [US4] Create `LastCleanDrawer` component with header (date, staleness badge, days since), summary (files cleaned, remaining issues), and chronological history list in `components/health/drawer/last-clean-drawer.tsx`
-- [ ] T023 [US4] Make Last Clean card clickable by removing `ACTIVE_SCAN_SET` gate and routing clicks to `LastCleanDrawer` in `components/health/health-dashboard.tsx`
+- [x] T021 [P] [US4] Create `useLastCleanDetails` TanStack Query hook fetching `GET /api/projects/:projectId/health/last-clean` in `app/lib/hooks/useLastCleanDetails.ts`
+- [x] T022 [US4] Create `LastCleanDrawer` component with header (date, staleness badge, days since), summary (files cleaned, remaining issues), and chronological history list in `components/health/drawer/last-clean-drawer.tsx`
+- [x] T023 [US4] Make Last Clean card clickable by removing `ACTIVE_SCAN_SET` gate and routing clicks to `LastCleanDrawer` in `components/health/health-dashboard.tsx`
 
 **Checkpoint**: Last Clean card is clickable, drawer shows cleanup summary and history.
 
@@ -124,9 +124,9 @@
 
 **Purpose**: Visual consistency, extended test coverage, and validation across all stories
 
-- [ ] T024 [P] Extend `HealthModuleCard` component tests with trend indicator, distribution, and staleness visual state assertions in `tests/unit/components/health-module-card.test.tsx`
-- [ ] T025 [P] Extend score calculator unit tests to verify 30-day average flows through correctly in `tests/unit/health/score-calculator.test.ts`
-- [ ] T026 Run `bun run type-check` and `bun run lint` to verify no type or lint errors across all changes
+- [x] T024 [P] Extend `HealthModuleCard` component tests with trend indicator, distribution, and staleness visual state assertions in `tests/unit/components/health-module-card.test.tsx`
+- [x] T025 [P] Extend score calculator unit tests to verify 30-day average flows through correctly in `tests/unit/health/score-calculator.test.ts`
+- [x] T026 Run `bun run type-check` and `bun run lint` to verify no type or lint errors across all changes
 
 ---
 

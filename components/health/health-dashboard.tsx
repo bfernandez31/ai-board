@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { HealthHero } from './health-hero';
 import { HealthModuleCard } from './health-module-card';
 import { ScanDetailDrawer } from './scan-detail-drawer';
+import { QualityGateDrawer } from './drawer/quality-gate-drawer';
+import { LastCleanDrawer } from './drawer/last-clean-drawer';
 import { useHealthPolling } from '@/app/lib/hooks/useHealthPolling';
 import { useTriggerScan } from '@/app/lib/hooks/mutations/useTriggerScan';
 import { ACTIVE_SCAN_TYPES } from '@/lib/health/types';
@@ -75,26 +77,38 @@ export function HealthDashboard({ projectId }: HealthDashboardProps) {
                 : undefined
             }
             isTriggerPending={triggerScan.isPending}
-            onClick={ACTIVE_SCAN_SET.has(type) ? () => setSelectedModule(type) : undefined}
+            onClick={() => setSelectedModule(type)}
           />
         ))}
       </div>
 
-      <ScanDetailDrawer
+      {selectedModule && selectedModule !== 'QUALITY_GATE' && selectedModule !== 'LAST_CLEAN' && (
+        <ScanDetailDrawer
+          projectId={projectId}
+          moduleType={selectedModule}
+          moduleStatus={
+            data.modules[MODULE_GRID.find(m => m.type === selectedModule)!.key]
+          }
+          isScanning={activeScanTypes.has(selectedModule as HealthScanType)}
+          onClose={() => setSelectedModule(null)}
+          onTriggerScan={
+            ACTIVE_SCAN_SET.has(selectedModule)
+              ? () => triggerScan.mutate({ projectId, scanType: selectedModule as HealthScanType })
+              : undefined
+          }
+        />
+      )}
+
+      <QualityGateDrawer
         projectId={projectId}
-        moduleType={selectedModule}
-        moduleStatus={
-          selectedModule
-            ? data.modules[MODULE_GRID.find(m => m.type === selectedModule)!.key]
-            : null
-        }
-        isScanning={selectedModule ? activeScanTypes.has(selectedModule as HealthScanType) : false}
+        isOpen={selectedModule === 'QUALITY_GATE'}
         onClose={() => setSelectedModule(null)}
-        onTriggerScan={
-          selectedModule && ACTIVE_SCAN_SET.has(selectedModule)
-            ? () => triggerScan.mutate({ projectId, scanType: selectedModule as HealthScanType })
-            : undefined
-        }
+      />
+
+      <LastCleanDrawer
+        projectId={projectId}
+        isOpen={selectedModule === 'LAST_CLEAN'}
+        onClose={() => setSelectedModule(null)}
       />
     </div>
   );
