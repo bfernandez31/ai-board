@@ -16,8 +16,8 @@
 
 **Purpose**: No new project scaffolding needed. This feature extends existing health dashboard code. Setup creates the foundational types and schemas all stories depend on.
 
-- [ ] T001 Add ScanReport discriminated union types (ReportIssue, GeneratedTicket, SecurityReport, ComplianceReport, TestsReport, SpecSyncReport, QualityGateReport, LastCleanReport, ScanReport) to `lib/health/types.ts`
-- [ ] T002 Create Zod validation schemas and `parseScanReport(scanType, rawJson)` function in `lib/health/report-schemas.ts`
+- [x] T001 Add ScanReport discriminated union types (ReportIssue, GeneratedTicket, SecurityReport, ComplianceReport, TestsReport, SpecSyncReport, QualityGateReport, LastCleanReport, ScanReport) to `lib/health/types.ts`
+- [x] T002 Create Zod validation schemas and `parseScanReport(scanType, rawJson)` function in `lib/health/report-schemas.ts`
 
 ---
 
@@ -27,8 +27,8 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Extend GET handler in `app/api/projects/[projectId]/health/scans/route.ts` to support optional `includeReport=true` query parameter that includes `report` field in response
-- [ ] T004 Create `useScanReport` TanStack Query hook in `app/lib/hooks/useScanReport.ts` — fetches latest completed scan with report for a given module type using `GET /api/projects/{projectId}/health/scans?type={type}&limit=1&includeReport=true`
+- [x] T003 Extend GET handler in `app/api/projects/[projectId]/health/scans/route.ts` to support optional `includeReport=true` query parameter that includes `report` field in response
+- [x] T004 Create `useScanReport` TanStack Query hook in `app/lib/hooks/useScanReport.ts` — fetches latest completed scan with report for a given module type using `GET /api/projects/{projectId}/health/scans?type={type}&limit=1&includeReport=true`
 
 **Checkpoint**: Foundation ready — types, schemas, API, and data fetching in place
 
@@ -42,11 +42,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Create main `ScanDetailDrawer` component with shadcn/ui Sheet (right side, `sm:max-w-lg` override), controlled open state via `moduleType` prop, and section layout in `components/health/scan-detail-drawer.tsx`
-- [ ] T006 [P] [US1] Create `DrawerHeader` component displaying module icon, name, color-coded score badge, last scan date, and commit range in `components/health/drawer/drawer-header.tsx`
-- [ ] T007 [P] [US1] Create `DrawerTickets` component displaying generated tickets with ticket key, current stage badge, and clickable links to the board in `components/health/drawer/drawer-tickets.tsx`
-- [ ] T008 [US1] Wire drawer into dashboard: add `selectedModule` state to `components/health/health-dashboard.tsx`, render `ScanDetailDrawer` with selected module state and `onClose` handler
-- [ ] T009 [US1] Make module cards clickable: add `onClick` prop to `components/health/health-module-card.tsx`, add `cursor-pointer` class on card root, add `stopPropagation` on scan trigger button
+- [x] T005 [US1] Create main `ScanDetailDrawer` component with shadcn/ui Sheet (right side, `sm:max-w-lg` override), controlled open state via `moduleType` prop, and section layout in `components/health/scan-detail-drawer.tsx`
+- [x] T006 [P] [US1] Create `DrawerHeader` component displaying module icon, name, color-coded score badge, last scan date, and commit range in `components/health/drawer/drawer-header.tsx`
+- [x] T007 [P] [US1] Create `DrawerTickets` component displaying generated tickets with ticket key, current stage badge, and clickable links to the board in `components/health/drawer/drawer-tickets.tsx`
+- [x] T008 [US1] Wire drawer into dashboard: add `selectedModule` state to `components/health/health-dashboard.tsx`, render `ScanDetailDrawer` with selected module state and `onClose` handler
+- [x] T009 [US1] Make module cards clickable: add `onClick` prop to `components/health/health-module-card.tsx`, add `cursor-pointer` class on card root, add `stopPropagation` on scan trigger button
 
 **Checkpoint**: User Story 1 complete — clicking a completed module card opens the drawer with header, issues (flat list), and ticket links
 
@@ -60,7 +60,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Create `DrawerIssues` component with module-type dispatcher and 6 module-specific renderers in `components/health/drawer/drawer-issues.tsx`:
+- [x] T010 [US2] Create `DrawerIssues` component with module-type dispatcher and 6 module-specific renderers in `components/health/drawer/drawer-issues.tsx`:
   - Security: group by severity (High -> Medium -> Low) with count per group
   - Compliance: group by `category` (constitution principle)
   - Tests: split into "Auto-fixed" and "Non-fixable" sections
@@ -80,8 +80,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T011 [US3] Create `DrawerHistory` component with cursor-based pagination, "Load more" button, and per-entry display (date, score, issue count, commit range) in `components/health/drawer/drawer-history.tsx`
-- [ ] T012 [US3] Integrate history section into `ScanDetailDrawer` in `components/health/scan-detail-drawer.tsx` — render `DrawerHistory` below tickets section, pass projectId and moduleType
+- [x] T011 [US3] Create `DrawerHistory` component with cursor-based pagination, "Load more" button, and per-entry display (date, score, issue count, commit range) in `components/health/drawer/drawer-history.tsx`
+- [x] T012 [US3] Integrate history section into `ScanDetailDrawer` in `components/health/scan-detail-drawer.tsx` — render `DrawerHistory` below tickets section, pass projectId and moduleType
 
 **Checkpoint**: User Story 3 complete — scan history displays with pagination in the drawer
 
@@ -95,12 +95,12 @@
 
 ### Implementation for User Story 4
 
-- [ ] T013 [US4] Create `DrawerStates` component handling four states in `components/health/drawer/drawer-states.tsx`:
+- [x] T013 [US4] Create `DrawerStates` component handling four states in `components/health/drawer/drawer-states.tsx`:
   - Never scanned: invitation message + scan trigger button (for active modules)
   - Scanning in progress: animated scanning/progress indicator
   - Failed: error message from `errorMessage` field with relevant context
   - Passive module with no data: explanatory message about passive data collection
-- [ ] T014 [US4] Integrate state handling into `ScanDetailDrawer` in `components/health/scan-detail-drawer.tsx` — render `DrawerStates` when module is not in COMPLETED status, render full report when COMPLETED
+- [x] T014 [US4] Integrate state handling into `ScanDetailDrawer` in `components/health/scan-detail-drawer.tsx` — render `DrawerStates` when module is not in COMPLETED status, render full report when COMPLETED
 
 **Checkpoint**: User Story 4 complete — all four module states display appropriate content
 
@@ -110,10 +110,10 @@
 
 **Purpose**: Unit, component, and integration tests covering all user stories
 
-- [ ] T015 [P] Create unit tests for Zod report parsing in `tests/unit/health/report-schemas.test.ts` — test each module variant, malformed JSON fallback, null/empty reports, legacy format handling
-- [ ] T016 [P] Create component tests for drawer states and interactions in `tests/unit/components/scan-detail-drawer.test.tsx` — test open/close, header rendering, completed state, never_scanned/scanning/failed states, card click vs scan button stopPropagation
-- [ ] T017 [P] Create component tests for module-specific grouping in `tests/unit/components/drawer-issues.test.tsx` — test all 6 module renderers with mock report data
-- [ ] T018 Extend existing integration tests for scan history with `includeReport` parameter in `tests/integration/health/scan-history.test.ts`
+- [x] T015 [P] Create unit tests for Zod report parsing in `tests/unit/health/report-schemas.test.ts` — test each module variant, malformed JSON fallback, null/empty reports, legacy format handling
+- [x] T016 [P] Create component tests for drawer states and interactions in `tests/unit/components/scan-detail-drawer.test.tsx` — test open/close, header rendering, completed state, never_scanned/scanning/failed states, card click vs scan button stopPropagation
+- [x] T017 [P] Create component tests for module-specific grouping in `tests/unit/components/drawer-issues.test.tsx` — test all 6 module renderers with mock report data
+- [x] T018 Extend existing integration tests for scan history with `includeReport` parameter in `tests/integration/health/scan-history.test.ts`
 
 ---
 
@@ -121,9 +121,9 @@
 
 **Purpose**: Edge cases, responsiveness, and final validation
 
-- [ ] T019 Handle malformed/missing report data gracefully in `components/health/scan-detail-drawer.tsx` — display "Report data unavailable" fallback (FR-012)
-- [ ] T020 Ensure drawer responsiveness from 375px to 2560px viewport widths (SC-006) and WCAG AA contrast compliance in all drawer components
-- [ ] T021 Run quickstart.md validation — verify all implementation steps match expected behavior
+- [x] T019 Handle malformed/missing report data gracefully in `components/health/scan-detail-drawer.tsx` — display "Report data unavailable" fallback (FR-012)
+- [x] T020 Ensure drawer responsiveness from 375px to 2560px viewport widths (SC-006) and WCAG AA contrast compliance in all drawer components
+- [x] T021 Run quickstart.md validation — verify all implementation steps match expected behavior
 
 ---
 

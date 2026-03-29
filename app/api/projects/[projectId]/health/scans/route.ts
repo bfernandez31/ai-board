@@ -12,6 +12,7 @@ const scanHistorySchema = z.object({
   type: z.enum(['SECURITY', 'COMPLIANCE', 'TESTS', 'SPEC_SYNC']).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   cursor: z.coerce.number().int().positive().optional(),
+  includeReport: z.enum(['true', 'false']).optional(),
 });
 
 export async function POST(
@@ -134,6 +135,7 @@ export async function GET(
       type: searchParams.get('type') || undefined,
       limit: searchParams.get('limit') || undefined,
       cursor: searchParams.get('cursor') || undefined,
+      includeReport: searchParams.get('includeReport') || undefined,
     });
 
     if (!parsed.success) {
@@ -143,7 +145,8 @@ export async function GET(
       );
     }
 
-    const { type, limit, cursor } = parsed.data;
+    const { type, limit, cursor, includeReport } = parsed.data;
+    const shouldIncludeReport = includeReport === 'true';
 
     const where: Record<string, unknown> = { projectId };
     if (type) where.scanType = type;
@@ -167,6 +170,7 @@ export async function GET(
         startedAt: true,
         completedAt: true,
         createdAt: true,
+        report: shouldIncludeReport,
       },
     });
 
