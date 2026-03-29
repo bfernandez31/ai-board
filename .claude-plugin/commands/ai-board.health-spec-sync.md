@@ -16,25 +16,23 @@ When `--base-commit` is provided, only check specs impacted by changed files:
 
 1. Get the list of changed files: `git diff --name-only <base-commit>..<head-commit>`
    - If `--head-commit` is not provided, use `HEAD` as the target
-2. For each changed file, determine which spec(s) it relates to:
-   - `app/api/**` changes → check `specs/specifications/endpoints.md`
-   - `prisma/schema.prisma` changes → check `specs/specifications/data-model.md`
-   - `lib/**` or `components/**` changes → check relevant functional specs
-3. Only evaluate the impacted specs (skip unrelated specs)
-4. If `--base-commit` refers to a commit that doesn't exist, report an error issue and fall back to full scan
+2. Discover all spec files under `specs/specifications/` (recursively)
+3. For each changed file, determine which discovered spec(s) it relates to based on the spec's content and subject matter (e.g., API-related specs for route changes, data model specs for schema changes, functional specs for component/logic changes)
+4. Only evaluate the impacted specs (skip unrelated specs)
+5. If `--base-commit` refers to a commit that doesn't exist, report an error issue and fall back to full scan
 
 ## What to Scan
 
 ### Spec Files to Compare
 
-Read consolidated specifications from `specs/specifications/` and compare against implementation:
+Dynamically discover all `.md` files under `specs/specifications/` (recursively). For each spec file found, read its content, determine what area of the codebase it documents, and compare against the corresponding implementation:
 
-| Spec File | Compare Against |
-|-----------|----------------|
-| `endpoints.md` | `app/api/` routes — verify documented routes exist, methods match, request/response shapes align |
-| `schemas.md` | Prisma schema and Zod validation schemas — verify documented types match actual types |
-| `data-model.md` | `prisma/schema.prisma` — verify documented models, fields, and relationships match actual schema |
-| Functional specs | Component code and API logic — verify documented behaviors are implemented |
+- **API/endpoint specs** → compare against `app/api/` routes (verify documented routes exist, methods match, request/response shapes align)
+- **Schema specs** → compare against Prisma schema and Zod validation schemas (verify documented types match actual types)
+- **Data model specs** → compare against `prisma/schema.prisma` (verify documented models, fields, and relationships match actual schema)
+- **Functional specs** → compare against component code and API logic (verify documented behaviors are implemented)
+
+Do NOT hardcode specific file paths — the directory structure within `specs/specifications/` may vary between projects.
 
 ### Bidirectional Drift Detection
 
@@ -46,8 +44,8 @@ Check drift in **both** directions:
    - Features described in functional specs but no corresponding code
 
 2. **Code without spec** (implemented but not documented):
-   - API routes that exist in `app/api/` but are not documented in `endpoints.md`
-   - Prisma schema fields/models not documented in `data-model.md`
+   - API routes that exist in `app/api/` but are not documented in any discovered spec
+   - Prisma schema fields/models not documented in any discovered spec
    - Significant behaviors in code not described in any spec
 
 3. **Behavioral divergence** (both exist but disagree):
@@ -79,16 +77,16 @@ You MUST output valid JSON to stdout with this exact structure. Output ONLY the 
     "type": "SPEC_SYNC",
     "specs": [
       {
-        "specPath": "specs/specifications/endpoints.md",
+        "specPath": "specs/specifications/api/endpoints.md",
         "status": "synced"
       },
       {
-        "specPath": "specs/specifications/schemas.md",
+        "specPath": "specs/specifications/api/schemas.md",
         "status": "drifted",
         "drift": "Missing documentation for POST /api/health/scans endpoint added in AIB-370"
       },
       {
-        "specPath": "specs/specifications/data-model.md",
+        "specPath": "specs/specifications/architecture/data-model.md",
         "status": "drifted",
         "drift": "Model 'HealthScore' exists in Prisma schema but is not documented in data-model spec"
       }
