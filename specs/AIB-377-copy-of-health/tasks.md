@@ -18,7 +18,7 @@
 
 **Purpose**: No new project structure needed — feature extends existing `lib/health/` and `.github/workflows/` directories.
 
-- [ ] T001 Verify existing health infrastructure files exist and review types in lib/health/types.ts, lib/health/report-schemas.ts, lib/health/score-calculator.ts, and lib/health/scan-dispatch.ts
+- [x] T001 Verify existing health infrastructure files exist and review types in lib/health/types.ts, lib/health/report-schemas.ts, lib/health/score-calculator.ts, and lib/health/scan-dispatch.ts
 
 ---
 
@@ -28,8 +28,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T002 Create static scan type → command mapping utility in lib/health/scan-commands.ts with getScanCommand() function and SCAN_COMMAND_MAP constant per contracts/health-scan-workflow.ts
-- [ ] T003 [P] Create unit tests for scan command mapping (all 4 types + unknown type error) in tests/unit/health/scan-commands.test.ts
+- [x] T002 Create static scan type → command mapping utility in lib/health/scan-commands.ts with getScanCommand() function and SCAN_COMMAND_MAP constant per contracts/health-scan-workflow.ts
+- [x] T003 [P] Create unit tests for scan command mapping (all 4 types + unknown type error) in tests/unit/health/scan-commands.test.ts
 
 **Checkpoint**: Foundation ready — scan command mapping available for workflow and all user stories
 
