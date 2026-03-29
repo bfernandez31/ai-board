@@ -14,6 +14,7 @@ import { Readable } from 'stream';
 import { prisma } from '@/lib/db/client';
 import { requireAuth } from '@/lib/db/users';
 import { getUserSubscription } from '@/lib/billing/subscription';
+import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 
 export async function GET(
   request: NextRequest,
@@ -121,25 +122,42 @@ export async function POST(
     }
 
     const projectId = parseInt(projectIdString, 10);
-    await verifyProjectAccess(projectId, request);
 
-    // Check plan limits for ticket creation
-    const userId = await requireAuth(request);
-    const subscription = await getUserSubscription(userId);
-    if (subscription.limits.maxTicketsPerMonth !== null) {
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-      const ticketCount = await prisma.ticket.count({
-        where: {
-          project: { userId },
-          createdAt: { gte: startOfMonth },
-        },
-      });
-      if (ticketCount >= subscription.limits.maxTicketsPerMonth) {
+    // Try workflow token auth first (for health scan workflow ticket creation)
+    const workflowAuth = validateWorkflowAuth(request);
+    const isWorkflowAuth = workflowAuth.isValid;
+
+    if (!isWorkflowAuth) {
+      // Fall back to user session auth
+      await verifyProjectAccess(projectId, request);
+
+      // Check plan limits for ticket creation (skip for workflow-authenticated requests)
+      const userId = await requireAuth(request);
+      const subscription = await getUserSubscription(userId);
+      if (subscription.limits.maxTicketsPerMonth !== null) {
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const ticketCount = await prisma.ticket.count({
+          where: {
+            project: { userId },
+            createdAt: { gte: startOfMonth },
+          },
+        });
+        if (ticketCount >= subscription.limits.maxTicketsPerMonth) {
+          return NextResponse.json(
+            { error: `Monthly ticket limit reached. Your ${subscription.plan} plan allows ${subscription.limits.maxTicketsPerMonth} tickets per month. Upgrade for unlimited tickets.`, code: 'PLAN_LIMIT' },
+            { status: 403 }
+          );
+        }
+      }
+    } else {
+      // Workflow auth: validate project exists
+      const project = await prisma.project.findUnique({ where: { id: projectId } });
+      if (!project) {
         return NextResponse.json(
-          { error: `Monthly ticket limit reached. Your ${subscription.plan} plan allows ${subscription.limits.maxTicketsPerMonth} tickets per month. Upgrade for unlimited tickets.`, code: 'PLAN_LIMIT' },
-          { status: 403 }
+          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+          { status: 404 }
         );
       }
     }

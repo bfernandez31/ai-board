@@ -40,7 +40,7 @@ interface HealthModuleCardProps {
   isScanning?: boolean;
   onTriggerScan?: (() => void) | undefined;
   isTriggerPending?: boolean | undefined;
-  onClick?: () => void;
+  onClick?: (() => void) | undefined;
 }
 
 export function HealthModuleCard({

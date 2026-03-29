@@ -18,7 +18,7 @@
 
 **Purpose**: No new project structure needed. This feature adds a single workflow file and a minor auth change to an existing endpoint. Verify existing infrastructure.
 
-- [ ] T001 Verify existing health scan API endpoints and report schemas in app/api/projects/[projectId]/health/ and lib/health/
+- [x] T001 Verify existing health scan API endpoints and report schemas in app/api/projects/[projectId]/health/ and lib/health/
 
 ---
 
@@ -28,8 +28,8 @@
 
 **Why**: Research Task 1 found that `POST /api/projects/:projectId/tickets` requires user session auth. The workflow authenticates via `WORKFLOW_API_TOKEN` Bearer token. An alternative auth path must be added.
 
-- [ ] T002 Add workflow token authentication path to ticket creation endpoint in app/api/projects/[projectId]/tickets/route.ts — import `validateWorkflowAuth` from `@/app/lib/workflow-auth`, try workflow auth first in POST handler, skip subscription limit checks when workflow-authenticated, validate projectId exists
-- [ ] T003 Add integration test for workflow-authenticated ticket creation in tests/integration/health/ticket-generation.test.ts — test that Bearer token auth creates tickets, verify subscription limits are skipped, verify projectId validation still applies
+- [x] T002 Add workflow token authentication path to ticket creation endpoint in app/api/projects/[projectId]/tickets/route.ts — import `validateWorkflowAuth` from `@/app/lib/workflow-auth`, try workflow auth first in POST handler, skip subscription limit checks when workflow-authenticated, validate projectId exists
+- [x] T003 Add integration test for workflow-authenticated ticket creation in tests/integration/health/ticket-generation.test.ts — test that Bearer token auth creates tickets, verify subscription limits are skipped, verify projectId validation still applies
 
 **Checkpoint**: Workflow can now create tickets via API with Bearer token auth
 
