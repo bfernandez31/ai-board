@@ -59,11 +59,11 @@ export function HealthModuleCard({
 
   return (
     <div
-      className="aurora-glass aurora-glass-hover rounded-lg p-4 space-y-3 cursor-pointer"
+      className={`aurora-glass rounded-lg p-4 space-y-3${onClick ? ' aurora-glass-hover cursor-pointer' : ''}`}
       onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

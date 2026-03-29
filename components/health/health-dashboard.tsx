@@ -75,7 +75,7 @@ export function HealthDashboard({ projectId }: HealthDashboardProps) {
                 : undefined
             }
             isTriggerPending={triggerScan.isPending}
-            onClick={() => setSelectedModule(type)}
+            onClick={ACTIVE_SCAN_SET.has(type) ? () => setSelectedModule(type) : undefined}
           />
         ))}
       </div>

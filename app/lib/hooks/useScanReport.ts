@@ -2,7 +2,10 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { parseScanReport } from '@/lib/health/report-schemas';
+import { ACTIVE_SCAN_TYPES } from '@/lib/health/types';
 import type { HealthModuleType, ScanReport, ScanHistoryItemWithReport } from '@/lib/health/types';
+
+const ACTIVE_SET = new Set<string>(ACTIVE_SCAN_TYPES);
 
 interface ScanReportResult {
   scan: ScanHistoryItemWithReport | null;
@@ -32,7 +35,7 @@ export function useScanReport(projectId: number, moduleType: HealthModuleType | 
       const report = parseScanReport(moduleType, scan.report);
       return { scan, report };
     },
-    enabled: moduleType !== null,
+    enabled: moduleType !== null && ACTIVE_SET.has(moduleType),
     staleTime: 30_000,
     gcTime: 5 * 60 * 1000,
   });
