@@ -155,10 +155,10 @@ No new implementation needed — the existing PATCH `/api/projects/{projectId}/h
 
 **Purpose**: Final validation and cross-cutting improvements
 
-- [ ] T022 Run bun run type-check to verify all new TypeScript files pass strict type checking
-- [ ] T023 Run bun run lint to verify all new files pass ESLint rules
-- [ ] T024 Run all health tests (bun run test:unit -- tests/unit/health/ && bun run test:integration -- tests/integration/health/) to verify full test suite passes
-- [ ] T025 Run quickstart.md validation — verify all key files exist and match the implementation order
+- [x] T022 Run bun run type-check to verify all new TypeScript files pass strict type checking
+- [x] T023 Run bun run lint to verify all new files pass ESLint rules
+- [x] T024 Run all health tests (bun run test:unit -- tests/unit/health/ && bun run test:integration -- tests/integration/health/) to verify full test suite passes
+- [x] T025 Run quickstart.md validation — verify all key files exist and match the implementation order
 
 ---
 
