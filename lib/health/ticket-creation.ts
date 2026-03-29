@@ -39,27 +39,38 @@ export function groupIssuesIntoTickets(
   }
 }
 
-function groupSecurityIssues(report: SecurityReport): RemediationTicket[] {
-  const bySeverity = new Map<string, typeof report.issues>();
-
-  for (const issue of report.issues) {
-    const severity = issue.severity;
-    if (!bySeverity.has(severity)) {
-      bySeverity.set(severity, []);
+function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const key = keyFn(item);
+    if (!groups.has(key)) {
+      groups.set(key, []);
     }
-    bySeverity.get(severity)!.push(issue);
+    groups.get(key)!.push(item);
   }
+  return groups;
+}
 
+function formatFileList(issues: { file?: string | undefined; line?: number | undefined; description: string }[]): string {
+  return issues
+    .filter((i) => i.file)
+    .map((i) => `- ${i.file}${i.line ? `:${i.line}` : ''}: ${i.description}`)
+    .join('\n') || 'See scan report for details.';
+}
+
+function plural(count: number, singular: string): string {
+  return `${count} ${singular}${count > 1 ? 's' : ''}`;
+}
+
+function groupSecurityIssues(report: SecurityReport): RemediationTicket[] {
+  const groups = groupBy(report.issues, (i) => i.severity);
   const tickets: RemediationTicket[] = [];
-  for (const [severity, issues] of bySeverity) {
-    const fileList = issues
-      .filter((i) => i.file)
-      .map((i) => `- ${i.file}${i.line ? `:${i.line}` : ''}: ${i.description}`)
-      .join('\n');
 
+  for (const [severity, issues] of groups) {
+    const label = `${severity.toUpperCase()} severity`;
     tickets.push({
-      title: `[Security] Fix ${issues.length} ${severity.toUpperCase()} severity issue${issues.length > 1 ? 's' : ''}`,
-      description: `Health scan found ${issues.length} ${severity.toUpperCase()} severity security issue${issues.length > 1 ? 's' : ''}:\n\n${fileList || 'See scan report for details.'}`,
+      title: `[Security] Fix ${plural(issues.length, `${label} issue`)}`,
+      description: `Health scan found ${plural(issues.length, `${label} security issue`)}:\n\n${formatFileList(issues)}`,
       stage: 'INBOX',
       workflowType: 'QUICK',
     });
@@ -69,26 +80,13 @@ function groupSecurityIssues(report: SecurityReport): RemediationTicket[] {
 }
 
 function groupComplianceIssues(report: ComplianceReport): RemediationTicket[] {
-  const byCategory = new Map<string, typeof report.issues>();
-
-  for (const issue of report.issues) {
-    const category = issue.category || 'General';
-    if (!byCategory.has(category)) {
-      byCategory.set(category, []);
-    }
-    byCategory.get(category)!.push(issue);
-  }
-
+  const groups = groupBy(report.issues, (i) => i.category || 'General');
   const tickets: RemediationTicket[] = [];
-  for (const [category, issues] of byCategory) {
-    const fileList = issues
-      .filter((i) => i.file)
-      .map((i) => `- ${i.file}${i.line ? `:${i.line}` : ''}: ${i.description}`)
-      .join('\n');
 
+  for (const [category, issues] of groups) {
     tickets.push({
-      title: `[Compliance] Fix ${issues.length} violation${issues.length > 1 ? 's' : ''} — ${category}`,
-      description: `Health scan found ${issues.length} compliance violation${issues.length > 1 ? 's' : ''} for principle "${category}":\n\n${fileList || 'See scan report for details.'}`,
+      title: `[Compliance] Fix ${plural(issues.length, 'violation')} — ${category}`,
+      description: `Health scan found ${plural(issues.length, 'compliance violation')} for principle "${category}":\n\n${formatFileList(issues)}`,
       stage: 'INBOX',
       workflowType: 'QUICK',
     });
@@ -101,8 +99,8 @@ function groupTestIssues(report: TestsReport): RemediationTicket[] {
   return report.nonFixable.map((issue) => ({
     title: `[Tests] Fix failing test: ${issue.description.slice(0, 80)}`,
     description: `Health scan found a non-fixable test failure:\n\n- **Test**: ${issue.description}\n- **File**: ${issue.file || 'Unknown'}\n- **ID**: ${issue.id}`,
-    stage: 'INBOX' as const,
-    workflowType: 'QUICK' as const,
+    stage: 'INBOX',
+    workflowType: 'QUICK',
   }));
 }
 
@@ -112,7 +110,7 @@ function groupSpecSyncIssues(report: SpecSyncReport): RemediationTicket[] {
     .map((spec) => ({
       title: `[Spec Sync] Resynchronize ${spec.specPath}`,
       description: `Health scan detected spec drift:\n\n- **Spec**: ${spec.specPath}\n- **Drift**: ${spec.drift || 'Specification out of sync with implementation'}`,
-      stage: 'INBOX' as const,
-      workflowType: 'QUICK' as const,
+      stage: 'INBOX',
+      workflowType: 'QUICK',
     }));
 }
