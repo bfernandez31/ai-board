@@ -73,7 +73,8 @@ ai-board/
 │   ├── ai-board-assist.yml       # AI assistance workflow
 │   ├── auto-ship.yml             # Auto-deployment workflow
 │   ├── deploy-preview.yml        # Vercel preview deployment
-│   └── rollback-reset.yml        # VERIFY→PLAN rollback
+│   ├── rollback-reset.yml        # VERIFY→PLAN rollback
+│   └── health-scan.yml           # Health scan execution (Security/Compliance/Tests/SpecSync)
 ├── .github/scripts/              # Shared shell utilities for workflows
 │   ├── run-agent.sh              # Unified agent runner (Claude/Codex)
 │   ├── fetch-telemetry.sh        # Pre-fetch job telemetry for /compare

@@ -88,6 +88,49 @@ Clicking the action button on an active module card triggers a scan:
 
 The first scan of any module type performs a full analysis with no base commit. Each subsequent scan of the same type uses the previous scan's `headCommit` as the `baseCommit`, limiting analysis to only the commits introduced since the last scan. Each module type maintains its own independent scan cursor.
 
+## Automatic Ticket Generation
+
+When a scan completes with issues, the health-scan workflow automatically creates tickets in INBOX with QUICK workflow type — one ticket per issue group. Grouping rules differ by scan type:
+
+| Scan Type | Grouping | Ticket Title Format |
+|-----------|----------|---------------------|
+| Security | One ticket per severity level (high / medium / low) | `[Health:Security] {Severity} severity issues` |
+| Compliance | One ticket per violated constitution principle | `[Health:Compliance] {Principle} violations` |
+| Tests | One ticket per non-fixable test failure (auto-fixed tests are excluded) | `[Health:Tests] {test description}` |
+| Spec Sync | One ticket per drifted specification | `[Health:SpecSync] {specPath} drift` |
+
+Each generated ticket includes issue descriptions, affected file paths with line numbers, and a reference to the originating scan ID.
+
+When a scan produces zero issues of the relevant grouping type, no tickets are created.
+
+If ticket creation fails for a subset of groups (e.g., due to a transient API error), the workflow logs the failure and continues creating remaining tickets. The scan record is marked COMPLETED regardless of partial ticket creation failures, and the scan report's `generatedTickets` array reflects only the tickets that were successfully created.
+
+The generated ticket keys are recorded in the scan report's `generatedTickets` array and surfaced in the Scan Detail Drawer's Generated Tickets section.
+
+```mermaid
+sequenceDiagram
+    participant UI as Health Dashboard
+    participant API as ai-board API
+    participant WF as health-scan.yml
+    participant Agent as Claude/Codex
+
+    UI->>API: POST /health/scans (scanType)
+    API->>API: Create HealthScan (PENDING)
+    API->>WF: Dispatch workflow
+    API-->>UI: 201 scan record
+
+    WF->>API: PATCH status → RUNNING
+    WF->>Agent: Execute health-{type} command
+    Agent-->>WF: Structured JSON report
+
+    WF->>API: POST /tickets (per issue group)
+    API-->>WF: 201 ticket keys
+
+    WF->>API: PATCH status → COMPLETED (score, report, tickets, telemetry)
+    UI->>API: Poll health score (2s)
+    API-->>UI: Updated score + scan status
+```
+
 ## Scan Detail Drawer
 
 Clicking any module card opens a right-side slide-over drawer displaying the full details for that module. The drawer replaces any previously open drawer if the user clicks a different card. It closes when the user clicks the overlay outside the drawer or the close button. Clicking the action button on a card (to trigger a scan) does not open the drawer.

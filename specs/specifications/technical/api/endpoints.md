@@ -249,8 +249,10 @@ Fetch all tickets for a project, grouped by stage.
 
 Create a new ticket.
 
-**Authentication**: Required (session)
-**Authorization**: Must be project owner or member
+**Authentication**: Session (user) or `Authorization: Bearer <WORKFLOW_API_TOKEN>` (workflow)
+**Authorization**:
+- Session: must be project owner or member; monthly ticket quota enforced per subscription plan
+- Workflow Bearer token: project must exist; subscription quota is not enforced
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -289,8 +291,8 @@ Create a new ticket.
 
 **Errors**:
 - `400`: Invalid request body (Zod validation errors)
-- `401`: Not authenticated
-- `403`: User is neither project owner nor member
+- `401`: Not authenticated (session path only)
+- `403`: User is neither project owner nor member, or monthly quota exceeded (`PLAN_LIMIT`)
 - `404`: Project not found
 - `500`: Database error
 
