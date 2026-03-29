@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { HealthHero } from './health-hero';
 import { HealthModuleCard } from './health-module-card';
+import { ScanDetailDrawer } from './scan-detail-drawer';
 import { useHealthPolling } from '@/app/lib/hooks/useHealthPolling';
 import { useTriggerScan } from '@/app/lib/hooks/mutations/useTriggerScan';
 import { ACTIVE_SCAN_TYPES } from '@/lib/health/types';
@@ -24,6 +26,7 @@ const MODULE_GRID: { type: HealthModuleType; key: keyof NonNullable<ReturnType<t
 const ACTIVE_SCAN_SET = new Set<string>(ACTIVE_SCAN_TYPES);
 
 export function HealthDashboard({ projectId }: HealthDashboardProps) {
+  const [selectedModule, setSelectedModule] = useState<HealthModuleType | null>(null);
   const { data, isLoading, error } = useHealthPolling(projectId);
   const triggerScan = useTriggerScan();
 
@@ -72,9 +75,27 @@ export function HealthDashboard({ projectId }: HealthDashboardProps) {
                 : undefined
             }
             isTriggerPending={triggerScan.isPending}
+            onClick={ACTIVE_SCAN_SET.has(type) ? () => setSelectedModule(type) : undefined}
           />
         ))}
       </div>
+
+      <ScanDetailDrawer
+        projectId={projectId}
+        moduleType={selectedModule}
+        moduleStatus={
+          selectedModule
+            ? data.modules[MODULE_GRID.find(m => m.type === selectedModule)!.key]
+            : null
+        }
+        isScanning={selectedModule ? activeScanTypes.has(selectedModule as HealthScanType) : false}
+        onClose={() => setSelectedModule(null)}
+        onTriggerScan={
+          selectedModule && ACTIVE_SCAN_SET.has(selectedModule)
+            ? () => triggerScan.mutate({ projectId, scanType: selectedModule as HealthScanType })
+            : undefined
+        }
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getScoreColor } from '@/lib/quality-score';
+import { MODULE_METADATA } from '@/lib/health/types';
 import type { HealthModuleType, HealthModuleStatus } from '@/lib/health/types';
 
 const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
@@ -22,15 +23,6 @@ const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
   SPEC_SYNC: FileCheck,
   QUALITY_GATE: Award,
   LAST_CLEAN: Sparkles,
-};
-
-const MODULE_LABELS: Record<HealthModuleType, string> = {
-  SECURITY: 'Security',
-  COMPLIANCE: 'Compliance',
-  TESTS: 'Tests',
-  SPEC_SYNC: 'Spec Sync',
-  QUALITY_GATE: 'Quality Gate',
-  LAST_CLEAN: 'Last Clean',
 };
 
 type CardState = 'never_scanned' | 'scanning' | 'completed' | 'failed';
@@ -48,6 +40,7 @@ interface HealthModuleCardProps {
   isScanning?: boolean;
   onTriggerScan?: (() => void) | undefined;
   isTriggerPending?: boolean | undefined;
+  onClick?: () => void;
 }
 
 export function HealthModuleCard({
@@ -56,15 +49,22 @@ export function HealthModuleCard({
   isScanning = false,
   onTriggerScan,
   isTriggerPending = false,
+  onClick,
 }: HealthModuleCardProps) {
   const Icon = MODULE_ICONS[moduleType];
-  const label = MODULE_LABELS[moduleType];
+  const label = MODULE_METADATA[moduleType].label;
   const isPassive = module.passive === true;
   const state = getCardState(module, isScanning);
   const scoreColors = module.score !== null ? getScoreColor(module.score) : null;
 
   return (
-    <div className="aurora-glass aurora-glass-hover rounded-lg p-4 space-y-3">
+    <div
+      className={`aurora-glass rounded-lg p-4 space-y-3${onClick ? ' aurora-glass-hover cursor-pointer' : ''}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Icon className="h-5 w-5 text-muted-foreground" />
@@ -129,7 +129,7 @@ function ScanButton({
 }) {
   if (state === 'scanning') {
     return (
-      <Button size="sm" variant="outline" className="w-full text-xs" disabled>
+      <Button size="sm" variant="outline" className="w-full text-xs" disabled onClick={(e) => e.stopPropagation()}>
         <Loader2 className="h-3 w-3 mr-1 animate-spin" />
         Scanning...
       </Button>
@@ -148,7 +148,7 @@ function ScanButton({
       size="sm"
       variant="outline"
       className="w-full text-xs"
-      onClick={onTriggerScan}
+      onClick={(e) => { e.stopPropagation(); onTriggerScan?.(); }}
       disabled={isTriggerPending}
     >
       {BUTTON_LABELS[state]}

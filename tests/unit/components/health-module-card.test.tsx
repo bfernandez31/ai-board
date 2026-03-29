@@ -48,7 +48,8 @@ describe('HealthModuleCard', () => {
     );
     expect(screen.getByText('Tests')).toBeInTheDocument();
     expect(screen.getAllByText('Scanning...').length).toBeGreaterThanOrEqual(1);
-    const scanningBtn = screen.getByRole('button', { name: /scanning/i });
+    const scanningBtn = screen.getAllByRole('button', { name: /scanning/i })
+      .find(el => el.tagName === 'BUTTON')!;
     expect(scanningBtn).toBeDisabled();
   });
 
@@ -82,7 +83,8 @@ describe('HealthModuleCard', () => {
     );
     expect(screen.getByText('Quality Gate')).toBeInTheDocument();
     expect(screen.getByText('passive')).toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    const buttons = screen.queryAllByRole('button').filter(el => el.tagName === 'BUTTON');
+    expect(buttons).toHaveLength(0);
   });
 
   it('calls onTriggerScan when action button is clicked', async () => {

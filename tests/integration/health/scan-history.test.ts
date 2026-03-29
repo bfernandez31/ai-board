@@ -103,4 +103,94 @@ describe('Scan History GET Endpoint', () => {
     );
     expect(response.status).toBe(400);
   });
+
+  describe('includeReport parameter', () => {
+    it('excludes report field by default', async () => {
+      await prisma.healthScan.create({
+        data: {
+          projectId: ctx.projectId,
+          scanType: 'SECURITY',
+          status: 'COMPLETED',
+          score: 85,
+          report: JSON.stringify({ type: 'SECURITY', issues: [], generatedTickets: [] }),
+        },
+      });
+
+      const response = await makeRequest(ctx.projectId);
+      const data = await response.json();
+
+      expect(data.scans).toHaveLength(1);
+      expect(data.scans[0]).not.toHaveProperty('report');
+    });
+
+    it('includes report field when includeReport=true', async () => {
+      const reportJson = JSON.stringify({
+        type: 'SECURITY',
+        issues: [{ id: 'sec-001', severity: 'high', description: 'SQL injection' }],
+        generatedTickets: [{ ticketKey: 'AIB-123', stage: 'INBOX' }],
+      });
+
+      await prisma.healthScan.create({
+        data: {
+          projectId: ctx.projectId,
+          scanType: 'SECURITY',
+          status: 'COMPLETED',
+          score: 85,
+          report: reportJson,
+        },
+      });
+
+      const response = await makeRequest(ctx.projectId, 'includeReport=true');
+      const data = await response.json();
+
+      expect(data.scans).toHaveLength(1);
+      expect(data.scans[0]).toHaveProperty('report');
+      expect(data.scans[0].report).toBe(reportJson);
+    });
+
+    it('returns null report when scan has no report and includeReport=true', async () => {
+      await prisma.healthScan.create({
+        data: {
+          projectId: ctx.projectId,
+          scanType: 'SECURITY',
+          status: 'COMPLETED',
+          score: 85,
+        },
+      });
+
+      const response = await makeRequest(ctx.projectId, 'includeReport=true');
+      const data = await response.json();
+
+      expect(data.scans).toHaveLength(1);
+      expect(data.scans[0].report).toBeNull();
+    });
+
+    it('combines includeReport with type filter', async () => {
+      await prisma.healthScan.create({
+        data: {
+          projectId: ctx.projectId,
+          scanType: 'SECURITY',
+          status: 'COMPLETED',
+          score: 85,
+          report: JSON.stringify({ type: 'SECURITY', issues: [], generatedTickets: [] }),
+        },
+      });
+      await prisma.healthScan.create({
+        data: {
+          projectId: ctx.projectId,
+          scanType: 'TESTS',
+          status: 'COMPLETED',
+          score: 90,
+          report: JSON.stringify({ type: 'TESTS', autoFixed: [], nonFixable: [], generatedTickets: [] }),
+        },
+      });
+
+      const response = await makeRequest(ctx.projectId, 'type=SECURITY&includeReport=true&limit=10');
+      const data = await response.json();
+
+      expect(data.scans).toHaveLength(1);
+      expect(data.scans[0].scanType).toBe('SECURITY');
+      expect(data.scans[0]).toHaveProperty('report');
+    });
+  });
 });

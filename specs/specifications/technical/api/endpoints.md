@@ -3535,6 +3535,7 @@ Returns paginated scan history for a project.
 - `type` (optional): `"SECURITY" | "COMPLIANCE" | "TESTS" | "SPEC_SYNC"` — filter by scan type
 - `limit` (optional): integer 1–100, default 20
 - `cursor` (optional): scan ID for cursor-based pagination
+- `includeReport` (optional): `"true"` — include the `report` JSON string in each scan object (omitted by default for performance)
 
 **Response** (200 OK):
 ```json
@@ -3553,13 +3554,16 @@ Returns paginated scan history for a project.
       "errorMessage": null,
       "startedAt": "2026-03-27T14:30:00Z",
       "completedAt": "2026-03-27T14:30:45Z",
-      "createdAt": "2026-03-27T14:29:55Z"
+      "createdAt": "2026-03-27T14:29:55Z",
+      "report": "{ ... }"
     }
   ],
   "nextCursor": 35,
   "hasMore": true
 }
 ```
+
+When `includeReport=true` is omitted, the `report` field is not present on scan objects.
 
 Results ordered by `createdAt DESC`. `nextCursor` is the ID of the last scan returned; pass as `cursor` for the next page.
 
