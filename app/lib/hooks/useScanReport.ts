@@ -25,6 +25,6 @@ export function useScanReport(projectId: number, moduleType: string, enabled: bo
     },
     enabled,
     staleTime: 30_000,
-    gcTime: 5 * 60 * 1000,
+    gcTime: 300_000,
   });
 }

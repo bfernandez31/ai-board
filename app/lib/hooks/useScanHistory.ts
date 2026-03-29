@@ -21,6 +21,6 @@ export function useScanHistory(projectId: number, moduleType: string, enabled: b
     },
     enabled,
     staleTime: 30_000,
-    gcTime: 5 * 60 * 1000,
+    gcTime: 300_000,
   });
 }

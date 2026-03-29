@@ -31,6 +31,6 @@ export function useGeneratedTickets(projectId: number, scanId: number | null, en
     },
     enabled: enabled && scanId !== null,
     staleTime: 60_000,
-    gcTime: 5 * 60 * 1000,
+    gcTime: 300_000,
   });
 }

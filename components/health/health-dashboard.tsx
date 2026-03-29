@@ -6,7 +6,7 @@ import { HealthModuleCard } from './health-module-card';
 import { ScanDetailDrawer } from './scan-detail-drawer';
 import { useHealthPolling } from '@/app/lib/hooks/useHealthPolling';
 import { useTriggerScan } from '@/app/lib/hooks/mutations/useTriggerScan';
-import { ACTIVE_SCAN_TYPES } from '@/lib/health/types';
+import { ACTIVE_SCAN_SET } from './shared';
 import type { HealthModuleType } from '@/lib/health/types';
 import type { HealthScanType } from '@prisma/client';
 
@@ -22,8 +22,6 @@ const MODULE_GRID: { type: HealthModuleType; key: keyof NonNullable<ReturnType<t
   { type: 'SPEC_SYNC', key: 'specSync' },
   { type: 'LAST_CLEAN', key: 'lastClean' },
 ];
-
-const ACTIVE_SCAN_SET = new Set<string>(ACTIVE_SCAN_TYPES);
 
 export function HealthDashboard({ projectId }: HealthDashboardProps) {
   const [selectedModule, setSelectedModule] = useState<{ type: HealthModuleType; key: keyof NonNullable<ReturnType<typeof useHealthPolling>['data']>['modules'] } | null>(null);
@@ -80,7 +78,7 @@ export function HealthDashboard({ projectId }: HealthDashboardProps) {
         ))}
       </div>
 
-      {selectedModule && data && (
+      {selectedModule && (
         <ScanDetailDrawer
           open={true}
           onOpenChange={(open) => { if (!open) setSelectedModule(null); }}

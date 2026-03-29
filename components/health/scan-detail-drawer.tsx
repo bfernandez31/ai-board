@@ -1,16 +1,6 @@
 'use client';
 
-import {
-  Shield,
-  Scale,
-  TestTubeDiagonal,
-  FileCheck,
-  Award,
-  Sparkles,
-  Loader2,
-  AlertTriangle,
-  type LucideIcon,
-} from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -24,36 +14,9 @@ import { GeneratedTicketsSection } from './generated-tickets-section';
 import { ScanHistorySection } from './scan-history-section';
 import { QualityGateContent } from './quality-gate-content';
 import { LastCleanContent } from './last-clean-content';
+import { MODULE_ICONS, getModuleLabel, getModuleState, ACTIVE_SCAN_SET } from './shared';
 import { useScanReport } from '@/app/lib/hooks/useScanReport';
-import { ACTIVE_SCAN_TYPES } from '@/lib/health/types';
 import type { HealthModuleType, HealthModuleStatus } from '@/lib/health/types';
-
-const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
-  SECURITY: Shield,
-  COMPLIANCE: Scale,
-  TESTS: TestTubeDiagonal,
-  SPEC_SYNC: FileCheck,
-  QUALITY_GATE: Award,
-  LAST_CLEAN: Sparkles,
-};
-
-const MODULE_LABELS: Record<HealthModuleType, string> = {
-  SECURITY: 'Security',
-  COMPLIANCE: 'Compliance',
-  TESTS: 'Tests',
-  SPEC_SYNC: 'Spec Sync',
-  QUALITY_GATE: 'Quality Gate',
-  LAST_CLEAN: 'Last Clean',
-};
-
-type DrawerState = 'never_scanned' | 'scanning' | 'completed' | 'failed';
-
-function getDrawerState(module: HealthModuleStatus, isScanning: boolean): DrawerState {
-  if (isScanning) return 'scanning';
-  if (module.scanStatus === 'FAILED') return 'failed';
-  if (module.score !== null || module.label === 'OK') return 'completed';
-  return 'never_scanned';
-}
 
 interface ScanDetailDrawerProps {
   open: boolean;
@@ -64,8 +27,6 @@ interface ScanDetailDrawerProps {
   isScanning: boolean;
 }
 
-const ACTIVE_SCAN_SET = new Set<string>(ACTIVE_SCAN_TYPES);
-
 export function ScanDetailDrawer({
   open,
   onOpenChange,
@@ -75,7 +36,7 @@ export function ScanDetailDrawer({
   isScanning,
 }: ScanDetailDrawerProps) {
   const isActiveScanType = ACTIVE_SCAN_SET.has(moduleType);
-  const state = getDrawerState(module, isScanning);
+  const state = getModuleState(module, isScanning);
 
   const { data: scanData } = useScanReport(
     projectId,
@@ -84,7 +45,7 @@ export function ScanDetailDrawer({
   );
 
   const Icon = MODULE_ICONS[moduleType];
-  const label = MODULE_LABELS[moduleType];
+  const label = getModuleLabel(moduleType);
   const scoreColors = module.score !== null ? getScoreColor(module.score) : null;
 
   const scan = scanData?.scan ?? null;
