@@ -44,7 +44,7 @@
 ### Implementation for User Story 1
 
 - [x] T006 [US1] Review and update security scan instruction file .claude-plugin/commands/ai-board.health-security.md to ensure scan categories cover all FR-003 requirements: injection (SQL, XSS, command), authentication/authorization flaws, exposed secrets, vulnerable dependencies, OWASP Top 10, input validation gaps, error message information leakage
-- [x] T007 [US1] Update .claude-plugin/commands/ai-board.health-security.md output format section to ensure SecurityReportPayload matches data-model.md: report.issues[] with severity (HIGH|MEDIUM|LOW), file, line, description, category fields; report.summary string
+- [x] T007 [US1] Update .claude-plugin/commands/ai-board.health-security.md output format section to ensure SecurityReportPayload matches data-model.md: report.issues[] with severity (high|medium|low), file, line, description, category fields; report.summary string
 - [x] T008 [US1] Update .claude-plugin/commands/ai-board.health-security.md score calculation instructions to match SCORE_RULES: score = 100 - (HIGH*15 + MEDIUM*5 + LOW*1), floor 0
 - [x] T009 [US1] Update .claude-plugin/commands/ai-board.health-security.md incremental scan instructions: when --base-commit provided, run git diff to get changed files and limit analysis to diff only; when absent, scan entire repository
 - [x] T010 [US1] Update .claude-plugin/commands/ai-board.health-security.md edge case handling: baseCommit not found falls back to full scan with note; empty repo returns score 100 with empty issues and summary noting no analyzable code
@@ -61,7 +61,7 @@
 
 ### Implementation for User Story 2
 
-- [x] T011 [US2] Review and update test scan instruction file .claude-plugin/commands/ai-board.health-tests.md to ensure test command detection logic matches research.md: priority order test:unit > test > vitest > jest, fallback to bun run test
+- [x] T011 [US2] Review and update test scan instruction file .claude-plugin/commands/ai-board.health-tests.md to ensure test command detection logic runs full suite: priority order test > vitest > jest, fallback to bun run test (test:unit excluded per FR-011)
 - [x] T012 [US2] Update .claude-plugin/commands/ai-board.health-tests.md output format section to ensure TestsReportPayload matches data-model.md: report.issues[] with file, description, status="fixed"; report.nonFixable[] with file, description, reason; report.summary string
 - [x] T013 [US2] Update .claude-plugin/commands/ai-board.health-tests.md auto-fix workflow instructions: for each failing test analyze error, attempt fix, re-run specific test to verify, commit fix individually to branch; report failed attempts as nonFixable with reason
 - [x] T014 [US2] Update .claude-plugin/commands/ai-board.health-tests.md score calculation instructions to match SCORE_RULES: score = (passed / total) * 100, adjusted for auto-fixed (auto-fixed count as passed)
@@ -83,7 +83,7 @@
 - [x] T017 [US3] Review and update compliance scan instruction file .claude-plugin/commands/ai-board.health-compliance.md to ensure constitution discovery matches research.md: check .ai-board/memory/constitution.md > .claude-plugin/memory/constitution.md > CLAUDE.md in order
 - [x] T018 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md output format section to ensure ComplianceReportPayload matches data-model.md: report.issues[] with category (principle name), file, line, description; report.summary string
 - [x] T019 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md to ensure per-principle evaluation with pass/partial/fail status is reflected in the report summary and issue categorization
-- [x] T020 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md score calculation instructions to match SCORE_RULES: score = 100 - (fail*20 + partial*5) per principle, floor 0
+- [x] T020 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md score calculation instructions to match SCORE_RULES: score = ((pass + partial*0.5) / total) * 100, normalized to principle count
 - [x] T021 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md incremental scan instructions: when --base-commit provided, analyze only diff; when absent, scan entire repository
 - [x] T022 [US3] Update .claude-plugin/commands/ai-board.health-compliance.md edge case handling: no constitution found reports gracefully with score 0; principles with no corresponding code patterns marked as pass; full compliance returns score 100 with all principles pass
 

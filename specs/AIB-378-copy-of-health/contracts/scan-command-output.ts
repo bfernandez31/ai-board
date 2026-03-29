@@ -28,7 +28,7 @@ export interface ScanCommandOutput {
 // --- Security ---
 
 export interface SecurityIssue {
-  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  severity: 'high' | 'medium' | 'low';
   file: string;
   line: number;
   description: string;
@@ -102,8 +102,8 @@ export type ScanType = keyof typeof SCAN_COMMAND_MAP;
 
 /** Score calculation rules per scan type */
 export const SCORE_RULES = {
-  SECURITY: 'score = 100 - (HIGH*15 + MEDIUM*5 + LOW*1), floor 0',
-  COMPLIANCE: 'score = 100 - (fail*20 + partial*5) per principle, floor 0',
+  SECURITY: 'score = 100 - (high*15 + medium*5 + low*1), floor 0',
+  COMPLIANCE: 'score = ((pass + partial*0.5) / total) * 100, normalized to principle count',
   TESTS: 'score = (passed / total) * 100, adjusted for auto-fixed',
   SPEC_SYNC: 'score = (synced / total) * 100',
 } as const;

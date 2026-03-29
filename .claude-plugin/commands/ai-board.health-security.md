@@ -29,16 +29,16 @@ Analyze the codebase for **all** of the following security categories:
 - **Cryptography**: Weak algorithms, insecure random number generation, missing encryption where required
 
 For each issue found, determine the severity:
-- **HIGH**: Directly exploitable vulnerability, immediate risk (e.g., SQL injection, exposed credentials)
-- **MEDIUM**: Potential risk requiring specific conditions to exploit (e.g., missing CSRF protection, weak crypto)
-- **LOW**: Best practice violation, minimal direct risk (e.g., verbose error messages, missing security headers)
+- **high**: Directly exploitable vulnerability, immediate risk (e.g., SQL injection, exposed credentials)
+- **medium**: Potential risk requiring specific conditions to exploit (e.g., missing CSRF protection, weak crypto)
+- **low**: Best practice violation, minimal direct risk (e.g., verbose error messages, missing security headers)
 
 ## Score Calculation
 
 Calculate the score using this formula:
 
 ```
-score = 100 - (HIGH_count * 15 + MEDIUM_count * 5 + LOW_count * 1)
+score = 100 - (high_count * 15 + medium_count * 5 + low_count * 1)
 ```
 
 Floor the result at **0** (score can never be negative).
@@ -57,14 +57,14 @@ The JSON object must have this **exact** structure:
   "report": {
     "issues": [
       {
-        "severity": "HIGH",
+        "severity": "high",
         "file": "path/to/file.ts",
         "line": 42,
         "description": "SQL injection vulnerability in query builder — use parameterized queries instead",
         "category": "injection"
       }
     ],
-    "summary": "Found 1 HIGH, 1 MEDIUM, 1 LOW security issue. Key concern: SQL injection in query builder."
+    "summary": "Found 1 high, 1 medium, 1 low security issue. Key concern: SQL injection in query builder."
   },
   "tokensUsed": 0,
   "costUsd": 0
@@ -79,7 +79,7 @@ The JSON object must have this **exact** structure:
 | `issuesFound` | `number` | Yes | Must equal `report.issues.length` |
 | `issuesFixed` | `number` | Yes | Always `0` for security scans |
 | `report.issues` | `array` | Yes | List of SecurityIssue objects |
-| `report.issues[].severity` | `string` | Yes | `"HIGH"`, `"MEDIUM"`, or `"LOW"` (uppercase) |
+| `report.issues[].severity` | `string` | Yes | `"high"`, `"medium"`, or `"low"` (lowercase) |
 | `report.issues[].file` | `string` | Yes | File path relative to repository root |
 | `report.issues[].line` | `number` | Yes | Positive integer line number |
 | `report.issues[].description` | `string` | Yes | What the vulnerability is and how to fix it |

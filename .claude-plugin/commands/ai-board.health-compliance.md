@@ -46,13 +46,17 @@ After loading the constitution, extract each declared principle and evaluate the
 Calculate the score using this formula:
 
 ```
-score = 100 - (fail_count * 20 + partial_count * 5)
+score = ((pass_count + partial_count * 0.5) / total_count) * 100
 ```
 
 Where:
-- `fail_count` = number of principles with **fail** status
-- `partial_count` = number of principles with **partial** status
-- Floor the result at **0** (score can never be negative)
+- `pass_count` = number of principles with **pass** status
+- `partial_count` = number of principles with **partial** status (each counts as half a pass)
+- `total_count` = total number of principles evaluated
+- Round to the nearest integer
+- If `total_count` is 0, return score 100
+
+This formula is normalized to the number of principles (consistent with health-tests and health-spec-sync scoring) and scales proportionally regardless of how many principles a project defines.
 
 ## Output Format
 

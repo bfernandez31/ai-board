@@ -100,7 +100,7 @@ Each command's JSON output must align with the corresponding report type:
 
 | Command | Report Type | Key Fields |
 |---------|-------------|------------|
-| health-security | `SecurityReport` | `issues[]` with severity (HIGH/MEDIUM/LOW), file, line, category |
+| health-security | `SecurityReport` | `issues[]` with severity (high/medium/low), file, line, category |
 | health-compliance | `ComplianceReport` | `issues[]` with category (constitution principle), file, line |
 | health-tests | `TestsReport` | `autoFixed[]`, `nonFixable[]` with file, description |
 | health-spec-sync | `SpecSyncReport` | `specs[]` with specPath, status (synced/drifted), drift description |
@@ -118,8 +118,8 @@ health-tests ignores `--base-commit` (always runs full suite per spec decision).
 ### Layer 4: Score Calculation
 
 Each command outputs a `score` (0-100):
-- **Security**: `100 - (HIGH*15 + MEDIUM*5 + LOW*1)`, floor 0
-- **Compliance**: `100 - (fail*20 + partial*5)` per principle, floor 0
+- **Security**: `100 - (high*15 + medium*5 + low*1)`, floor 0
+- **Compliance**: `((pass + partial*0.5) / total) * 100`, normalized to principle count
 - **Tests**: `(passed / total) * 100`, adjusted for auto-fixed
 - **Spec Sync**: `(synced / total) * 100`
 

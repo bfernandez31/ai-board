@@ -51,7 +51,7 @@
 
 ---
 
-- **Decision**: Severity levels are standardized: HIGH (exploitable/critical), MEDIUM (potential risk), LOW (best practice violation) across all commands that report severity
+- **Decision**: Severity levels are standardized: high (exploitable/critical), medium (potential risk), low (best practice violation) across all commands that report severity — lowercase to match the Zod schema in report-schemas.ts
 - **Policy Applied**: CONSERVATIVE
 - **Confidence**: High — consistent severity taxonomy aligns with OWASP and industry standards
 - **Fallback Triggered?**: No
@@ -72,7 +72,7 @@ A project owner triggers a health scan to identify security vulnerabilities in t
 
 **Acceptance Scenarios**:
 
-1. **Given** a project repository with code, **When** the security scan runs without a baseCommit, **Then** it performs a full repository scan and produces a valid JSON report with a score (0-100), issues grouped by severity (HIGH/MEDIUM/LOW), and each issue includes file path, line number, vulnerability description, and remediation recommendation.
+1. **Given** a project repository with code, **When** the security scan runs without a baseCommit, **Then** it performs a full repository scan and produces a valid JSON report with a score (0-100), issues grouped by severity (high/medium/low), and each issue includes file path, line number, vulnerability description, and remediation recommendation.
 2. **Given** a baseCommit parameter, **When** the security scan runs, **Then** it analyzes only the diff since that commit and reports issues found in the changed code.
 3. **Given** no security issues are found, **When** the scan completes, **Then** the report returns a score of 100 with an empty issues list.
 

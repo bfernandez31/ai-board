@@ -34,7 +34,7 @@ The `report` field for security scans.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `severity` | `"HIGH" \| "MEDIUM" \| "LOW"` | Yes | Issue severity |
+| `severity` | `"high" \| "medium" \| "low"` | Yes | Issue severity |
 | `file` | `string` | Yes | Affected file path |
 | `line` | `number` | Yes | Line number of the issue |
 | `description` | `string` | Yes | What the vulnerability is |
@@ -107,7 +107,7 @@ The workflow transforms command output into the existing `ScanReport` types in `
 
 | Command Output | → | Stored Report Type | Transformation |
 |---------------|---|-------------------|----------------|
-| SecurityReportPayload | → | `SecurityReport` | Add `type: 'SECURITY'`, map severity to lowercase, add `id` to each issue, add `generatedTickets` |
+| SecurityReportPayload | → | `SecurityReport` | Add `type: 'SECURITY'`, add `id` to each issue, add `generatedTickets` (severity already lowercase) |
 | ComplianceReportPayload | → | `ComplianceReport` | Add `type: 'COMPLIANCE'`, add `severity` from category mapping, add `id`, add `generatedTickets` |
 | TestsReportPayload | → | `TestsReport` | Add `type: 'TESTS'`, map `issues` → `autoFixed`, keep `nonFixable`, add `id`/`severity`, add `generatedTickets` |
 | SpecSyncReportPayload | → | `SpecSyncReport` | Add `type: 'SPEC_SYNC'`, pass `specs` through, add `generatedTickets` |
@@ -119,7 +119,7 @@ The workflow transforms command output into the existing `ScanReport` types in `
 - `issuesFixed` must equal length of auto-fixed array (tests) or 0 (others)
 - All file paths must be relative to repository root
 - Line numbers must be positive integers
-- Severity values are case-sensitive (uppercase in command output)
+- Severity values are case-sensitive (lowercase in command output, matching Zod schema)
 
 ## State Transitions
 

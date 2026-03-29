@@ -12,17 +12,19 @@ Arguments are passed inline after the command name:
 
 Detect the project's test command by inspecting `package.json` scripts in this priority order:
 
-1. `test:unit` — if present, use `bun run test:unit` (or npm/yarn equivalent)
-2. `test` — if present, use `bun run test`
-3. `vitest` — if present, use `bunx vitest run`
-4. `jest` — if present, use `bunx jest`
-5. **Fallback**: If none of the above are found, use `bun run test`
+1. `test` — if present, use `bun run test` (runs the **complete** test suite per FR-011)
+2. `vitest` — if present, use `bunx vitest run`
+3. `jest` — if present, use `bunx jest`
+4. **Fallback**: If none of the above are found, use `bun run test`
+
+**Important**: Do NOT use `test:unit` — it runs only unit tests. health-tests MUST always run the complete test suite (FR-011).
 
 For non-JavaScript/TypeScript projects, detect the appropriate test runner from project files (e.g., `pytest` for Python, `cargo test` for Rust, `go test` for Go).
 
 **Edge case — no test command detected**: If no test command can be found in package.json or project conventions, report an error issue in the output:
 - Set `issuesFound` to 1, `issuesFixed` to 0
-- Add a single issue: `{ "file": "package.json", "description": "No test command detected in package.json scripts", "status": "fixed" }` — note: use the `nonFixable` array instead with `reason: "No test runner configured"`
+- Add to the `nonFixable` array: `{ "file": "package.json", "description": "No test command detected in package.json scripts", "reason": "No test runner configured" }`
+- Keep `issues` array empty (nothing was fixed)
 - Set score to 0
 - Summary: "No test command found in project configuration"
 
