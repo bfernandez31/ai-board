@@ -52,15 +52,7 @@ export function DrawerHeader({ moduleType, moduleStatus, scan, isLoading }: Draw
           )}
         </div>
 
-        {isLoading ? (
-          <span className="text-xs text-muted-foreground bg-muted rounded-md px-2 py-0.5">...</span>
-        ) : score !== null && scoreColors ? (
-          <span className={`text-sm font-semibold ${scoreColors.text} ${scoreColors.bg} rounded-md px-2.5 py-0.5`}>
-            {score}
-          </span>
-        ) : (
-          <span className="text-xs text-muted-foreground bg-muted rounded-md px-2 py-0.5">---</span>
-        )}
+        <HeaderScoreBadge isLoading={isLoading} score={score} scoreColors={scoreColors} />
       </div>
 
       {scanDate && (
@@ -82,5 +74,33 @@ export function DrawerHeader({ moduleType, moduleStatus, scan, isLoading }: Draw
         </p>
       )}
     </div>
+  );
+}
+
+function HeaderScoreBadge({
+  isLoading,
+  score,
+  scoreColors,
+}: {
+  isLoading: boolean;
+  score: number | null;
+  scoreColors: { text: string; bg: string } | null;
+}) {
+  if (isLoading) {
+    return (
+      <span className="text-xs text-muted-foreground bg-muted rounded-md px-2 py-0.5">...</span>
+    );
+  }
+
+  if (score !== null && scoreColors) {
+    return (
+      <span className={`text-sm font-semibold ${scoreColors.text} ${scoreColors.bg} rounded-md px-2.5 py-0.5`}>
+        {score}
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-xs text-muted-foreground bg-muted rounded-md px-2 py-0.5">---</span>
   );
 }

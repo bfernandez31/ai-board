@@ -78,16 +78,6 @@ const scanReportSchema = z.discriminatedUnion('type', [
   lastCleanReportSchema,
 ]);
 
-/** Map from HealthModuleType to expected report type discriminator */
-const MODULE_TO_REPORT_TYPE: Record<HealthModuleType, string> = {
-  SECURITY: 'SECURITY',
-  COMPLIANCE: 'COMPLIANCE',
-  TESTS: 'TESTS',
-  SPEC_SYNC: 'SPEC_SYNC',
-  QUALITY_GATE: 'QUALITY_GATE',
-  LAST_CLEAN: 'LAST_CLEAN',
-};
-
 /**
  * Parse a raw JSON string into a typed ScanReport.
  * Returns null if the JSON is invalid, null, or doesn't match the expected schema.
@@ -97,18 +87,17 @@ export function parseScanReport(scanType: HealthModuleType, rawJson: string | nu
 
   try {
     const parsed = JSON.parse(rawJson);
-    const expectedType = MODULE_TO_REPORT_TYPE[scanType];
 
     // If parsed object doesn't have a type field, inject it from scanType
     if (typeof parsed === 'object' && parsed !== null && !parsed.type) {
-      parsed.type = expectedType;
+      parsed.type = scanType;
     }
 
     const result = scanReportSchema.safeParse(parsed);
     if (!result.success) return null;
 
     // Verify the report type matches the scan type
-    if (result.data.type !== expectedType) return null;
+    if (result.data.type !== scanType) return null;
 
     return result.data;
   } catch {

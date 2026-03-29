@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getScoreColor } from '@/lib/quality-score';
+import { MODULE_METADATA } from '@/lib/health/types';
 import type { HealthModuleType, HealthModuleStatus } from '@/lib/health/types';
 
 const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
@@ -22,15 +23,6 @@ const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
   SPEC_SYNC: FileCheck,
   QUALITY_GATE: Award,
   LAST_CLEAN: Sparkles,
-};
-
-const MODULE_LABELS: Record<HealthModuleType, string> = {
-  SECURITY: 'Security',
-  COMPLIANCE: 'Compliance',
-  TESTS: 'Tests',
-  SPEC_SYNC: 'Spec Sync',
-  QUALITY_GATE: 'Quality Gate',
-  LAST_CLEAN: 'Last Clean',
 };
 
 type CardState = 'never_scanned' | 'scanning' | 'completed' | 'failed';
@@ -60,7 +52,7 @@ export function HealthModuleCard({
   onClick,
 }: HealthModuleCardProps) {
   const Icon = MODULE_ICONS[moduleType];
-  const label = MODULE_LABELS[moduleType];
+  const label = MODULE_METADATA[moduleType].label;
   const isPassive = module.passive === true;
   const state = getCardState(module, isScanning);
   const scoreColors = module.score !== null ? getScoreColor(module.score) : null;
