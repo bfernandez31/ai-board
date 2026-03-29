@@ -15,7 +15,7 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 ```
 .claude-plugin/
 ├── plugin.json                          # Plugin metadata (name, version, description)
-├── commands/                            # 17 slash commands (ai-board.*.md)
+├── commands/                            # 21 slash commands (ai-board.*.md)
 │   ├── ai-board.specify.md              # Generate feature specification
 │   ├── ai-board.clarify.md              # Ask clarification questions on spec
 │   ├── ai-board.plan.md                 # Generate implementation plan
@@ -32,7 +32,11 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 │   ├── ai-board.assist.md               # AI assistant for @ai-board mentions
 │   ├── ai-board.compare.md              # Compare tickets (telemetry/specs)
 │   ├── ai-board.analyze.md              # Cross-artifact consistency analysis
-│   └── ai-board.constitution.md         # Create/update project constitution
+│   ├── ai-board.constitution.md         # Create/update project constitution
+│   ├── ai-board.health-security.md      # Security vulnerability scan
+│   ├── ai-board.health-compliance.md    # Constitution compliance scan
+│   ├── ai-board.health-tests.md         # Full test suite execution with auto-fix
+│   └── ai-board.health-spec-sync.md     # Spec-vs-implementation drift detection
 ├── templates/                           # Document templates used by commands
 │   ├── spec-template.md                 # Specification template
 │   ├── plan-template.md                 # Implementation plan template
@@ -90,6 +94,10 @@ Each command is designed to run at a specific workflow stage. Commands are invok
 | `ai-board.compare` | Any | `ai-board-assist.yml` | Compare tickets (telemetry + specs) |
 | `ai-board.analyze` | Local only | — | Cross-artifact consistency analysis |
 | `ai-board.constitution` | Local only | — | Create/update project constitution |
+| `ai-board.health-security` | Health Scan | `health-scan.yml` | Security vulnerability analysis (OWASP, secrets, injection) |
+| `ai-board.health-compliance` | Health Scan | `health-scan.yml` | Constitution compliance evaluation per principle |
+| `ai-board.health-tests` | Health Scan | `health-scan.yml` | Full test suite execution with auto-fix and commit |
+| `ai-board.health-spec-sync` | Health Scan | `health-scan.yml` | Spec-vs-implementation drift detection (bidirectional) |
 
 ### Workflow Type → Command Sequence
 
@@ -116,6 +124,25 @@ Some commands are designed for local interactive use and are not triggered by wo
 - **`ai-board.analyze`**: Run after task generation to check consistency between spec.md, plan.md, and tasks.md
 - **`ai-board.constitution`**: Create or update the project constitution (`.ai-board/memory/constitution.md`)
 - **`ai-board.compare`**: Can also be used locally to compare ticket implementations
+
+### Health Scan Commands
+
+The 4 health scan commands are invoked exclusively by the `health-scan.yml` workflow, triggered on-demand from the Health Dashboard UI. They are not part of the ticket lifecycle stages:
+
+- **`ai-board.health-security`**: Analyzes code for injection vulnerabilities, authentication flaws, exposed secrets, vulnerable dependencies, and OWASP Top 10 issues. Supports incremental scanning via `--base-commit`. Outputs a `SecurityReportPayload` JSON.
+- **`ai-board.health-compliance`**: Reads the target project's constitution dynamically (checks `.ai-board/memory/constitution.md` → `.claude-plugin/memory/constitution.md` → `CLAUDE.md` in order) and evaluates each declared principle with pass/partial/fail status. Supports incremental scanning. Outputs a `ComplianceReportPayload` JSON.
+- **`ai-board.health-tests`**: Runs the full test suite (always full — ignores `--base-commit`), auto-fixes failing tests where possible, commits each fix individually, and reports auto-fixed and non-fixable tests. Outputs a `TestsReportPayload` JSON.
+- **`ai-board.health-spec-sync`**: Compares every file in `specs/specifications/` against the codebase implementation, detecting drift in both directions (spec without code, code without spec). Supports incremental scanning via `--base-commit`. Outputs a `SpecSyncReportPayload` JSON.
+
+All 4 commands accept `--base-commit <SHA>` and `--head-commit <SHA>` arguments and produce **only valid JSON to stdout** — no extra text, logs, or formatting. The workflow parses the JSON and injects the `type` discriminator and `generatedTickets` fields before persisting the report.
+
+**Score formulas:**
+| Command | Formula |
+|---------|---------|
+| health-security | `100 - (HIGH×15 + MEDIUM×5 + LOW×1)`, floor 0 |
+| health-compliance | `100 - (fail×20 + partial×5)` per principle, floor 0 |
+| health-tests | `(passed / total) × 100` (auto-fixed count as passed) |
+| health-spec-sync | `(synced / total) × 100` |
 
 ## Plugin Installation
 
