@@ -29,6 +29,11 @@ on:
         description: 'Target repository in format owner/repo'
         required: true
         type: string
+      agent:
+        description: 'Agent type (CLAUDE or CODEX)'
+        required: false
+        type: string
+        default: 'CLAUDE'
 
 jobs:
   run-health-scan:
@@ -52,6 +57,16 @@ jobs:
           echo "  head_commit: ${{ inputs.head_commit }}"
           echo "  githubRepository: ${{ inputs.githubRepository }}"
 
+      # Checkout ai-board for commands and scripts (sparse, from main = stable tools)
+      - name: Checkout ai-board (sparse - plugin and scripts)
+        uses: actions/checkout@v4
+        with:
+          path: ai-board
+          sparse-checkout: |
+            .claude-plugin
+            .github/scripts
+          sparse-checkout-cone-mode: true
+
       # Step 1: Checkout target repository (US1 T006)
       - name: Checkout Target Repository
         uses: actions/checkout@v4
@@ -59,6 +74,7 @@ jobs:
           repository: ${{ inputs.githubRepository }}
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
+          path: target
 
       # Step 2: Update scan status to RUNNING (US1 T007)
       - name: Update Scan Status - RUNNING
@@ -91,19 +107,17 @@ jobs:
               exit 1
               ;;
           esac
-          echo "✅ Mapped ${{ inputs.scan_type }} → $(cat $GITHUB_OUTPUT | grep command | cut -d= -f2)"
+          echo "✅ Mapped ${{ inputs.scan_type }} → ai-board.$(grep command <<< "$(cat $GITHUB_OUTPUT)" | cut -d= -f2)"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.20.0'
 
-      - name: Install Claude Code
-        run: npm install -g @anthropic-ai/claude-code
-
       # Step 4: Execute scan command (US1 T009, US3 T015, US6 T021)
       - name: Execute Scan Command
         id: scan-exec
+        working-directory: target
         run: |
           set -o pipefail
           SCAN_CMD="${{ steps.scan-command.outputs.command }}"
@@ -124,8 +138,8 @@ jobs:
           # Track duration (US6: telemetry)
           SECONDS=0
 
-          # Execute scan via Claude Code CLI and capture output
-          if claude --command "/ai-board.${SCAN_CMD} ${SCAN_ARGS}" --json > /tmp/scan_output.json 2>/tmp/scan_stderr.txt; then
+          # Execute scan via run-agent.sh (established pattern for all workflows)
+          if ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.${SCAN_CMD}" "${SCAN_ARGS}" > /tmp/scan_output.json 2>/tmp/scan_stderr.txt; then
             DURATION_MS=$((SECONDS * 1000))
             echo "duration_ms=$DURATION_MS" >> $GITHUB_OUTPUT
             echo "scan_success=true" >> $GITHUB_OUTPUT
@@ -250,6 +264,7 @@ jobs:
       # NOTE: Runs AFTER ticket creation per spec (integrations.md)
       - name: Update Scan Status - COMPLETED
         if: ${{ steps.scan-exec.outputs.scan_success == 'true' }}
+        working-directory: target
         run: |
           REPORT=$(cat /tmp/scan_report.json)
           HEAD_COMMIT="${{ inputs.head_commit }}"
