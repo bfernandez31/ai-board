@@ -824,6 +824,26 @@ interface GeneratedTicket {
 }
 ```
 
+### Command Output Format
+
+Active module scan commands (`health-security`, `health-compliance`, `health-tests`, `health-spec-sync`) write a single JSON object to stdout. The workflow parses this with `jq` to extract fields for storage and ticket creation.
+
+```json
+{
+  "score": 85,
+  "issuesFound": 3,
+  "issuesFixed": 1,
+  "report": { ... }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `score` | `number` 0–100 | Health score; 100 = no issues. Score weights: HIGH −15, MEDIUM −8, LOW −3, floor 0 |
+| `issuesFound` | `number` | Total issues detected (for TESTS: `autoFixed.length + nonFixable.length`) |
+| `issuesFixed` | `number` | Issues auto-fixed (non-zero only for TESTS; 0 for all other modules) |
+| `report` | `ScanReport` | Typed report object stored in `HealthScan.report` (see discriminated union below) |
+
 ### ScanReport Discriminated Union
 
 ```typescript
@@ -844,6 +864,17 @@ type ScanReport =
 | `"SPEC_SYNC"` | Spec Sync | `specs[]` with `status: "synced" | "drifted"` and optional `drift` string |
 | `"QUALITY_GATE"` | Quality Gate (passive) | `dimensions[]` score breakdown + `recentTickets[]` |
 | `"LAST_CLEAN"` | Last Clean (passive) | `filesCleaned`, `remainingIssues`, `summary` string |
+
+**SecurityReport categories**: `injection`, `authentication`, `sensitive-data`, `access-control`, `misconfiguration`, `dependencies`, `cryptography`
+
+**ComplianceReport categories** (map to constitution principles): `TypeScript-First`, `Component-Driven`, `Test-Driven`, `Security-First`, `Database-Integrity`, `AI-First`
+
+**ComplianceReport severity mapping**:
+- `high`: `Security-First`, `Database-Integrity` violations
+- `medium`: `TypeScript-First`, `Test-Driven`, `Component-Driven` violations
+- `low`: `AI-First`, code-style violations
+
+**Constitution file discovery** (compliance command): reads `.ai-board/memory/constitution.md` first, falls back to `.claude-plugin/memory/constitution.md`
 
 ### Parsing
 
