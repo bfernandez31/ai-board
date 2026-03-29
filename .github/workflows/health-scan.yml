@@ -187,17 +187,20 @@ jobs:
           # Parse report and create grouped tickets based on scan type
           case "$SCAN_TYPE" in
             SECURITY)
-              # Group by severity
+              # Group by severity — include exploit scenario & recommendation when available
               echo "$REPORT" | jq -r '.issues // [] | group_by(.severity) | .[] | {
                 severity: .[0].severity,
                 count: length,
-                details: [.[] | "\(.file // "unknown"):\(.line // "?"): \(.description)"] | join("\n")
+                details: [.[] | "- **\(.file // "unknown"):\(.line // "?")**: \(.description)" + (if .exploitScenario then "\n  > **Exploit:** \(.exploitScenario)" else "" end) + (if .recommendation then "\n  > **Fix:** \(.recommendation)" else "" end)] | join("\n\n")
               }' | jq -c '.' | while read -r group; do
                 SEVERITY=$(echo "$group" | jq -r '.severity')
                 COUNT=$(echo "$group" | jq -r '.count')
                 DETAILS=$(echo "$group" | jq -r '.details')
                 TITLE="[Security] Fix ${COUNT} ${SEVERITY^^} severity issue$([ "$COUNT" -gt 1 ] && echo 's')"
                 DESC="Health scan found ${COUNT} ${SEVERITY^^} severity security issue$([ "$COUNT" -gt 1 ] && echo 's'):\n\n${DETAILS}"
+
+                # Truncate description to stay within 10000 char ticket limit
+                DESC=$(echo "$DESC" | head -c 9900)
 
                 curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
                   -H "Content-Type: application/json" \

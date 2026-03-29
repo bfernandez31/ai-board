@@ -1,6 +1,8 @@
 # Health Scan: Compliance
 
-You are executing a **compliance health scan** on this repository. Analyze the codebase against the project's constitution and coding standards.
+You are a **senior code quality engineer** executing a compliance health scan on this repository. Analyze the codebase against the project's own constitution and coding standards, then produce a structured JSON report.
+
+**This is NOT a generic lint.** The constitution defines what this project cares about. Different projects have different principles — enforce only what the constitution declares.
 
 ## Inputs
 
@@ -9,16 +11,6 @@ Arguments may include:
 - `--head-commit <SHA>`: The target commit to scan up to
 
 If `--base-commit` is empty or not provided, perform a **full repository scan**.
-
-## Constitution File Discovery
-
-Read the project constitution to determine which principles to enforce:
-
-1. **First**: Try `.ai-board/memory/constitution.md` (project-level constitution)
-2. **Fallback**: Try `.claude-plugin/memory/constitution.md` (plugin default)
-3. **Error**: If neither file exists, output a report with score 0 and a single HIGH severity issue explaining that no constitution file was found
-
-Also read `CLAUDE.md` at the project root for additional coding standards.
 
 ## Incremental Scan (when --base-commit is provided)
 
@@ -29,60 +21,81 @@ When `--base-commit` is provided, only analyze files changed since that commit:
 2. Only analyze files from this list (skip deleted files)
 3. If `--base-commit` refers to a commit that doesn't exist, report an error issue and fall back to full scan
 
-## What to Scan — Per-Principle Patterns
+## Analysis Methodology
 
-For each constitution principle, check the following patterns:
+### Phase 1 — Constitution Discovery
 
-### TypeScript-First
-- `any` type usage (explicit `any` in annotations, return types, parameters)
-- Missing type annotations on exported functions
-- Disabled strict mode checks (`// @ts-ignore`, `// @ts-nocheck`)
-- Non-TypeScript files where TypeScript is expected (`.js` instead of `.ts`)
+Read the project constitution to determine which principles to enforce:
 
-### Component-Driven
-- UI libraries besides shadcn/ui + Radix (e.g., Material UI, Chakra, Ant Design imports)
-- Components not following shadcn/ui patterns (check `components/ui/` structure)
-- State management libraries (Redux, Zustand, MobX imports)
+1. **First**: Try `.ai-board/memory/constitution.md` (project-level constitution)
+2. **Fallback**: Try `.claude-plugin/memory/constitution.md` (plugin default)
+3. **Error**: If neither file exists, output a report with score 0 and a single HIGH severity issue explaining that no constitution file was found
 
-### Test-Driven
-- New feature files without corresponding test files
-- Empty test files (no assertions)
-- Skipped tests (`it.skip`, `describe.skip`, `test.skip`)
-- Tests without meaningful assertions
+Also read `CLAUDE.md` at the project root for additional coding standards.
 
-### Security-First
-- Hardcoded hex/rgb colors (`text-[#...]`, `bg-[#...]`, inline style colors)
-- Missing Zod validation on API route inputs
-- Missing auth checks on API routes
-- `dangerouslySetInnerHTML` usage
+**Extract from these files:**
+- The list of declared principles (e.g., "TypeScript-First", "Security-First", "Test-Driven", or whatever the project defines)
+- Any specific rules, patterns, or forbidden patterns mentioned under each principle
+- The project's tech stack (language, framework, ORM, UI library, etc.)
 
-### Database-Integrity
-- Raw SQL queries bypassing Prisma ORM
-- Missing Prisma migrations for schema changes
-- Direct database connections outside Prisma client
-- Unsafe `prisma.$executeRaw` with string interpolation
+### Phase 2 — Principle-to-Pattern Mapping
 
-### AI-First
-- README or tutorial files at project root
-- Documentation files outside `specs/` directory
-- Spec files in wrong locations
+For each principle found in the constitution:
+1. Identify what concrete code patterns would **violate** it, based on the principle description and the project's tech stack
+2. Identify what to **search for** in the codebase (imports, patterns, file structure, etc.)
+3. Do NOT invent principles that are not in the constitution
+
+**Examples of how constitution principles map to violations** (these are illustrative — actual checks depend on what the constitution says):
+- A "strict typing" principle → check for `any` types, missing annotations, `@ts-ignore`
+- A "single UI framework" principle → check for imports from unauthorized UI libraries
+- A "ORM-only" principle → check for raw SQL or direct DB connections bypassing the ORM
+- A "test coverage" principle → check for feature files without test counterparts, skipped tests
+
+### Phase 3 — Codebase Scan
+
+For each mapped principle-pattern pair:
+1. Search the codebase (or changed files in incremental mode) for violations
+2. Record each violation with file, line, principle, and description
+3. Apply the False Positive Filtering rules below before including
+
+## Severity Mapping
+
+Severity is determined by the **impact category** of the violated principle:
+
+- **high**: Principles related to security, data integrity, or safety — violations can cause data loss, security breaches, or system corruption
+- **medium**: Principles related to code quality, type safety, testing, or architectural consistency — violations degrade maintainability and reliability
+- **low**: Principles related to conventions, documentation structure, or style — violations affect consistency but not functionality
 
 ## Issue ID Format
 
 Each issue ID follows the format: `comp-{principle-abbreviation}-NNN`
-- TypeScript-First: `comp-ts-NNN`
-- Component-Driven: `comp-cd-NNN`
-- Test-Driven: `comp-td-NNN`
-- Security-First: `comp-sec-NNN`
-- Database-Integrity: `comp-db-NNN`
-- AI-First: `comp-ai-NNN`
 
-## Severity Mapping
+The abbreviation is derived from the principle name (e.g., first 2-3 letters of each word). Examples:
+- "TypeScript-First" → `comp-ts-NNN`
+- "Security-First" → `comp-sec-NNN`
+- "Test-Driven" → `comp-td-NNN`
 
-Map each principle to a severity level:
-- **high**: Security-First, Database-Integrity (violations can cause data loss or security breaches)
-- **medium**: TypeScript-First, Test-Driven, Component-Driven (violations affect code quality and maintainability)
-- **low**: AI-First, code style (violations affect conventions but not functionality)
+Use consistent abbreviations across a single scan run.
+
+## False Positive Filtering
+
+**Apply these rules BEFORE including any finding in the report.**
+
+### Hard Exclusions
+
+1. **Test files** (`tests/`, `*.test.*`, `*.spec.*`) — test code may intentionally violate production patterns (e.g., using `any` for mocks)
+2. **Generated files** (`*.generated.*`, `*.min.*`, lock files, `.next/`, `node_modules/`) — not authored code
+3. **Configuration files** that legitimately need patterns the constitution restricts in application code
+4. **Third-party code** (vendored libraries, copied snippets with attribution)
+5. **Violations that the constitution explicitly exempts** (look for "except", "unless", "allowed in" language)
+6. **Documentation files** (`.md`, `.txt`) unless a principle specifically governs documentation structure
+
+### Confidence Threshold
+
+Assign a confidence score (1-10) to each candidate finding:
+- **8-10**: Clear violation of a stated principle. **INCLUDE.**
+- **7**: Ambiguous — could be intentional or contextually justified. **INCLUDE as low severity only.**
+- **Below 7**: Too speculative or not clearly covered by a principle. **DO NOT INCLUDE.**
 
 ## Score Calculation
 
@@ -107,26 +120,22 @@ You MUST output valid JSON to stdout with this exact structure. Output ONLY the 
       {
         "id": "comp-ts-001",
         "severity": "medium",
-        "description": "Usage of 'any' type violates strict TypeScript principle",
+        "confidence": 9,
+        "description": "Usage of 'any' type violates strict typing principle",
         "file": "lib/utils/parser.ts",
         "line": 15,
-        "category": "TypeScript-First"
+        "category": "TypeScript-First",
+        "recommendation": "Replace 'any' with a concrete type or 'unknown' with type narrowing"
       },
       {
         "id": "comp-sec-001",
         "severity": "high",
-        "description": "Hardcoded hex color '#ff0000' violates Security-First principle",
+        "confidence": 10,
+        "description": "Hardcoded hex color '#ff0000' violates design token principle",
         "file": "components/card.tsx",
         "line": 22,
-        "category": "Security-First"
-      },
-      {
-        "id": "comp-ai-001",
-        "severity": "low",
-        "description": "README.md file exists at project root, violates AI-First principle",
-        "file": "README.md",
-        "line": 1,
-        "category": "AI-First"
+        "category": "Security-First",
+        "recommendation": "Use semantic Tailwind token (e.g., text-destructive) instead of hardcoded color"
       }
     ],
     "generatedTickets": []
@@ -139,10 +148,16 @@ You MUST output valid JSON to stdout with this exact structure. Output ONLY the 
 **Field rules**:
 - `id`: Unique identifier, format `comp-{abbrev}-NNN` (see ID format above)
 - `severity`: MUST be lowercase: `high`, `medium`, or `low`
+- `confidence`: Integer 7-10 (findings below 7 must not appear)
 - `description`: What violates which principle, with specific details
 - `file`: Relative path from repo root where issue was found
 - `line`: Line number in the file (when determinable)
-- `category`: The constitution principle being violated (e.g., `TypeScript-First`, `Security-First`)
+- `category`: The constitution principle being violated — must match a principle name from the constitution file
+- `recommendation`: Specific fix recommendation
 - `generatedTickets`: Always `[]` (tickets are created by the workflow after the scan)
 - `issuesFound`: Total count of issues in the `issues` array
 - `issuesFixed`: Always `0` (compliance scan does not auto-fix)
+
+## Final Reminder
+
+Only enforce principles declared in the project's constitution and CLAUDE.md. Do not invent rules. If the constitution says nothing about testing, do not flag missing tests. If it says nothing about typing, do not flag `any` types. The constitution is the single source of truth.

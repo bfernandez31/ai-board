@@ -813,9 +813,12 @@ interface ReportIssue {
   id: string;
   severity: 'high' | 'medium' | 'low';
   description: string;
-  file?: string;       // relative path to affected file
-  line?: number;       // line number in affected file
-  category?: string;   // module-specific grouping key
+  file?: string;              // relative path to affected file
+  line?: number;              // line number in affected file
+  category?: string;          // module-specific grouping key
+  confidence?: number;        // 7-10 confidence score (security scan only)
+  exploitScenario?: string;   // concrete attack scenario (security scan only)
+  recommendation?: string;    // specific fix recommendation (security scan only)
 }
 
 interface GeneratedTicket {
@@ -867,12 +870,19 @@ type ScanReport =
 
 **SecurityReport categories**: `injection`, `authentication`, `sensitive-data`, `access-control`, `misconfiguration`, `dependencies`, `cryptography`
 
-**ComplianceReport categories** (map to constitution principles): `TypeScript-First`, `Component-Driven`, `Test-Driven`, `Security-First`, `Database-Integrity`, `AI-First`
+**SecurityReport severity mapping** (by exploitability + impact):
+- `high`: Directly exploitable — RCE, data breach, auth bypass, privilege escalation (no special conditions)
+- `medium`: Significant impact but requires specific conditions (authenticated attacker, chained exploit, race condition)
+- `low`: Defense-in-depth issues — weakens posture but not directly exploitable (verbose errors, debug flags, weak non-critical tokens)
+- Confidence override: findings with confidence = 7 are capped at `low` severity
 
-**ComplianceReport severity mapping**:
-- `high`: `Security-First`, `Database-Integrity` violations
-- `medium`: `TypeScript-First`, `Test-Driven`, `Component-Driven` violations
-- `low`: `AI-First`, code-style violations
+**ComplianceReport categories**: Derived dynamically from the project's constitution file — each `category` value must match a principle name declared in the constitution (e.g., `TypeScript-First`, `Security-First`, etc.). No hardcoded list; different projects may have entirely different principles.
+
+**ComplianceReport severity mapping** (by impact category of violated principle):
+- `high`: Principles related to security, data integrity, or safety
+- `medium`: Principles related to code quality, type safety, testing, or architecture
+- `low`: Principles related to conventions, documentation structure, or style
+- Confidence override: findings with confidence = 7 are capped at `low` severity
 
 **Constitution file discovery** (compliance command): reads `.ai-board/memory/constitution.md` first, falls back to `.claude-plugin/memory/constitution.md`
 

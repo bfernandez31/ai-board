@@ -55,6 +55,44 @@ describe('groupIssuesIntoTickets', () => {
       expect(tickets[0].stage).toBe('INBOX');
       expect(tickets[0].workflowType).toBe('QUICK');
     });
+
+    it('includes exploitScenario and recommendation in ticket description when present', () => {
+      const report: SecurityReport = {
+        type: 'SECURITY',
+        issues: [
+          {
+            id: '1',
+            severity: 'high',
+            description: 'SQL injection via $queryRaw',
+            file: 'lib/db.ts',
+            line: 42,
+            confidence: 9,
+            exploitScenario: 'Attacker sends crafted input to execute arbitrary SQL',
+            recommendation: 'Use Prisma.sql tagged template instead',
+          },
+        ],
+        generatedTickets: [],
+      };
+      const tickets = groupIssuesIntoTickets('SECURITY', report);
+      expect(tickets).toHaveLength(1);
+      expect(tickets[0].description).toContain('**Exploit:**');
+      expect(tickets[0].description).toContain('Attacker sends crafted input');
+      expect(tickets[0].description).toContain('**Fix:**');
+      expect(tickets[0].description).toContain('Prisma.sql tagged template');
+    });
+
+    it('omits exploitScenario and recommendation lines when fields are absent', () => {
+      const report: SecurityReport = {
+        type: 'SECURITY',
+        issues: [
+          { id: '1', severity: 'medium', description: 'Missing auth check', file: 'app/api/route.ts', line: 10 },
+        ],
+        generatedTickets: [],
+      };
+      const tickets = groupIssuesIntoTickets('SECURITY', report);
+      expect(tickets[0].description).not.toContain('**Exploit:**');
+      expect(tickets[0].description).not.toContain('**Fix:**');
+    });
   });
 
   // --- COMPLIANCE: Group by principle (category) ---

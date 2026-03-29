@@ -51,15 +51,26 @@ function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {
   return groups;
 }
 
-function formatFileList(issues: { file?: string | undefined; line?: number | undefined; description: string }[]): string {
+function formatFileList(issues: { file?: string | undefined; line?: number | undefined; description: string; exploitScenario?: string | undefined; recommendation?: string | undefined }[]): string {
   return issues
     .filter((i) => i.file)
-    .map((i) => `- ${i.file}${i.line ? `:${i.line}` : ''}: ${i.description}`)
-    .join('\n') || 'See scan report for details.';
+    .map((i) => {
+      let line = `- **${i.file}${i.line ? `:${i.line}` : ''}**: ${i.description}`;
+      if (i.exploitScenario) line += `\n  > **Exploit:** ${i.exploitScenario}`;
+      if (i.recommendation) line += `\n  > **Fix:** ${i.recommendation}`;
+      return line;
+    })
+    .join('\n\n') || 'See scan report for details.';
 }
 
 function plural(count: number, singular: string): string {
   return `${count} ${singular}${count > 1 ? 's' : ''}`;
+}
+
+const MAX_DESCRIPTION_LENGTH = 9900;
+
+function truncateDescription(desc: string): string {
+  return desc.length > MAX_DESCRIPTION_LENGTH ? desc.slice(0, MAX_DESCRIPTION_LENGTH) + '…' : desc;
 }
 
 function groupSecurityIssues(report: SecurityReport): RemediationTicket[] {
@@ -68,9 +79,10 @@ function groupSecurityIssues(report: SecurityReport): RemediationTicket[] {
 
   for (const [severity, issues] of groups) {
     const label = `${severity.toUpperCase()} severity`;
+    const desc = `Health scan found ${plural(issues.length, `${label} security issue`)}:\n\n${formatFileList(issues)}`;
     tickets.push({
       title: `[Security] Fix ${plural(issues.length, `${label} issue`)}`,
-      description: `Health scan found ${plural(issues.length, `${label} security issue`)}:\n\n${formatFileList(issues)}`,
+      description: truncateDescription(desc),
       stage: 'INBOX',
       workflowType: 'QUICK',
     });

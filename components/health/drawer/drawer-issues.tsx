@@ -263,6 +263,16 @@ function IssueList({ issues }: { issues: ReportIssue[] }) {
               {issue.file}{issue.line ? `:${issue.line}` : ''}
             </p>
           )}
+          {issue.exploitScenario && (
+            <p className="text-[10px] text-muted-foreground pl-2.5">
+              <span className="font-medium text-ctp-peach">Exploit:</span> {issue.exploitScenario}
+            </p>
+          )}
+          {issue.recommendation && (
+            <p className="text-[10px] text-muted-foreground pl-2.5">
+              <span className="font-medium text-ctp-green">Fix:</span> {issue.recommendation}
+            </p>
+          )}
         </div>
       ))}
     </div>

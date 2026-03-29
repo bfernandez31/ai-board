@@ -8,6 +8,9 @@ const reportIssueSchema = z.object({
   file: z.string().optional(),
   line: z.number().optional(),
   category: z.string().optional(),
+  confidence: z.number().optional(),
+  exploitScenario: z.string().optional(),
+  recommendation: z.string().optional(),
 });
 
 const generatedTicketSchema = z.object({

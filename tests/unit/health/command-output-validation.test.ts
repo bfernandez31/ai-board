@@ -100,6 +100,58 @@ describe('SecurityReport schema validation', () => {
     expect((parsed as SecurityReport).issues).toHaveLength(1);
     expect((parsed as SecurityReport).issues[0].id).toBe('sec-001');
   });
+
+  it('SecurityReport with confidence, exploitScenario and recommendation passes validation', () => {
+    const report: SecurityReport = {
+      type: 'SECURITY',
+      issues: [
+        makeIssue({
+          id: 'sec-001',
+          severity: 'high',
+          description: 'SQL injection via $queryRaw',
+          file: 'lib/db.ts',
+          line: 42,
+          category: 'injection',
+          confidence: 9,
+          exploitScenario: 'Attacker sends crafted input to execute arbitrary SQL',
+          recommendation: 'Use Prisma.sql tagged template instead',
+        }),
+      ],
+      generatedTickets: [],
+    };
+    const result = scanReportSchema.safeParse(report);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const parsed = result.data as SecurityReport;
+      expect(parsed.issues[0].confidence).toBe(9);
+      expect(parsed.issues[0].exploitScenario).toBe('Attacker sends crafted input to execute arbitrary SQL');
+      expect(parsed.issues[0].recommendation).toBe('Use Prisma.sql tagged template instead');
+    }
+  });
+
+  it('SecurityReport without optional security fields still passes validation', () => {
+    const report: SecurityReport = {
+      type: 'SECURITY',
+      issues: [
+        makeIssue({
+          id: 'sec-001',
+          severity: 'medium',
+          description: 'Missing auth check',
+          file: 'app/api/route.ts',
+          line: 10,
+        }),
+      ],
+      generatedTickets: [],
+    };
+    const result = scanReportSchema.safeParse(report);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const parsed = result.data as SecurityReport;
+      expect(parsed.issues[0].confidence).toBeUndefined();
+      expect(parsed.issues[0].exploitScenario).toBeUndefined();
+      expect(parsed.issues[0].recommendation).toBeUndefined();
+    }
+  });
 });
 
 // --- US2: Compliance Report Validation ---

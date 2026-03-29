@@ -1,6 +1,8 @@
 # Health Scan: Spec Sync
 
-You are executing a **specification synchronization health scan** on this repository. Analyze whether implementation code matches its feature specifications.
+You are a **senior technical writer** executing a specification synchronization health scan on this repository. Analyze whether implementation code matches its feature specifications and produce a structured JSON report.
+
+**This is NOT a documentation generator.** You compare existing specs against existing code to detect drift — nothing more.
 
 ## Inputs
 
@@ -10,53 +12,61 @@ Arguments may include:
 
 If `--base-commit` is empty or not provided, perform a **full repository scan**.
 
-## Incremental Scan (when --base-commit is provided)
+## Analysis Methodology
 
-When `--base-commit` is provided, only check specs impacted by changed files:
+### Phase 1 — Project Context Discovery
+
+Before scanning for drift, understand the project:
+
+1. **Read `CLAUDE.md`** at the project root to understand the tech stack, directory structure, key architecture decisions, and where code lives
+2. **Read any project constitution** (`.ai-board/memory/constitution.md` or `.claude-plugin/memory/constitution.md`) for additional context
+3. **Identify the implementation structure** — where route handlers, models/schemas, components, and business logic live in this specific project
+
+### Phase 2 — Spec Discovery
+
+Discover all `.md` files under `specs/specifications/` recursively. Each project may organize this directory differently (flat files, subdirectories by domain, functional vs technical split, etc.).
+
+For each spec file found:
+1. **Read its content** to understand what area of the codebase it documents
+2. **Classify its subject** — does it describe API endpoints, data models, UI behavior, architecture, schemas, workflows, or something else?
+3. **Map it to implementation files** — based on the spec's content and the project structure discovered in Phase 1, identify which source files correspond to this spec
+
+### Phase 3 — Drift Detection
+
+For each spec-to-code mapping, check for drift in **both directions**:
+
+#### Spec without code (documented but not implemented)
+- Endpoints, routes, or handlers described in spec but absent from the codebase
+- Data model fields or entities in spec but not in the actual schema/ORM
+- Features or behaviors described in spec but no corresponding implementation
+
+#### Code without spec (implemented but not documented)
+- Routes, handlers, or APIs that exist in code but are not described in any discovered spec
+- Schema fields, models, or entities not reflected in any spec
+- Significant behaviors or features in code with no spec coverage
+
+#### Behavioral divergence (both exist but disagree)
+- Route accepts different methods, parameters, or returns different shapes than documented
+- Data model has fields, types, or relationships that differ from the spec
+- Business logic or workflow differs from spec requirements
+
+### Incremental Scan (when --base-commit is provided)
+
+When `--base-commit` is provided, narrow the scan scope:
 
 1. Get the list of changed files: `git diff --name-only <base-commit>..<head-commit>`
    - If `--head-commit` is not provided, use `HEAD` as the target
-2. Discover all spec files under `specs/specifications/` (recursively)
-3. For each changed file, determine which discovered spec(s) it relates to based on the spec's content and subject matter (e.g., API-related specs for route changes, data model specs for schema changes, functional specs for component/logic changes)
-4. Only evaluate the impacted specs (skip unrelated specs)
+2. For each changed file, determine which discovered spec(s) it relates to (based on the Phase 2 mapping)
+3. Also check if any spec files themselves were changed
+4. Only evaluate impacted specs (skip unrelated ones)
 5. If `--base-commit` refers to a commit that doesn't exist, report an error issue and fall back to full scan
 
-## What to Scan
+## Edge Cases
 
-### Spec Files to Compare
-
-Dynamically discover all `.md` files under `specs/specifications/` (recursively). For each spec file found, read its content, determine what area of the codebase it documents, and compare against the corresponding implementation:
-
-- **API/endpoint specs** → compare against `app/api/` routes (verify documented routes exist, methods match, request/response shapes align)
-- **Schema specs** → compare against Prisma schema and Zod validation schemas (verify documented types match actual types)
-- **Data model specs** → compare against `prisma/schema.prisma` (verify documented models, fields, and relationships match actual schema)
-- **Functional specs** → compare against component code and API logic (verify documented behaviors are implemented)
-
-Do NOT hardcode specific file paths — the directory structure within `specs/specifications/` may vary between projects.
-
-### Bidirectional Drift Detection
-
-Check drift in **both** directions:
-
-1. **Spec without code** (documented but not implemented):
-   - API endpoints described in spec but no corresponding route handler
-   - Data model fields in spec but not in Prisma schema
-   - Features described in functional specs but no corresponding code
-
-2. **Code without spec** (implemented but not documented):
-   - API routes that exist in `app/api/` but are not documented in any discovered spec
-   - Prisma schema fields/models not documented in any discovered spec
-   - Significant behaviors in code not described in any spec
-
-3. **Behavioral divergence** (both exist but disagree):
-   - Route accepts different HTTP methods than documented
-   - Response shape differs from documented schema
-   - Business logic differs from spec requirements
-
-### Edge Cases
-
-- If no spec files exist in `specs/specifications/`: Report score 100 with empty specs array (nothing to be out of sync)
-- If a spec file is empty or malformed: Report it as drifted with a description of the issue
+- **No spec files** in `specs/specifications/`: Report score 100 with empty specs array (nothing to be out of sync)
+- **Empty or malformed spec**: Report it as drifted with a description of the issue
+- **Spec covers deleted/removed feature**: Report as drifted — "spec documents feature X which no longer exists in code"
+- **Multiple specs cover the same code area**: Evaluate each independently
 
 ## Score Calculation
 
@@ -77,18 +87,18 @@ You MUST output valid JSON to stdout with this exact structure. Output ONLY the 
     "type": "SPEC_SYNC",
     "specs": [
       {
-        "specPath": "specs/specifications/api/endpoints.md",
+        "specPath": "specs/specifications/technical/api/endpoints.md",
         "status": "synced"
       },
       {
-        "specPath": "specs/specifications/api/schemas.md",
+        "specPath": "specs/specifications/technical/api/schemas.md",
         "status": "drifted",
-        "drift": "Missing documentation for POST /api/health/scans endpoint added in AIB-370"
+        "drift": "Missing documentation for POST /api/health/scans endpoint"
       },
       {
-        "specPath": "specs/specifications/architecture/data-model.md",
+        "specPath": "specs/specifications/technical/architecture/data-model.md",
         "status": "drifted",
-        "drift": "Model 'HealthScore' exists in Prisma schema but is not documented in data-model spec"
+        "drift": "Model 'HealthScore' exists in schema but is not documented in data-model spec"
       }
     ],
     "generatedTickets": []
@@ -101,7 +111,11 @@ You MUST output valid JSON to stdout with this exact structure. Output ONLY the 
 **Field rules**:
 - `specPath`: Relative path from repo root to the spec file
 - `status`: `synced` (spec matches code) or `drifted` (spec and code disagree)
-- `drift`: Description of the synchronization issue (only when `status` is `drifted`)
+- `drift`: Concise description of the synchronization issue (only when `status` is `drifted`). Include what is missing or what diverges — be specific enough that a developer can act on it without re-reading the entire spec.
 - `generatedTickets`: Always `[]` (tickets are created by the workflow after the scan)
 - `issuesFound`: Count of specs with `status: "drifted"`
 - `issuesFixed`: Always `0` (spec-sync never auto-fixes)
+
+## Final Reminder
+
+Do NOT assume a specific project structure. Read `CLAUDE.md` and the actual codebase to understand where things live. A spec about "API endpoints" could map to `app/api/`, `src/routes/`, `handlers/`, `cmd/server/`, or anything else depending on the project.
