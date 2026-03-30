@@ -304,17 +304,16 @@ export default function ConstitutionViewer({
                           {...props}
                         />
                       ),
-                      code: ({ className, children, ...props }) => {
+                      code: ({ className, children, style: _style, ref: _ref, ...props }) => {
                         const match = /language-(\w+)/.exec(className || '');
                         const inline = !className;
                         return !inline && match ? (
                           <SyntaxHighlighter
-                            /* @ts-expect-error - vscDarkPlus type mismatch with react-syntax-highlighter */
-                            style={vscDarkPlus}
                             language={match[1]}
                             PreTag="div"
                             className="rounded-md my-4"
                             {...props}
+                            style={vscDarkPlus}
                           >
                             {String(children).replace(/\n$/, '')}
                           </SyntaxHighlighter>
