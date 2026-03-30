@@ -114,6 +114,9 @@ jobs:
         with:
           node-version: '22.20.0'
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+
       # Step 4: Execute scan command (US1 T009, US3 T015, US6 T021)
       - name: Execute Scan Command
         id: scan-exec
