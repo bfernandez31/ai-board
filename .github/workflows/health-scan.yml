@@ -45,17 +45,24 @@ jobs:
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       ANTHROPIC_MODEL: "claude-opus-4-6"
+      INPUT_SCAN_ID: ${{ inputs.scan_id }}
+      INPUT_PROJECT_ID: ${{ inputs.project_id }}
+      INPUT_SCAN_TYPE: ${{ inputs.scan_type }}
+      INPUT_BASE_COMMIT: ${{ inputs.base_commit }}
+      INPUT_HEAD_COMMIT: ${{ inputs.head_commit }}
+      INPUT_GITHUB_REPOSITORY: ${{ inputs.githubRepository }}
+      INPUT_AGENT: ${{ inputs.agent }}
 
     steps:
       - name: Debug Inputs
         run: |
           echo "🔍 Health scan inputs:"
-          echo "  scan_id: ${{ inputs.scan_id }}"
-          echo "  project_id: ${{ inputs.project_id }}"
-          echo "  scan_type: ${{ inputs.scan_type }}"
-          echo "  base_commit: ${{ inputs.base_commit }}"
-          echo "  head_commit: ${{ inputs.head_commit }}"
-          echo "  githubRepository: ${{ inputs.githubRepository }}"
+          echo "  scan_id: $INPUT_SCAN_ID"
+          echo "  project_id: $INPUT_PROJECT_ID"
+          echo "  scan_type: $INPUT_SCAN_TYPE"
+          echo "  base_commit: $INPUT_BASE_COMMIT"
+          echo "  head_commit: $INPUT_HEAD_COMMIT"
+          echo "  githubRepository: $INPUT_GITHUB_REPOSITORY"
 
       # Checkout ai-board for commands and scripts (sparse, from main = stable tools)
       - name: Checkout ai-board (sparse - plugin and scripts)
@@ -79,7 +86,7 @@ jobs:
       # Step 2: Update scan status to RUNNING (US1 T007)
       - name: Update Scan Status - RUNNING
         run: |
-          curl -X PATCH "${APP_URL}/api/projects/${{ inputs.project_id }}/health/scans/${{ inputs.scan_id }}/status" \
+          curl -X PATCH "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/health/scans/${INPUT_SCAN_ID}/status" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d '{"status": "RUNNING"}' \
@@ -89,7 +96,7 @@ jobs:
       - name: Map Scan Type to Command
         id: scan-command
         run: |
-          case "${{ inputs.scan_type }}" in
+          case "$INPUT_SCAN_TYPE" in
             SECURITY)
               echo "command=health-security" >> $GITHUB_OUTPUT
               ;;
@@ -103,11 +110,11 @@ jobs:
               echo "command=health-spec-sync" >> $GITHUB_OUTPUT
               ;;
             *)
-              echo "❌ Unknown scan type: ${{ inputs.scan_type }}"
+              echo "❌ Unknown scan type: $INPUT_SCAN_TYPE"
               exit 1
               ;;
           esac
-          echo "✅ Mapped ${{ inputs.scan_type }} → ai-board.$(grep command <<< "$(cat $GITHUB_OUTPUT)" | cut -d= -f2)"
+          echo "✅ Mapped $INPUT_SCAN_TYPE → ai-board.$(grep command <<< "$(cat $GITHUB_OUTPUT)" | cut -d= -f2)"
 
       - name: Setup ai-board commands and skills
         run: |
@@ -131,8 +138,8 @@ jobs:
         working-directory: target
         run: |
           SCAN_CMD="${{ steps.scan-command.outputs.command }}"
-          BASE_COMMIT="${{ inputs.base_commit }}"
-          HEAD_COMMIT="${{ inputs.head_commit }}"
+          BASE_COMMIT="$INPUT_BASE_COMMIT"
+          HEAD_COMMIT="$INPUT_HEAD_COMMIT"
 
           # Build command arguments (US3: incremental vs full scan)
           SCAN_ARGS=""
@@ -150,7 +157,7 @@ jobs:
 
           # Execute scan via run-agent.sh (standard interactive mode)
           # The skill writes results to /tmp/health-scan-result.json (file-based output, like compare skill)
-          if ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.${SCAN_CMD}" "${SCAN_ARGS}" 2>&1 | tee /tmp/scan_log.txt; then
+          if ../ai-board/.github/scripts/run-agent.sh "$INPUT_AGENT" "ai-board.${SCAN_CMD}" "${SCAN_ARGS}" 2>&1 | tee /tmp/scan_log.txt; then
             DURATION_MS=$((SECONDS * 1000))
             echo "duration_ms=$DURATION_MS" >> $GITHUB_OUTPUT
 
@@ -202,7 +209,7 @@ jobs:
       - name: Create Remediation Tickets
         if: ${{ steps.scan-exec.outputs.scan_success == 'true' && steps.scan-exec.outputs.issues_found > 0 }}
         run: |
-          SCAN_TYPE="${{ inputs.scan_type }}"
+          SCAN_TYPE="$INPUT_SCAN_TYPE"
           REPORT_FILE="/tmp/scan_report.json"
 
           # Parse report and create grouped tickets based on scan type
@@ -223,7 +230,7 @@ jobs:
                 TITLE="[Security] Fix ${COUNT} ${SEVERITY^^} severity issue${SUFFIX}"
                 DESC=$(printf 'Health scan found %s %s severity security issue%s:\n\n%s' "$COUNT" "${SEVERITY^^}" "$SUFFIX" "$DETAILS" | head -c 9900)
 
-                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
+                curl -X POST "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets" \
                   -H "Content-Type: application/json" \
                   -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
                   -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d, stage: "INBOX", workflowType: "QUICK"}')" \
@@ -244,7 +251,7 @@ jobs:
                 TITLE="[Compliance] Fix ${COUNT} violation${SUFFIX} - ${CATEGORY}"
                 DESC=$(printf 'Health scan found %s compliance violation%s for principle "%s":\n\n%s' "$COUNT" "$SUFFIX" "$CATEGORY" "$DETAILS")
 
-                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
+                curl -X POST "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets" \
                   -H "Content-Type: application/json" \
                   -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
                   -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d, stage: "INBOX", workflowType: "QUICK"}')" \
@@ -259,7 +266,7 @@ jobs:
                 TITLE="[Tests] Fix failing test: $(printf '%s' "$DESC_TEXT" | head -c 80)"
                 DESC=$(printf 'Health scan found a non-fixable test failure:\n\n- **Test**: %s\n- **File**: %s' "$DESC_TEXT" "$FILE")
 
-                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
+                curl -X POST "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets" \
                   -H "Content-Type: application/json" \
                   -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
                   -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d, stage: "INBOX", workflowType: "QUICK"}')" \
@@ -275,7 +282,7 @@ jobs:
                 TITLE="[Spec Sync] ${SHORT_NAME}"
                 DESC=$(printf 'Health scan detected spec drift:\n\n- **Spec**: %s\n- **Drift**: %s' "$SPEC_PATH" "$DRIFT")
 
-                curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
+                curl -X POST "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets" \
                   -H "Content-Type: application/json" \
                   -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
                   -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d, stage: "INBOX", workflowType: "QUICK"}')" \
@@ -292,7 +299,7 @@ jobs:
         if: ${{ steps.scan-exec.outputs.scan_success == 'true' }}
         working-directory: target
         run: |
-          HEAD_COMMIT="${{ inputs.head_commit }}"
+          HEAD_COMMIT="$INPUT_HEAD_COMMIT"
 
           # If no head_commit provided, use current HEAD
           if [ -z "$HEAD_COMMIT" ]; then
@@ -330,7 +337,7 @@ jobs:
             PAYLOAD=$(printf '%s' "$PAYLOAD" | jq --argjson c "$COST" '. + {costUsd: $c}')
           fi
 
-          curl -X PATCH "${APP_URL}/api/projects/${{ inputs.project_id }}/health/scans/${{ inputs.scan_id }}/status" \
+          curl -X PATCH "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/health/scans/${INPUT_SCAN_ID}/status" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d "$PAYLOAD" \
@@ -360,7 +367,7 @@ jobs:
             --argjson durationMs "$DURATION_MS" \
             '{status: $status, errorMessage: $errorMessage, durationMs: $durationMs}')
 
-          curl -X PATCH "${APP_URL}/api/projects/${{ inputs.project_id }}/health/scans/${{ inputs.scan_id }}/status" \
+          curl -X PATCH "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/health/scans/${INPUT_SCAN_ID}/status" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d "$PAYLOAD" \
@@ -372,7 +379,7 @@ jobs:
         if: ${{ steps.scan-exec.outputs.scan_success == 'true' }}
         run: |
           echo "✅ Health scan completed successfully"
-          echo "  Type: ${{ inputs.scan_type }}"
+          echo "  Type: $INPUT_SCAN_TYPE"
           echo "  Score: ${{ steps.scan-exec.outputs.score }}"
           echo "  Issues: ${{ steps.scan-exec.outputs.issues_found }} found, ${{ steps.scan-exec.outputs.issues_fixed }} fixed"
           echo "  Duration: ${{ steps.scan-exec.outputs.duration_ms }}ms"
