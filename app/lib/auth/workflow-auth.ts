@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextRequest } from 'next/server';
 
 /**
@@ -53,6 +54,9 @@ export async function verifyWorkflowToken(
     return false;
   }
 
-  // Compare tokens (constant-time comparison to prevent timing attacks)
-  return token === expectedToken;
+  // Compare tokens using constant-time comparison to prevent timing attacks
+  if (token.length !== expectedToken.length) {
+    return false;
+  }
+  return timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken));
 }

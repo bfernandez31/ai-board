@@ -297,7 +297,8 @@ If preview-login variables are absent or the environment is not a Vercel preview
 ## Security Notes
 
 - Preview login is excluded from production by environment gating
-- Secret comparison uses `timingSafeEqual`
+- Secret comparison uses `timingSafeEqual` (preview login credentials and workflow token verification)
+- Workflow token verification (`lib/auth/workflow-auth.ts`) uses `timingSafeEqual` from `node:crypto` to prevent timing attacks; mismatched lengths short-circuit before the comparison
 - Failed credentials attempts return a generic error
 - Authorization stays server-side after sign-in
 - PAT validation and browser-session validation are separate code paths
