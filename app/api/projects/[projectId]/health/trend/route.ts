@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
+import type { HealthScanType } from '@prisma/client';
 import type { TrendDataPoint } from '@/lib/health/types';
 
 export async function GET(
@@ -17,11 +18,11 @@ export async function GET(
 
     await verifyProjectAccess(projectId, request);
 
-    const queryModule = (scanType: string) =>
+    const queryModule = (scanType: HealthScanType) =>
       prisma.healthScan.findMany({
         where: {
           projectId,
-          scanType: scanType as 'SECURITY' | 'COMPLIANCE' | 'TESTS' | 'SPEC_SYNC',
+          scanType,
           status: 'COMPLETED',
           score: { not: null },
         },
