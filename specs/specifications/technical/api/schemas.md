@@ -644,6 +644,160 @@ export type DocumentError = z.infer<typeof DocumentErrorSchema>;
 - **GITHUB_API_ERROR**: GitHub API returned an error
 - **INTERNAL_ERROR**: Unexpected server error
 
+## Edit Documentation Schemas
+
+### EditDocumentationSchema
+
+```typescript
+// app/lib/schemas/documentation.ts
+export const editDocumentationSchema = z.object({
+  ticketId: z.number().int().positive('Ticket ID must be a positive integer'),
+  docType: z.enum(['spec', 'plan', 'tasks']),
+  content: z
+    .string()
+    .min(1, 'Document content cannot be empty')
+    .max(1048576, 'Document content exceeds 1MB limit'),
+  commitMessage: z.string().max(500, 'Commit message must be 500 characters or less').optional(),
+});
+
+export type EditDocumentationRequest = z.infer<typeof editDocumentationSchema>;
+```
+
+**Validation Rules**:
+- **ticketId**: Required positive integer identifying the ticket
+- **docType**: One of: `spec`, `plan`, `tasks` (excludes `summary` which is read-only)
+- **content**: Required document markdown content, 1 byte to 1MB
+- **commitMessage**: Optional custom commit message, max 500 characters
+
+**Usage**:
+- Used by `POST /api/projects/:projectId/docs` for validating document edit requests
+- Enables in-app editing of spec, plan, and tasks documents
+
+### EditDocumentationResponseSchema
+
+```typescript
+export const editDocumentationResponseSchema = z.object({
+  success: z.literal(true),
+  commitSha: z.string(),
+  updatedAt: z.string(),
+  message: z.string(),
+});
+
+export type EditDocumentationResponse = z.infer<typeof editDocumentationResponseSchema>;
+```
+
+**Fields**:
+- **success**: Always `true` for successful responses
+- **commitSha**: Git commit SHA of the documentation update
+- **updatedAt**: ISO 8601 timestamp of the update
+- **message**: Human-readable success message
+
+### EditDocumentationErrorSchema
+
+```typescript
+export const editDocumentationErrorSchema = z.object({
+  success: z.literal(false),
+  error: z.string(),
+  code: z.enum([
+    'PERMISSION_DENIED',
+    'BRANCH_NOT_FOUND',
+    'VALIDATION_ERROR',
+    'MERGE_CONFLICT',
+    'NETWORK_ERROR',
+    'TIMEOUT',
+  ]).optional(),
+  details: z.unknown().optional(),
+});
+
+export type EditDocumentationError = z.infer<typeof editDocumentationErrorSchema>;
+```
+
+**Error Codes**:
+- **PERMISSION_DENIED**: User lacks access to modify documentation
+- **BRANCH_NOT_FOUND**: Ticket branch does not exist
+- **VALIDATION_ERROR**: Request body failed schema validation
+- **MERGE_CONFLICT**: Concurrent edit conflict on the same file
+- **NETWORK_ERROR**: GitHub API communication failure
+- **TIMEOUT**: Operation exceeded time limit
+
+### GetDocumentationHistorySchema
+
+```typescript
+export const getDocumentationHistorySchema = z.object({
+  ticketId: z.coerce.number().int().positive('Ticket ID must be a positive integer'),
+  docType: z.enum(['spec', 'plan', 'tasks']),
+});
+
+export type GetDocumentationHistoryRequest = z.infer<typeof getDocumentationHistorySchema>;
+```
+
+**Validation Rules**:
+- **ticketId**: Coerced to positive integer (accepts string query parameter)
+- **docType**: One of: `spec`, `plan`, `tasks`
+
+**Usage**:
+- Used by `GET /api/projects/:projectId/docs/history` for fetching commit history of a document
+
+### DocumentationHistoryResponseSchema
+
+```typescript
+export const documentationHistoryResponseSchema = z.object({
+  commits: z.array(
+    z.object({
+      sha: z.string().length(40),
+      author: z.object({
+        name: z.string(),
+        email: z.string().email(),
+        date: z.string().datetime(),
+      }),
+      message: z.string(),
+      url: z.string().url(),
+    })
+  ),
+});
+
+export type DocumentationHistoryResponse = z.infer<typeof documentationHistoryResponseSchema>;
+```
+
+### GetDocumentationDiffSchema
+
+```typescript
+export const getDocumentationDiffSchema = z.object({
+  ticketId: z.coerce.number().int().positive('Ticket ID must be a positive integer'),
+  docType: z.enum(['spec', 'plan', 'tasks']),
+  sha: z.string().regex(/^[a-f0-9]{40}$/, 'SHA must be 40 character hexadecimal string'),
+});
+
+export type GetDocumentationDiffRequest = z.infer<typeof getDocumentationDiffSchema>;
+```
+
+**Validation Rules**:
+- **ticketId**: Coerced to positive integer
+- **docType**: One of: `spec`, `plan`, `tasks`
+- **sha**: 40-character hexadecimal Git commit SHA
+
+**Usage**:
+- Used by `GET /api/projects/:projectId/docs/diff` for fetching diff at a specific commit
+
+### DocumentationDiffResponseSchema
+
+```typescript
+export const documentationDiffResponseSchema = z.object({
+  sha: z.string().length(40),
+  files: z.array(
+    z.object({
+      filename: z.string(),
+      status: z.enum(['added', 'modified', 'removed']),
+      additions: z.number().int().nonnegative(),
+      deletions: z.number().int().nonnegative(),
+      patch: z.string().optional(),
+    })
+  ),
+});
+
+export type DocumentationDiffResponse = z.infer<typeof documentationDiffResponseSchema>;
+```
+
 ## Type Inference
 
 Zod schemas provide TypeScript type inference:
@@ -1012,6 +1166,7 @@ app/lib/schemas/
 ├── project.ts          # Project schemas
 ├── image.ts            # Image attachment schemas
 ├── agent.ts            # Agent enum schemas (projectAgentSchema, ticketAgentSchema)
+├── documentation.ts    # Documentation edit, history, and diff schemas
 └── index.ts            # Re-exports all schemas
 ```
 
