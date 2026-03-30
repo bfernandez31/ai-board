@@ -97,24 +97,17 @@ jobs:
         id: scan-command
         run: |
           case "$INPUT_SCAN_TYPE" in
-            SECURITY)
-              echo "command=health-security" >> $GITHUB_OUTPUT
-              ;;
-            COMPLIANCE)
-              echo "command=health-compliance" >> $GITHUB_OUTPUT
-              ;;
-            TESTS)
-              echo "command=health-tests" >> $GITHUB_OUTPUT
-              ;;
-            SPEC_SYNC)
-              echo "command=health-spec-sync" >> $GITHUB_OUTPUT
-              ;;
+            SECURITY)    CMD="health-security" ;;
+            COMPLIANCE)  CMD="health-compliance" ;;
+            TESTS)       CMD="health-tests" ;;
+            SPEC_SYNC)   CMD="health-spec-sync" ;;
             *)
               echo "❌ Unknown scan type: $INPUT_SCAN_TYPE"
               exit 1
               ;;
           esac
-          echo "✅ Mapped $INPUT_SCAN_TYPE → ai-board.$(grep command <<< "$(cat $GITHUB_OUTPUT)" | cut -d= -f2)"
+          echo "command=$CMD" >> $GITHUB_OUTPUT
+          echo "✅ Mapped $INPUT_SCAN_TYPE → ai-board.$CMD"
 
       - name: Setup ai-board commands and skills
         run: |
