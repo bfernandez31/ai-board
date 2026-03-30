@@ -44,7 +44,7 @@ export function DrawerHeader({ moduleType, moduleStatus, scan, isLoading }: Draw
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Icon className="h-5 w-5 text-muted-foreground" />
-          <h3 className="font-semibold text-base">{meta.label}</h3>
+          <h3 className="font-semibold text-base text-foreground">{meta.label}</h3>
           {meta.passive && (
             <span className="text-[10px] text-muted-foreground bg-muted rounded px-1.5 py-0.5">
               passive
