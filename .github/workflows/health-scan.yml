@@ -232,10 +232,10 @@ jobs:
               ;;
             COMPLIANCE)
               # Group by category/principle
-              jq -c '.issues // [] | group_by(.category // "General") | .[] | {
-                category: .[0].category // "General",
+              jq -c '.issues // [] | [.[] | .category //= "General" | .file //= "unknown" | .line //= "?"] | group_by(.category) | .[] | {
+                category: .[0].category,
                 count: length,
-                details: [.[] | "\(.file // "unknown"):\(.line // "?"): \(.description)"] | join("\n")
+                details: ([.[] | "\(.file):\(.line): \(.description)"] | join("\n"))
               }' "$REPORT_FILE" | while read -r group; do
                 CATEGORY=$(printf '%s' "$group" | jq -r '.category')
                 COUNT=$(printf '%s' "$group" | jq -r '.count')
