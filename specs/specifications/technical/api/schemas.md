@@ -908,6 +908,84 @@ const { data, isLoading } = useScanReport(projectId, 'SECURITY');
 
 ---
 
+## Health Passive Module Detail Schemas
+
+Response types returned by the passive module detail endpoints (`/health/quality-gate` and `/health/last-clean`). These are distinct from the `ScanReport` union above — they are API response shapes, not stored scan report blobs.
+
+**Location**: `lib/health/quality-gate.ts` (`QualityGateDetails`), `lib/health/last-clean.ts` (`LastCleanDetails`)
+
+### QualityGateDetails
+
+```typescript
+interface QualityGateDimension {
+  name: string;         // "Compliance" | "Bug Detection" | "Code Comments" | "Historical Context" | "Spec Sync"
+  averageScore: number; // 0–100
+  weight: number;       // 0.00–1.00 (Spec Sync = 0.00)
+}
+
+interface QualityGateTicket {
+  ticketKey: string;
+  title: string;
+  score: number;
+  completedAt: string; // ISO 8601
+}
+
+interface QualityGateDetails {
+  averageScore: number | null;
+  ticketCount: number;
+  trend: 'up' | 'down' | 'stable' | null;
+  trendDelta: number | null;
+  distribution: { excellent: number; good: number; fair: number; poor: number };
+  dimensions: QualityGateDimension[];
+  recentTickets: QualityGateTicket[];
+  trendData: Array<{ ticketKey: string; score: number; date: string }>;
+}
+```
+
+**Hooks**: `useQualityGateDetails(projectId)` — TanStack Query, fetches on drawer open, no polling.
+
+### LastCleanDetails
+
+```typescript
+interface LastCleanHistoryEntry {
+  jobId: number;
+  completedAt: string;      // ISO 8601
+  filesCleaned: number | null;
+  remainingIssues: number | null;
+  summary: string | null;
+}
+
+interface LastCleanDetails {
+  lastCleanDate: string | null;   // ISO 8601, null when no cleanups
+  stalenessStatus: 'ok' | 'warning' | 'alert' | null;
+  daysSinceClean: number | null;
+  filesCleaned: number | null;
+  remainingIssues: number | null;
+  summary: string | null;
+  history: LastCleanHistoryEntry[]; // up to 20, ordered by completedAt DESC
+}
+```
+
+**Hooks**: `useLastCleanDetails(projectId)` — TanStack Query, fetches on drawer open, no polling.
+
+### HealthModuleStatus Extensions
+
+The `HealthModuleStatus` interface in `lib/health/types.ts` is extended with optional fields populated by the passive modules:
+
+```typescript
+interface HealthModuleStatus {
+  // ... existing fields ...
+  ticketCount?: number;
+  trend?: 'up' | 'down' | 'stable' | null;
+  trendDelta?: number | null;
+  distribution?: { excellent: number; good: number; fair: number; poor: number };
+  stalenessStatus?: 'ok' | 'warning' | 'alert' | null;
+  filesCleaned?: number | null;
+}
+```
+
+---
+
 ## Schema Location & Usage
 
 ### File Organization

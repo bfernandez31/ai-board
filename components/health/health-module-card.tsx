@@ -10,9 +10,13 @@ import {
   Loader2,
   AlertTriangle,
   Play,
+  TrendingUp,
+  TrendingDown,
+  Minus,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { getScoreColor } from '@/lib/quality-score';
 import { MODULE_METADATA } from '@/lib/health/types';
 import type { HealthModuleType, HealthModuleStatus } from '@/lib/health/types';
@@ -60,7 +64,13 @@ export function HealthModuleCard({
 
   return (
     <div
-      className={`aurora-glass rounded-lg p-4 space-y-3${onClick ? ' aurora-glass-hover cursor-pointer' : ''}`}
+      className={cn(
+        'aurora-glass rounded-lg p-4 space-y-3',
+        onClick && 'aurora-glass-hover cursor-pointer',
+        module.stalenessStatus === 'warning' && 'border-l-2 border-ctp-yellow',
+        module.stalenessStatus === 'alert' && 'border-l-2 border-ctp-red',
+        module.stalenessStatus === 'ok' && 'border-l-2 border-ctp-green',
+      )}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -80,6 +90,14 @@ export function HealthModuleCard({
       </div>
 
       <p className="text-sm text-muted-foreground">{module.summary}</p>
+
+      {module.trend && (
+        <TrendIndicator trend={module.trend} trendDelta={module.trendDelta ?? null} />
+      )}
+
+      {module.distribution && module.ticketCount !== undefined && module.ticketCount > 0 && (
+        <DistributionBar distribution={module.distribution} />
+      )}
 
       {state === 'scanning' && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -109,6 +127,12 @@ export function HealthModuleCard({
       {module.lastCleanDate && (
         <p className="text-[11px] text-muted-foreground">
           Last cleanup: {new Date(module.lastCleanDate).toLocaleDateString()}
+        </p>
+      )}
+
+      {module.filesCleaned !== undefined && module.filesCleaned !== null && (
+        <p className="text-[11px] text-muted-foreground">
+          {module.filesCleaned} file{module.filesCleaned !== 1 ? 's' : ''} cleaned
         </p>
       )}
 
@@ -203,5 +227,67 @@ function ScoreBadge({
     <span className="text-xs font-medium text-muted-foreground bg-muted rounded-md px-2 py-0.5">
       ---
     </span>
+  );
+}
+
+function TrendIndicator({
+  trend,
+  trendDelta,
+}: {
+  trend: 'up' | 'down' | 'stable';
+  trendDelta: number | null;
+}) {
+  const config = {
+    up: { icon: TrendingUp, color: 'text-ctp-green', label: 'Improving' },
+    down: { icon: TrendingDown, color: 'text-ctp-red', label: 'Declining' },
+    stable: { icon: Minus, color: 'text-muted-foreground', label: 'Stable' },
+  };
+
+  const { icon: TrendIcon, color, label } = config[trend];
+  const deltaText = trendDelta !== null && trendDelta !== 0
+    ? ` (${trendDelta > 0 ? '+' : ''}${trendDelta})`
+    : '';
+
+  return (
+    <div className={`flex items-center gap-1.5 text-xs ${color}`}>
+      <TrendIcon className="h-3.5 w-3.5" />
+      <span>{label}{deltaText}</span>
+    </div>
+  );
+}
+
+function DistributionBar({
+  distribution,
+}: {
+  distribution: { excellent: number; good: number; fair: number; poor: number };
+}) {
+  const total = distribution.excellent + distribution.good + distribution.fair + distribution.poor;
+  if (total === 0) return null;
+
+  const segments = [
+    { count: distribution.excellent, color: 'bg-ctp-green', label: 'Excellent' },
+    { count: distribution.good, color: 'bg-ctp-blue', label: 'Good' },
+    { count: distribution.fair, color: 'bg-ctp-yellow', label: 'Fair' },
+    { count: distribution.poor, color: 'bg-ctp-red', label: 'Poor' },
+  ].filter((s) => s.count > 0);
+
+  return (
+    <div className="space-y-1">
+      <div className="flex h-1.5 rounded-full overflow-hidden gap-px">
+        {segments.map((s) => (
+          <div
+            key={s.label}
+            className={`${s.color} rounded-full`}
+            style={{ width: `${(s.count / total) * 100}%` }}
+            title={`${s.label}: ${s.count}`}
+          />
+        ))}
+      </div>
+      <div className="flex gap-2 text-[10px] text-muted-foreground">
+        {segments.map((s) => (
+          <span key={s.label}>{s.count} {s.label}</span>
+        ))}
+      </div>
+    </div>
   );
 }

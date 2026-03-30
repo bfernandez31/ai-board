@@ -3442,11 +3442,20 @@ Returns the aggregate health score and per-module status for a project.
       "summary": "5 issues found"
     },
     "qualityGate": {
-      "score": 75,
+      "score": 82,
       "label": "Good",
       "lastScanDate": "2026-03-27T16:00:00Z",
       "passive": true,
-      "summary": "From latest verify job"
+      "summary": "5 tickets — Good",
+      "ticketCount": 5,
+      "trend": "up",
+      "trendDelta": 4,
+      "distribution": {
+        "excellent": 1,
+        "good": 3,
+        "fair": 1,
+        "poor": 0
+      }
     },
     "lastClean": {
       "score": null,
@@ -3454,7 +3463,9 @@ Returns the aggregate health score and per-module status for a project.
       "lastCleanDate": "2026-03-20T12:00:00Z",
       "passive": true,
       "jobId": 456,
-      "summary": "8 days ago"
+      "summary": "8 days ago",
+      "stalenessStatus": "ok",
+      "filesCleaned": 12
     }
   },
   "lastFullScanDate": "2026-03-27T14:30:00Z",
@@ -3622,6 +3633,115 @@ Workflow callback endpoint to update scan status and results. Uses the same Bear
 - `401`: Invalid workflow token
 - `404`: Scan not found or wrong project
 - `409`: Invalid status transition (e.g., COMPLETED → RUNNING)
+
+---
+
+### GET /api/projects/[projectId]/health/quality-gate
+
+Returns aggregated Quality Gate data for the Health Dashboard drawer.
+
+**Authentication**: Session cookie OR Bearer PAT
+**Authorization**: `verifyProjectAccess(projectId)` — owner or member
+
+**Path params**: `projectId` (integer, required)
+
+**Response** (200 OK):
+```json
+{
+  "averageScore": 82,
+  "ticketCount": 5,
+  "trend": "up",
+  "trendDelta": 4,
+  "distribution": {
+    "excellent": 1,
+    "good": 3,
+    "fair": 1,
+    "poor": 0
+  },
+  "dimensions": [
+    { "name": "Compliance", "averageScore": 88, "weight": 0.40 },
+    { "name": "Bug Detection", "averageScore": 79, "weight": 0.30 },
+    { "name": "Code Comments", "averageScore": 75, "weight": 0.20 },
+    { "name": "Historical Context", "averageScore": 70, "weight": 0.10 },
+    { "name": "Spec Sync", "averageScore": 65, "weight": 0.00 }
+  ],
+  "recentTickets": [
+    {
+      "ticketKey": "AIB-120",
+      "title": "Add user preferences",
+      "score": 85,
+      "completedAt": "2026-03-25T14:30:00.000Z"
+    }
+  ],
+  "trendData": [
+    { "ticketKey": "AIB-120", "score": 85, "date": "2026-03-25T14:30:00.000Z" }
+  ]
+}
+```
+
+**Empty state** (no qualifying data): `averageScore: null`, `ticketCount: 0`, `trend: null`, `trendDelta: null`, all arrays empty.
+
+**Query logic**:
+- Current period: COMPLETED verify jobs, `workflowType=FULL`, `stage=SHIP`, `completedAt >= now - 30 days`
+- Previous period: same filters with `completedAt` between 60 and 30 days ago (for trend calculation)
+- Dimensions derived from `qualityScoreDetails` JSON on each qualifying Job record
+
+**Errors**:
+- `400`: Invalid project ID
+- `401`: Unauthorized
+- `403`: Forbidden
+- `404`: Project not found
+
+---
+
+### GET /api/projects/[projectId]/health/last-clean
+
+Returns Last Clean module data including cleanup history for the Health Dashboard drawer.
+
+**Authentication**: Session cookie OR Bearer PAT
+**Authorization**: `verifyProjectAccess(projectId)` — owner or member
+
+**Path params**: `projectId` (integer, required)
+
+**Response** (200 OK):
+```json
+{
+  "lastCleanDate": "2026-03-20T10:00:00.000Z",
+  "stalenessStatus": "ok",
+  "daysSinceClean": 9,
+  "filesCleaned": 12,
+  "remainingIssues": 3,
+  "summary": "Cleaned 12 files, 3 remaining issues",
+  "history": [
+    {
+      "jobId": 456,
+      "completedAt": "2026-03-20T10:00:00.000Z",
+      "filesCleaned": 12,
+      "remainingIssues": 3,
+      "summary": "Cleaned 12 files, 3 remaining issues"
+    },
+    {
+      "jobId": 400,
+      "completedAt": "2026-02-15T08:30:00.000Z",
+      "filesCleaned": null,
+      "remainingIssues": null,
+      "summary": null
+    }
+  ]
+}
+```
+
+**Staleness thresholds**: `< 30 days` → `"ok"`, `30–60 days` → `"warning"`, `> 60 days` → `"alert"`, no cleanups → `null`.
+
+**Empty state** (no COMPLETED cleanup jobs): all top-level fields `null`, `history: []`.
+
+**Query logic**: Fetches COMPLETED cleanup jobs (`command='clean'`, `status='COMPLETED'`) for the project, ordered by `completedAt DESC`, limit 20. Structured data (`filesCleaned`, `remainingIssues`, `summary`) is parsed from job `output`; fields degrade gracefully to `null` when absent.
+
+**Errors**:
+- `400`: Invalid project ID
+- `401`: Unauthorized
+- `403`: Forbidden
+- `404`: Project not found
 
 ---
 

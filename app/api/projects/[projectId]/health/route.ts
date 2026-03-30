@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
 import { calculateGlobalScore, getScoreLabel, getScoreColorConfig } from '@/lib/health/score-calculator';
+import { getQualityGateData } from '@/lib/health/quality-gate';
+import { computeStalenessStatus, parseCleanupOutput } from '@/lib/health/last-clean';
 import type { HealthResponse, HealthModuleStatus } from '@/lib/health/types';
 
 function getScoreDisplayLabel(score: number): string {
@@ -94,25 +96,13 @@ export async function GET(
       activeScans.map(s => [s.scanType, s.status])
     );
 
-    // Derive Quality Gate from latest completed verify job with qualityScore
-    let qualityGateScore: number | null = healthScore?.qualityGate ?? null;
-    let qualityGateDate: Date | null = null;
-
-    const latestVerifyJob = await prisma.job.findFirst({
-      where: {
-        ticket: { projectId },
-        command: 'verify',
-        status: 'COMPLETED',
-        qualityScore: { not: null },
-      },
-      orderBy: { completedAt: 'desc' },
-      select: { qualityScore: true, completedAt: true },
-    });
-
-    if (latestVerifyJob) {
-      qualityGateScore = latestVerifyJob.qualityScore;
-      qualityGateDate = latestVerifyJob.completedAt;
-    }
+    // Derive Quality Gate from 30-day average of SHIP tickets
+    const qualityGateData = await getQualityGateData(projectId);
+    const qualityGateScore = qualityGateData.averageScore;
+    const firstTicket = qualityGateData.recentTickets[0];
+    const qualityGateDate = firstTicket
+      ? new Date(firstTicket.completedAt)
+      : null;
 
     // Derive Last Clean from latest completed cleanup job
     let lastCleanDate: Date | null = healthScore?.lastCleanDate ?? null;
@@ -125,7 +115,7 @@ export async function GET(
         status: 'COMPLETED',
       },
       orderBy: { completedAt: 'desc' },
-      select: { id: true, completedAt: true },
+      select: { id: true, completedAt: true, logs: true },
     });
 
     if (latestCleanJob) {
@@ -169,18 +159,33 @@ export async function GET(
         label: qualityGateScore !== null ? getScoreDisplayLabel(qualityGateScore) : null,
         lastScanDate: qualityGateDate?.toISOString() ?? null,
         passive: true,
-        summary: qualityGateScore !== null ? 'From latest verify job' : 'No verify jobs yet',
+        summary: qualityGateData.ticketCount > 0
+          ? `${qualityGateData.ticketCount} ticket${qualityGateData.ticketCount !== 1 ? 's' : ''} — ${getScoreDisplayLabel(qualityGateScore!)}`
+          : 'No verify jobs yet',
+        ticketCount: qualityGateData.ticketCount,
+        trend: qualityGateData.trend,
+        trendDelta: qualityGateData.trendDelta,
+        distribution: qualityGateData.distribution,
       },
-      lastClean: {
-        score: null,
-        label: lastCleanDate ? 'OK' : null,
-        lastCleanDate: lastCleanDate?.toISOString() ?? null,
-        passive: true,
-        jobId: lastCleanJobId,
-        summary: lastCleanDate
-          ? `${Math.floor((Date.now() - lastCleanDate.getTime()) / (1000 * 60 * 60 * 24))} days ago`
-          : 'No cleanup yet',
-      },
+      lastClean: (() => {
+        const daysSinceClean = lastCleanDate
+          ? Math.floor((Date.now() - lastCleanDate.getTime()) / (1000 * 60 * 60 * 24))
+          : null;
+        return {
+          score: null,
+          label: lastCleanDate ? 'OK' : null,
+          lastCleanDate: lastCleanDate?.toISOString() ?? null,
+          passive: true,
+          jobId: lastCleanJobId,
+          summary: daysSinceClean !== null
+            ? `${daysSinceClean} days ago`
+            : 'No cleanup yet',
+          stalenessStatus: computeStalenessStatus(daysSinceClean),
+          filesCleaned: latestCleanJob?.logs
+            ? parseCleanupOutput(latestCleanJob.logs).filesCleaned
+            : null,
+        };
+      })(),
     };
 
     // Calculate global score

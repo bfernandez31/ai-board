@@ -37,6 +37,14 @@ export const MODULE_METADATA: Record<HealthModuleType, ModuleMetadata> = {
   LAST_CLEAN: { key: 'LAST_CLEAN', label: 'Last Clean', passive: true },
 };
 
+/** Threshold distribution for Quality Gate */
+export interface ThresholdDistribution {
+  excellent: number;
+  good: number;
+  fair: number;
+  poor: number;
+}
+
 /** Module status in the health response */
 export interface HealthModuleStatus {
   score: number | null;
@@ -48,6 +56,12 @@ export interface HealthModuleStatus {
   passive?: boolean;
   jobId?: number | null;
   summary: string;
+  ticketCount?: number;
+  trend?: 'up' | 'down' | 'stable' | null;
+  trendDelta?: number | null;
+  distribution?: ThresholdDistribution;
+  stalenessStatus?: 'ok' | 'warning' | 'alert' | null;
+  filesCleaned?: number | null;
 }
 
 /** Active scan info for polling */
