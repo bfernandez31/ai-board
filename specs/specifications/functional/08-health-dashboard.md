@@ -56,8 +56,8 @@ Each card renders one of four states based on the module's scan data:
 **Active modules** (Security, Compliance, Tests, Spec Sync) support user-triggered scans. Their cards display an action button and the commit range analyzed.
 
 **Passive modules** (Quality Gate, Last Clean) derive data from existing Job records and display a "passive" label instead of an action button:
-- **Quality Gate**: Score from the latest COMPLETED verify job's `qualityScore` field
-- **Last Clean**: Date and result of the latest COMPLETED cleanup job; does not contribute to the global score
+- **Quality Gate**: 30-day rolling average of quality scores from COMPLETED verify jobs of FULL-workflow tickets at SHIP stage. Contributes 20% to the global Health Score. The card also shows ticket count, a trend indicator (vs the previous 30-day window), and a threshold distribution (Excellent/Good/Fair/Poor).
+- **Last Clean**: Date and result of the latest COMPLETED cleanup job. Does not contribute to the global score. The card shows a staleness visual state based on elapsed time: OK (< 30 days), warning (30–60 days), alert (> 60 days).
 
 ### Card Content
 
@@ -69,6 +69,10 @@ Each card displays:
 - Severity tags (when applicable)
 - Last scan date
 - Action button or "passive" label
+
+**Quality Gate card extras** (when data is available): ticket count (e.g., "5 tickets"), trend indicator arrow (up/down/stable) with numeric delta, and a threshold distribution showing counts per bucket (Excellent ≥ 90, Good ≥ 70, Fair ≥ 50, Poor < 50).
+
+**Last Clean card extras**: staleness visual state (green border/tint for OK, yellow for warning, red for alert); days since last cleanup; file count when available from job output.
 
 ## Triggering a Scan
 
@@ -130,8 +134,8 @@ Issues from the latest scan are displayed in groups according to the module's gr
 | Compliance | By constitution principle violated |
 | Tests | Two categories: "Auto-fixed" and "Non-fixable" |
 | Spec Sync | By sync status (synced / drifted) with drift summary |
-| Quality Gate | Dimension breakdown (Compliance, Bug Detection, Code Comments, Historical Context, Spec Sync) |
-| Last Clean | Summary card showing files cleaned and remaining issues |
+| Quality Gate | Dimension breakdown (Compliance, Bug Detection, Code Comments, Historical Context, Spec Sync) with average scores; threshold distribution; trend chart (score per ticket over time); list of recent SHIP tickets with individual scores |
+| Last Clean | Summary of the latest cleanup (files cleaned, remaining issues, summary text); chronological history of past cleanups (date, file count, summary) |
 
 Each issue entry shows severity/category, description, and affected file with line number when available. Malformed or missing report data renders a fallback message ("Report data unavailable") instead of an error.
 
