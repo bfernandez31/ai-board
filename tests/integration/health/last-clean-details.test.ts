@@ -24,12 +24,18 @@ describe('Last Clean Details GET Endpoint', () => {
     );
   }
 
+  let ticketCounter = 0;
+
   async function createCleanTicket() {
+    ticketCounter++;
+    const num = 8000 + ticketCounter + Math.floor(Math.random() * 1000);
     return prisma.ticket.create({
       data: {
         projectId: ctx.projectId,
-        ticketKey: `E2E-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        ticketNumber: num,
+        ticketKey: `E2E-${num}`,
         title: '[e2e] Clean test ticket',
+        description: '[e2e] Last clean test ticket',
         workflowType: 'CLEAN',
         stage: 'SHIP',
       },
@@ -44,9 +50,11 @@ describe('Last Clean Details GET Endpoint', () => {
     return prisma.job.create({
       data: {
         ticketId,
+        projectId: ctx.projectId,
         command: 'clean',
         status: overrides.status ?? 'COMPLETED',
         completedAt: overrides.completedAt ?? new Date(),
+        updatedAt: new Date(),
         logs: overrides.logs ?? null,
       },
     });

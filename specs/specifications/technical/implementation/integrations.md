@@ -170,6 +170,7 @@ export async function dispatchWorkflow(params: {
   - `githubRepository` (required) - Target repository in format owner/repo
 - **Repository Checkout**: Checks out external project repository with full history (`fetch-depth: 0`) to support incremental scanning commit ranges
 - **Environment**: ubuntu-latest
+- **Timeout**: 60 minutes maximum
 - **Authentication**: `WORKFLOW_API_TOKEN` Bearer token for all status callbacks
 - **Command Mapping**: Maps `scan_type` to Claude Code CLI command via static lookup (`lib/health/scan-commands.ts`) — no dynamic command construction
 - **Steps**:
@@ -179,9 +180,10 @@ export async function dispatchWorkflow(params: {
   4. Parse JSON report output (score, issuesFound, issuesFixed, report)
   5. Create remediation tickets via `POST /api/projects/{projectId}/tickets` (grouped by scan type)
   6. `PATCH` scan status → COMPLETED with score, report, and telemetry
-  7. On any error: `PATCH` scan status → FAILED with error message (max 2000 chars)
+  7. **Catch-all FAILED step** (`if: always()`): runs whenever COMPLETED was skipped — covers explicit failures, workflow timeouts, and unexpected crashes
 - **Side effects**: COMPLETED callback triggers `HealthScore` upsert and `globalScore` recalculation via existing status endpoint
 - **Telemetry**: Records `durationMs`, `tokensUsed`, `costUsd` on every completion or failure
+- **Stale scan cleanup**: The health GET endpoint auto-fails scans stuck in PENDING/RUNNING for >65 minutes (workflow timeout + 5 min buffer) to prevent indefinitely stuck UI states
 
 **Auto-Ship** (`.github/workflows/auto-ship.yml`):
 - **Trigger**: `deployment_status` event

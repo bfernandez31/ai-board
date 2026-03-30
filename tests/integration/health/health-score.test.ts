@@ -110,6 +110,50 @@ describe('Health Score GET Endpoint', () => {
     expect(data.activeScans[0].status).toBe('RUNNING');
   });
 
+  it('auto-fails stale scans stuck for over 65 minutes', async () => {
+    const staleDate = new Date(Date.now() - 70 * 60 * 1000); // 70 min ago
+    const staleScan = await prisma.healthScan.create({
+      data: {
+        projectId: ctx.projectId,
+        scanType: 'SECURITY',
+        status: 'RUNNING',
+        startedAt: staleDate,
+        createdAt: staleDate,
+      },
+    });
+
+    const response = await makeRequest(ctx.projectId);
+    const data = await response.json();
+
+    // Stale scan should NOT appear in activeScans
+    expect(data.activeScans).toHaveLength(0);
+
+    // Verify it was marked FAILED in the database
+    const updated = await prisma.healthScan.findUnique({
+      where: { id: staleScan.id },
+    });
+    expect(updated!.status).toBe('FAILED');
+    expect(updated!.errorMessage).toBe('Scan timed out — workflow did not report back');
+    expect(updated!.completedAt).not.toBeNull();
+  });
+
+  it('does not auto-fail recent active scans', async () => {
+    await prisma.healthScan.create({
+      data: {
+        projectId: ctx.projectId,
+        scanType: 'COMPLIANCE',
+        status: 'RUNNING',
+        startedAt: new Date(), // just now
+      },
+    });
+
+    const response = await makeRequest(ctx.projectId);
+    const data = await response.json();
+
+    expect(data.activeScans).toHaveLength(1);
+    expect(data.activeScans[0].status).toBe('RUNNING');
+  });
+
   it('returns 400 for invalid project ID', async () => {
     const response = await GET(
       new NextRequest('http://localhost/api/projects/invalid/health'),

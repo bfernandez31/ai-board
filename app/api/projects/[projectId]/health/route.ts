@@ -58,6 +58,22 @@ export async function GET(
       where: { projectId },
     });
 
+    // Auto-fail stale scans stuck in PENDING/RUNNING for >65 minutes
+    // (workflow timeout is 60min + 5min buffer for the FAILED status update step)
+    const staleThreshold = new Date(Date.now() - 65 * 60 * 1000);
+    await prisma.healthScan.updateMany({
+      where: {
+        projectId,
+        status: { in: ['PENDING', 'RUNNING'] },
+        createdAt: { lt: staleThreshold },
+      },
+      data: {
+        status: 'FAILED',
+        completedAt: new Date(),
+        errorMessage: 'Scan timed out — workflow did not report back',
+      },
+    });
+
     // Fetch active scans (PENDING or RUNNING)
     const activeScans = await prisma.healthScan.findMany({
       where: {

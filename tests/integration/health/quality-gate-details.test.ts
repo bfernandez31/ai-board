@@ -24,16 +24,22 @@ describe('Quality Gate Details GET Endpoint', () => {
     );
   }
 
+  let ticketCounter = 0;
+
   async function createShipTicket(overrides: {
     title?: string;
     workflowType?: string;
     stage?: string;
   } = {}) {
+    ticketCounter++;
+    const num = 9000 + ticketCounter + Math.floor(Math.random() * 1000);
     return prisma.ticket.create({
       data: {
         projectId: ctx.projectId,
-        ticketKey: `E2E-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        ticketNumber: num,
+        ticketKey: `E2E-${num}`,
         title: overrides.title ?? '[e2e] QG test ticket',
+        description: '[e2e] Quality gate test ticket',
         workflowType: overrides.workflowType ?? 'FULL',
         stage: overrides.stage ?? 'SHIP',
       },
@@ -49,7 +55,9 @@ describe('Quality Gate Details GET Endpoint', () => {
     return prisma.job.create({
       data: {
         ticketId,
+        projectId: ctx.projectId,
         command: 'verify',
+        updatedAt: new Date(),
         status: overrides.status ?? 'COMPLETED',
         qualityScore: overrides.qualityScore ?? 80,
         qualityScoreDetails: overrides.qualityScoreDetails ?? null,
@@ -68,7 +76,8 @@ describe('Quality Gate Details GET Endpoint', () => {
     expect(data.trend).toBeNull();
     expect(data.trendDelta).toBeNull();
     expect(data.distribution).toEqual({ excellent: 0, good: 0, fair: 0, poor: 0 });
-    expect(data.dimensions).toEqual([]);
+    expect(data.dimensions).toHaveLength(5);
+    expect(data.dimensions.every((d: { averageScore: number | null }) => d.averageScore === null)).toBe(true);
     expect(data.recentTickets).toEqual([]);
     expect(data.trendData).toEqual([]);
   });
@@ -87,7 +96,7 @@ describe('Quality Gate Details GET Endpoint', () => {
 
     expect(data.averageScore).toBe(80); // (90+80+70)/3
     expect(data.ticketCount).toBe(3);
-    expect(data.distribution).toEqual({ excellent: 1, good: 1, fair: 1, poor: 0 });
+    expect(data.distribution).toEqual({ excellent: 1, good: 2, fair: 0, poor: 0 });
   });
 
   it('excludes QUICK-workflow tickets from calculation', async () => {

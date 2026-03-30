@@ -38,7 +38,7 @@ on:
 jobs:
   run-health-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     env:
       APP_URL: ${{ vars.APP_URL }}
@@ -315,8 +315,9 @@ jobs:
           echo "✅ Scan status updated to COMPLETED (score: ${{ steps.scan-exec.outputs.score }})"
 
       # Error handling: Update status to FAILED (US5 T019)
+      # Catch-all: runs whenever COMPLETED step was skipped (covers explicit failure AND unexpected crashes)
       - name: Update Scan Status - FAILED
-        if: ${{ steps.scan-exec.outputs.scan_success == 'false' }}
+        if: ${{ always() && steps.scan-exec.outputs.scan_success != 'true' }}
         run: |
           ERROR_MSG="${{ steps.scan-exec.outputs.error_msg }}"
           if [ -z "$ERROR_MSG" ]; then
@@ -326,10 +327,13 @@ jobs:
           # Truncate to 2000 chars
           ERROR_MSG=$(echo "$ERROR_MSG" | head -c 2000)
 
+          DURATION_MS="${{ steps.scan-exec.outputs.duration_ms }}"
+          DURATION_MS="${DURATION_MS:-0}"
+
           PAYLOAD=$(jq -n \
             --arg status "FAILED" \
             --arg errorMessage "$ERROR_MSG" \
-            --argjson durationMs "${{ steps.scan-exec.outputs.duration_ms || 0 }}" \
+            --argjson durationMs "$DURATION_MS" \
             '{status: $status, errorMessage: $errorMessage, durationMs: $durationMs}')
 
           curl -X PATCH "${APP_URL}/api/projects/${{ inputs.project_id }}/health/scans/${{ inputs.scan_id }}/status" \
