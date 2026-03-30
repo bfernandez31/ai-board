@@ -37,7 +37,7 @@ echo -e "${GREEN}Starting integration tests...${NC}"
 if curl -s "$BASE_URL" > /dev/null 2>&1; then
     echo -e "${YELLOW}Dev server already running at $BASE_URL${NC}"
     echo -e "${GREEN}Running integration tests...${NC}"
-    VITEST_INTEGRATION=1 bun vitest run
+    VITEST_INTEGRATION=1 bun vitest run "$@"
     exit $?
 fi
 
@@ -82,7 +82,7 @@ echo -e "\n${GREEN}Server ready! (took ${WAITED}s)${NC}"
 
 # Run integration tests
 echo -e "${GREEN}Running integration tests...${NC}"
-VITEST_INTEGRATION=1 bun vitest run
+VITEST_INTEGRATION=1 bun vitest run "$@"
 
 TEST_EXIT_CODE=$?
 

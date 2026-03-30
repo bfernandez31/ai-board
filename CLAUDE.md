@@ -45,7 +45,7 @@ bun run type-check         # TypeScript check
 bun run lint               # ESLint check
 ```
 
-**Note**: `test` and `test:integration` automatically start/stop the dev server. For manual server control, use `test:integration:manual` with `TEST_MODE=true bun run dev` running.
+**Note**: `test` and `test:integration` automatically start/stop the dev server. For manual server control, use `test:integration:manual` with `TEST_MODE=true bun run dev` running. To run a specific file, append the path (e.g., `bun run test:unit tests/unit/components/foo.test.tsx`). Never use `bunx vitest run` directly.
 
 ## Data Models
 

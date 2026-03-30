@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { History, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getScoreColor } from '@/lib/quality-score';
@@ -14,19 +13,14 @@ interface DrawerHistoryProps {
 }
 
 export function DrawerHistory({ projectId, moduleType }: DrawerHistoryProps) {
-  const [allScans, setAllScans] = useState<ScanHistoryItem[]>([]);
-  const [cursor, setCursor] = useState<number | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [isInitial, setIsInitial] = useState(true);
-
-  const { isLoading } = useQuery({
-    queryKey: [...queryKeys.health.scanHistory(projectId, moduleType), 'drawer', cursor],
-    queryFn: async (): Promise<ScanHistoryResponse> => {
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: [...queryKeys.health.scanHistory(projectId, moduleType), 'drawer'],
+    queryFn: async ({ pageParam }): Promise<ScanHistoryResponse> => {
       const params = new URLSearchParams({
         type: moduleType,
         limit: '10',
       });
-      if (cursor) params.set('cursor', String(cursor));
+      if (pageParam) params.set('cursor', String(pageParam));
 
       const response = await fetch(
         `/api/projects/${projectId}/health/scans?${params}`,
@@ -37,27 +31,18 @@ export function DrawerHistory({ projectId, moduleType }: DrawerHistoryProps) {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const data: ScanHistoryResponse = await response.json();
-
-      setAllScans((prev) => {
-        // Avoid duplicates when re-fetching initial page
-        if (!cursor) return data.scans;
-        return [...prev, ...data.scans];
-      });
-      setHasMore(data.hasMore);
-      setIsInitial(false);
-
-      return data;
+      return response.json();
     },
+    initialPageParam: null as number | null,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.nextCursor : undefined,
     staleTime: 30_000,
     gcTime: 5 * 60 * 1000,
   });
 
-  if (isInitial && isLoading) {
-    return null;
-  }
+  const allScans = data?.pages.flatMap((page) => page.scans) ?? [];
 
-  if (allScans.length === 0) {
+  if (isLoading || allScans.length === 0) {
     return null;
   }
 
@@ -74,16 +59,13 @@ export function DrawerHistory({ projectId, moduleType }: DrawerHistoryProps) {
         ))}
       </div>
 
-      {hasMore && (
+      {hasNextPage && (
         <Button
           variant="ghost"
           size="sm"
           className="w-full text-xs"
-          onClick={() => {
-            const last = allScans[allScans.length - 1];
-            if (last) setCursor(last.id);
-          }}
-          disabled={isLoading}
+          onClick={() => fetchNextPage()}
+          disabled={isFetchingNextPage}
         >
           <ChevronDown className="h-3 w-3 mr-1" />
           Load more
