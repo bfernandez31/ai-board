@@ -28,6 +28,9 @@ interface QualityGateDrawerProps {
 
 export function QualityGateDrawer({ projectId, isOpen, onClose }: QualityGateDrawerProps) {
   const { data, isLoading } = useQualityGateDetails(projectId, isOpen);
+  const scoreColors = data?.averageScore !== null && data?.averageScore !== undefined
+    ? getScoreColor(data.averageScore)
+    : null;
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -70,10 +73,10 @@ export function QualityGateDrawer({ projectId, isOpen, onClose }: QualityGateDra
               <div className="aurora-glass rounded-lg p-4 flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-2xl font-bold ${getScoreColor(data.averageScore).text}`}>
+                    <span className={`text-2xl font-bold ${scoreColors!.text}`}>
                       {data.averageScore}
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-md ${getScoreColor(data.averageScore).text} ${getScoreColor(data.averageScore).bg}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-md ${scoreColors!.text} ${scoreColors!.bg}`}>
                       {getScoreThreshold(data.averageScore)}
                     </span>
                   </div>

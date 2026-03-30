@@ -167,22 +167,25 @@ export async function GET(
         trendDelta: qualityGateData.trendDelta,
         distribution: qualityGateData.distribution,
       },
-      lastClean: {
-        score: null,
-        label: lastCleanDate ? 'OK' : null,
-        lastCleanDate: lastCleanDate?.toISOString() ?? null,
-        passive: true,
-        jobId: lastCleanJobId,
-        summary: lastCleanDate
-          ? `${Math.floor((Date.now() - lastCleanDate.getTime()) / (1000 * 60 * 60 * 24))} days ago`
-          : 'No cleanup yet',
-        stalenessStatus: lastCleanDate
-          ? computeStalenessStatus(Math.floor((Date.now() - lastCleanDate.getTime()) / (1000 * 60 * 60 * 24)))
-          : null,
-        filesCleaned: latestCleanJob?.logs
-          ? parseCleanupOutput(latestCleanJob.logs).filesCleaned
-          : null,
-      },
+      lastClean: (() => {
+        const daysSinceClean = lastCleanDate
+          ? Math.floor((Date.now() - lastCleanDate.getTime()) / (1000 * 60 * 60 * 24))
+          : null;
+        return {
+          score: null,
+          label: lastCleanDate ? 'OK' : null,
+          lastCleanDate: lastCleanDate?.toISOString() ?? null,
+          passive: true,
+          jobId: lastCleanJobId,
+          summary: daysSinceClean !== null
+            ? `${daysSinceClean} days ago`
+            : 'No cleanup yet',
+          stalenessStatus: computeStalenessStatus(daysSinceClean),
+          filesCleaned: latestCleanJob?.logs
+            ? parseCleanupOutput(latestCleanJob.logs).filesCleaned
+            : null,
+        };
+      })(),
     };
 
     // Calculate global score

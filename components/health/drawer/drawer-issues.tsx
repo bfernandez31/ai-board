@@ -36,7 +36,7 @@ export function DrawerIssues({ report }: DrawerIssuesProps) {
 // --- Security: group by severity ---
 
 function SecurityIssues({ report }: { report: SecurityReport }) {
-  const groups = groupBySeverity(report.issues);
+  const groups = groupBy(report.issues, (i) => i.severity);
 
   if (report.issues.length === 0) {
     return <EmptyIssues label="No security issues found" />;
@@ -83,7 +83,7 @@ function ComplianceIssues({ report }: { report: ComplianceReport }) {
     return <EmptyIssues label="No compliance issues found" />;
   }
 
-  const groups = groupByCategory(report.issues);
+  const groups = groupBy(report.issues, (i) => i.category ?? 'Uncategorized');
 
   return (
     <div className="space-y-3">
@@ -287,20 +287,10 @@ function EmptyIssues({ label }: { label: string }) {
   );
 }
 
-function groupBySeverity(issues: ReportIssue[]): Record<string, ReportIssue[]> {
+function groupBy(issues: ReportIssue[], keyFn: (issue: ReportIssue) => string): Record<string, ReportIssue[]> {
   const groups: Record<string, ReportIssue[]> = {};
   for (const issue of issues) {
-    const key = issue.severity;
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(issue);
-  }
-  return groups;
-}
-
-function groupByCategory(issues: ReportIssue[]): Record<string, ReportIssue[]> {
-  const groups: Record<string, ReportIssue[]> = {};
-  for (const issue of issues) {
-    const key = issue.category ?? 'Uncategorized';
+    const key = keyFn(issue);
     if (!groups[key]) groups[key] = [];
     groups[key].push(issue);
   }

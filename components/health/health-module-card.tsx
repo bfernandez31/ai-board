@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { getScoreColor } from '@/lib/quality-score';
 import { MODULE_METADATA } from '@/lib/health/types';
 import type { HealthModuleType, HealthModuleStatus } from '@/lib/health/types';
@@ -63,7 +64,13 @@ export function HealthModuleCard({
 
   return (
     <div
-      className={`aurora-glass rounded-lg p-4 space-y-3${onClick ? ' aurora-glass-hover cursor-pointer' : ''}${module.stalenessStatus === 'warning' ? ' border-l-2 border-ctp-yellow' : ''}${module.stalenessStatus === 'alert' ? ' border-l-2 border-ctp-red' : ''}${module.stalenessStatus === 'ok' ? ' border-l-2 border-ctp-green' : ''}`}
+      className={cn(
+        'aurora-glass rounded-lg p-4 space-y-3',
+        onClick && 'aurora-glass-hover cursor-pointer',
+        module.stalenessStatus === 'warning' && 'border-l-2 border-ctp-yellow',
+        module.stalenessStatus === 'alert' && 'border-l-2 border-ctp-red',
+        module.stalenessStatus === 'ok' && 'border-l-2 border-ctp-green',
+      )}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
