@@ -1,5 +1,6 @@
 import type { HealthScanType } from '@prisma/client';
 import type {
+  ReportIssue,
   SecurityReport,
   ComplianceReport,
   TestsReport,
@@ -51,7 +52,7 @@ function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {
   return groups;
 }
 
-function formatFileList(issues: { file?: string | undefined; line?: number | undefined; description: string; exploitScenario?: string | undefined; recommendation?: string | undefined }[]): string {
+function formatFileList(issues: Pick<ReportIssue, 'file' | 'line' | 'description' | 'exploitScenario' | 'recommendation'>[]): string {
   return issues
     .filter((i) => i.file)
     .map((i) => {

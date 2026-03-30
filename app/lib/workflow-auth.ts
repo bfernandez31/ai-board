@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextRequest } from 'next/server';
 
 export interface WorkflowAuthResult {
@@ -25,22 +26,11 @@ export function validateWorkflowAuth(request: NextRequest): WorkflowAuthResult {
     return { isValid: false, error: 'Invalid Authorization header format' };
   }
 
-  if (!constantTimeCompare(token, expectedToken)) {
+  if (token.length !== expectedToken.length || !timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken))) {
     console.warn('[Workflow Auth] Invalid token');
     return { isValid: false, error: 'Invalid authentication token' };
   }
 
   console.log('[Workflow Auth] Valid token');
   return { isValid: true };
-}
-
-function constantTimeCompare(a: string, b: string): boolean {
-  const maxLength = Math.max(a.length, b.length);
-  let result = a.length === b.length ? 0 : 1;
-
-  for (let i = 0; i < maxLength; i++) {
-    result |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
-  }
-
-  return result === 0;
 }
