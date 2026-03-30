@@ -25,13 +25,9 @@ export default defineConfig({
     fileParallelism: isIntegration ? false : true,
     // Pool configuration
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        // Single fork for integration tests (sequential execution)
-        maxForks: isIntegration ? 1 : undefined,
-        minForks: isIntegration ? 1 : undefined,
-      },
-    },
+    // Single fork for integration tests (sequential execution)
+    maxForks: isIntegration ? 1 : undefined,
+    minForks: isIntegration ? 1 : undefined,
     // Timeout configuration
     testTimeout: isIntegration ? 30000 : 5000,
     hookTimeout: isIntegration ? 30000 : 10000,

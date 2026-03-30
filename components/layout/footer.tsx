@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 /** Routes where the footer is hidden (full-height layouts like the board). */
-const HIDDEN_ROUTES = /^\/projects\/[^/]+\/board/;
+const HIDDEN_ROUTES = /^\/projects\/[^/]+/;
 
 export function Footer() {
   const pathname = usePathname();

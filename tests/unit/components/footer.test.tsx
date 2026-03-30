@@ -3,7 +3,7 @@
  *
  * Tests for the global footer component.
  * Verifies legal links render with correct hrefs and
- * that the footer is hidden on board pages.
+ * that the footer is hidden on project pages.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -43,14 +43,20 @@ describe('Footer', () => {
     expect(screen.getByText(new RegExp(`${currentYear}.*AI Board`))).toBeInTheDocument();
   });
 
-  it('should be hidden on board pages', () => {
+  it('should be hidden on project pages', () => {
     mockUsePathname.mockReturnValue('/projects/123/board');
     const { container } = render(<Footer />);
     expect(container.innerHTML).toBe('');
   });
 
-  it('should be visible on non-board pages', () => {
+  it('should be hidden on all project sub-routes', () => {
     mockUsePathname.mockReturnValue('/projects/123/settings');
+    const { container } = render(<Footer />);
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('should be visible on non-project pages', () => {
+    mockUsePathname.mockReturnValue('/legal/terms');
     render(<Footer />);
     expect(screen.getByRole('link', { name: 'Terms of Service' })).toBeInTheDocument();
   });
