@@ -47,7 +47,7 @@ install_claude() {
     return 0
   fi
   log_info "Installing Claude Code CLI..."
-  if ! bun add -g @anthropic-ai/claude-code; then
+  if ! bun add -g @anthropic-ai/claude-code >&2; then
     log_error "Failed to install @anthropic-ai/claude-code"
     exit 1
   fi
@@ -76,7 +76,7 @@ install_codex() {
     return 0
   fi
   log_info "Installing Codex CLI..."
-  if ! bun add -g @openai/codex; then
+  if ! bun add -g @openai/codex >&2; then
     log_error "Failed to install @openai/codex"
     exit 1
   fi
@@ -97,7 +97,7 @@ auth_codex() {
     chmod 600 ~/.codex/auth.json
     log_info "Codex authenticated via OAuth token (auth.json reset from secret)"
   else
-    codex login --api-key "$OPENAI_API_KEY"
+    codex login --api-key "$OPENAI_API_KEY" >&2
     log_info "Codex authenticated via API key"
   fi
 }
@@ -141,7 +141,7 @@ TOML
 
   log_info "Codex telemetry config appended"
   log_info "Config contents:"
-  cat ~/.codex/config.toml
+  cat ~/.codex/config.toml >&2
 }
 
 invoke_codex() {
