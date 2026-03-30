@@ -34,4 +34,3 @@ export function validateWorkflowAuth(request: NextRequest): WorkflowAuthResult {
   console.log('[Workflow Auth] Valid token');
   return { isValid: true };
 }
-
