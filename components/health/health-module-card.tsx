@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { getScoreColor } from '@/lib/quality-score';
 import { MODULE_METADATA } from '@/lib/health/types';
-import type { HealthModuleType, HealthModuleStatus } from '@/lib/health/types';
+import type { HealthModuleType, HealthModuleStatus, QualityGateModuleStatus, LastCleanModuleStatus } from '@/lib/health/types';
 
 const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
   SECURITY: Shield,
@@ -79,6 +79,21 @@ export function HealthModuleCard({
       </div>
 
       <p className="text-sm text-muted-foreground">{module.summary}</p>
+
+      {moduleType === 'QUALITY_GATE' && (module as QualityGateModuleStatus).ticketCount > 0 && (
+        <QualityGateCardExtras module={module as QualityGateModuleStatus} />
+      )}
+
+      {moduleType === 'LAST_CLEAN' && (module as LastCleanModuleStatus).isOverdue && (
+        <div className="flex items-center gap-1.5 text-xs text-ctp-yellow">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          <span>Cleanup overdue</span>
+        </div>
+      )}
+
+      {moduleType === 'LAST_CLEAN' && (module as LastCleanModuleStatus).status !== 'never' && (
+        <LastCleanCardExtras module={module as LastCleanModuleStatus} />
+      )}
 
       {state === 'scanning' && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -198,9 +213,77 @@ function ScoreBadge({
     );
   }
 
+  if (label === 'Overdue') {
+    return (
+      <span className="text-xs font-medium text-ctp-yellow bg-ctp-yellow/10 rounded-md px-2 py-0.5">
+        Overdue
+      </span>
+    );
+  }
+
   return (
     <span className="text-xs font-medium text-muted-foreground bg-muted rounded-md px-2 py-0.5">
       ---
     </span>
+  );
+}
+
+function TrendIndicator({ trend }: { trend: QualityGateModuleStatus['trend'] }) {
+  if (trend.type === 'no_data' || trend.type === 'new') {
+    return <span className="text-xs text-muted-foreground">N/A</span>;
+  }
+  if (trend.type === 'improvement') {
+    return <span className="text-xs text-ctp-green">↑ +{trend.delta}</span>;
+  }
+  if (trend.type === 'regression') {
+    return <span className="text-xs text-ctp-red">↓ {trend.delta}</span>;
+  }
+  return <span className="text-xs text-muted-foreground">→ 0</span>;
+}
+
+function QualityGateCardExtras({ module }: { module: QualityGateModuleStatus }) {
+  const { distribution, trend } = module;
+  const total = distribution.excellent + distribution.good + distribution.fair + distribution.poor;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">Trend</span>
+        <TrendIndicator trend={trend} />
+      </div>
+      {total > 0 && (
+        <div className="space-y-1">
+          <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden">
+            {distribution.excellent > 0 && (
+              <div className="bg-ctp-green" style={{ flex: distribution.excellent }} />
+            )}
+            {distribution.good > 0 && (
+              <div className="bg-ctp-blue" style={{ flex: distribution.good }} />
+            )}
+            {distribution.fair > 0 && (
+              <div className="bg-ctp-yellow" style={{ flex: distribution.fair }} />
+            )}
+            {distribution.poor > 0 && (
+              <div className="bg-ctp-red" style={{ flex: distribution.poor }} />
+            )}
+          </div>
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>{distribution.excellent}E</span>
+            <span>{distribution.good}G</span>
+            <span>{distribution.fair}F</span>
+            <span>{distribution.poor}P</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LastCleanCardExtras({ module }: { module: LastCleanModuleStatus }) {
+  return (
+    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      {module.filesCleaned > 0 && <span>{module.filesCleaned} files</span>}
+      {module.remainingIssues > 0 && <span>{module.remainingIssues} remaining</span>}
+    </div>
   );
 }

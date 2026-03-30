@@ -12,9 +12,11 @@ import { DrawerIssues } from './drawer/drawer-issues';
 import { DrawerTickets } from './drawer/drawer-tickets';
 import { DrawerHistory } from './drawer/drawer-history';
 import { DrawerStates } from './drawer/drawer-states';
+import { QualityGateDrawerContent } from './drawer/quality-gate-drawer-content';
+import { LastCleanDrawerContent } from './drawer/last-clean-drawer-content';
 import { useScanReport } from '@/app/lib/hooks/useScanReport';
 import { MODULE_METADATA } from '@/lib/health/types';
-import type { HealthModuleType, HealthModuleStatus } from '@/lib/health/types';
+import type { HealthModuleType, HealthModuleStatus, QualityGateModuleStatus, LastCleanModuleStatus } from '@/lib/health/types';
 
 interface ScanDetailDrawerProps {
   projectId: number;
@@ -70,39 +72,51 @@ export function ScanDetailDrawer({
               isLoading={isLoading}
             />
 
-            {isLoading && (
-              <div className="flex items-center justify-center py-8">
-                <p className="text-sm text-muted-foreground">Loading report...</p>
-              </div>
+            {moduleType === 'QUALITY_GATE' && (
+              <QualityGateDrawerContent module={moduleStatus as QualityGateModuleStatus} />
             )}
 
-            {showStates && (
-              <DrawerStates
-                moduleType={moduleType}
-                moduleStatus={moduleStatus}
-                isScanning={isScanning}
-                errorMessage={data?.scan?.errorMessage}
-                onTriggerScan={onTriggerScan}
-              />
+            {moduleType === 'LAST_CLEAN' && (
+              <LastCleanDrawerContent module={moduleStatus as LastCleanModuleStatus} />
             )}
 
-            {hasReport && data?.report && (
+            {moduleType !== 'QUALITY_GATE' && moduleType !== 'LAST_CLEAN' && (
               <>
-                <DrawerIssues report={data.report} />
-                <DrawerTickets report={data.report} projectId={projectId} />
+                {isLoading && (
+                  <div className="flex items-center justify-center py-8">
+                    <p className="text-sm text-muted-foreground">Loading report...</p>
+                  </div>
+                )}
+
+                {showStates && (
+                  <DrawerStates
+                    moduleType={moduleType}
+                    moduleStatus={moduleStatus}
+                    isScanning={isScanning}
+                    errorMessage={data?.scan?.errorMessage}
+                    onTriggerScan={onTriggerScan}
+                  />
+                )}
+
+                {hasReport && data?.report && (
+                  <>
+                    <DrawerIssues report={data.report} />
+                    <DrawerTickets report={data.report} projectId={projectId} />
+                  </>
+                )}
+
+                {hasCompletedScan && !hasReport && (
+                  <div className="text-center py-4">
+                    <p className="text-xs text-muted-foreground">
+                      Report data unavailable — scan predates structured reporting
+                    </p>
+                  </div>
+                )}
+
+                {!isLoading && (
+                  <DrawerHistory projectId={projectId} moduleType={moduleType} />
+                )}
               </>
-            )}
-
-            {hasCompletedScan && !hasReport && (
-              <div className="text-center py-4">
-                <p className="text-xs text-muted-foreground">
-                  Report data unavailable — scan predates structured reporting
-                </p>
-              </div>
-            )}
-
-            {!isLoading && (
-              <DrawerHistory projectId={projectId} moduleType={moduleType} />
             )}
           </div>
         )}

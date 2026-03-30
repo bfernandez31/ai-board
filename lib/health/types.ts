@@ -68,8 +68,8 @@ export interface HealthResponse {
     compliance: HealthModuleStatus;
     tests: HealthModuleStatus;
     specSync: HealthModuleStatus;
-    qualityGate: HealthModuleStatus;
-    lastClean: HealthModuleStatus;
+    qualityGate: QualityGateModuleStatus;
+    lastClean: LastCleanModuleStatus;
   };
   lastFullScanDate: string | null;
   activeScans: ActiveScanInfo[];
@@ -193,3 +193,102 @@ export type ScanReport =
   | SpecSyncReport
   | QualityGateReport
   | LastCleanReport;
+
+// --- Quality Gate Aggregate Types (derived, not persisted) ---
+
+export interface QualityGateTrend {
+  type: 'improvement' | 'regression' | 'stable' | 'new' | 'no_data';
+  currentAverage: number | null;
+  previousAverage: number | null;
+  delta: number | null;
+}
+
+export interface ThresholdDistribution {
+  excellent: number;
+  good: number;
+  fair: number;
+  poor: number;
+}
+
+export interface DimensionAverage {
+  name: string;
+  averageScore: number | null;
+  weight: number;
+}
+
+export interface QualityGateTicketItem {
+  ticketKey: string;
+  title: string;
+  score: number;
+  label: string;
+  completedAt: string;
+}
+
+export interface TrendDataPoint {
+  week: string;
+  averageScore: number;
+  ticketCount: number;
+}
+
+export interface QualityGateAggregate {
+  averageScore: number | null;
+  ticketCount: number;
+  trend: QualityGateTrend;
+  distribution: ThresholdDistribution;
+  dimensions: DimensionAverage[];
+  recentTickets: QualityGateTicketItem[];
+  trendData: TrendDataPoint[];
+}
+
+export interface QualityGateModuleStatus extends HealthModuleStatus {
+  passive: true;
+  ticketCount: number;
+  trend: {
+    type: 'improvement' | 'regression' | 'stable' | 'new' | 'no_data';
+    delta: number | null;
+    previousAverage: number | null;
+  };
+  distribution: ThresholdDistribution;
+  detail: {
+    dimensions: DimensionAverage[];
+    recentTickets: QualityGateTicketItem[];
+    trendData: TrendDataPoint[];
+  } | null;
+}
+
+// --- Last Clean Aggregate Types (derived, not persisted) ---
+
+export interface LastCleanHistoryItem {
+  jobId: number;
+  completedAt: string;
+  filesCleaned: number;
+  remainingIssues: number;
+  summary: string;
+  ticketKey: string | null;
+}
+
+export interface LastCleanAggregate {
+  lastCleanDate: string | null;
+  filesCleaned: number;
+  remainingIssues: number;
+  daysAgo: number | null;
+  isOverdue: boolean;
+  status: 'ok' | 'overdue' | 'never';
+  summary: string;
+  history: LastCleanHistoryItem[];
+}
+
+export interface LastCleanModuleStatus extends HealthModuleStatus {
+  passive: true;
+  lastCleanDate: string | null;
+  jobId: number | null;
+  filesCleaned: number;
+  remainingIssues: number;
+  daysAgo: number | null;
+  isOverdue: boolean;
+  status: 'ok' | 'overdue' | 'never';
+  detail: {
+    summary: string;
+    history: LastCleanHistoryItem[];
+  } | null;
+}

@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
 import { calculateGlobalScore, getScoreLabel, getScoreColorConfig } from '@/lib/health/score-calculator';
-import type { HealthResponse, HealthModuleStatus } from '@/lib/health/types';
+import { getQualityGateAggregate } from '@/lib/health/quality-gate';
+import { getLastCleanAggregate } from '@/lib/health/last-clean';
+import type { HealthResponse, HealthModuleStatus, QualityGateModuleStatus, LastCleanModuleStatus } from '@/lib/health/types';
 
 function getScoreDisplayLabel(score: number): string {
   if (score >= 90) return 'Excellent';
@@ -94,44 +96,16 @@ export async function GET(
       activeScans.map(s => [s.scanType, s.status])
     );
 
-    // Derive Quality Gate from latest completed verify job with qualityScore
-    let qualityGateScore: number | null = healthScore?.qualityGate ?? null;
-    let qualityGateDate: Date | null = null;
+    // Derive Quality Gate aggregate from 30-day SHIP ticket data
+    const qgAggregate = await getQualityGateAggregate(projectId);
+    const qualityGateScore = qgAggregate.averageScore;
+    const firstTicket = qgAggregate.recentTickets[0];
+    const qualityGateDate = firstTicket ? new Date(firstTicket.completedAt) : null;
 
-    const latestVerifyJob = await prisma.job.findFirst({
-      where: {
-        ticket: { projectId },
-        command: 'verify',
-        status: 'COMPLETED',
-        qualityScore: { not: null },
-      },
-      orderBy: { completedAt: 'desc' },
-      select: { qualityScore: true, completedAt: true },
-    });
-
-    if (latestVerifyJob) {
-      qualityGateScore = latestVerifyJob.qualityScore;
-      qualityGateDate = latestVerifyJob.completedAt;
-    }
-
-    // Derive Last Clean from latest completed cleanup job
-    let lastCleanDate: Date | null = healthScore?.lastCleanDate ?? null;
-    let lastCleanJobId: number | null = healthScore?.lastCleanJobId ?? null;
-
-    const latestCleanJob = await prisma.job.findFirst({
-      where: {
-        ticket: { projectId },
-        command: 'clean',
-        status: 'COMPLETED',
-      },
-      orderBy: { completedAt: 'desc' },
-      select: { id: true, completedAt: true },
-    });
-
-    if (latestCleanJob) {
-      lastCleanDate = latestCleanJob.completedAt;
-      lastCleanJobId = latestCleanJob.id;
-    }
+    // Derive Last Clean aggregate from completed cleanup jobs
+    const lcAggregate = await getLastCleanAggregate(projectId);
+    const firstHistory = lcAggregate.history[0];
+    const lastCleanJobId = firstHistory ? firstHistory.jobId : null;
 
     // Build module statuses
     const securityScan = scanStatusMap.get('SECURITY');
@@ -169,18 +143,41 @@ export async function GET(
         label: qualityGateScore !== null ? getScoreDisplayLabel(qualityGateScore) : null,
         lastScanDate: qualityGateDate?.toISOString() ?? null,
         passive: true,
-        summary: qualityGateScore !== null ? 'From latest verify job' : 'No verify jobs yet',
-      },
+        summary: qgAggregate.ticketCount > 0
+          ? `${qgAggregate.ticketCount} tickets in 30 days`
+          : 'No qualifying tickets',
+        ticketCount: qgAggregate.ticketCount,
+        trend: {
+          type: qgAggregate.trend.type,
+          delta: qgAggregate.trend.delta,
+          previousAverage: qgAggregate.trend.previousAverage,
+        },
+        distribution: qgAggregate.distribution,
+        detail: qgAggregate.ticketCount > 0 ? {
+          dimensions: qgAggregate.dimensions,
+          recentTickets: qgAggregate.recentTickets,
+          trendData: qgAggregate.trendData,
+        } : null,
+      } satisfies QualityGateModuleStatus,
       lastClean: {
         score: null,
-        label: lastCleanDate ? 'OK' : null,
-        lastCleanDate: lastCleanDate?.toISOString() ?? null,
+        label: lcAggregate.status !== 'never' ? (lcAggregate.isOverdue ? 'Overdue' : 'OK') : null,
+        lastCleanDate: lcAggregate.lastCleanDate,
         passive: true,
         jobId: lastCleanJobId,
-        summary: lastCleanDate
-          ? `${Math.floor((Date.now() - lastCleanDate.getTime()) / (1000 * 60 * 60 * 24))} days ago`
-          : 'No cleanup yet',
-      },
+        summary: lcAggregate.status === 'never'
+          ? 'No cleanup yet'
+          : `${lcAggregate.daysAgo} days ago`,
+        filesCleaned: lcAggregate.filesCleaned,
+        remainingIssues: lcAggregate.remainingIssues,
+        daysAgo: lcAggregate.daysAgo,
+        isOverdue: lcAggregate.isOverdue,
+        status: lcAggregate.status,
+        detail: lcAggregate.status !== 'never' ? {
+          summary: lcAggregate.summary,
+          history: lcAggregate.history,
+        } : null,
+      } satisfies LastCleanModuleStatus,
     };
 
     // Calculate global score
