@@ -116,11 +116,17 @@ function groupTestIssues(report: TestsReport): RemediationTicket[] {
   }));
 }
 
+function shortSpecName(specPath: string): string {
+  return specPath
+    .replace(/^specs\/specifications\//, '')
+    .replace(/\.md$/, '');
+}
+
 function groupSpecSyncIssues(report: SpecSyncReport): RemediationTicket[] {
   return report.specs
     .filter((spec) => spec.status === 'drifted')
     .map((spec) => ({
-      title: `[Spec Sync] Resynchronize ${spec.specPath}`,
+      title: `[Spec Sync] ${shortSpecName(spec.specPath)}`,
       description: `Health scan detected spec drift:\n\n- **Spec**: ${spec.specPath}\n- **Drift**: ${spec.drift || 'Specification out of sync with implementation'}`,
       stage: 'INBOX',
       workflowType: 'QUICK',

@@ -189,9 +189,23 @@ describe('groupIssuesIntoTickets', () => {
 
       const tickets = groupIssuesIntoTickets('SPEC_SYNC', report);
       expect(tickets).toHaveLength(2);
-      expect(tickets[0].title).toContain('specs/AIB-100/spec.md');
+      expect(tickets[0].title).toBe('[Spec Sync] specs/AIB-100/spec');
       expect(tickets[0].description).toContain('API endpoint removed');
-      expect(tickets[1].title).toContain('specs/AIB-300/spec.md');
+      expect(tickets[1].title).toBe('[Spec Sync] specs/AIB-300/spec');
+    });
+
+    it('strips specs/specifications/ prefix and .md extension from title', () => {
+      const report: SpecSyncReport = {
+        type: 'SPEC_SYNC',
+        specs: [
+          { specPath: 'specs/specifications/technical/architecture/data-model.md', status: 'drifted', drift: 'Model drift' },
+        ],
+        generatedTickets: [],
+      };
+
+      const tickets = groupIssuesIntoTickets('SPEC_SYNC', report);
+      expect(tickets[0].title).toBe('[Spec Sync] technical/architecture/data-model');
+      expect(tickets[0].description).toContain('specs/specifications/technical/architecture/data-model.md');
     });
 
     it('returns empty array when all specs are synced', () => {

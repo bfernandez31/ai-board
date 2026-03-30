@@ -263,7 +263,8 @@ jobs:
               jq -c '.specs // [] | .[] | select(.status == "drifted")' "$REPORT_FILE" | while read -r spec; do
                 SPEC_PATH=$(printf '%s' "$spec" | jq -r '.specPath')
                 DRIFT=$(printf '%s' "$spec" | jq -r '.drift // "Specification out of sync with implementation"')
-                TITLE="[Spec Sync] Resynchronize ${SPEC_PATH}"
+                SHORT_NAME=$(echo "$SPEC_PATH" | sed 's|^specs/specifications/||; s|\.md$||')
+                TITLE="[Spec Sync] ${SHORT_NAME}"
                 DESC=$(printf 'Health scan detected spec drift:\n\n- **Spec**: %s\n- **Drift**: %s' "$SPEC_PATH" "$DRIFT")
 
                 curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
