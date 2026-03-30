@@ -6,7 +6,7 @@
 - **Next.js 16**: App Router architecture for file-based routing and server-side rendering
 - **Node.js 22.20.0 LTS**: Server runtime environment
 - **React 18**: Component-based UI library
-- **TypeScript 5.6**: Strict mode for type safety
+- **TypeScript 5.9**: Strict mode for type safety
 
 ### Architectural Patterns
 
@@ -73,6 +73,7 @@ ai-board/
 │   ├── ai-board-assist.yml       # AI assistance workflow
 │   ├── auto-ship.yml             # Auto-deployment workflow
 │   ├── deploy-preview.yml        # Vercel preview deployment
+│   ├── health-scan.yml           # Health scan workflow
 │   └── rollback-reset.yml        # VERIFY→PLAN rollback
 ├── .github/scripts/              # Shared shell utilities for workflows
 │   ├── run-agent.sh              # Unified agent runner (Claude/Codex)

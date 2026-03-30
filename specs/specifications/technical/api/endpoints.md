@@ -682,6 +682,30 @@ sequenceDiagram
 - Simple copy: <3 seconds from API call to new ticket visible in UI
 - Full clone: <5 seconds (includes GitHub API branch creation + database transaction)
 
+### GET /api/projects/:projectId/tickets/:id/branch
+
+Fetch ticket branch name.
+
+**Authentication**: Required (session or workflow token)
+**Authorization**: Must be project owner or member (session), OR valid workflow token
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number or string, required): Ticket ID or Ticket Key
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "branch": "042-add-login-feature",
+  "ticketKey": "ABC-5"
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID or ticket ID
+- `404`: Project or ticket not found
+
 ### PATCH /api/projects/:projectId/tickets/:id/branch
 
 Update ticket branch name (workflow-only endpoint).
@@ -1070,7 +1094,7 @@ Fetch all comments for a ticket.
       "id": 1,
       "ticketId": 42,
       "userId": "user-abc123",
-      "content": "This needs clarification on @[Alice Smith](user-alice) the authentication flow.",
+      "content": "This needs clarification on @[user-alice:Alice Smith] the authentication flow.",
       "createdAt": "2025-01-15T10:00:00.000Z",
       "updatedAt": "2025-01-15T10:00:00.000Z",
       "user": {
@@ -3828,8 +3852,224 @@ Returns Last Clean module data including cleanup history for the Health Dashboar
 - `403`: Forbidden
 - `404`: Project not found
 
+## Activity Endpoints
+
+### GET /api/projects/:projectId/activity
+
+Fetch unified activity feed for a project.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters**:
+- `limit` (number, optional): Maximum events to return (default: 50, max: 100)
+- `cursor` (string, optional): Cursor for pagination (from previous response)
+
+**Response** (200 OK):
+```json
+{
+  "events": [
+    {
+      "type": "job_completed",
+      "timestamp": "2025-01-15T10:10:00.000Z",
+      "data": { ... }
+    }
+  ],
+  "nextCursor": "abc123",
+  "hasMore": true
+}
+```
+
+**Event Types**: `ticket_created`, `job_started`, `job_completed`, `job_failed`, `stage_changed`, `comment_posted`, `pr_created`, `preview_deployed`
+
+**Errors**:
+- `400`: Invalid project ID or query parameters
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+
+## Token Endpoints
+
+### GET /api/tokens
+
+List all personal access tokens for the authenticated user.
+
+**Authentication**: Required (session or PAT)
+
+**Response** (200 OK):
+```json
+{
+  "tokens": [
+    {
+      "id": 1,
+      "name": "CI Pipeline",
+      "preview": "ab12",
+      "lastUsedAt": "2025-01-20T09:00:00.000Z",
+      "createdAt": "2025-01-15T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Errors**:
+- `401`: Not authenticated
+- `500`: Database error
+
+### POST /api/tokens
+
+Create a new personal access token.
+
+**Authentication**: Required (session or PAT)
+
+**Request Body**:
+```json
+{
+  "name": "CI Pipeline"
+}
+```
+
+**Validation**:
+- `name`: Required, 1-100 characters
+
+**Response** (201 Created):
+```json
+{
+  "id": 1,
+  "name": "CI Pipeline",
+  "token": "aib_xxxxxxxxxxxx",
+  "preview": "ab12",
+  "createdAt": "2025-01-20T09:00:00.000Z"
+}
+```
+
+**Note**: The full `token` value is returned only once at creation. It cannot be retrieved again.
+
+**Errors**:
+- `400`: Invalid token name (Zod validation)
+- `401`: Not authenticated
+- `500`: Database error
+
+### DELETE /api/tokens/:id
+
+Delete (revoke) a personal access token.
+
+**Authentication**: Required (session or PAT)
+
+**Path Parameters**:
+- `id` (number, required): Token ID
+
+**Response** (200 OK):
+```json
+{
+  "message": "Token deleted successfully"
+}
+```
+
+**Errors**:
+- `400`: Invalid token ID
+- `401`: Not authenticated
+- `404`: Token not found (or not owned by user)
+- `500`: Database error
+
+## Ticket Lookup Endpoints
+
+### GET /api/ticket/:key
+
+Fetch ticket by key without requiring project ID.
+
+**Authentication**: Required (session)
+**Authorization**: Must be owner or member of the ticket's project
+
+**Path Parameters**:
+- `key` (string, required): Ticket key in format `{PROJECT_KEY}-{NUMBER}` (e.g., "ABC-123")
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "ticketKey": "ABC-5",
+  "title": "Add login feature",
+  "stage": "SPECIFY",
+  "projectId": 1,
+  "project": {
+    "id": 1,
+    "name": "AI Board Development",
+    "clarificationPolicy": "AUTO",
+    "githubOwner": "bfernandez31",
+    "githubRepo": "ai-board"
+  }
+}
+```
+
+**Errors**:
+- `400`: Invalid ticket key format
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket not found
+
+### GET /api/tickets/:id/ai-board-availability
+
+Check if AI-BOARD can be mentioned for a given ticket.
+
+**Authentication**: Not required (public endpoint)
+
+**Path Parameters**:
+- `id` (number, required): Ticket ID
+
+**Response** (200 OK):
+```json
+{
+  "available": true,
+  "reason": null
+}
+```
+
+**Response (unavailable)**:
+```json
+{
+  "available": false,
+  "reason": "Job is currently running"
+}
+```
+
+**Errors**:
+- `400`: Invalid ticket ID
+- `500`: Internal server error
+
+### GET /api/projects/:projectId/tickets/verify
+
+Fetch all VERIFY-stage tickets for a project (workflow-only endpoint).
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Response** (200 OK):
+```json
+{
+  "tickets": [
+    {
+      "id": 42,
+      "ticketKey": "ABC-5",
+      "branch": "042-add-login-feature"
+    }
+  ]
+}
+```
+
+**Usage**: Used by `auto-ship.yml` workflow to find VERIFY tickets eligible for auto-ship after production deployment.
+
+**Errors**:
+- `400`: Invalid project ID
+- `401`: Invalid or missing workflow token
+- `404`: Project not found
+
 ---
 
 ## Pagination
 
-Scan history (`GET /api/projects/[projectId]/health/scans`) uses cursor-based pagination. All other endpoints return complete result sets.
+Scan history (`GET /api/projects/[projectId]/health/scans`) and activity feed (`GET /api/projects/:projectId/activity`) use cursor-based pagination. All other endpoints return complete result sets.

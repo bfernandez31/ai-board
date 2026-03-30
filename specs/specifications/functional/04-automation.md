@@ -903,6 +903,7 @@ For minor issues in VERIFY, AI-BOARD triggers the iterate workflow:
 - `comment-plan`: PLAN stage assistance
 - `comment-build`: BUILD stage assistance (not implemented)
 - `comment-verify`: VERIFY stage assistance
+- `comment-ship`: SHIP stage assistance (not implemented)
 - `iterate`: Automatic fixes during VERIFY
 
 ### Response Format

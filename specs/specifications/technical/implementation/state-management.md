@@ -2,7 +2,7 @@
 
 Complete guide to TanStack Query usage, optimistic updates, and client-side state patterns.
 
-## TanStack Query v5.90.5
+## TanStack Query v5.95.2
 
 ### Core Configuration
 
@@ -14,16 +14,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,        // 5 minutes
+      staleTime: 5000,                  // 5 seconds
       gcTime: 1000 * 60 * 10,           // 10 minutes (formerly cacheTime)
-      refetchOnWindowFocus: true,       // Refetch when tab gains focus
+      refetchOnWindowFocus: false,      // Do not refetch when tab gains focus
       refetchOnReconnect: true,         // Refetch on network reconnection
-      retry: 3,                         // Retry failed requests 3 times
-      retryDelay: (attemptIndex) =>
-        Math.min(1000 * 2 ** attemptIndex, 30000),  // Exponential backoff
+      retry: 1,                         // Retry failed requests once
     },
     mutations: {
-      retry: 1,                         // Retry mutations once
+      retry: 0,                         // Do not retry mutations
     },
   },
 });
