@@ -178,14 +178,9 @@ export async function POST(
       );
     }
 
-    // Construct file path
-    // Extract feature directory from branch name
-    // Branch format: "036-mode-to-update" → feature dir: "036-mode-to-update"
-    const featureDir = ticket.branch;
-    const filePath = `specs/${featureDir}/${docType}.md`;
+    const filePath = `specs/${ticket.branch}/${docType}.md`;
 
-    // Default commit message if not provided
-    const message = commitMessage || `docs: update ${docType}.md for ticket #${ticketId}`;
+    const message = commitMessage ?? `docs: update ${docType}.md for ticket #${ticketId}`;
 
     // Commit and push to GitHub
     try {
@@ -214,44 +209,41 @@ export async function POST(
         message: `${docType}.md updated successfully`,
       });
     } catch (error: unknown) {
-      const err = error as { message?: string };
+      const errMessage = error instanceof Error ? error.message : String(error);
       console.error('[docs/POST] Git operation failed:', {
         ticketId,
         docType,
-        error: err.message,
+        error: errMessage,
       });
 
-      // Handle merge conflicts
-      if (err.message?.includes('another user has modified')) {
+      if (errMessage.includes('another user has modified')) {
         return NextResponse.json(
           {
             success: false,
-            error: err.message,
+            error: errMessage,
             code: 'MERGE_CONFLICT',
           },
           { status: 409 }
         );
       }
 
-      // Handle branch not found
-      if (err.message?.includes('Branch') && err.message?.includes('not found')) {
+      if (errMessage.includes('Branch') && errMessage.includes('not found')) {
         return NextResponse.json(
           {
             success: false,
-            error: err.message,
+            error: errMessage,
             code: 'BRANCH_NOT_FOUND',
           },
           { status: 404 }
         );
       }
 
-      // Generic network/GitHub API error
       return NextResponse.json(
         {
           success: false,
           error: 'Failed to save changes to repository',
           code: 'NETWORK_ERROR',
-          details: err.message,
+          details: errMessage,
         },
         { status: 500 }
       );
