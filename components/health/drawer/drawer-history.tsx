@@ -1,10 +1,11 @@
 'use client';
 
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { History, ChevronDown } from 'lucide-react';
+import { History, ChevronDown, AlertTriangle, DollarSign, Zap, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getScoreColor } from '@/lib/quality-score';
 import { queryKeys } from '@/app/lib/query-keys';
+import { formatIssues, formatCost, formatTokens, formatDuration } from '@/lib/health/format';
 import type { HealthModuleType, ScanHistoryItem, ScanHistoryResponse } from '@/lib/health/types';
 
 interface DrawerHistoryProps {
@@ -80,23 +81,18 @@ function HistoryEntry({ scan }: { scan: ScanHistoryItem }) {
   const date = scan.completedAt ?? scan.createdAt;
 
   return (
-    <div className="aurora-glass rounded-md px-3 py-2 flex items-center justify-between">
-      <div className="space-y-0.5">
-        <p className="text-xs text-foreground">
-          {new Date(date).toLocaleDateString()}
-        </p>
-        {scan.baseCommit && scan.headCommit && (
-          <p className="text-[10px] text-muted-foreground font-mono">
-            {scan.baseCommit.slice(0, 7)}..{scan.headCommit.slice(0, 7)}
+    <div className="aurora-glass rounded-md px-3 py-2 space-y-1.5">
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <p className="text-xs text-foreground">
+            {new Date(date).toLocaleDateString()}
           </p>
-        )}
-      </div>
-      <div className="flex items-center gap-3">
-        {scan.issuesFound !== null && (
-          <span className="text-xs text-muted-foreground">
-            {scan.issuesFound} issue{scan.issuesFound !== 1 ? 's' : ''}
-          </span>
-        )}
+          {scan.baseCommit && scan.headCommit && (
+            <p className="text-[10px] text-muted-foreground font-mono">
+              {scan.baseCommit.slice(0, 7)}..{scan.headCommit.slice(0, 7)}
+            </p>
+          )}
+        </div>
         {scan.score !== null && scoreColors ? (
           <span className={`text-xs font-medium ${scoreColors.text} ${scoreColors.bg} rounded-md px-2 py-0.5`}>
             {scan.score}
@@ -104,6 +100,24 @@ function HistoryEntry({ scan }: { scan: ScanHistoryItem }) {
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
         )}
+      </div>
+      <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+        <span className="flex items-center gap-0.5" title={`Issues: ${formatIssues(scan.issuesFound)}`}>
+          <AlertTriangle className="h-3 w-3" />
+          {formatIssues(scan.issuesFound)}
+        </span>
+        <span className="flex items-center gap-0.5" title={`Cost: ${formatCost(scan.costUsd)}`}>
+          <DollarSign className="h-3 w-3" />
+          {formatCost(scan.costUsd)}
+        </span>
+        <span className="flex items-center gap-0.5" title={`Tokens: ${formatTokens(scan.tokensUsed)}`}>
+          <Zap className="h-3 w-3" />
+          {formatTokens(scan.tokensUsed)}
+        </span>
+        <span className="flex items-center gap-0.5" title={`Duration: ${formatDuration(scan.durationMs)}`}>
+          <Clock className="h-3 w-3" />
+          {formatDuration(scan.durationMs)}
+        </span>
       </div>
     </div>
   );

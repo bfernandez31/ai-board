@@ -18,9 +18,9 @@
 
 **Purpose**: Add shared types and query key configuration needed by multiple user stories
 
-- [ ] T001 Add TrendDataPoint, TrendResponse, and extended ScanHistoryItem types in lib/health/types.ts
-- [ ] T002 [P] Add health.trend query key in app/lib/query-keys.ts
-- [ ] T003 [P] Create metric formatting utilities (issues, cost, tokens, duration, null→dash) in lib/health/format.ts
+- [x] T001 Add TrendDataPoint, TrendResponse, and extended ScanHistoryItem types in lib/health/types.ts
+- [x] T002 [P] Add health.trend query key in app/lib/query-keys.ts
+- [x] T003 [P] Create metric formatting utilities (issues, cost, tokens, duration, null→dash) in lib/health/format.ts
 
 ---
 
@@ -32,12 +32,12 @@
 
 ### Tests for User Story 1
 
-- [ ] T004 [P] [US1] Integration test for trend endpoint in tests/integration/health/trend-endpoint.test.ts — test 200 with data, empty modules, auth/403, invalid projectId
+- [x] T004 [P] [US1] Integration test for trend endpoint in tests/integration/health/trend-endpoint.test.ts — test 200 with data, empty modules, auth/403, invalid projectId
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Create trend API route handler in app/api/projects/[projectId]/health/trend/route.ts — 4 parallel Prisma queries (COMPLETED, non-null score, take 20, orderBy completedAt desc), reverse for oldest-first, verifyProjectAccess auth
-- [ ] T006 [US1] Create useHealthTrend hook in app/lib/hooks/useHealthTrend.ts — TanStack Query with staleTime Infinity (fetch once on mount, no polling), uses health.trend query key
+- [x] T005 [US1] Create trend API route handler in app/api/projects/[projectId]/health/trend/route.ts — 4 parallel Prisma queries (COMPLETED, non-null score, take 20, orderBy completedAt desc), reverse for oldest-first, verifyProjectAccess auth
+- [x] T006 [US1] Create useHealthTrend hook in app/lib/hooks/useHealthTrend.ts — TanStack Query with staleTime Infinity (fetch once on mount, no polling), uses health.trend query key
 
 **Checkpoint**: Trend endpoint returns correct data. Hook fetches once on mount. Integration tests pass.
 
@@ -51,12 +51,12 @@
 
 ### Tests for User Story 2
 
-- [ ] T007 [P] [US2] Component test for enriched history metrics in tests/unit/components/drawer-history-metrics.test.tsx — render with full data, null values (dash display), tooltip text
+- [x] T007 [P] [US2] Component test for enriched history metrics in tests/unit/components/drawer-history-metrics.test.tsx — render with full data, null values (dash display), tooltip text
 
 ### Implementation for User Story 2
 
-- [ ] T008 [US2] Modify scan history API to include tokensUsed and costUsd in select clause in app/api/projects/[projectId]/health/scans/route.ts
-- [ ] T009 [US2] Enrich drawer history lines with 4 metric icons (issues via AlertTriangle, cost via DollarSign, tokens via Zap, duration via Clock) with tooltips in components/health/drawer/drawer-history.tsx — use formatting utils from T003, display dash for null values
+- [x] T008 [US2] Modify scan history API to include tokensUsed and costUsd in select clause in app/api/projects/[projectId]/health/scans/route.ts
+- [x] T009 [US2] Enrich drawer history lines with 4 metric icons (issues via AlertTriangle, cost via DollarSign, tokens via Zap, duration via Clock) with tooltips in components/health/drawer/drawer-history.tsx — use formatting utils from T003, display dash for null values
 
 **Checkpoint**: Scan history API returns tokensUsed/costUsd. Drawer history shows 4 metric icons with tooltips. Component tests pass.
 
@@ -72,12 +72,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T010 [P] [US3] Component test for sparkline in tests/unit/components/sparkline.test.tsx — render with 3+ data points, hidden with <3 points, WCAG contrast (primary color)
+- [x] T010 [P] [US3] Component test for sparkline in tests/unit/components/sparkline.test.tsx — render with 3+ data points, hidden with <3 points, WCAG contrast (primary color)
 
 ### Implementation for User Story 3
 
-- [ ] T011 [US3] Create Sparkline component in components/health/sparkline.tsx — Recharts LineChart in ResponsiveContainer (~40px height), hidden axes/grid/tooltip, primary color stroke, accepts TrendDataPoint[] data prop, renders nothing when data.length < 3
-- [ ] T012 [US3] Add sparkline to active module cards in components/health/health-module-card.tsx — consume useHealthTrend data, pass module trend data to Sparkline component, only render for active modules (Security, Compliance, Tests, Spec Sync)
+- [x] T011 [US3] Create Sparkline component in components/health/sparkline.tsx — Recharts LineChart in ResponsiveContainer (~40px height), hidden axes/grid/tooltip, primary color stroke, accepts TrendDataPoint[] data prop, renders nothing when data.length < 3
+- [x] T012 [US3] Add sparkline to active module cards in components/health/health-module-card.tsx — consume useHealthTrend data, pass module trend data to Sparkline component, only render for active modules (Security, Compliance, Tests, Spec Sync)
 
 **Checkpoint**: Sparklines visible on module cards with sufficient data. Hidden when <3 scans. Component tests pass.
 
@@ -93,8 +93,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T013 [US4] Create ModuleAreaChart component in components/health/drawer/module-area-chart.tsx — Recharts AreaChart with CartesianGrid, XAxis (date formatted), YAxis (domain [0,100]), Area (monotone, primary stroke, 10% fill), Tooltip with date+score, "Not enough data" message when <2 points
-- [ ] T014 [US4] Add area chart section to scan detail drawer in components/health/scan-detail-drawer.tsx — consume useHealthTrend data, render ModuleAreaChart for the selected module, position above history section
+- [x] T013 [US4] Create ModuleAreaChart component in components/health/drawer/module-area-chart.tsx — Recharts AreaChart with CartesianGrid, XAxis (date formatted), YAxis (domain [0,100]), Area (monotone, primary stroke, 10% fill), Tooltip with date+score, "Not enough data" message when <2 points
+- [x] T014 [US4] Add area chart section to scan detail drawer in components/health/scan-detail-drawer.tsx — consume useHealthTrend data, render ModuleAreaChart for the selected module, position above history section
 
 **Checkpoint**: Area charts visible in module drawers. Hover tooltips show date+score. "Not enough data" shown when <2 scans.
 
@@ -104,9 +104,9 @@
 
 **Purpose**: Final validation across all stories
 
-- [ ] T015 WCAG AA contrast validation — verify all new text and graphical elements meet 4.5:1 (text) and 3:1 (non-text) contrast ratios across light and dark themes
-- [ ] T016 Responsive validation — verify sparklines, metric icons, and area charts render correctly at 375px viewport width
-- [ ] T017 Run quickstart.md verification steps (trend endpoint curl, scan history curl, dashboard visual check)
+- [x] T015 WCAG AA contrast validation — verify all new text and graphical elements meet 4.5:1 (text) and 3:1 (non-text) contrast ratios across light and dark themes
+- [x] T016 Responsive validation — verify sparklines, metric icons, and area charts render correctly at 375px viewport width
+- [x] T017 Run quickstart.md verification steps (trend endpoint curl, scan history curl, dashboard visual check)
 
 ---
 

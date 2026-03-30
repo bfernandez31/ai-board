@@ -19,7 +19,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getScoreColor } from '@/lib/quality-score';
 import { MODULE_METADATA } from '@/lib/health/types';
-import type { HealthModuleType, HealthModuleStatus } from '@/lib/health/types';
+import type { HealthModuleType, HealthModuleStatus, TrendDataPoint } from '@/lib/health/types';
+import { Sparkline } from '@/components/health/sparkline';
 
 const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
   SECURITY: Shield,
@@ -46,6 +47,7 @@ interface HealthModuleCardProps {
   onTriggerScan?: (() => void) | undefined;
   isTriggerPending?: boolean | undefined;
   onClick?: (() => void) | undefined;
+  trendData?: TrendDataPoint[];
 }
 
 export function HealthModuleCard({
@@ -55,6 +57,7 @@ export function HealthModuleCard({
   onTriggerScan,
   isTriggerPending = false,
   onClick,
+  trendData,
 }: HealthModuleCardProps) {
   const Icon = MODULE_ICONS[moduleType];
   const label = MODULE_METADATA[moduleType].label;
@@ -93,6 +96,10 @@ export function HealthModuleCard({
 
       {module.trend && (
         <TrendIndicator trend={module.trend} trendDelta={module.trendDelta ?? null} />
+      )}
+
+      {!isPassive && trendData && trendData.length >= 3 && (
+        <Sparkline data={trendData} />
       )}
 
       {module.distribution && module.ticketCount !== undefined && module.ticketCount > 0 && (

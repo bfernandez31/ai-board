@@ -12,9 +12,28 @@ import { DrawerIssues } from './drawer/drawer-issues';
 import { DrawerTickets } from './drawer/drawer-tickets';
 import { DrawerHistory } from './drawer/drawer-history';
 import { DrawerStates } from './drawer/drawer-states';
+import { ModuleAreaChart } from './drawer/module-area-chart';
 import { useScanReport } from '@/app/lib/hooks/useScanReport';
-import { MODULE_METADATA } from '@/lib/health/types';
-import type { HealthModuleType, HealthModuleStatus } from '@/lib/health/types';
+import { useHealthTrend } from '@/app/lib/hooks/useHealthTrend';
+import { MODULE_METADATA, ACTIVE_SCAN_TYPES } from '@/lib/health/types';
+import type { HealthModuleType, HealthModuleStatus, TrendResponse } from '@/lib/health/types';
+import type { HealthScanType } from '@prisma/client';
+
+const TREND_KEY_MAP: Record<string, keyof TrendResponse['trends']> = {
+  SECURITY: 'security',
+  COMPLIANCE: 'compliance',
+  TESTS: 'tests',
+  SPEC_SYNC: 'specSync',
+};
+
+function isActiveModule(moduleType: HealthModuleType): boolean {
+  return ACTIVE_SCAN_TYPES.includes(moduleType as HealthScanType);
+}
+
+function getModuleTrendData(trendData: TrendResponse, moduleType: HealthModuleType) {
+  const key = TREND_KEY_MAP[moduleType];
+  return key ? trendData.trends[key] : [];
+}
 
 interface ScanDetailDrawerProps {
   projectId: number;
@@ -34,6 +53,7 @@ export function ScanDetailDrawer({
   onTriggerScan,
 }: ScanDetailDrawerProps) {
   const { data, isLoading } = useScanReport(projectId, moduleType);
+  const { data: trendData } = useHealthTrend(projectId);
   const isOpen = moduleType !== null;
 
   const moduleMeta = moduleType ? MODULE_METADATA[moduleType] : null;
@@ -99,6 +119,10 @@ export function ScanDetailDrawer({
                   Report data unavailable — scan predates structured reporting
                 </p>
               </div>
+            )}
+
+            {!isLoading && isActiveModule(moduleType) && trendData && (
+              <ModuleAreaChart data={getModuleTrendData(trendData, moduleType)} />
             )}
 
             {!isLoading && (
