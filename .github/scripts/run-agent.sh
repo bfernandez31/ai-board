@@ -60,7 +60,12 @@ install_claude() {
 
 invoke_claude() {
   log_info "Invoking Claude: /$COMMAND $ARGS"
-  claude --dangerously-skip-permissions "/$COMMAND $ARGS"
+  if [[ "${AGENT_JSON_OUTPUT:-}" == "true" ]]; then
+    log_info "JSON output mode enabled (--print --output-format json)"
+    claude --dangerously-skip-permissions --print --output-format json "/$COMMAND $ARGS"
+  else
+    claude --dangerously-skip-permissions "/$COMMAND $ARGS"
+  fi
 }
 
 # --- Codex functions ---

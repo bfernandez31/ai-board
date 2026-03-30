@@ -121,6 +121,8 @@ jobs:
       - name: Execute Scan Command
         id: scan-exec
         working-directory: target
+        env:
+          AGENT_JSON_OUTPUT: 'true'
         run: |
           set -o pipefail
           SCAN_CMD="${{ steps.scan-command.outputs.command }}"
@@ -141,19 +143,45 @@ jobs:
           # Track duration (US6: telemetry)
           SECONDS=0
 
-          # Execute scan via run-agent.sh (established pattern for all workflows)
-          if ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.${SCAN_CMD}" "${SCAN_ARGS}" > /tmp/scan_output.json 2>/tmp/scan_stderr.txt; then
+          # Execute scan via run-agent.sh with AGENT_JSON_OUTPUT=true
+          # Claude CLI outputs a JSON wrapper: { "result": "...", "total_cost_usd": ..., "usage": ... }
+          # The skill must output valid JSON in .result for downstream parsing
+          if ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.${SCAN_CMD}" "${SCAN_ARGS}" > /tmp/scan_raw.json 2>/tmp/scan_stderr.txt; then
             DURATION_MS=$((SECONDS * 1000))
             echo "duration_ms=$DURATION_MS" >> $GITHUB_OUTPUT
             echo "scan_success=true" >> $GITHUB_OUTPUT
 
-            # Extract results from JSON output
+            # Extract .result from Claude CLI JSON wrapper, then parse the scan results
+            RESULT_TEXT=$(jq -r '.result // empty' /tmp/scan_raw.json)
+
+            # Extract telemetry from CLI wrapper
+            CLI_COST=$(jq -r '.total_cost_usd // empty' /tmp/scan_raw.json)
+            CLI_TOKENS=$(jq -r '.usage.input_tokens // empty' /tmp/scan_raw.json)
+
+            # Try to parse .result as JSON (the skill should output JSON)
+            if echo "$RESULT_TEXT" | jq empty 2>/dev/null; then
+              echo "$RESULT_TEXT" > /tmp/scan_output.json
+            else
+              # Fallback: try to extract JSON block from text output
+              JSON_BLOCK=$(echo "$RESULT_TEXT" | grep -Pzo '\{[\s\S]*"score"[\s\S]*\}' | tr '\0' '\n' | head -1 || true)
+              if [ -n "$JSON_BLOCK" ] && echo "$JSON_BLOCK" | jq empty 2>/dev/null; then
+                echo "$JSON_BLOCK" > /tmp/scan_output.json
+              else
+                # No parseable JSON — create minimal result from CLI metadata
+                echo '{"score": 0, "issuesFound": 0, "issuesFixed": 0, "report": {}}' > /tmp/scan_output.json
+                echo "⚠️ Could not parse JSON from skill output, using defaults"
+              fi
+            fi
+
+            # Extract results from parsed JSON
             SCORE=$(jq -r '.score // 0' /tmp/scan_output.json)
             ISSUES_FOUND=$(jq -r '.issuesFound // 0' /tmp/scan_output.json)
             ISSUES_FIXED=$(jq -r '.issuesFixed // 0' /tmp/scan_output.json)
             REPORT=$(jq -c '.report // {}' /tmp/scan_output.json)
-            TOKENS_USED=$(jq -r '.tokensUsed // empty' /tmp/scan_output.json)
-            COST_USD=$(jq -r '.costUsd // empty' /tmp/scan_output.json)
+
+            # Prefer CLI telemetry over skill-reported values
+            TOKENS_USED="${CLI_TOKENS:-$(jq -r '.tokensUsed // empty' /tmp/scan_output.json)}"
+            COST_USD="${CLI_COST:-$(jq -r '.costUsd // empty' /tmp/scan_output.json)}"
 
             echo "score=$SCORE" >> $GITHUB_OUTPUT
             echo "issues_found=$ISSUES_FOUND" >> $GITHUB_OUTPUT
