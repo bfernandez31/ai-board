@@ -56,8 +56,8 @@ Each card renders one of four states based on the module's scan data:
 **Active modules** (Security, Compliance, Tests, Spec Sync) support user-triggered scans. Their cards display an action button and the commit range analyzed.
 
 **Passive modules** (Quality Gate, Last Clean) derive data from existing Job records and display a "passive" label instead of an action button:
-- **Quality Gate**: Score from the latest COMPLETED verify job's `qualityScore` field
-- **Last Clean**: Date and result of the latest COMPLETED cleanup job; does not contribute to the global score
+- **Quality Gate**: Average `qualityScore` across all COMPLETED verify jobs on SHIP-stage tickets in the last 30 days; contributes 20% to the global Health Score. Includes trend vs. the previous 30-day period, threshold distribution (Excellent/Good/Fair/Poor), per-dimension averages, and a list of recent qualifying tickets.
+- **Last Clean**: Date and result of the most recent COMPLETED cleanup job; shows files cleaned, remaining issues, and a staleness indicator (overdue if older than 30 days). Does not contribute to the global Health Score.
 
 ### Card Content
 

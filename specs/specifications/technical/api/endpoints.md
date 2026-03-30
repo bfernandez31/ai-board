@@ -3446,7 +3446,32 @@ Returns the aggregate health score and per-module status for a project.
       "label": "Good",
       "lastScanDate": "2026-03-27T16:00:00Z",
       "passive": true,
-      "summary": "From latest verify job"
+      "summary": "4 tickets in 30 days",
+      "ticketCount": 4,
+      "trend": {
+        "type": "improvement",
+        "delta": 5,
+        "previousAverage": 70
+      },
+      "distribution": {
+        "excellent": 0,
+        "good": 3,
+        "fair": 1,
+        "poor": 0
+      },
+      "detail": {
+        "dimensions": [
+          { "name": "Compliance", "averageScore": 80, "weight": 0.25 },
+          { "name": "Bug Detection", "averageScore": 72, "weight": 0.25 }
+        ],
+        "recentTickets": [
+          { "ticketKey": "AIB-120", "title": "Add auth middleware", "score": 78, "label": "Good", "completedAt": "2026-03-27T16:00:00Z" }
+        ],
+        "trendData": [
+          { "week": "Mar 17-23", "averageScore": 70, "ticketCount": 2 },
+          { "week": "Mar 24-30", "averageScore": 75, "ticketCount": 2 }
+        ]
+      }
     },
     "lastClean": {
       "score": null,
@@ -3454,7 +3479,18 @@ Returns the aggregate health score and per-module status for a project.
       "lastCleanDate": "2026-03-20T12:00:00Z",
       "passive": true,
       "jobId": 456,
-      "summary": "8 days ago"
+      "summary": "8 days ago",
+      "filesCleaned": 12,
+      "remainingIssues": 2,
+      "daysAgo": 8,
+      "isOverdue": false,
+      "status": "ok",
+      "detail": {
+        "summary": "Cleaned 12 files across 3 components",
+        "history": [
+          { "jobId": 456, "completedAt": "2026-03-20T12:00:00Z", "filesCleaned": 12, "remainingIssues": 2, "summary": "Cleaned 12 files", "ticketKey": "AIB-115" }
+        ]
+      }
     }
   },
   "lastFullScanDate": "2026-03-27T14:30:00Z",
