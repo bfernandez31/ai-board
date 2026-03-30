@@ -108,7 +108,7 @@ Both Vitest integration tests and Playwright E2E tests use worker isolation to e
 
 **Project ID Mapping**:
 ```typescript
-const PROJECT_MAPPING = [1, 2, 4, 5, 6, 7]; // Skip project 3 (development)
+const PROJECT_MAPPING = [1, 2, 4, 5, 6, 7, 8, 9, 10]; // Skip project 3 (development)
 
 // Each worker gets a unique project ID based on pool ID
 function getProjectId(workerId: number): number {
@@ -123,8 +123,8 @@ function getProjectId(workerId: number): number {
   pool: 'forks',
   poolOptions: {
     forks: {
-      maxForks: 6, // Match project mapping length
-      minForks: 1,
+      maxForks: isIntegration ? 1 : undefined, // Sequential for integration, unlimited for unit
+      minForks: isIntegration ? 1 : undefined,
     },
   },
 }
@@ -1261,7 +1261,7 @@ npx playwright test --coverage
 
 ### Data Management
 - ✅ Create minimal test data needed
-- ✅ Use worker-specific project IDs (1, 2, 4, 5, 6, 7)
+- ✅ Use worker-specific project IDs (1, 2, 4, 5, 6, 7, 8, 9, 10)
 - ✅ Clean up after tests (via `ctx.cleanup()` or global teardown)
 - ✅ Use test helpers: `ctx.createTicket()`, `ctx.createProject()`
 - ❌ Don't create data without `[e2e]` prefix
@@ -1289,7 +1289,7 @@ npx playwright test --coverage
 - ❌ Don't test React hooks directly (use unit tests instead)
 
 ### Performance
-- ✅ Run integration tests in parallel (6 workers)
+- ✅ Run integration tests in parallel (9 workers)
 - ✅ Use native fetch instead of Playwright for API tests
 - ✅ Mock external services (Cloudinary, GitHub)
 - ✅ Target <50ms per integration test, <500ms per E2E test

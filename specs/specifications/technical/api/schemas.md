@@ -81,18 +81,22 @@ export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 - **agent**: Editable ONLY in INBOX stage (API enforced; follows same rules as clarificationPolicy)
 - **version**: Always required for optimistic concurrency control
 
-### TransitionTicketSchema
+### TransitionRequestSchema
 
 ```typescript
-export const transitionTicketSchema = z.object({
-  targetStage: z.enum(['SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']),
+export const StageSchema = z.enum([
+  'INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP', 'CLOSED',
+]);
+
+export const TransitionRequestSchema = z.object({
+  targetStage: StageSchema,
 });
 
-export type TransitionTicketInput = z.infer<typeof transitionTicketSchema>;
+export type TransitionRequest = z.infer<typeof TransitionRequestSchema>;
 ```
 
 **Validation**:
-- **targetStage**: Must be valid Stage enum value
+- **targetStage**: Must be valid Stage enum value (includes CLOSED)
 - Additional business logic validation in API route (sequential progression, job completion)
 
 ### UpdateBranchSchema
@@ -133,22 +137,29 @@ export type DeleteTicketParams = z.infer<typeof deleteTicketParamsSchema>;
 ### UpdatePreviewUrlSchema
 
 ```typescript
-const vercelDomainPattern = /^https:\/\/[a-z0-9-]+\.vercel\.app$/;
+// app/lib/schemas/deploy-preview.ts
+export const previewUrlSchema = z
+  .string()
+  .url('Must be a valid URL')
+  .regex(
+    /^https:\/\/[a-z0-9-]+\.vercel\.app$/,
+    'Must be a valid Vercel preview URL (https://*.vercel.app)'
+  )
+  .max(500, 'Preview URL must be ≤500 characters');
 
-export const updatePreviewUrlSchema = z.object({
-  previewUrl: z.string()
-    .max(500, 'Preview URL must be 500 characters or less')
-    .regex(vercelDomainPattern, 'Preview URL must be a valid Vercel domain (HTTPS only)')
-    .nullable(),
+// Inline in route handler
+const updatePreviewUrlSchema = z.object({
+  previewUrl: previewUrlSchema,
 });
 
 export type UpdatePreviewUrlInput = z.infer<typeof updatePreviewUrlSchema>;
 ```
 
 **Validation Rules**:
-- **previewUrl**: Max 500 characters, HTTPS-only, Vercel domain pattern (`https://*.vercel.app`)
+- **previewUrl**: Required string (not nullable), max 500 characters, HTTPS-only, valid URL, Vercel domain pattern (`https://*.vercel.app`)
 - **Pattern**: `^https:\/\/[a-z0-9-]+\.vercel\.app$`
 - Rejects non-HTTPS URLs, non-Vercel domains, and malformed URLs
+- **Note**: Schema is defined in `app/lib/schemas/deploy-preview.ts` and imported by the route handler
 
 ## Search Schemas
 
@@ -304,26 +315,28 @@ export type CreateCommentInput = z.infer<typeof createCommentSchema>;
 
 **Features**:
 - Markdown formatting supported
-- User mentions via `@[Name](userId)` syntax
+- User mentions via `@[userId:displayName]` syntax
 - HTML escaping enabled (XSS protection)
 
-### CreateAIBoardCommentSchema
+### AIBoardCommentRequestSchema
 
 ```typescript
-export const createAIBoardCommentSchema = z.object({
+export const aiBoardCommentRequestSchema = z.object({
   content: z.string()
-    .min(1)
-    .max(2000),
+    .min(1, 'Comment content cannot be empty')
+    .max(2000, 'Comment content cannot exceed 2000 characters'),
 
-  userId: z.literal('ai-board-system-user'),
+  userId: z.string().min(1, 'User ID is required'),
 });
 
-export type CreateAIBoardCommentInput = z.infer<typeof createAIBoardCommentSchema>;
+export type AIBoardCommentRequest = z.infer<typeof aiBoardCommentRequestSchema>;
 ```
 
+**Location**: `app/lib/schemas/ai-board-comment.ts`
+
 **Validation**:
-- **userId**: Must be exactly "ai-board-system-user"
-- Used only by GitHub Actions workflows
+- **userId**: Any non-empty string (verified server-side)
+- Used by GitHub Actions workflows for AI-BOARD comment posting
 
 ## Job Schemas
 
@@ -374,8 +387,8 @@ export const uploadImageSchema = z.object({
   file: z.instanceof(File)
     .refine((file) => file.size <= 10 * 1024 * 1024, 'File must be 10MB or smaller')
     .refine(
-      (file) => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type),
-      'Only JPEG, PNG, GIF, and WebP images are allowed'
+      (file) => ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'].includes(file.type),
+      'Only JPEG, PNG, GIF, WebP, and SVG images are allowed'
     ),
 });
 
@@ -384,7 +397,7 @@ export type UploadImageInput = z.infer<typeof uploadImageSchema>;
 
 **Validation**:
 - **Max Size**: 10MB (10485760 bytes)
-- **Formats**: JPEG, PNG, GIF, WebP only
+- **Formats**: JPEG, PNG, GIF, WebP, SVG
 - **Stage Restriction**: SPECIFY and PLAN only (enforced in API route)
 
 ### TicketAttachment Interface

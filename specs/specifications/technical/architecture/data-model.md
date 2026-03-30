@@ -12,20 +12,26 @@ User accounts with authentication and project ownership.
 
 ```prisma
 model User {
-  id                String    @id @default(cuid())
-  email             String    @unique
-  name              String?
-  emailVerified     DateTime?
-  stripeCustomerId  String?   @unique @db.VarChar(255)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id                    String                @id
+  name                  String?
+  email                 String                @unique
+  emailVerified         DateTime?
+  image                 String?
+  stripeCustomerId      String?               @unique @db.VarChar(255)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime
+  accounts              Account[]
+  comments              Comment[]
+  projects              Project[]
+  sessions              Session[]
+  memberships           ProjectMember[]
+  notificationsReceived Notification[]        @relation("NotificationRecipient")
+  notificationsCreated  Notification[]        @relation("NotificationActor")
+  pushSubscriptions     PushSubscription[]
+  personalAccessTokens  PersonalAccessToken[]
+  subscription          Subscription?
 
-  projects          Project[]
-  comments          Comment[]
-  accounts          Account[]
-  sessions          Session[]
-  projectMembers    ProjectMember[]
-  subscription      Subscription?
+  @@index([email])
 }
 ```
 
@@ -36,11 +42,12 @@ model User {
 - `email`: Unique email address (authentication identifier)
 - `name`: Display name (nullable, from OAuth provider)
 - `emailVerified`: Email verification timestamp (from OAuth)
+- `image`: Profile image URL (nullable, from OAuth provider)
 - `createdAt`: Account creation timestamp
 - `updatedAt`: Last modification timestamp
 
 **Relationships**:
-- One-to-many: Projects, Comments, Accounts, Sessions, ProjectMembers, Notifications (as recipient and actor), PushSubscriptions
+- One-to-many: Projects, Comments, Accounts, Sessions, ProjectMembers (as memberships), Notifications (as recipient and actor), PushSubscriptions, PersonalAccessTokens
 
 **Constraints**:
 - Unique email address
@@ -142,30 +149,37 @@ Tickets track work items through six workflow stages.
 
 ```prisma
 model Ticket {
-  id                   Int                  @id @default(autoincrement())
-  ticketNumber         Int
-  ticketKey            String               @unique @db.VarChar(20)
-  title                String               @db.VarChar(100)
-  description          String               @db.Text
-  stage                Stage                @default(INBOX)
-  projectId            Int
-  branch               String?              @db.VarChar(200)
-  workflowType         WorkflowType         @default(FULL)
-  clarificationPolicy  ClarificationPolicy?
-  agent                Agent?
-  attachments          Json?
-  version              Int                  @default(1)
-  closedAt             DateTime?
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
-
-  project              Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  jobs                 Job[]
-  comments             Comment[]
+  id                     Int                       @id @default(autoincrement())
+  title                  String                    @db.VarChar(100)
+  description            String                    @db.VarChar(10000)
+  stage                  Stage                     @default(INBOX)
+  version                Int                       @default(1)
+  projectId              Int
+  ticketNumber           Int
+  ticketKey              String                    @unique @db.VarChar(20)
+  branch                 String?                   @db.VarChar(200)
+  previewUrl             String?                   @db.VarChar(500)
+  autoMode               Boolean                   @default(false)
+  workflowType           WorkflowType              @default(FULL)
+  attachments            Json?                     @default("[]")
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @default(now()) @updatedAt
+  clarificationPolicy    ClarificationPolicy?
+  agent                  Agent?
+  closedAt               DateTime?
+  comments               Comment[]
+  jobs                   Job[]
+  notifications          Notification[]
+  project                Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceComparisons      ComparisonRecord[]        @relation("ComparisonSourceTicket")
+  winnerComparisons      ComparisonRecord[]        @relation("ComparisonWinnerTicket")
+  comparisonParticipants ComparisonParticipant[]
+  decisionVerdicts       DecisionPointEvaluation[] @relation("DecisionVerdictTicket")
 
   @@unique([projectId, ticketNumber])
   @@index([projectId])
-  @@index([projectId, stage])
+  @@index([stage])
+  @@index([updatedAt])
   @@index([projectId, workflowType])
   @@index([ticketKey])
 }
@@ -189,10 +203,11 @@ model Ticket {
 - `stage`: Current workflow stage (enum: INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP, CLOSED)
 - `projectId`: Parent project (required foreign key)
 - `branch`: Git branch name (max 200 chars, nullable, set by workflow)
-- `workflowType`: Workflow path used (enum: FULL, QUICK, default: FULL)
+- `autoMode`: Boolean flag for automated ticket processing (default: false)
+- `workflowType`: Workflow path used (enum: FULL, QUICK, CLEAN, default: FULL)
 - `clarificationPolicy`: Optional policy override (nullable, inherits from project when null)
 - `agent`: Optional AI agent override (nullable, inherits from project `defaultAgent` when null)
-- `attachments`: Image attachments (JSON array of TicketAttachment objects)
+- `attachments`: Image attachments (JSON array of TicketAttachment objects, default: empty array)
 - `previewUrl`: Vercel preview deployment URL (max 500 chars, nullable, HTTPS-only, Vercel domain pattern)
   - Set when manual deployment triggered from VERIFY stage
   - Clickable icon appears on ticket card when URL is set
@@ -206,14 +221,15 @@ model Ticket {
 
 **Relationships**:
 - Belongs to Project (required, cascade delete)
-- One-to-many: Jobs, Comments, ComparisonParticipants, DecisionPointEvaluations (as verdict ticket)
+- One-to-many: Jobs, Comments, Notifications, ComparisonParticipants, DecisionPointEvaluations (as verdict ticket)
 - Referenced by: ComparisonRecord (as sourceTicket or winnerTicket)
 
 **Constraints**:
 - Unique ticketKey across all tickets
 - Unique (projectId, ticketNumber) within project
 - Index on projectId for filtering
-- Composite index (projectId, stage) for board queries
+- Index on stage for board queries
+- Index on updatedAt for sorting
 - Composite index (projectId, workflowType) for filtering
 - Index on ticketKey for lookup by key
 
@@ -302,7 +318,7 @@ model Job {
 - `id`: Auto-incrementing unique identifier
 - `ticketId`: Associated ticket (required foreign key)
 - `projectId`: Parent project (required foreign key, for polling queries)
-- `command`: Spec-kit command executed (specify|plan|implement|verify|quick-impl|clean|deploy-preview|rollback-reset|comment-specify|comment-plan|comment-build|comment-verify, max 50 chars)
+- `command`: Spec-kit command executed (specify|plan|implement|verify|ship|quick-impl|clean|deploy-preview|rollback-reset|iterate|comment-specify|comment-plan|comment-build|comment-verify|comment-ship|health-scan, max 50 chars)
 - `status`: Current execution state (enum: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
 - `branch`: Git branch name (max 200 chars, nullable)
 - `commitSha`: Git commit hash (max 40 chars, nullable)
@@ -392,9 +408,10 @@ model Comment {
   id        Int      @id @default(autoincrement())
   ticketId  Int
   userId    String
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  content       String         @db.VarChar(2000)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  notifications Notification[]
 
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -424,7 +441,7 @@ model Comment {
 
 **Features**:
 - Markdown rendering with HTML escaping (XSS protection)
-- User mentions via `@[Name](userId)` syntax
+- User mentions via `@[userId:displayName]` syntax
 - Real-time updates via 10-second client polling
 - Author-only deletion with optimistic UI updates
 
@@ -456,9 +473,9 @@ model Notification {
   comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
   ticket    Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
-  @@index([recipientId, read, createdAt])
-  @@index([recipientId, deletedAt])
-  @@index([commentId])
+  @@index([recipientId, createdAt])
+  @@index([recipientId, read])
+  @@index([createdAt])
 }
 ```
 
@@ -482,9 +499,9 @@ model Notification {
 - Belongs to Ticket (required, cascade delete)
 
 **Constraints**:
-- Composite index (recipientId, read, createdAt) for efficient unread notification queries
-- Composite index (recipientId, deletedAt) for soft-delete filtering
-- Index on commentId for notification lookup by comment
+- Composite index (recipientId, createdAt) for listing notifications for user
+- Composite index (recipientId, read) for counting unread notifications
+- Index on createdAt for cleanup job (30-day retention)
 
 **Features**:
 - Automatic creation when @mentions detected in comments
@@ -654,7 +671,7 @@ model Subscription {
 - `stripeSubscriptionId`: Stripe subscription object ID (unique)
 - `stripePriceId`: Stripe Price ID for the active plan
 - `plan`: Current subscribed plan (`FREE`, `PRO`, `TEAM`)
-- `status`: Stripe subscription status (`ACTIVE`, `TRIALING`, `PAST_DUE`, `CANCELED`)
+- `status`: Stripe subscription status (`ACTIVE`, `TRIALING`, `PAST_DUE`, `CANCELED`, `INCOMPLETE`)
 - `currentPeriodStart/End`: Active billing period dates
 - `trialStart/End`: Trial period dates (nullable)
 - `cancelAt`: Scheduled cancellation date from Stripe (nullable)
@@ -695,6 +712,80 @@ model StripeEvent {
 **Business Rules**:
 - Webhook handler checks for existing record before processing; duplicate events are silently ignored
 - Records are never deleted (permanent audit log of processed events)
+
+### VerificationToken
+
+NextAuth.js email verification tokens.
+
+```prisma
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+```
+
+**Purpose**: Email verification for authentication flows
+
+**Fields**:
+- `identifier`: Email or other identifier
+- `token`: Unique verification token
+- `expires`: Token expiration timestamp
+
+**Constraints**:
+- Unique token
+- Unique (identifier, token) combination
+
+### PersonalAccessToken
+
+API tokens for programmatic access and workflow authentication.
+
+```prisma
+model PersonalAccessToken {
+  id         Int       @id @default(autoincrement())
+  userId     String
+  name       String    @db.VarChar(100)
+  hash       String    @db.VarChar(64)
+  salt       String    @db.VarChar(32)
+  preview    String    @db.VarChar(4)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, hash])
+  @@index([userId])
+  @@index([preview])
+}
+```
+
+**Purpose**: Secure API token management for programmatic access
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `userId`: Token owner (required foreign key)
+- `name`: Human-readable token name (max 100 chars)
+- `hash`: SHA-256 hash of the token (max 64 chars)
+- `salt`: Random salt for token hashing (max 32 chars)
+- `preview`: Last 4 characters of the token for identification (max 4 chars)
+- `lastUsedAt`: Timestamp of last token usage (nullable)
+- `createdAt`: Token creation timestamp
+
+**Relationships**:
+- Belongs to User (required, cascade delete)
+
+**Constraints**:
+- Unique (userId, hash) — prevents duplicate tokens per user
+- Index on userId for efficient token lookup
+- Index on preview for token identification
+
+**Business Rules**:
+- Tokens are hashed with salt before storage (plaintext never persisted)
+- Token preview shown in UI for identification
+- Last used timestamp updated on each API call
+- Cascade delete when user is deleted
 
 ## Comparison Models
 
@@ -996,6 +1087,19 @@ enum WorkflowType {
 - CLEAN type created via project menu "Clean Project" action
 - CLEAN tickets bypass INBOX, SPECIFY, PLAN stages
 
+### AuthProvider
+
+Authentication provider used for account linking.
+
+```prisma
+enum AuthProvider {
+  GITHUB
+  GOOGLE
+  GITLAB
+  BITBUCKET
+}
+```
+
 ### ClarificationPolicy
 
 Spec generation decision-making strategy.
@@ -1057,10 +1161,11 @@ enum SubscriptionPlan {
 
 ```prisma
 enum SubscriptionStatus {
-  ACTIVE    // Paid and current
-  TRIALING  // Within free trial period
-  PAST_DUE  // Payment failed; grace period active
-  CANCELED  // Subscription ended
+  ACTIVE     // Paid and current
+  TRIALING   // Within free trial period
+  PAST_DUE   // Payment failed; grace period active
+  CANCELED   // Subscription ended
+  INCOMPLETE // Initial payment incomplete
 }
 ```
 

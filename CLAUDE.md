@@ -14,11 +14,11 @@
 
 ## Tech Stack
 
-- **Core**: TypeScript 5.6 (strict), Node.js 22.20.0, Next.js 16 (App Router), React 18
+- **Core**: TypeScript 5.9 (strict), Node.js 22.20.0, Next.js 16 (App Router), React 18
 - **Database**: PostgreSQL 14+, Prisma 6.x
 - **Styling**: TailwindCSS 3.4, shadcn/ui, lucide-react
-- **Charts**: Recharts 2.x (analytics dashboard)
-- **State**: TanStack Query v5.90.5, client-side polling (2s jobs, 10s comments, 15s notifications, 15s analytics, 15s usage)
+- **Charts**: Recharts 3.x (analytics dashboard)
+- **State**: TanStack Query v5.95.2, client-side polling (2s jobs, 10s comments, 15s notifications, 15s analytics, 15s usage)
 - **Testing**: Vitest (unit + integration), Playwright (E2E browser tests)
 - **Auth**: NextAuth.js (session-based)
 - **Push Notifications**: web-push ^3.6.x (VAPID), Web Push API, Service Worker (/public/sw.js)
@@ -57,7 +57,7 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 - `branch`: Created by workflow, NOT during stage transition
 - `workflowType`: FULL|QUICK|CLEAN — set once, never changes
 - `previewUrl`: Single per project (auto-replaces on deploy)
-- Job commands: `specify`, `plan`, `implement`, `verify`, `quick-impl`, `clean`, `deploy-preview`, `rollback-reset`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`
+- Job commands: `specify`, `plan`, `implement`, `verify`, `ship`, `quick-impl`, `clean`, `deploy-preview`, `rollback-reset`, `iterate`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`, `comment-ship`, `health-scan`
 - Notifications: 15s polling, soft delete with 30-day retention
 - PushSubscriptions: Multiple per user, auto-cleanup on 410/404
 - Subscription: One per user (FREE/PRO/TEAM), effective plan considers grace period; `lib/billing/` for billing logic; `PlanLimits` includes `maxMembersPerProject` (0=not allowed, 10=Team)

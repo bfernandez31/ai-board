@@ -44,7 +44,15 @@ sequenceDiagram
 
 **Package**: `@octokit/rest` ^22.0.0
 
-**Setup** (`app/lib/workflows/dispatch.ts`):
+**Setup** (`app/lib/workflows/dispatch.ts` and related modules):
+
+> **Note**: Workflow dispatch logic is split across multiple files rather than centralized in a single dispatch module:
+> - `lib/workflows/transition.ts` — stage transition dispatches
+> - `lib/health/scan-dispatch.ts` — health scan dispatches
+> - `app/lib/workflows/dispatch-deploy-preview.ts` — deploy preview dispatches
+> - `app/lib/workflows/dispatch-rollback-reset.ts` — rollback-reset dispatches
+> - `app/lib/workflows/dispatch-ai-board.ts` — AI-board assist dispatches
+> - `app/api/projects/[projectId]/clean/route.ts` — cleanup dispatches
 
 ```typescript
 import { Octokit } from '@octokit/rest';

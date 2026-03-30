@@ -8,7 +8,7 @@
 - **Features Used**: ESM modules, modern JavaScript features
 - **Environment**: Development, test, production, GitHub Actions
 
-### TypeScript 5.6
+### TypeScript 5.9
 - **Mode**: Strict mode enabled
 - **Purpose**: Type safety across frontend and backend
 - **Configuration**: tsconfig.json in project root
@@ -133,7 +133,7 @@
 - **Graceful Degradation**: Feature detection hides opt-in prompt on unsupported browsers
 
 ### Recharts
-- **Version**: 2.x
+- **Version**: 3.x
 - **Purpose**: React charting library for analytics dashboard
 - **Features Used**:
   - Area charts (cost over time)
@@ -150,8 +150,8 @@
 
 ## State Management
 
-### TanStack Query v5.90.5
-- **Version**: 5.90.5
+### TanStack Query v5.95.2
+- **Version**: 5.95.2
 - **Purpose**: Server state management
 - **Features Used**:
   - Query caching with intelligent invalidation
@@ -291,7 +291,7 @@
 - **Features Used**:
   - Fast test execution (~5ms unit, ~50ms integration)
   - TypeScript support
-  - Worker isolation (forks pool with 6 workers)
+  - Worker isolation (forks pool with 9 workers)
   - Mocking utilities
   - Coverage reporting
   - Environment switching (happy-dom for unit, node for integration)
@@ -431,13 +431,13 @@
 |---------|---------|---------|
 | Next.js | 16 | Framework |
 | React | 18 | UI library |
-| TypeScript | 5.6 | Type safety |
+| TypeScript | 5.9 | Type safety |
 | Node.js | 22.20.0 LTS | Runtime |
 | PostgreSQL | 14+ | Database |
 | Prisma | 6.x | ORM |
-| TanStack Query | 5.90.5 | State management |
+| TanStack Query | 5.95.2 | State management |
 | TailwindCSS | 3.4 | Styling |
-| Recharts | 3.5.1 | Chart library |
+| Recharts | 3.8.1 | Chart library |
 | Zod | 4.x | Validation |
 | Playwright | Latest | E2E testing |
 | Vitest | Latest | Unit testing |
