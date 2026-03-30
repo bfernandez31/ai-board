@@ -121,10 +121,7 @@ jobs:
       - name: Execute Scan Command
         id: scan-exec
         working-directory: target
-        env:
-          AGENT_JSON_OUTPUT: 'true'
         run: |
-          set -o pipefail
           SCAN_CMD="${{ steps.scan-command.outputs.command }}"
           BASE_COMMIT="${{ inputs.base_commit }}"
           HEAD_COMMIT="${{ inputs.head_commit }}"
@@ -143,70 +140,48 @@ jobs:
           # Track duration (US6: telemetry)
           SECONDS=0
 
-          # Execute scan via run-agent.sh with AGENT_JSON_OUTPUT=true
-          # Claude CLI outputs a JSON wrapper: { "result": "...", "total_cost_usd": ..., "usage": ... }
-          # The skill must output valid JSON in .result for downstream parsing
-          if ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.${SCAN_CMD}" "${SCAN_ARGS}" > /tmp/scan_raw.json 2>/tmp/scan_stderr.txt; then
+          # Execute scan via run-agent.sh (standard interactive mode)
+          # The skill writes results to /tmp/health-scan-result.json (file-based output, like compare skill)
+          if ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.${SCAN_CMD}" "${SCAN_ARGS}" 2>&1 | tee /tmp/scan_log.txt; then
             DURATION_MS=$((SECONDS * 1000))
             echo "duration_ms=$DURATION_MS" >> $GITHUB_OUTPUT
-            echo "scan_success=true" >> $GITHUB_OUTPUT
 
-            # Claude CLI may output non-JSON lines before the result — extract only the JSON line
-            grep -E '^\s*\{' /tmp/scan_raw.json | tail -1 > /tmp/scan_clean.json || true
-            if ! jq empty /tmp/scan_clean.json 2>/dev/null; then
-              # Fallback: try the raw file directly
-              cp /tmp/scan_raw.json /tmp/scan_clean.json
-            fi
+            # Read results from file written by the skill
+            RESULT_FILE="/tmp/health-scan-result.json"
+            if [ -f "$RESULT_FILE" ] && jq empty "$RESULT_FILE" 2>/dev/null; then
+              echo "scan_success=true" >> $GITHUB_OUTPUT
 
-            # Extract .result from Claude CLI JSON wrapper, then parse the scan results
-            RESULT_TEXT=$(jq -r '.result // empty' /tmp/scan_clean.json)
+              SCORE=$(jq -r '.score // 0' "$RESULT_FILE")
+              ISSUES_FOUND=$(jq -r '.issuesFound // 0' "$RESULT_FILE")
+              ISSUES_FIXED=$(jq -r '.issuesFixed // 0' "$RESULT_FILE")
+              REPORT=$(jq -c '.report // {}' "$RESULT_FILE")
+              TOKENS_USED=$(jq -r '.tokensUsed // empty' "$RESULT_FILE")
+              COST_USD=$(jq -r '.costUsd // empty' "$RESULT_FILE")
 
-            # Extract telemetry from CLI wrapper
-            CLI_COST=$(jq -r '.total_cost_usd // empty' /tmp/scan_clean.json)
-            CLI_TOKENS=$(jq -r '.usage.input_tokens // empty' /tmp/scan_clean.json)
+              echo "score=$SCORE" >> $GITHUB_OUTPUT
+              echo "issues_found=$ISSUES_FOUND" >> $GITHUB_OUTPUT
+              echo "issues_fixed=$ISSUES_FIXED" >> $GITHUB_OUTPUT
+              echo "tokens_used=$TOKENS_USED" >> $GITHUB_OUTPUT
+              echo "cost_usd=$COST_USD" >> $GITHUB_OUTPUT
 
-            # Try to parse .result as JSON (the skill should output JSON)
-            if echo "$RESULT_TEXT" | jq empty 2>/dev/null; then
-              echo "$RESULT_TEXT" > /tmp/scan_output.json
+              # Store report in file (may be large)
+              echo "$REPORT" > /tmp/scan_report.json
+
+              echo "✅ Scan completed: score=$SCORE, issues=$ISSUES_FOUND"
             else
-              # Fallback: try to extract JSON block from text output
-              JSON_BLOCK=$(echo "$RESULT_TEXT" | grep -Pzo '\{[\s\S]*"score"[\s\S]*\}' | tr '\0' '\n' | head -1 || true)
-              if [ -n "$JSON_BLOCK" ] && echo "$JSON_BLOCK" | jq empty 2>/dev/null; then
-                echo "$JSON_BLOCK" > /tmp/scan_output.json
-              else
-                # No parseable JSON — create minimal result from CLI metadata
-                echo '{"score": 0, "issuesFound": 0, "issuesFixed": 0, "report": {}}' > /tmp/scan_output.json
-                echo "⚠️ Could not parse JSON from skill output, using defaults"
-              fi
+              echo "scan_success=false" >> $GITHUB_OUTPUT
+              echo "error_msg<<EOF_ERROR" >> $GITHUB_OUTPUT
+              echo "Skill did not write /tmp/health-scan-result.json or file is not valid JSON" >> $GITHUB_OUTPUT
+              echo "EOF_ERROR" >> $GITHUB_OUTPUT
+              echo "❌ Scan agent succeeded but result file missing or invalid"
             fi
-
-            # Extract results from parsed JSON
-            SCORE=$(jq -r '.score // 0' /tmp/scan_output.json)
-            ISSUES_FOUND=$(jq -r '.issuesFound // 0' /tmp/scan_output.json)
-            ISSUES_FIXED=$(jq -r '.issuesFixed // 0' /tmp/scan_output.json)
-            REPORT=$(jq -c '.report // {}' /tmp/scan_output.json)
-
-            # Prefer CLI telemetry over skill-reported values
-            TOKENS_USED="${CLI_TOKENS:-$(jq -r '.tokensUsed // empty' /tmp/scan_output.json)}"
-            COST_USD="${CLI_COST:-$(jq -r '.costUsd // empty' /tmp/scan_output.json)}"
-
-            echo "score=$SCORE" >> $GITHUB_OUTPUT
-            echo "issues_found=$ISSUES_FOUND" >> $GITHUB_OUTPUT
-            echo "issues_fixed=$ISSUES_FIXED" >> $GITHUB_OUTPUT
-            echo "tokens_used=$TOKENS_USED" >> $GITHUB_OUTPUT
-            echo "cost_usd=$COST_USD" >> $GITHUB_OUTPUT
-
-            # Store report in file (may be large)
-            echo "$REPORT" > /tmp/scan_report.json
-
-            echo "✅ Scan completed: score=$SCORE, issues=$ISSUES_FOUND"
           else
             DURATION_MS=$((SECONDS * 1000))
             echo "duration_ms=$DURATION_MS" >> $GITHUB_OUTPUT
             echo "scan_success=false" >> $GITHUB_OUTPUT
 
-            # Capture error (truncate to 2000 chars)
-            ERROR_MSG=$(head -c 2000 /tmp/scan_stderr.txt)
+            # Capture error from log
+            ERROR_MSG=$(tail -c 2000 /tmp/scan_log.txt)
             echo "error_msg<<EOF_ERROR" >> $GITHUB_OUTPUT
             echo "$ERROR_MSG" >> $GITHUB_OUTPUT
             echo "EOF_ERROR" >> $GITHUB_OUTPUT

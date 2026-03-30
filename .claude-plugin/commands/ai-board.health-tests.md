@@ -73,7 +73,7 @@ For each failing test, attempt a fix **only if the fix is obvious and isolated**
 
 ## Output Format
 
-You MUST output valid JSON to stdout with this exact structure. Output ONLY the JSON object, no other text.
+You MUST write the result as a valid JSON file to `/tmp/health-scan-result.json` using the Write tool. Do NOT print JSON to stdout — write it to the file. The workflow will read this file after execution.
 
 ```json
 {
