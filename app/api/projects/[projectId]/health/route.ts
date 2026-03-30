@@ -2,16 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
 import { calculateGlobalScore, getScoreLabel, getScoreColorConfig } from '@/lib/health/score-calculator';
+import { getScoreThreshold } from '@/lib/quality-score';
 import { getQualityGateAggregate } from '@/lib/health/quality-gate';
 import { getLastCleanAggregate } from '@/lib/health/last-clean';
 import type { HealthResponse, HealthModuleStatus, QualityGateModuleStatus, LastCleanModuleStatus } from '@/lib/health/types';
-
-function getScoreDisplayLabel(score: number): string {
-  if (score >= 90) return 'Excellent';
-  if (score >= 70) return 'Good';
-  if (score >= 50) return 'Fair';
-  return 'Poor';
-}
 
 function buildModuleStatus(
   score: number | null,
@@ -23,7 +17,7 @@ function buildModuleStatus(
   let summary: string;
 
   if (score !== null) {
-    label = getScoreDisplayLabel(score);
+    label = getScoreThreshold(score);
     summary = issuesFound !== null && issuesFound > 0 ? `${issuesFound} issues found` : 'All clear';
   } else {
     summary = 'No scan yet';
@@ -53,94 +47,60 @@ export async function GET(
 
     await verifyProjectAccess(projectId, request);
 
-    // Fetch cached health score
-    const healthScore = await prisma.healthScore.findUnique({
-      where: { projectId },
-    });
+    // Fetch all data in parallel
+    const [healthScore, activeScans, latestScans, qgAggregate, lcAggregate] = await Promise.all([
+      prisma.healthScore.findUnique({ where: { projectId } }),
+      prisma.healthScan.findMany({
+        where: { projectId, status: { in: ['PENDING', 'RUNNING'] } },
+        select: { id: true, scanType: true, status: true, startedAt: true },
+      }),
+      prisma.healthScan.findMany({
+        where: { projectId, status: 'COMPLETED' },
+        orderBy: { createdAt: 'desc' },
+        distinct: ['scanType'],
+        select: { scanType: true, status: true, issuesFound: true },
+      }),
+      getQualityGateAggregate(projectId),
+      getLastCleanAggregate(projectId),
+    ]);
 
-    // Fetch active scans (PENDING or RUNNING)
-    const activeScans = await prisma.healthScan.findMany({
-      where: {
-        projectId,
-        status: { in: ['PENDING', 'RUNNING'] },
-      },
-      select: {
-        id: true,
-        scanType: true,
-        status: true,
-        startedAt: true,
-      },
-    });
+    const scanStatusMap = new Map(latestScans.map(s => [s.scanType, s]));
+    const activeScanMap = new Map(activeScans.map(s => [s.scanType, s.status]));
 
-    // Get latest scan status per active module type
-    const latestScans = await prisma.healthScan.findMany({
-      where: {
-        projectId,
-        status: 'COMPLETED',
-      },
-      orderBy: { createdAt: 'desc' },
-      distinct: ['scanType'],
-      select: {
-        scanType: true,
-        status: true,
-        issuesFound: true,
-      },
-    });
-
-    const scanStatusMap = new Map(
-      latestScans.map(s => [s.scanType, s])
-    );
-
-    // Active scan status map (for modules currently scanning)
-    const activeScanMap = new Map(
-      activeScans.map(s => [s.scanType, s.status])
-    );
-
-    // Derive Quality Gate aggregate from 30-day SHIP ticket data
-    const qgAggregate = await getQualityGateAggregate(projectId);
     const qualityGateScore = qgAggregate.averageScore;
     const firstTicket = qgAggregate.recentTickets[0];
     const qualityGateDate = firstTicket ? new Date(firstTicket.completedAt) : null;
-
-    // Derive Last Clean aggregate from completed cleanup jobs
-    const lcAggregate = await getLastCleanAggregate(projectId);
-    const firstHistory = lcAggregate.history[0];
-    const lastCleanJobId = firstHistory ? firstHistory.jobId : null;
+    const lastCleanJobId = lcAggregate.history[0]?.jobId ?? null;
 
     // Build module statuses
-    const securityScan = scanStatusMap.get('SECURITY');
-    const complianceScan = scanStatusMap.get('COMPLIANCE');
-    const testsScan = scanStatusMap.get('TESTS');
-    const specSyncScan = scanStatusMap.get('SPEC_SYNC');
-
     const modules: HealthResponse['modules'] = {
       security: buildModuleStatus(
         healthScore?.securityScore ?? null,
         healthScore?.lastSecurityScan ?? null,
-        activeScanMap.get('SECURITY') ?? securityScan?.status ?? null,
-        securityScan?.issuesFound ?? null,
+        activeScanMap.get('SECURITY') ?? scanStatusMap.get('SECURITY')?.status ?? null,
+        scanStatusMap.get('SECURITY')?.issuesFound ?? null,
       ),
       compliance: buildModuleStatus(
         healthScore?.complianceScore ?? null,
         healthScore?.lastComplianceScan ?? null,
-        activeScanMap.get('COMPLIANCE') ?? complianceScan?.status ?? null,
-        complianceScan?.issuesFound ?? null,
+        activeScanMap.get('COMPLIANCE') ?? scanStatusMap.get('COMPLIANCE')?.status ?? null,
+        scanStatusMap.get('COMPLIANCE')?.issuesFound ?? null,
       ),
       tests: buildModuleStatus(
         healthScore?.testsScore ?? null,
         healthScore?.lastTestsScan ?? null,
-        activeScanMap.get('TESTS') ?? testsScan?.status ?? null,
-        testsScan?.issuesFound ?? null,
+        activeScanMap.get('TESTS') ?? scanStatusMap.get('TESTS')?.status ?? null,
+        scanStatusMap.get('TESTS')?.issuesFound ?? null,
       ),
       specSync: buildModuleStatus(
         healthScore?.specSyncScore ?? null,
         healthScore?.lastSpecSyncScan ?? null,
-        activeScanMap.get('SPEC_SYNC') ?? specSyncScan?.status ?? null,
-        specSyncScan?.issuesFound ?? null,
+        activeScanMap.get('SPEC_SYNC') ?? scanStatusMap.get('SPEC_SYNC')?.status ?? null,
+        scanStatusMap.get('SPEC_SYNC')?.issuesFound ?? null,
       ),
       qualityGate: {
         score: qualityGateScore,
-        label: qualityGateScore !== null ? getScoreDisplayLabel(qualityGateScore) : null,
+        label: qualityGateScore !== null ? getScoreThreshold(qualityGateScore) : null,
         lastScanDate: qualityGateDate?.toISOString() ?? null,
         passive: true,
         summary: qgAggregate.ticketCount > 0
