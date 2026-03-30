@@ -644,6 +644,60 @@ export type DocumentError = z.infer<typeof DocumentErrorSchema>;
 - **GITHUB_API_ERROR**: GitHub API returned an error
 - **INTERNAL_ERROR**: Unexpected server error
 
+### EditDocumentationSchema
+
+```typescript
+export const editDocumentationSchema = z.object({
+  ticketId: z.number().int().positive(),
+  docType: z.enum(['spec', 'plan', 'tasks']),
+  content: z.string().min(1).max(1048576),           // 1 byte – 1 MB
+  commitMessage: z.string().max(500).optional(),
+});
+
+export type EditDocumentationRequest = z.infer<typeof editDocumentationSchema>;
+
+export const editDocumentationResponseSchema = z.object({
+  success: z.literal(true),
+  commitSha: z.string(),
+  updatedAt: z.string(),
+  message: z.string(),
+});
+
+export type EditDocumentationResponse = z.infer<typeof editDocumentationResponseSchema>;
+
+export const editDocumentationErrorSchema = z.object({
+  success: z.literal(false),
+  error: z.string(),
+  code: z.enum([
+    'PERMISSION_DENIED',
+    'BRANCH_NOT_FOUND',
+    'VALIDATION_ERROR',
+    'MERGE_CONFLICT',
+    'NETWORK_ERROR',
+    'TIMEOUT',
+  ]).optional(),
+  details: z.unknown().optional(),
+});
+
+export type EditDocumentationError = z.infer<typeof editDocumentationErrorSchema>;
+```
+
+**Validation Rules**:
+- **ticketId**: Positive integer; must belong to the specified project
+- **docType**: One of `spec`, `plan`, or `tasks` — `summary` is read-only and cannot be written
+- **content**: Full markdown body, 1 byte to 1 MB
+- **commitMessage**: Optional; defaults to `docs: update {docType}.md for ticket #{ticketId}`; max 500 chars
+
+**Error Codes** (POST /api/projects/:projectId/docs):
+- **PERMISSION_DENIED**: Ticket stage does not permit editing the requested `docType`
+- **BRANCH_NOT_FOUND**: Ticket has no branch assigned, or branch does not exist on GitHub
+- **VALIDATION_ERROR**: Invalid request body or invalid markdown content
+- **MERGE_CONFLICT**: Another user modified the file concurrently (409)
+- **NETWORK_ERROR**: GitHub API error or network failure (500)
+- **TIMEOUT**: Operation exceeded time limit (504)
+
+**Usage**: `POST /api/projects/:projectId/docs` — validated in `app/lib/schemas/documentation.ts`
+
 ## Type Inference
 
 Zod schemas provide TypeScript type inference:

@@ -241,6 +241,9 @@ The ticket detail modal provides quick access to workflow documentation files:
 - Loading states shown during fetch operations
 - Error messages displayed if file cannot be fetched
 - Modal can be closed via close button, Escape key, or clicking outside
+- Edits are saved by committing directly to the ticket's feature branch on GitHub
+- Stage-based permissions control which document types are editable at each workflow stage; attempting to save an ineligible document returns a permission error
+- Concurrent edits are detected at save time; a conflict error is shown if another user modified the file since it was last fetched
 
 ### Modal Behavior
 
