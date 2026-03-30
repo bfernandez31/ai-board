@@ -829,7 +829,7 @@ interface GeneratedTicket {
 
 ### Command Output Format
 
-Active module scan commands (`health-security`, `health-compliance`, `health-tests`, `health-spec-sync`) write a single JSON object to stdout. The workflow parses this with `jq` to extract fields for storage and ticket creation.
+Active module scan commands (`health-security`, `health-compliance`, `health-tests`, `health-spec-sync`) write a JSON result file to `/tmp/health-scan-result.json`. The workflow reads this file with `jq` to extract fields for storage and ticket creation.
 
 ```json
 {

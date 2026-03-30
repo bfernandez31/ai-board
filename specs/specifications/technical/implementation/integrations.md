@@ -177,7 +177,7 @@ export async function dispatchWorkflow(params: {
   1. Checkout target repository
   2. `PATCH /api/projects/{project_id}/health/scans/{scan_id}/status` → RUNNING
   3. Execute scan command with `base_commit`/`head_commit` for incremental support
-  4. Parse JSON report output (score, issuesFound, issuesFixed, report)
+  4. Read `/tmp/health-scan-result.json` written by the skill (score, issuesFound, issuesFixed, report)
   5. Create remediation tickets via `POST /api/projects/{projectId}/tickets` (grouped by scan type)
   6. `PATCH` scan status → COMPLETED with score, report, and telemetry
   7. **Catch-all FAILED step** (`if: always()`): runs whenever COMPLETED was skipped — covers explicit failures, workflow timeouts, and unexpected crashes
