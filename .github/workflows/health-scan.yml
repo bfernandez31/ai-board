@@ -195,25 +195,25 @@ jobs:
         if: ${{ steps.scan-exec.outputs.scan_success == 'true' && steps.scan-exec.outputs.issues_found > 0 }}
         run: |
           SCAN_TYPE="${{ inputs.scan_type }}"
-          REPORT=$(cat /tmp/scan_report.json)
+          REPORT_FILE="/tmp/scan_report.json"
 
           # Parse report and create grouped tickets based on scan type
+          # NOTE: Pipe file directly to jq — never use echo "$VAR" with JSON that
+          #       may contain backticks (bash interprets them as command substitution).
           case "$SCAN_TYPE" in
             SECURITY)
               # Group by severity — include exploit scenario & recommendation when available
-              echo "$REPORT" | jq -r '.issues // [] | group_by(.severity) | .[] | {
+              jq -c '.issues // [] | group_by(.severity) | .[] | {
                 severity: .[0].severity,
                 count: length,
                 details: [.[] | "- **\(.file // "unknown"):\(.line // "?")**: \(.description)" + (if .exploitScenario then "\n  > **Exploit:** \(.exploitScenario)" else "" end) + (if .recommendation then "\n  > **Fix:** \(.recommendation)" else "" end)] | join("\n\n")
-              }' | jq -c '.' | while read -r group; do
-                SEVERITY=$(echo "$group" | jq -r '.severity')
-                COUNT=$(echo "$group" | jq -r '.count')
-                DETAILS=$(echo "$group" | jq -r '.details')
-                TITLE="[Security] Fix ${COUNT} ${SEVERITY^^} severity issue$([ "$COUNT" -gt 1 ] && echo 's')"
-                DESC="Health scan found ${COUNT} ${SEVERITY^^} severity security issue$([ "$COUNT" -gt 1 ] && echo 's'):\n\n${DETAILS}"
-
-                # Truncate description to stay within 10000 char ticket limit
-                DESC=$(echo "$DESC" | head -c 9900)
+              }' "$REPORT_FILE" | while read -r group; do
+                SEVERITY=$(printf '%s' "$group" | jq -r '.severity')
+                COUNT=$(printf '%s' "$group" | jq -r '.count')
+                DETAILS=$(printf '%s' "$group" | jq -r '.details')
+                SUFFIX=""; [ "$COUNT" -gt 1 ] && SUFFIX="s"
+                TITLE="[Security] Fix ${COUNT} ${SEVERITY^^} severity issue${SUFFIX}"
+                DESC=$(printf 'Health scan found %s %s severity security issue%s:\n\n%s' "$COUNT" "${SEVERITY^^}" "$SUFFIX" "$DETAILS" | head -c 9900)
 
                 curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
                   -H "Content-Type: application/json" \
@@ -224,16 +224,17 @@ jobs:
               ;;
             COMPLIANCE)
               # Group by category/principle
-              echo "$REPORT" | jq -r '.issues // [] | group_by(.category // "General") | .[] | {
+              jq -c '.issues // [] | group_by(.category // "General") | .[] | {
                 category: .[0].category // "General",
                 count: length,
                 details: [.[] | "\(.file // "unknown"):\(.line // "?"): \(.description)"] | join("\n")
-              }' | jq -c '.' | while read -r group; do
-                CATEGORY=$(echo "$group" | jq -r '.category')
-                COUNT=$(echo "$group" | jq -r '.count')
-                DETAILS=$(echo "$group" | jq -r '.details')
-                TITLE="[Compliance] Fix ${COUNT} violation$([ "$COUNT" -gt 1 ] && echo 's') — ${CATEGORY}"
-                DESC="Health scan found ${COUNT} compliance violation$([ "$COUNT" -gt 1 ] && echo 's') for principle \"${CATEGORY}\":\n\n${DETAILS}"
+              }' "$REPORT_FILE" | while read -r group; do
+                CATEGORY=$(printf '%s' "$group" | jq -r '.category')
+                COUNT=$(printf '%s' "$group" | jq -r '.count')
+                DETAILS=$(printf '%s' "$group" | jq -r '.details')
+                SUFFIX=""; [ "$COUNT" -gt 1 ] && SUFFIX="s"
+                TITLE="[Compliance] Fix ${COUNT} violation${SUFFIX} — ${CATEGORY}"
+                DESC=$(printf 'Health scan found %s compliance violation%s for principle "%s":\n\n%s' "$COUNT" "$SUFFIX" "$CATEGORY" "$DETAILS")
 
                 curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
                   -H "Content-Type: application/json" \
@@ -244,11 +245,11 @@ jobs:
               ;;
             TESTS)
               # One ticket per non-fixable test
-              echo "$REPORT" | jq -c '.nonFixable // [] | .[]' | while read -r issue; do
-                DESC_TEXT=$(echo "$issue" | jq -r '.description')
-                FILE=$(echo "$issue" | jq -r '.file // "Unknown"')
-                TITLE="[Tests] Fix failing test: $(echo "$DESC_TEXT" | head -c 80)"
-                DESC="Health scan found a non-fixable test failure:\n\n- **Test**: ${DESC_TEXT}\n- **File**: ${FILE}"
+              jq -c '.nonFixable // [] | .[]' "$REPORT_FILE" | while read -r issue; do
+                DESC_TEXT=$(printf '%s' "$issue" | jq -r '.description')
+                FILE=$(printf '%s' "$issue" | jq -r '.file // "Unknown"')
+                TITLE="[Tests] Fix failing test: $(printf '%s' "$DESC_TEXT" | head -c 80)"
+                DESC=$(printf 'Health scan found a non-fixable test failure:\n\n- **Test**: %s\n- **File**: %s' "$DESC_TEXT" "$FILE")
 
                 curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
                   -H "Content-Type: application/json" \
@@ -259,11 +260,11 @@ jobs:
               ;;
             SPEC_SYNC)
               # One ticket per drifted spec
-              echo "$REPORT" | jq -c '.specs // [] | .[] | select(.status == "drifted")' | while read -r spec; do
-                SPEC_PATH=$(echo "$spec" | jq -r '.specPath')
-                DRIFT=$(echo "$spec" | jq -r '.drift // "Specification out of sync with implementation"')
+              jq -c '.specs // [] | .[] | select(.status == "drifted")' "$REPORT_FILE" | while read -r spec; do
+                SPEC_PATH=$(printf '%s' "$spec" | jq -r '.specPath')
+                DRIFT=$(printf '%s' "$spec" | jq -r '.drift // "Specification out of sync with implementation"')
                 TITLE="[Spec Sync] Resynchronize ${SPEC_PATH}"
-                DESC="Health scan detected spec drift:\n\n- **Spec**: ${SPEC_PATH}\n- **Drift**: ${DRIFT}"
+                DESC=$(printf 'Health scan detected spec drift:\n\n- **Spec**: %s\n- **Drift**: %s' "$SPEC_PATH" "$DRIFT")
 
                 curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
                   -H "Content-Type: application/json" \
@@ -282,7 +283,6 @@ jobs:
         if: ${{ steps.scan-exec.outputs.scan_success == 'true' }}
         working-directory: target
         run: |
-          REPORT=$(cat /tmp/scan_report.json)
           HEAD_COMMIT="${{ inputs.head_commit }}"
 
           # If no head_commit provided, use current HEAD
@@ -291,10 +291,12 @@ jobs:
           fi
 
           # Build payload with telemetry (US6)
+          # Use --rawfile to load report without bash variable expansion (avoids
+          # backtick command substitution in JSON values like `$queryRaw`).
           PAYLOAD=$(jq -n \
             --arg status "COMPLETED" \
             --argjson score ${{ steps.scan-exec.outputs.score }} \
-            --arg report "$REPORT" \
+            --rawfile report /tmp/scan_report.json \
             --argjson issuesFound ${{ steps.scan-exec.outputs.issues_found }} \
             --argjson issuesFixed ${{ steps.scan-exec.outputs.issues_fixed }} \
             --arg headCommit "$HEAD_COMMIT" \
@@ -313,10 +315,10 @@ jobs:
           TOKENS="${{ steps.scan-exec.outputs.tokens_used }}"
           COST="${{ steps.scan-exec.outputs.cost_usd }}"
           if [ -n "$TOKENS" ]; then
-            PAYLOAD=$(echo "$PAYLOAD" | jq --argjson t "$TOKENS" '. + {tokensUsed: $t}')
+            PAYLOAD=$(printf '%s' "$PAYLOAD" | jq --argjson t "$TOKENS" '. + {tokensUsed: $t}')
           fi
           if [ -n "$COST" ]; then
-            PAYLOAD=$(echo "$PAYLOAD" | jq --argjson c "$COST" '. + {costUsd: $c}')
+            PAYLOAD=$(printf '%s' "$PAYLOAD" | jq --argjson c "$COST" '. + {costUsd: $c}')
           fi
 
           curl -X PATCH "${APP_URL}/api/projects/${{ inputs.project_id }}/health/scans/${{ inputs.scan_id }}/status" \
