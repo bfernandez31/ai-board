@@ -20,6 +20,28 @@ log_error() {
   echo "❌ [run-agent] ERROR: $*" >&2
 }
 
+# --- Command file resolution ---
+# .claude/ is gitignored so .claude/commands/ won't exist in CI checkouts.
+# Search tracked locations: the current repo's .claude-plugin/commands/ first,
+# then the ai-board sparse checkout at ../ai-board/.claude-plugin/commands/.
+
+resolve_command_file() {
+  local cmd="$1"
+  local candidates=(
+    ".claude-plugin/commands/${cmd}.md"
+    ".claude/commands/${cmd}.md"
+    "../ai-board/.claude-plugin/commands/${cmd}.md"
+  )
+  for f in "${candidates[@]}"; do
+    if [[ -f "$f" ]]; then
+      echo "$f"
+      return 0
+    fi
+  done
+  log_error "Command file not found for '${cmd}'. Searched: ${candidates[*]}"
+  return 1
+}
+
 # --- Validation ---
 
 validate_auth() {
@@ -59,8 +81,20 @@ install_claude() {
 }
 
 invoke_claude() {
-  log_info "Invoking Claude: /$COMMAND $ARGS"
-  claude --dangerously-skip-permissions "/$COMMAND $ARGS"
+  local command_file
+  command_file=$(resolve_command_file "$COMMAND") || exit 1
+
+  local prompt
+  prompt="$(cat "$command_file")"
+
+  if [[ -n "$ARGS" ]]; then
+    prompt="${prompt}
+
+${ARGS}"
+  fi
+
+  log_info "Invoking Claude with command file: $command_file"
+  claude --dangerously-skip-permissions -p "$prompt"
 }
 
 # --- Codex functions ---
@@ -140,12 +174,8 @@ TOML
 }
 
 invoke_codex() {
-  local command_file=".claude/commands/${COMMAND}.md"
-
-  if [[ ! -f "$command_file" ]]; then
-    log_error "Command file not found: $command_file"
-    exit 1
-  fi
+  local command_file
+  command_file=$(resolve_command_file "$COMMAND") || exit 1
 
   log_info "Invoking Codex with command file: $command_file"
 
