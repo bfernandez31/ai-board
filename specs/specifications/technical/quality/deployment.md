@@ -12,6 +12,7 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 | `quick-impl.yml` | workflow_dispatch | Quick-implementation path | 120 min |
 | `cleanup.yml` | workflow_dispatch | Diff-based technical debt cleanup | 45 min |
 | `verify.yml` | workflow_dispatch | Test verification and PR creation | 45 min |
+| `health-scan.yml` | workflow_dispatch | Health scan execution (Security/Compliance/Tests/Spec Sync) | 60 min |
 | `ai-board-assist.yml` | workflow_dispatch | AI-BOARD comment assistance | 60 min |
 | `deploy-preview.yml` | workflow_dispatch | Manual Vercel preview deployment | 15 min |
 | `auto-ship.yml` | deployment_status | Auto-transition VERIFY → SHIP | 5 min |
@@ -754,6 +755,23 @@ await prisma.job.update({
 - ✅ Use constant-time comparison for tokens
 - ✅ Log all workflow operations
 - ❌ Don't expose internal errors to clients
+
+### GitHub Actions Script Injection Prevention
+
+All `workflow_dispatch` inputs are assigned to `env:` block variables at the job level and referenced as environment variables in `run:` scripts — never interpolated directly with `${{ inputs.* }}` inside shell code. This prevents script injection via crafted input values.
+
+```yaml
+# Pattern used in health-scan.yml and other workflows
+env:
+  INPUT_SCAN_ID: ${{ inputs.scan_id }}
+  INPUT_PROJECT_ID: ${{ inputs.project_id }}
+
+steps:
+  - name: Use inputs safely
+    run: |
+      echo "scan: $INPUT_SCAN_ID"                  # ✅ env var reference
+      echo "project: ${{ inputs.project_id }}"     # ❌ direct interpolation — never do this
+```
 
 ### Deployment Security
 - ✅ Protected main branch
