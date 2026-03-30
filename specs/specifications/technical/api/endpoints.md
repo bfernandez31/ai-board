@@ -1917,6 +1917,59 @@ Fetch summary.md content for a ticket (read-only).
 
 **Note**: Unlike spec.md, plan.md, and tasks.md, the summary.md file is read-only and cannot be edited through the UI or API.
 
+### POST /api/projects/:projectId/docs
+
+Commit and push edited documentation content (spec.md, plan.md, or tasks.md) to the ticket's feature branch on GitHub.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (via `verifyProjectAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body** (JSON):
+```json
+{
+  "ticketId": 42,
+  "docType": "spec",
+  "content": "# Updated Spec\n\nContent...",
+  "commitMessage": "docs: update spec.md for ticket #42"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `ticketId` | number | Yes | Positive integer ticket ID (must belong to the specified project) |
+| `docType` | string | Yes | Document type — `spec`, `plan`, or `tasks` |
+| `content` | string | Yes | Full markdown content (1 byte – 1 MB) |
+| `commitMessage` | string | No | Custom commit message (max 500 chars). Defaults to `docs: update {docType}.md for ticket #{ticketId}` |
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "commitSha": "a1b2c3d4e5f6...",
+  "updatedAt": "2026-01-15T10:30:00.000Z",
+  "message": "spec.md updated successfully"
+}
+```
+
+**Stage-Based Permissions**:
+- Editing is gated by the ticket's current stage and the requested `docType`
+- If the stage does not allow editing the specified document type, a `403` is returned
+
+**File Path**: `specs/{ticketBranch}/{docType}.md` (derived from the ticket's branch name)
+
+**Markdown Validation**: Content is validated for correct markdown syntax before committing. Invalid markdown returns a `400`.
+
+**Errors**:
+- `400`: Invalid project ID, invalid request body, or invalid markdown content
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member, ticket belongs to different project, or stage does not permit editing this document type
+- `404`: Ticket not found, ticket has no branch, or branch not found on GitHub
+- `409`: Merge conflict — another user modified the file concurrently
+- `500`: GitHub API error or internal server error
+
 ### GET /api/projects/:projectId/docs/diff
 
 Fetch the diff for a specific commit affecting a documentation file on a ticket's feature branch.
