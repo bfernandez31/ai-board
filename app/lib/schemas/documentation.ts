@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /**
  * Zod schema for editing documentation files
- * Validates POST /api/projects/:projectId/docs request body
+ * Validates POST /api/projects/:projectId/docs/edit request body
  */
 export const editDocumentationSchema = z.object({
   ticketId: z.number().int().positive('Ticket ID must be a positive integer'),

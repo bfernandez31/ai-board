@@ -1,5 +1,5 @@
 /**
- * POST /api/projects/[projectId]/docs
+ * POST /api/projects/[projectId]/docs/edit
  *
  * Commits and pushes edited documentation content to the ticket's feature branch.
  *
@@ -16,7 +16,7 @@
  * @throws 504 - Operation timeout
  *
  * @example
- * POST /api/projects/1/docs
+ * POST /api/projects/1/docs/edit
  * Body: { ticketId: 42, docType: "spec", content: "# Updated Spec\n\nContent..." }
  * Response: { success: true, commitSha: "abc123...", updatedAt: "...", message: "..." }
  */
