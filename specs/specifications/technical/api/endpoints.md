@@ -1917,6 +1917,56 @@ Fetch summary.md content for a ticket (read-only).
 
 **Note**: Unlike spec.md, plan.md, and tasks.md, the summary.md file is read-only and cannot be edited through the UI or API.
 
+### POST /api/projects/:projectId/docs
+
+Commit and push edited documentation content to a ticket's feature branch.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (via `verifyProjectAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body** (`editDocumentationSchema`):
+```json
+{
+  "ticketId": 42,
+  "docType": "spec",
+  "content": "# Updated Spec\n\nContent...",
+  "commitMessage": "docs: clarify acceptance criteria"
+}
+```
+
+**Fields**:
+- `ticketId` (number, required): Positive integer identifying the ticket
+- `docType` (string, required): One of `spec`, `plan`, `tasks` — `summary` is read-only
+- `content` (string, required): Full markdown content, 1 byte to 1MB
+- `commitMessage` (string, optional): Custom commit message, max 500 characters; defaults to `"docs: update {docType}.md for ticket #{ticketId}"`
+
+**Stage-Based Edit Permissions**:
+- `SPECIFY` stage: only `spec` is editable
+- `PLAN` stage: only `plan` and `tasks` are editable
+- All other stages (`INBOX`, `BUILD`, `VERIFY`, `SHIP`): editing is not allowed (403)
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "commitSha": "abc123def456abc123def456abc123def456abcd",
+  "updatedAt": "2026-01-02T14:30:00.000Z",
+  "message": "spec.md updated successfully"
+}
+```
+
+**File Path**: `specs/{ticketBranch}/{docType}.md`
+
+**Errors**:
+- `400`: Invalid project ID, validation error (body fails schema), or invalid markdown syntax
+- `403`: User lacks project access, ticket belongs to a different project, or ticket stage does not allow editing the requested `docType`
+- `404`: Ticket not found or ticket has no branch assigned
+- `409`: Merge conflict — another user modified the same file concurrently
+- `500`: GitHub API error or internal server error
+
 ### GET /api/projects/:projectId/docs/diff
 
 Fetch the diff for a specific commit affecting a documentation file on a ticket's feature branch.
