@@ -208,7 +208,7 @@ export function ProjectComparisonsPage({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+      <section className="aurora-glass rounded-3xl border p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-muted-foreground">
@@ -220,7 +220,7 @@ export function ProjectComparisonsPage({
               Review durable comparison history for {projectName} and launch fresh comparisons from VERIFY.
             </p>
           </div>
-          <Button type="button" onClick={() => setLaunchOpen(true)}>
+          <Button type="button" className="aurora-btn-mauve border border-ctp-mauve/25 text-ctp-mauve hover:text-ctp-mauve" onClick={() => setLaunchOpen(true)}>
             <Sparkles className="mr-2 h-4 w-4" />
             Compare VERIFY tickets
           </Button>
