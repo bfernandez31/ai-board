@@ -3720,6 +3720,8 @@ Returns paginated scan history for a project.
       "baseCommit": "abc1234567890abcdef1234567890abcdef123456",
       "headCommit": "def4567890abcdef1234567890abcdef456789ab",
       "durationMs": 45000,
+      "tokensUsed": 12000,
+      "costUsd": 0.15,
       "errorMessage": null,
       "startedAt": "2026-03-27T14:30:00Z",
       "completedAt": "2026-03-27T14:30:45Z",
@@ -3732,7 +3734,7 @@ Returns paginated scan history for a project.
 }
 ```
 
-When `includeReport=true` is omitted, the `report` field is not present on scan objects.
+When `includeReport=true` is omitted, the `report` field is not present on scan objects. `tokensUsed` and `costUsd` are `null` when telemetry was not captured for the scan.
 
 Results ordered by `createdAt DESC`. `nextCursor` is the ID of the last scan returned; pass as `cursor` for the next page.
 
@@ -3900,6 +3902,50 @@ Returns Last Clean module data including cleanup history for the Health Dashboar
 - `401`: Unauthorized
 - `403`: Forbidden
 - `404`: Project not found
+
+---
+
+### GET /api/projects/[projectId]/health/trend
+
+Returns the score history for all active modules, used to render sparklines and area charts on the health dashboard.
+
+**Authentication**: Session cookie OR Bearer PAT
+**Authorization**: `verifyProjectAccess(projectId)` — owner or member
+
+**Path params**: `projectId` (integer, required)
+
+**Fetch behavior**: Fetched once on dashboard mount; not included in the 2-second polling cycle.
+
+**Response** (200 OK):
+```json
+{
+  "trends": {
+    "security": [
+      { "score": 85, "date": "2026-03-15T10:30:00.000Z" },
+      { "score": 90, "date": "2026-03-20T14:15:00.000Z" }
+    ],
+    "compliance": [],
+    "tests": [
+      { "score": 72, "date": "2026-03-18T09:00:00.000Z" }
+    ],
+    "specSync": [
+      { "score": 95, "date": "2026-03-22T16:45:00.000Z" }
+    ]
+  }
+}
+```
+
+**Business rules**:
+- Only COMPLETED scans with non-null `score` are included
+- Maximum 20 data points per module (most recent)
+- Results ordered chronologically (oldest → newest) for chart rendering
+- Empty array when a module has no qualifying scans
+
+**Errors**:
+- `400`: Invalid project ID
+- `401`: Unauthorized
+- `403`: Forbidden
+- `500`: Internal server error
 
 ## Activity Endpoints
 

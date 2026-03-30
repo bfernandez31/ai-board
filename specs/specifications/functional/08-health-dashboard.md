@@ -74,6 +74,8 @@ Each card displays:
 
 **Last Clean card extras**: staleness visual state (green border/tint for OK, yellow for warning, red for alert); days since last cleanup; file count when available from job output.
 
+**Active module card sparklines**: When an active module (Security, Compliance, Tests, Spec Sync) has 3 or more completed scans, a mini sparkline (~40px height, no axes) appears on the card showing score trend across recent scans. The sparkline is absent when fewer than 3 completed scans exist. Sparkline data is fetched once on dashboard mount from the trend endpoint and is not included in the 2-second polling cycle. All sparkline visual elements meet WCAG AA contrast requirements.
+
 ## Triggering a Scan
 
 Clicking the action button on an active module card triggers a scan:
@@ -143,9 +145,13 @@ Each issue entry shows severity/category, description, and affected file with li
 
 For active modules, the drawer lists any tickets that were generated from the scan, showing each ticket's key and current stage. Each entry links directly to that ticket on the board. If no tickets were generated, this section is omitted.
 
+### Area Chart
+
+Each active module drawer includes an area chart showing score evolution over time, following the same visual pattern as the Quality Gate drawer chart. The chart displays a date axis, a score axis (0–100 range), and hover details showing the date and score for each data point. When a module has fewer than 2 completed scans, the chart section is hidden or shows a "Not enough data" message.
+
 ### History Section
 
-The History section lists previous scans for the selected module in reverse chronological order. Each entry shows the scan date, score, issue count, and commit range. History is loaded in pages of 20 with a "Load more" button at the bottom. Modules with no scan history display "No scan history."
+The History section lists previous scans for the selected module in reverse chronological order. Each entry shows the scan date, score badge, and 4 compact metric icons: issues found, cost in USD, tokens consumed, and execution time. Hovering over any metric icon displays a tooltip explaining the metric. When a metric value is unavailable (null), the icon displays a dash "—". History is loaded in pages of 20 with a "Load more" button at the bottom. Modules with no scan history display "No scan history."
 
 ### Content Refresh
 

@@ -1135,6 +1135,57 @@ interface LastCleanDetails {
 
 **Hooks**: `useLastCleanDetails(projectId)` — TanStack Query, fetches on drawer open, no polling.
 
+### Health Trend Schemas
+
+Response type for `GET /api/projects/[projectId]/health/trend`.
+
+**Location**: `lib/health/types.ts`
+
+```typescript
+interface TrendDataPoint {
+  score: number;  // 0–100
+  date: string;   // ISO 8601, completedAt of the scan
+}
+
+interface HealthTrendResponse {
+  trends: {
+    security: TrendDataPoint[];
+    compliance: TrendDataPoint[];
+    tests: TrendDataPoint[];
+    specSync: TrendDataPoint[];
+  };
+}
+```
+
+**Hook**: `useHealthTrend(projectId)` — TanStack Query, fetched once on mount (`staleTime: Infinity`), not polled.
+
+### Scan History Item
+
+The `ScanHistoryItem` shape returned by `GET /api/projects/[projectId]/health/scans` includes telemetry fields:
+
+```typescript
+interface ScanHistoryItem {
+  id: number;
+  scanType: 'SECURITY' | 'COMPLIANCE' | 'TESTS' | 'SPEC_SYNC';
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  score: number | null;
+  issuesFound: number | null;
+  issuesFixed: number | null;
+  baseCommit: string | null;
+  headCommit: string | null;
+  durationMs: number | null;
+  tokensUsed: number | null;   // null when telemetry was not captured
+  costUsd: number | null;      // null when telemetry was not captured
+  errorMessage: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  report?: string;             // present only when includeReport=true
+}
+```
+
+Null telemetry values (`tokensUsed`, `costUsd`, `durationMs`) render as a dash "—" in the scan history UI.
+
 ### HealthModuleStatus Extensions
 
 The `HealthModuleStatus` interface in `lib/health/types.ts` is extended with optional fields populated by the passive modules:
