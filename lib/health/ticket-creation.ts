@@ -97,7 +97,7 @@ function groupComplianceIssues(report: ComplianceReport): RemediationTicket[] {
 
   for (const [category, issues] of groups) {
     tickets.push({
-      title: `[Compliance] Fix ${plural(issues.length, 'violation')} — ${category}`,
+      title: `[Compliance] Fix ${plural(issues.length, 'violation')} - ${category}`,
       description: `Health scan found ${plural(issues.length, 'compliance violation')} for principle "${category}":\n\n${formatFileList(issues)}`,
       stage: 'INBOX',
       workflowType: 'QUICK',

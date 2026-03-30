@@ -241,7 +241,7 @@ jobs:
                 COUNT=$(printf '%s' "$group" | jq -r '.count')
                 DETAILS=$(printf '%s' "$group" | jq -r '.details')
                 SUFFIX=""; [ "$COUNT" -gt 1 ] && SUFFIX="s"
-                TITLE="[Compliance] Fix ${COUNT} violation${SUFFIX} — ${CATEGORY}"
+                TITLE="[Compliance] Fix ${COUNT} violation${SUFFIX} - ${CATEGORY}"
                 DESC=$(printf 'Health scan found %s compliance violation%s for principle "%s":\n\n%s' "$COUNT" "$SUFFIX" "$CATEGORY" "$DETAILS")
 
                 curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets" \
