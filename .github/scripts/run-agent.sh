@@ -81,20 +81,8 @@ install_claude() {
 }
 
 invoke_claude() {
-  local command_file
-  command_file=$(resolve_command_file "$COMMAND") || exit 1
-
-  local prompt
-  prompt="$(cat "$command_file")"
-
-  if [[ -n "$ARGS" ]]; then
-    prompt="${prompt}
-
-${ARGS}"
-  fi
-
-  log_info "Invoking Claude with command file: $command_file"
-  printf '%s' "$prompt" | claude --dangerously-skip-permissions -p
+  log_info "Invoking Claude: /$COMMAND $ARGS"
+  claude --dangerously-skip-permissions "/$COMMAND $ARGS"
 }
 
 # --- Codex functions ---

@@ -109,6 +109,14 @@ jobs:
           esac
           echo "✅ Mapped ${{ inputs.scan_type }} → ai-board.$(grep command <<< "$(cat $GITHUB_OUTPUT)" | cut -d= -f2)"
 
+      - name: Setup ai-board commands and skills
+        run: |
+          mkdir -p target/.claude
+          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
+          ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
+          echo "✅ ai-board commands linked to target/.claude/commands"
+          echo "✅ ai-board skills linked to target/.claude/skills"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
