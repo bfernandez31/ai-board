@@ -13,7 +13,7 @@ ARGS="$*"
 # --- Logging helpers ---
 
 log_info() {
-  echo "ℹ️  [run-agent] $*"
+  echo "ℹ️  [run-agent] $*" >&2
 }
 
 log_error() {
