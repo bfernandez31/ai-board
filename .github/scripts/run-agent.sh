@@ -94,7 +94,7 @@ ${ARGS}"
   fi
 
   log_info "Invoking Claude with command file: $command_file"
-  claude --dangerously-skip-permissions -p "$prompt"
+  printf '%s' "$prompt" | claude --dangerously-skip-permissions -p
 }
 
 # --- Codex functions ---
