@@ -81,18 +81,22 @@ export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 - **agent**: Editable ONLY in INBOX stage (API enforced; follows same rules as clarificationPolicy)
 - **version**: Always required for optimistic concurrency control
 
-### TransitionTicketSchema
+### TransitionRequestSchema
 
 ```typescript
-export const transitionTicketSchema = z.object({
-  targetStage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']),
+export const StageSchema = z.enum([
+  'INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP', 'CLOSED',
+]);
+
+export const TransitionRequestSchema = z.object({
+  targetStage: StageSchema,
 });
 
-export type TransitionTicketInput = z.infer<typeof transitionTicketSchema>;
+export type TransitionRequest = z.infer<typeof TransitionRequestSchema>;
 ```
 
 **Validation**:
-- **targetStage**: Must be valid Stage enum value
+- **targetStage**: Must be valid Stage enum value (includes CLOSED)
 - Additional business logic validation in API route (sequential progression, job completion)
 
 ### UpdateBranchSchema

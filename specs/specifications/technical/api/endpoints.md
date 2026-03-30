@@ -686,8 +686,7 @@ sequenceDiagram
 
 Fetch ticket branch name.
 
-**Authentication**: Required (session or workflow token)
-**Authorization**: Must be project owner or member (session), OR valid workflow token
+**Authentication**: None (unauthenticated endpoint)
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -698,7 +697,7 @@ Fetch ticket branch name.
 {
   "id": 42,
   "branch": "042-add-login-feature",
-  "ticketKey": "ABC-5"
+  "updatedAt": "2025-01-15T10:35:00.000Z"
 }
 ```
 
@@ -3878,8 +3877,18 @@ Fetch unified activity feed for a project.
       "data": { ... }
     }
   ],
-  "nextCursor": "abc123",
-  "hasMore": true
+  "pagination": {
+    "hasMore": true,
+    "nextCursor": "abc123",
+    "totalCount": 150,
+    "cursorExpired": false
+  },
+  "metadata": {
+    "projectId": 1,
+    "rangeStart": "2024-12-16T10:10:00.000Z",
+    "rangeEnd": "2025-01-15T10:10:00.000Z",
+    "fetchedAt": "2025-01-15T10:10:00.000Z"
+  }
 }
 ```
 
@@ -4054,8 +4063,10 @@ Fetch all VERIFY-stage tickets for a project (workflow-only endpoint).
   "tickets": [
     {
       "id": 42,
-      "ticketKey": "ABC-5",
-      "branch": "042-add-login-feature"
+      "title": "Add login feature",
+      "branch": "042-add-login-feature",
+      "stage": "VERIFY",
+      "updatedAt": "2025-01-15T10:35:00.000Z"
     }
   ]
 }

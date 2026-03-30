@@ -123,8 +123,8 @@ function getProjectId(workerId: number): number {
   pool: 'forks',
   poolOptions: {
     forks: {
-      maxForks: 9, // Match project mapping length
-      minForks: 1,
+      maxForks: isIntegration ? 1 : undefined, // Sequential for integration, unlimited for unit
+      minForks: isIntegration ? 1 : undefined,
     },
   },
 }
