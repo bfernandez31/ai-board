@@ -306,8 +306,7 @@ export default function ConstitutionViewer({
                       ),
                       code: ({ className, children, style: _style, ref: _ref, ...props }) => {
                         const match = /language-(\w+)/.exec(className || '');
-                        const inline = !className;
-                        return !inline && match ? (
+                        return className && match ? (
                           <SyntaxHighlighter
                             language={match[1]}
                             PreTag="div"
