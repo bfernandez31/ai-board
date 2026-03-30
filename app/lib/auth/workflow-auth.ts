@@ -53,6 +53,17 @@ export async function verifyWorkflowToken(
     return false;
   }
 
-  // Compare tokens (constant-time comparison to prevent timing attacks)
-  return token === expectedToken;
+  // Compare tokens using constant-time comparison to prevent timing attacks
+  return constantTimeCompare(token, expectedToken);
+}
+
+function constantTimeCompare(a: string, b: string): boolean {
+  const maxLength = Math.max(a.length, b.length);
+  let result = a.length === b.length ? 0 : 1;
+
+  for (let i = 0; i < maxLength; i++) {
+    result |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+
+  return result === 0;
 }

@@ -21,7 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Octokit } from '@octokit/rest';
 import { ProjectIdSchema } from '@/lib/validations/ticket';
-import { getProjectById } from '@/lib/db/projects';
+import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
 import {
   getDocumentationHistorySchema,
@@ -84,15 +84,8 @@ export async function GET(
 
     const { ticketId: validatedTicketId, docType: validatedDocType } = validationResult.data;
 
-    // Fetch project and verify ownership
-    const project = await getProjectById(projectId);
-    if (!project) {
-      console.error('[docs/history/GET] Project not found:', { projectId });
-      return NextResponse.json(
-        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-        { status: 404 }
-      );
-    }
+    // Verify user has access to this project (owner or member)
+    const project = await verifyProjectAccess(projectId, request);
 
     // Fetch ticket and verify branch exists
     const ticket = await prisma.ticket.findUnique({
@@ -199,6 +192,22 @@ export async function GET(
     return NextResponse.json(response);
   } catch (error: unknown) {
     console.error('[docs/history/GET] Error fetching commit history:', error);
+
+    // Auth errors from verifyProjectAccess
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json(
+          { error: 'Unauthorized: Please sign in', code: 'UNAUTHORIZED' },
+          { status: 401 }
+        );
+      }
+      if (error.message === 'Forbidden' || error.message === 'Project not found') {
+        return NextResponse.json(
+          { error: 'Access denied', code: 'FORBIDDEN' },
+          { status: 403 }
+        );
+      }
+    }
 
     // GitHub API errors
     if ((error as { status?: number }).status === 404) {
