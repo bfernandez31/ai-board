@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The Health Dashboard provides project owners and members with an at-a-glance view of their project's technical health. It aggregates results from up to 6 health modules into a single global score, allows users to trigger on-demand scans, and tracks scan history over time.
+The Health Dashboard provides project owners and members with an at-a-glance view of their project's technical health. It aggregates results from up to 5 health modules into a single global score, allows users to trigger on-demand scans, and tracks scan history over time.
 
 ## Accessing the Health Dashboard
 
@@ -30,13 +30,13 @@ The global score is a weighted average of all contributing modules that have bee
 
 ## Module Cards
 
-Below the hero zone, six module cards are arranged in a 2-column, 3-row grid. Clicking anywhere on a card (except the action button) opens the Scan Detail Drawer for that module.
+Below the hero zone, five module cards are arranged in a 2-column grid. Clicking anywhere on a card (except the action button) opens the Scan Detail Drawer for that module.
 
 | Row | Left | Right |
 |-----|------|-------|
 | 1 | Security | Compliance |
 | 2 | Tests | Quality Gate |
-| 3 | Spec Sync | Last Clean |
+| 3 | Spec Sync | |
 
 On small screens (< `sm` breakpoint), the grid collapses to a single column.
 
@@ -55,15 +55,14 @@ Each card renders one of four states based on the module's scan data:
 
 **Active modules** (Security, Compliance, Tests, Spec Sync) support user-triggered scans. Their cards display an action button and the commit range analyzed.
 
-**Passive modules** (Quality Gate, Last Clean) derive data from existing Job records and display a "passive" label instead of an action button:
+**Passive modules** (Quality Gate) derive data from existing Job records and display a "passive" label instead of an action button:
 - **Quality Gate**: 30-day rolling average of quality scores from COMPLETED verify jobs of FULL-workflow tickets at SHIP stage. Contributes 20% to the global Health Score. The card also shows ticket count, a trend indicator (vs the previous 30-day window), and a threshold distribution (Excellent/Good/Fair/Poor).
-- **Last Clean**: Date and result of the latest COMPLETED cleanup job. Does not contribute to the global score. The card shows a staleness visual state based on elapsed time: OK (< 30 days), warning (30–60 days), alert (> 60 days).
 
 ### Card Content
 
 Each card displays:
 - Module icon and name
-- Score badge: integer 0–100, "OK" (for Last Clean), or "---" (no data)
+- Score badge: integer 0–100 or "---" (no data)
 - Compact summary (e.g., "3 issues found", "All clear", "No scan yet")
 - Commit range (active modules with completed scans): `baseCommit..headCommit`
 - Severity tags (when applicable)
@@ -71,8 +70,6 @@ Each card displays:
 - Action button or "passive" label
 
 **Quality Gate card extras** (when data is available): ticket count (e.g., "5 tickets"), trend indicator arrow (up/down/stable) with numeric delta, and a threshold distribution showing counts per bucket (Excellent ≥ 90, Good ≥ 70, Fair ≥ 50, Poor < 50).
-
-**Last Clean card extras**: staleness visual state (green border/tint for OK, yellow for warning, red for alert); days since last cleanup; file count when available from job output.
 
 **Active module card extras** (when 3 or more completed scans exist): a mini sparkline (~40px height, no axes, labels, or grid) appears below the summary text showing how the module's score has trended across recent scans in chronological order (oldest left, most recent right). The sparkline color matches the module's current score color coding. Modules with fewer than 3 completed scans show no sparkline.
 
@@ -88,7 +85,7 @@ Clicking the action button on an active module card triggers a scan:
 
 **Concurrent scan prevention**: Only one scan per module type per project can run at a time. Attempting to trigger a second scan of the same type while one is running is rejected; the action button remains disabled until the running scan reaches a terminal state.
 
-**No active scans button when passive**: Quality Gate and Last Clean cards never show an action button.
+**No active scans button when passive**: Quality Gate card never shows an action button.
 
 ## Automatic Ticket Creation
 
@@ -113,7 +110,7 @@ Clicking any module card opens a right-side slide-over drawer displaying the ful
 
 ### Drawer Header
 
-The header shows the module icon, module name, a color-coded score badge (matching the card's score color), last scan date, and the commit range analyzed (`baseCommit..headCommit`) for active modules with completed scans. Passive modules (Quality Gate, Last Clean) omit the commit range.
+The header shows the module icon, module name, a color-coded score badge (matching the card's score color), last scan date, and the commit range analyzed (`baseCommit..headCommit`) for active modules with completed scans. The passive module (Quality Gate) omits the commit range.
 
 ### Drawer States
 
@@ -137,7 +134,6 @@ Issues from the latest scan are displayed in groups according to the module's gr
 | Tests | Two categories: "Auto-fixed" and "Non-fixable" |
 | Spec Sync | By sync status (synced / drifted) with drift summary |
 | Quality Gate | Dimension breakdown (Compliance, Bug Detection, Code Comments, Historical Context, Spec Sync) with average scores; threshold distribution; trend chart (score per ticket over time); list of recent SHIP tickets with individual scores |
-| Last Clean | Summary of the latest cleanup (files cleaned, remaining issues, summary text); chronological history of past cleanups (date, file count, summary) |
 
 Each issue entry shows severity/category, description, and affected file with line number when available. Malformed or missing report data renders a fallback message ("Report data unavailable") instead of an error.
 

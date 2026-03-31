@@ -83,8 +83,10 @@ model Project {
 
   user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets              Ticket[]
-  jobs                 Job[]
-  projectMembers       ProjectMember[]
+  members              ProjectMember[]
+  comparisonRecords    ComparisonRecord[]
+  healthScans          HealthScan[]
+  healthScore          HealthScore?
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -115,7 +117,8 @@ model Project {
 
 **Relationships**:
 - Belongs to User (required, cascade delete)
-- One-to-many: Tickets, Jobs, ProjectMembers
+- One-to-many: Tickets, ProjectMembers, ComparisonRecords, HealthScans
+- One-to-one (optional): HealthScore
 
 **Constraints**:
 - Unique key (project identifier for ticket prefixes)
@@ -943,9 +946,6 @@ model HealthScore {
   lastTestsScan       DateTime?
   lastSpecSyncScan    DateTime?
 
-  lastCleanDate    DateTime?
-  lastCleanJobId   Int?
-
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -968,17 +968,6 @@ Equal 20% weighting with proportional redistribution when modules are unscanned.
 
 ---
 
-### Project (health relations)
-
-The existing `Project` model carries two additional relations:
-
-```prisma
-healthScans  HealthScan[]
-healthScore  HealthScore?
-```
-
----
-
 ## Enums
 
 ### HealthScanType
@@ -992,7 +981,7 @@ enum HealthScanType {
 }
 ```
 
-Only the 4 active types above are stored as `HealthScan` records. Quality Gate and Last Clean are derived from existing `Job` records.
+Only the 4 active types above are stored as `HealthScan` records. Quality Gate is a passive module derived from existing `Job` records.
 
 ### HealthScanStatus
 
