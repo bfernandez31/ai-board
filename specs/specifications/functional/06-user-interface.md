@@ -650,6 +650,7 @@ The command palette provides unified keyboard-driven navigation and search acros
 - Dropdown menu triggered by three-dot icon (⋮) in card header
 - Available actions:
   - **Settings**: Navigates to project settings page (Settings icon)
+- The project menu **does not** include a "Clean Project" action. Any prior references to a "Clean Project" option in legacy or feature-specific specs are considered deprecated and must not be implemented in the current UI.
 - Menu positioned to right of project name
 - Click on menu does not trigger card navigation
 
