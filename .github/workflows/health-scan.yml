@@ -40,7 +40,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
+    # PostgreSQL service container for TESTS scan type (idle for other scan types)
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ai_board_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -133,6 +150,80 @@ jobs:
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
+
+      # --- Test infrastructure setup (only for TESTS scan type) ---
+      - name: Install Dependencies
+        if: ${{ inputs.scan_type == 'TESTS' }}
+        working-directory: target
+        run: bun install --frozen-lockfile
+
+      - name: Setup Test Environment
+        if: ${{ inputs.scan_type == 'TESTS' }}
+        working-directory: target
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: |
+          echo "🔧 Setting up test environment for health scan..."
+          ../ai-board/.github/scripts/setup-test-env.sh
+
+      - name: Detect Prisma
+        if: ${{ inputs.scan_type == 'TESTS' }}
+        id: detect-prisma
+        working-directory: target
+        run: |
+          if [ -f "prisma/schema.prisma" ]; then
+            echo "has_prisma=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_prisma=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Prisma Client
+        if: ${{ inputs.scan_type == 'TESTS' && steps.detect-prisma.outputs.has_prisma == 'true' }}
+        working-directory: target
+        run: npx prisma generate
+
+      - name: Apply Database Migrations
+        if: ${{ inputs.scan_type == 'TESTS' && steps.detect-prisma.outputs.has_prisma == 'true' }}
+        working-directory: target
+        run: npx prisma migrate deploy
+
+      - name: Seed Test Database
+        if: ${{ inputs.scan_type == 'TESTS' && steps.detect-prisma.outputs.has_prisma == 'true' }}
+        working-directory: target
+        run: |
+          if [ -f "tests/global-setup.ts" ]; then
+            npx tsx tests/global-setup.ts
+          else
+            echo "ℹ️ No tests/global-setup.ts found, skipping seed"
+          fi
+
+      - name: Get Playwright Version
+        if: ${{ inputs.scan_type == 'TESTS' }}
+        working-directory: target
+        id: playwright-version
+        run: |
+          if [ -f "package.json" ] && node -p "require('./package.json').devDependencies['@playwright/test']" 2>/dev/null; then
+            echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
+            echo "has_playwright=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_playwright=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Cache Playwright Browsers
+        if: ${{ inputs.scan_type == 'TESTS' && steps.playwright-version.outputs.has_playwright == 'true' }}
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: ${{ inputs.scan_type == 'TESTS' && steps.playwright-version.outputs.has_playwright == 'true' && steps.playwright-cache.outputs.cache-hit != 'true' }}
+        working-directory: target
+        run: npx playwright install chromium
 
       # Step 4: Execute scan command (US1 T009, US3 T015, US6 T021)
       - name: Execute Scan Command
