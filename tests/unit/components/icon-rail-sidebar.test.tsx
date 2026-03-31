@@ -15,6 +15,20 @@ vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
 }));
 
+// Mock fetch for project info (specs URL)
+const mockProjectData = {
+  id: 1,
+  name: 'Test Project',
+  githubOwner: 'testowner',
+  githubRepo: 'testrepo',
+};
+
+beforeEach(() => {
+  global.fetch = vi.fn().mockResolvedValue({
+    json: () => Promise.resolve(mockProjectData),
+  });
+});
+
 // Import component AFTER mocks
 import { IconRailSidebar } from '@/components/navigation/icon-rail-sidebar';
 
@@ -100,5 +114,17 @@ describe('IconRailSidebar', () => {
     const nav = screen.getByRole('navigation', { name: 'Project navigation' });
     expect(nav.className).toContain('hidden');
     expect(nav.className).toContain('lg:flex');
+  });
+
+  it('renders Docs external link opening in new tab after project fetch', async () => {
+    renderSidebar();
+
+    const docsLink = await screen.findByRole('link', { name: /docs/i });
+    expect(docsLink).toHaveAttribute(
+      'href',
+      'https://github.com/testowner/testrepo/tree/main/specs/specifications'
+    );
+    expect(docsLink).toHaveAttribute('target', '_blank');
+    expect(docsLink).toHaveAttribute('rel', 'noopener noreferrer');
   });
 });

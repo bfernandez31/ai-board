@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { FileText } from 'lucide-react';
 import { NAVIGATION_ITEMS } from './nav-items';
 import {
   Tooltip,
@@ -15,6 +17,20 @@ interface IconRailSidebarProps {
 
 export function IconRailSidebar({ projectId }: IconRailSidebarProps) {
   const pathname = usePathname();
+  const [specsUrl, setSpecsUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/projects/${projectId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.githubOwner && data.githubRepo) {
+          setSpecsUrl(
+            `https://github.com/${data.githubOwner}/${data.githubRepo}/tree/main/specs/specifications`
+          );
+        }
+      })
+      .catch(() => {});
+  }, [projectId]);
 
   const viewItems = NAVIGATION_ITEMS.filter((item) => item.group === 'views');
   const bottomItems = NAVIGATION_ITEMS.filter((item) => item.group === 'bottom');
@@ -60,6 +76,22 @@ export function IconRailSidebar({ projectId }: IconRailSidebarProps) {
       </div>
 
       <div className="flex flex-col items-center gap-1 border-t pt-2">
+        {specsUrl && (
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <a
+                href={specsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Docs"
+                className="flex items-center justify-center w-10 h-10 rounded-md transition-colors text-muted-foreground hover:aurora-bg-muted hover:text-foreground"
+              >
+                <FileText className="w-5 h-5" />
+              </a>
+            </TooltipTrigger>
+            <TooltipContent side="right">Docs</TooltipContent>
+          </Tooltip>
+        )}
         {bottomItems.map(renderNavItem)}
       </div>
     </nav>

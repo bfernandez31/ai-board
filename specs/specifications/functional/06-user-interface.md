@@ -554,9 +554,10 @@ On desktop viewports (≥1024px), a fixed 48px-wide vertical icon rail provides 
 - **Analytics** (BarChart3 icon) — navigates to `/projects/{projectId}/analytics`
 - **Comparisons** (GitCompare icon) — navigates to `/projects/{projectId}/comparisons`
 - **Health** (HeartPulse icon) — navigates to `/projects/{projectId}/health`
+- **Docs** (FileText icon, anchored to bottom) — opens `https://github.com/{owner}/{repo}/tree/main/specs/specifications` in a new tab (external link)
 - **Settings** (Settings icon, anchored to bottom) — navigates to `/projects/{projectId}/settings`
 
-Board, Activity, Analytics, Comparisons, and Health are grouped at the top with a subtle divider separating them from Settings at the bottom.
+Board, Activity, Analytics, Comparisons, and Health are grouped at the top with a subtle divider separating Docs and Settings at the bottom. The Docs link fetches the project's GitHub owner/repo at mount and is hidden until the data is available.
 
 **Active State**: The currently active page's icon receives a distinct background highlight (`bg-accent`). Active icons also carry `aria-current="page"`.
 
