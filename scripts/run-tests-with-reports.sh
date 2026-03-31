@@ -153,6 +153,11 @@ if [ -z "$INT_ERROR" ]; then
     else
         read INT_PASSED INT_FAILED INT_TOTAL <<< "$(parse_vitest_report "$INTEGRATION_REPORT")"
         echo "Integration tests: $INT_PASSED passed, $INT_FAILED failed (total: $INT_TOTAL)"
+        # Log failed test names for CI debugging
+        if [ "$INT_FAILED" -gt 0 ] && [ -f "$INTEGRATION_REPORT" ]; then
+            echo "Failed integration tests:"
+            jq -r '.testResults[] | select(.status == "failed") | .assertionResults[] | select(.status == "failed") | "  ✗ \(.ancestorTitles | join(" > ")) > \(.title)"' "$INTEGRATION_REPORT" 2>/dev/null || true
+        fi
     fi
     echo ""
 fi
@@ -172,6 +177,11 @@ if [ -z "$E2E_ERROR" ]; then
     else
         read E2E_PASSED E2E_FAILED E2E_TOTAL <<< "$(parse_playwright_report "$E2E_REPORT")"
         echo "E2E tests: $E2E_PASSED passed, $E2E_FAILED failed (total: $E2E_TOTAL)"
+        # Log failed test names for CI debugging
+        if [ "$E2E_FAILED" -gt 0 ] && [ -f "$E2E_REPORT" ]; then
+            echo "Failed E2E tests:"
+            jq -r '[.. | .specs? // empty | .[]? | select(.tests[]?.status == "unexpected") | "  ✗ \(.file): \(.title)"] | .[]' "$E2E_REPORT" 2>/dev/null || true
+        fi
     fi
     echo ""
 fi
