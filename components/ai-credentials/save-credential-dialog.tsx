@@ -32,6 +32,20 @@ interface SaveCredentialDialogProps {
   onSave: (input: UpsertAiCredentialInput) => Promise<void>;
 }
 
+function getInitialCredentialType(
+  credential?: UserAiCredentialSummary | null
+): AiCredentialType {
+  return credential?.credentialType ?? AiCredentialType.ANTHROPIC_API_KEY;
+}
+
+function getSecretPlaceholder(credentialType: AiCredentialType): string {
+  if (credentialType === AiCredentialType.ANTHROPIC_API_KEY) {
+    return 'sk-ant-...';
+  }
+
+  return 'anthropic-oauth-...';
+}
+
 export function SaveCredentialDialog({
   credential,
   isSaving = false,
@@ -40,7 +54,7 @@ export function SaveCredentialDialog({
   const [open, setOpen] = React.useState(false);
   const [label, setLabel] = React.useState(credential?.label ?? '');
   const [credentialType, setCredentialType] = React.useState<AiCredentialType>(
-    credential?.credentialType ?? AiCredentialType.ANTHROPIC_API_KEY
+    getInitialCredentialType(credential)
   );
   const [secret, setSecret] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
@@ -48,6 +62,13 @@ export function SaveCredentialDialog({
   const localValidation = secret
     ? validateAnthropicSecretFormat(credentialType, secret)
     : { valid: false, error: null };
+
+  function resetForm(): void {
+    setLabel(credential?.label ?? '');
+    setCredentialType(getInitialCredentialType(credential));
+    setSecret('');
+    setError(null);
+  }
 
   async function handleSubmit() {
     if (!label.trim()) {
@@ -75,10 +96,7 @@ export function SaveCredentialDialog({
     setOpen(nextOpen);
 
     if (nextOpen) {
-      setLabel(credential?.label ?? '');
-      setCredentialType(credential?.credentialType ?? AiCredentialType.ANTHROPIC_API_KEY);
-      setSecret('');
-      setError(null);
+      resetForm();
     }
   }
 
@@ -144,11 +162,7 @@ export function SaveCredentialDialog({
                 setSecret(event.target.value);
                 setError(null);
               }}
-              placeholder={
-                credentialType === AiCredentialType.ANTHROPIC_API_KEY
-                  ? 'sk-ant-...'
-                  : 'anthropic-oauth-...'
-              }
+              placeholder={getSecretPlaceholder(credentialType)}
             />
             {!localValidation.valid && secret ? (
               <p className="text-sm text-destructive">{localValidation.error}</p>

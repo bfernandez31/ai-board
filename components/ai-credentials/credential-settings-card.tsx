@@ -1,24 +1,32 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, type JSX } from 'react';
 import { AlertCircle, Loader2, Trash2 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { CredentialList } from '@/components/ai-credentials/credential-list';
 import { DeleteCredentialDialog } from '@/components/ai-credentials/delete-credential-dialog';
 import { SaveCredentialDialog } from '@/components/ai-credentials/save-credential-dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AiCredentialProvider, type UpsertAiCredentialInput } from '@/lib/ai-credentials/types';
 import {
   useAiCredentials,
   useDeleteAiCredential,
   useSaveAiCredential,
 } from '@/lib/hooks/mutations/useAiCredentials';
-import type { UpsertAiCredentialInput } from '@/lib/ai-credentials/types';
 
-export function AiCredentialSettingsCard() {
+function getErrorMessage(error: unknown, fallbackMessage: string): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
+
+export function AiCredentialSettingsCard(): JSX.Element {
   const { data, isLoading, error } = useAiCredentials();
   const saveCredential = useSaveAiCredential();
-  const deleteCredential = useDeleteAiCredential('ANTHROPIC');
+  const deleteCredential = useDeleteAiCredential(AiCredentialProvider.ANTHROPIC);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -29,7 +37,7 @@ export function AiCredentialSettingsCard() {
       setSaveError(null);
       await saveCredential.mutateAsync(input);
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Failed to save credential');
+      setSaveError(getErrorMessage(error, 'Failed to save credential'));
       throw error;
     }
   }
@@ -40,7 +48,7 @@ export function AiCredentialSettingsCard() {
       await deleteCredential.mutateAsync();
       setDeleteDialogOpen(false);
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Failed to delete credential');
+      setSaveError(getErrorMessage(error, 'Failed to delete credential'));
     }
   }
 

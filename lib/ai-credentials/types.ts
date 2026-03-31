@@ -98,3 +98,15 @@ export const AI_CREDENTIAL_PROVIDERS: AiCredentialProviderMetadata[] = [
     ],
   },
 ];
+
+export function parseAiCredentialProvider(
+  provider: string
+): AiCredentialProvider | null {
+  const normalizedProvider = provider.toLowerCase();
+
+  if (normalizedProvider === 'anthropic') {
+    return AiCredentialProvider.ANTHROPIC;
+  }
+
+  return null;
+}

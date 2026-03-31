@@ -1,27 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AiCredentialProvider, AiCredentialReadinessStatus } from '@prisma/client';
+import { AiCredentialReadinessStatus } from '@prisma/client';
 import { ZodError } from 'zod';
 import { getCurrentUser } from '@/lib/db/users';
 import { deleteUserAiCredential, saveUserAiCredential } from '@/lib/ai-credentials/service';
+import { parseAiCredentialProvider } from '@/lib/ai-credentials/types';
 import { upsertAiCredentialSchema } from '@/lib/validations/ai-credentials';
 
 interface RouteContext {
   params: Promise<{ provider: string }>;
 }
 
-function parseProvider(provider: string): AiCredentialProvider | null {
-  if (provider.toLowerCase() === 'anthropic') {
-    return AiCredentialProvider.ANTHROPIC;
-  }
-
-  return null;
-}
-
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
     const user = await getCurrentUser(request);
     const params = await context.params;
-    const provider = parseProvider(params.provider);
+    const provider = parseAiCredentialProvider(params.provider);
 
     if (!provider) {
       return NextResponse.json(
@@ -87,7 +80,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const user = await getCurrentUser(request);
     const params = await context.params;
-    const provider = parseProvider(params.provider);
+    const provider = parseAiCredentialProvider(params.provider);
 
     if (!provider) {
       return NextResponse.json(

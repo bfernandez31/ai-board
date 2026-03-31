@@ -1,10 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import { queryKeys } from '@/app/lib/query-keys';
 import type {
   DeleteAiCredentialResponse,
   UpsertAiCredentialInput,
   UserAiCredentialSummary,
 } from '@/lib/ai-credentials/types';
+import { AiCredentialProvider } from '@/lib/ai-credentials/types';
 
 interface ListAiCredentialsResponse {
   credentials: UserAiCredentialSummary[];
@@ -16,7 +23,19 @@ interface ApiError {
   message?: string | null;
 }
 
-export function useAiCredentials() {
+async function parseAiCredentialResponse<T>(
+  response: Response,
+  fallbackMessage: string
+): Promise<T> {
+  if (!response.ok) {
+    const errorData = (await response.json()) as ApiError;
+    throw new Error(errorData.message || errorData.error || fallbackMessage);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export function useAiCredentials(): UseQueryResult<ListAiCredentialsResponse, Error> {
   return useQuery<ListAiCredentialsResponse, Error>({
     queryKey: queryKeys.aiCredentials.all,
     queryFn: async () => {
@@ -24,17 +43,19 @@ export function useAiCredentials() {
         credentials: 'include',
       });
 
-      if (!response.ok) {
-        const errorData = (await response.json()) as ApiError;
-        throw new Error(errorData.error || 'Failed to fetch AI credentials');
-      }
-
-      return response.json();
+      return parseAiCredentialResponse<ListAiCredentialsResponse>(
+        response,
+        'Failed to fetch AI credentials'
+      );
     },
   });
 }
 
-export function useSaveAiCredential() {
+export function useSaveAiCredential(): UseMutationResult<
+  { credential: UserAiCredentialSummary },
+  Error,
+  UpsertAiCredentialInput
+> {
   const queryClient = useQueryClient();
 
   return useMutation<
@@ -55,12 +76,10 @@ export function useSaveAiCredential() {
         }
       );
 
-      if (!response.ok) {
-        const errorData = (await response.json()) as ApiError;
-        throw new Error(errorData.message || errorData.error || 'Failed to save AI credential');
-      }
-
-      return response.json();
+      return parseAiCredentialResponse<{ credential: UserAiCredentialSummary }>(
+        response,
+        'Failed to save AI credential'
+      );
     },
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.aiCredentials.all });
@@ -71,7 +90,9 @@ export function useSaveAiCredential() {
   });
 }
 
-export function useDeleteAiCredential(provider: string) {
+export function useDeleteAiCredential(
+  provider: AiCredentialProvider
+): UseMutationResult<DeleteAiCredentialResponse, Error, void> {
   const queryClient = useQueryClient();
 
   return useMutation<DeleteAiCredentialResponse, Error, void>({
@@ -84,12 +105,10 @@ export function useDeleteAiCredential(provider: string) {
         }
       );
 
-      if (!response.ok) {
-        const errorData = (await response.json()) as ApiError;
-        throw new Error(errorData.message || errorData.error || 'Failed to delete AI credential');
-      }
-
-      return response.json();
+      return parseAiCredentialResponse<DeleteAiCredentialResponse>(
+        response,
+        'Failed to delete AI credential'
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.aiCredentials.all });

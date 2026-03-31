@@ -1,22 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AiCredentialProvider } from '@prisma/client';
 import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
 import {
   getProjectOwnerCredentialEligibility,
   resolveProjectOwnerWorkflowCredential,
 } from '@/lib/ai-credentials/workflow';
+import { parseAiCredentialProvider } from '@/lib/ai-credentials/types';
 import { workflowCredentialRequestSchema } from '@/lib/validations/ai-credentials';
 
 interface RouteContext {
   params: Promise<{ projectId: string; provider: string }>;
-}
-
-function parseProvider(provider: string): AiCredentialProvider | null {
-  if (provider.toLowerCase() === 'anthropic') {
-    return AiCredentialProvider.ANTHROPIC;
-  }
-
-  return null;
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
@@ -31,7 +23,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const params = await context.params;
     const projectId = Number(params.projectId);
-    const provider = parseProvider(params.provider);
+    const provider = parseAiCredentialProvider(params.provider);
 
     if (!Number.isInteger(projectId) || projectId <= 0 || !provider) {
       return NextResponse.json(
