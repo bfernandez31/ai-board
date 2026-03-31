@@ -215,8 +215,8 @@ export const StageColumn = React.memo(
         data-testid={`column-${stage}`}
         data-column={stage}
         data-stage={stage}
-        className={`flex flex-col h-full min-w-[280px] rounded-lg border overflow-hidden shadow-[0_0_24px_rgba(0,0,0,0.35)] transition-all duration-300 relative ${stageConfig.bgColor} ${stageConfig.borderColor} ${dropZoneStyle || ''} ${
-          isOver ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-black' : ''
+        className={`flex flex-col h-full min-w-[280px] rounded-lg border overflow-hidden shadow-[0_0_24px_hsl(var(--ctp-crust)/0.5)] transition-all duration-300 relative ${stageConfig.bgColor} ${stageConfig.borderColor} ${dropZoneStyle || ''} ${
+          isOver ? 'ring-2 ring-ring ring-offset-2 ring-offset-background' : ''
         }`}
       >
         {/* Column Header */}
@@ -232,7 +232,7 @@ export const StageColumn = React.memo(
             </h2>
             {/* Ticket count badge */}
             <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-[0.58rem] font-semibold shadow-[0_0_8px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/10 ${stageConfig.badgeBgColor} ${stageConfig.badgeTextColor}`}
+              className={`flex h-6 w-6 items-center justify-center rounded-full text-[0.58rem] font-semibold shadow-[0_0_8px_hsl(var(--ctp-crust)/0.5)] ring-1 ring-inset ring-border/20 ${stageConfig.badgeBgColor} ${stageConfig.badgeTextColor}`}
             >
               {ticketCount}
             </span>
@@ -290,8 +290,8 @@ export const StageColumn = React.memo(
         {/* Blocked by Job Overlay */}
         {isBlockedByJob && (
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-50 pointer-events-none">
-            <Ban className="w-16 h-16 text-red-400 mb-3" strokeWidth={2.5} />
-            <p className="text-red-300 font-semibold text-sm">Workflow in progress</p>
+            <Ban className="w-16 h-16 text-destructive mb-3" strokeWidth={2.5} />
+            <p className="text-destructive/80 font-semibold text-sm">Workflow in progress</p>
             <p className="text-muted-foreground text-xs mt-1">Wait for job completion</p>
           </div>
         )}

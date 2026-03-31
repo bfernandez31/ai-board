@@ -968,10 +968,10 @@ export function Board({
       if (dragSource === Stage.INBOX) {
         if (stage === Stage.SPECIFY) {
           // Normal workflow - blue
-          return 'border-4 border-dashed border-blue-500 bg-blue-500/10';
+          return 'border-4 border-dashed border-primary bg-primary/10';
         } else if (stage === Stage.BUILD) {
           // Quick-impl - green
-          return 'border-4 border-dashed border-green-500 bg-green-500/10';
+          return 'border-4 border-dashed border-ctp-green bg-ctp-green/10';
         } else {
           // Invalid - gray with reduced opacity
           return 'opacity-50 cursor-not-allowed';
@@ -982,16 +982,16 @@ export function Board({
       if (dragSource === Stage.VERIFY) {
         if (stage === Stage.SHIP) {
           // Normal ship - green
-          return 'border-4 border-dashed border-green-500 bg-green-500/10';
+          return 'border-4 border-dashed border-ctp-green bg-ctp-green/10';
         } else if (stage === Stage.CLOSED) {
           // Close zone - red
-          return 'border-4 border-dashed border-red-500 bg-red-500/10';
+          return 'border-4 border-dashed border-destructive bg-destructive/10';
         }
       }
 
       // Normal drag: Check if valid transition
       if (isValidTransition(dragSource, stage)) {
-        return 'border-4 border-dashed border-blue-500 bg-blue-500/10';
+        return 'border-4 border-dashed border-primary bg-primary/10';
       } else {
         return 'opacity-50 cursor-not-allowed';
       }
@@ -1072,7 +1072,7 @@ export function Board({
         <div className="w-full h-full relative">
           {/* Drop Zone Visual Feedback - Full Board */}
           {isAnyColumnOver && (
-            <div className="absolute inset-0 border-4 border-dashed border-blue-500 pointer-events-none bg-blue-500/5 z-10" />
+            <div className="absolute inset-0 border-4 border-dashed border-primary pointer-events-none bg-primary/5 z-10" />
           )}
 
           {/* Board Grid - Restored original styling */}
