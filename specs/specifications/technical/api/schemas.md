@@ -1355,3 +1355,67 @@ const mutation = useMutation({
   }
 });
 ```
+
+## Credential Schemas
+
+### UpsertCredentialSchema
+
+Used by `POST /api/credentials` to validate create/replace requests.
+
+```typescript
+import { z } from 'zod';
+import { AiProvider, CredentialType } from '@prisma/client';
+
+const upsertCredentialSchema = z.object({
+  provider: z.nativeEnum(AiProvider),
+  credentialType: z.nativeEnum(CredentialType),
+  label: z.string().min(1, 'Label is required').max(100, 'Label must be 100 characters or less'),
+  apiKey: z.string().min(1, 'API key is required'),
+});
+
+type UpsertCredentialInput = z.infer<typeof upsertCredentialSchema>;
+```
+
+**Validation Rules**:
+- `provider`: Required, `AiProvider` enum (`ANTHROPIC`)
+- `credentialType`: Required, `CredentialType` enum (`API_KEY` | `OAUTH_TOKEN`)
+- `label`: Required, 1-100 characters
+- `apiKey`: Required, non-empty — additional format validation applied after Zod via `validateKeyFormat()`
+
+**Format Validation** (`lib/credentials/validation.ts` — applied after Zod):
+
+| Provider | Type | Rule |
+|----------|------|-------|
+| `ANTHROPIC` | `API_KEY` | Must start with `sk-ant-`, minimum 20 characters |
+| `ANTHROPIC` | `OAUTH_TOKEN` | Minimum 10 characters |
+
+### ValidateCredentialSchema
+
+Used by `POST /api/credentials/validate` to test a key without storing it.
+
+```typescript
+const validateCredentialSchema = z.object({
+  provider: z.nativeEnum(AiProvider),
+  credentialType: z.nativeEnum(CredentialType),
+  apiKey: z.string().min(1, 'API key is required'),
+});
+```
+
+**Validation Rules**:
+- Same as `UpsertCredentialSchema` minus `label`
+- The key is checked by format then tested against the live provider API
+
+### WorkflowCredentialSchema
+
+Used by `POST /api/workflows/credentials` (workflow-token auth only).
+
+```typescript
+const workflowCredentialSchema = z.object({
+  projectId: z.number().int().positive(),
+  provider: z.nativeEnum(AiProvider),
+});
+```
+
+**Validation Rules**:
+- `projectId`: Required, positive integer — used to look up the project owner
+- `provider`: Required, `AiProvider` enum (`ANTHROPIC`)
