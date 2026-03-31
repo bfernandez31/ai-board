@@ -140,7 +140,10 @@ fi
 # ── Step 3: Integration Tests ──────────────────────────────────────
 if [ -z "$INT_ERROR" ]; then
     echo "[2/3] Running integration tests..."
-    VITEST_INTEGRATION=1 bun vitest run --reporter=json --outputFile="$INTEGRATION_REPORT" 2>/tmp/test-int-stderr.txt
+    # Override WORKFLOW_API_TOKEN so tests use the same token as the server we started
+    VITEST_INTEGRATION=1 \
+    WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only \
+    bun vitest run --reporter=json --outputFile="$INTEGRATION_REPORT" 2>/tmp/test-int-stderr.txt
     INT_EXIT=$?
     INT_RAN=true
 
@@ -157,7 +160,9 @@ fi
 # ── Step 4: E2E Tests ──────────────────────────────────────────────
 if [ -z "$E2E_ERROR" ]; then
     echo "[3/3] Running E2E tests..."
-    bun playwright test --reporter=json > "$E2E_REPORT" 2>/tmp/test-e2e-stderr.txt
+    # Unset CI so Playwright reuses the server we already started
+    # (playwright.config.ts: reuseExistingServer: !process.env.CI)
+    CI= bun playwright test --reporter=json > "$E2E_REPORT" 2>/tmp/test-e2e-stderr.txt
     E2E_EXIT=$?
     E2E_RAN=true
 
