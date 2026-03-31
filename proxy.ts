@@ -28,6 +28,7 @@ const PUBLIC_PATTERNS = [
   /^\/api\/projects\/\d+\/tickets\/\d+\/jobs$/,
   /^\/api\/projects\/\d+\/health\/scans\/\d+\/status$/,
   /^\/api\/projects\/\d+\/tickets$/,
+  /^\/api\/internal\/credentials$/,
 ]
 
 function hasAuthSessionCookie(request: NextRequest): boolean {
