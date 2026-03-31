@@ -32,7 +32,8 @@ describe('Scan History GET Endpoint', () => {
           scanType,
           status: 'COMPLETED',
           score: 50 + i * 5,
-          completedAt: new Date(Date.now() - i * 86400000),
+          createdAt: new Date(Date.now() - (count - 1 - i) * 1000),
+          completedAt: new Date(Date.now() - (count - 1 - i) * 86400000),
         },
       });
     }

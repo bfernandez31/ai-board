@@ -55,7 +55,7 @@ describe('Ticket Jobs API', () => {
     // Get the job ID
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
-      include: { jobs: { orderBy: { createdAt: 'desc' } } },
+      include: { jobs: { orderBy: { id: 'desc' } } },
     });
     jobId = ticket!.jobs[0]!.id;
   });

@@ -57,7 +57,7 @@ describe('Jobs Status', () => {
     // Get the job ID
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
-      include: { jobs: { orderBy: { createdAt: 'desc' } } },
+      include: { jobs: { orderBy: { id: 'desc' } } },
     });
     jobId = ticket!.jobs[0]!.id;
   });
@@ -332,7 +332,7 @@ describe('Jobs Status', () => {
       // Get all jobs for the ticket
       const ticket = await prisma.ticket.findUnique({
         where: { id: ticketId },
-        include: { jobs: { orderBy: { createdAt: 'asc' } } },
+        include: { jobs: { orderBy: { id: 'asc' } } },
       });
 
       expect(ticket?.jobs.length).toBe(2);

@@ -46,7 +46,7 @@ describe('Ticket Transitions', () => {
       // Verify database state
       const updatedTicket = await prisma.ticket.findUnique({
         where: { id: ticketId },
-        include: { jobs: true },
+        include: { jobs: { orderBy: { createdAt: 'desc' } } },
       });
 
       expect(updatedTicket?.stage).toBe('SPECIFY');
@@ -131,7 +131,7 @@ describe('Ticket Transitions', () => {
       // Verify job was created with quick-impl command
       const ticket = await prisma.ticket.findUnique({
         where: { id: ticketId },
-        include: { jobs: true },
+        include: { jobs: { orderBy: { createdAt: 'desc' } } },
       });
 
       expect(ticket?.workflowType).toBe('QUICK');

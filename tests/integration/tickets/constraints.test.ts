@@ -27,6 +27,13 @@ describe('Database Constraints', () => {
     ctx = await getTestContext();
     await ctx.cleanup();
     createdProjectIds.length = 0;
+
+    await prisma.project.deleteMany({
+      where: {
+        name: { startsWith: '[e2e]' },
+        id: { gt: 10 },
+      },
+    });
   });
 
   afterEach(async () => {
@@ -259,7 +266,7 @@ describe('Database Constraints', () => {
         name: '[e2e] Unique Repo Test 1',
         githubOwner: `unique-owner-${id}`,
         githubRepo: `unique-repo-${id}`,
-        key: 'UN1',
+        key: uniqueKey(),
       });
       createdProjectIds.push(project1.id);
 
@@ -267,7 +274,7 @@ describe('Database Constraints', () => {
         name: '[e2e] Unique Repo Test 2',
         githubOwner: `unique-owner-${id}`, // Same owner
         githubRepo: `unique-repo-${id}`, // Same repo
-        key: 'UN2',
+        key: uniqueKey(),
       });
 
       await expect(createPromise).rejects.toThrow();
