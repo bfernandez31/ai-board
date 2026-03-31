@@ -74,7 +74,7 @@ Each card displays:
 
 **Last Clean card extras**: staleness visual state (green border/tint for OK, yellow for warning, red for alert); days since last cleanup; file count when available from job output.
 
-**Active module card extras** (when 3 or more completed scans exist): a mini sparkline (~40px height, no axes, labels, or grid) appears below the summary text showing how the module's score has trended across recent scans. The sparkline color matches the module's current score color coding. Modules with fewer than 3 completed scans show no sparkline.
+**Active module card extras** (when 3 or more completed scans exist): a mini sparkline (~40px height, no axes, labels, or grid) appears below the summary text showing how the module's score has trended across recent scans in chronological order (oldest left, most recent right). The sparkline color matches the module's current score color coding. Modules with fewer than 3 completed scans show no sparkline.
 
 ## Triggering a Scan
 
@@ -147,7 +147,7 @@ For active modules, the drawer lists any tickets that were generated from the sc
 
 ### Score Trend Section (Active Modules)
 
-For active modules with at least one completed scan, the drawer displays an area chart showing the module's score evolution over time. The chart includes date and score (0–100) axes and interactive hover tooltips showing the scan date and score at each data point. It uses the same visual pattern as the Quality Gate score chart. Trend data is fetched once on dashboard mount and is not re-fetched during the 2-second scan polling cycle.
+For active modules with at least one completed scan, the drawer displays an area chart showing the module's score evolution over time. The X-axis displays dates in chronological order (oldest on the left, most recent on the right). The chart includes date and score (0–100) axes and interactive hover tooltips showing the scan date and score at each data point. It uses the same visual pattern as the Quality Gate score chart. Trend data is fetched once on dashboard mount and is not re-fetched during the 2-second scan polling cycle. The API returns the most recent N scans sorted chronologically (ascending) for chart display.
 
 ### History Section
 

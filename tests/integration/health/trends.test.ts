@@ -107,6 +107,26 @@ describe('Health Trends GET Endpoint', () => {
     expect(data.trends.SECURITY).toHaveLength(3);
   });
 
+  it('returns trend data in chronological order (oldest first)', async () => {
+    const now = Date.now();
+    for (let i = 0; i < 3; i++) {
+      await prisma.healthScan.create({
+        data: {
+          projectId: ctx.projectId,
+          scanType: 'SECURITY',
+          status: 'COMPLETED',
+          score: 70 + i * 10,
+          completedAt: new Date(now - (2 - i) * 86400000), // oldest first: 70, 80, 90
+        },
+      });
+    }
+
+    const response = await makeRequest(ctx.projectId);
+    const data = await response.json();
+    const scores = data.trends.SECURITY.map((p: { score: number }) => p.score);
+    expect(scores).toEqual([70, 80, 90]);
+  });
+
   it('returns empty arrays for modules with no qualifying scans', async () => {
     const response = await makeRequest(ctx.projectId);
     expect(response.status).toBe(200);

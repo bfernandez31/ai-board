@@ -62,7 +62,7 @@ export async function GET(
         (results[index] ?? []).map((scan) => ({
           date: (scan.completedAt ?? new Date()).toISOString(),
           score: scan.score ?? 0,
-        })),
+        })).reverse(),
       ])
     );
 
