@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 // Mock pathname - MUST be before component import
@@ -17,14 +18,13 @@ vi.mock('next/navigation', () => ({
 
 // Mock fetch for project info (specs URL)
 const mockProjectData = {
-  id: 1,
-  name: 'Test Project',
   githubOwner: 'testowner',
   githubRepo: 'testrepo',
 };
 
 beforeEach(() => {
   global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
     json: () => Promise.resolve(mockProjectData),
   });
 });
@@ -32,11 +32,20 @@ beforeEach(() => {
 // Import component AFTER mocks
 import { IconRailSidebar } from '@/components/navigation/icon-rail-sidebar';
 
+let queryClient: QueryClient;
+
 function renderSidebar() {
+  queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+    },
+  });
   return render(
-    <TooltipProvider>
-      <IconRailSidebar projectId={1} />
-    </TooltipProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <IconRailSidebar projectId={1} />
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 

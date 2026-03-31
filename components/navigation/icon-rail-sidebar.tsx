@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { FileText } from 'lucide-react';
+import { queryKeys } from '@/app/lib/query-keys';
 import { NAVIGATION_ITEMS } from './nav-items';
 import {
   Tooltip,
@@ -11,26 +12,32 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+interface ProjectResponse {
+  githubOwner?: string;
+  githubRepo?: string;
+}
+
 interface IconRailSidebarProps {
   projectId: number;
 }
 
 export function IconRailSidebar({ projectId }: IconRailSidebarProps) {
   const pathname = usePathname();
-  const [specsUrl, setSpecsUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch(`/api/projects/${projectId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.githubOwner && data.githubRepo) {
-          setSpecsUrl(
-            `https://github.com/${data.githubOwner}/${data.githubRepo}/tree/main/specs/specifications`
-          );
-        }
-      })
-      .catch(() => {});
-  }, [projectId]);
+  const { data: project } = useQuery({
+    queryKey: queryKeys.projects.detail(projectId),
+    queryFn: async (): Promise<ProjectResponse> => {
+      const res = await fetch(`/api/projects/${projectId}`);
+      if (!res.ok) throw new Error(`Failed to fetch project: ${res.status}`);
+      return res.json() as Promise<ProjectResponse>;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const specsUrl =
+    project?.githubOwner && project?.githubRepo
+      ? `https://github.com/${project.githubOwner}/${project.githubRepo}/tree/main/specs/specifications`
+      : null;
 
   const viewItems = NAVIGATION_ITEMS.filter((item) => item.group === 'views');
   const bottomItems = NAVIGATION_ITEMS.filter((item) => item.group === 'bottom');
