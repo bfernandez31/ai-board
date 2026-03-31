@@ -120,24 +120,6 @@ describe('parseScanReport', () => {
     });
   });
 
-  describe('LAST_CLEAN', () => {
-    it('parses valid last clean report', () => {
-      const report = parseScanReport('LAST_CLEAN', JSON.stringify({
-        type: 'LAST_CLEAN',
-        filesCleaned: 12,
-        remainingIssues: 3,
-        summary: 'Removed unused imports across 12 files.',
-      }));
-
-      expect(report).not.toBeNull();
-      expect(report!.type).toBe('LAST_CLEAN');
-      if (report!.type === 'LAST_CLEAN') {
-        expect(report!.filesCleaned).toBe(12);
-        expect(report!.remainingIssues).toBe(3);
-      }
-    });
-  });
-
   describe('error handling', () => {
     it('returns null for null input', () => {
       expect(parseScanReport('SECURITY', null)).toBeNull();

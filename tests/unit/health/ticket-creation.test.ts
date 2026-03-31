@@ -139,6 +139,55 @@ describe('groupIssuesIntoTickets', () => {
       };
       expect(groupIssuesIntoTickets('COMPLIANCE', report)).toEqual([]);
     });
+
+    it('groups Dead Code issues into a single ticket', () => {
+      const report: ComplianceReport = {
+        type: 'COMPLIANCE',
+        issues: [
+          { id: 'dead-code-1', severity: 'low', description: 'Unused export: helperFn', file: 'lib/old.ts', line: 42, category: 'Dead Code' },
+          { id: 'dead-code-2', severity: 'low', description: 'Orphaned file with no imports', file: 'lib/unused.ts', category: 'Dead Code' },
+          { id: 'dead-code-3', severity: 'low', description: 'Unused export: oldParser', file: 'lib/parsers.ts', line: 10, category: 'Dead Code' },
+        ],
+        generatedTickets: [],
+      };
+
+      const tickets = groupIssuesIntoTickets('COMPLIANCE', report);
+      expect(tickets).toHaveLength(1);
+      expect(tickets[0].title).toContain('3 violations');
+      expect(tickets[0].title).toContain('Dead Code');
+    });
+
+    it('groups Temp Files issues into a single ticket', () => {
+      const report: ComplianceReport = {
+        type: 'COMPLIANCE',
+        issues: [
+          { id: 'temp-file-1', severity: 'low', description: 'Debug documentation file', file: 'docs/troubleshooting/fix-auth.md', category: 'Temp Files' },
+          { id: 'temp-file-2', severity: 'low', description: 'One-shot fix script', file: 'scripts/fix-migration.sh', category: 'Temp Files' },
+        ],
+        generatedTickets: [],
+      };
+
+      const tickets = groupIssuesIntoTickets('COMPLIANCE', report);
+      expect(tickets).toHaveLength(1);
+      expect(tickets[0].title).toContain('2 violations');
+      expect(tickets[0].title).toContain('Temp Files');
+    });
+
+    it('creates separate tickets for Dead Code and Temp Files categories', () => {
+      const report: ComplianceReport = {
+        type: 'COMPLIANCE',
+        issues: [
+          { id: 'dead-1', severity: 'low', description: 'Unused export', file: 'lib/old.ts', category: 'Dead Code' },
+          { id: 'temp-1', severity: 'low', description: 'Debug doc', file: 'docs/troubleshooting/fix.md', category: 'Temp Files' },
+        ],
+        generatedTickets: [],
+      };
+
+      const tickets = groupIssuesIntoTickets('COMPLIANCE', report);
+      expect(tickets).toHaveLength(2);
+      expect(tickets.find(t => t.title.includes('Dead Code'))).toBeDefined();
+      expect(tickets.find(t => t.title.includes('Temp Files'))).toBeDefined();
+    });
   });
 
   // --- TESTS: One ticket per unfixable test ---

@@ -6,7 +6,6 @@ import {
   TestTubeDiagonal,
   FileCheck,
   Award,
-  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import { getScoreColor } from '@/lib/quality-score';
@@ -19,7 +18,6 @@ const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
   TESTS: TestTubeDiagonal,
   SPEC_SYNC: FileCheck,
   QUALITY_GATE: Award,
-  LAST_CLEAN: Sparkles,
 };
 
 interface DrawerHeaderProps {
@@ -35,7 +33,7 @@ export function DrawerHeader({ moduleType, moduleStatus, scan, isLoading }: Draw
   const score = scan?.score ?? moduleStatus.score;
   const scoreColors = score !== null ? getScoreColor(score) : null;
 
-  const scanDate = scan?.completedAt ?? moduleStatus.lastScanDate ?? moduleStatus.lastCleanDate;
+  const scanDate = scan?.completedAt ?? moduleStatus.lastScanDate;
   const baseCommit = scan?.baseCommit;
   const headCommit = scan?.headCommit;
 

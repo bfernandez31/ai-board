@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, CheckCircle, XCircle, FileText, BarChart3, Sparkles } from 'lucide-react';
+import { AlertTriangle, CheckCircle, XCircle, FileText, BarChart3 } from 'lucide-react';
 import type {
   ScanReport,
   SecurityReport,
@@ -8,7 +8,6 @@ import type {
   TestsReport,
   SpecSyncReport,
   QualityGateReport,
-  LastCleanReport,
   ReportIssue,
 } from '@/lib/health/types';
 
@@ -28,8 +27,6 @@ export function DrawerIssues({ report }: DrawerIssuesProps) {
       return <SpecSyncIssues report={report} />;
     case 'QUALITY_GATE':
       return <QualityGateIssues report={report} />;
-    case 'LAST_CLEAN':
-      return <LastCleanIssues report={report} />;
   }
 }
 
@@ -223,29 +220,6 @@ function QualityGateIssues({ report }: { report: QualityGateReport }) {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-// --- Last Clean: summary card ---
-
-function LastCleanIssues({ report }: { report: LastCleanReport }) {
-  return (
-    <div className="space-y-3">
-      <h4 className="text-sm font-medium text-foreground">Last Cleanup Summary</h4>
-      <div className="aurora-glass rounded-md p-3 space-y-2">
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5 text-ctp-green" />
-          <span className="text-xs text-foreground">{report.filesCleaned} files cleaned</span>
-        </div>
-        {report.remainingIssues > 0 && (
-          <div className="flex items-center gap-1.5">
-            <AlertTriangle className="h-3.5 w-3.5 text-ctp-yellow" />
-            <span className="text-xs text-foreground">{report.remainingIssues} remaining issues</span>
-          </div>
-        )}
-        <p className="text-xs text-muted-foreground">{report.summary}</p>
-      </div>
     </div>
   );
 }

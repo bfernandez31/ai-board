@@ -20,7 +20,6 @@ function makeModules(overrides: Partial<HealthResponse['modules']> = {}): Health
     tests: { ...defaultModule },
     specSync: { ...defaultModule },
     qualityGate: { ...defaultModule, passive: true, summary: 'No verify jobs yet' },
-    lastClean: { ...defaultModule, passive: true, summary: 'No cleanup yet' },
     ...overrides,
   };
 }

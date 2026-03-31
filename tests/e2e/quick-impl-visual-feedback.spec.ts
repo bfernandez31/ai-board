@@ -24,12 +24,6 @@ test.describe('Quick-Impl Visual Feedback', () => {
     // Reset ticket counter
     nextTicketNumber = 1;
 
-    // Clear any existing cleanup lock
-    await prisma.project.update({
-      where: { id: projectId },
-      data: { activeCleanupJobId: null },
-    });
-
     // Create test ticket in INBOX
     const projectKey = getProjectKey(projectId);
     const ticketNumber = nextTicketNumber++;

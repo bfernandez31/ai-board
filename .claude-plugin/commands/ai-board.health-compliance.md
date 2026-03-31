@@ -58,6 +58,41 @@ For each mapped principle-pattern pair:
 2. Record each violation with file, line, principle, and description
 3. Apply the False Positive Filtering rules below before including
 
+### Phase 4 — Dead Code Detection
+
+Detect unused exports and orphaned files that have not been modified in the last 30 days:
+
+1. **Find candidate dead code**:
+   - Search for exported functions, classes, and constants across the codebase
+   - For each export, check if it is imported anywhere else in the codebase
+   - If an export is not imported anywhere, it is a candidate
+2. **Apply the 30-day age gate**:
+   - For each candidate, check the last modification date: `git log -1 --format=%aI -- <file>`
+   - Only flag files whose last modification is **older than 30 days**
+   - Files modified within the last 30 days are excluded (too recent to be confidently dead)
+3. **Record issues** with `category: "Dead Code"`, `severity: "low"`
+
+**Hard exclusions for dead code detection**:
+- Entry points (pages, API routes, middleware, layout files)
+- Files re-exported from barrel/index files
+- Type-only exports (interfaces, type aliases)
+- Configuration files and constants used at runtime
+- Test files and test utilities
+
+### Phase 5 — Temp File Detection
+
+Detect leftover debug documentation and one-shot scripts that should be cleaned up:
+
+**Patterns to detect**:
+- `docs/troubleshooting/**` — debug documentation directory
+- `*SUMMARY*.md`, `*FIX*.md`, `*GUIDE*.md` (case-insensitive) — excluding `CLAUDE.md` and files under `specs/`
+- `scripts/fix-*.sh` — one-shot fix scripts
+- `scripts/check-*.ts` — temporary check scripts
+- `scripts/*-migration*.sh` — migration helper scripts
+- `scripts/validate-*.sh` — temporary validation scripts
+
+**Record issues** with `category: "Temp Files"`, `severity: "low"`
+
 ## Severity Mapping
 
 Severity is determined by the **impact category** of the violated principle:

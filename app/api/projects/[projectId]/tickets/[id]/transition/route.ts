@@ -87,42 +87,6 @@ export async function POST(
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     }
 
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { activeCleanupJobId: true },
-    });
-
-    if (project?.activeCleanupJobId) {
-      const cleanupJob = await prisma.job.findUnique({
-        where: { id: project.activeCleanupJobId },
-        select: { status: true, ticket: { select: { ticketKey: true } } },
-      });
-
-      if (cleanupJob && ['PENDING', 'RUNNING'].includes(cleanupJob.status)) {
-        return NextResponse.json(
-          {
-            error: 'Project cleanup is in progress. Stage transitions are temporarily disabled.',
-            code: 'CLEANUP_IN_PROGRESS',
-            details: {
-              activeCleanupJobId: project.activeCleanupJobId,
-              jobStatus: cleanupJob.status,
-              ticketKey: cleanupJob.ticket.ticketKey,
-              message: 'You can still update ticket descriptions, documents, and preview deployments. Transitions will be re-enabled when cleanup completes.',
-            },
-          },
-          { status: 423 }
-        );
-      }
-
-      if (cleanupJob && ['COMPLETED', 'FAILED', 'CANCELLED'].includes(cleanupJob.status)) {
-        await prisma.project.update({
-          where: { id: projectId },
-          data: { activeCleanupJobId: null },
-        });
-        console.log(`[Transition] Cleared orphaned cleanup lock for project ${projectId}`);
-      }
-    }
-
     const isRollbackToInboxAttempt = ticket.stage === 'BUILD' && targetStage === 'INBOX';
     const isRollbackToPlanAttempt = ticket.stage === 'VERIFY' && targetStage === 'PLAN';
 

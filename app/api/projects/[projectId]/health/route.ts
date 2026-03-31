@@ -3,7 +3,6 @@ import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
 import { calculateGlobalScore, getScoreLabel, getScoreColorConfig } from '@/lib/health/score-calculator';
 import { getQualityGateData } from '@/lib/health/quality-gate';
-import { computeStalenessStatus, parseCleanupOutput } from '@/lib/health/last-clean';
 import type { HealthResponse, HealthModuleStatus } from '@/lib/health/types';
 
 function getScoreDisplayLabel(score: number): string {
@@ -120,25 +119,6 @@ export async function GET(
       ? new Date(firstTicket.completedAt)
       : null;
 
-    // Derive Last Clean from latest completed cleanup job
-    let lastCleanDate: Date | null = healthScore?.lastCleanDate ?? null;
-    let lastCleanJobId: number | null = healthScore?.lastCleanJobId ?? null;
-
-    const latestCleanJob = await prisma.job.findFirst({
-      where: {
-        ticket: { projectId },
-        command: 'clean',
-        status: 'COMPLETED',
-      },
-      orderBy: { completedAt: 'desc' },
-      select: { id: true, completedAt: true, logs: true },
-    });
-
-    if (latestCleanJob) {
-      lastCleanDate = latestCleanJob.completedAt;
-      lastCleanJobId = latestCleanJob.id;
-    }
-
     // Build module statuses
     const securityScan = scanStatusMap.get('SECURITY');
     const complianceScan = scanStatusMap.get('COMPLIANCE');
@@ -183,25 +163,6 @@ export async function GET(
         trendDelta: qualityGateData.trendDelta,
         distribution: qualityGateData.distribution,
       },
-      lastClean: (() => {
-        const daysSinceClean = lastCleanDate
-          ? Math.floor((Date.now() - lastCleanDate.getTime()) / (1000 * 60 * 60 * 24))
-          : null;
-        return {
-          score: null,
-          label: lastCleanDate ? 'OK' : null,
-          lastCleanDate: lastCleanDate?.toISOString() ?? null,
-          passive: true,
-          jobId: lastCleanJobId,
-          summary: daysSinceClean !== null
-            ? `${daysSinceClean} days ago`
-            : 'No cleanup yet',
-          stalenessStatus: computeStalenessStatus(daysSinceClean),
-          filesCleaned: latestCleanJob?.logs
-            ? parseCleanupOutput(latestCleanJob.logs).filesCleaned
-            : null,
-        };
-      })(),
     };
 
     // Calculate global score

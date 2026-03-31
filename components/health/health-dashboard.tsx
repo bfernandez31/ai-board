@@ -5,7 +5,6 @@ import { HealthHero } from './health-hero';
 import { HealthModuleCard } from './health-module-card';
 import { ScanDetailDrawer } from './scan-detail-drawer';
 import { QualityGateDrawer } from './drawer/quality-gate-drawer';
-import { LastCleanDrawer } from './drawer/last-clean-drawer';
 import { useHealthPolling } from '@/app/lib/hooks/useHealthPolling';
 import { useTriggerScan } from '@/app/lib/hooks/mutations/useTriggerScan';
 import { ACTIVE_SCAN_TYPES } from '@/lib/health/types';
@@ -22,7 +21,6 @@ const MODULE_GRID: { type: HealthModuleType; key: keyof NonNullable<ReturnType<t
   { type: 'TESTS', key: 'tests' },
   { type: 'QUALITY_GATE', key: 'qualityGate' },
   { type: 'SPEC_SYNC', key: 'specSync' },
-  { type: 'LAST_CLEAN', key: 'lastClean' },
 ];
 
 const ACTIVE_SCAN_SET = new Set<string>(ACTIVE_SCAN_TYPES);
@@ -82,7 +80,7 @@ export function HealthDashboard({ projectId }: HealthDashboardProps) {
         ))}
       </div>
 
-      {selectedModule && selectedModule !== 'QUALITY_GATE' && selectedModule !== 'LAST_CLEAN' && (
+      {selectedModule && selectedModule !== 'QUALITY_GATE' && (
         <ScanDetailDrawer
           projectId={projectId}
           moduleType={selectedModule}
@@ -105,11 +103,6 @@ export function HealthDashboard({ projectId }: HealthDashboardProps) {
         onClose={() => setSelectedModule(null)}
       />
 
-      <LastCleanDrawer
-        projectId={projectId}
-        isOpen={selectedModule === 'LAST_CLEAN'}
-        onClose={() => setSelectedModule(null)}
-      />
     </div>
   );
 }

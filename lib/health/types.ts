@@ -1,7 +1,7 @@
 import type { HealthScanType, HealthScanStatus } from '@prisma/client';
 
 /** All scan types including passive (non-scannable) modules */
-export type HealthModuleType = HealthScanType | 'QUALITY_GATE' | 'LAST_CLEAN';
+export type HealthModuleType = HealthScanType | 'QUALITY_GATE';
 
 /** Active scan types that can be triggered */
 export const ACTIVE_SCAN_TYPES: HealthScanType[] = [
@@ -11,14 +11,13 @@ export const ACTIVE_SCAN_TYPES: HealthScanType[] = [
   'SPEC_SYNC',
 ];
 
-/** All 6 module types for display */
+/** All 5 module types for display */
 export const ALL_MODULE_TYPES: HealthModuleType[] = [
   'SECURITY',
   'COMPLIANCE',
   'TESTS',
   'QUALITY_GATE',
   'SPEC_SYNC',
-  'LAST_CLEAN',
 ];
 
 /** Module display metadata */
@@ -34,7 +33,6 @@ export const MODULE_METADATA: Record<HealthModuleType, ModuleMetadata> = {
   TESTS: { key: 'TESTS', label: 'Tests', passive: false },
   SPEC_SYNC: { key: 'SPEC_SYNC', label: 'Spec Sync', passive: false },
   QUALITY_GATE: { key: 'QUALITY_GATE', label: 'Quality Gate', passive: true },
-  LAST_CLEAN: { key: 'LAST_CLEAN', label: 'Last Clean', passive: true },
 };
 
 /** Threshold distribution for Quality Gate */
@@ -50,7 +48,7 @@ export interface HealthModuleStatus {
   score: number | null;
   label: string | null;
   lastScanDate?: string | null;
-  lastCleanDate?: string | null;
+
   scanStatus?: string | null;
   issuesFound?: number | null;
   passive?: boolean;
@@ -60,8 +58,6 @@ export interface HealthModuleStatus {
   trend?: 'up' | 'down' | 'stable' | null;
   trendDelta?: number | null;
   distribution?: ThresholdDistribution;
-  stalenessStatus?: 'ok' | 'warning' | 'alert' | null;
-  filesCleaned?: number | null;
 }
 
 /** Active scan info for polling */
@@ -83,7 +79,6 @@ export interface HealthResponse {
     tests: HealthModuleStatus;
     specSync: HealthModuleStatus;
     qualityGate: HealthModuleStatus;
-    lastClean: HealthModuleStatus;
   };
   lastFullScanDate: string | null;
   activeScans: ActiveScanInfo[];
@@ -194,19 +189,10 @@ export interface QualityGateReport {
   recentTickets: QualityTicket[];
 }
 
-/** Last Clean (passive): cleanup summary */
-export interface LastCleanReport {
-  type: 'LAST_CLEAN';
-  filesCleaned: number;
-  remainingIssues: number;
-  summary: string;
-}
-
 /** Discriminated union of all report types */
 export type ScanReport =
   | SecurityReport
   | ComplianceReport
   | TestsReport
   | SpecSyncReport
-  | QualityGateReport
-  | LastCleanReport;
+  | QualityGateReport;

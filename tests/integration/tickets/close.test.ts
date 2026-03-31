@@ -157,53 +157,6 @@ describe('Close Ticket', () => {
       expect(response.data.code).toBe('ACTIVE_JOBS');
     });
 
-    it('should return 423 when closing during cleanup lock', async () => {
-      const ticketId = await createVerifyTicket();
-
-      // Create a cleanup job and lock the project
-      const cleanupTicket = await prisma.ticket.create({
-        data: {
-          projectId: ctx.projectId,
-          ticketNumber: 9999,
-          ticketKey: 'CLEANUP-9999',
-          title: '[e2e] Cleanup ticket',
-          description: 'Cleanup',
-          stage: 'BUILD',
-          workflowType: 'CLEAN',
-        },
-      });
-
-      const cleanupJob = await prisma.job.create({
-        data: {
-          ticketId: cleanupTicket.id,
-          projectId: ctx.projectId,
-          command: 'clean',
-          status: 'RUNNING',
-          updatedAt: new Date(),
-        },
-      });
-
-      await prisma.project.update({
-        where: { id: ctx.projectId },
-        data: { activeCleanupJobId: cleanupJob.id },
-      });
-
-      const response = await ctx.api.post<{ error: string; code: string }>(
-        `/api/projects/${ctx.projectId}/tickets/${ticketId}/close`,
-        {}
-      );
-
-      expect(response.status).toBe(423);
-      expect(response.data.error).toContain('cleanup is in progress');
-      expect(response.data.code).toBe('CLEANUP_LOCKED');
-
-      // Cleanup: release the lock
-      await prisma.project.update({
-        where: { id: ctx.projectId },
-        data: { activeCleanupJobId: null },
-      });
-    });
-
     it('should return 404 for non-existent ticket', async () => {
       const response = await ctx.api.post(
         `/api/projects/${ctx.projectId}/tickets/999999/close`,

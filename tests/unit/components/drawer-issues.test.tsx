@@ -8,7 +8,6 @@ import type {
   TestsReport,
   SpecSyncReport,
   QualityGateReport,
-  LastCleanReport,
 } from '@/lib/health/types';
 
 describe('DrawerIssues', () => {
@@ -131,20 +130,4 @@ describe('DrawerIssues', () => {
     });
   });
 
-  describe('Last Clean renderer', () => {
-    it('renders cleanup summary card', () => {
-      const report: LastCleanReport = {
-        type: 'LAST_CLEAN',
-        filesCleaned: 12,
-        remainingIssues: 3,
-        summary: 'Removed unused imports across 12 files.',
-      };
-
-      renderWithProviders(<DrawerIssues report={report} />);
-      expect(screen.getByText('Last Cleanup Summary')).toBeInTheDocument();
-      expect(screen.getByText('12 files cleaned')).toBeInTheDocument();
-      expect(screen.getByText('3 remaining issues')).toBeInTheDocument();
-      expect(screen.getByText('Removed unused imports across 12 files.')).toBeInTheDocument();
-    });
-  });
 });

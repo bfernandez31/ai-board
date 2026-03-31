@@ -38,7 +38,6 @@ describe('Health Score GET Endpoint', () => {
     expect(data.modules.tests.score).toBeNull();
     expect(data.modules.specSync.score).toBeNull();
     expect(data.modules.qualityGate.passive).toBe(true);
-    expect(data.modules.lastClean.passive).toBe(true);
     expect(data.activeScans).toEqual([]);
     expect(data.lastFullScanDate).toBeNull();
   });

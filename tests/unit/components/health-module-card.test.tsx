@@ -32,13 +32,13 @@ const failed: HealthModuleStatus = {
 };
 
 describe('HealthModuleCard', () => {
-  it('renders "never scanned" state with "Run first scan" button', () => {
+  it('renders "never scanned" state with "Run scan" button', () => {
     renderWithProviders(
       <HealthModuleCard moduleType="SECURITY" module={neverScanned} />
     );
     expect(screen.getByText('Security')).toBeInTheDocument();
     expect(screen.getByText('No scan yet')).toBeInTheDocument();
-    expect(screen.getByText('Run first scan')).toBeInTheDocument();
+    expect(screen.getByText('Run scan')).toBeInTheDocument();
     expect(screen.getAllByText('---').length).toBeGreaterThanOrEqual(1);
   });
 
@@ -53,13 +53,13 @@ describe('HealthModuleCard', () => {
     expect(scanningBtn).toBeDisabled();
   });
 
-  it('renders "completed" state with score and "Re-run scan" button', () => {
+  it('renders "completed" state with score and "Re-run" button', () => {
     renderWithProviders(
       <HealthModuleCard moduleType="SECURITY" module={completed} />
     );
     expect(screen.getByText('85')).toBeInTheDocument();
     expect(screen.getByText('3 issues found')).toBeInTheDocument();
-    expect(screen.getByText('Re-run scan')).toBeInTheDocument();
+    expect(screen.getByText('Re-run')).toBeInTheDocument();
   });
 
   it('renders "failed" state with "Retry" button', () => {
@@ -96,7 +96,7 @@ describe('HealthModuleCard', () => {
         onTriggerScan={onTriggerScan}
       />
     );
-    const button = screen.getByText('Run first scan');
+    const button = screen.getByText('Run scan');
     button.click();
     expect(onTriggerScan).toHaveBeenCalledOnce();
   });

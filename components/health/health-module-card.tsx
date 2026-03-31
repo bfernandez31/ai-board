@@ -6,7 +6,6 @@ import {
   TestTubeDiagonal,
   FileCheck,
   Award,
-  Sparkles,
   Loader2,
   AlertTriangle,
   Play,
@@ -27,7 +26,6 @@ const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
   TESTS: TestTubeDiagonal,
   SPEC_SYNC: FileCheck,
   QUALITY_GATE: Award,
-  LAST_CLEAN: Sparkles,
 };
 
 type CardState = 'never_scanned' | 'scanning' | 'completed' | 'failed';
@@ -67,9 +65,6 @@ export function HealthModuleCard({
       className={cn(
         'aurora-glass rounded-lg p-4 space-y-3',
         onClick && 'aurora-glass-hover cursor-pointer',
-        module.stalenessStatus === 'warning' && 'border-l-2 border-ctp-yellow',
-        module.stalenessStatus === 'alert' && 'border-l-2 border-ctp-red',
-        module.stalenessStatus === 'ok' && 'border-l-2 border-ctp-green',
       )}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
@@ -122,17 +117,6 @@ export function HealthModuleCard({
       {module.lastScanDate && (
         <p className="text-[11px] text-muted-foreground">
           Last scan: {new Date(module.lastScanDate).toLocaleDateString()}
-        </p>
-      )}
-      {module.lastCleanDate && (
-        <p className="text-[11px] text-muted-foreground">
-          Last cleanup: {new Date(module.lastCleanDate).toLocaleDateString()}
-        </p>
-      )}
-
-      {module.filesCleaned !== undefined && module.filesCleaned !== null && (
-        <p className="text-[11px] text-muted-foreground">
-          {module.filesCleaned} file{module.filesCleaned !== 1 ? 's' : ''} cleaned
         </p>
       )}
 

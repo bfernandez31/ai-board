@@ -4,7 +4,6 @@ import { verifyTicketAccess } from '@/lib/db/auth-helpers';
 import { Stage } from '@/lib/stage-transitions';
 import { closePRsForBranch } from '@/lib/github/close-prs';
 import { Octokit } from '@octokit/rest';
-import { isProjectLocked } from '@/lib/transition-lock';
 
 /**
  * POST /api/projects/[projectId]/tickets/[id]/close
@@ -30,18 +29,6 @@ export async function POST(
 
     // Authorization - verifies user has access to ticket
     await verifyTicketAccess(ticketId);
-
-    // Check cleanup lock
-    const lockActive = await isProjectLocked(projId);
-    if (lockActive) {
-      return NextResponse.json(
-        {
-          error: 'Project cleanup is in progress. Please wait for it to complete.',
-          code: 'CLEANUP_LOCKED',
-        },
-        { status: 423 }
-      );
-    }
 
     // Get ticket with project and jobs
     const ticket = await prisma.ticket.findUnique({

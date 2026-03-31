@@ -77,7 +77,6 @@ model Project {
   updatedAt           DateTime
   clarificationPolicy ClarificationPolicy @default(AUTO)
   defaultAgent        Agent               @default(CLAUDE)
-  activeCleanupJobId  Int?
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
   members             ProjectMember[]
@@ -89,7 +88,6 @@ model Project {
   @@index([githubOwner, githubRepo])
   @@index([userId])
   @@index([key])
-  @@index([activeCleanupJobId])
 }
 
 model ProjectMember {
@@ -512,10 +510,6 @@ model HealthScore {
   lastComplianceScan DateTime?
   lastTestsScan      DateTime?
   lastSpecSyncScan   DateTime?
-
-  // Last Clean info (derived from Job model)
-  lastCleanDate      DateTime?
-  lastCleanJobId     Int?
 
   // Timestamps
   createdAt          DateTime  @default(now())

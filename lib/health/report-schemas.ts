@@ -65,20 +65,12 @@ const qualityGateReportSchema = z.object({
   recentTickets: z.array(qualityTicketSchema),
 });
 
-const lastCleanReportSchema = z.object({
-  type: z.literal('LAST_CLEAN'),
-  filesCleaned: z.number(),
-  remainingIssues: z.number(),
-  summary: z.string(),
-});
-
 const scanReportSchema = z.discriminatedUnion('type', [
   securityReportSchema,
   complianceReportSchema,
   testsReportSchema,
   specSyncReportSchema,
   qualityGateReportSchema,
-  lastCleanReportSchema,
 ]);
 
 /**
