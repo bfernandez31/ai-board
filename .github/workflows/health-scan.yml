@@ -190,15 +190,9 @@ jobs:
         working-directory: target
         run: npx prisma migrate deploy
 
-      - name: Seed Test Database
-        if: ${{ inputs.scan_type == 'TESTS' && steps.detect-prisma.outputs.has_prisma == 'true' }}
-        working-directory: target
-        run: |
-          if [ -f "tests/global-setup.ts" ]; then
-            npx tsx tests/global-setup.ts
-          else
-            echo "ℹ️ No tests/global-setup.ts found, skipping seed"
-          fi
+      # NOTE: No explicit DB seed step — vitest and Playwright each run their
+      # own global-setup automatically. Running it here too caused double-seeding
+      # race conditions that broke integration tests in CI.
 
       - name: Get Playwright Version
         if: ${{ inputs.scan_type == 'TESTS' }}
