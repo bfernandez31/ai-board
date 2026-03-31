@@ -1090,7 +1090,6 @@ export function Board({
               // Exception for rollback: PLAN is not blocked when dragging VERIFY ticket (AIB-75)
               const isRollbackToPlan = dragSource === Stage.VERIFY && stage === Stage.PLAN;
               const isBlocked = isDragging && draggedTicketHasJob && !isRollbackToInbox && !isRollbackToPlan;
-              const blockReason = 'job' as const;
 
               return (
                 <StageColumn
@@ -1103,7 +1102,6 @@ export function Board({
                   getTicketJobs={getTicketJobs}
                   dropZoneStyle={getDropZoneStyle(stage)}
                   isBlockedByJob={isBlocked}
-                  blockReason={blockReason}
                   activePreviewTicket={activePreviewTicket}
                   activeDeploymentTicket={activeDeploymentTicket}
                 />

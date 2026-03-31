@@ -27,6 +27,9 @@ export function DrawerIssues({ report }: DrawerIssuesProps) {
       return <SpecSyncIssues report={report} />;
     case 'QUALITY_GATE':
       return <QualityGateIssues report={report} />;
+    default:
+      report satisfies never;
+      return null;
   }
 }
 

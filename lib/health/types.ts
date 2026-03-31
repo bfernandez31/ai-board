@@ -48,7 +48,6 @@ export interface HealthModuleStatus {
   score: number | null;
   label: string | null;
   lastScanDate?: string | null;
-
   scanStatus?: string | null;
   issuesFound?: number | null;
   passive?: boolean;
