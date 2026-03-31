@@ -58,7 +58,7 @@
 - **Trade-offs**:
   1. Server-side validation adds latency on save but prevents storing invalid credentials
   2. Provider API validation may fail if the provider is temporarily unavailable — handle gracefully
-- **Reviewer Notes**: Define behavior when provider validation endpoint is unreachable (suggest: allow save with warning, revalidate on next workflow launch)
+- **Reviewer Notes**: When provider validation endpoint is unreachable during save, the system blocks with HTTP 422 (`PROVIDER_UNREACHABLE`) and a clear error message — no credential is stored. This is the safest posture under CONSERVATIVE policy: storing an unvalidated key could lead to silent workflow failures downstream. Users retry when the provider is back. (Note: the separate `/test` endpoint may return `isValid: null` for unreachable providers on *already-stored* credentials — that is a different flow.)
 
 ## User Scenarios & Testing
 
@@ -116,7 +116,7 @@ A user can view, test, replace, or delete their existing credential from the set
 ### Edge Cases
 
 - What happens when a credential is deleted while a workflow is already running? The running workflow completes with the key it already fetched; only subsequent launches are blocked.
-- What happens when the Anthropic validation endpoint is temporarily unavailable during key submission? The system displays a clear error distinguishing "invalid key" from "provider unreachable" and allows retry.
+- What happens when the Anthropic validation endpoint is temporarily unavailable during key submission? The system blocks the save with HTTP 422, displays a clear error distinguishing "invalid key" (`INVALID_KEY`) from "provider unreachable" (`PROVIDER_UNREACHABLE`), and allows the user to retry.
 - What happens when a project owner's credential expires or is revoked at the provider level? The workflow fails with an explicit error; the owner is notified to update their credential.
 - What happens when a user who owns multiple projects deletes their credential? All projects they own are affected — workflows for all their projects are blocked until a new credential is added.
 
