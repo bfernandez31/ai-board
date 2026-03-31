@@ -1,8 +1,9 @@
-import { PrismaClient, Stage, JobStatus, Ticket, Project, Agent } from '@prisma/client';
+import { PrismaClient, Stage, JobStatus, Ticket, Project, Agent, AiProvider } from '@prisma/client';
 import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
+import { getApiCredential } from '@/lib/db/api-credentials';
 
 const prisma = new PrismaClient();
 
@@ -21,7 +22,7 @@ export interface TransitionResult {
   success: boolean;
   jobId?: number;
   error?: string;
-  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB';
+  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB' | 'MISSING_CREDENTIAL';
   details?: {
     currentStage?: Stage;
     targetStage?: Stage;
@@ -186,6 +187,18 @@ export async function handleTicketTransition(
           updatedAt: new Date(),
         },
       });
+    }
+
+    // BYOK check: verify the project owner has a configured AI credential
+    const ownerCredential = await getApiCredential(ticket.project.userId, AiProvider.ANTHROPIC);
+    if (!ownerCredential) {
+      // Clean up the job we just created since the workflow can't run
+      await prisma.job.delete({ where: { id: job.id } }).catch(() => {});
+      return {
+        success: false,
+        error: 'No AI credential configured. The project owner must add an Anthropic API key in Settings > AI Credentials before workflows can run.',
+        errorCode: 'MISSING_CREDENTIAL',
+      };
     }
 
     const githubToken = process.env.GITHUB_TOKEN;

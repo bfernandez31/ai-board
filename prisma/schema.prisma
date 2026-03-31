@@ -168,6 +168,7 @@ model User {
   notificationsCreated  Notification[]        @relation("NotificationActor")
   pushSubscriptions     PushSubscription[]
   personalAccessTokens  PersonalAccessToken[]
+  apiCredentials        ApiCredential[]
   subscription          Subscription?
 
   @@index([email])
@@ -436,6 +437,34 @@ model ComplianceAssessment {
 
   @@unique([comparisonParticipantId, principleKey])
   @@index([comparisonParticipantId, displayOrder])
+}
+
+enum AiProvider {
+  ANTHROPIC
+}
+
+enum CredentialType {
+  API_KEY
+  OAUTH_TOKEN
+}
+
+model ApiCredential {
+  id             Int            @id @default(autoincrement())
+  userId         String
+  provider       AiProvider
+  credentialType CredentialType
+  label          String         @db.VarChar(100)
+  encryptedKey   String         @db.VarChar(500)
+  iv             String         @db.VarChar(32)
+  authTag        String         @db.VarChar(32)
+  preview        String         @db.VarChar(4)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
 }
 
 enum HealthScanType {
