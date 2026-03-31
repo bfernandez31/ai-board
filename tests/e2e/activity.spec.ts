@@ -24,7 +24,7 @@ test.describe('Activity Feed Navigation', () => {
   test('should navigate to activity page from header icon', async ({ page, projectId }) => {
     // Wait for the activity link — requires projectInfo to load (async fetch in header)
     // projectInfo only sets when API returns githubOwner + githubRepo
-    const activityLink = page.locator('a[aria-label="View project activity"]').first();
+    const activityLink = page.locator('a[aria-label="Activity"]').first();
     await activityLink.waitFor({ state: 'visible', timeout: 15000 });
     await activityLink.click();
 
@@ -41,7 +41,7 @@ test.describe('Activity Feed Navigation', () => {
     await page.waitForLoadState('networkidle');
 
     // Check for the activity feed container
-    const feedContainer = page.locator('.bg-zinc-900\\/50');
+    const feedContainer = page.locator('.aurora-bg-subtle');
     await expect(feedContainer).toBeVisible();
   });
 
@@ -109,7 +109,7 @@ test.describe('Activity Feed Mobile', () => {
     // Wait for the Sheet to open, then find activity link INSIDE the sheet content
     const sheetContent = page.locator('[data-state="open"][role="dialog"]');
     await sheetContent.waitFor({ state: 'visible', timeout: 5000 });
-    const activityLink = sheetContent.locator('a[aria-label="View project activity"]');
+    const activityLink = sheetContent.locator('a', { hasText: 'Activity' });
     await activityLink.click();
 
     // Verify navigation

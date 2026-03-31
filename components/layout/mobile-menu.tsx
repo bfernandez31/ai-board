@@ -60,6 +60,7 @@ export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
                     <Link
                       key={item.id}
                       href={`/projects/${projectId}${item.href}`}
+                      aria-label={item.label}
                       className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
                       onClick={() => setOpen(false)}
                     >

@@ -174,15 +174,21 @@ test.describe('First-Time User Creation', () => {
 
 test.describe('Returning User Updates', () => {
   const testEmail = 'returning-user@e2e.local';
-  const testUserId = 'test-user-returning-' + Date.now();
+  let testUserId: string;
 
   test.beforeEach(async ({ projectId }) => {
-    // Create existing user
-    await prisma.user.upsert({
+    // Clean up stale data from previous runs
+    const staleProjects = await prisma.project.findMany({ where: { key: 'RET' } });
+    if (staleProjects.length > 0) {
+      await prisma.project.deleteMany({ where: { key: 'RET' } });
+    }
+
+    // Upsert user — reuse existing or create fresh
+    const user = await prisma.user.upsert({
       where: { email: testEmail },
       update: {},
       create: {
-        id: testUserId,
+        id: `test-user-returning-${Date.now()}`,
         email: testEmail,
         name: 'Old Name',
         emailVerified: new Date(),
@@ -190,6 +196,7 @@ test.describe('Returning User Updates', () => {
         updatedAt: new Date(),
       },
     });
+    testUserId = user.id;
   });
 
   test.afterEach(async () => {

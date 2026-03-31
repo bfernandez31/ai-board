@@ -80,14 +80,14 @@ test.describe('Quick-Impl Visual Feedback', () => {
     // Check SPECIFY column - should have blue border (normal workflow)
     const specifyColumn = page.locator('[data-testid="column-SPECIFY"]');
     const specifyClasses = await specifyColumn.getAttribute('class');
-    expect(specifyClasses).toContain('border-blue-500');
-    expect(specifyClasses).toContain('bg-blue-500/10');
+    expect(specifyClasses).toContain('border-primary');
+    expect(specifyClasses).toContain('bg-primary/10');
 
     // Check BUILD column - should have green border (quick-impl)
     const buildColumn = page.locator('[data-testid="column-BUILD"]');
     const buildClasses = await buildColumn.getAttribute('class');
-    expect(buildClasses).toContain('border-green-500');
-    expect(buildClasses).toContain('bg-green-500/10');
+    expect(buildClasses).toContain('border-ctp-green');
+    expect(buildClasses).toContain('bg-ctp-green/10');
 
     // Check PLAN column - should be grayed out (invalid)
     const planColumn = page.locator('[data-testid="column-PLAN"]');
@@ -147,7 +147,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
     // Verify styling is applied during drag
     const buildColumn = page.locator('[data-testid="column-BUILD"]');
     let buildClasses = await buildColumn.getAttribute('class');
-    expect(buildClasses).toContain('border-green-500');
+    expect(buildClasses).toContain('border-ctp-green');
 
     // End drag with pointerup
     await page.mouse.up();
@@ -155,8 +155,8 @@ test.describe('Quick-Impl Visual Feedback', () => {
 
     // Verify styling is removed after drag
     buildClasses = await buildColumn.getAttribute('class');
-    expect(buildClasses).not.toContain('border-green-500');
-    expect(buildClasses).not.toContain('bg-green-500/10');
+    expect(buildClasses).not.toContain('border-ctp-green');
+    expect(buildClasses).not.toContain('bg-ctp-green/10');
   });
 
   /**
@@ -207,8 +207,8 @@ test.describe('Quick-Impl Visual Feedback', () => {
     // Check PLAN column - should have blue border (valid transition)
     const planColumn = page.locator('[data-testid="column-PLAN"]');
     const planClasses = await planColumn.getAttribute('class');
-    expect(planClasses).toContain('border-blue-500');
-    expect(planClasses).toContain('bg-blue-500/10');
+    expect(planClasses).toContain('border-primary');
+    expect(planClasses).toContain('bg-primary/10');
 
     // Check BUILD column - should be grayed out (invalid, skipping PLAN)
     const buildColumn = page.locator('[data-testid="column-BUILD"]');
