@@ -3475,16 +3475,6 @@ Returns the aggregate health score and per-module status for a project.
         "fair": 1,
         "poor": 0
       }
-    },
-    "lastClean": {
-      "score": null,
-      "label": "OK",
-      "lastCleanDate": "2026-03-20T12:00:00Z",
-      "passive": true,
-      "jobId": 456,
-      "summary": "8 days ago",
-      "stalenessStatus": "ok",
-      "filesCleaned": 12
     }
   },
   "lastFullScanDate": "2026-03-27T14:30:00Z",

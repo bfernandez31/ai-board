@@ -1143,9 +1143,9 @@ Response types returned by the passive module detail endpoint (`/health/quality-
 
 ```typescript
 interface QualityGateDimension {
-  name: string;         // "Compliance" | "Bug Detection" | "Code Comments" | "Historical Context" | "Spec Sync"
-  averageScore: number; // 0–100
-  weight: number;       // 0.00–1.00 (Spec Sync = 0.00)
+  name: string;              // "Compliance" | "Bug Detection" | "Code Comments" | "Historical Context" | "Spec Sync"
+  averageScore: number | null; // 0–100 or null when no data for dimension
+  weight: number;            // 0.00–1.00 (Spec Sync = 0.00)
 }
 
 interface QualityGateTicket {
@@ -1169,19 +1169,100 @@ interface QualityGateDetails {
 
 **Hooks**: `useQualityGateDetails(projectId)` — TanStack Query, fetches on drawer open, no polling.
 
-### HealthModuleStatus Extensions
+### HealthModuleStatus
 
-The `HealthModuleStatus` interface in `lib/health/types.ts` is extended with optional fields populated by the passive modules:
+The `HealthModuleStatus` interface in `lib/health/types.ts` defines the per-module shape returned in the `modules` object of `GET /api/projects/[projectId]/health`:
 
 ```typescript
 interface HealthModuleStatus {
-  // ... existing fields ...
-  ticketCount?: number;
-  trend?: 'up' | 'down' | 'stable' | null;
-  trendDelta?: number | null;
-  distribution?: { excellent: number; good: number; fair: number; poor: number };
+  score: number | null;
+  label: string | null;
+  lastScanDate?: string | null;      // ISO 8601 — last completed scan date
+  scanStatus?: string | null;        // current scan status (e.g., "COMPLETED", "RUNNING")
+  issuesFound?: number | null;       // issues found in latest scan
+  passive?: boolean;                 // true for Quality Gate (no user-triggered scans)
+  jobId?: number | null;             // associated job ID (passive modules)
+  summary: string;                   // human-readable summary (e.g., "3 issues found", "No scan yet")
+  ticketCount?: number;              // Quality Gate: number of qualifying tickets
+  trend?: 'up' | 'down' | 'stable' | null;  // Quality Gate: trend vs previous period
+  trendDelta?: number | null;        // Quality Gate: numeric score delta
+  distribution?: { excellent: number; good: number; fair: number; poor: number }; // Quality Gate: threshold buckets
 }
 ```
+
+---
+
+## Health Scan Request Schemas
+
+Zod validation schemas for health scan API endpoints. These are co-located in the route handlers rather than `app/lib/schemas/`.
+
+### triggerScanSchema
+
+**Location**: `app/api/projects/[projectId]/health/scans/route.ts`
+
+```typescript
+const triggerScanSchema = z.object({
+  scanType: z.enum(['SECURITY', 'COMPLIANCE', 'TESTS', 'SPEC_SYNC']),
+});
+```
+
+Used by `POST /api/projects/[projectId]/health/scans` to validate the request body.
+
+### scanHistorySchema
+
+**Location**: `app/api/projects/[projectId]/health/scans/route.ts`
+
+```typescript
+const scanHistorySchema = z.object({
+  type: z.enum(['SECURITY', 'COMPLIANCE', 'TESTS', 'SPEC_SYNC']).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  cursor: z.coerce.number().int().positive().optional(),
+  includeReport: z.enum(['true', 'false']).optional(),
+});
+```
+
+Used by `GET /api/projects/[projectId]/health/scans` to validate query parameters. The response is wrapped in a pagination envelope:
+
+```typescript
+interface ScanHistoryResponse {
+  scans: ScanHistoryItem[];
+  nextCursor: number | null;  // ID of last scan returned; pass as cursor for next page
+  hasMore: boolean;           // true if more results exist beyond this page
+}
+```
+
+### statusUpdateSchema
+
+**Location**: `app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts`
+
+```typescript
+const statusUpdateSchema = z.object({
+  status: z.enum(['RUNNING', 'COMPLETED', 'FAILED']),
+  score: z.number().int().min(0).max(100).optional(),
+  report: z.string().optional(),
+  issuesFound: z.number().int().min(0).optional(),
+  issuesFixed: z.number().int().min(0).optional(),
+  headCommit: z.string().length(40).optional(),
+  durationMs: z.number().int().min(0).optional(),
+  tokensUsed: z.number().int().min(0).optional(),
+  costUsd: z.number().min(0).optional(),
+  errorMessage: z.string().max(2000).optional(),
+});
+```
+
+Used by `PATCH /api/projects/[projectId]/health/scans/[scanId]/status` (workflow callback). Validates state transitions: PENDING → RUNNING/FAILED, RUNNING → COMPLETED/FAILED. Terminal states (COMPLETED, FAILED) reject further updates.
+
+### trendsQuerySchema
+
+**Location**: `app/api/projects/[projectId]/health/trends/route.ts`
+
+```typescript
+const trendsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+```
+
+Used by `GET /api/projects/[projectId]/health/trends` to validate the `limit` query parameter.
 
 ---
 
