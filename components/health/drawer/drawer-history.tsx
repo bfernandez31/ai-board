@@ -1,10 +1,17 @@
 'use client';
 
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { History, ChevronDown } from 'lucide-react';
+import { History, ChevronDown, AlertTriangle, Coins, Zap, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { getScoreColor } from '@/lib/quality-score';
 import { queryKeys } from '@/app/lib/query-keys';
+import { formatCost, formatTokens, formatDuration } from '@/lib/health/format';
 import type { HealthModuleType, ScanHistoryItem, ScanHistoryResponse } from '@/lib/health/types';
 
 interface DrawerHistoryProps {
@@ -92,11 +99,54 @@ function HistoryEntry({ scan }: { scan: ScanHistoryItem }) {
         )}
       </div>
       <div className="flex items-center gap-3">
-        {scan.issuesFound !== null && (
-          <span className="text-xs text-muted-foreground">
-            {scan.issuesFound} issue{scan.issuesFound !== 1 ? 's' : ''}
-          </span>
-        )}
+        <TooltipProvider>
+          <div className="flex items-center gap-2">
+            {scan.issuesFound !== null && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                    <AlertTriangle className="h-3 w-3" />
+                    {scan.issuesFound}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent><p>Issues found</p></TooltipContent>
+              </Tooltip>
+            )}
+            {scan.costUsd !== null && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                    <Coins className="h-3 w-3" />
+                    {formatCost(scan.costUsd)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent><p>Cost in USD</p></TooltipContent>
+              </Tooltip>
+            )}
+            {scan.tokensUsed !== null && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                    <Zap className="h-3 w-3" />
+                    {formatTokens(scan.tokensUsed)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent><p>Tokens consumed</p></TooltipContent>
+              </Tooltip>
+            )}
+            {scan.durationMs !== null && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    {formatDuration(scan.durationMs)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent><p>Execution time</p></TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </TooltipProvider>
         {scan.score !== null && scoreColors ? (
           <span className={`text-xs font-medium ${scoreColors.text} ${scoreColors.bg} rounded-md px-2 py-0.5`}>
             {scan.score}

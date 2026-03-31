@@ -83,6 +83,17 @@ export interface HealthResponse {
   activeScans: ActiveScanInfo[];
 }
 
+/** Single data point for trend charts (sparklines and area charts) */
+export interface TrendDataPoint {
+  date: string;
+  score: number;
+}
+
+/** Trend data response grouped by scan type */
+export interface ModuleTrends {
+  trends: Record<HealthScanType, TrendDataPoint[]>;
+}
+
 /** Scan record shape for history API */
 export interface ScanHistoryItem {
   id: number;
@@ -94,6 +105,8 @@ export interface ScanHistoryItem {
   baseCommit: string | null;
   headCommit: string | null;
   durationMs: number | null;
+  tokensUsed: number | null;
+  costUsd: number | null;
   errorMessage: string | null;
   startedAt: string | null;
   completedAt: string | null;
