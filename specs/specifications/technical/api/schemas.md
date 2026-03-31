@@ -1171,7 +1171,7 @@ interface QualityGateDetails {
 
 ### HealthModuleStatus
 
-The `HealthModuleStatus` interface in `lib/health/types.ts` defines the per-module shape returned in the `modules` object of `GET /health`:
+The `HealthModuleStatus` interface in `lib/health/types.ts` defines the per-module shape returned in the `modules` object of `GET /api/projects/[projectId]/health`:
 
 ```typescript
 interface HealthModuleStatus {
