@@ -100,7 +100,7 @@ E2E tests are reserved for scenarios that genuinely require a real browser:
 - **Drag-and-drop**: DnD Kit interactions with real DOM
 - **Keyboard navigation**: Focus management, keyboard shortcuts
 - **Viewport testing**: Responsive layouts, media queries
-- **Visual state**: Cleanup banners, loading states
+- **Visual state**: Loading states, animated transitions
 
 ### Worker Isolation Pattern
 

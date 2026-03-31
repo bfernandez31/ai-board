@@ -332,15 +332,6 @@ A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion it
 - Agent is resolved automatically from the ticket's agent field (set in INBOX), falling back to project default, then CLAUDE
 - No agent selection in the modal — agent is configured on the ticket before transitioning
 
-**Cleanup Confirmation Dialog**:
-- Triggered when "Clean Project" menu option selected
-- Title: "Clean Project"
-- Description explains cleanup will analyze changes since last cleanup
-- Shows list of shipped tickets that will be analyzed
-- Warning that stage transitions will be blocked during cleanup
-- Cancel and "Start Cleanup" buttons
-- Loading state while cleanup job is being created
-
 ## Drag-and-Drop
 
 ### Visual Feedback
@@ -658,8 +649,8 @@ The command palette provides unified keyboard-driven navigation and search acros
 **Project Menu**:
 - Dropdown menu triggered by three-dot icon (⋮) in card header
 - Available actions:
-  - **Clean Project**: Opens cleanup confirmation dialog (Sparkles icon)
   - **Settings**: Navigates to project settings page (Settings icon)
+- The project menu **does not** include a "Clean Project" action. Any prior references to a "Clean Project" option in legacy or feature-specific specs are considered deprecated and must not be implemented in the current UI.
 - Menu positioned to right of project name
 - Click on menu does not trigger card navigation
 
@@ -728,28 +719,6 @@ The command palette provides unified keyboard-driven navigation and search acros
   - RUNNING: Progress animation
   - COMPLETED: Success checkmark
   - FAILED: Error icon
-
-**Cleanup In Progress Banner**:
-- Warning banner displayed at top of project board during cleanup
-- Yellow/amber alert styling with warning icon
-- Message: "Cleanup in progress - Stage transitions are temporarily disabled"
-- Lists allowed operations: descriptions, documents, preview deployments
-- Indicates lock will release when cleanup completes
-- Auto-hides via polling when cleanup job reaches terminal state (2-second intervals)
-- Only visible when project has active cleanup job (activeCleanupJobId set)
-
-**Cleanup Transition Lock Visual Feedback**:
-- During cleanup, all stage columns display blocked overlay when drag operations begin
-- Same visual treatment as job-in-progress lock (dark overlay with Ban icon)
-- Overlay shows "Cleanup in progress" message with "Wait for cleanup completion" subtitle
-- Prevents user confusion by clearly indicating why transitions are disabled
-- Drag cursor shows "not-allowed" state for all drop zones during cleanup
-- Columns appear with reduced opacity (50%) to indicate disabled state
-
-**Cleanup Job Status**:
-- Cleanup ticket shows "CLEANING" status label during execution
-- Status indicator updates via job polling (2-second intervals)
-- Visual feedback matches other job types (pending, running, completed, failed)
 
 **Deploy Preview Indicators**:
 
