@@ -3792,6 +3792,169 @@ Fetch unified activity feed for a project.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 
+## Credential Endpoints
+
+User-managed API credentials for AI providers (BYOK). Keys are encrypted at rest using AES-256-GCM and never returned after storage. One credential per provider per user (upsert semantics).
+
+### GET /api/credentials
+
+List all API credentials (metadata only) for the authenticated user. The encrypted key and IV are never included in the response.
+
+**Authentication**: Required (session or PAT)
+
+**Response** (200 OK):
+```json
+{
+  "credentials": [
+    {
+      "id": 1,
+      "provider": "ANTHROPIC",
+      "credentialType": "API_KEY",
+      "label": "My Anthropic Key",
+      "preview": "ab12",
+      "createdAt": "2026-03-31T10:00:00.000Z",
+      "updatedAt": "2026-03-31T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Errors**:
+- `401`: Not authenticated
+- `500`: Database error
+
+### POST /api/credentials
+
+Create or replace an API credential for a given provider. If a credential already exists for the provider, it is replaced. The key is validated by format and then encrypted before storage.
+
+**Authentication**: Required (session or PAT)
+
+**Request Body**:
+```json
+{
+  "provider": "ANTHROPIC",
+  "credentialType": "API_KEY",
+  "label": "My Anthropic Key",
+  "apiKey": "sk-ant-..."
+}
+```
+
+**Validation**:
+- `provider`: Required, `AiProvider` enum (`ANTHROPIC`)
+- `credentialType`: Required, `CredentialType` enum (`API_KEY` | `OAUTH_TOKEN`)
+- `label`: Required, 1-100 characters
+- `apiKey`: Required; format validated per provider (Anthropic `API_KEY` must start with `sk-ant-`, min 20 chars)
+
+**Response** (201 Created):
+```json
+{
+  "id": 1,
+  "provider": "ANTHROPIC",
+  "credentialType": "API_KEY",
+  "label": "My Anthropic Key",
+  "preview": "ab12",
+  "createdAt": "2026-03-31T10:00:00.000Z",
+  "updatedAt": "2026-03-31T10:00:00.000Z"
+}
+```
+
+**Note**: `preview` is the last 4 characters of the plaintext key. The plaintext key is never returned.
+
+**Errors**:
+- `400`: Validation failure (Zod or format check)
+- `401`: Not authenticated
+- `500`: Database error
+
+### DELETE /api/credentials/:id
+
+Delete an API credential. Only the owning user can delete their credential.
+
+**Authentication**: Required (session or PAT)
+
+**Path Parameters**:
+- `id` (number, required): Credential ID
+
+**Response** (200 OK):
+```json
+{
+  "message": "Credential deleted successfully"
+}
+```
+
+**Errors**:
+- `400`: Invalid credential ID
+- `401`: Not authenticated
+- `404`: Credential not found (or not owned by user)
+- `500`: Database error
+
+### POST /api/credentials/validate
+
+Validate an API key by format check then live call to the provider API. Does not store the key.
+
+**Authentication**: Required (session or PAT)
+
+**Request Body**:
+```json
+{
+  "provider": "ANTHROPIC",
+  "credentialType": "API_KEY",
+  "apiKey": "sk-ant-..."
+}
+```
+
+**Response** (200 OK — always 200 regardless of key validity):
+```json
+{
+  "valid": true,
+  "error": null
+}
+```
+
+or on failure:
+```json
+{
+  "valid": false,
+  "error": "Invalid API key: authentication failed"
+}
+```
+
+**Error responses** (non-200):
+- `400`: Zod validation failure
+- `401`: Not authenticated
+
+**Provider checks**:
+- `ANTHROPIC`: Calls `GET https://api.anthropic.com/v1/models`; 401 → invalid key, 403 → insufficient permissions
+
+### POST /api/workflows/credentials
+
+Workflow-only endpoint. Returns the decrypted API key for the owner of the given project. Used by GitHub Actions workflows to obtain the user's BYOK key at job runtime.
+
+**Authentication**: Bearer `WORKFLOW_API_TOKEN` only (no user session)
+
+**Request Body**:
+```json
+{
+  "projectId": 42,
+  "provider": "ANTHROPIC"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "credentialType": "API_KEY",
+  "apiKey": "sk-ant-..."
+}
+```
+
+**Errors**:
+- `400`: Zod validation failure
+- `401`: Invalid or missing workflow token
+- `404`: Project not found, or no credential configured for this provider
+- `500`: Decryption / database error
+
+**Security**: The decrypted `apiKey` is transmitted only in the response body; it is never logged server-side.
+
 ## Token Endpoints
 
 ### GET /api/tokens

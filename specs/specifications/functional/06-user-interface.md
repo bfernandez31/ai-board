@@ -458,12 +458,13 @@ The user menu provides authenticated account navigation via an avatar button in 
 **Dropdown Contents** (authenticated):
 - User display name and email (non-interactive label)
 - **Billing** → `/settings/billing` (CreditCard icon)
+- **AI Credentials** → `/settings/credentials` (ShieldCheck icon)
 - **API Tokens** → `/settings/tokens` (Key icon)
 - **Sign out** — triggers `signOut` with redirect to `/auth/signin`
 
 **Unauthenticated State**: Replaced by a "Sign In" button linking to `/auth/signin`.
 
-**Mobile Behavior** (<768px): Avatar button is hidden; Billing and API Tokens links are surfaced inside the mobile hamburger menu instead.
+**Mobile Behavior** (<768px): Avatar button is hidden; Billing, AI Credentials, and API Tokens links are surfaced inside the mobile hamburger menu instead.
 
 **Component**: `components/auth/user-menu.tsx`
 
@@ -476,8 +477,9 @@ The mobile hamburger menu (`components/layout/mobile-menu.tsx`) is a slide-in `S
 **Authenticated User Contents**:
 1. User avatar, display name, and email
 2. **Billing** → `/settings/billing` (CreditCard icon)
-3. **API Tokens** → `/settings/tokens` (Key icon)
-4. **Sign Out** button (red text, LogOut icon)
+3. **AI Credentials** → `/settings/credentials` (ShieldCheck icon)
+4. **API Tokens** → `/settings/tokens` (Key icon)
+5. **Sign Out** button (red text, LogOut icon)
 
 **Project-specific section** (shown when `projectId` and `projectName` are provided):
 - Project name header with icon links: Board, Analytics, Activity
@@ -874,6 +876,29 @@ A floating keyboard icon button is visible at the bottom-right corner of the boa
 - 15-second interval for notifications
 - Automatic stop when updates complete
 - Minimal network overhead
+
+## AI Credentials Settings
+
+The AI Credentials settings page (`/settings/credentials`) allows users to manage their BYOK (Bring Your Own Key) API credentials for AI providers.
+
+**Route**: `/settings/credentials`
+**Component**: `app/settings/credentials/page.tsx`
+
+### Behavior
+
+- Displays the currently saved Anthropic credential (label, provider, last-4 preview, created/updated timestamps) if one exists.
+- When no credential exists, only the "Add Credential" form is shown.
+- When a credential exists, both the current credential card and a "Replace Credential" form are shown.
+- The form accepts: provider (Anthropic), credential type (API Key or OAuth Token), label, and the raw API key.
+- On submit, the form validates key format client-side and calls `POST /api/credentials` to encrypt and store.
+- A "Validate" action calls `POST /api/credentials/validate` to test the key against the live provider API before saving.
+- Deleting a credential calls `DELETE /api/credentials/:id` and removes the card.
+- The plaintext API key is never shown after saving; only the 4-character preview is displayed.
+
+### Access
+
+- Accessible from the user menu ("AI Credentials" entry, ShieldCheck icon) and mobile hamburger menu.
+- Requires authentication; unauthenticated users are redirected to `/auth/signin`.
 
 ## Error Presentation
 

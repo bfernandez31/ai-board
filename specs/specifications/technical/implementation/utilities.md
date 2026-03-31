@@ -1325,3 +1325,40 @@ it('should send job completion notification to project owner', async () => {
 - System works without push notifications (in-app polling fallback)
 - Development mode doesn't require VAPID setup
 - Unsupported browsers hide opt-in prompt
+
+## AES-256-GCM Encryption Utility
+
+### Purpose
+
+Encrypts and decrypts sensitive strings (API keys) using AES-256-GCM authenticated encryption. Used exclusively by the BYOK credential system.
+
+### File Location
+
+`lib/crypto/encrypt.ts`
+
+### Environment Variable
+
+`BYOK_ENCRYPTION_KEY` — 64-character hex string (32 bytes). Required at runtime; server throws on startup if absent or wrong length.
+
+### API Reference
+
+```typescript
+interface EncryptedData {
+  encryptedKey: string; // hex-encoded ciphertext
+  iv: string;           // hex-encoded 12-byte IV
+  authTag: string;      // hex-encoded 16-byte GCM auth tag
+}
+
+function encrypt(plaintext: string): EncryptedData
+function decrypt(data: EncryptedData): string
+```
+
+**`encrypt(plaintext)`**: Generates a fresh random 12-byte IV per call, encrypts with AES-256-GCM, returns hex-encoded ciphertext + IV + auth tag.
+
+**`decrypt(data)`**: Decrypts ciphertext using the stored IV and verifies the auth tag. Throws if the key, IV, or auth tag is incorrect (tamper detection).
+
+### Security Properties
+
+- Unique IV per encryption call prevents ciphertext reuse
+- GCM auth tag detects tampering before decryption
+- Key never logged; only used in-memory at encrypt/decrypt call sites
