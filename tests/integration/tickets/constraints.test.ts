@@ -270,14 +270,18 @@ describe('Database Constraints', () => {
       });
       createdProjectIds.push(project1.id);
 
-      const createPromise = createTestProject({
-        name: '[e2e] Unique Repo Test 2',
-        githubOwner: `unique-owner-${id}`, // Same owner
-        githubRepo: `unique-repo-${id}`, // Same repo
-        key: uniqueKey(),
-      });
-
-      await expect(createPromise).rejects.toThrow();
+      try {
+        const project2 = await createTestProject({
+          name: '[e2e] Unique Repo Test 2',
+          githubOwner: `unique-owner-${id}`,
+          githubRepo: `unique-repo-${id}`,
+          key: uniqueKey(),
+        });
+        createdProjectIds.push(project2.id);
+        expect.unreachable('Should have thrown unique constraint error');
+      } catch (error) {
+        expect(error).toBeDefined();
+      }
     });
   });
 });

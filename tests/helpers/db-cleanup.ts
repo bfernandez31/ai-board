@@ -116,6 +116,13 @@ export async function ensureTestFixtures(): Promise<string> {
       });
     }
 
+    // Advance the auto-increment sequence past all worker project IDs so that
+    // createTestProject() (which uses default auto-increment) doesn't collide.
+    const maxWorkerId = Math.max(...workerProjects.map(p => p.id));
+    await client.$executeRawUnsafe(
+      `SELECT setval('"Project_id_seq"', GREATEST((SELECT last_value FROM "Project_id_seq"), ${maxWorkerId}))`
+    );
+
     // Ensure test user has PRO subscription to avoid FREE plan ticket limits
     await client.subscription.upsert({
       where: { userId: testUser.id },
