@@ -80,9 +80,9 @@
 ### Implementation for User Story 2
 
 - [x] T020 [US2] Implement GET /api/internal/credentials endpoint (verify workflow token, resolve via lib/ai-credentials/workflow.ts, decrypt via crypto.ts, return WorkflowResolvedCredential payload) in app/api/internal/credentials/route.ts
-- [ ] T021 [US2] Add credential existence check before workflow dispatch in app/lib/workflows/dispatch-ai-board.ts (use lib/ai-credentials/workflow.ts to check owner credential, throw user-facing error if missing)
-- [ ] T022 [US2] Add credential fetch step to .github/workflows/ai-board-assist.yml (curl internal endpoint, mask value with ::add-mask::, export env var via $GITHUB_ENV)
-- [ ] T023 [US2] Add credential fetch step to .github/workflows/speckit.yml (same pattern as ai-board-assist.yml for SPECIFY/PLAN/BUILD stages)
+- [x] T021 [US2] Add credential existence check before workflow dispatch in app/lib/workflows/dispatch-ai-board.ts (use lib/ai-credentials/workflow.ts to check owner credential, throw user-facing error if missing)
+- [x] T022 [US2] Add credential fetch step to .github/workflows/ai-board-assist.yml (curl internal endpoint, mask value with ::add-mask::, export env var via $GITHUB_ENV)
+- [x] T023 [US2] Add credential fetch step to .github/workflows/speckit.yml (same pattern as ai-board-assist.yml for SPECIFY/PLAN/BUILD stages)
 
 **Checkpoint**: User Story 2 fully functional — workflows retrieve and use owner credentials; blocked without credential
 

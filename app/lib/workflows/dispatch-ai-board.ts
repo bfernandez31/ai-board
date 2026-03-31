@@ -1,5 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import { isWorkflowTestMode } from './test-mode';
+import { getOwnerCredential } from '@/lib/ai-credentials/workflow';
 
 export interface AIBoardWorkflowInputs {
   ticket_id: string;
@@ -25,6 +26,17 @@ export async function dispatchAIBoardWorkflow(
       stage: inputs.stage,
     });
     return;
+  }
+
+  // Check that the project owner has an AI credential configured
+  const projectId = parseInt(inputs.project_id, 10);
+  if (!isNaN(projectId)) {
+    const credential = await getOwnerCredential(projectId);
+    if (!credential) {
+      throw new Error(
+        'No AI credential configured for this project owner. Please add your Anthropic key in Settings → AI Credentials before triggering workflows.'
+      );
+    }
   }
 
   if (!githubToken) {
