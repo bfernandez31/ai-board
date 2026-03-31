@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { CreditCard, Key, LogOut } from "lucide-react"
+import { CreditCard, Key, LogOut, Shield } from "lucide-react"
 
 export function UserMenu() {
   const { data: session } = useSession()
@@ -66,6 +66,13 @@ export function UserMenu() {
           <Link href="/settings/tokens">
             <Key className="mr-2 h-4 w-4" />
             API Tokens
+          </Link>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem asChild className="cursor-pointer">
+          <Link href="/settings/credentials">
+            <Shield className="mr-2 h-4 w-4" />
+            AI Credentials
           </Link>
         </DropdownMenuItem>
 

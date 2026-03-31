@@ -57,11 +57,11 @@
 
 - [x] T012 [P] [US1] Implement GET handler (list user credentials with readinessStatus/verificationCode/verificationMessage, exclude encrypted fields) in app/api/credentials/route.ts
 - [x] T013 [P] [US1] Implement POST handler (Zod validation, format check via providers/anthropic.ts, provider verification, encrypt via crypto.ts, upsert via service.ts, return metadata with readinessStatus) in app/api/credentials/route.ts
-- [ ] T014 [US1] Create credential management page with layout in app/settings/credentials/page.tsx
-- [ ] T015 [P] [US1] Implement credential form component (provider select, type select, label input, value input with real-time format validation) in app/components/credentials/credential-form.tsx
-- [ ] T016 [P] [US1] Implement credential list component (display provider, label, masked preview, readinessStatus badge, verificationMessage, timestamps) in app/components/credentials/credential-list.tsx
-- [ ] T017 [US1] Add TanStack Query hooks for credential CRUD operations (useCredentials, useCreateCredential with optimistic updates) in app/components/credentials/ or lib/ hooks
-- [ ] T018 [US1] Add "Credentials" navigation link to settings sidebar/nav (follow existing tokens nav pattern)
+- [x] T014 [US1] Create credential management page with layout in app/settings/credentials/page.tsx
+- [x] T015 [P] [US1] Implement credential form component (provider select, type select, label input, value input with real-time format validation) in app/components/credentials/credential-form.tsx
+- [x] T016 [P] [US1] Implement credential list component (display provider, label, masked preview, readinessStatus badge, verificationMessage, timestamps) in app/components/credentials/credential-list.tsx
+- [x] T017 [US1] Add TanStack Query hooks for credential CRUD operations (useCredentials, useCreateCredential with optimistic updates) in app/components/credentials/ or lib/ hooks
+- [x] T018 [US1] Add "Credentials" navigation link to settings sidebar/nav (follow existing tokens nav pattern)
 
 **Checkpoint**: User Story 1 fully functional — users can add and view encrypted credentials
 
@@ -102,9 +102,9 @@
 
 - [x] T025 [US3] Implement DELETE handler in app/api/credentials/[id]/route.ts (verify ownership, delete via service.ts, return 204)
 - [x] T026 [US3] Implement POST /api/credentials/[id]/test handler (verify ownership, decrypt via crypto.ts, verify via providers/anthropic.ts, update readinessStatus/lastVerifiedAt/verificationCode/verificationMessage via service.ts, return result) in app/api/credentials/[id]/test/route.ts
-- [ ] T027 [US3] Implement credential test button component (trigger test, show loading/success/failure states with verificationMessage) in app/components/credentials/credential-test-button.tsx
-- [ ] T028 [US3] Add delete and replace actions to credential-list.tsx with confirmation dialog (delete removes credential, replace opens form pre-filled with provider)
-- [ ] T029 [US3] Add TanStack Query hooks for delete and test operations (useDeleteCredential, useTestCredential with optimistic readinessStatus updates)
+- [x] T027 [US3] Implement credential test button component (trigger test, show loading/success/failure states with verificationMessage) in app/components/credentials/credential-test-button.tsx
+- [x] T028 [US3] Add delete and replace actions to credential-list.tsx with confirmation dialog (delete removes credential, replace opens form pre-filled with provider)
+- [x] T029 [US3] Add TanStack Query hooks for delete and test operations (useDeleteCredential, useTestCredential with optimistic readinessStatus updates)
 
 **Checkpoint**: All user stories independently functional — full CRUD + workflow integration
 

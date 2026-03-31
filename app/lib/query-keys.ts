@@ -65,6 +65,10 @@ export const queryKeys = {
   tokens: {
     all: ['tokens'] as const,
   },
+
+  credentials: {
+    all: ['credentials'] as const,
+  },
 } as const;
 
 export type QueryKeys = typeof queryKeys;
