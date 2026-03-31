@@ -9,8 +9,8 @@ import { LastCleanDrawer } from './drawer/last-clean-drawer';
 import { useHealthPolling } from '@/app/lib/hooks/useHealthPolling';
 import { useHealthTrends } from '@/app/lib/hooks/useHealthTrends';
 import { useTriggerScan } from '@/app/lib/hooks/mutations/useTriggerScan';
-import { ACTIVE_SCAN_TYPES } from '@/lib/health/types';
-import type { HealthModuleType, HealthTrendsResponse } from '@/lib/health/types';
+import { ACTIVE_SCAN_TYPES, SCAN_TYPE_TO_TREND_KEY } from '@/lib/health/types';
+import type { HealthModuleType } from '@/lib/health/types';
 import type { HealthScanType } from '@prisma/client';
 
 interface HealthDashboardProps {
@@ -28,12 +28,6 @@ const MODULE_GRID: { type: HealthModuleType; key: keyof NonNullable<ReturnType<t
 
 const ACTIVE_SCAN_SET = new Set<string>(ACTIVE_SCAN_TYPES);
 
-const MODULE_TO_TREND_KEY: Partial<Record<HealthModuleType, keyof HealthTrendsResponse>> = {
-  SECURITY: 'security',
-  COMPLIANCE: 'compliance',
-  TESTS: 'tests',
-  SPEC_SYNC: 'specSync',
-};
 
 export function HealthDashboard({ projectId }: HealthDashboardProps) {
   const [selectedModule, setSelectedModule] = useState<HealthModuleType | null>(null);
@@ -87,7 +81,7 @@ export function HealthDashboard({ projectId }: HealthDashboardProps) {
             }
             isTriggerPending={triggerScan.isPending}
             onClick={() => setSelectedModule(type)}
-            trendData={trendsData && MODULE_TO_TREND_KEY[type] ? trendsData[MODULE_TO_TREND_KEY[type]] : undefined}
+            trendData={trendsData && SCAN_TYPE_TO_TREND_KEY[type] ? trendsData[SCAN_TYPE_TO_TREND_KEY[type]] : undefined}
           />
         ))}
       </div>
@@ -106,7 +100,7 @@ export function HealthDashboard({ projectId }: HealthDashboardProps) {
               ? () => triggerScan.mutate({ projectId, scanType: selectedModule as HealthScanType })
               : undefined
           }
-          trendData={trendsData && MODULE_TO_TREND_KEY[selectedModule] ? trendsData[MODULE_TO_TREND_KEY[selectedModule]] : undefined}
+          trendData={trendsData && SCAN_TYPE_TO_TREND_KEY[selectedModule] ? trendsData[SCAN_TYPE_TO_TREND_KEY[selectedModule]] : undefined}
         />
       )}
 

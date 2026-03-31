@@ -103,6 +103,14 @@ export interface HealthTrendsResponse {
   specSync: TrendDataPoint[];
 }
 
+/** Maps scan/module type to its key in HealthTrendsResponse */
+export const SCAN_TYPE_TO_TREND_KEY: Partial<Record<HealthModuleType, keyof HealthTrendsResponse>> = {
+  SECURITY: 'security',
+  COMPLIANCE: 'compliance',
+  TESTS: 'tests',
+  SPEC_SYNC: 'specSync',
+};
+
 /** Scan record shape for history API */
 export interface ScanHistoryItem {
   id: number;
