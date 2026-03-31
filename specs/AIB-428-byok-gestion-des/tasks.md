@@ -50,7 +50,7 @@
 ### Tests for User Story 1
 
 - [x] T009 [P] [US1] Write integration tests for GET /api/credentials and POST /api/credentials in tests/integration/credentials/credentials-api.test.ts (list empty, create API_KEY with readinessStatus, create OAUTH_TOKEN, upsert replaces existing, format validation errors, provider validation errors returning verificationCode/verificationMessage, 401 unauthorized)
-- [ ] T010 [P] [US1] Write component tests for credential form in tests/unit/components/credential-form.test.tsx (render form fields, provider/type selection, real-time format validation, submit success, submit error display with verificationMessage)
+- [x] T010 [P] [US1] Write component tests for credential form in tests/unit/components/credential-form.test.tsx (render form fields, provider/type selection, real-time format validation, submit success, submit error display with verificationMessage)
 - [x] T011 [P] [US1] Write integration tests for credential format validation in tests/integration/credentials/credential-validation.test.ts (valid/invalid API_KEY format, valid/invalid OAUTH_TOKEN format)
 
 ### Implementation for User Story 1
@@ -114,9 +114,9 @@
 
 **Purpose**: Security hardening, logging guardrails, and final validation
 
-- [ ] T030 [P] Audit all API routes and logs to ensure credential values are never logged (FR-013) — check route handlers, middleware, error handlers
-- [ ] T031 [P] Verify aurora-b+ theme styling on credential settings page (aurora-* CSS classes on dialogs, cards, forms)
-- [ ] T032 Run quickstart.md validation — verify full flow end-to-end: add credential → list (check readinessStatus) → test → workflow retrieves → replace → delete
+- [x] T030 [P] Audit all API routes and logs to ensure credential values are never logged (FR-013) — check route handlers, middleware, error handlers
+- [x] T031 [P] Verify aurora-b+ theme styling on credential settings page (aurora-* CSS classes on dialogs, cards, forms)
+- [x] T032 Run quickstart.md validation — verify full flow end-to-end: add credential → list (check readinessStatus) → test → workflow retrieves → replace → delete
 
 ---
 
