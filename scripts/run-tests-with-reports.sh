@@ -156,7 +156,7 @@ if [ -z "$INT_ERROR" ]; then
         # Log failed test names for CI debugging
         if [ "$INT_FAILED" -gt 0 ] && [ -f "$INTEGRATION_REPORT" ]; then
             echo "Failed integration tests:"
-            jq -r '.testResults[] | select(.status == "failed") | .assertionResults[] | select(.status == "failed") | "  ✗ \(.ancestorTitles | join(" > ")) > \(.title)"' "$INTEGRATION_REPORT" 2>/dev/null || true
+            jq -r '.testResults[] | select(.status == "failed") | .assertionResults[] | select(.status == "failed") | "  ✗ \(.ancestorTitles | join(" > ")) > \(.title)\n    \(.failureMessages[0] | split("\n")[0] // "no message")"' "$INTEGRATION_REPORT" 2>/dev/null || true
         fi
     fi
     echo ""
