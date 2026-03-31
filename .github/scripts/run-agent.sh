@@ -69,7 +69,7 @@ install_claude() {
     return 0
   fi
   log_info "Installing Claude Code CLI..."
-  if ! bun add -g @anthropic-ai/claude-code >&2; then
+  if ! bun add -g @anthropic-ai/claude-code@2.1.87 >&2; then
     log_error "Failed to install @anthropic-ai/claude-code"
     exit 1
   fi
