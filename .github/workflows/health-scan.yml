@@ -61,6 +61,7 @@ jobs:
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      AI_CREDENTIAL_ENCRYPTION_KEY: ${{ secrets.AI_CREDENTIAL_ENCRYPTION_KEY }}
       ANTHROPIC_MODEL: "claude-opus-4-6"
       # Inputs passed as env vars to prevent script injection (shell metacharacters
       # in workflow_dispatch values would be interpolated into run: scripts).
@@ -162,12 +163,17 @@ jobs:
         working-directory: target
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AI_CREDENTIAL_ENCRYPTION_KEY: ${{ secrets.AI_CREDENTIAL_ENCRYPTION_KEY }}
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           echo "🔧 Setting up test environment for health scan..."
           ../ai-board/.github/scripts/setup-test-env.sh
+
+      - name: Load Project Owner AI Credential
+        run: |
+          ../ai-board/.github/scripts/load-ai-credential.sh "${INPUT_PROJECT_ID}"
 
       - name: Detect Prisma
         if: ${{ inputs.scan_type == 'TESTS' }}

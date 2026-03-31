@@ -67,6 +67,7 @@ jobs:
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+      AI_CREDENTIAL_ENCRYPTION_KEY: ${{ secrets.AI_CREDENTIAL_ENCRYPTION_KEY }}
       SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
       SKIP_TESTS: ${{ inputs.workflowType == 'QUICK' || true}}
       APP_URL: ${{ vars.APP_URL }}
@@ -179,12 +180,18 @@ jobs:
         working-directory: target
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AI_CREDENTIAL_ENCRYPTION_KEY: ${{ secrets.AI_CREDENTIAL_ENCRYPTION_KEY }}
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           echo "🔧 Setting up test environment..."
           ../ai-board/.github/scripts/setup-test-env.sh
+
+      - name: Load Project Owner AI Credential
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: |
+          ../ai-board/.github/scripts/load-ai-credential.sh "${{ inputs.project_id }}"
 
       # Database setup steps
       - name: Generate Prisma Client

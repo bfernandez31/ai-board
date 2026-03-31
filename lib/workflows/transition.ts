@@ -3,6 +3,7 @@ import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
+import { projectOwnerHasAiCredential } from '@/lib/db/ai-credentials';
 
 const prisma = new PrismaClient();
 
@@ -156,6 +157,15 @@ export async function handleTicketTransition(
       };
     }
 
+    const hasOwnerCredential = await projectOwnerHasAiCredential(ticket.projectId);
+    if (!hasOwnerCredential) {
+      return {
+        success: false,
+        error:
+          'Project owner must configure an Anthropic AI credential in /settings before launching workflows.',
+      };
+    }
+
     let job;
     if (isQuickImpl) {
       const [createdJob] = await prisma.$transaction([
@@ -191,8 +201,9 @@ export async function handleTicketTransition(
     const githubToken = process.env.GITHUB_TOKEN;
     const aiboardOwner = process.env.GITHUB_OWNER;
     const aiboardRepo = process.env.GITHUB_REPO;
+    const workflowTestMode = isWorkflowTestMode(githubToken);
 
-    if (!aiboardOwner || !aiboardRepo) {
+    if (!workflowTestMode && (!aiboardOwner || !aiboardRepo)) {
       return {
         success: false,
         error: 'GITHUB_OWNER and GITHUB_REPO environment variables must be set',
@@ -200,7 +211,7 @@ export async function handleTicketTransition(
       };
     }
 
-    if (!isWorkflowTestMode(githubToken)) {
+    if (!workflowTestMode) {
       let workflowFile: string = '';
 
       try {
@@ -286,8 +297,8 @@ export async function handleTicketTransition(
         });
 
         await octokit.actions.createWorkflowDispatch({
-          owner: aiboardOwner,
-          repo: aiboardRepo,
+          owner: aiboardOwner!,
+          repo: aiboardRepo!,
           workflow_id: workflowFile,
           ref: 'main',
           inputs: workflowInputs,

@@ -46,6 +46,7 @@ export const queryKeys = {
     all: ['users'] as const,
     current: ['users', 'current'] as const,
     detail: (id: string) => ['users', id] as const,
+    aiCredentials: ['users', 'ai-credentials'] as const,
   },
 
   push: {

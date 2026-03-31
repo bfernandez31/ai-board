@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { encryptSecret } from '@/lib/security/secret-box';
 
 /**
  * Database cleanup utility for E2E tests
@@ -6,6 +7,39 @@ import { PrismaClient } from '@prisma/client';
  */
 
 let prisma: PrismaClient | null = null;
+
+async function ensureDefaultAiCredential(client: PrismaClient, userId: string): Promise<void> {
+  const encrypted = encryptSecret('sk-ant-api03-defaulttestcredential123456789');
+
+  await client.userAiCredential.upsert({
+    where: {
+      userId_provider: {
+        userId,
+        provider: 'ANTHROPIC',
+      },
+    },
+    update: {
+      credentialType: 'API_KEY',
+      label: '[e2e] Default Anthropic Credential',
+      encryptedValue: encrypted.ciphertext,
+      iv: encrypted.iv,
+      authTag: encrypted.authTag,
+      preview: '6789',
+      lastValidatedAt: new Date(),
+    },
+    create: {
+      userId,
+      provider: 'ANTHROPIC',
+      credentialType: 'API_KEY',
+      label: '[e2e] Default Anthropic Credential',
+      encryptedValue: encrypted.ciphertext,
+      iv: encrypted.iv,
+      authTag: encrypted.authTag,
+      preview: '6789',
+      lastValidatedAt: new Date(),
+    },
+  });
+}
 
 export function getPrismaClient(): PrismaClient {
   if (!prisma) {
@@ -131,6 +165,8 @@ export async function ensureTestFixtures(): Promise<string> {
       },
     });
 
+    await ensureDefaultAiCredential(client, testUser.id);
+
     console.error(`✓ Test fixtures ensured (user + ${workerProjects.length} worker projects)`);
     return testUser.id;
   } catch (error) {
@@ -217,6 +253,14 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
               in: [1, 2, 4, 5, 6, 7],
             },
           },
+    });
+
+    await client.userAiCredential.deleteMany({
+      where: {
+        userId: {
+          not: 'test-user-id',
+        },
+      },
     });
 
     // Delete all accounts before deleting users (foreign key constraint)
@@ -455,6 +499,8 @@ export async function ensureProjectExists(projectId: number): Promise<void> {
       updatedAt: new Date(),
     },
   });
+
+  await ensureDefaultAiCredential(client, testUser.id);
 
   // Ensure AI-BOARD system user exists and is a project member
   const aiBoardUser = await client.user.upsert({

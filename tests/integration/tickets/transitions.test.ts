@@ -139,6 +139,37 @@ describe('Ticket Transitions', () => {
       expect(ticket?.jobs[0]?.command).toBe('quick-impl');
     });
 
+    it('should block workflow launch when the project owner has no AI credential configured', async () => {
+      await prisma.userAiCredential.deleteMany({
+        where: { userId: 'test-user-id', provider: 'ANTHROPIC' },
+      });
+
+      const createResponse = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Missing owner BYOK',
+          description: 'Transition must fail when owner BYOK is missing',
+        }
+      );
+      const ticketId = createResponse.data.id;
+
+      const response = await ctx.api.post<{ error: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+        { targetStage: 'SPECIFY' }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toMatch(/AI credential|Anthropic|owner/i);
+
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        include: { jobs: true },
+      });
+
+      expect(ticket?.stage).toBe('INBOX');
+      expect(ticket?.jobs).toHaveLength(0);
+    });
+
     it('should not allow transitioning backwards (SPECIFY to INBOX)', async () => {
       const createResponse = await ctx.api.post<{ id: number }>(
         `/api/projects/${ctx.projectId}/tickets`,
