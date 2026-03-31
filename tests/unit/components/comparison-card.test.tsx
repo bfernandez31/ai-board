@@ -100,13 +100,13 @@ describe('ComparisonCard', () => {
     it('should apply expanded border style when isExpanded is true', () => {
       render(<ComparisonCard {...defaultProps} isExpanded={true} />);
       const card = screen.getByTestId('comparison-card-42');
-      expect(card.className).toContain('border-primary');
+      expect(card.className).toContain('border-ctp-mauve/30');
     });
 
     it('should apply collapsed border style when isExpanded is false', () => {
       render(<ComparisonCard {...defaultProps} isExpanded={false} />);
       const card = screen.getByTestId('comparison-card-42');
-      expect(card.className).toContain('border-border');
+      expect(card.className).toContain('border-ctp-mauve/12');
     });
 
     it('should rotate chevron when expanded', () => {
@@ -141,8 +141,8 @@ describe('ComparisonCard', () => {
       const card1 = container.querySelector('[data-testid="comparison-card-42"]');
       const card2 = container.querySelector('[data-testid="comparison-card-43"]');
 
-      expect(card1?.className).toContain('border-primary');
-      expect(card2?.className).toContain('border-border');
+      expect(card1?.className).toContain('border-ctp-mauve/30');
+      expect(card2?.className).toContain('border-ctp-mauve/12');
     });
 
     it('should call onToggle with correct comparison when either card is clicked', async () => {
