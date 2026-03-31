@@ -1,17 +1,10 @@
 'use client';
 
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Loader2 } from 'lucide-react';
 import { useCredentials } from '@/lib/hooks/mutations/useCredentials';
 import { CredentialForm } from '@/components/credentials/credential-form';
 import { CredentialCard } from '@/components/credentials/credential-card';
-import { Loader2 } from 'lucide-react';
 
-/**
- * AI Credentials Settings Page
- *
- * User-level settings page for managing BYOK (Bring Your Own Key) API credentials.
- * Located at /settings/credentials
- */
 export default function CredentialsSettingsPage() {
   const { data, isLoading } = useCredentials();
   const anthropicCredential = data?.credentials?.find((c) => c.provider === 'ANTHROPIC') ?? null;
@@ -19,7 +12,6 @@ export default function CredentialsSettingsPage() {
   return (
     <main className="container mx-auto py-10 max-w-4xl">
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
             <ShieldCheck className="h-5 w-5 text-primary" />
@@ -32,7 +24,6 @@ export default function CredentialsSettingsPage() {
           </div>
         </div>
 
-        {/* Description */}
         <div className="rounded-lg border aurora-bg-subtle p-4">
           <p className="text-sm text-muted-foreground">
             AI workflows (specify, plan, build, verify) require an API key to interact with AI
@@ -41,7 +32,6 @@ export default function CredentialsSettingsPage() {
           </p>
         </div>
 
-        {/* Existing credential */}
         {isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -56,7 +46,6 @@ export default function CredentialsSettingsPage() {
               </div>
             )}
 
-            {/* Form */}
             <div>
               <h2 className="mb-4 text-lg font-semibold">
                 {anthropicCredential ? 'Replace Credential' : 'Add Credential'}

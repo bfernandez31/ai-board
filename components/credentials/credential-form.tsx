@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,22 +37,19 @@ export function CredentialForm({ existingCredential, onSuccess }: CredentialForm
   const saveCredential = useSaveCredential();
   const validateCredential = useValidateCredential();
 
-  const validateFormat = useCallback(
-    (key: string, type: string) => {
-      if (!key) {
-        setFormatError(null);
-        return;
-      }
-      if (type === 'API_KEY' && !key.startsWith('sk-ant-')) {
-        setFormatError('Anthropic API key must start with "sk-ant-"');
-      } else if (key.length < 10) {
-        setFormatError('Key is too short');
-      } else {
-        setFormatError(null);
-      }
-    },
-    []
-  );
+  const validateFormat = (key: string, type: string) => {
+    if (!key) {
+      setFormatError(null);
+      return;
+    }
+    if (type === 'API_KEY' && !key.startsWith('sk-ant-')) {
+      setFormatError('Anthropic API key must start with "sk-ant-"');
+    } else if (key.length < 10) {
+      setFormatError('Key is too short');
+    } else {
+      setFormatError(null);
+    }
+  };
 
   const handleKeyChange = (value: string) => {
     setApiKey(value);
@@ -64,7 +61,7 @@ export function CredentialForm({ existingCredential, onSuccess }: CredentialForm
     validateFormat(apiKey, value);
   };
 
-  const handleValidate = async () => {
+  const handleValidate = () => {
     if (!apiKey) return;
     validateCredential.mutate({
       provider: 'ANTHROPIC',

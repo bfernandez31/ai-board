@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,15 +23,9 @@ interface CredentialCardProps {
 
 export function CredentialCard({ credential }: CredentialCardProps) {
   const deleteCredential = useDeleteCredential();
-  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      await deleteCredential.mutateAsync(credential.id);
-    } finally {
-      setIsDeleting(false);
-    }
+  const handleDelete = () => {
+    deleteCredential.mutate(credential.id);
   };
 
   return (
@@ -60,7 +53,7 @@ export function CredentialCard({ credential }: CredentialCardProps) {
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-              {isDeleting ? (
+              {deleteCredential.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Trash2 className="h-4 w-4" />

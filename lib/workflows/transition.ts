@@ -157,6 +157,16 @@ export async function handleTicketTransition(
       };
     }
 
+    // BYOK check: verify the project owner has a configured AI credential before creating job
+    const ownerCredential = await getApiCredential(ticket.project.userId, AiProvider.ANTHROPIC);
+    if (!ownerCredential) {
+      return {
+        success: false,
+        error: 'No AI credential configured. The project owner must add an Anthropic API key in Settings > AI Credentials before workflows can run.',
+        errorCode: 'MISSING_CREDENTIAL',
+      };
+    }
+
     let job;
     if (isQuickImpl) {
       const [createdJob] = await prisma.$transaction([
@@ -187,18 +197,6 @@ export async function handleTicketTransition(
           updatedAt: new Date(),
         },
       });
-    }
-
-    // BYOK check: verify the project owner has a configured AI credential
-    const ownerCredential = await getApiCredential(ticket.project.userId, AiProvider.ANTHROPIC);
-    if (!ownerCredential) {
-      // Clean up the job we just created since the workflow can't run
-      await prisma.job.delete({ where: { id: job.id } }).catch(() => {});
-      return {
-        success: false,
-        error: 'No AI credential configured. The project owner must add an Anthropic API key in Settings > AI Credentials before workflows can run.',
-        errorCode: 'MISSING_CREDENTIAL',
-      };
     }
 
     const githubToken = process.env.GITHUB_TOKEN;

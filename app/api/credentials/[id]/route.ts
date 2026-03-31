@@ -10,9 +10,9 @@ interface RouteParams {
  * DELETE /api/credentials/:id
  * Delete an API credential.
  */
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const user = await getCurrentUserOrToken(_request);
+    const user = await getCurrentUserOrToken(request);
     const { id } = await params;
 
     const credentialId = parseInt(id, 10);
