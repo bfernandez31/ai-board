@@ -1075,6 +1075,67 @@ const { data, isLoading } = useScanReport(projectId, 'SECURITY');
 
 ---
 
+## Health Trend Schemas
+
+Types for the trends endpoint response and the client hook that consumes it.
+
+**Location**: `lib/health/types.ts` (`TrendDataPoint`, `ModuleTrends`)
+**Hook**: `app/lib/hooks/useHealthTrends.ts`
+
+```typescript
+interface TrendDataPoint {
+  date: string;   // ISO 8601 — scan completedAt timestamp
+  score: number;  // 0–100
+}
+
+type ModuleTrends = {
+  SECURITY: TrendDataPoint[];
+  COMPLIANCE: TrendDataPoint[];
+  TESTS: TrendDataPoint[];
+  SPEC_SYNC: TrendDataPoint[];
+};
+```
+
+**Hook**: `useHealthTrends(projectId)` — TanStack Query, fetched once on dashboard mount with `staleTime: 60_000` and `gcTime: 300_000`. No polling; not invalidated by the 2-second scan-status cycle.
+
+**Query key**: `queryKeys.health.trends(projectId)` → `['health', projectId, 'trends']`
+
+---
+
+## Health Scan History Item
+
+The `ScanHistoryItem` interface represents a single entry returned by `GET /api/projects/[projectId]/health/scans`.
+
+```typescript
+interface ScanHistoryItem {
+  id: number;
+  scanType: HealthScanType;
+  status: HealthScanStatus;
+  score: number | null;
+  issuesFound: number | null;
+  issuesFixed: number | null;
+  baseCommit: string | null;
+  headCommit: string | null;
+  durationMs: number | null;
+  tokensUsed: number | null;   // API tokens consumed; null for pre-telemetry scans
+  costUsd: number | null;      // Cost in USD; null for pre-telemetry scans
+  errorMessage: string | null;
+  startedAt: string | null;    // ISO 8601
+  completedAt: string | null;  // ISO 8601
+  createdAt: string;           // ISO 8601
+}
+
+// Extended variant used when includeReport=true
+type ScanHistoryItemWithReport = ScanHistoryItem & { report: string | null };
+```
+
+**Formatting utilities** (`lib/health/format.ts`):
+- `formatCost(costUsd: number): string` → `"$0.42"` (2 decimal places)
+- `formatTokens(tokens: number): string` → `"500"`, `"1.2k"`, `"1.5M"` (abbreviated)
+- `formatDuration(ms: number): string` → `"0.5s"`, `"2.3s"`, `"1m 15s"` (human-readable)
+
+---
+
 ## Health Passive Module Detail Schemas
 
 Response types returned by the passive module detail endpoints (`/health/quality-gate` and `/health/last-clean`). These are distinct from the `ScanReport` union above — they are API response shapes, not stored scan report blobs.

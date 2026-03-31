@@ -3720,6 +3720,8 @@ Returns paginated scan history for a project.
       "baseCommit": "abc1234567890abcdef1234567890abcdef123456",
       "headCommit": "def4567890abcdef1234567890abcdef456789ab",
       "durationMs": 45000,
+      "tokensUsed": 12000,
+      "costUsd": 0.15,
       "errorMessage": null,
       "startedAt": "2026-03-27T14:30:00Z",
       "completedAt": "2026-03-27T14:30:45Z",
@@ -3733,6 +3735,8 @@ Returns paginated scan history for a project.
 ```
 
 When `includeReport=true` is omitted, the `report` field is not present on scan objects.
+
+`tokensUsed` and `costUsd` are always returned; both are `null` for scans that predate telemetry collection.
 
 Results ordered by `createdAt DESC`. `nextCursor` is the ID of the last scan returned; pass as `cursor` for the next page.
 
@@ -3791,6 +3795,45 @@ Workflow callback endpoint to update scan status and results. Uses the same Bear
 - `401`: Invalid workflow token
 - `404`: Scan not found or wrong project
 - `409`: Invalid status transition (e.g., COMPLETED → RUNNING)
+
+---
+
+### GET /api/projects/[projectId]/health/trends
+
+Returns score trend data for all active scan modules in a single response. Used to render sparklines on module cards and area charts in module drawers.
+
+**Authentication**: Session cookie OR Bearer PAT
+**Authorization**: `verifyProjectAccess(projectId)` — owner or member
+
+**Query params**:
+- `limit` (optional): integer 1–100, default 20 — max number of COMPLETED scans per module
+
+**Response** (200 OK):
+```json
+{
+  "trends": {
+    "SECURITY": [
+      { "date": "2026-03-30T14:22:00.000Z", "score": 85 },
+      { "date": "2026-03-29T10:15:00.000Z", "score": 82 }
+    ],
+    "COMPLIANCE": [
+      { "date": "2026-03-30T14:22:00.000Z", "score": 92 }
+    ],
+    "TESTS": [],
+    "SPEC_SYNC": [
+      { "date": "2026-03-30T14:22:00.000Z", "score": 78 },
+      { "date": "2026-03-28T09:00:00.000Z", "score": 75 }
+    ]
+  }
+}
+```
+
+Each array is ordered newest first. Only scans with `status = COMPLETED` and a non-null score are included. Empty array when no qualifying scans exist for a module.
+
+**Errors**:
+- `400`: Invalid project ID or `limit` out of range (`VALIDATION_ERROR`)
+- `401`: Unauthorized
+- `403`: Forbidden
 
 ---
 
