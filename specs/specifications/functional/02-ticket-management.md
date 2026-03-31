@@ -25,7 +25,7 @@ stateDiagram-v2
     SHIP --> [*]: Complete
 
     note right of INBOX: All tickets start here
-    note right of BUILD: FULL, QUICK, or CLEAN workflow
+    note right of BUILD: FULL or QUICK workflow
     note right of VERIFY: Tests, code review, PR
     note left of PLAN: Rollback resets git to pre-BUILD
 ```
@@ -33,7 +33,6 @@ stateDiagram-v2
 **Workflow Types**:
 - **FULL**: INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP (complete documentation)
 - **QUICK**: INBOX → BUILD → VERIFY → SHIP (fast track, minimal docs)
-- **CLEAN**: (triggered) → BUILD → VERIFY → SHIP (technical debt cleanup)
 
 ## Ticket Creation
 
@@ -144,9 +143,8 @@ Users move tickets between stages using drag-and-drop:
   - Restores spec files and commits them
   - Force-pushes the reset branch
 - Available when latest workflow job is COMPLETED, FAILED, or CANCELLED
-- Not available for QUICK or CLEAN workflow types
+- Not available for QUICK workflow type
 - Not available when job is RUNNING or PENDING
-- Blocked during project cleanup (HTTP 423 Locked)
 - Creates a `rollback-reset` job to track the git reset operation
 
 **Close Ticket (VERIFY to CLOSED)**:
@@ -161,7 +159,6 @@ Users move tickets between stages using drag-and-drop:
   - Ticket enters terminal CLOSED state (no further transitions)
 - Available when ticket in VERIFY stage with no PENDING or RUNNING jobs
 - Not available for other stages (dual drop zone only appears for VERIFY)
-- Blocked during project cleanup (HTTP 423 Locked)
 - Sets closedAt timestamp on ticket
 
 ### Performance
@@ -202,7 +199,7 @@ Clicking any ticket card opens a detail modal displaying:
   - Creation date
   - Last updated date
   - Branch name (when available)
-  - Workflow type indicator (⚡ for quick implementation, ✨ for cleanup)
+  - Workflow type indicator (⚡ for quick implementation)
 
 ### Documentation Buttons
 
@@ -233,7 +230,7 @@ The ticket detail modal provides quick access to workflow documentation files:
 - Icon: FileOutput
 - Fetches content from feature branch for BUILD/VERIFY stages
 - Fetches content from main branch for SHIP stage
-- Not available for QUICK or CLEAN workflow types (summary files only created during full workflow implementation)
+- Not available for QUICK workflow type (summary files only created during full workflow implementation)
 
 **Common Behaviors**:
 - All documentation modals support commit history viewing
@@ -299,7 +296,7 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
   - Spec Sync (0%)
 - **No Empty Breakdown**: If the verify job does not include dimension details, the score card remains non-expandable and only the summary is shown
 - **Score Source**: Taken from the latest COMPLETED verify job when multiple exist (rollback-reset scenarios)
-- **Absence**: No quality score section appears for QUICK or CLEAN workflow tickets, or if the verify job failed or was cancelled
+- **Absence**: No quality score section appears for QUICK workflow tickets, or if the verify job failed or was cancelled
 
 **Summary Metrics**:
 - **Total Cost**: Aggregated cost in USD from all jobs (formatted as $X.XX)
@@ -375,7 +372,7 @@ The viewer is a modal dialog with two sections:
   - Score percentage badge
   - "Winner" badge on rank 1
   - Rank rationale text
-  - Workflow type badge (FULL / QUICK / CLEAN)
+  - Workflow type badge (FULL / QUICK)
   - Agent badge when agent information is available
   - Quality score badge with threshold label (e.g., "87 Good") when a score exists
 
@@ -825,12 +822,11 @@ Timestamps display in user-friendly formats:
 - **Workflow Type**: Indicates which workflow path was used
   - FULL: Normal workflow (INBOX → SPECIFY → PLAN → BUILD)
   - QUICK: Quick implementation (INBOX → BUILD)
-  - CLEAN: Cleanup workflow (automated technical debt cleanup)
+  - CLEAN: Historical only -- creation path removed; retained for existing tickets
   - Set once during first BUILD transition
   - Immutable after being set
   - Visual badges distinguish workflow types on ticket cards:
     - QUICK: ⚡ Quick badge (amber styling)
-    - CLEAN: ✨ Clean badge with sparkles icon (purple styling)
 
 ### Optional Configuration
 

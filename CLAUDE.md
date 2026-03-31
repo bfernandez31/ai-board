@@ -55,9 +55,9 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 - `ticketKey` format: `{PROJECT_KEY}-{NUMBER}` (e.g., "AIB-123")
 - `project.key`: 3-char unique identifier (e.g., "AIB")
 - `branch`: Created by workflow, NOT during stage transition
-- `workflowType`: FULL|QUICK|CLEAN — set once, never changes
+- `workflowType`: FULL|QUICK — set once, never changes (CLEAN retained in DB enum for historical data)
 - `previewUrl`: Single per project (auto-replaces on deploy)
-- Job commands: `specify`, `plan`, `implement`, `verify`, `ship`, `quick-impl`, `clean`, `deploy-preview`, `rollback-reset`, `iterate`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`, `comment-ship`, `health-scan`
+- Job commands: `specify`, `plan`, `implement`, `verify`, `ship`, `quick-impl`, `deploy-preview`, `rollback-reset`, `iterate`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`, `comment-ship`, `health-scan`
 - Notifications: 15s polling, soft delete with 30-day retention
 - PushSubscriptions: Multiple per user, auto-cleanup on 410/404
 - Subscription: One per user (FREE/PRO/TEAM), effective plan considers grace period; `lib/billing/` for billing logic; `PlanLimits` includes `maxMembersPerProject` (0=not allowed, 10=Team)
@@ -91,7 +91,6 @@ For full endpoint catalog, read `specs/specifications/endpoints.md`.
 
 **Normal**: INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
 **Quick**: INBOX → BUILD (for simple fixes, bypasses spec/plan)
-**Clean**: (triggered) → BUILD → VERIFY → SHIP (automated technical debt cleanup)
 
 **Rollbacks**:
 - BUILD → INBOX: Quick-impl tickets with failed/cancelled jobs
@@ -115,12 +114,11 @@ For full endpoint catalog, read `specs/specifications/endpoints.md`.
 See `.github/workflows/` for implementation. Key workflows:
 1. **speckit.yml**: SPECIFY/PLAN/BUILD stages
 2. **quick-impl.yml**: Direct INBOX→BUILD
-3. **cleanup.yml**: Automated technical debt (CLEAN workflow)
-4. **verify.yml**: Test execution and PR creation
-5. **deploy-preview.yml**: Vercel deployment (single preview per project)
-6. **rollback-reset.yml**: Git reset for VERIFY→PLAN rollback (preserves spec files)
-7. **ai-board-assist.yml**: `@ai-board` mention triggers AI assistance (SPECIFY/PLAN/BUILD/VERIFY)
-8. **iterate.yml**: Minor fixes during VERIFY stage
+3. **verify.yml**: Test execution and PR creation
+4. **deploy-preview.yml**: Vercel deployment (single preview per project)
+5. **rollback-reset.yml**: Git reset for VERIFY→PLAN rollback (preserves spec files)
+6. **ai-board-assist.yml**: `@ai-board` mention triggers AI assistance (SPECIFY/PLAN/BUILD/VERIFY)
+7. **iterate.yml**: Minor fixes during VERIFY stage
 
 ## Testing
 

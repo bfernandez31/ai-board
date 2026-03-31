@@ -83,7 +83,7 @@ Each ticket appears as a card within its current stage column. Cards display:
   - Blue: Good (70-89)
   - Amber: Fair (50-69)
   - Red: Poor (0-49)
-  - Not shown for QUICK/CLEAN workflows or failed/cancelled verify jobs
+  - Not shown for QUICK workflows or failed/cancelled verify jobs
 
 ### Ticket Ordering
 
@@ -135,10 +135,8 @@ Tickets are ordered differently depending on their stage:
 
 **Locked State Overlays**:
 - When a ticket with an active job is dragged, all drop columns show a blocked overlay
-- When project cleanup is in progress, all drop columns show a blocked overlay for ANY dragged ticket
 - Overlay displays a Ban icon with contextual message:
   - Job lock: "Workflow in progress - Wait for job completion"
-  - Cleanup lock: "Cleanup in progress - Wait for cleanup completion"
 - Drop zones appear with 50% opacity and "not-allowed" cursor
 - Users receive clear visual feedback about why transitions are temporarily disabled
 

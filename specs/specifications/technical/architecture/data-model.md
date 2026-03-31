@@ -78,7 +78,6 @@ model Project {
   userId               String
   clarificationPolicy  ClarificationPolicy  @default(AUTO)
   defaultAgent         Agent                @default(CLAUDE)
-  activeCleanupJobId   Int?
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
 
@@ -91,7 +90,6 @@ model Project {
   @@index([githubOwner, githubRepo])
   @@index([userId])
   @@index([key])
-  @@index([activeCleanupJobId])
 }
 ```
 
@@ -112,11 +110,6 @@ model Project {
 - `userId`: Owner of the project (required foreign key)
 - `clarificationPolicy`: Default policy for spec generation (enum, default: AUTO)
 - `defaultAgent`: Default AI agent for all tickets in the project (enum, default: CLAUDE)
-- `activeCleanupJobId`: Reference to currently active cleanup job (nullable)
-  - Used for project-level transition locking during cleanup
-  - Set when cleanup workflow triggered
-  - Cleared when cleanup job reaches terminal state (COMPLETED/FAILED/CANCELLED)
-  - Index for efficient lock status queries
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
 
@@ -204,7 +197,7 @@ model Ticket {
 - `projectId`: Parent project (required foreign key)
 - `branch`: Git branch name (max 200 chars, nullable, set by workflow)
 - `autoMode`: Boolean flag for automated ticket processing (default: false)
-- `workflowType`: Workflow path used (enum: FULL, QUICK, CLEAN, default: FULL)
+- `workflowType`: Workflow path used (enum: FULL, QUICK, CLEAN; default: FULL). CLEAN is historical only -- creation path removed; retained for existing tickets.
 - `clarificationPolicy`: Optional policy override (nullable, inherits from project when null)
 - `agent`: Optional AI agent override (nullable, inherits from project `defaultAgent` when null)
 - `attachments`: Image attachments (JSON array of TicketAttachment objects, default: empty array)
@@ -262,7 +255,6 @@ model Ticket {
 - **Closing**:
   - Tickets can be closed from VERIFY stage (transition to CLOSED)
   - Closing blocked when ticket has PENDING or RUNNING jobs
-  - Closing blocked during project cleanup (HTTP 423 Locked)
   - Closes all open GitHub PRs for ticket branch with explanatory comment
   - Preserves Git branch (not deleted)
   - Sets closedAt timestamp automatically
@@ -318,7 +310,7 @@ model Job {
 - `id`: Auto-incrementing unique identifier
 - `ticketId`: Associated ticket (required foreign key)
 - `projectId`: Parent project (required foreign key, for polling queries)
-- `command`: Spec-kit command executed (specify|plan|implement|verify|ship|quick-impl|clean|deploy-preview|rollback-reset|iterate|comment-specify|comment-plan|comment-build|comment-verify|comment-ship|health-scan, max 50 chars)
+- `command`: Spec-kit command executed (specify|plan|implement|verify|ship|quick-impl|deploy-preview|rollback-reset|iterate|comment-specify|comment-plan|comment-build|comment-verify|comment-ship|health-scan, max 50 chars)
 - `status`: Current execution state (enum: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
 - `branch`: Git branch name (max 200 chars, nullable)
 - `commitSha`: Git commit hash (max 40 chars, nullable)
@@ -969,11 +961,10 @@ availableModules = [security, compliance, tests, specSync, qualityGate].filter(s
 globalScore = sum(availableModules.map(m => m.score)) / availableModules.length
 ```
 
-Equal 20% weighting with proportional redistribution when modules are unscanned. `lastClean` is informational and does not contribute to `globalScore`.
+Equal 20% weighting with proportional redistribution when modules are unscanned.
 
 **Derived fields**:
 - `qualityGate`: Latest COMPLETED verify job's `qualityScore` for the project
-- `lastCleanDate` / `lastCleanJobId`: Latest COMPLETED cleanup job for the project
 
 ---
 
@@ -1076,16 +1067,15 @@ Workflow path tracking.
 enum WorkflowType {
   FULL  // Standard workflow (INBOX → SPECIFY → PLAN → BUILD)
   QUICK // Quick-implementation (INBOX → BUILD)
-  CLEAN // Cleanup workflow (triggered → BUILD)
+  CLEAN // Historical only — creation path removed; retained for existing tickets
 }
 ```
 
 **Usage**:
 - Set during first BUILD transition
 - Immutable after initial setting
-- Determines visual badge (⚡ Quick, ✨ Clean with sparkles icon)
-- CLEAN type created via project menu "Clean Project" action
-- CLEAN tickets bypass INBOX, SPECIFY, PLAN stages
+- Determines visual badge (⚡ Quick)
+- CLEAN is retained in the enum for historical tickets but can no longer be created
 
 ### AuthProvider
 

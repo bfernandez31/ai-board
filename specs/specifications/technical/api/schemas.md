@@ -245,7 +245,6 @@ export type CloseTicketParams = z.infer<typeof closeTicketParamsSchema>;
 **Business Validation** (performed in API route, not schema):
 - Ticket must be in VERIFY stage
 - Ticket cannot have PENDING or RUNNING jobs
-- Project cleanup must not be in progress (checked via activeCleanupJobId)
 - All open GitHub PRs for ticket branch will be closed
 - Git branch preserved (not deleted)
 
@@ -1022,8 +1021,7 @@ type ScanReport =
   | ComplianceReport
   | TestsReport
   | SpecSyncReport
-  | QualityGateReport
-  | LastCleanReport;
+  | QualityGateReport;
 ```
 
 | `type` value | Module | Grouping strategy |
@@ -1033,7 +1031,6 @@ type ScanReport =
 | `"TESTS"` | Tests | Two arrays: `autoFixed` / `nonFixable` |
 | `"SPEC_SYNC"` | Spec Sync | `specs[]` with `status: "synced" | "drifted"` and optional `drift` string |
 | `"QUALITY_GATE"` | Quality Gate (passive) | `dimensions[]` score breakdown + `recentTickets[]` |
-| `"LAST_CLEAN"` | Last Clean (passive) | `filesCleaned`, `remainingIssues`, `summary` string |
 
 **SecurityReport categories**: `injection`, `authentication`, `sensitive-data`, `access-control`, `misconfiguration`, `dependencies`, `cryptography`
 
@@ -1077,9 +1074,9 @@ const { data, isLoading } = useScanReport(projectId, 'SECURITY');
 
 ## Health Passive Module Detail Schemas
 
-Response types returned by the passive module detail endpoints (`/health/quality-gate` and `/health/last-clean`). These are distinct from the `ScanReport` union above — they are API response shapes, not stored scan report blobs.
+Response types returned by the passive module detail endpoint (`/health/quality-gate`). These are distinct from the `ScanReport` union above — they are API response shapes, not stored scan report blobs.
 
-**Location**: `lib/health/quality-gate.ts` (`QualityGateDetails`), `lib/health/last-clean.ts` (`LastCleanDetails`)
+**Location**: `lib/health/quality-gate.ts` (`QualityGateDetails`)
 
 ### QualityGateDetails
 
@@ -1111,30 +1108,6 @@ interface QualityGateDetails {
 
 **Hooks**: `useQualityGateDetails(projectId)` — TanStack Query, fetches on drawer open, no polling.
 
-### LastCleanDetails
-
-```typescript
-interface LastCleanHistoryEntry {
-  jobId: number;
-  completedAt: string;      // ISO 8601
-  filesCleaned: number | null;
-  remainingIssues: number | null;
-  summary: string | null;
-}
-
-interface LastCleanDetails {
-  lastCleanDate: string | null;   // ISO 8601, null when no cleanups
-  stalenessStatus: 'ok' | 'warning' | 'alert' | null;
-  daysSinceClean: number | null;
-  filesCleaned: number | null;
-  remainingIssues: number | null;
-  summary: string | null;
-  history: LastCleanHistoryEntry[]; // up to 20, ordered by completedAt DESC
-}
-```
-
-**Hooks**: `useLastCleanDetails(projectId)` — TanStack Query, fetches on drawer open, no polling.
-
 ### HealthModuleStatus Extensions
 
 The `HealthModuleStatus` interface in `lib/health/types.ts` is extended with optional fields populated by the passive modules:
@@ -1146,8 +1119,6 @@ interface HealthModuleStatus {
   trend?: 'up' | 'down' | 'stable' | null;
   trendDelta?: number | null;
   distribution?: { excellent: number; good: number; fair: number; poor: number };
-  stalenessStatus?: 'ok' | 'warning' | 'alert' | null;
-  filesCleaned?: number | null;
 }
 ```
 

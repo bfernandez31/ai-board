@@ -346,37 +346,6 @@ Projects track activity across all tickets:
 
 ## Project Actions
 
-### Clean Project
-
-Users can trigger automated cleanup of technical debt accumulated from shipped features:
-
-**Menu Access**:
-- Project menu contains "Clean Project" option (Sparkles icon)
-- Available to project owners and members
-
-**Cleanup Prerequisites**:
-- At least one ticket shipped since last cleanup
-- No cleanup currently in progress
-- System validates prerequisites before allowing trigger
-
-**Cleanup Behavior**:
-- Creates cleanup ticket directly in BUILD stage
-- Ticket title format: "Clean YYYY-MM-DD"
-- Ticket workflowType set to CLEAN
-- Applies project-level transition lock
-
-**Transition Lock During Cleanup**:
-- All ticket stage transitions blocked during cleanup
-- Content updates still allowed (descriptions, comments, previews)
-- Warning banner displayed at top of board
-- Lock automatically released when cleanup completes
-
-**Blocked Cleanup**:
-- Already running: Shows error about active cleanup
-- No changes: Shows last cleanup date and explains nothing to clean
-
-For detailed cleanup workflow behavior, see [Automation - Cleanup Workflow](./04-automation.md#cleanup-workflow).
-
 ### Project Analytics
 
 Users can access comprehensive analytics dashboard to visualize AI workflow metrics and track project performance:
@@ -393,7 +362,7 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - **Token Usage**: Chart showing input tokens, output tokens, and cache tokens
 - **Cache Efficiency**: Ring/donut chart displaying cache savings percentage
 - **Top Tools**: Horizontal bar chart ranking most-used AI tools (Edit, Read, Bash, etc.)
-- **Workflow Distribution**: Donut chart showing proportion of FULL, QUICK, and CLEAN workflows
+- **Workflow Distribution**: Donut chart showing proportion of FULL and QUICK workflows
 - **Velocity**: Bar chart displaying tickets shipped per week
 
 **Dashboard Filters**:

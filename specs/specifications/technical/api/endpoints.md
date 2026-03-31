@@ -127,16 +127,10 @@ Fetch project details including clarification policy.
   "githubRepo": "ai-board",
   "userId": "user-abc123",
   "clarificationPolicy": "AUTO",
-  "activeCleanupJobId": null,
   "createdAt": "2025-01-01T00:00:00.000Z",
   "updatedAt": "2025-01-15T10:30:00.000Z"
 }
 ```
-
-**Fields**:
-- `activeCleanupJobId`: ID of active cleanup job (null if no cleanup in progress)
-  - Used by frontend to show cleanup lock banner
-  - Lock automatically cleared when cleanup job reaches terminal state
 
 **Errors**:
 - `401`: Not authenticated
@@ -963,8 +957,7 @@ Close ticket from VERIFY stage (transition to CLOSED).
 **Close Behavior**:
 1. Validates ticket is in VERIFY stage
 2. Validates no PENDING or RUNNING jobs exist
-3. Validates project cleanup is not in progress
-4. Closes all open GitHub PRs for ticket branch with comment: "Closed by ai-board - ticket moved to CLOSED state"
+3. Closes all open GitHub PRs for ticket branch with comment: "Closed by ai-board - ticket moved to CLOSED state"
 5. Updates ticket stage to CLOSED and sets closedAt timestamp
 6. Preserves Git branch (not deleted)
 
@@ -989,13 +982,6 @@ Close ticket from VERIFY stage (transition to CLOSED).
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 - `404`: Ticket or project not found
-- `423`: Cleanup in progress
-  ```json
-  {
-    "error": "Project cleanup in progress",
-    "code": "CLEANUP_IN_PROGRESS"
-  }
-  ```
 - `500`: Database error
 
 **Notes**:
@@ -1899,7 +1885,7 @@ Fetch summary.md content for a ticket (read-only).
 
 **Availability**:
 - Only available for FULL workflow tickets with completed implement job
-- Returns 404 for QUICK or CLEAN workflow types
+- Returns 404 for QUICK workflow type
 - Returns 404 if implement job has not completed
 
 **Summary Content**:
@@ -2846,7 +2832,6 @@ sequenceDiagram
   "workflowDistribution": [
     { "type": "FULL", "count": 12, "percentage": 60.0 },
     { "type": "QUICK", "count": 6, "percentage": 30.0 },
-    { "type": "CLEAN", "count": 2, "percentage": 10.0 }
   ],
   "velocity": [
     { "week": "2025-W46", "ticketsShipped": 3 },
@@ -2912,7 +2897,7 @@ sequenceDiagram
   - `tool`: Tool name (Edit, Read, Bash, Write, Glob, etc.)
   - `count`: Usage frequency
 - `workflowDistribution`: Workflow type breakdown
-  - `type`: FULL, QUICK, or CLEAN
+  - `type`: FULL or QUICK
   - `count`: Number of tickets using this type
   - `percentage`: Percentage of total tickets
 - `velocity`: Weekly shipping velocity
@@ -3031,9 +3016,6 @@ All error responses follow a consistent structure:
 | `VERSION_CONFLICT` | Optimistic concurrency control conflict |
 | `INVALID_TOKEN` | Workflow authentication failed |
 | `VALIDATION_ERROR` | Zod schema validation failed |
-| `CLEANUP_IN_PROGRESS` | Transitions blocked during cleanup (423) |
-| `CLEANUP_ALREADY_RUNNING` | Cleanup workflow already in progress (409) |
-| `NO_CHANGES` | No shipped tickets to clean up (400) |
 | `PLAN_LIMIT` | Action blocked because user has reached their plan quota (403) |
 
 ### HTTP Status Codes
@@ -3047,9 +3029,8 @@ All error responses follow a consistent structure:
 | `401` | Unauthorized (authentication failed) |
 | `403` | Forbidden (authorization failed) |
 | `404` | Not Found (resource doesn't exist) |
-| `409` | Conflict (version mismatch, cleanup already running) |
+| `409` | Conflict (version mismatch) |
 | `413` | Payload Too Large (file upload) |
-| `423` | Locked (cleanup in progress, transitions blocked) |
 | `500` | Internal Server Error |
 
 ## Constitution Endpoints
@@ -3224,126 +3205,6 @@ Fetch diff for a specific commit.
 - `403`: User is neither project owner nor member
 - `404`: Project not found, commit not found, or no diff available
 - `500`: GitHub API error
-
-## Project Cleanup Endpoints
-
-### POST /api/projects/:projectId/clean
-
-Trigger cleanup workflow for a project.
-
-**Authentication**: Required (session)
-**Authorization**: Must be project owner or member
-
-**Path Parameters**:
-- `projectId` (number, required): Project ID
-
-**Request Body**: Empty
-
-**Response** (201 Created):
-```json
-{
-  "ticket": {
-    "id": 150,
-    "ticketKey": "ABC-42",
-    "title": "Clean 2025-01-15",
-    "description": "Cleanup of shipped tickets since last cleanup...",
-    "stage": "BUILD",
-    "workflowType": "CLEAN",
-    "branch": null,
-    "projectId": 1,
-    "createdAt": "2025-01-15T10:00:00.000Z"
-  },
-  "job": {
-    "id": 300,
-    "ticketId": 150,
-    "command": "clean",
-    "status": "PENDING",
-    "branch": null,
-    "startedAt": "2025-01-15T10:00:00.000Z",
-    "projectId": 1
-  },
-  "analysis": {
-    "lastCleanup": {
-      "ticketKey": "ABC-30",
-      "date": "2025-01-01T00:00:00.000Z"
-    },
-    "changes": {
-      "ticketsShipped": 12,
-      "ticketKeys": ["ABC-31", "ABC-32", "..."]
-    }
-  }
-}
-```
-
-**Cleanup Process**:
-1. Validates no cleanup already in progress
-2. Checks if shipped tickets exist since last cleanup
-3. Creates cleanup ticket in BUILD stage with workflowType=CLEAN
-4. Creates cleanup job with command="clean"
-5. Sets project.activeCleanupJobId (enables transition lock)
-6. Dispatches cleanup.yml GitHub workflow
-7. Returns ticket and job details
-
-**Errors**:
-- `400`: No changes to clean (no shipped tickets since last cleanup)
-  ```json
-  {
-    "error": "No changes to clean up",
-    "code": "NO_CHANGES",
-    "details": {
-      "lastCleanupDate": "2025-01-01T00:00:00.000Z",
-      "lastCleanupTicket": "ABC-30",
-      "message": "No tickets shipped since last cleanup"
-    }
-  }
-  ```
-- `401`: Not authenticated
-- `403`: User is neither project owner nor member
-- `404`: Project not found
-- `409`: Cleanup already in progress
-  ```json
-  {
-    "error": "Cleanup workflow already in progress",
-    "code": "CLEANUP_ALREADY_RUNNING",
-    "details": {
-      "activeJobId": 299,
-      "activeJobStatus": "RUNNING"
-    }
-  }
-  ```
-- `500`: Workflow dispatch error or database error
-
-**Note**: Workflow dispatch errors are logged but don't fail the request (workflow can be manually triggered).
-
-## Transition Lock Behavior
-
-### HTTP 423 Locked Response
-
-When a project has an active cleanup job, all ticket transition requests return 423:
-
-**Request**: POST /api/projects/:projectId/tickets/:id/transition
-
-**Response** (423 Locked):
-```json
-{
-  "error": "Project cleanup in progress",
-  "code": "CLEANUP_IN_PROGRESS",
-  "details": {
-    "cleanupTicketKey": "ABC-42",
-    "jobStatus": "RUNNING",
-    "message": "You can still update ticket descriptions, documents, and preview deployments. Transitions will be re-enabled when cleanup completes."
-  }
-}
-```
-
-**Affected Endpoints**:
-- POST /api/projects/:projectId/tickets/:id/transition
-
-**Unaffected Endpoints** (still work during cleanup):
-- PATCH /api/projects/:projectId/tickets/:id (update title, description)
-- POST /api/projects/:projectId/tickets/:id/deploy (trigger preview)
-- POST /api/projects/:projectId/tickets/:id/comments (add comments)
-- All GET endpoints
 
 ## Rate Limiting
 
@@ -3843,57 +3704,6 @@ Returns aggregated Quality Gate data for the Health Dashboard drawer.
 - Current period: COMPLETED verify jobs, `workflowType=FULL`, `stage=SHIP`, `completedAt >= now - 30 days`
 - Previous period: same filters with `completedAt` between 60 and 30 days ago (for trend calculation)
 - Dimensions derived from `qualityScoreDetails` JSON on each qualifying Job record
-
-**Errors**:
-- `400`: Invalid project ID
-- `401`: Unauthorized
-- `403`: Forbidden
-- `404`: Project not found
-
----
-
-### GET /api/projects/[projectId]/health/last-clean
-
-Returns Last Clean module data including cleanup history for the Health Dashboard drawer.
-
-**Authentication**: Session cookie OR Bearer PAT
-**Authorization**: `verifyProjectAccess(projectId)` — owner or member
-
-**Path params**: `projectId` (integer, required)
-
-**Response** (200 OK):
-```json
-{
-  "lastCleanDate": "2026-03-20T10:00:00.000Z",
-  "stalenessStatus": "ok",
-  "daysSinceClean": 9,
-  "filesCleaned": 12,
-  "remainingIssues": 3,
-  "summary": "Cleaned 12 files, 3 remaining issues",
-  "history": [
-    {
-      "jobId": 456,
-      "completedAt": "2026-03-20T10:00:00.000Z",
-      "filesCleaned": 12,
-      "remainingIssues": 3,
-      "summary": "Cleaned 12 files, 3 remaining issues"
-    },
-    {
-      "jobId": 400,
-      "completedAt": "2026-02-15T08:30:00.000Z",
-      "filesCleaned": null,
-      "remainingIssues": null,
-      "summary": null
-    }
-  ]
-}
-```
-
-**Staleness thresholds**: `< 30 days` → `"ok"`, `30–60 days` → `"warning"`, `> 60 days` → `"alert"`, no cleanups → `null`.
-
-**Empty state** (no COMPLETED cleanup jobs): all top-level fields `null`, `history: []`.
-
-**Query logic**: Fetches COMPLETED cleanup jobs (`command='clean'`, `status='COMPLETED'`) for the project, ordered by `completedAt DESC`, limit 20. Structured data (`filesCleaned`, `remainingIssues`, `summary`) is parsed from job `output`; fields degrade gracefully to `null` when absent.
 
 **Errors**:
 - `400`: Invalid project ID

@@ -68,7 +68,6 @@ ai-board/
 │   ├── speckit.yml               # Main workflow
 │   ├── quick-impl.yml            # Quick-impl workflow
 │   ├── verify.yml                # Verification workflow
-│   ├── cleanup.yml               # Technical debt cleanup
 │   ├── iterate.yml               # Minor fixes during VERIFY
 │   ├── ai-board-assist.yml       # AI assistance workflow
 │   ├── auto-ship.yml             # Auto-deployment workflow
@@ -220,7 +219,7 @@ if (!project) {
 
 #### Strategy Pattern
 - Clarification policies (AUTO, CONSERVATIVE, PRAGMATIC, INTERACTIVE)
-- Workflow type (FULL vs QUICK)
+- Workflow type (FULL or QUICK)
 
 #### State Machine Pattern
 - Job status transitions (PENDING → RUNNING → COMPLETED/FAILED/CANCELLED)
