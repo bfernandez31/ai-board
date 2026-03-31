@@ -111,13 +111,6 @@ export function HealthModuleCard({
         <DistributionBar distribution={module.distribution} />
       )}
 
-      {state === 'scanning' && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Scanning...</span>
-        </div>
-      )}
-
       {state === 'failed' && (
         <div className="flex items-center gap-2 text-sm text-ctp-red">
           <AlertTriangle className="h-4 w-4" />
