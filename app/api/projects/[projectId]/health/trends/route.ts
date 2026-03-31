@@ -56,18 +56,15 @@ export async function GET(
 
     const results = await Promise.all(trendQueries);
 
-    const trends: Record<string, { date: string; score: number }[]> = {};
-    ACTIVE_SCAN_TYPES.forEach((scanType, index) => {
-      const moduleResults = results[index];
-      if (moduleResults) {
-        trends[scanType] = moduleResults.map((scan) => ({
+    const trends = Object.fromEntries(
+      ACTIVE_SCAN_TYPES.map((scanType, index) => [
+        scanType,
+        (results[index] ?? []).map((scan) => ({
           date: (scan.completedAt ?? new Date()).toISOString(),
           score: scan.score ?? 0,
-        }));
-      } else {
-        trends[scanType] = [];
-      }
-    });
+        })),
+      ])
+    );
 
     return NextResponse.json({ trends });
   } catch (error) {

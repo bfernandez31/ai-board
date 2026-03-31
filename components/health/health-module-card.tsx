@@ -99,7 +99,7 @@ export function HealthModuleCard({
       {trendData && trendData.length >= 3 && (
         <Sparkline
           data={trendData}
-          color={scoreColors ? SCORE_COLOR_TO_HSL[scoreColors.text] ?? 'hsl(var(--primary))' : 'hsl(var(--primary))'}
+          color={scoreColors ? (SCORE_COLOR_TO_HSL[scoreColors.text] ?? 'hsl(var(--primary))') : 'hsl(var(--primary))'}
         />
       )}
 

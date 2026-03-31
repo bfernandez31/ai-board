@@ -32,13 +32,7 @@ export function HealthDashboard({ projectId }: HealthDashboardProps) {
   const { data: trendsData } = useHealthTrends(projectId);
   const triggerScan = useTriggerScan();
 
-  // Build per-module trend lookup from the single trends response
-  const moduleTrends: Record<string, TrendDataPoint[]> = {};
-  if (trendsData?.trends) {
-    for (const [scanType, points] of Object.entries(trendsData.trends)) {
-      moduleTrends[scanType] = points;
-    }
-  }
+  const moduleTrends: Record<string, TrendDataPoint[]> = trendsData?.trends ?? {};
 
   if (isLoading) {
     return (
