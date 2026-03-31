@@ -65,6 +65,11 @@ export const queryKeys = {
   tokens: {
     all: ['tokens'] as const,
   },
+
+  aiCredentials: {
+    all: ['ai-credentials'] as const,
+    provider: (provider: string) => ['ai-credentials', provider] as const,
+  },
 } as const;
 
 export type QueryKeys = typeof queryKeys;

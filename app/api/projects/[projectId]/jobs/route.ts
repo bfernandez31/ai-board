@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { AiCredentialProvider } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
+import { getProjectOwnerCredentialEligibility } from '@/lib/ai-credentials/workflow';
 
 /**
  * Schema for route parameters
@@ -70,6 +72,22 @@ export async function POST(
     }
 
     const { ticketId, command, branch } = validationResult.data;
+
+    const eligibility = await getProjectOwnerCredentialEligibility(
+      projectId,
+      AiCredentialProvider.ANTHROPIC
+    );
+
+    if (!eligibility.eligible) {
+      return NextResponse.json(
+        {
+          error: eligibility.message,
+          code: eligibility.code,
+          message: eligibility.message,
+        },
+        { status: 409 }
+      );
+    }
 
     // Verify the ticket exists and belongs to this project
     const ticket = await prisma.ticket.findUnique({

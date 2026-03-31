@@ -189,8 +189,14 @@ export async function handleTicketTransition(
     }
 
     const githubToken = process.env.GITHUB_TOKEN;
-    const aiboardOwner = process.env.GITHUB_OWNER;
-    const aiboardRepo = process.env.GITHUB_REPO;
+    const repositoryParts = process.env.GITHUB_REPOSITORY?.split('/') ?? [];
+    const aiboardOwner =
+      process.env.GITHUB_OWNER ||
+      process.env.GITHUB_REPOSITORY_OWNER ||
+      repositoryParts[0];
+    const aiboardRepo =
+      process.env.GITHUB_REPO ||
+      repositoryParts[1];
 
     if (!aiboardOwner || !aiboardRepo) {
       return {

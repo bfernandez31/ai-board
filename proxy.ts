@@ -16,6 +16,7 @@ const SESSION_COOKIE_NAMES = [
 const PUBLIC_PREFIXES = ["/auth", "/api/auth", "/api/push", "/api/telemetry/", "/legal"]
 
 const PUBLIC_PATTERNS = [
+  /^\/api\/internal\/workflows\/projects\/\d+\/providers\/[^/]+\/credential$/,
   /^\/api\/jobs\/\d+\/status$/,
   /^\/api\/projects\/\d+\/jobs$/,
   /^\/api\/projects\/\d+\/tickets\/[^/]+\/comments\/ai-board$/,

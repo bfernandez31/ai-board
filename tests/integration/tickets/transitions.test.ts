@@ -9,6 +9,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import { encryptSecret, maskSecret } from '@/lib/ai-credentials/crypto';
 
 describe('Ticket Transitions', () => {
   let ctx: TestContext;
@@ -17,6 +18,12 @@ describe('Ticket Transitions', () => {
   beforeEach(async () => {
     ctx = await getTestContext();
     await ctx.cleanup();
+    process.env.AI_CREDENTIAL_ENCRYPTION_KEY = 'transition-test-ai-credential-key';
+    await prisma.userAiCredential.deleteMany({
+      where: {
+        userId: 'test-user-id',
+      },
+    });
   });
 
   describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
@@ -162,6 +169,76 @@ describe('Ticket Transitions', () => {
 
       expect(response.status).toBe(400);
       expect(response.data).toHaveProperty('error');
+    });
+  });
+
+  describe('POST /api/projects/:projectId/jobs', () => {
+    it('blocks workflow job creation when the owner credential is missing', async () => {
+      const ticket = await ctx.createTicket({
+        title: '[e2e] Missing credential launch gate',
+        description: 'Workflow launch should be blocked without owner credential',
+      });
+
+      const response = await ctx.api.fetch(`/api/projects/${ctx.projectId}/jobs`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only'}`,
+        },
+        body: JSON.stringify({
+          ticketId: ticket.id,
+          command: 'implement',
+        }),
+        includeTestUserHeader: false,
+        enableTestAuthOverride: false,
+      });
+
+      const data = (await response.json()) as { code: string; message: string };
+
+      expect(response.status).toBe(409);
+      expect(data.code).toBe('OWNER_CREDENTIAL_MISSING');
+      expect(data.message).toMatch(/project owner must configure a valid anthropic credential/i);
+    });
+
+    it('allows workflow job creation when the owner credential is ready', async () => {
+      const secret = 'sk-ant-valid-secret-12345678';
+      const encrypted = encryptSecret(secret);
+
+      await prisma.userAiCredential.create({
+        data: {
+          userId: 'test-user-id',
+          provider: 'ANTHROPIC',
+          credentialType: 'ANTHROPIC_API_KEY',
+          label: '[e2e] Ready owner credential',
+          maskedPreview: maskSecret(secret),
+          ...encrypted,
+          readinessStatus: 'READY',
+          lastVerifiedAt: new Date(),
+        },
+      });
+
+      const ticket = await ctx.createTicket({
+        title: '[e2e] Ready credential launch gate',
+        description: 'Workflow launch should be allowed with owner credential',
+      });
+
+      const response = await ctx.api.fetch(`/api/projects/${ctx.projectId}/jobs`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only'}`,
+        },
+        body: JSON.stringify({
+          ticketId: ticket.id,
+          command: 'implement',
+        }),
+        includeTestUserHeader: false,
+        enableTestAuthOverride: false,
+      });
+
+      const data = (await response.json()) as { status: string; command: string };
+
+      expect(response.status).toBe(201);
+      expect(data.status).toBe('PENDING');
+      expect(data.command).toBe('implement');
     });
   });
 

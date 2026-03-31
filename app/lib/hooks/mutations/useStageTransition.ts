@@ -8,6 +8,20 @@ import type {
   OptimisticContext,
 } from '@/app/lib/types/query-types';
 
+export class StageTransitionError extends Error {
+  status: number;
+  code: string | undefined;
+  details: unknown;
+
+  constructor(message: string, status: number, code?: string, details?: unknown) {
+    super(message);
+    this.name = 'StageTransitionError';
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+}
+
 /**
  * Transition a ticket to a different stage (drag-and-drop)
  *
@@ -40,7 +54,12 @@ export function useStageTransition(projectId: number) {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to transition ticket');
+        throw new StageTransitionError(
+          error.message || error.error || 'Failed to transition ticket',
+          response.status,
+          error.code,
+          error.details
+        );
       }
 
       return response.json() as Promise<TicketWithVersion>;

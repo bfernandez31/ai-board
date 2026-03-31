@@ -16,9 +16,9 @@
 
 **Purpose**: Create the shared feature entry points and naming scaffolding used by the later implementation phases.
 
-- [ ] T001 Add the AI-credentials query key namespace and cache helpers in `/home/runner/work/ai-board/ai-board/target/app/lib/query-keys.ts`
-- [ ] T002 [P] Create shared AI credential enums, DTOs, and provider metadata in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/types.ts`
-- [ ] T003 [P] Scaffold the personal AI credentials settings page shell in `/home/runner/work/ai-board/ai-board/target/app/settings/ai-credentials/page.tsx`
+- [X] T001 Add the AI-credentials query key namespace and cache helpers in `/home/runner/work/ai-board/ai-board/target/app/lib/query-keys.ts`
+- [X] T002 [P] Create shared AI credential enums, DTOs, and provider metadata in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/types.ts`
+- [X] T003 [P] Scaffold the personal AI credentials settings page shell in `/home/runner/work/ai-board/ai-board/target/app/settings/ai-credentials/page.tsx`
 
 ---
 
@@ -28,15 +28,15 @@
 
 **⚠️ CRITICAL**: No user story work should start before this phase is complete.
 
-- [ ] T004 Extend the Prisma schema with `UserAiCredential`, enum types, and the `User.aiCredentials` relation in `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`
-- [ ] T005 Create the Prisma migration for `UserAiCredential` tables, indexes, and enum changes in `/home/runner/work/ai-board/ai-board/target/prisma/migrations/20260331120000_add_user_ai_credentials/migration.sql`
-- [ ] T006 [P] Implement shared Zod request/response validation for labels, provider/type pairs, and workflow payloads in `/home/runner/work/ai-board/ai-board/target/lib/validations/ai-credentials.ts`
-- [ ] T007 [P] Implement encryption, decryption, masking, and secret-shredding helpers in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/crypto.ts`
-- [ ] T008 [P] Implement the Anthropic provider adapter for local format checks and server verification in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/providers/anthropic.ts`
-- [ ] T009 Implement Prisma data-access helpers for active credential lookup, upsert, and soft delete in `/home/runner/work/ai-board/ai-board/target/lib/db/ai-credentials.ts`
-- [ ] T010 Implement the shared credential service for masked summaries, readiness transitions, and replacement semantics in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/service.ts`
-- [ ] T011 Implement workflow owner resolution and provider auth-mode mapping in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/workflow.ts`
-- [ ] T012 [P] Add unit coverage for encryption, decryption, invalid-key handling, and delete-time shredding in `/home/runner/work/ai-board/ai-board/target/tests/unit/ai-credentials/crypto.test.ts`
+- [X] T004 Extend the Prisma schema with `UserAiCredential`, enum types, and the `User.aiCredentials` relation in `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`
+- [X] T005 Create the Prisma migration for `UserAiCredential` tables, indexes, and enum changes in `/home/runner/work/ai-board/ai-board/target/prisma/migrations/20260331120000_add_user_ai_credentials/migration.sql`
+- [X] T006 [P] Implement shared Zod request/response validation for labels, provider/type pairs, and workflow payloads in `/home/runner/work/ai-board/ai-board/target/lib/validations/ai-credentials.ts`
+- [X] T007 [P] Implement encryption, decryption, masking, and secret-shredding helpers in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/crypto.ts`
+- [X] T008 [P] Implement the Anthropic provider adapter for local format checks and server verification in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/providers/anthropic.ts`
+- [X] T009 Implement Prisma data-access helpers for active credential lookup, upsert, and soft delete in `/home/runner/work/ai-board/ai-board/target/lib/db/ai-credentials.ts`
+- [X] T010 Implement the shared credential service for masked summaries, readiness transitions, and replacement semantics in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/service.ts`
+- [X] T011 Implement workflow owner resolution and provider auth-mode mapping in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/workflow.ts`
+- [X] T012 [P] Add unit coverage for encryption, decryption, invalid-key handling, and delete-time shredding in `/home/runner/work/ai-board/ai-board/target/tests/unit/ai-credentials/crypto.test.ts`
 
 **Checkpoint**: Foundation ready. User story implementation can now proceed with a shared schema, service layer, and crypto boundary.
 
@@ -50,19 +50,19 @@
 
 ### Tests for User Story 1
 
-- [ ] T013 [P] [US1] Add integration coverage for list, create, verify, and masked-summary responses in `/home/runner/work/ai-board/ai-board/target/tests/integration/ai-credentials/settings-api.test.ts`
-- [ ] T014 [P] [US1] Add component coverage for provider/type selection, inline validation, and status rendering in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/ai-credential-settings-card.test.tsx`
-- [ ] T015 [P] [US1] Add a Playwright smoke test for the save flow and post-save masked display in `/home/runner/work/ai-board/ai-board/target/tests/e2e/ai-credentials.spec.ts`
+- [X] T013 [P] [US1] Add integration coverage for list, create, verify, and masked-summary responses in `/home/runner/work/ai-board/ai-board/target/tests/integration/ai-credentials/settings-api.test.ts`
+- [X] T014 [P] [US1] Add component coverage for provider/type selection, inline validation, and status rendering in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/ai-credential-settings-card.test.tsx`
+- [X] T015 [P] [US1] Add a Playwright smoke test for the save flow and post-save masked display in `/home/runner/work/ai-board/ai-board/target/tests/e2e/ai-credentials.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T016 [P] [US1] Implement the AI-credential React Query hooks for list and save mutations in `/home/runner/work/ai-board/ai-board/target/lib/hooks/mutations/useAiCredentials.ts`
-- [ ] T017 [P] [US1] Implement the masked credential list and primary settings card in `/home/runner/work/ai-board/ai-board/target/components/ai-credentials/credential-list.tsx` and `/home/runner/work/ai-board/ai-board/target/components/ai-credentials/credential-settings-card.tsx`
-- [ ] T018 [P] [US1] Implement the save credential dialog with client-side validation and submit states in `/home/runner/work/ai-board/ai-board/target/components/ai-credentials/save-credential-dialog.tsx`
-- [ ] T019 [US1] Implement the session-authenticated list endpoint for masked credential summaries in `/home/runner/work/ai-board/ai-board/target/app/api/settings/ai-credentials/route.ts`
-- [ ] T020 [US1] Implement the provider-scoped upsert endpoint with provider verification and masked responses in `/home/runner/work/ai-board/ai-board/target/app/api/settings/ai-credentials/[provider]/route.ts`
-- [ ] T021 [US1] Wire the settings page to the new hooks and components in `/home/runner/work/ai-board/ai-board/target/app/settings/ai-credentials/page.tsx`
-- [ ] T022 [US1] Add an AI Credentials navigation entry and coverage for it in `/home/runner/work/ai-board/ai-board/target/components/auth/user-menu.tsx` and `/home/runner/work/ai-board/ai-board/target/tests/unit/components/user-menu.test.tsx`
+- [X] T016 [P] [US1] Implement the AI-credential React Query hooks for list and save mutations in `/home/runner/work/ai-board/ai-board/target/lib/hooks/mutations/useAiCredentials.ts`
+- [X] T017 [P] [US1] Implement the masked credential list and primary settings card in `/home/runner/work/ai-board/ai-board/target/components/ai-credentials/credential-list.tsx` and `/home/runner/work/ai-board/ai-board/target/components/ai-credentials/credential-settings-card.tsx`
+- [X] T018 [P] [US1] Implement the save credential dialog with client-side validation and submit states in `/home/runner/work/ai-board/ai-board/target/components/ai-credentials/save-credential-dialog.tsx`
+- [X] T019 [US1] Implement the session-authenticated list endpoint for masked credential summaries in `/home/runner/work/ai-board/ai-board/target/app/api/settings/ai-credentials/route.ts`
+- [X] T020 [US1] Implement the provider-scoped upsert endpoint with provider verification and masked responses in `/home/runner/work/ai-board/ai-board/target/app/api/settings/ai-credentials/[provider]/route.ts`
+- [X] T021 [US1] Wire the settings page to the new hooks and components in `/home/runner/work/ai-board/ai-board/target/app/settings/ai-credentials/page.tsx`
+- [X] T022 [US1] Add an AI Credentials navigation entry and coverage for it in `/home/runner/work/ai-board/ai-board/target/components/auth/user-menu.tsx` and `/home/runner/work/ai-board/ai-board/target/tests/unit/components/user-menu.test.tsx`
 
 **Checkpoint**: User Story 1 is complete when a user can save exactly one valid Anthropic credential, see only masked metadata afterward, and receive actionable validation errors for invalid credentials.
 
@@ -76,14 +76,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Add integration coverage for workflow token auth, owner resolution, and fail-closed responses in `/home/runner/work/ai-board/ai-board/target/tests/integration/ai-credentials/workflow-owner-credential.test.ts`
-- [ ] T024 [P] [US2] Extend workflow launch gating coverage for allowed and blocked transitions in `/home/runner/work/ai-board/ai-board/target/tests/integration/tickets/transitions.test.ts`
+- [X] T023 [P] [US2] Add integration coverage for workflow token auth, owner resolution, and fail-closed responses in `/home/runner/work/ai-board/ai-board/target/tests/integration/ai-credentials/workflow-owner-credential.test.ts`
+- [X] T024 [P] [US2] Extend workflow launch gating coverage for allowed and blocked transitions in `/home/runner/work/ai-board/ai-board/target/tests/integration/tickets/transitions.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Implement the workflow-only owner credential retrieval endpoint in `/home/runner/work/ai-board/ai-board/target/app/api/internal/workflows/projects/[projectId]/providers/[provider]/credential/route.ts`
-- [ ] T026 [US2] Enforce owner credential eligibility before AI job creation in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/jobs/route.ts`
-- [ ] T027 [US2] Surface blocked-launch remediation details through the stage-transition mutation flow in `/home/runner/work/ai-board/ai-board/target/app/lib/hooks/mutations/useStageTransition.ts`
+- [X] T025 [US2] Implement the workflow-only owner credential retrieval endpoint in `/home/runner/work/ai-board/ai-board/target/app/api/internal/workflows/projects/[projectId]/providers/[provider]/credential/route.ts`
+- [X] T026 [US2] Enforce owner credential eligibility before AI job creation in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/jobs/route.ts`
+- [X] T027 [US2] Surface blocked-launch remediation details through the stage-transition mutation flow in `/home/runner/work/ai-board/ai-board/target/app/lib/hooks/mutations/useStageTransition.ts`
 
 **Checkpoint**: User Story 2 is complete when workflow-authenticated callers can resolve only the owner credential, member launches still use the owner credential, and launches fail before AI execution if the owner credential is missing or unusable.
 
@@ -97,15 +97,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T028 [P] [US3] Extend settings API integration coverage for replacement, deletion, and readiness transitions in `/home/runner/work/ai-board/ai-board/target/tests/integration/ai-credentials/settings-api.test.ts`
-- [ ] T029 [P] [US3] Extend component coverage for masked persisted state and delete confirmation flows in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/ai-credential-settings-card.test.tsx`
-- [ ] T030 [P] [US3] Extend Playwright coverage for replace and delete lifecycle flows in `/home/runner/work/ai-board/ai-board/target/tests/e2e/ai-credentials.spec.ts`
+- [X] T028 [P] [US3] Extend settings API integration coverage for replacement, deletion, and readiness transitions in `/home/runner/work/ai-board/ai-board/target/tests/integration/ai-credentials/settings-api.test.ts`
+- [X] T029 [P] [US3] Extend component coverage for masked persisted state and delete confirmation flows in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/ai-credential-settings-card.test.tsx`
+- [X] T030 [P] [US3] Extend Playwright coverage for replace and delete lifecycle flows in `/home/runner/work/ai-board/ai-board/target/tests/e2e/ai-credentials.spec.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Implement the delete credential dialog and destructive mutation wiring in `/home/runner/work/ai-board/ai-board/target/components/ai-credentials/delete-credential-dialog.tsx`
-- [ ] T032 [US3] Add provider-scoped delete handling with soft-delete shredding semantics in `/home/runner/work/ai-board/ai-board/target/app/api/settings/ai-credentials/[provider]/route.ts`
-- [ ] T033 [US3] Update masked lifecycle messaging and replacement/delete states in `/home/runner/work/ai-board/ai-board/target/components/ai-credentials/credential-settings-card.tsx`
+- [X] T031 [US3] Implement the delete credential dialog and destructive mutation wiring in `/home/runner/work/ai-board/ai-board/target/components/ai-credentials/delete-credential-dialog.tsx`
+- [X] T032 [US3] Add provider-scoped delete handling with soft-delete shredding semantics in `/home/runner/work/ai-board/ai-board/target/app/api/settings/ai-credentials/[provider]/route.ts`
+- [X] T033 [US3] Update masked lifecycle messaging and replacement/delete states in `/home/runner/work/ai-board/ai-board/target/components/ai-credentials/credential-settings-card.tsx`
 
 **Checkpoint**: User Story 3 is complete when replacement takes effect for the next launch, deletion immediately removes launch eligibility, and every later view remains masked.
 
@@ -115,10 +115,10 @@
 
 **Purpose**: Finalize generated artifacts, verify the designed scenarios, and clear project-wide quality gates.
 
-- [ ] T034 [P] Regenerate the Prisma client for the new credential schema rooted in `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`
-- [ ] T035 [P] Validate the designed user and workflow scenarios against `/home/runner/work/ai-board/ai-board/target/specs/AIB-431-byok-gestion-des/quickstart.md`
-- [ ] T036 [P] Run `bun run type-check` and fix any BYOK-related issues in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/`
-- [ ] T037 [P] Run `bun run lint` and fix any BYOK-related issues in `/home/runner/work/ai-board/ai-board/target/app/settings/ai-credentials/page.tsx` and `/home/runner/work/ai-board/ai-board/target/components/ai-credentials/`
+- [X] T034 [P] Regenerate the Prisma client for the new credential schema rooted in `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`
+- [X] T035 [P] Validate the designed user and workflow scenarios against `/home/runner/work/ai-board/ai-board/target/specs/AIB-431-byok-gestion-des/quickstart.md`
+- [X] T036 [P] Run `bun run type-check` and fix any BYOK-related issues in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/`
+- [X] T037 [P] Run `bun run lint` and fix any BYOK-related issues in `/home/runner/work/ai-board/ai-board/target/app/settings/ai-credentials/page.tsx` and `/home/runner/work/ai-board/ai-board/target/components/ai-credentials/`
 
 ---
 

@@ -168,6 +168,7 @@ model User {
   notificationsCreated  Notification[]        @relation("NotificationActor")
   pushSubscriptions     PushSubscription[]
   personalAccessTokens  PersonalAccessToken[]
+  aiCredentials         UserAiCredential[]
   subscription          Subscription?
 
   @@index([email])
@@ -255,6 +256,31 @@ model PushSubscription {
   @@index([endpoint])
 }
 
+model UserAiCredential {
+  id                      Int                         @id @default(autoincrement())
+  userId                  String
+  provider                AiCredentialProvider
+  credentialType          AiCredentialType
+  label                   String                      @db.VarChar(100)
+  maskedPreview           String                      @db.VarChar(4)
+  encryptedSecret         String?                     @db.Text
+  encryptionIv            String?                     @db.VarChar(64)
+  encryptionAuthTag       String?                     @db.VarChar(64)
+  readinessStatus         AiCredentialReadinessStatus @default(PENDING_VERIFICATION)
+  lastVerifiedAt          DateTime?
+  lastVerificationCode    String?                     @db.VarChar(50)
+  lastVerificationMessage String?                     @db.VarChar(500)
+  deletedAt               DateTime?
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @default(now()) @updatedAt
+  user                    User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([provider, readinessStatus])
+  @@index([deletedAt])
+}
+
 enum AuthProvider {
   GITHUB
   GOOGLE
@@ -296,6 +322,21 @@ enum WorkflowType {
 enum Agent {
   CLAUDE
   CODEX
+}
+
+enum AiCredentialProvider {
+  ANTHROPIC
+}
+
+enum AiCredentialType {
+  ANTHROPIC_API_KEY
+  ANTHROPIC_OAUTH
+}
+
+enum AiCredentialReadinessStatus {
+  PENDING_VERIFICATION
+  READY
+  ACTION_REQUIRED
 }
 
 enum SubscriptionPlan {

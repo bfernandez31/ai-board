@@ -163,6 +163,19 @@ describe('Query Keys Factory', () => {
     });
   });
 
+  describe('aiCredentials', () => {
+    it('should return correct key for all AI credentials', () => {
+      expect(queryKeys.aiCredentials.all).toEqual(['ai-credentials']);
+    });
+
+    it('should return correct key for provider AI credentials', () => {
+      expect(queryKeys.aiCredentials.provider('ANTHROPIC')).toEqual([
+        'ai-credentials',
+        'ANTHROPIC',
+      ]);
+    });
+  });
+
   describe('cache invalidation hierarchy', () => {
     it('should support hierarchical invalidation for projects', () => {
       const allProjects = queryKeys.projects.all;

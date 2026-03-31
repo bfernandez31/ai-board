@@ -2,7 +2,7 @@
  * RTL Component Tests: UserMenu
  *
  * Tests for the user menu dropdown component.
- * Verifies settings links (Billing, API Tokens) are present.
+ * Verifies settings links (Billing, API Tokens, AI Credentials) are present.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -50,6 +50,10 @@ describe('UserMenu', () => {
     const tokensItem = screen.getByRole('menuitem', { name: /api tokens/i });
     expect(tokensItem).toBeInTheDocument();
     expect(tokensItem).toHaveAttribute('href', '/settings/tokens');
+
+    const aiCredentialsItem = screen.getByRole('menuitem', { name: /ai credentials/i });
+    expect(aiCredentialsItem).toBeInTheDocument();
+    expect(aiCredentialsItem).toHaveAttribute('href', '/settings/ai-credentials');
   });
 
   it('should render sign out option', async () => {
