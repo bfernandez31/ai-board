@@ -59,12 +59,14 @@ parse_vitest_report() {
 }
 
 # Parse Playwright JSON report and extract counts
+# Playwright nests suites recursively (e.g. auth/, board/ subdirectories),
+# so we must recurse into all .suites[] at every depth level.
 parse_playwright_report() {
     local report_file="$1"
     if [ -f "$report_file" ] && jq empty "$report_file" 2>/dev/null; then
         local passed failed total
-        passed=$(jq '[.suites[]?.specs[]?.tests[]? | select(.status == "expected")] | length' "$report_file" 2>/dev/null || echo 0)
-        failed=$(jq '[.suites[]?.specs[]?.tests[]? | select(.status == "unexpected")] | length' "$report_file" 2>/dev/null || echo 0)
+        passed=$(jq '[.. | .specs? // empty | .[]? | .tests[]? | select(.status == "expected")] | length' "$report_file" 2>/dev/null || echo 0)
+        failed=$(jq '[.. | .specs? // empty | .[]? | .tests[]? | select(.status == "unexpected")] | length' "$report_file" 2>/dev/null || echo 0)
         total=$((passed + failed))
         echo "$passed $failed $total"
     else
@@ -102,6 +104,9 @@ else
     TEST_MODE=true \
     WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only \
     NODE_ENV=test \
+    VERCEL_ENV=preview \
+    DEV_LOGIN_ENABLED=true \
+    DEV_LOGIN_SECRET=shared-preview-secret \
     bun run dev > /tmp/dev-server.log 2>&1 &
     SERVER_PID=$!
 
