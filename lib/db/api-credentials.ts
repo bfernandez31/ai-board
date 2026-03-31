@@ -2,6 +2,16 @@ import { prisma } from './client';
 import { AiProvider, CredentialType } from '@prisma/client';
 import { encrypt, decrypt } from '@/lib/crypto/encrypt';
 
+const METADATA_SELECT = {
+  id: true,
+  provider: true,
+  credentialType: true,
+  label: true,
+  preview: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
 /**
  * Upsert an API credential for a user+provider (one credential per provider per user).
  * The key is encrypted at rest using AES-256-GCM.
@@ -36,15 +46,7 @@ export async function upsertApiCredential(
       authTag,
       preview,
     },
-    select: {
-      id: true,
-      provider: true,
-      credentialType: true,
-      label: true,
-      preview: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+    select: METADATA_SELECT,
   });
 }
 
@@ -54,15 +56,7 @@ export async function upsertApiCredential(
 export async function getApiCredential(userId: string, provider: AiProvider) {
   return prisma.apiCredential.findUnique({
     where: { userId_provider: { userId, provider } },
-    select: {
-      id: true,
-      provider: true,
-      credentialType: true,
-      label: true,
-      preview: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+    select: METADATA_SELECT,
   });
 }
 
@@ -72,15 +66,7 @@ export async function getApiCredential(userId: string, provider: AiProvider) {
 export async function listApiCredentials(userId: string) {
   return prisma.apiCredential.findMany({
     where: { userId },
-    select: {
-      id: true,
-      provider: true,
-      credentialType: true,
-      label: true,
-      preview: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+    select: METADATA_SELECT,
     orderBy: { createdAt: 'desc' },
   });
 }

@@ -12,6 +12,18 @@ const upsertSchema = z.object({
   apiKey: z.string().min(1, 'API key is required'),
 });
 
+function serializeCredential(c: { id: number; provider: AiProvider; credentialType: CredentialType; label: string; preview: string; createdAt: Date; updatedAt: Date }) {
+  return {
+    id: c.id,
+    provider: c.provider,
+    credentialType: c.credentialType,
+    label: c.label,
+    preview: c.preview,
+    createdAt: c.createdAt.toISOString(),
+    updatedAt: c.updatedAt.toISOString(),
+  };
+}
+
 /**
  * GET /api/credentials
  * List all API credentials (metadata only) for the authenticated user.
@@ -22,15 +34,7 @@ export async function GET(request: NextRequest) {
     const credentials = await listApiCredentials(user.id);
 
     return NextResponse.json({
-      credentials: credentials.map((c) => ({
-        id: c.id,
-        provider: c.provider,
-        credentialType: c.credentialType,
-        label: c.label,
-        preview: c.preview,
-        createdAt: c.createdAt.toISOString(),
-        updatedAt: c.updatedAt.toISOString(),
-      })),
+      credentials: credentials.map(serializeCredential),
     });
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {
@@ -52,7 +56,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = upsertSchema.parse(body);
 
-    // Format validation
     const formatCheck = validateKeyFormat(
       validated.provider,
       validated.credentialType,
@@ -70,18 +73,7 @@ export async function POST(request: NextRequest) {
       validated.apiKey
     );
 
-    return NextResponse.json(
-      {
-        id: credential.id,
-        provider: credential.provider,
-        credentialType: credential.credentialType,
-        label: credential.label,
-        preview: credential.preview,
-        createdAt: credential.createdAt.toISOString(),
-        updatedAt: credential.updatedAt.toISOString(),
-      },
-      { status: 201 }
-    );
+    return NextResponse.json(serializeCredential(credential), { status: 201 });
   } catch (error) {
     if (error instanceof ZodError) {
       const firstIssue = error.issues[0];

@@ -1,11 +1,10 @@
-import { PrismaClient, Stage, JobStatus, Ticket, Project, Agent, AiProvider } from '@prisma/client';
+import { Stage, JobStatus, Ticket, Project, Agent, AiProvider } from '@prisma/client';
 import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
 import { getApiCredential } from '@/lib/db/api-credentials';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/db/client';
 
 /** Stage-to-command mapping (null = manual/no workflow) */
 export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
