@@ -1,10 +1,16 @@
 'use client';
 
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { History, ChevronDown } from 'lucide-react';
+import { History, ChevronDown, AlertTriangle, Coins, Zap, Clock, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/components/ui/tooltip';
 import { getScoreColor } from '@/lib/quality-score';
 import { queryKeys } from '@/app/lib/query-keys';
+import { formatAbbreviatedNumber, formatCost, formatDuration } from '@/lib/analytics/aggregations';
 import type { HealthModuleType, ScanHistoryItem, ScanHistoryResponse } from '@/lib/health/types';
 
 interface DrawerHistoryProps {
@@ -91,12 +97,29 @@ function HistoryEntry({ scan }: { scan: ScanHistoryItem }) {
           </p>
         )}
       </div>
-      <div className="flex items-center gap-3">
-        {scan.issuesFound !== null && (
-          <span className="text-xs text-muted-foreground">
-            {scan.issuesFound} issue{scan.issuesFound !== 1 ? 's' : ''}
-          </span>
-        )}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <MetricIcon
+            icon={AlertTriangle}
+            value={scan.issuesFound !== null ? String(scan.issuesFound) : null}
+            tooltip="Issues found during scan"
+          />
+          <MetricIcon
+            icon={Coins}
+            value={scan.costUsd !== null ? formatCost(scan.costUsd) : null}
+            tooltip="Cost in USD"
+          />
+          <MetricIcon
+            icon={Zap}
+            value={scan.tokensUsed !== null ? formatAbbreviatedNumber(scan.tokensUsed) : null}
+            tooltip="Tokens consumed"
+          />
+          <MetricIcon
+            icon={Clock}
+            value={scan.durationMs !== null ? formatDuration(scan.durationMs) : null}
+            tooltip="Execution time"
+          />
+        </div>
         {scan.score !== null && scoreColors ? (
           <span className={`text-xs font-medium ${scoreColors.text} ${scoreColors.bg} rounded-md px-2 py-0.5`}>
             {scan.score}
@@ -106,5 +129,29 @@ function HistoryEntry({ scan }: { scan: ScanHistoryItem }) {
         )}
       </div>
     </div>
+  );
+}
+
+function MetricIcon({
+  icon: Icon,
+  value,
+  tooltip,
+}: {
+  icon: LucideIcon;
+  value: string | null;
+  tooltip: string;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="flex items-center gap-0.5 text-muted-foreground">
+          <Icon className="h-3 w-3" />
+          <span className="text-[10px]">{value ?? '—'}</span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p className="text-xs">{tooltip}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }

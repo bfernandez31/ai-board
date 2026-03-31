@@ -104,6 +104,54 @@ describe('Scan History GET Endpoint', () => {
     expect(response.status).toBe(400);
   });
 
+  describe('telemetry fields', () => {
+    it('includes tokensUsed and costUsd fields in response', async () => {
+      await prisma.healthScan.create({
+        data: {
+          projectId: ctx.projectId,
+          scanType: 'SECURITY',
+          status: 'COMPLETED',
+          score: 85,
+          tokensUsed: 12500,
+          costUsd: 0.15,
+          durationMs: 45000,
+          completedAt: new Date(),
+        },
+      });
+
+      const response = await makeRequest(ctx.projectId);
+      const data = await response.json();
+
+      expect(data.scans).toHaveLength(1);
+      expect(data.scans[0].tokensUsed).toBe(12500);
+      expect(data.scans[0].costUsd).toBe(0.15);
+      expect(data.scans[0].durationMs).toBe(45000);
+    });
+
+    it('returns null for null telemetry values (not zero)', async () => {
+      await prisma.healthScan.create({
+        data: {
+          projectId: ctx.projectId,
+          scanType: 'SECURITY',
+          status: 'COMPLETED',
+          score: 85,
+          tokensUsed: null,
+          costUsd: null,
+          durationMs: null,
+          completedAt: new Date(),
+        },
+      });
+
+      const response = await makeRequest(ctx.projectId);
+      const data = await response.json();
+
+      expect(data.scans).toHaveLength(1);
+      expect(data.scans[0].tokensUsed).toBeNull();
+      expect(data.scans[0].costUsd).toBeNull();
+      expect(data.scans[0].durationMs).toBeNull();
+    });
+  });
+
   describe('includeReport parameter', () => {
     it('excludes report field by default', async () => {
       await prisma.healthScan.create({

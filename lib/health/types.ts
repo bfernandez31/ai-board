@@ -89,6 +89,20 @@ export interface HealthResponse {
   activeScans: ActiveScanInfo[];
 }
 
+/** Trend data point for sparklines and area charts */
+export interface TrendDataPoint {
+  score: number;
+  date: string; // ISO 8601 from completedAt
+}
+
+/** Response shape for GET /api/projects/[projectId]/health/trends */
+export interface HealthTrendsResponse {
+  security: TrendDataPoint[];
+  compliance: TrendDataPoint[];
+  tests: TrendDataPoint[];
+  specSync: TrendDataPoint[];
+}
+
 /** Scan record shape for history API */
 export interface ScanHistoryItem {
   id: number;
@@ -100,6 +114,8 @@ export interface ScanHistoryItem {
   baseCommit: string | null;
   headCommit: string | null;
   durationMs: number | null;
+  tokensUsed: number | null;
+  costUsd: number | null;
   errorMessage: string | null;
   startedAt: string | null;
   completedAt: string | null;

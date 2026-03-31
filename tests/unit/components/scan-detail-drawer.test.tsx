@@ -2,7 +2,18 @@ import React from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
 import { ScanDetailDrawer } from '@/components/health/scan-detail-drawer';
-import type { HealthModuleStatus } from '@/lib/health/types';
+import type { HealthModuleStatus, TrendDataPoint } from '@/lib/health/types';
+
+// Mock Recharts
+vi.mock('recharts', () => ({
+  AreaChart: ({ children }: { children: React.ReactNode }) => <div data-testid="area-chart">{children}</div>,
+  Area: () => null,
+  XAxis: () => null,
+  YAxis: () => null,
+  CartesianGrid: () => null,
+  Tooltip: () => null,
+  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
 
 // Mock useScanReport hook
 const mockUseScanReport = vi.fn();
@@ -187,6 +198,51 @@ describe('ScanDetailDrawer', () => {
       />
     );
     expect(screen.getByText(/Report data unavailable/)).toBeInTheDocument();
+  });
+
+  it('renders area chart in drawer when trend data exists', () => {
+    mockUseScanReport.mockReturnValue({
+      data: { scan: completedScan, report: securityReport },
+      isLoading: false,
+    });
+
+    const trendData: TrendDataPoint[] = [
+      { score: 70, date: '2026-03-25T10:00:00Z' },
+      { score: 80, date: '2026-03-27T10:00:00Z' },
+      { score: 85, date: '2026-03-28T10:00:00Z' },
+    ];
+
+    renderWithProviders(
+      <ScanDetailDrawer
+        projectId={1}
+        moduleType="SECURITY"
+        moduleStatus={completedStatus}
+        isScanning={false}
+        onClose={vi.fn()}
+        trendData={trendData}
+      />
+    );
+    expect(screen.getByText('Score Trend')).toBeInTheDocument();
+    expect(screen.getByTestId('area-chart')).toBeInTheDocument();
+  });
+
+  it('does not render area chart when no trend data', () => {
+    mockUseScanReport.mockReturnValue({
+      data: { scan: completedScan, report: securityReport },
+      isLoading: false,
+    });
+
+    renderWithProviders(
+      <ScanDetailDrawer
+        projectId={1}
+        moduleType="SECURITY"
+        moduleStatus={completedStatus}
+        isScanning={false}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.queryByText('Score Trend')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
 
   it('renders issues and tickets when report is available', () => {

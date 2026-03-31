@@ -18,9 +18,9 @@
 
 **Purpose**: Type definitions and query key registration shared across all user stories
 
-- [ ] T001 [P] Add `TrendDataPoint` and `HealthTrendsResponse` interfaces to lib/health/types.ts
-- [ ] T002 [P] Extend `ScanHistoryItem` interface with `tokensUsed: number | null` and `costUsd: number | null` in lib/health/types.ts
-- [ ] T003 Add `trends` query key to health object in app/lib/query-keys.ts
+- [x] T001 [P] Add `TrendDataPoint` and `HealthTrendsResponse` interfaces to lib/health/types.ts
+- [x] T002 [P] Extend `ScanHistoryItem` interface with `tokensUsed: number | null` and `costUsd: number | null` in lib/health/types.ts
+- [x] T003 Add `trends` query key to health object in app/lib/query-keys.ts
 
 ---
 
@@ -34,15 +34,15 @@
 
 ### Tests for User Story 4
 
-- [ ] T004 [P] [US4] Integration test: trend endpoint returns correct shape in tests/integration/health/trends.test.ts
-- [ ] T005 [P] [US4] Integration test: trend endpoint filters only COMPLETED scans with non-null scores in tests/integration/health/trends.test.ts
-- [ ] T006 [P] [US4] Integration test: trend endpoint caps at 20 data points per module in tests/integration/health/trends.test.ts
-- [ ] T007 [P] [US4] Integration test: trend endpoint returns empty arrays when no qualifying scans exist in tests/integration/health/trends.test.ts
+- [x] T004 [P] [US4] Integration test: trend endpoint returns correct shape in tests/integration/health/trends.test.ts
+- [x] T005 [P] [US4] Integration test: trend endpoint filters only COMPLETED scans with non-null scores in tests/integration/health/trends.test.ts
+- [x] T006 [P] [US4] Integration test: trend endpoint caps at 20 data points per module in tests/integration/health/trends.test.ts
+- [x] T007 [P] [US4] Integration test: trend endpoint returns empty arrays when no qualifying scans exist in tests/integration/health/trends.test.ts
 
 ### Implementation for User Story 4
 
-- [ ] T008 [US4] Create trend endpoint with `verifyProjectAccess`, query last 20 COMPLETED scans per active module (SECURITY, COMPLIANCE, TESTS, SPEC_SYNC) in app/api/projects/[projectId]/health/trends/route.ts
-- [ ] T009 [US4] Create `useHealthTrends` hook with `staleTime: 5min`, no polling, `refetchOnWindowFocus: false` in app/lib/hooks/useHealthTrends.ts
+- [x] T008 [US4] Create trend endpoint with `verifyProjectAccess`, query last 20 COMPLETED scans per active module (SECURITY, COMPLIANCE, TESTS, SPEC_SYNC) in app/api/projects/[projectId]/health/trends/route.ts
+- [x] T009 [US4] Create `useHealthTrends` hook with `staleTime: 5min`, no polling, `refetchOnWindowFocus: false` in app/lib/hooks/useHealthTrends.ts
 
 **Checkpoint**: Trend endpoint returns correct data. US2 and US3 can now begin.
 
@@ -56,16 +56,16 @@
 
 ### Tests for User Story 1
 
-- [ ] T010 [P] [US1] Integration test: scan history API includes `tokensUsed` and `costUsd` fields in tests/integration/health/scan-history.test.ts
-- [ ] T011 [P] [US1] Integration test: scan history null telemetry returns null (not zero) in tests/integration/health/scan-history.test.ts
-- [ ] T012 [P] [US1] Component test: HistoryEntry renders 4 metric icons with formatted values in tests/unit/components/drawer-history.test.tsx
-- [ ] T013 [P] [US1] Component test: HistoryEntry shows dash for null metrics in tests/unit/components/drawer-history.test.tsx
-- [ ] T014 [P] [US1] Component test: metric icon tooltips display correct descriptive text in tests/unit/components/drawer-history.test.tsx
+- [x] T010 [P] [US1] Integration test: scan history API includes `tokensUsed` and `costUsd` fields in tests/integration/health/scan-history.test.ts
+- [x] T011 [P] [US1] Integration test: scan history null telemetry returns null (not zero) in tests/integration/health/scan-history.test.ts
+- [x] T012 [P] [US1] Component test: HistoryEntry renders 4 metric icons with formatted values in tests/unit/components/drawer-history.test.tsx
+- [x] T013 [P] [US1] Component test: HistoryEntry shows dash for null metrics in tests/unit/components/drawer-history.test.tsx
+- [x] T014 [P] [US1] Component test: metric icon tooltips display correct descriptive text in tests/unit/components/drawer-history.test.tsx
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Add `tokensUsed: true` and `costUsd: true` to Prisma select clause in app/api/projects/[projectId]/health/scans/route.ts
-- [ ] T016 [US1] Replace current issues text layout with 4 metric icons (AlertTriangle, Coins, Zap, Clock) with Tooltip wrappers and formatted values using `formatAbbreviatedNumber`, `formatCost`, `formatDuration` in components/health/drawer/drawer-history.tsx
+- [x] T015 [US1] Add `tokensUsed: true` and `costUsd: true` to Prisma select clause in app/api/projects/[projectId]/health/scans/route.ts
+- [x] T016 [US1] Replace current issues text layout with 4 metric icons (AlertTriangle, Coins, Zap, Clock) with Tooltip wrappers and formatted values using `formatAbbreviatedNumber`, `formatCost`, `formatDuration` in components/health/drawer/drawer-history.tsx
 
 **Checkpoint**: Scan history drawer shows enriched telemetry. Fully testable independently of sparklines/charts.
 
@@ -81,14 +81,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T017 [P] [US2] Component test: sparkline renders when trendData has ≥ 3 data points in tests/unit/components/health-module-card.test.tsx
-- [ ] T018 [P] [US2] Component test: sparkline hidden when trendData has < 3 data points in tests/unit/components/health-module-card.test.tsx
-- [ ] T019 [P] [US2] Component test: sparkline hidden for passive modules in tests/unit/components/health-module-card.test.tsx
+- [x] T017 [P] [US2] Component test: sparkline renders when trendData has ≥ 3 data points in tests/unit/components/health-module-card.test.tsx
+- [x] T018 [P] [US2] Component test: sparkline hidden when trendData has < 3 data points in tests/unit/components/health-module-card.test.tsx
+- [x] T019 [P] [US2] Component test: sparkline hidden for passive modules in tests/unit/components/health-module-card.test.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Add optional `trendData?: TrendDataPoint[]` prop to `HealthModuleCard` and render Recharts `LineChart` sparkline (40px, no axes, monotone, `hsl(var(--primary))`, `aria-hidden="true"`) when `!passive && trendData.length >= 3` in components/health/health-module-card.tsx
-- [ ] T021 [US2] Call `useHealthTrends(projectId)` in dashboard and pass per-module trend arrays to active `HealthModuleCard` components in components/health/health-dashboard.tsx
+- [x] T020 [US2] Add optional `trendData?: TrendDataPoint[]` prop to `HealthModuleCard` and render Recharts `LineChart` sparkline (40px, no axes, monotone, `hsl(var(--primary))`, `aria-hidden="true"`) when `!passive && trendData.length >= 3` in components/health/health-module-card.tsx
+- [x] T021 [US2] Call `useHealthTrends(projectId)` in dashboard and pass per-module trend arrays to active `HealthModuleCard` components in components/health/health-dashboard.tsx
 
 **Checkpoint**: Dashboard shows sparklines on module cards with sufficient scan history.
 
@@ -104,12 +104,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T022 [P] [US3] Component test: area chart renders in drawer when trend data exists in tests/unit/components/scan-detail-drawer.test.tsx
+- [x] T022 [P] [US3] Component test: area chart renders in drawer when trend data exists in tests/unit/components/scan-detail-drawer.test.tsx
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] Add `trendData?: TrendDataPoint[]` prop to drawer and render Recharts `AreaChart` matching Quality Gate pattern (192px height, CartesianGrid, XAxis with dates, YAxis [0,100], Tooltip, monotone Area with `hsl(var(--primary))`) with "Score Trend" heading in components/health/scan-detail-drawer.tsx
-- [ ] T024 [US3] Wire trend data from `useHealthTrends` to module drawer components via dashboard in components/health/health-dashboard.tsx
+- [x] T023 [US3] Add `trendData?: TrendDataPoint[]` prop to drawer and render Recharts `AreaChart` matching Quality Gate pattern (192px height, CartesianGrid, XAxis with dates, YAxis [0,100], Tooltip, monotone Area with `hsl(var(--primary))`) with "Score Trend" heading in components/health/scan-detail-drawer.tsx
+- [x] T024 [US3] Wire trend data from `useHealthTrends` to module drawer components via dashboard in components/health/health-dashboard.tsx
 
 **Checkpoint**: Module drawers show full area chart with interactive hover details.
 
@@ -119,10 +119,10 @@
 
 **Purpose**: Validation and accessibility sweep across all user stories
 
-- [ ] T025 Run `bun run type-check` and fix any TypeScript errors
-- [ ] T026 Run `bun run lint` and fix any linting issues
-- [ ] T027 Verify WCAG AA contrast compliance — all new text uses Tailwind semantic tokens only (no hardcoded colors)
-- [ ] T028 Run quickstart.md validation steps (`bun run test:unit`, `bun run test:integration`)
+- [x] T025 Run `bun run type-check` and fix any TypeScript errors
+- [x] T026 Run `bun run lint` and fix any linting issues
+- [x] T027 Verify WCAG AA contrast compliance — all new text uses Tailwind semantic tokens only (no hardcoded colors)
+- [x] T028 Run quickstart.md validation steps (`bun run test:unit`, `bun run test:integration`)
 
 ---
 

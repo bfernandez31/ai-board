@@ -1,6 +1,15 @@
 'use client';
 
 import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -14,7 +23,7 @@ import { DrawerHistory } from './drawer/drawer-history';
 import { DrawerStates } from './drawer/drawer-states';
 import { useScanReport } from '@/app/lib/hooks/useScanReport';
 import { MODULE_METADATA } from '@/lib/health/types';
-import type { HealthModuleType, HealthModuleStatus } from '@/lib/health/types';
+import type { HealthModuleType, HealthModuleStatus, TrendDataPoint } from '@/lib/health/types';
 
 interface ScanDetailDrawerProps {
   projectId: number;
@@ -23,6 +32,7 @@ interface ScanDetailDrawerProps {
   isScanning: boolean;
   onClose: () => void;
   onTriggerScan?: (() => void) | undefined;
+  trendData?: TrendDataPoint[] | undefined;
 }
 
 export function ScanDetailDrawer({
@@ -32,6 +42,7 @@ export function ScanDetailDrawer({
   isScanning,
   onClose,
   onTriggerScan,
+  trendData,
 }: ScanDetailDrawerProps) {
   const { data, isLoading } = useScanReport(projectId, moduleType);
   const isOpen = moduleType !== null;
@@ -98,6 +109,42 @@ export function ScanDetailDrawer({
                 <p className="text-xs text-muted-foreground">
                   Report data unavailable — scan predates structured reporting
                 </p>
+              </div>
+            )}
+
+            {trendData && trendData.length >= 1 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Score Trend</h3>
+                <div className="h-48 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(v: string) => new Date(v).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        className="text-[10px]"
+                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      />
+                      <YAxis
+                        domain={[0, 100]}
+                        className="text-[10px]"
+                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      />
+                      <Tooltip
+                        labelFormatter={(v) => new Date(String(v)).toLocaleDateString()}
+                        formatter={(value) => [`${value}`, 'Score']}
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="score"
+                        stroke="hsl(var(--primary))"
+                        fill="hsl(var(--primary) / 0.1)"
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             )}
 

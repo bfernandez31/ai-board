@@ -15,11 +15,12 @@ import {
   Minus,
   type LucideIcon,
 } from 'lucide-react';
+import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getScoreColor } from '@/lib/quality-score';
 import { MODULE_METADATA } from '@/lib/health/types';
-import type { HealthModuleType, HealthModuleStatus } from '@/lib/health/types';
+import type { HealthModuleType, HealthModuleStatus, TrendDataPoint } from '@/lib/health/types';
 
 const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
   SECURITY: Shield,
@@ -46,6 +47,7 @@ interface HealthModuleCardProps {
   onTriggerScan?: (() => void) | undefined;
   isTriggerPending?: boolean | undefined;
   onClick?: (() => void) | undefined;
+  trendData?: TrendDataPoint[] | undefined;
 }
 
 export function HealthModuleCard({
@@ -55,6 +57,7 @@ export function HealthModuleCard({
   onTriggerScan,
   isTriggerPending = false,
   onClick,
+  trendData,
 }: HealthModuleCardProps) {
   const Icon = MODULE_ICONS[moduleType];
   const label = MODULE_METADATA[moduleType].label;
@@ -97,6 +100,23 @@ export function HealthModuleCard({
 
       {module.distribution && module.ticketCount !== undefined && module.ticketCount > 0 && (
         <DistributionBar distribution={module.distribution} />
+      )}
+
+      {!isPassive && trendData && trendData.length >= 3 && (
+        <div className="h-10" aria-hidden="true">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={trendData}>
+              <Line
+                type="monotone"
+                dataKey="score"
+                stroke="hsl(var(--primary))"
+                strokeWidth={1.5}
+                dot={false}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       )}
 
       {state === 'scanning' && (
