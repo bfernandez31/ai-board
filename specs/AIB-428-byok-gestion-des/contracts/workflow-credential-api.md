@@ -7,6 +7,27 @@ This is an internal endpoint called by GitHub Actions workflows to retrieve the 
 
 ---
 
+## Typed Interfaces
+
+These interfaces are defined in `lib/ai-credentials/types.ts` and used by `lib/ai-credentials/workflow.ts`:
+
+```typescript
+interface WorkflowCredentialRequest {
+  projectId: number;
+  provider: "ANTHROPIC";
+}
+
+interface WorkflowResolvedCredential {
+  provider: "ANTHROPIC";
+  credentialType: "API_KEY" | "OAUTH_TOKEN";
+  envVar: string; // ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
+  secret: string;
+  ownerUserId: string;
+}
+```
+
+---
+
 ## GET /api/internal/credentials
 
 Retrieve the decrypted credential for a project owner.
@@ -22,8 +43,9 @@ Retrieve the decrypted credential for a project owner.
 2. Look up project by ID → get `userId` (owner)
 3. Find UserCredential for owner with provider = ANTHROPIC
 4. If no credential found → return 404 with message
-5. Decrypt credential value using AES-256-GCM
-6. Return env var name + decrypted value
+5. Decrypt credential value using AES-256-GCM (via `lib/ai-credentials/crypto.ts`)
+6. Build `WorkflowResolvedCredential` payload (via `lib/ai-credentials/workflow.ts`)
+7. Return env var name + decrypted value
 
 **Response 200**:
 ```json
@@ -81,14 +103,13 @@ In `.github/workflows/ai-board-assist.yml`, add a step before Claude execution:
 
 ## Pre-Dispatch Validation
 
-Before dispatching a workflow, the app should check that the project owner has a credential configured. This check happens in the workflow dispatch functions (`dispatch-ai-board.ts`):
+Before dispatching a workflow, the app should check that the project owner has a credential configured. This check happens in the workflow dispatch functions (`dispatch-ai-board.ts`) using `lib/ai-credentials/workflow.ts`:
 
 ```typescript
+import { getOwnerCredential } from '@/lib/ai-credentials/workflow';
+
 // Before calling octokit.actions.createWorkflowDispatch():
-const credential = await prisma.userCredential.findUnique({
-  where: { userId_provider: { userId: project.userId, provider: 'ANTHROPIC' } },
-  select: { id: true }
-});
+const credential = await getOwnerCredential(project.id);
 
 if (!credential) {
   throw new Error('No AI credential configured. Please add your Anthropic key in Settings.');

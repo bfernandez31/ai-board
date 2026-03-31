@@ -19,8 +19,10 @@ Stores an encrypted AI provider credential belonging to a user. Each user may ha
 | `iv` | `String` | VarChar(24), NOT NULL | Base64-encoded 12-byte initialization vector |
 | `authTag` | `String` | VarChar(24), NOT NULL | Base64-encoded 16-byte GCM authentication tag |
 | `preview` | `String` | VarChar(4), NOT NULL | Last 4 characters (for display) |
-| `isValid` | `Boolean` | DEFAULT true | Last known validation status |
-| `lastValidatedAt` | `DateTime` | nullable | Timestamp of last provider validation |
+| `readinessStatus` | `CredentialReadiness` | DEFAULT PENDING_VERIFICATION | Current readiness state of the credential |
+| `lastVerifiedAt` | `DateTime` | nullable | Timestamp of last provider verification |
+| `verificationCode` | `String` | VarChar(50), nullable | Machine-readable verification result code (e.g., INVALID_KEY, EXPIRED, UNREACHABLE) |
+| `verificationMessage` | `String` | VarChar(500), nullable | User-facing remediation message |
 | `createdAt` | `DateTime` | DEFAULT now() | Creation timestamp |
 | `updatedAt` | `DateTime` | @updatedAt | Last update timestamp |
 
@@ -44,25 +46,33 @@ enum CredentialType {
   API_KEY
   OAUTH_TOKEN
 }
+
+enum CredentialReadiness {
+  PENDING_VERIFICATION
+  READY
+  ACTION_REQUIRED
+}
 ```
 
 ## Prisma Schema Addition
 
 ```prisma
 model UserCredential {
-  id              Int                @id @default(autoincrement())
-  userId          String
-  provider        CredentialProvider
-  credentialType  CredentialType
-  label           String             @db.VarChar(100)
-  encryptedValue  String
-  iv              String             @db.VarChar(24)
-  authTag         String             @db.VarChar(24)
-  preview         String             @db.VarChar(4)
-  isValid         Boolean            @default(true)
-  lastValidatedAt DateTime?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id                  Int                 @id @default(autoincrement())
+  userId              String
+  provider            CredentialProvider
+  credentialType      CredentialType
+  label               String              @db.VarChar(100)
+  encryptedValue      String
+  iv                  String              @db.VarChar(24)
+  authTag             String              @db.VarChar(24)
+  preview             String              @db.VarChar(4)
+  readinessStatus     CredentialReadiness @default(PENDING_VERIFICATION)
+  lastVerifiedAt      DateTime?
+  verificationCode    String?             @db.VarChar(50)
+  verificationMessage String?             @db.VarChar(500)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -78,6 +88,27 @@ model User {
   credentials UserCredential[]
 }
 ```
+
+## Workflow Typed Interfaces
+
+TypeScript interfaces for workflow credential resolution, defined in `lib/ai-credentials/types.ts`:
+
+```typescript
+interface WorkflowCredentialRequest {
+  projectId: number;
+  provider: "ANTHROPIC";
+}
+
+interface WorkflowResolvedCredential {
+  provider: "ANTHROPIC";
+  credentialType: "API_KEY" | "OAUTH_TOKEN";
+  envVar: string; // ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
+  secret: string;
+  ownerUserId: string;
+}
+```
+
+These interfaces are consumed by `lib/ai-credentials/workflow.ts` for owner resolution and workflow payload mapping.
 
 ## Entity Relationships
 
@@ -115,14 +146,22 @@ Workflow triggered for Project
 
 ## State Transitions
 
-`isValid` field tracks validation state:
+`readinessStatus` field tracks credential readiness:
 
 ```
-Created (isValid: true) → Tested (isValid: true/false) → Replaced (new credential, isValid: true)
-                        → Provider revokes key → Workflow fails → isValid set to false
+Created (PENDING_VERIFICATION) → Validated successfully (READY) → Re-tested fails (ACTION_REQUIRED)
+                                                                 → Provider revokes key → Workflow fails (ACTION_REQUIRED)
+                                → Validation fails (ACTION_REQUIRED) → User replaces key → (PENDING_VERIFICATION)
 ```
 
-No complex state machine — `isValid` is informational and updated on explicit test or workflow failure.
+**Readiness status semantics**:
+- `PENDING_VERIFICATION`: Credential just created or replaced, not yet verified against provider
+- `READY`: Last verification succeeded — credential is usable by workflows
+- `ACTION_REQUIRED`: Last verification failed — user must fix or replace the credential
+
+**Verification detail fields**:
+- `verificationCode`: Machine-readable code set on verification (e.g., `VALID`, `INVALID_KEY`, `EXPIRED`, `UNREACHABLE`, `RATE_LIMITED`)
+- `verificationMessage`: User-facing remediation message (e.g., "Your API key has been revoked. Please generate a new key in the Anthropic console.")
 
 ## Migration Notes
 

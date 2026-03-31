@@ -56,12 +56,13 @@ specs/AIB-428-byok-gestion-des/
 ```
 # New files for this feature
 lib/
-├── crypto/
-│   └── credentials.ts          # AES-256-GCM encrypt/decrypt utilities
-├── db/
-│   └── credentials.ts          # Prisma CRUD operations for UserCredential
-└── credentials/
-    └── validation.ts           # Provider-specific format validation
+└── ai-credentials/
+    ├── crypto.ts               # AES-256-GCM encrypt/decrypt utilities
+    ├── service.ts              # Business logic (save, list, delete, test)
+    ├── workflow.ts             # Owner resolution + workflow payload mapping
+    ├── types.ts                # Shared interfaces and types (WorkflowCredentialRequest, WorkflowResolvedCredential, etc.)
+    └── providers/
+        └── anthropic.ts        # Format validation + remote verification for Anthropic
 
 app/
 ├── api/
@@ -90,11 +91,11 @@ app/lib/workflows/
 └── dispatch-rollback-reset.ts  # No change (no AI credential needed)
 
 prisma/
-└── schema.prisma               # Add UserCredential model + CredentialProvider + CredentialType enums
+└── schema.prisma               # Add UserCredential model + CredentialProvider + CredentialType + CredentialReadiness enums
 
 tests/
 ├── unit/
-│   └── crypto-credentials.test.ts       # Encrypt/decrypt unit tests
+│   └── ai-credentials.test.ts           # Encrypt/decrypt + format validation unit tests
 ├── unit/components/
 │   └── credential-form.test.tsx         # Component tests for credential form
 ├── integration/
@@ -104,19 +105,19 @@ tests/
 │       └── workflow-credential.test.ts  # Workflow credential retrieval tests
 ```
 
-**Structure Decision**: Web application pattern — API routes in `app/api/`, UI in `app/settings/`, shared logic in `lib/`. Follows existing patterns for tokens (`lib/tokens/`, `app/api/tokens/`, `app/settings/tokens/`).
+**Structure Decision**: Web application pattern — API routes in `app/api/`, UI in `app/settings/`, shared logic in `lib/ai-credentials/` (consolidated module with `providers/` subfolder for provider-specific logic). Follows existing patterns for tokens (`lib/tokens/`, `app/api/tokens/`, `app/settings/tokens/`).
 
 ## Testing Strategy
 
 | User Story | Test Type | Location | Rationale |
 |------------|-----------|----------|-----------|
 | US1: Configure credential | Integration | `tests/integration/credentials/credentials-api.test.ts` | API + DB operations |
-| US1: Format validation | Unit | `tests/unit/crypto-credentials.test.ts` | Pure function validation |
+| US1: Format validation | Unit | `tests/unit/ai-credentials.test.ts` | Pure function validation |
 | US1: Credential form UI | Component | `tests/unit/components/credential-form.test.tsx` | React form with user interactions |
 | US2: Workflow retrieves credential | Integration | `tests/integration/credentials/workflow-credential.test.ts` | API + auth + decryption |
 | US2: Block workflow without credential | Integration | `tests/integration/credentials/workflow-credential.test.ts` | API behavior |
 | US3: Test/replace/delete credential | Integration | `tests/integration/credentials/credentials-api.test.ts` | CRUD API operations |
-| Encryption round-trip | Unit | `tests/unit/crypto-credentials.test.ts` | Pure crypto function |
+| Encryption round-trip | Unit | `tests/unit/ai-credentials.test.ts` | Pure crypto function |
 
 No E2E tests needed — all features testable via API integration and component tests.
 

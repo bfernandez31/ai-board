@@ -58,7 +58,7 @@
 - **Trade-offs**:
   1. Server-side validation adds latency on save but prevents storing invalid credentials
   2. Provider API validation may fail if the provider is temporarily unavailable — handle gracefully
-- **Reviewer Notes**: When provider validation endpoint is unreachable during save, the system blocks with HTTP 422 (`PROVIDER_UNREACHABLE`) and a clear error message — no credential is stored. This is the safest posture under CONSERVATIVE policy: storing an unvalidated key could lead to silent workflow failures downstream. Users retry when the provider is back. (Note: the separate `/test` endpoint may return `isValid: null` for unreachable providers on *already-stored* credentials — that is a different flow.)
+- **Reviewer Notes**: When provider validation endpoint is unreachable during save, the system blocks with HTTP 422 (`PROVIDER_UNREACHABLE`) and a clear error message — no credential is stored. This is the safest posture under CONSERVATIVE policy: storing an unvalidated key could lead to silent workflow failures downstream. Users retry when the provider is back. (Note: the separate `/test` endpoint may return `readinessStatus: ACTION_REQUIRED` with `verificationCode: UNREACHABLE` for unreachable providers on *already-stored* credentials — that is a different flow.)
 
 ## User Scenarios & Testing
 
@@ -106,7 +106,7 @@ A user can view, test, replace, or delete their existing credential from the set
 
 **Acceptance Scenarios**:
 
-1. **Given** a user with an existing Anthropic credential, **When** they click "Test", **Then** the system validates the key against the provider and shows success or failure.
+1. **Given** a user with an existing Anthropic credential, **When** they click "Test", **Then** the system validates the key against the provider, updates `readinessStatus` to READY or ACTION_REQUIRED with appropriate `verificationCode` and `verificationMessage`, and shows the result.
 2. **Given** a user with an existing credential, **When** they submit a new key for the same provider, **Then** the old credential is replaced (not duplicated) and the new one is encrypted and stored.
 3. **Given** a user with an existing credential, **When** they delete it, **Then** the credential is permanently removed and workflows for their projects can no longer launch until a new one is added.
 4. **Given** a user viewing their credential, **Then** only the last 4 characters are visible — the full key is never sent to the client after initial submission.
@@ -142,7 +142,8 @@ A user can view, test, replace, or delete their existing credential from the set
 
 ### Key Entities
 
-- **UserCredential**: Represents an encrypted AI provider credential belonging to a user. Key attributes: provider (enum: ANTHROPIC, extensible), credential type (API_KEY or OAUTH_TOKEN), user-assigned label, encrypted value, IV/nonce for decryption, last 4 characters (for display), validation status, timestamps. Unique per provider per user.
+- **UserCredential**: Represents an encrypted AI provider credential belonging to a user. Key attributes: provider (enum: ANTHROPIC, extensible), credential type (API_KEY or OAUTH_TOKEN), user-assigned label, encrypted value, IV/nonce for decryption, last 4 characters (for display), readiness status (enum: PENDING_VERIFICATION, READY, ACTION_REQUIRED), verification code (machine-readable), verification message (user-facing remediation), timestamps. Unique per provider per user.
+- **CredentialReadiness (enum)**: Tracks the verification state of a credential: PENDING_VERIFICATION (just created/replaced, not yet verified), READY (last verification succeeded), ACTION_REQUIRED (last verification failed — user must act).
 - **Provider (enum)**: Identifies the AI service provider. Initially contains ANTHROPIC only; designed as an extensible enumeration so new providers can be added without schema changes.
 
 ## Success Criteria

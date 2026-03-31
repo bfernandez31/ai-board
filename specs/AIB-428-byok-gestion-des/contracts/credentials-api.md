@@ -19,8 +19,10 @@ List the authenticated user's credentials. Never returns encrypted values.
       "credentialType": "API_KEY",
       "label": "My production key",
       "preview": "ab12",
-      "isValid": true,
-      "lastValidatedAt": "2026-03-31T10:00:00Z",
+      "readinessStatus": "READY",
+      "lastVerifiedAt": "2026-03-31T10:00:00Z",
+      "verificationCode": "VALID",
+      "verificationMessage": null,
       "createdAt": "2026-03-31T09:00:00Z",
       "updatedAt": "2026-03-31T10:00:00Z"
     }
@@ -55,10 +57,10 @@ Create or replace a credential for the given provider. If a credential already e
 
 **Server-side behavior**:
 1. Validate input format (Zod)
-2. Validate credential format (provider-specific regex)
+2. Validate credential format (provider-specific regex via `lib/ai-credentials/providers/anthropic.ts`)
 3. Validate credential against provider API (server-side call)
-4. Encrypt value with AES-256-GCM
-5. Upsert into UserCredential (unique on userId + provider)
+4. Encrypt value with AES-256-GCM (via `lib/ai-credentials/crypto.ts`)
+5. Upsert into UserCredential with `readinessStatus: READY` if verification succeeds (via `lib/ai-credentials/service.ts`)
 6. Return created/updated credential metadata (no encrypted value)
 
 **Response 201** (created) / **200** (replaced):
@@ -69,8 +71,10 @@ Create or replace a credential for the given provider. If a credential already e
   "credentialType": "API_KEY",
   "label": "My production key",
   "preview": "ab12",
-  "isValid": true,
-  "lastValidatedAt": "2026-03-31T10:00:00Z",
+  "readinessStatus": "READY",
+  "lastVerifiedAt": "2026-03-31T10:00:00Z",
+  "verificationCode": "VALID",
+  "verificationMessage": null,
   "createdAt": "2026-03-31T09:00:00Z",
   "updatedAt": "2026-03-31T10:00:00Z"
 }
@@ -95,40 +99,54 @@ Delete a credential. Only the owning user can delete.
 
 ## POST /api/credentials/[id]/test
 
-Re-validate an existing credential against the provider API without modifying it.
+Re-validate an existing credential against the provider API without modifying the credential value.
 
 **Request body**: None
 
 **Server-side behavior**:
 1. Fetch credential by id (verify ownership)
-2. Decrypt credential value
-3. Call provider API to validate
-4. Update `isValid` and `lastValidatedAt` fields
+2. Decrypt credential value (via `lib/ai-credentials/crypto.ts`)
+3. Call provider API to validate (via `lib/ai-credentials/providers/anthropic.ts`)
+4. Update `readinessStatus`, `lastVerifiedAt`, `verificationCode`, and `verificationMessage` fields
 5. Return validation result
 
-**Response 200**:
+**Response 200** (valid key):
 ```json
 {
-  "isValid": true,
-  "lastValidatedAt": "2026-03-31T12:00:00Z"
+  "readinessStatus": "READY",
+  "lastVerifiedAt": "2026-03-31T12:00:00Z",
+  "verificationCode": "VALID",
+  "verificationMessage": null
 }
 ```
 
 **Response 200** (invalid key):
 ```json
 {
-  "isValid": false,
-  "error": "Key rejected by provider",
-  "lastValidatedAt": "2026-03-31T12:00:00Z"
+  "readinessStatus": "ACTION_REQUIRED",
+  "lastVerifiedAt": "2026-03-31T12:00:00Z",
+  "verificationCode": "INVALID_KEY",
+  "verificationMessage": "Your API key was rejected by Anthropic. Please verify the key in your Anthropic console and replace it."
+}
+```
+
+**Response 200** (expired key):
+```json
+{
+  "readinessStatus": "ACTION_REQUIRED",
+  "lastVerifiedAt": "2026-03-31T12:00:00Z",
+  "verificationCode": "EXPIRED",
+  "verificationMessage": "Your API key has expired. Please generate a new key in the Anthropic console."
 }
 ```
 
 **Response 200** (provider unreachable):
 ```json
 {
-  "isValid": null,
-  "error": "Provider unreachable — try again later",
-  "lastValidatedAt": null
+  "readinessStatus": "ACTION_REQUIRED",
+  "lastVerifiedAt": null,
+  "verificationCode": "UNREACHABLE",
+  "verificationMessage": "Unable to reach Anthropic to verify your key. Please try again later."
 }
 ```
 

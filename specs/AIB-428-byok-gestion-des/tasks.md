@@ -18,7 +18,7 @@
 
 **Purpose**: Database schema, encryption key provisioning, and Prisma client generation
 
-- [ ] T001 Add CredentialProvider and CredentialType enums and UserCredential model with User relation to prisma/schema.prisma
+- [ ] T001 Add CredentialProvider, CredentialType, and CredentialReadiness enums and UserCredential model (with readinessStatus, lastVerifiedAt, verificationCode, verificationMessage fields) with User relation to prisma/schema.prisma
 - [ ] T002 Run Prisma migration (`bunx prisma migrate dev --name add-user-credential`) and regenerate client (`bunx prisma generate`)
 - [ ] T003 Add `CREDENTIAL_ENCRYPTION_KEY` env var to `.env.local` and `.env.example` with generation instructions
 
@@ -30,10 +30,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 [P] Implement AES-256-GCM encrypt/decrypt utilities in lib/crypto/credentials.ts (encryptCredential, decryptCredential using CREDENTIAL_ENCRYPTION_KEY env var, 12-byte random IV, separate authTag)
-- [ ] T005 [P] Implement provider-specific format validation in lib/credentials/validation.ts (validateCredentialFormat for regex checks, validateCredentialWithProvider for Anthropic API call with 10s timeout, distinguish INVALID_KEY from PROVIDER_UNREACHABLE)
-- [ ] T006 [P] Implement Prisma CRUD operations in lib/db/credentials.ts (createOrReplaceCredential upsert, listCredentials metadata only, getCredentialForDecryption, getOwnerCredential resolving project→owner→credential, deleteCredential, updateValidationStatus)
-- [ ] T007 [P] Write unit tests for encryption round-trip and format validation in tests/unit/crypto-credentials.test.ts
+- [ ] T004 [P] Create shared types and interfaces in lib/ai-credentials/types.ts (WorkflowCredentialRequest, WorkflowResolvedCredential, CredentialReadiness-related types, API response types with readinessStatus/verificationCode/verificationMessage)
+- [ ] T005 [P] Implement AES-256-GCM encrypt/decrypt utilities in lib/ai-credentials/crypto.ts (encryptCredential, decryptCredential using CREDENTIAL_ENCRYPTION_KEY env var, 12-byte random IV, separate authTag)
+- [ ] T006 [P] Implement Anthropic format validation + remote verification in lib/ai-credentials/providers/anthropic.ts (validateFormat for regex checks, verifyWithProvider for API call with 10s timeout, return verificationCode + verificationMessage)
+- [ ] T007 [P] Implement business logic in lib/ai-credentials/service.ts (createOrReplaceCredential upsert, listCredentials metadata only, getCredentialForDecryption, deleteCredential, testCredential updating readinessStatus/verificationCode/verificationMessage)
+- [ ] T007b [P] Implement owner resolution + workflow payload mapping in lib/ai-credentials/workflow.ts (getOwnerCredential resolving project→owner→credential, buildWorkflowPayload returning WorkflowResolvedCredential)
+- [ ] T008 [P] Write unit tests for encryption round-trip and format validation in tests/unit/ai-credentials.test.ts
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 
@@ -47,19 +49,19 @@
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Write integration tests for GET /api/credentials and POST /api/credentials in tests/integration/credentials/credentials-api.test.ts (list empty, create API_KEY, create OAUTH_TOKEN, upsert replaces existing, format validation errors, provider validation errors, 401 unauthorized)
-- [ ] T009 [P] [US1] Write component tests for credential form in tests/unit/components/credential-form.test.tsx (render form fields, provider/type selection, real-time format validation, submit success, submit error display)
-- [ ] T010 [P] [US1] Write integration tests for credential format validation in tests/integration/credentials/credential-validation.test.ts (valid/invalid API_KEY format, valid/invalid OAUTH_TOKEN format)
+- [ ] T009 [P] [US1] Write integration tests for GET /api/credentials and POST /api/credentials in tests/integration/credentials/credentials-api.test.ts (list empty, create API_KEY with readinessStatus, create OAUTH_TOKEN, upsert replaces existing, format validation errors, provider validation errors returning verificationCode/verificationMessage, 401 unauthorized)
+- [ ] T010 [P] [US1] Write component tests for credential form in tests/unit/components/credential-form.test.tsx (render form fields, provider/type selection, real-time format validation, submit success, submit error display with verificationMessage)
+- [ ] T011 [P] [US1] Write integration tests for credential format validation in tests/integration/credentials/credential-validation.test.ts (valid/invalid API_KEY format, valid/invalid OAUTH_TOKEN format)
 
 ### Implementation for User Story 1
 
-- [ ] T011 [P] [US1] Implement GET handler (list user credentials, exclude encrypted fields) in app/api/credentials/route.ts
-- [ ] T012 [P] [US1] Implement POST handler (Zod validation, format check, provider validation, encrypt, upsert, return metadata) in app/api/credentials/route.ts
-- [ ] T013 [US1] Create credential management page with layout in app/settings/credentials/page.tsx
-- [ ] T014 [P] [US1] Implement credential form component (provider select, type select, label input, value input with real-time format validation) in app/components/credentials/credential-form.tsx
-- [ ] T015 [P] [US1] Implement credential list component (display provider, label, masked preview, validation status, timestamps) in app/components/credentials/credential-list.tsx
-- [ ] T016 [US1] Add TanStack Query hooks for credential CRUD operations (useCredentials, useCreateCredential with optimistic updates) in app/components/credentials/ or lib/ hooks
-- [ ] T017 [US1] Add "Credentials" navigation link to settings sidebar/nav (follow existing tokens nav pattern)
+- [ ] T012 [P] [US1] Implement GET handler (list user credentials with readinessStatus/verificationCode/verificationMessage, exclude encrypted fields) in app/api/credentials/route.ts
+- [ ] T013 [P] [US1] Implement POST handler (Zod validation, format check via providers/anthropic.ts, provider verification, encrypt via crypto.ts, upsert via service.ts, return metadata with readinessStatus) in app/api/credentials/route.ts
+- [ ] T014 [US1] Create credential management page with layout in app/settings/credentials/page.tsx
+- [ ] T015 [P] [US1] Implement credential form component (provider select, type select, label input, value input with real-time format validation) in app/components/credentials/credential-form.tsx
+- [ ] T016 [P] [US1] Implement credential list component (display provider, label, masked preview, readinessStatus badge, verificationMessage, timestamps) in app/components/credentials/credential-list.tsx
+- [ ] T017 [US1] Add TanStack Query hooks for credential CRUD operations (useCredentials, useCreateCredential with optimistic updates) in app/components/credentials/ or lib/ hooks
+- [ ] T018 [US1] Add "Credentials" navigation link to settings sidebar/nav (follow existing tokens nav pattern)
 
 **Checkpoint**: User Story 1 fully functional — users can add and view encrypted credentials
 
@@ -73,14 +75,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T018 [P] [US2] Write integration tests for GET /api/internal/credentials in tests/integration/credentials/workflow-credential.test.ts (valid workflow token returns decrypted API_KEY with ANTHROPIC_API_KEY envVar, valid token returns OAUTH_TOKEN with CLAUDE_CODE_OAUTH_TOKEN envVar, 401 without token, 404 when no credential, 400 missing projectId)
+- [ ] T019 [P] [US2] Write integration tests for GET /api/internal/credentials in tests/integration/credentials/workflow-credential.test.ts (valid workflow token returns decrypted API_KEY with ANTHROPIC_API_KEY envVar, valid token returns OAUTH_TOKEN with CLAUDE_CODE_OAUTH_TOKEN envVar, 401 without token, 404 when no credential, 400 missing projectId)
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Implement GET /api/internal/credentials endpoint (verify workflow token, resolve projectId→owner→credential, decrypt, return envVar+value based on credentialType) in app/api/internal/credentials/route.ts
-- [ ] T020 [US2] Add credential existence check before workflow dispatch in app/lib/workflows/dispatch-ai-board.ts (query UserCredential for project owner, throw user-facing error if missing)
-- [ ] T021 [US2] Add credential fetch step to .github/workflows/ai-board-assist.yml (curl internal endpoint, mask value with ::add-mask::, export env var via $GITHUB_ENV)
-- [ ] T022 [US2] Add credential fetch step to .github/workflows/speckit.yml (same pattern as ai-board-assist.yml for SPECIFY/PLAN/BUILD stages)
+- [ ] T020 [US2] Implement GET /api/internal/credentials endpoint (verify workflow token, resolve via lib/ai-credentials/workflow.ts, decrypt via crypto.ts, return WorkflowResolvedCredential payload) in app/api/internal/credentials/route.ts
+- [ ] T021 [US2] Add credential existence check before workflow dispatch in app/lib/workflows/dispatch-ai-board.ts (use lib/ai-credentials/workflow.ts to check owner credential, throw user-facing error if missing)
+- [ ] T022 [US2] Add credential fetch step to .github/workflows/ai-board-assist.yml (curl internal endpoint, mask value with ::add-mask::, export env var via $GITHUB_ENV)
+- [ ] T023 [US2] Add credential fetch step to .github/workflows/speckit.yml (same pattern as ai-board-assist.yml for SPECIFY/PLAN/BUILD stages)
 
 **Checkpoint**: User Story 2 fully functional — workflows retrieve and use owner credentials; blocked without credential
 
@@ -94,15 +96,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T023 [P] [US3] Write integration tests for DELETE /api/credentials/[id] and POST /api/credentials/[id]/test in tests/integration/credentials/credentials-api.test.ts (delete success 204, delete 404 not found, delete 401, test valid key returns isValid true, test invalid key returns isValid false, test provider unreachable returns isValid null)
+- [ ] T024 [P] [US3] Write integration tests for DELETE /api/credentials/[id] and POST /api/credentials/[id]/test in tests/integration/credentials/credentials-api.test.ts (delete success 204, delete 404 not found, delete 401, test valid key returns readinessStatus READY, test invalid key returns readinessStatus ACTION_REQUIRED with verificationCode INVALID_KEY, test provider unreachable returns ACTION_REQUIRED with verificationCode UNREACHABLE)
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Implement DELETE handler in app/api/credentials/[id]/route.ts (verify ownership, delete, return 204)
-- [ ] T025 [US3] Implement POST /api/credentials/[id]/test handler (verify ownership, decrypt, validate against provider, update isValid and lastValidatedAt, return result) in app/api/credentials/[id]/test/route.ts
-- [ ] T026 [US3] Implement credential test button component (trigger test, show loading/success/failure states) in app/components/credentials/credential-test-button.tsx
-- [ ] T027 [US3] Add delete and replace actions to credential-list.tsx with confirmation dialog (delete removes credential, replace opens form pre-filled with provider)
-- [ ] T028 [US3] Add TanStack Query hooks for delete and test operations (useDeleteCredential, useTestCredential with optimistic status updates)
+- [ ] T025 [US3] Implement DELETE handler in app/api/credentials/[id]/route.ts (verify ownership, delete via service.ts, return 204)
+- [ ] T026 [US3] Implement POST /api/credentials/[id]/test handler (verify ownership, decrypt via crypto.ts, verify via providers/anthropic.ts, update readinessStatus/lastVerifiedAt/verificationCode/verificationMessage via service.ts, return result) in app/api/credentials/[id]/test/route.ts
+- [ ] T027 [US3] Implement credential test button component (trigger test, show loading/success/failure states with verificationMessage) in app/components/credentials/credential-test-button.tsx
+- [ ] T028 [US3] Add delete and replace actions to credential-list.tsx with confirmation dialog (delete removes credential, replace opens form pre-filled with provider)
+- [ ] T029 [US3] Add TanStack Query hooks for delete and test operations (useDeleteCredential, useTestCredential with optimistic readinessStatus updates)
 
 **Checkpoint**: All user stories independently functional — full CRUD + workflow integration
 
@@ -112,9 +114,9 @@
 
 **Purpose**: Security hardening, logging guardrails, and final validation
 
-- [ ] T029 [P] Audit all API routes and logs to ensure credential values are never logged (FR-013) — check route handlers, middleware, error handlers
-- [ ] T030 [P] Verify aurora-b+ theme styling on credential settings page (aurora-* CSS classes on dialogs, cards, forms)
-- [ ] T031 Run quickstart.md validation — verify full flow end-to-end: add credential → list → test → workflow retrieves → replace → delete
+- [ ] T030 [P] Audit all API routes and logs to ensure credential values are never logged (FR-013) — check route handlers, middleware, error handlers
+- [ ] T031 [P] Verify aurora-b+ theme styling on credential settings page (aurora-* CSS classes on dialogs, cards, forms)
+- [ ] T032 Run quickstart.md validation — verify full flow end-to-end: add credential → list (check readinessStatus) → test → workflow retrieves → replace → delete
 
 ---
 
@@ -144,10 +146,10 @@
 
 ### Parallel Opportunities
 
-- **Phase 2**: T004, T005, T006, T007 can all run in parallel (different files)
-- **Phase 3**: T008, T009, T010 (tests) in parallel; T011, T012 in parallel; T014, T015 in parallel
-- **Phase 4**: T018 (test) independent; after T019, T020/T021/T022 touch different files
-- **Phase 5**: T023 independent; T024, T025 touch different route files (parallel); T026 parallel with T027
+- **Phase 2**: T004, T005, T006, T007, T007b, T008 can all run in parallel (different files)
+- **Phase 3**: T009, T010, T011 (tests) in parallel; T012, T013 in parallel; T015, T016 in parallel
+- **Phase 4**: T019 (test) independent; after T020, T021/T022/T023 touch different files
+- **Phase 5**: T024 independent; T025, T026 touch different route files (parallel); T027 parallel with T028
 - **Cross-story**: US1, US2, US3 can all start in parallel after Phase 2
 
 ---
@@ -156,17 +158,17 @@
 
 ```bash
 # Launch all tests for User Story 1 together:
-Task T008: "Integration tests for credentials API in tests/integration/credentials/credentials-api.test.ts"
-Task T009: "Component tests for credential form in tests/unit/components/credential-form.test.tsx"
-Task T010: "Integration tests for credential validation in tests/integration/credentials/credential-validation.test.ts"
+Task T009: "Integration tests for credentials API in tests/integration/credentials/credentials-api.test.ts"
+Task T010: "Component tests for credential form in tests/unit/components/credential-form.test.tsx"
+Task T011: "Integration tests for credential validation in tests/integration/credentials/credential-validation.test.ts"
 
 # Launch parallel API route handlers:
-Task T011: "GET handler in app/api/credentials/route.ts"
-Task T012: "POST handler in app/api/credentials/route.ts"
+Task T012: "GET handler in app/api/credentials/route.ts"
+Task T013: "POST handler in app/api/credentials/route.ts"
 
 # Launch parallel UI components:
-Task T014: "Credential form in app/components/credentials/credential-form.tsx"
-Task T015: "Credential list in app/components/credentials/credential-list.tsx"
+Task T015: "Credential form in app/components/credentials/credential-form.tsx"
+Task T016: "Credential list in app/components/credentials/credential-list.tsx"
 ```
 
 ---
