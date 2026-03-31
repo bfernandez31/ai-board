@@ -1,0 +1,144 @@
+import { describe, it, expect, beforeAll } from 'vitest';
+import crypto from 'crypto';
+
+// Set encryption key before importing modules that read env
+const TEST_KEY = crypto.randomBytes(32).toString('hex');
+process.env.CREDENTIAL_ENCRYPTION_KEY = TEST_KEY;
+
+import { encryptCredential, decryptCredential } from '@/lib/ai-credentials/crypto';
+import { validateFormat } from '@/lib/ai-credentials/providers/anthropic';
+
+describe('ai-credentials/crypto', () => {
+  describe('encryptCredential / decryptCredential round-trip', () => {
+    it('should encrypt and decrypt a credential value', () => {
+      const plaintext = 'sk-ant-api03-' + 'a'.repeat(80);
+      const encrypted = encryptCredential(plaintext);
+
+      expect(encrypted.encryptedValue).toBeTruthy();
+      expect(encrypted.iv).toBeTruthy();
+      expect(encrypted.authTag).toBeTruthy();
+      expect(encrypted.preview).toBe(plaintext.slice(-4));
+
+      const decrypted = decryptCredential(
+        encrypted.encryptedValue,
+        encrypted.iv,
+        encrypted.authTag
+      );
+      expect(decrypted).toBe(plaintext);
+    });
+
+    it('should produce different ciphertexts for the same input', () => {
+      const plaintext = 'test-credential-value-1234567890';
+      const encrypted1 = encryptCredential(plaintext);
+      const encrypted2 = encryptCredential(plaintext);
+
+      expect(encrypted1.encryptedValue).not.toBe(encrypted2.encryptedValue);
+      expect(encrypted1.iv).not.toBe(encrypted2.iv);
+    });
+
+    it('should extract the last 4 characters as preview', () => {
+      const plaintext = 'sk-ant-api03-abcdefgh';
+      const encrypted = encryptCredential(plaintext);
+      expect(encrypted.preview).toBe('efgh');
+    });
+
+    it('should throw on tampered auth tag', () => {
+      const encrypted = encryptCredential('test-value');
+      const tamperedTag = Buffer.from(encrypted.authTag, 'base64');
+      tamperedTag[0] ^= 0xff;
+
+      expect(() =>
+        decryptCredential(
+          encrypted.encryptedValue,
+          encrypted.iv,
+          tamperedTag.toString('base64')
+        )
+      ).toThrow();
+    });
+
+    it('should throw on tampered ciphertext', () => {
+      const encrypted = encryptCredential('test-value');
+      const tamperedValue = Buffer.from(encrypted.encryptedValue, 'base64');
+      tamperedValue[0] ^= 0xff;
+
+      expect(() =>
+        decryptCredential(
+          tamperedValue.toString('base64'),
+          encrypted.iv,
+          encrypted.authTag
+        )
+      ).toThrow();
+    });
+  });
+
+  describe('missing encryption key', () => {
+    it('should throw when CREDENTIAL_ENCRYPTION_KEY is missing', () => {
+      const originalKey = process.env.CREDENTIAL_ENCRYPTION_KEY;
+      delete process.env.CREDENTIAL_ENCRYPTION_KEY;
+
+      expect(() => encryptCredential('test')).toThrow(
+        'CREDENTIAL_ENCRYPTION_KEY environment variable is not configured'
+      );
+
+      process.env.CREDENTIAL_ENCRYPTION_KEY = originalKey;
+    });
+
+    it('should throw when CREDENTIAL_ENCRYPTION_KEY has wrong length', () => {
+      const originalKey = process.env.CREDENTIAL_ENCRYPTION_KEY;
+      process.env.CREDENTIAL_ENCRYPTION_KEY = 'tooshort';
+
+      expect(() => encryptCredential('test')).toThrow(
+        'CREDENTIAL_ENCRYPTION_KEY must be a 64-character hex string'
+      );
+
+      process.env.CREDENTIAL_ENCRYPTION_KEY = originalKey;
+    });
+  });
+});
+
+describe('ai-credentials/providers/anthropic - validateFormat', () => {
+  describe('API_KEY format', () => {
+    it('should accept valid Anthropic API key format', () => {
+      const validKey = 'sk-ant-api03-' + 'a'.repeat(80);
+      const result = validateFormat('API_KEY', validKey);
+      expect(result.valid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should reject key without sk-ant- prefix', () => {
+      const result = validateFormat('API_KEY', 'invalid-key');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid Anthropic API key format');
+    });
+
+    it('should reject key with too short random part', () => {
+      const shortKey = 'sk-ant-api03-' + 'a'.repeat(10);
+      const result = validateFormat('API_KEY', shortKey);
+      expect(result.valid).toBe(false);
+    });
+
+    it('should accept key with underscores and hyphens', () => {
+      const key = 'sk-ant-api03-' + 'aA0_-'.repeat(20);
+      const result = validateFormat('API_KEY', key);
+      expect(result.valid).toBe(true);
+    });
+  });
+
+  describe('OAUTH_TOKEN format', () => {
+    it('should accept valid OAuth token (20+ chars)', () => {
+      const result = validateFormat('OAUTH_TOKEN', 'a'.repeat(20));
+      expect(result.valid).toBe(true);
+    });
+
+    it('should reject empty OAuth token', () => {
+      const result = validateFormat('OAUTH_TOKEN', '');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid OAuth token format');
+    });
+
+    it('should reject short OAuth token', () => {
+      const result = validateFormat('OAUTH_TOKEN', 'short');
+      expect(result.valid).toBe(false);
+    });
+  });
+});

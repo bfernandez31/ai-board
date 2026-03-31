@@ -168,6 +168,7 @@ model User {
   notificationsCreated  Notification[]        @relation("NotificationActor")
   pushSubscriptions     PushSubscription[]
   personalAccessTokens  PersonalAccessToken[]
+  credentials           UserCredential[]
   subscription          Subscription?
 
   @@index([email])
@@ -298,6 +299,21 @@ enum Agent {
   CODEX
 }
 
+enum CredentialProvider {
+  ANTHROPIC
+}
+
+enum CredentialType {
+  API_KEY
+  OAUTH_TOKEN
+}
+
+enum CredentialReadiness {
+  PENDING_VERIFICATION
+  READY
+  ACTION_REQUIRED
+}
+
 enum SubscriptionPlan {
   FREE
   PRO
@@ -344,6 +360,29 @@ model StripeEvent {
 
   @@index([type])
   @@index([processedAt])
+}
+
+model UserCredential {
+  id                  Int                 @id @default(autoincrement())
+  userId              String
+  provider            CredentialProvider
+  credentialType      CredentialType
+  label               String              @db.VarChar(100)
+  encryptedValue      String
+  iv                  String              @db.VarChar(24)
+  authTag             String              @db.VarChar(24)
+  preview             String              @db.VarChar(4)
+  readinessStatus     CredentialReadiness @default(PENDING_VERIFICATION)
+  lastVerifiedAt      DateTime?
+  verificationCode    String?             @db.VarChar(50)
+  verificationMessage String?             @db.VarChar(500)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
 }
 
 model ComparisonRecord {

@@ -18,9 +18,9 @@
 
 **Purpose**: Database schema, encryption key provisioning, and Prisma client generation
 
-- [ ] T001 Add CredentialProvider, CredentialType, and CredentialReadiness enums and UserCredential model (with readinessStatus, lastVerifiedAt, verificationCode, verificationMessage fields) with User relation to prisma/schema.prisma
-- [ ] T002 Run Prisma migration (`bunx prisma migrate dev --name add-user-credential`) and regenerate client (`bunx prisma generate`)
-- [ ] T003 Add `CREDENTIAL_ENCRYPTION_KEY` env var to `.env.local` and `.env.example` with generation instructions
+- [x] T001 Add CredentialProvider, CredentialType, and CredentialReadiness enums and UserCredential model (with readinessStatus, lastVerifiedAt, verificationCode, verificationMessage fields) with User relation to prisma/schema.prisma
+- [x] T002 Run Prisma migration (`bunx prisma migrate dev --name add-user-credential`) and regenerate client (`bunx prisma generate`)
+- [x] T003 Add `CREDENTIAL_ENCRYPTION_KEY` env var to `.env.local` and `.env.example` with generation instructions
 
 ---
 
@@ -30,12 +30,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 [P] Create shared types and interfaces in lib/ai-credentials/types.ts (WorkflowCredentialRequest, WorkflowResolvedCredential, CredentialReadiness-related types, API response types with readinessStatus/verificationCode/verificationMessage)
-- [ ] T005 [P] Implement AES-256-GCM encrypt/decrypt utilities in lib/ai-credentials/crypto.ts (encryptCredential, decryptCredential using CREDENTIAL_ENCRYPTION_KEY env var, 12-byte random IV, separate authTag)
-- [ ] T006 [P] Implement Anthropic format validation + remote verification in lib/ai-credentials/providers/anthropic.ts (validateFormat for regex checks, verifyWithProvider for API call with 10s timeout, return verificationCode + verificationMessage)
-- [ ] T007 [P] Implement business logic in lib/ai-credentials/service.ts (createOrReplaceCredential upsert, listCredentials metadata only, getCredentialForDecryption, deleteCredential, testCredential updating readinessStatus/verificationCode/verificationMessage)
-- [ ] T007b [P] Implement owner resolution + workflow payload mapping in lib/ai-credentials/workflow.ts (getOwnerCredential resolving project→owner→credential, buildWorkflowPayload returning WorkflowResolvedCredential)
-- [ ] T008 [P] Write unit tests for encryption round-trip and format validation in tests/unit/ai-credentials.test.ts
+- [x] T004 [P] Create shared types and interfaces in lib/ai-credentials/types.ts (WorkflowCredentialRequest, WorkflowResolvedCredential, CredentialReadiness-related types, API response types with readinessStatus/verificationCode/verificationMessage)
+- [x] T005 [P] Implement AES-256-GCM encrypt/decrypt utilities in lib/ai-credentials/crypto.ts (encryptCredential, decryptCredential using CREDENTIAL_ENCRYPTION_KEY env var, 12-byte random IV, separate authTag)
+- [x] T006 [P] Implement Anthropic format validation + remote verification in lib/ai-credentials/providers/anthropic.ts (validateFormat for regex checks, verifyWithProvider for API call with 10s timeout, return verificationCode + verificationMessage)
+- [x] T007 [P] Implement business logic in lib/ai-credentials/service.ts (createOrReplaceCredential upsert, listCredentials metadata only, getCredentialForDecryption, deleteCredential, testCredential updating readinessStatus/verificationCode/verificationMessage)
+- [x] T007b [P] Implement owner resolution + workflow payload mapping in lib/ai-credentials/workflow.ts (getOwnerCredential resolving project→owner→credential, buildWorkflowPayload returning WorkflowResolvedCredential)
+- [x] T008 [P] Write unit tests for encryption round-trip and format validation in tests/unit/ai-credentials.test.ts
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 
