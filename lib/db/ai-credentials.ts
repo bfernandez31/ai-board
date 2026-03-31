@@ -1,4 +1,5 @@
 import { AiCredentialType, AiProvider, type UserAiCredential } from '@prisma/client';
+import { maskCredentialPreview } from '@/lib/ai/credentials';
 import { prisma } from '@/lib/db/client';
 import { decryptSecret, encryptSecret } from '@/lib/security/secret-box';
 
@@ -19,7 +20,7 @@ function toViewModel(credential: UserAiCredential): UserAiCredentialView {
     provider: credential.provider,
     credentialType: credential.credentialType,
     label: credential.label,
-    preview: `****${credential.preview}`,
+    preview: maskCredentialPreview(credential.preview),
     lastValidatedAt: credential.lastValidatedAt?.toISOString() ?? null,
     createdAt: credential.createdAt.toISOString(),
     updatedAt: credential.updatedAt.toISOString(),
@@ -43,8 +44,9 @@ export async function upsertUserAiCredential(input: {
   secret: string;
   lastValidatedAt?: Date;
 }): Promise<UserAiCredentialView> {
-  const encrypted = encryptSecret(input.secret.trim());
-  const preview = input.secret.trim().slice(-4);
+  const trimmedSecret = input.secret.trim();
+  const encrypted = encryptSecret(trimmedSecret);
+  const preview = trimmedSecret.slice(-4);
 
   const credential = await prisma.userAiCredential.upsert({
     where: {

@@ -32,8 +32,25 @@ interface ValidateAiCredentialInput {
   secret: string;
 }
 
+interface ErrorResponse {
+  error?: string;
+}
+
 async function parseJson<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
+}
+
+async function getErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
+  const data = await parseJson<ErrorResponse>(response);
+  return data.error || fallbackMessage;
+}
+
+function useInvalidateAiCredentials(): () => Promise<void> {
+  const queryClient = useQueryClient();
+
+  return function invalidateAiCredentials(): Promise<void> {
+    return queryClient.invalidateQueries({ queryKey: queryKeys.users.aiCredentials });
+  };
 }
 
 export function useAiCredentials() {
@@ -45,8 +62,7 @@ export function useAiCredentials() {
       });
 
       if (!response.ok) {
-        const data = await parseJson<{ error?: string }>(response);
-        throw new Error(data.error || 'Failed to fetch AI credentials');
+        throw new Error(await getErrorMessage(response, 'Failed to fetch AI credentials'));
       }
 
       return parseJson<ListAiCredentialsResponse>(response);
@@ -75,7 +91,7 @@ export function useValidateAiCredential() {
 }
 
 export function useSaveAiCredential() {
-  const queryClient = useQueryClient();
+  const invalidateAiCredentials = useInvalidateAiCredentials();
 
   return useMutation<{ credential: AiCredentialListItem }, Error, SaveAiCredentialInput>({
     mutationFn: async (input) => {
@@ -94,13 +110,13 @@ export function useSaveAiCredential() {
       return { credential: data.credential };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.aiCredentials });
+      return invalidateAiCredentials();
     },
   });
 }
 
 export function useDeleteAiCredential() {
-  const queryClient = useQueryClient();
+  const invalidateAiCredentials = useInvalidateAiCredentials();
 
   return useMutation<void, Error, AiProvider>({
     mutationFn: async (provider) => {
@@ -109,13 +125,12 @@ export function useDeleteAiCredential() {
         credentials: 'include',
       });
 
-      const data = await parseJson<{ error?: string }>(response);
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete AI credential');
+        throw new Error(await getErrorMessage(response, 'Failed to delete AI credential'));
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.aiCredentials });
+      return invalidateAiCredentials();
     },
   });
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Bot, CheckCircle2, Loader2, ShieldAlert, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,8 +19,41 @@ import {
 import { getCredentialFormatError } from '@/lib/ai/credentials';
 
 const PROVIDER = 'ANTHROPIC';
+const DEFAULT_LABEL = 'Anthropic credential';
 
-export function AiCredentialsCard() {
+function getCredentialTypeLabel(credentialType: AiCredentialType): string {
+  if (credentialType === 'API_KEY') {
+    return 'API Key';
+  }
+
+  return 'OAuth Token';
+}
+
+function getSecretLabel(credentialType: AiCredentialType): string {
+  if (credentialType === 'API_KEY') {
+    return 'Anthropic API Key';
+  }
+
+  return 'Claude OAuth Token';
+}
+
+function getSecretPlaceholder(credentialType: AiCredentialType): string {
+  if (credentialType === 'API_KEY') {
+    return 'sk-ant-...';
+  }
+
+  return 'CLAUDE_CODE_OAUTH_TOKEN';
+}
+
+function getErrorMessage(error: unknown, fallbackMessage: string): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
+
+export function AiCredentialsCard(): JSX.Element {
   const [label, setLabel] = useState('');
   const [secret, setSecret] = useState('');
   const [credentialType, setCredentialType] = useState<AiCredentialType>('API_KEY');
@@ -36,14 +69,15 @@ export function AiCredentialsCard() {
     (credential) => credential.provider === PROVIDER
   );
 
-  const formatError = useMemo(
-    () => getCredentialFormatError(PROVIDER, credentialType, secret),
-    [credentialType, secret]
-  );
+  const formatError = getCredentialFormatError(PROVIDER, credentialType, secret);
 
-  async function handleValidate() {
+  function resetServerState(): void {
     setServerMessage(null);
     setServerError(null);
+  }
+
+  async function handleValidate(): Promise<void> {
+    resetServerState();
 
     try {
       await validateMutation.mutateAsync({
@@ -53,37 +87,35 @@ export function AiCredentialsCard() {
       });
       setServerMessage('Credential validated successfully.');
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'Validation failed');
+      setServerError(getErrorMessage(error, 'Validation failed'));
     }
   }
 
-  async function handleSave() {
-    setServerMessage(null);
-    setServerError(null);
+  async function handleSave(): Promise<void> {
+    resetServerState();
 
     try {
       await saveMutation.mutateAsync({
         provider: PROVIDER,
         credentialType,
-        label: label.trim() || 'Anthropic credential',
+        label: label.trim() || DEFAULT_LABEL,
         secret,
       });
       setServerMessage(existingCredential ? 'Credential replaced successfully.' : 'Credential saved successfully.');
       setSecret('');
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'Save failed');
+      setServerError(getErrorMessage(error, 'Save failed'));
     }
   }
 
-  async function handleDelete() {
-    setServerMessage(null);
-    setServerError(null);
+  async function handleDelete(): Promise<void> {
+    resetServerState();
 
     try {
       await deleteMutation.mutateAsync(PROVIDER);
       setServerMessage('Credential deleted successfully.');
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'Delete failed');
+      setServerError(getErrorMessage(error, 'Delete failed'));
     }
   }
 
@@ -107,7 +139,7 @@ export function AiCredentialsCard() {
               <div>
                 <p className="font-medium">{existingCredential.label}</p>
                 <p className="text-sm text-muted-foreground">
-                  {existingCredential.preview} | {existingCredential.credentialType === 'API_KEY' ? 'API Key' : 'OAuth Token'}
+                  {existingCredential.preview} | {getCredentialTypeLabel(existingCredential.credentialType)}
                 </p>
               </div>
               <Badge variant="secondary">Anthropic</Badge>
@@ -153,15 +185,13 @@ export function AiCredentialsCard() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="ai-secret">
-            {credentialType === 'API_KEY' ? 'Anthropic API Key' : 'Claude OAuth Token'}
-          </Label>
+          <Label htmlFor="ai-secret">{getSecretLabel(credentialType)}</Label>
           <Input
             id="ai-secret"
             type="password"
             value={secret}
             onChange={(event) => setSecret(event.target.value)}
-            placeholder={credentialType === 'API_KEY' ? 'sk-ant-...' : 'CLAUDE_CODE_OAUTH_TOKEN'}
+            placeholder={getSecretPlaceholder(credentialType)}
             autoComplete="off"
           />
           <p className={`text-sm ${formatError ? 'text-destructive' : 'text-muted-foreground'}`}>

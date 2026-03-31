@@ -13,6 +13,11 @@ export const AI_CREDENTIAL_ENV_VAR_MAP: Record<AiCredentialTypeValue, string> = 
 
 const ANTHROPIC_API_KEY_PATTERN = /^sk-ant(?:-api\d+)?-[A-Za-z0-9_-]{10,}$/;
 const ANTHROPIC_OAUTH_TOKEN_PATTERN = /^[A-Za-z0-9._-]{20,}$/;
+const ANTHROPIC_VERSION = '2023-06-01';
+
+function isTestRuntime(): boolean {
+  return process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true';
+}
 
 export function getCredentialFormatError(
   provider: AiProviderValue,
@@ -54,7 +59,7 @@ async function validateAnthropicApiKey(secret: string): Promise<ProviderValidati
     method: 'GET',
     headers: {
       'x-api-key': secret,
-      'anthropic-version': '2023-06-01',
+      'anthropic-version': ANTHROPIC_VERSION,
     },
     cache: 'no-store',
   });
@@ -74,7 +79,7 @@ async function validateAnthropicApiKey(secret: string): Promise<ProviderValidati
 }
 
 async function validateAnthropicOAuthToken(secret: string): Promise<ProviderValidationResult> {
-  if (process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true') {
+  if (isTestRuntime()) {
     return { valid: true, error: null };
   }
 
@@ -83,7 +88,7 @@ async function validateAnthropicOAuthToken(secret: string): Promise<ProviderVali
       method: 'GET',
       headers: {
         Authorization: `Bearer ${secret}`,
-        'anthropic-version': '2023-06-01',
+        'anthropic-version': ANTHROPIC_VERSION,
       },
       cache: 'no-store',
     });
@@ -113,7 +118,7 @@ export async function validateProviderCredential(
     return { valid: false, error: formatError };
   }
 
-  if (process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true') {
+  if (isTestRuntime()) {
     return { valid: true, error: null };
   }
 
