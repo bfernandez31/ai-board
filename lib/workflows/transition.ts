@@ -189,18 +189,18 @@ export async function handleTicketTransition(
     }
 
     const githubToken = process.env.GITHUB_TOKEN;
-    const aiboardOwner = process.env.GITHUB_OWNER;
-    const aiboardRepo = process.env.GITHUB_REPO;
-
-    if (!aiboardOwner || !aiboardRepo) {
-      return {
-        success: false,
-        error: 'GITHUB_OWNER and GITHUB_REPO environment variables must be set',
-        errorCode: 'GITHUB_ERROR',
-      };
-    }
 
     if (!isWorkflowTestMode(githubToken)) {
+      const aiboardOwner = process.env.GITHUB_OWNER;
+      const aiboardRepo = process.env.GITHUB_REPO;
+
+      if (!aiboardOwner || !aiboardRepo) {
+        return {
+          success: false,
+          error: 'GITHUB_OWNER and GITHUB_REPO environment variables must be set',
+          errorCode: 'GITHUB_ERROR',
+        };
+      }
       let workflowFile: string = '';
 
       try {
