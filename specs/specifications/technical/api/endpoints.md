@@ -3720,6 +3720,8 @@ Returns paginated scan history for a project.
       "baseCommit": "abc1234567890abcdef1234567890abcdef123456",
       "headCommit": "def4567890abcdef1234567890abcdef456789ab",
       "durationMs": 45000,
+      "tokensUsed": 12500,
+      "costUsd": 0.15,
       "errorMessage": null,
       "startedAt": "2026-03-27T14:30:00Z",
       "completedAt": "2026-03-27T14:30:45Z",
@@ -3738,6 +3740,51 @@ Results ordered by `createdAt DESC`. `nextCursor` is the ID of the last scan ret
 
 **Errors**:
 - `400`: Invalid project ID or invalid query params (`VALIDATION_ERROR`)
+- `401`: Unauthorized
+- `403`: Forbidden
+
+---
+
+### GET /api/projects/[projectId]/health/trends
+
+Returns the last 20 completed scan scores per active module for sparkline and area chart rendering. Intended to be fetched once on dashboard mount — not included in the 2-second polling cycle.
+
+**Authentication**: Session cookie OR Bearer PAT
+**Authorization**: `verifyProjectAccess(projectId)` — owner or member
+
+**Path params**: `projectId` (integer, required)
+
+**Query params**: None
+
+**Response** (200 OK):
+```json
+{
+  "security": [
+    { "score": 72, "date": "2026-03-20T14:30:00.000Z" },
+    { "score": 85, "date": "2026-03-28T11:00:00.000Z" }
+  ],
+  "compliance": [
+    { "score": 90, "date": "2026-03-22T16:00:00.000Z" }
+  ],
+  "tests": [],
+  "specSync": [
+    { "score": 65, "date": "2026-03-19T08:00:00.000Z" },
+    { "score": 70, "date": "2026-03-26T10:30:00.000Z" }
+  ]
+}
+```
+
+Each array contains up to 20 `TrendDataPoint` objects ordered chronologically (oldest → newest). Only `COMPLETED` scans with non-null scores are included. An empty array is returned for modules with no qualifying scans.
+
+```typescript
+interface TrendDataPoint {
+  score: number;  // 0–100
+  date: string;   // ISO 8601 timestamp from completedAt
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID (`VALIDATION_ERROR`)
 - `401`: Unauthorized
 - `403`: Forbidden
 

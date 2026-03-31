@@ -68,6 +68,7 @@ Each card displays:
 - Commit range (active modules with completed scans): `baseCommit..headCommit`
 - Severity tags (when applicable)
 - Last scan date
+- **Score trend sparkline** (active modules only): a mini line chart (~40px height, no axes) showing score history over the last completed scans. Displayed only when 3 or more completed scans with valid scores exist. Fetched once on dashboard mount and excluded from the 2-second polling cycle.
 - Action button or "passive" label
 
 **Quality Gate card extras** (when data is available): ticket count (e.g., "5 tickets"), trend indicator arrow (up/down/stable) with numeric delta, and a threshold distribution showing counts per bucket (Excellent ≥ 90, Good ≥ 70, Fair ≥ 50, Poor < 50).
@@ -145,7 +146,11 @@ For active modules, the drawer lists any tickets that were generated from the sc
 
 ### History Section
 
-The History section lists previous scans for the selected module in reverse chronological order. Each entry shows the scan date, score, issue count, and commit range. History is loaded in pages of 20 with a "Load more" button at the bottom. Modules with no scan history display "No scan history."
+The History section lists previous scans for the selected module in reverse chronological order. Each entry shows a score badge and four compact metric icons with values: issues found (AlertTriangle), cost in USD (Coins), tokens consumed (Zap), and execution duration (Clock). Each metric icon displays a tooltip on hover explaining what it represents. When a telemetry value is null (e.g., no cost data recorded), the icon shows "—" rather than zero. History is loaded in pages of 20 with a "Load more" button at the bottom. Modules with no scan history display "No scan history."
+
+### Score Trend Section (Active Modules)
+
+For active modules (Security, Compliance, Tests, Spec Sync), the drawer includes a **Score Trend** area chart showing score evolution over time. The chart follows the established visual pattern of the Quality Gate drawer: `ResponsiveContainer` at 192px height, `CartesianGrid`, labeled axes with date markers, `YAxis` domain 0–100, and a hover tooltip displaying the score value and scan date for each data point. The chart renders whenever at least one completed scan exists for the module. Passive modules (Quality Gate, Last Clean) do not display this section.
 
 ### Content Refresh
 
