@@ -166,6 +166,8 @@ export async function GET(
         baseCommit: true,
         headCommit: true,
         durationMs: true,
+        tokensUsed: true,
+        costUsd: true,
         errorMessage: true,
         startedAt: true,
         completedAt: true,

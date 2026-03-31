@@ -12,9 +12,10 @@ import { DrawerIssues } from './drawer/drawer-issues';
 import { DrawerTickets } from './drawer/drawer-tickets';
 import { DrawerHistory } from './drawer/drawer-history';
 import { DrawerStates } from './drawer/drawer-states';
+import { ScoreTrendChart } from './drawer/score-trend-chart';
 import { useScanReport } from '@/app/lib/hooks/useScanReport';
 import { MODULE_METADATA } from '@/lib/health/types';
-import type { HealthModuleType, HealthModuleStatus } from '@/lib/health/types';
+import type { HealthModuleType, HealthModuleStatus, TrendDataPoint } from '@/lib/health/types';
 
 interface ScanDetailDrawerProps {
   projectId: number;
@@ -23,6 +24,7 @@ interface ScanDetailDrawerProps {
   isScanning: boolean;
   onClose: () => void;
   onTriggerScan?: (() => void) | undefined;
+  trendData?: TrendDataPoint[] | undefined;
 }
 
 export function ScanDetailDrawer({
@@ -32,6 +34,7 @@ export function ScanDetailDrawer({
   isScanning,
   onClose,
   onTriggerScan,
+  trendData,
 }: ScanDetailDrawerProps) {
   const { data, isLoading } = useScanReport(projectId, moduleType);
   const isOpen = moduleType !== null;
@@ -84,6 +87,15 @@ export function ScanDetailDrawer({
                 errorMessage={data?.scan?.errorMessage}
                 onTriggerScan={onTriggerScan}
               />
+            )}
+
+            {trendData && trendData.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Score Trend</h3>
+                <div className="h-48 w-full">
+                  <ScoreTrendChart data={trendData} />
+                </div>
+              </div>
             )}
 
             {hasReport && data?.report && (

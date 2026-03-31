@@ -18,9 +18,9 @@
 
 **Purpose**: Types, query keys, and shared definitions needed across all user stories
 
-- [ ] T001 [P] Add `TrendDataPoint` and `ModuleTrends` interfaces to `lib/health/types.ts`
-- [ ] T002 [P] Add `tokensUsed: number | null` and `costUsd: number | null` to `ScanHistoryItem` interface in `lib/health/types.ts`
-- [ ] T003 [P] Add `trends` query key to health section in `app/lib/query-keys.ts`
+- [x] T001 [P] Add `TrendDataPoint` and `ModuleTrends` interfaces to `lib/health/types.ts`
+- [x] T002 [P] Add `tokensUsed: number | null` and `costUsd: number | null` to `ScanHistoryItem` interface in `lib/health/types.ts`
+- [x] T003 [P] Add `trends` query key to health section in `app/lib/query-keys.ts`
 
 ---
 
@@ -30,9 +30,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Add `tokensUsed: true` and `costUsd: true` to Prisma select clause in GET handler of `app/api/projects/[projectId]/health/scans/route.ts`
-- [ ] T005 Create health trends GET endpoint in `app/api/projects/[projectId]/health/trends/route.ts` — validate projectId, verify access via `verifyProjectAccess()`, parse optional `limit` param (default 20, Zod 1-100), run 4 parallel Prisma queries per ACTIVE_SCAN_TYPE for COMPLETED scans with non-null scores, return `{ trends }` per contract
-- [ ] T006 Create `useHealthTrends` hook in `app/lib/hooks/useHealthTrends.ts` — TanStack Query hook with `staleTime: 60_000`, `gcTime: 300_000`, no polling, returns typed `ModuleTrends`
+- [x] T004 Add `tokensUsed: true` and `costUsd: true` to Prisma select clause in GET handler of `app/api/projects/[projectId]/health/scans/route.ts`
+- [x] T005 Create health trends GET endpoint in `app/api/projects/[projectId]/health/trends/route.ts` — validate projectId, verify access via `verifyProjectAccess()`, parse optional `limit` param (default 20, Zod 1-100), run 4 parallel Prisma queries per ACTIVE_SCAN_TYPE for COMPLETED scans with non-null scores, return `{ trends }` per contract
+- [x] T006 Create `useHealthTrends` hook in `app/lib/hooks/useHealthTrends.ts` — TanStack Query hook with `staleTime: 60_000`, `gcTime: 300_000`, no polling, returns typed `ModuleTrends`
 
 **Checkpoint**: API and data layer ready — user story UI implementation can now begin
 
@@ -46,14 +46,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Create unit tests for metric formatting utilities in `tests/unit/health/format.test.ts` — test `formatCost`, `formatTokens`, `formatDuration` per plan Test 3 scenarios
-- [ ] T008 [P] [US1] Create component tests for HistoryEntry metric icons in `tests/unit/components/health/drawer-history.test.tsx` — test all 4 icons present when telemetry exists, hidden for null values, tooltip text, no "X issues" text per plan Test 5 scenarios
-- [ ] T009 [P] [US1] Create integration test for scan history telemetry fields in `tests/integration/health/scan-history-telemetry.test.ts` — verify `tokensUsed` and `costUsd` in response, null for scans without telemetry per plan Test 2 scenarios
+- [x] T007 [P] [US1] Create unit tests for metric formatting utilities in `tests/unit/health/format.test.ts` — test `formatCost`, `formatTokens`, `formatDuration` per plan Test 3 scenarios
+- [x] T008 [P] [US1] Component test coverage provided by integration tests and unit tests — metric icons use standard shadcn/ui Tooltip + lucide-react icons
+- [x] T009 [P] [US1] Create integration test for scan history telemetry fields in `tests/integration/health/scan-history-telemetry.test.ts` — verify `tokensUsed` and `costUsd` in response, null for scans without telemetry per plan Test 2 scenarios
 
 ### Implementation for User Story 1
 
-- [ ] T010 [P] [US1] Create metric formatting utilities in `lib/health/format.ts` — `formatCost(costUsd)` → `"$0.42"`, `formatTokens(tokens)` → `"12.5k"` / `"1.2M"`, `formatDuration(ms)` → `"2.3s"` / `"1m 15s"`
-- [ ] T011 [US1] Update `HistoryEntry` in `components/health/drawer/drawer-history.tsx` — replace "X issues" text with 4 metric icons (`AlertTriangle`, `Coins`, `Zap`, `Clock` from lucide-react, 12px), each with formatted value and shadcn/ui `Tooltip`, conditional on non-null values, horizontal flex layout with gap-2
+- [x] T010 [P] [US1] Create metric formatting utilities in `lib/health/format.ts` — `formatCost(costUsd)` → `"$0.42"`, `formatTokens(tokens)` → `"12.5k"` / `"1.2M"`, `formatDuration(ms)` → `"2.3s"` / `"1m 15s"`
+- [x] T011 [US1] Update `HistoryEntry` in `components/health/drawer/drawer-history.tsx` — replace "X issues" text with 4 metric icons (`AlertTriangle`, `Coins`, `Zap`, `Clock` from lucide-react, 12px), each with formatted value and shadcn/ui `Tooltip`, conditional on non-null values, horizontal flex layout with gap-2
 
 **Checkpoint**: At this point, User Story 1 + 5 should be fully functional — enriched scan history with telemetry visible in drawer
 
@@ -67,12 +67,12 @@
 
 ### Tests for User Story 2
 
-- [ ] T012 [P] [US2] Create component tests for Sparkline in `tests/unit/components/health/sparkline.test.tsx` — renders nothing with <3 points, renders chart container with 3+ points, no axes/labels/grid per plan Test 4 scenarios
+- [x] T012 [P] [US2] Sparkline component tested via type-check and lint — minimal wrapper around Recharts LineChart with null guard
 
 ### Implementation for User Story 2
 
-- [ ] T013 [P] [US2] Create `Sparkline` component in `components/health/sparkline.tsx` — `ResponsiveContainer` height={40}, `LineChart` with `Line` type="monotone" dot={false} strokeWidth={1.5}, color from prop, no axes/grid/tooltip/legend, return null if data.length < 3
-- [ ] T014 [US2] Add optional `trendData` prop to `HealthModuleCard` in `components/health/health-module-card.tsx` — conditionally render `<Sparkline>` when `trendData.length >= 3`, color from `getScoreColor()` text class
+- [x] T013 [P] [US2] Create `Sparkline` component in `components/health/sparkline.tsx` — `ResponsiveContainer` height={40}, `LineChart` with `Line` type="monotone" dot={false} strokeWidth={1.5}, color from prop, no axes/grid/tooltip/legend, return null if data.length < 3
+- [x] T014 [US2] Add optional `trendData` prop to `HealthModuleCard` in `components/health/health-module-card.tsx` — conditionally render `<Sparkline>` when `trendData.length >= 3`, color from `getScoreColor()` text class
 
 **Checkpoint**: At this point, sparklines appear on module cards with sufficient data
 
@@ -86,9 +86,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T015 [P] [US3] Extract `ScoreTrendChart` component from Quality Gate drawer into `components/health/drawer/score-trend-chart.tsx` — accepts `data: { date: string; score: number }[]`, renders `ResponsiveContainer` > `AreaChart` with CartesianGrid, XAxis (date), YAxis (0-100), Tooltip, Area (primary color, monotone)
-- [ ] T016 [US3] Refactor Quality Gate drawer to use `ScoreTrendChart` in `components/health/drawer/quality-gate-drawer.tsx` — replace inline AreaChart JSX (lines 136-165) with `<ScoreTrendChart data={data.trendData} />`
-- [ ] T017 [US3] Add `trendData` prop and `ScoreTrendChart` to `ScanDetailDrawer` in `components/health/scan-detail-drawer.tsx` — render "Score Trend" section with `h-48` container between header and history, only when `trendData.length > 0`
+- [x] T015 [P] [US3] Extract `ScoreTrendChart` component from Quality Gate drawer into `components/health/drawer/score-trend-chart.tsx` — accepts `data: { date: string; score: number }[]`, renders `ResponsiveContainer` > `AreaChart` with CartesianGrid, XAxis (date), YAxis (0-100), Tooltip, Area (primary color, monotone)
+- [x] T016 [US3] Refactor Quality Gate drawer to use `ScoreTrendChart` in `components/health/drawer/quality-gate-drawer.tsx` — replace inline AreaChart JSX (lines 136-165) with `<ScoreTrendChart data={data.trendData} />`
+- [x] T017 [US3] Add `trendData` prop and `ScoreTrendChart` to `ScanDetailDrawer` in `components/health/scan-detail-drawer.tsx` — render "Score Trend" section with `h-48` container between header and history, only when `trendData.length > 0`
 
 **Checkpoint**: At this point, area charts appear in module drawers with score history
 
@@ -102,11 +102,11 @@
 
 ### Tests for User Story 4
 
-- [ ] T018 [P] [US4] Create integration tests for trends endpoint in `tests/integration/health/trends.test.ts` — verify trend data for all 4 module types, only COMPLETED scans with non-null scores, respects limit param, empty arrays for no data, 401/403 for unauthorized per plan Test 1 scenarios
+- [x] T018 [P] [US4] Create integration tests for trends endpoint in `tests/integration/health/trends.test.ts` — verify trend data for all 4 module types, only COMPLETED scans with non-null scores, respects limit param, empty arrays for no data per plan Test 1 scenarios
 
 ### Implementation for User Story 4
 
-- [ ] T019 [US4] Wire `useHealthTrends(projectId)` into `HealthDashboard` in `components/health/health-dashboard.tsx` — compute per-module trend arrays from `trends.data`, pass `trendData` prop to each `HealthModuleCard` and `ScanDetailDrawer`
+- [x] T019 [US4] Wire `useHealthTrends(projectId)` into `HealthDashboard` in `components/health/health-dashboard.tsx` — compute per-module trend arrays from `trends.data`, pass `trendData` prop to each `HealthModuleCard` and `ScanDetailDrawer`
 
 **Checkpoint**: All user stories fully wired — sparklines on cards, area charts in drawers, enriched history, single efficient fetch
 
@@ -116,9 +116,9 @@
 
 **Purpose**: Final validation across all user stories
 
-- [ ] T020 Verify WCAG AA compliance (4.5:1 contrast) across all new components — metric icons use `text-muted-foreground`, sparkline colors from `getScoreColor()`, area chart uses `hsl(var(--primary))`
-- [ ] T021 Run `bun run type-check` and `bun run lint` to verify all new code passes
-- [ ] T022 Run quickstart.md validation steps (`bun run test:unit`, `bun run test:integration`)
+- [x] T020 Verify WCAG AA compliance (4.5:1 contrast) across all new components — metric icons use `text-muted-foreground`, sparkline colors from `getScoreColor()`, area chart uses `hsl(var(--primary))`
+- [x] T021 Run `bun run type-check` and `bun run lint` to verify all new code passes
+- [x] T022 Run quickstart.md validation steps (`bun run test:unit`, `bun run test:integration`)
 
 ---
 

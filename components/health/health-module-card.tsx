@@ -18,7 +18,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getScoreColor } from '@/lib/quality-score';
 import { MODULE_METADATA } from '@/lib/health/types';
-import type { HealthModuleType, HealthModuleStatus } from '@/lib/health/types';
+import { Sparkline } from './sparkline';
+import type { HealthModuleType, HealthModuleStatus, TrendDataPoint } from '@/lib/health/types';
 
 const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
   SECURITY: Shield,
@@ -37,6 +38,13 @@ function getCardState(module: HealthModuleStatus, isScanning: boolean): CardStat
   return 'never_scanned';
 }
 
+const SCORE_COLOR_TO_HSL: Record<string, string> = {
+  'text-ctp-green': 'hsl(var(--ctp-green))',
+  'text-ctp-blue': 'hsl(var(--ctp-blue))',
+  'text-ctp-yellow': 'hsl(var(--ctp-yellow))',
+  'text-ctp-red': 'hsl(var(--ctp-red))',
+};
+
 interface HealthModuleCardProps {
   moduleType: HealthModuleType;
   module: HealthModuleStatus;
@@ -44,6 +52,7 @@ interface HealthModuleCardProps {
   onTriggerScan?: (() => void) | undefined;
   isTriggerPending?: boolean | undefined;
   onClick?: (() => void) | undefined;
+  trendData?: TrendDataPoint[] | undefined;
 }
 
 export function HealthModuleCard({
@@ -53,6 +62,7 @@ export function HealthModuleCard({
   onTriggerScan,
   isTriggerPending = false,
   onClick,
+  trendData,
 }: HealthModuleCardProps) {
   const Icon = MODULE_ICONS[moduleType];
   const label = MODULE_METADATA[moduleType].label;
@@ -85,6 +95,13 @@ export function HealthModuleCard({
       </div>
 
       <p className="text-sm text-muted-foreground">{module.summary}</p>
+
+      {trendData && trendData.length >= 3 && (
+        <Sparkline
+          data={trendData}
+          color={scoreColors ? SCORE_COLOR_TO_HSL[scoreColors.text] ?? 'hsl(var(--primary))' : 'hsl(var(--primary))'}
+        />
+      )}
 
       {module.trend && (
         <TrendIndicator trend={module.trend} trendDelta={module.trendDelta ?? null} />
