@@ -33,7 +33,8 @@ export function ProfileInfo({ profile }: ProfileInfoProps) {
     day: 'numeric',
   });
 
-  const planLabel = profile.plan === 'FREE' ? 'Free' : profile.plan === 'PRO' ? 'Pro' : 'Team';
+  const planLabels = { FREE: 'Free', PRO: 'Pro', TEAM: 'Team' } as const;
+  const planLabel = planLabels[profile.plan];
 
   return (
     <div className="space-y-6">

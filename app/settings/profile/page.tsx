@@ -33,17 +33,19 @@ export default function ProfileSettingsPage() {
           </div>
         </div>
 
-        {isLoading ? (
+        {isLoading && (
           <div className="text-muted-foreground">Loading profile...</div>
-        ) : error ? (
+        )}
+        {!isLoading && error && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
             Failed to load profile. Please try again later.
           </div>
-        ) : profile ? (
+        )}
+        {!isLoading && !error && profile && (
           <div className="rounded-lg border border-border bg-card p-6">
             <ProfileInfo profile={profile} />
           </div>
-        ) : null}
+        )}
       </div>
     </main>
   );
