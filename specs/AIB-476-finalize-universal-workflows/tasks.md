@@ -28,8 +28,8 @@
 
 **CRITICAL**: No workflow modifications can begin until both scripts are ready.
 
-- [ ] T001 Create `.github/scripts/run-command.sh` — config-driven command executor that reads `.ai-board/config.yml`, looks up command key via yq, and executes in target directory. Must handle: missing config (exit 0), missing key (exit 0), invalid YAML (exit 1), command execution with exit code passthrough. Include yq bootstrap logic. See `specs/AIB-476-finalize-universal-workflows/contracts/run-command-sh.md` for full contract.
-- [ ] T002 Modify `.github/scripts/setup-environment.sh` — add `--phase <lightweight|full>` parameter (default: `full`). Lightweight phase: yq bootstrap, config validation, package manager install, symlinks, partial validation. Full phase: all lightweight steps plus dependency install, agent CLI, env export, Prisma detection, Playwright detection, full validation. Reject unrecognized phase values with error. See `specs/AIB-476-finalize-universal-workflows/contracts/setup-environment-sh.md` for full contract.
+- [x] T001 Create `.github/scripts/run-command.sh` — config-driven command executor that reads `.ai-board/config.yml`, looks up command key via yq, and executes in target directory. Must handle: missing config (exit 0), missing key (exit 0), invalid YAML (exit 1), command execution with exit code passthrough. Include yq bootstrap logic. See `specs/AIB-476-finalize-universal-workflows/contracts/run-command-sh.md` for full contract.
+- [x] T002 Modify `.github/scripts/setup-environment.sh` — add `--phase <lightweight|full>` parameter (default: `full`). Lightweight phase: yq bootstrap, config validation, package manager install, symlinks, partial validation. Full phase: all lightweight steps plus dependency install, agent CLI, env export, Prisma detection, Playwright detection, full validation. Reject unrecognized phase values with error. See `specs/AIB-476-finalize-universal-workflows/contracts/setup-environment-sh.md` for full contract.
 
 **Checkpoint**: Both scripts ready and backward-compatible. Workflow updates can now begin.
 
