@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, LogOut, CreditCard, Key, KeyRound } from 'lucide-react';
+import { Menu, LogOut, CreditCard, Key, KeyRound, User } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -97,6 +97,15 @@ export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
               </div>
 
               <div className="border-t border-border my-2" />
+
+              <Link
+                href="/settings/profile"
+                className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
+                onClick={() => setOpen(false)}
+              >
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </Link>
 
               <Link
                 href="/settings/billing"

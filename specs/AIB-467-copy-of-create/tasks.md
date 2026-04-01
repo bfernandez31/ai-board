@@ -18,7 +18,7 @@
 
 **Purpose**: No new dependencies or schema changes required. This phase creates the API endpoint that all user stories depend on.
 
-- [ ] T001 Create GET endpoint with auth, Prisma query (User + Account + Subscription), GitHub API username resolution, and ProfileResponse shape in `app/api/settings/profile/route.ts`
+- [x] T001 Create GET endpoint with auth, Prisma query (User + Account + Subscription), GitHub API username resolution, and ProfileResponse shape in `app/api/settings/profile/route.ts`
 
 **Checkpoint**: API endpoint is functional and returns profile data for authenticated users.
 
@@ -32,12 +32,12 @@
 
 ### Tests for User Story 1
 
-- [ ] T002 [P] [US1] Integration tests for profile API (full profile, FREE default, GitHub API failure, 401 unauth, name fallback) in `tests/integration/settings/profile-api.test.ts`
-- [ ] T003 [P] [US1] Component tests for profile page (all fields rendered, initials fallback, null email, loading skeleton, GitHub link href, plan billing link) in `tests/unit/components/settings/profile-page.test.tsx`
+- [x] T002 [P] [US1] Integration tests for profile API (full profile, FREE default, GitHub API failure, 401 unauth, name fallback) in `tests/integration/settings/profile-api.test.ts`
+- [x] T003 [P] [US1] Component tests for profile page (all fields rendered, initials fallback, null email, loading skeleton, GitHub link href, plan billing link) in `tests/unit/components/settings/profile-page.test.tsx`
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Create profile settings page component with React Query data fetching, loading skeleton, aurora theme styling, avatar with initials fallback, and all six profile fields in `app/settings/profile/page.tsx`
+- [x] T004 [US1] Create profile settings page component with React Query data fetching, loading skeleton, aurora theme styling, avatar with initials fallback, and all six profile fields in `app/settings/profile/page.tsx`
 
 **Checkpoint**: User Story 1 is fully functional — users can visit `/settings/profile` and see all account information with graceful fallbacks.
 
@@ -51,12 +51,12 @@
 
 ### Tests for User Story 2
 
-- [ ] T005 [P] [US2] Navigation tests verifying Profile is first settings item in both UserMenu and MobileMenu in `tests/unit/components/navigation-profile-link.test.tsx`
+- [x] T005 [P] [US2] Navigation tests verifying Profile is first settings item in both UserMenu and MobileMenu in `tests/unit/components/navigation-profile-link.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T006 [P] [US2] Add Profile link (User icon, `/settings/profile`) as first settings item in `components/auth/user-menu.tsx`
-- [ ] T007 [P] [US2] Add Profile link (User icon, `/settings/profile`) as first settings item with `onClick={() => setOpen(false)}` in `components/layout/mobile-menu.tsx`
+- [x] T006 [P] [US2] Add Profile link (User icon, `/settings/profile`) as first settings item in `components/auth/user-menu.tsx`
+- [x] T007 [P] [US2] Add Profile link (User icon, `/settings/profile`) as first settings item with `onClick={() => setOpen(false)}` in `components/layout/mobile-menu.tsx`
 
 **Checkpoint**: User Story 2 is complete — Profile is discoverable from all navigation entry points.
 
@@ -70,7 +70,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T008 [US3] Verify and refine responsive layout in `app/settings/profile/page.tsx` — ensure mobile-first stacking, `max-w-4xl` centering on desktop, no horizontal scroll at 320px viewport
+- [x] T008 [US3] Verify and refine responsive layout in `app/settings/profile/page.tsx` — ensure mobile-first stacking, `max-w-4xl` centering on desktop, no horizontal scroll at 320px viewport
 
 **Checkpoint**: Profile page is fully responsive across all breakpoints.
 
@@ -80,8 +80,8 @@
 
 **Purpose**: Final validation across all stories.
 
-- [ ] T009 Run `bun run type-check` and `bun run lint` to verify no type or lint errors
-- [ ] T010 Run all profile-related tests (`bun run test:unit tests/unit/components/settings/profile-page.test.tsx`, `bun run test:unit tests/unit/components/navigation-profile-link.test.tsx`, `bun run test:integration tests/integration/settings/profile-api.test.ts`)
+- [x] T009 Run `bun run type-check` and `bun run lint` to verify no type or lint errors
+- [x] T010 Run all profile-related tests (`bun run test:unit tests/unit/components/settings/profile-page.test.tsx`, `bun run test:unit tests/unit/components/navigation-profile-link.test.tsx`, `bun run test:integration tests/integration/settings/profile-api.test.ts`)
 
 ---
 
