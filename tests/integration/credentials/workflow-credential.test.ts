@@ -14,8 +14,8 @@ import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup'
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { createAPIClient } from '@/tests/fixtures/vitest/api-client';
 
-// Load .env.local so test-side encryption uses the same key as the server
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+// Load .env.test so test-side encryption uses the same key as the server
+dotenv.config({ path: path.resolve(process.cwd(), '.env.test') });
 
 import { encryptCredential } from '@/lib/ai-credentials/crypto';
 

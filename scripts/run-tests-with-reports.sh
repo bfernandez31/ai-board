@@ -107,6 +107,7 @@ else
     VERCEL_ENV=preview \
     DEV_LOGIN_ENABLED=true \
     DEV_LOGIN_SECRET=shared-preview-secret \
+    CREDENTIAL_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
     bun run dev > /tmp/dev-server.log 2>&1 &
     SERVER_PID=$!
 

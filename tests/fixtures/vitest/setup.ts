@@ -21,6 +21,7 @@ import { createTestProject, createTestTicket } from '../../helpers/db-setup';
 
 // Load environment variables for test tokens (must happen before any tests run)
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env.test') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env.test.local'), override: true });
 
 export interface TestContext {
