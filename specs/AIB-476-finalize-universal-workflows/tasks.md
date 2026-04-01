@@ -65,8 +65,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T009 [US2] Validate ai-board's `.ai-board/config.yml` contains all command keys referenced by run-command.sh (`install`, `build`, `lint`, `type_check`, `test_unit`, `test_integration`, `test_e2e`). Add any missing keys. No modifications if all keys present.
-- [ ] T010 [US2] Update `.github/workflows/iterate.yml` — add `ai-board/.github/scripts/setup-environment.sh target --phase lightweight` call for environment setup. This workflow currently has no setup-environment.sh call.
+- [x] T009 [US2] Validate ai-board's `.ai-board/config.yml` contains all command keys referenced by run-command.sh (`install`, `build`, `lint`, `type_check`, `test_unit`, `test_integration`, `test_e2e`). Add any missing keys. No modifications if all keys present.
+- [x] T010 [US2] Update `.github/workflows/iterate.yml` — add `ai-board/.github/scripts/setup-environment.sh target --phase lightweight` call for environment setup. This workflow currently has no setup-environment.sh call.
 
 **Checkpoint**: AI-board self-management workflows are verified compatible. Existing config.yml works with all updated workflows.
 
