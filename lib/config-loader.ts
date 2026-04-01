@@ -54,7 +54,7 @@ export async function loadConfig(projectDir: string): Promise<ValidationResult> 
     };
   }
 
-  if (parsed === null || parsed === undefined) {
+  if (parsed == null) {
     return validateConfig({});
   }
 

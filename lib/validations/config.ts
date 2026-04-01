@@ -226,14 +226,14 @@ function mapZodErrors(
       if (actualValue === undefined) {
         return {
           path,
-          type: 'missing_required' as ValidationErrorType,
+          type: 'missing_required',
           value: undefined,
           message: `Missing required field '${path}'. ${getFieldGuidance(path)}`,
         };
       }
       return {
         path,
-        type: 'invalid_type' as ValidationErrorType,
+        type: 'invalid_type',
         value: actualValue,
         message: `Invalid type for '${path}': expected ${issue.expected}, received ${typeof actualValue}. ${getFieldGuidance(path)}`,
       };
@@ -248,7 +248,7 @@ function mapZodErrors(
       if (path === 'version' && actualValue === undefined) {
         return {
           path,
-          type: 'missing_required' as ValidationErrorType,
+          type: 'missing_required',
           value: undefined,
           message: `Missing required field 'version'. ${getFieldGuidance('version')}`,
         };
@@ -258,7 +258,7 @@ function mapZodErrors(
       if (path === 'version' && values && values.length === 1) {
         return {
           path,
-          type: 'invalid_value' as ValidationErrorType,
+          type: 'invalid_value',
           value: actualValue,
           message: `Unsupported config version '${actualValue}'. Supported versions: ${values.join(', ')}.`,
         };
@@ -269,32 +269,16 @@ function mapZodErrors(
         const allowed = values.join(', ');
         return {
           path,
-          type: 'invalid_value' as ValidationErrorType,
+          type: 'invalid_value',
           value: actualValue,
           message: `Invalid value '${actualValue}' for '${path}'. Allowed values: ${allowed}.`,
         };
       }
-
-      return {
-        path,
-        type: 'invalid_value' as ValidationErrorType,
-        value: actualValue,
-        message: issue.message,
-      };
-    }
-
-    if (issue.code === 'too_small') {
-      return {
-        path,
-        type: 'invalid_value' as ValidationErrorType,
-        value: actualValue,
-        message: issue.message,
-      };
     }
 
     return {
       path,
-      type: 'invalid_value' as ValidationErrorType,
+      type: 'invalid_value',
       value: actualValue,
       message: issue.message,
     };
