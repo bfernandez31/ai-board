@@ -84,7 +84,7 @@ For full endpoint catalog, read `specs/specifications/endpoints.md`.
 
 - **Centralized Workflow Execution**: All workflows execute on ai-board repository
 - Workflows clone target repository via `githubRepository` input (format: `owner/repo`)
-- **No workflow files required in external projects** — only `.claude/commands/` and `.specify/scripts/bash/`
+- **No workflow files required in external projects** — external projects need only `.ai-board/config.yml` (runtime/agent config) and `.claude/commands/` + `.specify/scripts/bash/`
 - Target repos need `GH_PAT` secret for cross-repo access
 - Supports both self-management (ai-board managing itself) and external projects
 

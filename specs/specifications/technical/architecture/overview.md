@@ -76,6 +76,7 @@ ai-board/
 │   └── rollback-reset.yml        # VERIFY→PLAN rollback
 ├── .github/scripts/              # Shared shell utilities for workflows
 │   ├── run-agent.sh              # Unified agent runner (Claude/Codex)
+│   ├── setup-environment.sh      # Centralized environment setup (reads .ai-board/config.yml)
 │   ├── fetch-telemetry.sh        # Pre-fetch job telemetry for /compare
 │   └── setup-test-env.sh         # Prepare test environment
 ├── .claude-plugin/               # Claude Code plugin (full content)
@@ -85,6 +86,7 @@ ai-board/
 │   │   └── bash/                 # Bash scripts
 │   └── templates/                # Spec/plan/task templates
 └── .ai-board/                    # Project-specific content
+    ├── config.yml                # Project runtime/agent configuration
     └── memory/                   # Constitution and memory
         └── constitution.md       # Project conventions
 ```
@@ -122,7 +124,7 @@ Stage Transition
   → Workflow Executes:
     → Sparse checkout ai-board (only .claude-plugin/)
     → Full checkout target repository
-    → Symlink commands to target/.claude/
+    → setup-environment.sh: reads .ai-board/config.yml, installs runtime, creates symlinks
     → Run Claude Code with ai-board commands
   → Workflow Updates Job Status
   → Client Polls for Status Updates

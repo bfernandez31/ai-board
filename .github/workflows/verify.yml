@@ -135,22 +135,6 @@ jobs:
           fetch-depth: 0
           path: target
 
-      - name: Setup ai-board commands and skills
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
-        run: |
-          # Create symlinks so Claude can find ai-board commands and skills in target repo
-          mkdir -p target/.claude
-          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
-          ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
-          echo "✅ ai-board commands linked to target/.claude/commands"
-          echo "✅ ai-board skills linked to target/.claude/skills"
-
-      - name: Setup Bun
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: 1.3.1
-
       - name: Setup Node.js
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         uses: actions/setup-node@v4
@@ -163,10 +147,9 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Setup Environment
         if: ${{ env.SKIP_EXECUTION != 'true' }}
-        working-directory: target
-        run: bun install --frozen-lockfile
+        run: ../ai-board/.github/scripts/setup-environment.sh target
 
       - name: Configure Git
         if: ${{ env.SKIP_EXECUTION != 'true' }}
@@ -187,11 +170,6 @@ jobs:
           ../ai-board/.github/scripts/setup-test-env.sh
 
       # Database setup steps
-      - name: Generate Prisma Client
-        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
-        working-directory: target
-        run: npx prisma generate
-
       - name: Apply Database Migrations
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
         working-directory: target
