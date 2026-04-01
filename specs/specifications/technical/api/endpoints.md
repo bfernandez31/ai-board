@@ -3213,6 +3213,53 @@ Currently no rate limiting implemented. Future enhancement may add:
 - Per-IP request limits
 - Workflow endpoint protection
 
+## Settings Endpoints
+
+### GET /api/settings/profile
+
+Fetches the authenticated user's profile data for the settings page.
+
+**Authentication**: Required (session or Bearer PAT)
+
+**Response** (200 OK):
+```json
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "image": "https://avatars.githubusercontent.com/u/12345?v=4",
+  "githubUsername": "johndoe",
+  "githubProfileUrl": "https://github.com/johndoe",
+  "createdAt": "2026-01-15T10:30:00.000Z",
+  "plan": "FREE"
+}
+```
+
+**Field Descriptions**:
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `name` | string | No | Display name; falls back to GitHub username, then "Unknown" |
+| `email` | string | No | User's email address; "Not available" if null |
+| `image` | string | Yes | GitHub avatar URL; null if not set |
+| `githubUsername` | string | Yes | GitHub login; null if GitHub API call fails |
+| `githubProfileUrl` | string | Yes | Full GitHub profile URL; null if username unavailable |
+| `createdAt` | string (ISO 8601) | No | Account creation timestamp |
+| `plan` | string | No | Subscription plan: `"FREE"`, `"PRO"`, or `"TEAM"` |
+
+**Notes**:
+- GitHub username is resolved server-side via `GET https://api.github.com/user/{providerAccountId}` using the stored OAuth access token
+- If the GitHub API is unreachable or the token is invalid, `githubUsername` and `githubProfileUrl` return `null` — the page displays a graceful fallback
+- Missing subscription record defaults to `"FREE"`
+
+**Error Responses**:
+
+| Status | Body | Condition |
+|--------|------|-----------|
+| `401` | `{ "error": "Unauthorized" }` | No valid session or token |
+| `500` | `{ "error": "Internal server error" }` | Server-side failure |
+
+---
+
 ## Billing Endpoints
 
 ### GET /api/billing/plans

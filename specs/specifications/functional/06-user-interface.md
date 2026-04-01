@@ -457,6 +457,7 @@ The user menu provides authenticated account navigation via an avatar button in 
 
 **Dropdown Contents** (authenticated):
 - User display name and email (non-interactive label)
+- **Profile** → `/settings/profile` (User icon)
 - **Billing** → `/settings/billing` (CreditCard icon)
 - **API Tokens** → `/settings/tokens` (Key icon)
 - **AI Credentials** → `/settings/credentials` (KeyRound icon)
@@ -464,7 +465,7 @@ The user menu provides authenticated account navigation via an avatar button in 
 
 **Unauthenticated State**: Replaced by a "Sign In" button linking to `/auth/signin`.
 
-**Mobile Behavior** (<768px): Avatar button is hidden; Billing, API Tokens, and AI Credentials links are surfaced inside the mobile hamburger menu instead.
+**Mobile Behavior** (<768px): Avatar button is hidden; Profile, Billing, API Tokens, and AI Credentials links are surfaced inside the mobile hamburger menu instead.
 
 **Component**: `components/auth/user-menu.tsx`
 
@@ -476,10 +477,11 @@ The mobile hamburger menu (`components/layout/mobile-menu.tsx`) is a slide-in `S
 
 **Authenticated User Contents**:
 1. User avatar, display name, and email
-2. **Billing** → `/settings/billing` (CreditCard icon)
-3. **API Tokens** → `/settings/tokens` (Key icon)
-4. **AI Credentials** → `/settings/credentials` (KeyRound icon)
-5. **Sign Out** button (red text, LogOut icon)
+2. **Profile** → `/settings/profile` (User icon)
+3. **Billing** → `/settings/billing` (CreditCard icon)
+4. **API Tokens** → `/settings/tokens` (Key icon)
+5. **AI Credentials** → `/settings/credentials` (KeyRound icon)
+6. **Sign Out** button (red text, LogOut icon)
 
 **Project-specific section** (shown when `projectId` and `projectName` are provided):
 - Project name header with icon links: Board, Analytics, Activity
@@ -876,6 +878,33 @@ A floating keyboard icon button is visible at the bottom-right corner of the boa
 - 15-second interval for notifications
 - Automatic stop when updates complete
 - Minimal network overhead
+
+## Settings Pages
+
+### Profile Settings
+
+The profile settings page (`/settings/profile`) displays a read-only summary of the user's account information. It is accessible only to authenticated users.
+
+**Displayed Fields**:
+- **Avatar** — circular image sourced from GitHub OAuth; initials shown as fallback when no image is available
+- **Display Name** — user's name from the account record; falls back to GitHub username, then "Unknown"
+- **Email** — user's email address; displays "Not available" when null (e.g., private GitHub email)
+- **GitHub Account** — GitHub username rendered as a clickable link to the user's GitHub profile; shows "GitHub connected" without a username if the GitHub API is unreachable
+- **Member Since** — account registration date formatted as a human-readable string (e.g., "April 1, 2026")
+- **Current Plan** — subscription plan name (FREE, PRO, or TEAM) with a navigational link to `/settings/billing`
+
+**Behavior**:
+- All fields are read-only — no edit forms or inline editing
+- Data is fetched via `GET /api/settings/profile`
+- A loading skeleton is displayed while data is loading
+- Page uses aurora theme, consistent with other settings pages
+
+**Layout**:
+- `max-w-4xl mx-auto` container with consistent settings page spacing
+- Stacks on mobile, uses a grid layout on desktop
+- Responsive across viewports from 320px to 1920px without horizontal scrolling
+
+---
 
 ## Error Presentation
 
