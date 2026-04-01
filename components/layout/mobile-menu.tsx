@@ -49,7 +49,7 @@ export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
         {projectName && (
           <>
             <div className="mt-6 px-2">
-              <p className="text-lg font-semibold text-zinc-50">{projectName}</p>
+              <p className="text-lg font-semibold text-foreground">{projectName}</p>
             </div>
             <div className="border-t border-border my-2" />
             {projectId && (
