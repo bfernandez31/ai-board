@@ -41,7 +41,6 @@ export async function GET(request: NextRequest) {
 
     const payload = buildWorkflowPayload(credential);
 
-    // Base64-encode the secret to avoid plaintext credentials in JSON responses
     const encodedValue = Buffer.from(payload.secret).toString('base64');
 
     return NextResponse.json(
