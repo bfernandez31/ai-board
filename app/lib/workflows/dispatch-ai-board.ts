@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import { isWorkflowTestMode } from './test-mode';
-import { getOwnerCredential } from '@/lib/ai-credentials/workflow';
+import { getOwnerCredential, MISSING_CREDENTIAL_ERROR } from '@/lib/ai-credentials/workflow';
 
 export interface AIBoardWorkflowInputs {
   ticket_id: string;
@@ -33,9 +33,7 @@ export async function dispatchAIBoardWorkflow(
   if (!isNaN(projectId)) {
     const credential = await getOwnerCredential(projectId);
     if (!credential) {
-      throw new Error(
-        'No AI credential configured for this project owner. Please add your Anthropic key in Settings → AI Credentials before triggering workflows.'
-      );
+      throw new Error(MISSING_CREDENTIAL_ERROR);
     }
   }
 
