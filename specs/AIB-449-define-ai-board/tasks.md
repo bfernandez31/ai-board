@@ -18,9 +18,9 @@
 
 **Purpose**: Add new dependency and create file scaffolding
 
-- [ ] T001 Install `yaml` v2.x dependency via `bun add yaml`
-- [ ] T002 [P] Create empty file `lib/validations/config.ts` with module doc comment and imports (zod, yaml types)
-- [ ] T003 [P] Create empty file `lib/config-loader.ts` with module doc comment and imports
+- [x] T001 Install `yaml` v2.x dependency via `bun add yaml`
+- [x] T002 [P] Create empty file `lib/validations/config.ts` with module doc comment and imports (zod, yaml types)
+- [x] T003 [P] Create empty file `lib/config-loader.ts` with module doc comment and imports
 
 ---
 
@@ -30,14 +30,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Define enum schemas (`ProjectLanguageSchema`, `ProjectFrameworkSchema`, `PackageManagerSchema`, `ServiceTypeSchema`, `AgentCliSchema`, `ValidationErrorTypeSchema`) in `lib/validations/config.ts`
-- [ ] T005 Define `ProjectSectionSchema` with required `name` (non-empty string), required `language` (enum), optional `framework` (enum, default `"none"`) in `lib/validations/config.ts`
-- [ ] T006 Define `RuntimeSectionSchema` with required `manager` (enum), optional `manager_version`, `node`, `python` (all strings) in `lib/validations/config.ts`
-- [ ] T007 Define `CommandsSectionSchema` with required `install` (non-empty string), optional `build`, `lint`, `type_check`, `test_unit`, `test_integration`, `test_e2e` (all strings, default `undefined`) in `lib/validations/config.ts`
-- [ ] T008 Define `ServiceConfigSchema` with required `type` (enum) and `version` (non-empty string), optional `database`, `username`, `password` in `lib/validations/config.ts`
-- [ ] T009 Define `AgentSectionSchema` with optional `cli` (enum, default `"claude-code"`), optional `model` (string) in `lib/validations/config.ts`
-- [ ] T010 Define root `ProjectConfigSchema` composing all section schemas with `.passthrough()` for unknown field detection — `version` as `z.literal(1)`, required `project`, `runtime`, `commands`, optional `services` (default `[]`), `env` (default `{}`), `agent` (default `{ cli: "claude-code" }`) in `lib/validations/config.ts`
-- [ ] T011 Export inferred TypeScript types via `z.infer<>` for all schemas (`ProjectConfig`, `ProjectSection`, `RuntimeSection`, `CommandsSection`, `ServiceConfig`, `AgentSection`) in `lib/validations/config.ts`
+- [x] T004 Define enum schemas (`ProjectLanguageSchema`, `ProjectFrameworkSchema`, `PackageManagerSchema`, `ServiceTypeSchema`, `AgentCliSchema`, `ValidationErrorTypeSchema`) in `lib/validations/config.ts`
+- [x] T005 Define `ProjectSectionSchema` with required `name` (non-empty string), required `language` (enum), optional `framework` (enum, default `"none"`) in `lib/validations/config.ts`
+- [x] T006 Define `RuntimeSectionSchema` with required `manager` (enum), optional `manager_version`, `node`, `python` (all strings) in `lib/validations/config.ts`
+- [x] T007 Define `CommandsSectionSchema` with required `install` (non-empty string), optional `build`, `lint`, `type_check`, `test_unit`, `test_integration`, `test_e2e` (all strings, default `undefined`) in `lib/validations/config.ts`
+- [x] T008 Define `ServiceConfigSchema` with required `type` (enum) and `version` (non-empty string), optional `database`, `username`, `password` in `lib/validations/config.ts`
+- [x] T009 Define `AgentSectionSchema` with optional `cli` (enum, default `"claude-code"`), optional `model` (string) in `lib/validations/config.ts`
+- [x] T010 Define root `ProjectConfigSchema` composing all section schemas with `.passthrough()` for unknown field detection — `version` as `z.literal(1)`, required `project`, `runtime`, `commands`, optional `services` (default `[]`), `env` (default `{}`), `agent` (default `{ cli: "claude-code" }`) in `lib/validations/config.ts`
+- [x] T011 Export inferred TypeScript types via `z.infer<>` for all schemas (`ProjectConfig`, `ProjectSection`, `RuntimeSection`, `CommandsSection`, `ServiceConfig`, `AgentSection`) in `lib/validations/config.ts`
 
 **Checkpoint**: All Zod schemas defined and types exported — user story implementation can now begin
 
@@ -51,14 +51,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T012 [P] [US1] Write test: valid config with all fields returns success with correct types in `tests/unit/config-schema.test.ts`
-- [ ] T013 [P] [US1] Write test: valid config with only required fields returns success with defaults populated (`framework: "none"`, `services: []`, `env: {}`, `agent.cli: "claude-code"`) in `tests/unit/config-schema.test.ts`
-- [ ] T014 [P] [US1] Write test: valid config with all sections fully populated has every field present with correct types in `tests/unit/config-schema.test.ts`
+- [x] T012 [P] [US1] Write test: valid config with all fields returns success with correct types in `tests/unit/config-schema.test.ts`
+- [x] T013 [P] [US1] Write test: valid config with only required fields returns success with defaults populated (`framework: "none"`, `services: []`, `env: {}`, `agent.cli: "claude-code"`) in `tests/unit/config-schema.test.ts`
+- [x] T014 [P] [US1] Write test: valid config with all sections fully populated has every field present with correct types in `tests/unit/config-schema.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Implement `validateConfig(raw: unknown): ValidationResult` function in `lib/validations/config.ts` — runs `safeParse()`, collects unknown field warnings via key diff against known schema keys, returns discriminated union result
-- [ ] T016 [US1] Export `ValidationError`, `ValidationWarning`, and `ValidationResult` types from `lib/validations/config.ts` per contracts/config-schema.ts interface
+- [x] T015 [US1] Implement `validateConfig(raw: unknown): ValidationResult` function in `lib/validations/config.ts` — runs `safeParse()`, collects unknown field warnings via key diff against known schema keys, returns discriminated union result
+- [x] T016 [US1] Export `ValidationError`, `ValidationWarning`, and `ValidationResult` types from `lib/validations/config.ts` per contracts/config-schema.ts interface
 
 **Checkpoint**: `validateConfig()` works for valid inputs — run tests to verify
 
@@ -72,15 +72,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T017 [P] [US2] Write test: missing required fields (`version`, `project.name`, `project.language`, `runtime.manager`, `commands.install`) produce errors with correct paths and `missing_required` type in `tests/unit/config-schema.test.ts`
-- [ ] T018 [P] [US2] Write test: invalid enum values (`project.language: "ruby"`) produce `invalid_value` error listing allowed values in `tests/unit/config-schema.test.ts`
-- [ ] T019 [P] [US2] Write test: wrong types (`runtime.node: 22` number instead of string) produce `invalid_type` error in `tests/unit/config-schema.test.ts`
-- [ ] T020 [P] [US2] Write test: config with multiple errors returns all errors together (not just the first) in `tests/unit/config-schema.test.ts`
-- [ ] T021 [P] [US2] Write test: empty object returns all required-field errors in `tests/unit/config-schema.test.ts`
+- [x] T017 [P] [US2] Write test: missing required fields (`version`, `project.name`, `project.language`, `runtime.manager`, `commands.install`) produce errors with correct paths and `missing_required` type in `tests/unit/config-schema.test.ts`
+- [x] T018 [P] [US2] Write test: invalid enum values (`project.language: "ruby"`) produce `invalid_value` error listing allowed values in `tests/unit/config-schema.test.ts`
+- [x] T019 [P] [US2] Write test: wrong types (`runtime.node: 22` number instead of string) produce `invalid_type` error in `tests/unit/config-schema.test.ts`
+- [x] T020 [P] [US2] Write test: config with multiple errors returns all errors together (not just the first) in `tests/unit/config-schema.test.ts`
+- [x] T021 [P] [US2] Write test: empty object returns all required-field errors in `tests/unit/config-schema.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Implement Zod-to-ValidationError mapping in `validateConfig()` — map Zod issue codes to `ValidationErrorType` (`missing_required`, `invalid_value`, `invalid_type`), include field path, invalid value, and human-readable message with fix guidance in `lib/validations/config.ts`
+- [x] T022 [US2] Implement Zod-to-ValidationError mapping in `validateConfig()` — map Zod issue codes to `ValidationErrorType` (`missing_required`, `invalid_value`, `invalid_type`), include field path, invalid value, and human-readable message with fix guidance in `lib/validations/config.ts`
 
 **Checkpoint**: `validateConfig()` produces actionable errors for all invalid inputs — run tests to verify
 
@@ -94,14 +94,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T023 [P] [US3] Write test: missing `.ai-board/config.yml` file returns error with message "Missing .ai-board/config.yml" in `tests/unit/config-loader.test.ts`
-- [ ] T024 [P] [US3] Write test: invalid YAML syntax returns parse error with line info and guidance in `tests/unit/config-loader.test.ts`
-- [ ] T025 [P] [US3] Write test: valid file delegates to `validateConfig()` and returns correct result in `tests/unit/config-loader.test.ts`
-- [ ] T026 [P] [US3] Write test: empty file returns all required-field errors in `tests/unit/config-loader.test.ts`
+- [x] T023 [P] [US3] Write test: missing `.ai-board/config.yml` file returns error with message "Missing .ai-board/config.yml" in `tests/unit/config-loader.test.ts`
+- [x] T024 [P] [US3] Write test: invalid YAML syntax returns parse error with line info and guidance in `tests/unit/config-loader.test.ts`
+- [x] T025 [P] [US3] Write test: valid file delegates to `validateConfig()` and returns correct result in `tests/unit/config-loader.test.ts`
+- [x] T026 [P] [US3] Write test: empty file returns all required-field errors in `tests/unit/config-loader.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Implement `loadConfig(projectDir: string): Promise<ValidationResult>` in `lib/config-loader.ts` — resolve path to `{projectDir}/.ai-board/config.yml`, check file existence (return FR-010 error if missing), read and parse YAML (catch syntax errors with line info), delegate to `validateConfig()`
+- [x] T027 [US3] Implement `loadConfig(projectDir: string): Promise<ValidationResult>` in `lib/config-loader.ts` — resolve path to `{projectDir}/.ai-board/config.yml`, check file existence (return FR-010 error if missing), read and parse YAML (catch syntax errors with line info), delegate to `validateConfig()`
 
 **Checkpoint**: `loadConfig()` handles missing files, bad YAML, and valid files — run tests to verify
 
@@ -115,8 +115,8 @@
 
 ### Tests for User Story 4
 
-- [ ] T028 [P] [US4] Write test: config with only `commands.install` validates successfully, all other commands are `undefined` in `tests/unit/config-schema.test.ts`
-- [ ] T029 [P] [US4] Write test: config with `commands.lint` omitted returns `undefined` for lint (workflow can check truthiness to skip) in `tests/unit/config-schema.test.ts`
+- [x] T028 [P] [US4] Write test: config with only `commands.install` validates successfully, all other commands are `undefined` in `tests/unit/config-schema.test.ts`
+- [x] T029 [P] [US4] Write test: config with `commands.lint` omitted returns `undefined` for lint (workflow can check truthiness to skip) in `tests/unit/config-schema.test.ts`
 
 **Checkpoint**: Optional command skip behavior verified — no implementation changes needed (handled by Zod defaults in Phase 2)
 
@@ -130,9 +130,9 @@
 
 ### Tests for User Story 5
 
-- [ ] T030 [P] [US5] Write test: `version: 1` passes validation in `tests/unit/config-schema.test.ts`
-- [ ] T031 [P] [US5] Write test: `version: 2` fails with "Unsupported config version" error listing supported versions in `tests/unit/config-schema.test.ts`
-- [ ] T032 [P] [US5] Write test: `version: "one"` (string) fails with type error in `tests/unit/config-schema.test.ts`
+- [x] T030 [P] [US5] Write test: `version: 1` passes validation in `tests/unit/config-schema.test.ts`
+- [x] T031 [P] [US5] Write test: `version: 2` fails with "Unsupported config version" error listing supported versions in `tests/unit/config-schema.test.ts`
+- [x] T032 [P] [US5] Write test: `version: "one"` (string) fails with type error in `tests/unit/config-schema.test.ts`
 
 **Checkpoint**: Version validation covers supported, unsupported, and wrong-type cases — no additional implementation needed (handled by `z.literal(1)` in Phase 2)
 
@@ -142,11 +142,11 @@
 
 **Purpose**: Final validation and quality checks across all user stories
 
-- [ ] T033 [P] Run `bun run type-check` and fix any type errors across `lib/validations/config.ts` and `lib/config-loader.ts`
-- [ ] T034 [P] Run `bun run lint` and fix any lint issues across all new files
-- [ ] T035 Run all unit tests together: `bun run test:unit tests/unit/config-schema.test.ts` and `bun run test:unit tests/unit/config-loader.test.ts`
-- [ ] T036 Validate unknown fields produce warnings (not errors) — ensure `.passthrough()` + key diff logic emits `ValidationWarning` objects per FR-014 in `lib/validations/config.ts`
-- [ ] T037 Run quickstart.md validation — execute the example code from `specs/AIB-449-define-ai-board/quickstart.md` to confirm API works as documented
+- [x] T033 [P] Run `bun run type-check` and fix any type errors across `lib/validations/config.ts` and `lib/config-loader.ts`
+- [x] T034 [P] Run `bun run lint` and fix any lint issues across all new files
+- [x] T035 Run all unit tests together: `bun run test:unit tests/unit/config-schema.test.ts` and `bun run test:unit tests/unit/config-loader.test.ts`
+- [x] T036 Validate unknown fields produce warnings (not errors) — ensure `.passthrough()` + key diff logic emits `ValidationWarning` objects per FR-014 in `lib/validations/config.ts`
+- [x] T037 Run quickstart.md validation — execute the example code from `specs/AIB-449-define-ai-board/quickstart.md` to confirm API works as documented
 
 ---
 
