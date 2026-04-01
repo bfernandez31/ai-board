@@ -12,12 +12,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { CreditCard, Key, KeyRound, LogOut } from "lucide-react"
+import { CreditCard, Key, KeyRound, LogOut, User } from "lucide-react"
 
 export function UserMenu() {
   const { data: session } = useSession()
 
-  // Show sign in button when not authenticated
   if (!session?.user) {
     return (
       <Link href="/auth/signin">
@@ -54,6 +53,13 @@ export function UserMenu() {
         </DropdownMenuLabel>
 
         <DropdownMenuSeparator />
+
+        <DropdownMenuItem asChild className="cursor-pointer">
+          <Link href="/settings/profile">
+            <User className="mr-2 h-4 w-4" />
+            Profile
+          </Link>
+        </DropdownMenuItem>
 
         <DropdownMenuItem asChild className="cursor-pointer">
           <Link href="/settings/billing">
