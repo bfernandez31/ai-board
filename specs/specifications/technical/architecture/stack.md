@@ -172,13 +172,20 @@
 ### Zod 4.x
 - **Version**: 4.x (exact version in package.json)
 - **Purpose**: Schema validation (client and server)
-- **Schemas**: `app/lib/schemas/`
+- **Schemas**: `app/lib/schemas/`, `lib/validations/`
 - **Features Used**:
   - Enum validation
   - String length constraints
   - Type inference for TypeScript
   - Custom error messages
   - Nullable/optional fields
+
+### yaml
+- **Version**: ^2.7.0
+- **Purpose**: YAML 1.2 parsing for `.ai-board/config.yml`
+- **Usage**: Server-side only — loaded by `lib/config-loader.ts` to parse external project config files
+- **Features Used**:
+  - `yaml.parse()` — parse YAML string to JS object with syntax error reporting
 
 ### React Query Hooks
 - **Queries**: `useTickets`, `useComments`, `useJobPolling`
@@ -440,6 +447,7 @@
 | TailwindCSS | 3.4 | Styling |
 | Recharts | 3.8.1 | Chart library |
 | Zod | 4.x | Validation |
+| yaml | ^2.7.0 | YAML 1.2 parsing |
 | Playwright | Latest | E2E testing |
 | Vitest | Latest | Unit testing |
 | @octokit/rest | ^22.0.0 | GitHub API |

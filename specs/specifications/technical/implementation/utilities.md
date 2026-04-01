@@ -1325,3 +1325,95 @@ it('should send job completion notification to project owner', async () => {
 - System works without push notifications (in-app polling fallback)
 - Development mode doesn't require VAPID setup
 - Unsupported browsers hide opt-in prompt
+
+---
+
+## Config Schema Validation
+
+### Purpose
+
+Defines and validates the versioned YAML schema for `.ai-board/config.yml` — the declarative configuration file that external projects must provide for ai-board workflows to operate.
+
+### File Location
+
+`lib/validations/config.ts`
+
+### API Reference
+
+**Function**: `validateConfig(raw: unknown): ValidationResult`
+
+Validates a parsed YAML object against the v1 config schema. Collects all errors in a single pass and emits warnings for unknown fields (forward compatibility).
+
+```typescript
+type ValidationResult =
+  | { success: true; data: ProjectConfig; warnings: ValidationWarning[] }
+  | { success: false; errors: ValidationError[]; warnings: ValidationWarning[] };
+```
+
+**Behavior**:
+- Returns `success: true` with a fully typed `ProjectConfig` (defaults populated) on valid input
+- Returns `success: false` with all `ValidationError` objects collected at once on invalid input
+- Always returns `warnings` for unknown top-level or section-level keys
+
+**Types**:
+
+```typescript
+interface ValidationError {
+  path: string;           // e.g., "project.language"
+  type: ValidationErrorType; // "missing_required" | "invalid_value" | "invalid_type" | "unknown_field"
+  value?: unknown;        // the invalid value provided
+  message: string;        // human-readable explanation with fix guidance
+}
+
+interface ValidationWarning {
+  path: string;
+  message: string;
+}
+```
+
+**Exported schemas and types**: `ProjectConfigSchema`, `ProjectConfig`, `ProjectSection`, `RuntimeSection`, `CommandsSection`, `ServiceConfig`, `AgentSection`, `ValidationError`, `ValidationWarning`, `ValidationResult`
+
+### Enum Values
+
+| Schema | Allowed Values |
+|--------|---------------|
+| `ProjectLanguageSchema` | `typescript`, `python`, `go`, `rust`, `java` |
+| `ProjectFrameworkSchema` | `nextjs`, `express`, `fastapi`, `django`, `gin`, `none` |
+| `PackageManagerSchema` | `bun`, `npm`, `yarn`, `pnpm`, `pip`, `poetry`, `cargo` |
+| `ServiceTypeSchema` | `postgres`, `redis`, `mysql`, `mongo` |
+| `AgentCliSchema` | `claude-code`, `codex` |
+
+### Testing
+
+**Unit Tests**: `tests/unit/config-schema.test.ts`
+
+---
+
+## Config Loader
+
+### Purpose
+
+Reads `.ai-board/config.yml` from a target project directory, parses YAML, and delegates to the config schema validator. Handles file-not-found and YAML syntax errors before validation.
+
+### File Location
+
+`lib/config-loader.ts`
+
+### API Reference
+
+**Function**: `loadConfig(projectDir: string): Promise<ValidationResult>`
+
+Loads and validates the config file from `{projectDir}/.ai-board/config.yml`.
+
+**Error cases**:
+
+| Condition | Returns |
+|-----------|---------|
+| File not found | `success: false`, error path `".ai-board/config.yml"`, type `missing_required`, message: "Missing .ai-board/config.yml — this file is required for ai-board to operate on your project." |
+| YAML syntax error | `success: false`, error path `".ai-board/config.yml"`, type `invalid_value`, message includes YAML error details |
+| Empty file | Treated as empty object → all required-field errors returned |
+| Valid file | Delegates to `validateConfig()` |
+
+### Testing
+
+**Unit Tests**: `tests/unit/config-loader.test.ts`
