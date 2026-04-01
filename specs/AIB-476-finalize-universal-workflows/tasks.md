@@ -97,7 +97,7 @@
 
 ### Implementation for User Story 4
 
-- [ ] T015 [US4] Verify all `setup-environment.sh` calls in updated workflows use correct phase parameter — specify/plan steps: `--phase lightweight`; implement/build/verify/health-scan-TESTS steps: `--phase full`; iterate/assist steps: `--phase lightweight`. Fix any mismatches found during review of T004-T008 and T010 changes.
+- [x] T015 [US4] Verify all `setup-environment.sh` calls in updated workflows use correct phase parameter — specify/plan steps: `--phase lightweight`; implement/build/verify/health-scan-TESTS steps: `--phase full`; iterate/assist steps: `--phase lightweight`. Fix any mismatches found during review of T004-T008 and T010 changes.
 
 **Checkpoint**: Phase-aware setup confirmed across all workflows. Specify/plan phases skip dependency install, Prisma, and Playwright.
 
@@ -111,8 +111,8 @@
 
 ### Implementation for User Story 5
 
-- [ ] T016 [US5] Verify run-command.sh handles missing config by reviewing T001 implementation — confirm silent exit 0 behavior with no stderr output when `.ai-board/config.yml` is absent.
-- [ ] T017 [US5] Verify setup-environment.sh handles missing config appropriately — per contract, setup-environment.sh requires config (exit 1 if missing), which is correct since setup is only called when a project is onboarded. Confirm this distinction from run-command.sh is documented in script header comments.
+- [x] T016 [US5] Verify run-command.sh handles missing config by reviewing T001 implementation — confirm silent exit 0 behavior with no stderr output when `.ai-board/config.yml` is absent.
+- [x] T017 [US5] Verify setup-environment.sh handles missing config appropriately — per contract, setup-environment.sh requires config (exit 1 if missing), which is correct since setup is only called when a project is onboarded. Confirm this distinction from run-command.sh is documented in script header comments.
 
 **Checkpoint**: Backward compatibility confirmed. Repos without config trigger graceful no-ops for project commands.
 
