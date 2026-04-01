@@ -18,8 +18,8 @@
 
 **Purpose**: Create the script file, directory structure, and reference config for the ai-board project itself
 
-- [ ] T001 Create script file `.github/scripts/setup-environment.sh` with shebang, `set -euo pipefail`, and usage/help function
-- [ ] T002 [P] Create ai-board self-config file `.ai-board/config.yml` with version 1 schema for this project (bun, typescript, nextjs, claude-code)
+- [x] T001 Create script file `.github/scripts/setup-environment.sh` with shebang, `set -euo pipefail`, and usage/help function ✅ DONE
+- [x] T002 [P] Create ai-board self-config file `.ai-board/config.yml` with version 1 schema for this project (bun, typescript, nextjs, claude-code) ✅ DONE
 
 ---
 
@@ -29,10 +29,10 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Implement target directory argument parsing and validation (check directory exists) in `.github/scripts/setup-environment.sh`
-- [ ] T004 Implement yq bootstrap installation (download binary to `/usr/local/bin/yq` if not present) in `.github/scripts/setup-environment.sh`
-- [ ] T005 Implement config file loading — read `.ai-board/config.yml` from target directory via `yq`, extract all fields into shell variables in `.github/scripts/setup-environment.sh`
-- [ ] T006 [P] Implement logging helper functions (`info`, `error`, `success`) with emoji-prefixed output (stdout for info/success, stderr for errors) in `.github/scripts/setup-environment.sh`
+- [x] T003 Implement target directory argument parsing and validation (check directory exists) in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T004 Implement yq bootstrap installation (download binary to `/usr/local/bin/yq` if not present) in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T005 Implement config file loading — read `.ai-board/config.yml` from target directory via `yq`, extract all fields into shell variables in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T006 [P] Implement logging helper functions (`info`, `error`, `success`) with emoji-prefixed output (stdout for info/success, stderr for errors) in `.github/scripts/setup-environment.sh` ✅ DONE
 
 **Checkpoint**: Foundation ready — config parsing works, yq is available, error reporting is in place
 
@@ -46,14 +46,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Implement package manager installation for bun (download via `curl -fsSL https://bun.sh/install` with optional version pinning from `runtime.manager_version`) in `.github/scripts/setup-environment.sh`
-- [ ] T008 [US1] Implement dependency installation step — execute `commands.install` value from config in the target directory in `.github/scripts/setup-environment.sh`
-- [ ] T009 [US1] Implement agent CLI installation for claude-code (via `npm install -g @anthropic-ai/claude-code`) in `.github/scripts/setup-environment.sh`
-- [ ] T010 [US1] Implement environment variable export — iterate config `env` section, export each as `VAR="${VAR:-config_value}"` (preserving existing workflow secrets) in `.github/scripts/setup-environment.sh`
-- [ ] T011 [US1] Implement plugin symlink creation — `mkdir -p <target>/.claude`, `ln -sf` for commands and skills pointing to `../../ai-board/.claude-plugin/` in `.github/scripts/setup-environment.sh`
-- [ ] T012 [US1] Implement project dependency detection — check for Prisma (`prisma/schema.prisma`) and Playwright (`playwright.config`), export `HAS_PRISMA` and `HAS_PLAYWRIGHT`, run `bunx prisma generate` if Prisma detected in `.github/scripts/setup-environment.sh`
-- [ ] T013 [US1] Implement final validation step — verify package manager on PATH, `node_modules/` exists, agent CLI on PATH, symlinks valid, env vars exported in `.github/scripts/setup-environment.sh`
-- [ ] T014 [US1] Wire all steps together in correct execution order (parse → install manager → install deps → install agent → export env → symlinks → detect deps → validate) in `.github/scripts/setup-environment.sh`
+- [x] T007 [US1] Implement package manager installation for bun (download via `curl -fsSL https://bun.sh/install` with optional version pinning from `runtime.manager_version`) in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T008 [US1] Implement dependency installation step — execute `commands.install` value from config in the target directory in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T009 [US1] Implement agent CLI installation for claude-code (via `npm install -g @anthropic-ai/claude-code`) in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T010 [US1] Implement environment variable export — iterate config `env` section, export each as `VAR="${VAR:-config_value}"` (preserving existing workflow secrets) in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T011 [US1] Implement plugin symlink creation — `mkdir -p <target>/.claude`, `ln -sf` for commands and skills pointing to `../../ai-board/.claude-plugin/` in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T012 [US1] Implement project dependency detection — check for Prisma (`prisma/schema.prisma`) and Playwright (`playwright.config`), export `HAS_PRISMA` and `HAS_PLAYWRIGHT`, run `bunx prisma generate` if Prisma detected in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T013 [US1] Implement final validation step — verify package manager on PATH, `node_modules/` exists, agent CLI on PATH, symlinks valid, env vars exported in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T014 [US1] Wire all steps together in correct execution order (parse → install manager → install deps → install agent → export env → symlinks → detect deps → validate) in `.github/scripts/setup-environment.sh` ✅ DONE
 
 **Checkpoint**: Full happy path works end-to-end with bun + claude-code
 
@@ -67,10 +67,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Add config file existence check — fail with `ERROR: Config file not found: <path>` if `.ai-board/config.yml` is missing in `.github/scripts/setup-environment.sh`
-- [ ] T016 [US2] Add YAML parse validation — wrap yq calls to catch parse errors, fail with `ERROR: Config file parse error: <details>` in `.github/scripts/setup-environment.sh`
-- [ ] T017 [US2] Add required field validation — check `version`, `project.name`, `project.language`, `runtime.manager`, `commands.install`, `agent.cli` are present, fail listing specific missing fields in `.github/scripts/setup-environment.sh`
-- [ ] T018 [US2] Add schema version check — verify `version` equals `1`, fail with clear message if unsupported in `.github/scripts/setup-environment.sh`
+- [x] T015 [US2] Add config file existence check — fail with `ERROR: Config file not found: <path>` if `.ai-board/config.yml` is missing in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T016 [US2] Add YAML parse validation — wrap yq calls to catch parse errors, fail with `ERROR: Config file parse error: <details>` in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T017 [US2] Add required field validation — check `version`, `project.name`, `project.language`, `runtime.manager`, `commands.install`, `agent.cli` are present, fail listing specific missing fields in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T018 [US2] Add schema version check — verify `version` equals `1`, fail with clear message if unsupported in `.github/scripts/setup-environment.sh` ✅ DONE
 
 **Checkpoint**: Script fails fast with clear messages for all invalid config scenarios
 
@@ -84,10 +84,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] Implement npm support — npm is bundled with Node.js, so just verify it's available and run the install command in `.github/scripts/setup-environment.sh`
-- [ ] T020 [P] [US3] Implement yarn support — activate via `corepack enable && corepack prepare yarn@<version> --activate`, then run install command in `.github/scripts/setup-environment.sh`
-- [ ] T021 [P] [US3] Implement pnpm support — activate via `corepack enable && corepack prepare pnpm@<version> --activate`, then run install command in `.github/scripts/setup-environment.sh`
-- [ ] T022 [US3] Refactor package manager installation into a `case` statement dispatching on `runtime.manager` value, with unsupported manager producing `ERROR: Unsupported package manager: <value>. Supported: bun, npm, yarn, pnpm` in `.github/scripts/setup-environment.sh`
+- [x] T019 [US3] Implement npm support — npm is bundled with Node.js, so just verify it's available and run the install command in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T020 [P] [US3] Implement yarn support — activate via `corepack enable && corepack prepare yarn@<version> --activate`, then run install command in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T021 [P] [US3] Implement pnpm support — activate via `corepack enable && corepack prepare pnpm@<version> --activate`, then run install command in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T022 [US3] Refactor package manager installation into a `case` statement dispatching on `runtime.manager` value, with unsupported manager producing `ERROR: Unsupported package manager: <value>. Supported: bun, npm, yarn, pnpm` in `.github/scripts/setup-environment.sh` ✅ DONE
 
 **Checkpoint**: All four package managers work correctly when specified in config
 
@@ -101,8 +101,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T023 [US4] Implement codex CLI installation (via `npm install -g @openai/codex`) in `.github/scripts/setup-environment.sh`
-- [ ] T024 [US4] Refactor agent CLI installation into a `case` statement dispatching on `agent.cli` value, with unsupported agent producing `ERROR: Unsupported agent CLI: <value>. Supported: claude-code, codex` in `.github/scripts/setup-environment.sh`
+- [x] T023 [US4] Implement codex CLI installation (via `npm install -g @openai/codex`) in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T024 [US4] Refactor agent CLI installation into a `case` statement dispatching on `agent.cli` value, with unsupported agent producing `ERROR: Unsupported agent CLI: <value>. Supported: claude-code, codex` in `.github/scripts/setup-environment.sh` ✅ DONE
 
 **Checkpoint**: Both claude-code and codex agent CLIs can be installed from config
 
@@ -116,9 +116,9 @@
 
 ### Implementation for User Story 5
 
-- [ ] T025 [US5] Ensure `mkdir -p` creates `.claude/` directory if it doesn't exist before symlink creation in `.github/scripts/setup-environment.sh`
-- [ ] T026 [US5] Ensure `ln -sf` overwrites existing symlinks on re-runs without error in `.github/scripts/setup-environment.sh`
-- [ ] T027 [US5] Add symlink validation in the final validation step — verify symlinks exist and targets are readable via `readlink` and `test -d` in `.github/scripts/setup-environment.sh`
+- [x] T025 [US5] Ensure `mkdir -p` creates `.claude/` directory if it doesn't exist before symlink creation in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T026 [US5] Ensure `ln -sf` overwrites existing symlinks on re-runs without error in `.github/scripts/setup-environment.sh` ✅ DONE
+- [x] T027 [US5] Add symlink validation in the final validation step — verify symlinks exist and targets are readable via `readlink` and `test -d` in `.github/scripts/setup-environment.sh` ✅ DONE
 
 **Checkpoint**: Symlinks work correctly for first-run, re-run, and validation scenarios
 
