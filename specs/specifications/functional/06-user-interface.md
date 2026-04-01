@@ -459,11 +459,12 @@ The user menu provides authenticated account navigation via an avatar button in 
 - User display name and email (non-interactive label)
 - **Billing** → `/settings/billing` (CreditCard icon)
 - **API Tokens** → `/settings/tokens` (Key icon)
+- **AI Credentials** → `/settings/credentials` (KeyRound icon)
 - **Sign out** — triggers `signOut` with redirect to `/auth/signin`
 
 **Unauthenticated State**: Replaced by a "Sign In" button linking to `/auth/signin`.
 
-**Mobile Behavior** (<768px): Avatar button is hidden; Billing and API Tokens links are surfaced inside the mobile hamburger menu instead.
+**Mobile Behavior** (<768px): Avatar button is hidden; Billing, API Tokens, and AI Credentials links are surfaced inside the mobile hamburger menu instead.
 
 **Component**: `components/auth/user-menu.tsx`
 
@@ -477,7 +478,8 @@ The mobile hamburger menu (`components/layout/mobile-menu.tsx`) is a slide-in `S
 1. User avatar, display name, and email
 2. **Billing** → `/settings/billing` (CreditCard icon)
 3. **API Tokens** → `/settings/tokens` (Key icon)
-4. **Sign Out** button (red text, LogOut icon)
+4. **AI Credentials** → `/settings/credentials` (KeyRound icon)
+5. **Sign Out** button (red text, LogOut icon)
 
 **Project-specific section** (shown when `projectId` and `projectName` are provided):
 - Project name header with icon links: Board, Analytics, Activity

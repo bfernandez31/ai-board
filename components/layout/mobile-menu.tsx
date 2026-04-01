@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, LogOut, CreditCard, Key } from 'lucide-react';
+import { Menu, LogOut, CreditCard, Key, KeyRound } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -114,6 +114,15 @@ export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
               >
                 <Key className="mr-2 h-4 w-4" />
                 API Tokens
+              </Link>
+
+              <Link
+                href="/settings/credentials"
+                className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
+                onClick={() => setOpen(false)}
+              >
+                <KeyRound className="mr-2 h-4 w-4" />
+                AI Credentials
               </Link>
 
               <div className="border-t border-border my-2" />

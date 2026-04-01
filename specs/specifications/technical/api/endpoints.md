@@ -3974,6 +3974,164 @@ Fetch all VERIFY-stage tickets for a project (workflow-only endpoint).
 
 ---
 
+## Credential Endpoints
+
+### GET /api/credentials
+
+List the authenticated user's AI provider credentials. Encrypted values are never returned.
+
+**Authentication**: Required (session or PAT)
+
+**Response** (200 OK):
+```json
+{
+  "credentials": [
+    {
+      "id": 1,
+      "provider": "ANTHROPIC",
+      "credentialType": "API_KEY",
+      "label": "My production key",
+      "preview": "ab12",
+      "readinessStatus": "READY",
+      "lastVerifiedAt": "2026-03-31T10:00:00Z",
+      "verificationCode": "VALID",
+      "verificationMessage": null,
+      "createdAt": "2026-03-31T09:00:00Z",
+      "updatedAt": "2026-03-31T10:00:00Z"
+    }
+  ]
+}
+```
+
+**Errors**:
+- `401`: Not authenticated
+
+### POST /api/credentials
+
+Create or replace a credential for the given provider. If a credential already exists for that provider, it is replaced (upsert). The credential is validated against the provider API before storage.
+
+**Authentication**: Required (session or PAT)
+
+**Request Body**:
+```json
+{
+  "provider": "ANTHROPIC",
+  "credentialType": "API_KEY",
+  "label": "My production key",
+  "value": "sk-ant-api03-..."
+}
+```
+
+**Validation**:
+- `provider`: Required, valid `CredentialProvider` enum value
+- `credentialType`: Required, valid `CredentialType` enum value
+- `label`: Required, 1–100 characters
+- `value`: Required, format validated per provider and type (e.g., `/^sk-ant-api\d{2}-[A-Za-z0-9_-]{80,}$/` for Anthropic API keys)
+
+**Server-side behavior**:
+1. Validate input format (Zod)
+2. Validate credential format (provider-specific regex)
+3. Validate credential against provider API
+4. Encrypt value with AES-256-GCM
+5. Upsert into `UserCredential` with `readinessStatus: READY`
+6. Return metadata (no encrypted value)
+
+**Response** (201 Created / 200 OK on replace):
+```json
+{
+  "id": 1,
+  "provider": "ANTHROPIC",
+  "credentialType": "API_KEY",
+  "label": "My production key",
+  "preview": "ab12",
+  "readinessStatus": "READY",
+  "lastVerifiedAt": "2026-03-31T10:00:00Z",
+  "verificationCode": "VALID",
+  "verificationMessage": null,
+  "createdAt": "2026-03-31T09:00:00Z",
+  "updatedAt": "2026-03-31T10:00:00Z"
+}
+```
+
+**Errors**:
+- `400`: Invalid credential format (`{ "error": "Invalid Anthropic API key format" }`)
+- `401`: Not authenticated
+- `422`: Provider validation failed — `{ "error": "...", "code": "INVALID_KEY" }` or `{ "error": "...", "code": "PROVIDER_UNREACHABLE" }`
+
+### DELETE /api/credentials/:id
+
+Delete a credential. Only the owning user can delete.
+
+**Authentication**: Required (session or PAT)
+
+**Path Parameters**:
+- `id` (number, required): Credential ID
+
+**Response** (204 No Content)
+
+**Errors**:
+- `401`: Not authenticated
+- `404`: Credential not found or not owned by user
+
+### POST /api/credentials/:id/test
+
+Re-validate an existing credential against the provider API without modifying the credential value. Updates `readinessStatus`, `lastVerifiedAt`, `verificationCode`, and `verificationMessage`.
+
+**Authentication**: Required (session or PAT)
+
+**Path Parameters**:
+- `id` (number, required): Credential ID
+
+**Response** (200 OK):
+```json
+{
+  "readinessStatus": "READY",
+  "lastVerifiedAt": "2026-03-31T12:00:00Z",
+  "verificationCode": "VALID",
+  "verificationMessage": null
+}
+```
+
+Possible `verificationCode` values: `VALID`, `INVALID_KEY`, `EXPIRED`, `UNREACHABLE`, `RATE_LIMITED`
+
+**Errors**:
+- `401`: Not authenticated
+- `404`: Credential not found or not owned by user
+
+### GET /api/internal/credentials
+
+Internal endpoint called by GitHub Actions workflows to retrieve the decrypted credential for a project's owner. Not accessible to regular users.
+
+**Authentication**: Workflow token only (`Authorization: Bearer ${WORKFLOW_API_TOKEN}`)
+
+**Query Parameters**:
+- `projectId` (string/numeric, required): Project ID to resolve owner credential
+
+**Server-side behavior**:
+1. Verify workflow token
+2. Look up project → get owner `userId`
+3. Find `UserCredential` for owner with `provider = ANTHROPIC`
+4. Decrypt credential with AES-256-GCM
+5. Return env var name and decrypted value
+
+**Response** (200 OK):
+```json
+{
+  "envVar": "ANTHROPIC_API_KEY",
+  "value": "sk-ant-api03-...",
+  "credentialType": "API_KEY"
+}
+```
+
+For OAuth tokens: `envVar` is `CLAUDE_CODE_OAUTH_TOKEN`.
+
+**Errors**:
+- `400`: `projectId` is required
+- `401`: Missing or invalid workflow token
+- `404`: `{ "error": "No AI credential configured for project owner. Please add your Anthropic key in Settings." }`
+
+---
+
 ## Pagination
 
 Scan history (`GET /api/projects/[projectId]/health/scans`) and activity feed (`GET /api/projects/:projectId/activity`) use cursor-based pagination. All other endpoints return complete result sets.
