@@ -64,7 +64,8 @@
 - **Theme**: Custom dark theme (zinc palette)
 - **Configuration**: `tailwind.config.ts`
 - **Features Used**:
-  - Custom color palette
+  - Custom color palette including semantic tokens: `destructive`, `success`, `muted`, `accent`, `primary`, `secondary`
+  - `success` / `success-foreground` token maps to Catppuccin green via `--success` CSS variable (defined in `globals.css`)
   - Responsive breakpoints (sm, md, lg)
   - Dark mode support
   - Custom utilities
