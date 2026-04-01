@@ -4105,28 +4105,33 @@ Internal endpoint called by GitHub Actions workflows to retrieve the decrypted c
 **Authentication**: Workflow token only (`Authorization: Bearer ${WORKFLOW_API_TOKEN}`)
 
 **Query Parameters**:
-- `projectId` (string/numeric, required): Project ID to resolve owner credential
+- `projectId` (positive integer, required): Project ID to resolve owner credential
 
 **Server-side behavior**:
 1. Verify workflow token
-2. Look up project → get owner `userId`
-3. Find `UserCredential` for owner with `provider = ANTHROPIC`
-4. Decrypt credential with AES-256-GCM
-5. Return env var name and decrypted value
+2. Validate `projectId` is a positive integer (Zod schema)
+3. Look up project → get owner `userId`
+4. Find `UserCredential` for owner with `provider = ANTHROPIC`
+5. Decrypt credential with AES-256-GCM
+6. Base64-encode the decrypted secret value
+7. Return env var name and encoded value with no-cache headers
 
 **Response** (200 OK):
 ```json
 {
   "envVar": "ANTHROPIC_API_KEY",
-  "value": "sk-ant-api03-...",
+  "value": "<base64-encoded-secret>",
+  "encoding": "base64",
   "credentialType": "API_KEY"
 }
 ```
 
+The `value` field is always base64-encoded. Callers must decode it before use (e.g., `echo "$VALUE" | base64 -d`). The response includes `Cache-Control: no-store, no-cache, must-revalidate` and `Pragma: no-cache` headers to prevent credential caching.
+
 For OAuth tokens: `envVar` is `CLAUDE_CODE_OAUTH_TOKEN`.
 
 **Errors**:
-- `400`: `projectId` is required
+- `400`: `{ "error": "projectId is required and must be a positive integer" }`
 - `401`: Missing or invalid workflow token
 - `404`: `{ "error": "No AI credential configured for project owner. Please add your Anthropic key in Settings." }`
 
