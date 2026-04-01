@@ -135,16 +135,6 @@ jobs:
           fetch-depth: 0
           path: target
 
-      - name: Setup ai-board commands and skills
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
-        run: |
-          # Create symlinks so Claude can find ai-board commands and skills in target repo
-          mkdir -p target/.claude
-          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
-          ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
-          echo "✅ ai-board commands linked to target/.claude/commands"
-          echo "✅ ai-board skills linked to target/.claude/skills"
-
       - name: Setup Bun
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         uses: oven-sh/setup-bun@v1
@@ -163,10 +153,13 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Setup Environment
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: ai-board/.github/scripts/setup-environment.sh target --phase full
+
       - name: Install Dependencies
         if: ${{ env.SKIP_EXECUTION != 'true' }}
-        working-directory: target
-        run: bun install --frozen-lockfile
+        run: ai-board/.github/scripts/run-command.sh target install
 
       - name: Configure Git
         if: ${{ env.SKIP_EXECUTION != 'true' }}

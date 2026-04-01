@@ -135,14 +135,6 @@ jobs:
           esac
           echo "✅ Mapped $INPUT_SCAN_TYPE → ai-board.$(grep command <<< "$(cat $GITHUB_OUTPUT)" | cut -d= -f2)"
 
-      - name: Setup ai-board commands and skills
-        run: |
-          mkdir -p target/.claude
-          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
-          ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
-          echo "✅ ai-board commands linked to target/.claude/commands"
-          echo "✅ ai-board skills linked to target/.claude/skills"
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -151,11 +143,18 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
 
+      - name: Setup Environment (full for TESTS)
+        if: ${{ inputs.scan_type == 'TESTS' }}
+        run: ai-board/.github/scripts/setup-environment.sh target --phase full
+
+      - name: Setup Environment (lightweight for non-TESTS)
+        if: ${{ inputs.scan_type != 'TESTS' }}
+        run: ai-board/.github/scripts/setup-environment.sh target --phase lightweight
+
       # --- Test infrastructure setup (only for TESTS scan type) ---
       - name: Install Dependencies
         if: ${{ inputs.scan_type == 'TESTS' }}
-        working-directory: target
-        run: bun install --frozen-lockfile
+        run: ai-board/.github/scripts/run-command.sh target install
 
       - name: Setup Test Environment
         if: ${{ inputs.scan_type == 'TESTS' }}
