@@ -69,8 +69,8 @@ Each workflow update replaces hardcoded commands with `run-command.sh`, replaces
 
 **Purpose**: Verify all changes are correct and consistent across all workflow files.
 
-- [ ] T010 Validate all workflow path references — grep all `.github/workflows/*.yml` for `../ai-board/` (must find zero matches per FR-011/SC-006), grep for hardcoded `bun install`, `bun run test`, `npx prisma`, `npx playwright` outside comments (must find zero except in `run-command.sh` fallback table), verify all `setup-environment.sh` and `run-command.sh` calls use `ai-board/.github/scripts/` prefix.
-- [ ] T011 [P] Verify `run-command.sh` fallback defaults match current ai-board `.ai-board/config.yml` commands — cross-reference the fallback table in `run-command.sh` against the actual config file to ensure defaults produce identical behavior.
+- [x] T010 Validate all workflow path references — grep all `.github/workflows/*.yml` for `../ai-board/` (must find zero matches per FR-011/SC-006), grep for hardcoded `bun install`, `bun run test`, `npx prisma`, `npx playwright` outside comments (must find zero except in `run-command.sh` fallback table), verify all `setup-environment.sh` and `run-command.sh` calls use `ai-board/.github/scripts/` prefix.
+- [x] T011 [P] Verify `run-command.sh` fallback defaults match current ai-board `.ai-board/config.yml` commands — cross-reference the fallback table in `run-command.sh` against the actual config file to ensure defaults produce identical behavior.
 
 ---
 
