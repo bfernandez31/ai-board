@@ -182,15 +182,28 @@ jobs:
           fetch-depth: 0
           path: target
 
+      # 3. Setup ai-board commands and skills symlink in target
+      - name: Setup ai-board commands and skills
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        run: |
+          mkdir -p target/.claude
+          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
+          ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
+          echo "✅ Commands symlinked: target/.claude/commands -> ai-board/.claude-plugin/commands"
+          echo "✅ Skills symlinked: target/.claude/skills -> ai-board/.claude-plugin/skills"
+          ls -la target/.claude/
+
+      - name: Setup Bun
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 1.3.1
+
       - name: Setup Node.js
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: '22.20.0'
-
-      - name: Setup Environment
-        if: ${{ env.SKIP_CLAUDE != 'true' }}
-        run: ai-board/.github/scripts/setup-environment.sh target
 
       - name: Configure Git
         if: ${{ env.SKIP_CLAUDE != 'true' }}
