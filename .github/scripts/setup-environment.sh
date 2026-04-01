@@ -1,7 +1,7 @@
 #!/bin/bash
 # setup-environment.sh — Centralized environment setup for ai-board workflows
 # Reads .ai-board/config.yml from target repos and handles all setup automatically.
-# Usage: setup-environment.sh <target-directory>
+# Usage: setup-environment.sh <target-directory> [--mode lightweight|full]
 
 set -euo pipefail
 
@@ -23,12 +23,38 @@ set_env() {
 # ─── Argument Parsing ─────────────────────────────────────────────────────────
 
 if [[ $# -lt 1 ]]; then
-  echo "Usage: setup-environment.sh <target-directory>"
+  echo "Usage: setup-environment.sh <target-directory> [--mode lightweight|full]"
   echo "  Reads .ai-board/config.yml from the target directory and configures the environment."
+  echo "  --mode lightweight  (default) Only symlinks, runtimes, git config, agent CLI"
+  echo "  --mode full         Lightweight + deps, env vars, Prisma, Playwright, global-setup"
   exit 1
 fi
 
 TARGET_DIR="$1"
+shift
+
+# Parse --mode flag (default: lightweight)
+MODE="lightweight"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --mode)
+      if [[ $# -lt 2 ]]; then
+        error "Missing value for --mode flag. Expected: lightweight or full"
+        exit 1
+      fi
+      MODE="$2"
+      if [[ "$MODE" != "lightweight" && "$MODE" != "full" ]]; then
+        error "Invalid mode: $MODE. Expected: lightweight or full"
+        exit 1
+      fi
+      shift 2
+      ;;
+    *)
+      error "Unknown argument: $1"
+      exit 1
+      ;;
+  esac
+done
 
 if [[ ! -d "$TARGET_DIR" ]]; then
   error "Target directory does not exist: $TARGET_DIR"
@@ -39,6 +65,8 @@ fi
 TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
 
 CONFIG_FILE="${TARGET_DIR}/.ai-board/config.yml"
+
+info "Setup mode: $MODE"
 
 # ─── yq Bootstrap ─────────────────────────────────────────────────────────────
 
@@ -99,9 +127,18 @@ MANAGER_VERSION=$(yq eval '.runtime.manager_version // ""' "$CONFIG_FILE")
 INSTALL_CMD=$(yq eval '.commands.install' "$CONFIG_FILE")
 AGENT_CLI=$(yq eval '.agent.cli' "$CONFIG_FILE")
 
-success "Config loaded: manager=$MANAGER, agent=$AGENT_CLI"
+success "Config loaded: manager=$MANAGER, agent=$AGENT_CLI, mode=$MODE"
 
-# ─── Package Manager Installation ────────────────────────────────────────────
+# ─── Plugin Symlink Creation (always runs) ──────────────────────────────────
+
+info "Creating plugin symlinks..."
+mkdir -p "${TARGET_DIR}/.claude"
+ln -sf "../../ai-board/.claude-plugin/commands" "${TARGET_DIR}/.claude/commands"
+ln -sf "../../ai-board/.claude-plugin/skills" "${TARGET_DIR}/.claude/skills"
+success "ai-board commands linked to ${TARGET_DIR}/.claude/commands"
+success "ai-board skills linked to ${TARGET_DIR}/.claude/skills"
+
+# ─── Package Manager Installation (always runs) ─────────────────────────────
 
 install_package_manager() {
   case "$MANAGER" in
@@ -156,13 +193,7 @@ install_package_manager() {
 
 install_package_manager
 
-# ─── Dependency Installation ─────────────────────────────────────────────────
-
-info "Installing dependencies via: $INSTALL_CMD"
-(cd "$TARGET_DIR" && eval "$INSTALL_CMD")
-success "Dependencies installed"
-
-# ─── Agent CLI Installation ──────────────────────────────────────────────────
+# ─── Agent CLI Installation (always runs) ───────────────────────────────────
 
 install_agent_cli() {
   case "$AGENT_CLI" in
@@ -193,6 +224,23 @@ install_agent_cli() {
 
 install_agent_cli
 
+# ─── Lightweight mode stops here ─────────────────────────────────────────────
+
+if [[ "$MODE" == "lightweight" ]]; then
+  success "Lightweight setup complete."
+  exit 0
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Full mode: everything below runs only when --mode full
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─── Dependency Installation ─────────────────────────────────────────────────
+
+info "Installing dependencies via: $INSTALL_CMD"
+(cd "$TARGET_DIR" && eval "$INSTALL_CMD")
+success "Dependencies installed"
+
 # ─── Environment Variable Export ─────────────────────────────────────────────
 
 info "Exporting environment variables..."
@@ -208,15 +256,6 @@ while IFS= read -r key; do
   fi
 done < <(yq eval '.env | keys | .[]' "$CONFIG_FILE" 2>/dev/null || true)
 success "Exported $ENV_COUNT environment variables"
-
-# ─── Plugin Symlink Creation ─────────────────────────────────────────────────
-
-info "Creating plugin symlinks..."
-mkdir -p "${TARGET_DIR}/.claude"
-ln -sf "../../ai-board/.claude-plugin/commands" "${TARGET_DIR}/.claude/commands"
-ln -sf "../../ai-board/.claude-plugin/skills" "${TARGET_DIR}/.claude/skills"
-success "ai-board commands linked to ${TARGET_DIR}/.claude/commands"
-success "ai-board skills linked to ${TARGET_DIR}/.claude/skills"
 
 # ─── Project Dependency Detection ────────────────────────────────────────────
 
@@ -294,4 +333,4 @@ if [[ "$VALIDATION_FAILED" == "true" ]]; then
   exit 1
 fi
 
-success "Environment setup complete. Validation passed."
+success "Environment setup complete (full mode). Validation passed."
