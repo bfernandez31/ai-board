@@ -122,11 +122,11 @@
 
 **Purpose**: Final validation and cleanup across all changes
 
-- [ ] T018 [P] Verify all script references in workflow YAML files use `ai-board/` workspace-root-relative paths (NOT `../ai-board/`) per FR-010
-- [ ] T019 [P] Verify bun cache step is preserved in `.github/workflows/speckit.yml` per FR-012
-- [ ] T020 [P] Verify execution order is preserved in all workflows: symlinks → runtime → deps → dependency detection → Prisma → Playwright per FR-011
-- [ ] T021 Run `bun run type-check` and `bun run lint` to ensure no regressions
-- [ ] T022 Run `bun run test:unit tests/unit/scripts/run-command.test.ts` to confirm all tests pass
+- [x] T018 [P] Verify all script references in workflow YAML files use `ai-board/` workspace-root-relative paths (NOT `../ai-board/`) per FR-010
+- [x] T019 [P] Verify bun cache step is preserved in `.github/workflows/speckit.yml` per FR-012
+- [x] T020 [P] Verify execution order is preserved in all workflows: symlinks → runtime → deps → dependency detection → Prisma → Playwright per FR-011
+- [x] T021 Run `bun run type-check` and `bun run lint` to ensure no regressions
+- [x] T022 Run `bun run test:unit tests/unit/scripts/run-command.test.ts` to confirm all tests pass
 
 ---
 
