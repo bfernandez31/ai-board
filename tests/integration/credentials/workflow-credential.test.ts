@@ -58,6 +58,12 @@ describe('Workflow Credential Retrieval API', () => {
     expect(response.status).toBe(400);
   });
 
+  it('should return 400 when projectId is not a valid number', async () => {
+    const client = createWorkflowClient();
+    const response = await client.get('/api/internal/credentials?projectId=abc');
+    expect(response.status).toBe(400);
+  });
+
   it('should return 404 when owner has no credential', async () => {
     const client = createWorkflowClient();
     const response = await client.get<{ error: string }>(
@@ -90,12 +96,14 @@ describe('Workflow Credential Retrieval API', () => {
     const response = await client.get<{
       envVar: string;
       value: string;
+      encoding: string;
       credentialType: string;
     }>(`/api/internal/credentials?projectId=${ctx.projectId}`);
 
     expect(response.status).toBe(200);
     expect(response.data.envVar).toBe('ANTHROPIC_API_KEY');
-    expect(response.data.value).toBe(testKey);
+    expect(response.data.encoding).toBe('base64');
+    expect(Buffer.from(response.data.value, 'base64').toString()).toBe(testKey);
     expect(response.data.credentialType).toBe('API_KEY');
   });
 
@@ -122,12 +130,14 @@ describe('Workflow Credential Retrieval API', () => {
     const response = await client.get<{
       envVar: string;
       value: string;
+      encoding: string;
       credentialType: string;
     }>(`/api/internal/credentials?projectId=${ctx.projectId}`);
 
     expect(response.status).toBe(200);
     expect(response.data.envVar).toBe('CLAUDE_CODE_OAUTH_TOKEN');
-    expect(response.data.value).toBe(testToken);
+    expect(response.data.encoding).toBe('base64');
+    expect(Buffer.from(response.data.value, 'base64').toString()).toBe(testToken);
     expect(response.data.credentialType).toBe('OAUTH_TOKEN');
   });
 });

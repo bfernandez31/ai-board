@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 import { getOwnerCredential, buildWorkflowPayload } from '@/lib/ai-credentials/workflow';
+
+const querySchema = z.object({
+  projectId: z.coerce.number().int().positive(),
+});
 
 export async function GET(request: NextRequest) {
   const authResult = validateWorkflowAuth(request);
@@ -8,15 +13,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const projectIdParam = request.nextUrl.searchParams.get('projectId');
-  if (!projectIdParam) {
-    return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+  const parsed = querySchema.safeParse({
+    projectId: request.nextUrl.searchParams.get('projectId'),
+  });
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'projectId is required and must be a positive integer' },
+      { status: 400 }
+    );
   }
 
-  const projectId = parseInt(projectIdParam, 10);
-  if (isNaN(projectId)) {
-    return NextResponse.json({ error: 'projectId must be a number' }, { status: 400 });
-  }
+  const { projectId } = parsed.data;
 
   try {
     const credential = await getOwnerCredential(projectId);
@@ -33,13 +41,24 @@ export async function GET(request: NextRequest) {
 
     const payload = buildWorkflowPayload(credential);
 
-    return NextResponse.json({
-      envVar: payload.envVar,
-      value: payload.secret,
-      credentialType: payload.credentialType,
-    });
+    const encodedValue = Buffer.from(payload.secret).toString('base64');
+
+    return NextResponse.json(
+      {
+        envVar: payload.envVar,
+        value: encodedValue,
+        encoding: 'base64',
+        credentialType: payload.credentialType,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          Pragma: 'no-cache',
+        },
+      }
+    );
   } catch (error) {
-    console.error('Failed to resolve workflow credential:', error);
+    console.error('Failed to resolve workflow credential:', error instanceof Error ? error.message : String(error));
     return NextResponse.json(
       { error: 'Failed to resolve credential' },
       { status: 500 }
