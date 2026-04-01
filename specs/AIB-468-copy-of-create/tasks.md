@@ -128,13 +128,13 @@
 
 **Purpose**: Replace duplicated setup blocks in existing workflow files with the centralized script call
 
-- [ ] T028 [P] Replace duplicated setup blocks in `.github/workflows/speckit.yml` with a single `setup-environment.sh` invocation (keep `actions/setup-node` step)
-- [ ] T029 [P] Replace duplicated setup blocks in `.github/workflows/quick-impl.yml` with a single `setup-environment.sh` invocation
-- [ ] T030 [P] Replace duplicated setup blocks in `.github/workflows/verify.yml` with a single `setup-environment.sh` invocation
-- [ ] T031 [P] Replace duplicated setup blocks in `.github/workflows/ai-board-assist.yml` with a single `setup-environment.sh` invocation
-- [ ] T032 [P] Replace duplicated setup blocks in `.github/workflows/iterate.yml` with a single `setup-environment.sh` invocation
-- [ ] T033 [P] Replace duplicated setup blocks in `.github/workflows/health-scan.yml` with a single `setup-environment.sh` invocation
-- [ ] T034 Run quickstart.md validation — verify the script works per documented usage examples
+- [x] T028 [P] Replace duplicated setup blocks in `.github/workflows/speckit.yml` with a single `setup-environment.sh` invocation (keep `actions/setup-node` step) ✅ DONE
+- [x] T029 [P] Replace duplicated setup blocks in `.github/workflows/quick-impl.yml` with a single `setup-environment.sh` invocation ✅ DONE
+- [x] T030 [P] Replace duplicated setup blocks in `.github/workflows/verify.yml` with a single `setup-environment.sh` invocation ✅ DONE
+- [x] T031 [P] Replace duplicated setup blocks in `.github/workflows/ai-board-assist.yml` with a single `setup-environment.sh` invocation ✅ DONE
+- [x] T032 [P] Replace duplicated setup blocks in `.github/workflows/iterate.yml` with a single `setup-environment.sh` invocation ✅ DONE
+- [x] T033 [P] Replace duplicated setup blocks in `.github/workflows/health-scan.yml` with a single `setup-environment.sh` invocation ✅ DONE
+- [x] T034 Run quickstart.md validation — verify the script works per documented usage examples ✅ DONE
 
 ---
 
