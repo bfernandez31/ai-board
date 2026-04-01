@@ -1,0 +1,7 @@
+version: 1
+
+runtime:
+  manager: bun
+
+agent:
+  model: claude-opus-4-6

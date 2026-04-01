@@ -1,0 +1,12 @@
+version: 1
+
+runtime:
+  manager: pnpm
+  manager_version: "9"
+  node: "22"
+
+commands:
+  install: pnpm install
+
+agent:
+  cli: claude-code

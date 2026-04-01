@@ -1,0 +1,11 @@
+version: 1
+
+runtime:
+  manager: npm
+  node: "22"
+
+commands:
+  install: npm install
+
+agent:
+  cli: claude-code

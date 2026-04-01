@@ -1,0 +1,10 @@
+version: 1
+
+runtime:
+  manager: pip
+
+commands:
+  install: pip install -r requirements.txt
+
+agent:
+  cli: claude-code

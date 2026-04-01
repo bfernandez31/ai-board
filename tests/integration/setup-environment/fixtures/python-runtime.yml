@@ -1,0 +1,10 @@
+version: 1
+
+runtime:
+  manager: poetry
+
+commands:
+  install: poetry install
+
+agent:
+  cli: claude-code
