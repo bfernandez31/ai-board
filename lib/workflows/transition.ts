@@ -131,6 +131,8 @@ export async function handleTicketTransition(
   try {
     const currentStage = ticket.stage as Stage;
 
+    // Prisma Stage and ValidationStage are structurally identical string enums
+    // but TypeScript treats them as distinct nominal types, requiring a bridge cast
     if (!isValidTransition(currentStage as unknown as ValidationStage, targetStage as unknown as ValidationStage)) {
       return {
         success: false,
