@@ -8,7 +8,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { execSync, type ExecSyncOptionsWithBufferEncoding } from 'node:child_process';
-import { mkdirSync, rmSync, cpSync, existsSync, lstatSync, readlinkSync, mkdtempSync } from 'node:fs';
+import { mkdirSync, rmSync, cpSync, lstatSync, readlinkSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -123,7 +123,6 @@ describe('setup-environment.sh', () => {
       // Create a config with valid manager but unsupported agent CLI
       const configDir = join(tempDir, '.ai-board');
       mkdirSync(configDir, { recursive: true });
-      const { writeFileSync } = require('node:fs');
       writeFileSync(join(configDir, 'config.yml'), [
         'version: 1',
         'runtime:',
@@ -149,7 +148,6 @@ describe('setup-environment.sh', () => {
       setupMockTarget('valid-npm-config.yml', tempDir);
 
       // Create a minimal package.json so npm install succeeds
-      const { writeFileSync } = require('node:fs');
       writeFileSync(join(tempDir, 'package.json'), '{"name":"test","version":"1.0.0"}');
 
       // Run script twice
@@ -176,7 +174,6 @@ describe('setup-environment.sh', () => {
     it('T040: exits 3 when real directory exists at symlink target', () => {
       setupMockTarget('valid-npm-config.yml', tempDir);
 
-      const { writeFileSync } = require('node:fs');
       writeFileSync(join(tempDir, 'package.json'), '{"name":"test","version":"1.0.0"}');
 
       // Create a real directory at .claude/commands (not a symlink)
@@ -208,7 +205,6 @@ describe('setup-environment.sh', () => {
     it('T023: script with valid bun config exits 0 and outputs step markers', () => {
       setupMockTarget('valid-bun-config.yml', tempDir);
 
-      const { writeFileSync } = require('node:fs');
       writeFileSync(join(tempDir, 'package.json'), '{"name":"test","version":"1.0.0"}');
 
       const result = runScript(tempDir);
@@ -235,7 +231,6 @@ describe('setup-environment.sh', () => {
     it('T024: script with valid npm config exits 0', () => {
       setupMockTarget('valid-npm-config.yml', tempDir);
 
-      const { writeFileSync } = require('node:fs');
       writeFileSync(join(tempDir, 'package.json'), '{"name":"test","version":"1.0.0"}');
 
       const result = runScript(tempDir);
@@ -258,7 +253,6 @@ describe('setup-environment.sh', () => {
     it('T033: script with valid yarn config passes validation', () => {
       setupMockTarget('valid-yarn-config.yml', tempDir);
 
-      const { writeFileSync } = require('node:fs');
       writeFileSync(join(tempDir, 'package.json'), '{"name":"test","version":"1.0.0"}');
 
       const result = runScript(tempDir);
@@ -271,7 +265,6 @@ describe('setup-environment.sh', () => {
     it('T034: script with valid pnpm config passes validation', () => {
       setupMockTarget('valid-pnpm-config.yml', tempDir);
 
-      const { writeFileSync } = require('node:fs');
       writeFileSync(join(tempDir, 'package.json'), '{"name":"test","version":"1.0.0"}');
 
       const result = runScript(tempDir);
@@ -290,7 +283,6 @@ describe('setup-environment.sh', () => {
     it('T036: script with codex agent config passes validation', () => {
       const configDir = join(tempDir, '.ai-board');
       mkdirSync(configDir, { recursive: true });
-      const { writeFileSync } = require('node:fs');
       writeFileSync(join(configDir, 'config.yml'), [
         'version: 1',
         'runtime:',
