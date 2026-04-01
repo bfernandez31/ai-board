@@ -117,6 +117,7 @@ jobs:
             CRED_TYPE=$(echo "$BODY" | jq -r '.credentialType')
             ENV_VAR=$(echo "$BODY" | jq -r '.envVar')
             CRED_VALUE_B64=$(echo "$BODY" | jq -r '.value')
+            echo "::add-mask::${CRED_VALUE_B64}"
             CRED_VALUE=$(echo "$CRED_VALUE_B64" | base64 -d)
 
             # Mask the credential value in logs

@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error('Failed to resolve workflow credential:', error);
+    console.error('Failed to resolve workflow credential:', error instanceof Error ? error.message : String(error));
     return NextResponse.json(
       { error: 'Failed to resolve credential' },
       { status: 500 }
