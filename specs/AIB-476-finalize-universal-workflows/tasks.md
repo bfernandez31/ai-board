@@ -80,10 +80,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T011 [US3] Add conditional service inputs and service container definitions to `.github/workflows/speckit.yml` — add 8 inputs (`needs_postgres`, `needs_redis`, `needs_mysql`, `needs_mongo` + version inputs) and conditional `services:` block using empty-image-string pattern per `specs/AIB-476-finalize-universal-workflows/contracts/workflow-service-inputs.md`.
-- [ ] T012 [P] [US3] Add conditional service inputs and service container definitions to `.github/workflows/quick-impl.yml` — same input schema and services block as speckit.yml.
-- [ ] T013 [P] [US3] Add conditional service inputs and service container definitions to `.github/workflows/verify.yml` — same input schema and services block as speckit.yml.
-- [ ] T014 [P] [US3] Add conditional service inputs and service container definitions to `.github/workflows/health-scan.yml` — same input schema and services block as speckit.yml. Services only needed for TESTS scan type.
+- [x] T011 [US3] Add conditional service inputs and service container definitions to `.github/workflows/speckit.yml` — add 8 inputs (`needs_postgres`, `needs_redis`, `needs_mysql`, `needs_mongo` + version inputs) and conditional `services:` block using empty-image-string pattern per `specs/AIB-476-finalize-universal-workflows/contracts/workflow-service-inputs.md`.
+- [x] T012 [P] [US3] Add conditional service inputs and service container definitions to `.github/workflows/quick-impl.yml` — same input schema and services block as speckit.yml.
+- [x] T013 [P] [US3] Add conditional service inputs and service container definitions to `.github/workflows/verify.yml` — same input schema and services block as speckit.yml.
+- [x] T014 [P] [US3] Add conditional service inputs and service container definitions to `.github/workflows/health-scan.yml` — same input schema and services block as speckit.yml. Services only needed for TESTS scan type.
 
 **Checkpoint**: All 4 test-capable workflows accept service inputs. Containers only start when `needs_*` is true. Zero overhead when false.
 
