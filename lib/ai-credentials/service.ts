@@ -109,6 +109,26 @@ export async function testCredential(
   );
 
   const credentialType = credential.credentialType as 'API_KEY' | 'OAUTH_TOKEN';
+
+  // OAuth tokens skip provider verification
+  if (credentialType === 'OAUTH_TOKEN') {
+    const result: VerificationResult = {
+      readinessStatus: 'READY',
+      verificationCode: 'SKIPPED',
+      verificationMessage: null,
+    };
+    await prisma.userCredential.update({
+      where: { id },
+      data: {
+        readinessStatus: 'READY',
+        verificationCode: 'SKIPPED',
+        verificationMessage: null,
+        lastVerifiedAt: new Date(),
+      },
+    });
+    return result;
+  }
+
   const formatResult = validateFormat(credentialType, decrypted);
 
   const result: VerificationResult = formatResult.valid

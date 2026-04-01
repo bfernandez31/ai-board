@@ -147,6 +147,26 @@ describe('User Credentials API', () => {
       expect(response.status).toBe(400);
     });
 
+    it('should create OAUTH_TOKEN with SKIPPED verification (no provider call)', async () => {
+      const response = await ctx.api.post<{
+        id: number;
+        provider: string;
+        credentialType: string;
+        readinessStatus: string;
+        verificationCode: string;
+      }>('/api/credentials', {
+        provider: 'ANTHROPIC',
+        credentialType: 'OAUTH_TOKEN',
+        label: '[e2e] OAuth Token',
+        value: 'sk-ant-oat01-' + 'a'.repeat(80),
+      });
+
+      expect(response.status).toBe(201);
+      expect(response.data.credentialType).toBe('OAUTH_TOKEN');
+      expect(response.data.readinessStatus).toBe('READY');
+      expect(response.data.verificationCode).toBe('SKIPPED');
+    });
+
     it('should return 422 for valid format but invalid key (rejected by provider)', async () => {
       // This key has valid format but will be rejected by Anthropic
       const response = await ctx.api.post<{ error: string; code: string }>('/api/credentials', {
@@ -268,6 +288,36 @@ describe('User Credentials API', () => {
       expect(response.data).toHaveProperty('verificationCode');
       // The key is fake so it should be ACTION_REQUIRED with INVALID_KEY or UNREACHABLE
       expect(['READY', 'ACTION_REQUIRED']).toContain(response.data.readinessStatus);
+    });
+
+    it('should return SKIPPED for OAUTH_TOKEN re-test (no provider call)', async () => {
+      const prisma = getPrismaClient();
+      const testValue = 'sk-ant-oat01-' + 'a'.repeat(80);
+      const { encryptedValue, iv, authTag } = encryptCredential(testValue);
+
+      const cred = await prisma.userCredential.create({
+        data: {
+          userId: 'test-user-id',
+          provider: 'ANTHROPIC',
+          credentialType: 'OAUTH_TOKEN',
+          label: '[e2e] Test OAuth',
+          encryptedValue,
+          iv,
+          authTag,
+          preview: testValue.slice(-4),
+          readinessStatus: 'READY',
+          verificationCode: 'SKIPPED',
+        },
+      });
+
+      const response = await ctx.api.post<{
+        readinessStatus: string;
+        verificationCode: string;
+      }>(`/api/credentials/${cred.id}/test`);
+
+      expect(response.status).toBe(200);
+      expect(response.data.readinessStatus).toBe('READY');
+      expect(response.data.verificationCode).toBe('SKIPPED');
     });
   });
 });

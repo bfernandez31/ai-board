@@ -60,7 +60,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const verificationResult = await verifyWithProvider(validated.credentialType, validated.value);
+    const verificationResult = validated.credentialType === 'OAUTH_TOKEN'
+      ? { readinessStatus: 'READY' as const, verificationCode: 'SKIPPED' as const, verificationMessage: null }
+      : await verifyWithProvider(validated.credentialType, validated.value);
 
     if (verificationResult.readinessStatus === 'ACTION_REQUIRED') {
       if (verificationResult.verificationCode === 'UNREACHABLE') {
