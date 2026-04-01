@@ -544,7 +544,7 @@ interface TransitionResponse {
   branchName?: string;
   message?: string;
   error?: string;
-  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB';
+  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB' | 'MISSING_CREDENTIAL';
   details?: {
     currentStage?: Stage;
     targetStage?: Stage;
