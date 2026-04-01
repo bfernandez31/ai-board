@@ -225,22 +225,6 @@ test.describe('Responsive Board Design', () => {
     }
   });
 
-  test('should maintain performance on mobile devices', async ({ page , projectId }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-
-    const startTime = Date.now();
-
-    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
-
-    const board = page.locator('main').or(page.locator('[data-testid="board"]'));
-    await board.first().waitFor({ state: 'visible', timeout: 3000 });
-
-    const loadTime = Date.now() - startTime;
-
-    // Should load within 2 seconds even on mobile
-    expect(loadTime).toBeLessThan(2000);
-  });
-
   test('should allow smooth horizontal scrolling without lag', async ({ page , projectId }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);

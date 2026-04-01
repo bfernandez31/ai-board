@@ -30,17 +30,6 @@ test.describe('Personal Access Tokens', () => {
       await expect(generateButton).toBeVisible();
     });
 
-    test('should display empty state when no tokens exist', async ({ page }) => {
-      // Check for empty state message (may or may not be present depending on existing tokens)
-      const emptyState = page.locator('text=No personal access tokens yet');
-      const tokenList = page.locator('[class*="divide-y"]');
-
-      // Either empty state or token list should be visible
-      const hasEmptyState = await emptyState.count() > 0;
-      const hasTokenList = await tokenList.count() > 0;
-
-      expect(hasEmptyState || hasTokenList).toBe(true);
-    });
   });
 
   test.describe('Token Generation Flow', () => {

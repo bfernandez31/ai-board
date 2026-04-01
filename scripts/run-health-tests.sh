@@ -43,14 +43,19 @@ has_errors() {
   jq -r '.hasErrors' /tmp/test-report-summary.json
 }
 
+# Regression-penalty scoring: 100 minus a cost per failure.
+# Goal is 100% pass rate — every failure is a regression the AI introduced.
+# Penalty per fail: unit -1, integration -3, e2e -5 (user-facing = most severe).
+# Floor at 0.
 compute_score() {
-  local total_tests="$1"
-  local total_failed="$2"
-  if [ "$total_tests" -eq 0 ]; then
-    echo 100
-  else
-    echo "$total_tests $total_failed" | awk '{printf "%d", (100 * (1 - $2 / $1) + 0.5)}'
-  fi
+  local summary="$1"
+  echo "$summary" | jq '
+    [0, 100
+      - (.unit.failed        * 1)
+      - (.integration.failed * 3)
+      - (.e2e.failed         * 5)
+    ] | max
+  '
 }
 
 # Write /tmp/health-scan-result.json
@@ -109,10 +114,11 @@ echo "════════════════════════�
 SUMMARY=$(read_summary)
 TOTAL_TESTS=$(echo "$SUMMARY" | jq -r '.totalTests')
 TOTAL_FAILED=$(echo "$SUMMARY" | jq -r '.totalFailed')
-SCORE=$(compute_score "$TOTAL_TESTS" "$TOTAL_FAILED")
+TOTAL_PASSED=$((TOTAL_TESTS - TOTAL_FAILED))
+SCORE=$(compute_score "$SUMMARY")
 
 echo ""
-echo "📊 First-run score: $SCORE (${TOTAL_PASSED:-$TOTAL_TESTS} passed, $TOTAL_FAILED failed out of $TOTAL_TESTS)"
+echo "📊 First-run score: $SCORE ($TOTAL_PASSED passed, $TOTAL_FAILED failed out of $TOTAL_TESTS)"
 
 # ── Phase 3: Check if done ──────────────────────────────────────────
 

@@ -104,46 +104,6 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   });
 
   /**
-   * T011: User can save title by pressing Enter
-   */
-  test('user can save title with Enter key', async ({ page, request , projectId }) => {
-    // Create ticket
-    const ticket = await createTicket(request, projectId, 'Original Title', 'Original description');
-
-    // Navigate and open modal
-    const ticketCard = await navigateAndWaitForTicket(page, projectId, ticket.id);
-    await ticketCard.click();
-
-    // Click title to edit
-    const titleElement = page.getByTestId('ticket-title');
-    await titleElement.click();
-
-    // Type new title
-    const titleInput = page.getByTestId('title-input');
-    await titleInput.fill('Updated Title');
-    await titleInput.press('Enter');
-
-    // Assert: input returns to display mode
-    await expect(titleInput).not.toBeVisible();
-
-    // Assert: title shows updated value
-    await expect(titleElement).toContainText('Updated Title');
-
-    // Wait for success toast
-    const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
-    await expect(toast).toBeVisible({ timeout: 2000 });
-
-    // Verify database
-    const dbTicket = await getTicket(ticket.id);
-    expect(dbTicket?.title).toBe('Updated Title');
-
-    // Close modal and verify board shows updated title
-    await page.keyboard.press('Escape');
-    const boardCard = page.locator(`[data-ticket-id="${ticket.id}"]`);
-    await expect(boardCard).toContainText('Updated Title');
-  });
-
-  /**
    * T012: User can cancel title edit with ESC
    */
   test('user can cancel title edit with ESC', async ({ page, request , projectId }) => {

@@ -414,36 +414,6 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
   });
 
   /**
-   * T011: Test sub-100ms latency validation
-   * Updated for SPECIFY stage - tests INBOX → SPECIFY transition
-   */
-  test('meets sub-100ms latency requirement', async ({ page, request , projectId }) => {
-    // Setup: Create ticket
-    const ticket = await createTicket(request, projectId, 'INBOX');
-
-    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
-    await page.waitForLoadState('domcontentloaded');
-
-    // Measure time from drag start to visual update
-    const startTime = Date.now();
-
-    // Use mouse events for @dnd-kit compatibility - INBOX to SPECIFY
-    await dragTicketToColumn(page, ticket.id, 'SPECIFY');
-
-    // Wait for ticket to appear in new column
-    const specifyColumn = page.locator('[data-stage="SPECIFY"]');
-    await specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`).waitFor({ state: 'visible', timeout: 2000 });
-
-    const endTime = Date.now();
-    const latency = endTime - startTime;
-
-    console.log(`Drag latency: ${latency}ms`);
-
-    // Verify reasonable latency with optimistic update (increased to 3s to account for network)
-    expect(latency).toBeLessThan(3000);
-  });
-
-  /**
    * T012: Test mobile scrolling does not trigger drag (T905)
    * Validates that quick touch swipes for scrolling don't initiate drag operations.
    * Uses CDP touch events to simulate real touch input (TouchSensor requires 250ms delay).

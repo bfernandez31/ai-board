@@ -387,12 +387,24 @@ jobs:
               done
               ;;
             TESTS)
-              # One ticket per non-fixable test
-              jq -c '.nonFixable // [] | .[]' "$REPORT_FILE" | while read -r issue; do
-                DESC_TEXT=$(printf '%s' "$issue" | jq -r '.description')
-                FILE=$(printf '%s' "$issue" | jq -r '.file // "Unknown"')
-                TITLE="[Tests] Fix failing test: $(printf '%s' "$DESC_TEXT" | head -c 80)"
-                DESC=$(printf 'Health scan found a non-fixable test failure:\n\n- **Test**: %s\n- **File**: %s' "$DESC_TEXT" "$FILE")
+              # One ticket per test file (grouped), title ≤100 chars
+              jq -c '
+                [.nonFixable // [] | .[] | .file //= "unknown"] |
+                group_by(.file) | .[] | {
+                  file: .[0].file,
+                  count: length,
+                  details: [.[] | .description // "unnamed test"] | join("\n- ")
+                }
+              ' "$REPORT_FILE" | while read -r group; do
+                FILE=$(printf '%s' "$group" | jq -r '.file')
+                COUNT=$(printf '%s' "$group" | jq -r '.count')
+                DETAILS=$(printf '%s' "$group" | jq -r '.details')
+                SHORT_FILE=$(echo "$FILE" | sed 's|^tests/e2e/||; s|\.spec\.ts$||')
+                SUFFIX=""; [ "$COUNT" -gt 1 ] && SUFFIX="s"
+                TITLE="[Tests] Fix ${COUNT} failure${SUFFIX} in ${SHORT_FILE}"
+                # Truncate title to 100 chars
+                TITLE=$(printf '%s' "$TITLE" | head -c 100)
+                DESC=$(printf 'Health scan found %s non-fixable test failure%s in `%s`:\n\n- %s' "$COUNT" "$SUFFIX" "$FILE" "$DETAILS")
 
                 curl -X POST "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets" \
                   -H "Content-Type: application/json" \
