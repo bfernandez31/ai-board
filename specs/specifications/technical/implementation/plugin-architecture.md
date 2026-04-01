@@ -340,6 +340,7 @@ For an external project to work with ai-board workflows:
 **Required**:
 - A GitHub repository accessible via `GH_PAT`
 - Standard project structure (package.json, source code)
+- `.ai-board/config.yml` — declarative config file declaring the project's language, runtime, package manager, install command, optional tooling commands, services, and agent preferences (see [Config Schema](#config-schema))
 
 **Optional but recommended**:
 - `CLAUDE.md` at project root (project context for the AI agent)
@@ -349,4 +350,63 @@ For an external project to work with ai-board workflows:
 **Not required**:
 - No workflow files in the external project
 - No `.claude/` directory (created by workflow via symlink)
-- No ai-board dependencies or configuration
+- No ai-board package dependencies
+
+## Config Schema
+
+External projects declare their environment via `.ai-board/config.yml` (schema version 1). The file is validated by `lib/validations/config.ts` and loaded by `lib/config-loader.ts` at workflow startup.
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `version` | `1` (literal) | Schema version — must be `1` |
+| `project.name` | string | Project name |
+| `project.language` | enum | `typescript` \| `python` \| `go` \| `rust` \| `java` |
+| `runtime.manager` | enum | `bun` \| `npm` \| `yarn` \| `pnpm` \| `pip` \| `poetry` \| `cargo` |
+| `commands.install` | string | Install command (e.g., `bun install`) |
+
+### Optional Fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `project.framework` | enum | `none` | `nextjs` \| `express` \| `fastapi` \| `django` \| `gin` \| `none` |
+| `runtime.manager_version` | string | — | Package manager version |
+| `runtime.node` | string | — | Node.js version override |
+| `runtime.python` | string | — | Python version override |
+| `commands.build` | string | — | Build command (skipped if absent) |
+| `commands.lint` | string | — | Lint command (skipped if absent) |
+| `commands.type_check` | string | — | Type-check command (skipped if absent) |
+| `commands.test_unit` | string | — | Unit test command (skipped if absent) |
+| `commands.test_integration` | string | — | Integration test command (skipped if absent) |
+| `commands.test_e2e` | string | — | E2E test command (skipped if absent) |
+| `services` | array | `[]` | Sidecar services (postgres, redis, mysql, mongo) |
+| `env` | object | `{}` | Flat key-value map of CI environment variables |
+| `agent.cli` | enum | `claude-code` | `claude-code` \| `codex` |
+| `agent.model` | string | — | Model name override (free-form) |
+
+### Minimal Example
+
+```yaml
+version: 1
+
+project:
+  name: my-app
+  language: typescript
+
+runtime:
+  manager: bun
+
+commands:
+  install: bun install
+  lint: bun run lint
+  type_check: bun run type-check
+  test_unit: bun run test:unit
+```
+
+### Validation Behavior
+
+- Missing required fields produce structured errors with field path and guidance on how to fix them.
+- All errors are collected in a single pass (not fail-on-first).
+- Unknown fields at the top level or within known sections produce warnings (not errors), supporting forward compatibility.
+- A missing `.ai-board/config.yml` file fails immediately with: "Missing .ai-board/config.yml — this file is required for ai-board to operate on your project."
