@@ -168,6 +168,7 @@ The proxy allows these through without a session redirect:
 - `/api/health`
 - `/api/push/*`
 - `/api/telemetry/*`
+- `/api/webhooks/*` (Stripe webhook callbacks — no session possible)
 - selected workflow and ticket API routes matched by explicit regex patterns
 
 ### Protected Routes

@@ -737,7 +737,7 @@ sequenceDiagram
 
 **Endpoint**: `POST /api/webhooks/stripe`
 
-**Auth**: Stripe signature verification via `stripe.webhooks.constructEvent()` using `STRIPE_WEBHOOK_SECRET`.
+**Auth**: Stripe signature verification via `stripe.webhooks.constructEvent()` using `STRIPE_WEBHOOK_SECRET`. The webhook route is excluded from auth middleware in `proxy.ts` (via the matcher pattern) since Stripe cannot present a session cookie.
 
 **Idempotency**: Each event is checked against the `StripeEvent` table before processing. Duplicate events are silently ignored.
 

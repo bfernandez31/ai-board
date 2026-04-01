@@ -145,4 +145,10 @@ The original consolidated specifications (before reorganization) are preserved i
 
 ---
 
+## License
+
+AI-Board is licensed under the [Business Source License 1.1](../../LICENSE) (BSL 1.1). The source code is publicly available but may not be used to create a competing product or service. The license converts to Apache 2.0 on 2030-04-01.
+
+---
+
 *This documentation represents the current state of the AI Board application. It is continuously updated with each feature development.*
