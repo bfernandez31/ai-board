@@ -37,7 +37,7 @@
 
 ### Unit Tests
 
-- [ ] T003 [US1] Create unit tests for `run-command.sh` at `tests/unit/scripts/run-command.test.sh` (or Vitest shell exec wrapper) — test cases: (1) valid config executes configured command and returns exit code, (2) missing config uses fallback default, (3) empty command value exits 0 silently, (4) missing command key exits 0 silently, (5) invalid YAML exits 2 with error message, (6) unrecognized command key exits 0 silently, (7) missing arguments fails with usage message, (8) command failure returns non-zero exit code faithfully.
+- [x] T003 [US1] Create unit tests for `run-command.sh` at `tests/unit/scripts/run-command.test.sh` (or Vitest shell exec wrapper) — test cases: (1) valid config executes configured command and returns exit code, (2) missing config uses fallback default, (3) empty command value exits 0 silently, (4) missing command key exits 0 silently, (5) invalid YAML exits 2 with error message, (6) unrecognized command key exits 0 silently, (7) missing arguments fails with usage message, (8) command failure returns non-zero exit code faithfully.
 
 ### Workflow Updates (US1+US2+US3 combined per file)
 
