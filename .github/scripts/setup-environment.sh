@@ -11,6 +11,15 @@ info()    { echo "ℹ️  $*"; }
 success() { echo "✅ $*"; }
 error()   { echo "❌ ERROR: $*" >&2; }
 
+# Export a variable and persist it to GITHUB_ENV when running in Actions
+set_env() {
+  local key="$1" val="$2"
+  export "$key=$val"
+  if [[ -n "${GITHUB_ENV:-}" ]]; then
+    echo "$key=$val" >> "$GITHUB_ENV"
+  fi
+}
+
 # ─── Argument Parsing ─────────────────────────────────────────────────────────
 
 if [[ $# -lt 1 ]]; then
@@ -99,11 +108,10 @@ install_package_manager() {
     bun)
       if ! command -v bun &>/dev/null; then
         info "Installing bun..."
+        export BUN_INSTALL="${HOME}/.bun"
         if [[ -n "$MANAGER_VERSION" ]]; then
-          export BUN_INSTALL="${HOME}/.bun"
           curl -fsSL https://bun.sh/install | bash -s "bun-v${MANAGER_VERSION}"
         else
-          export BUN_INSTALL="${HOME}/.bun"
           curl -fsSL https://bun.sh/install | bash
         fi
         export PATH="${HOME}/.bun/bin:${PATH}"
@@ -194,11 +202,7 @@ while IFS= read -r key; do
     val=$(yq eval ".env.${key}" "$CONFIG_FILE")
     # Preserve existing values (workflow secrets take precedence)
     if [[ -z "${!key:-}" ]]; then
-      export "$key=$val"
-      # Also write to GITHUB_ENV if available (for subsequent workflow steps)
-      if [[ -n "${GITHUB_ENV:-}" ]]; then
-        echo "$key=$val" >> "$GITHUB_ENV"
-      fi
+      set_env "$key" "$val"
       ENV_COUNT=$((ENV_COUNT + 1))
     fi
   fi
@@ -221,17 +225,11 @@ info "Detecting project dependencies..."
 # Prisma detection
 if [[ -f "${TARGET_DIR}/prisma/schema.prisma" ]] || \
    ( [[ -f "${TARGET_DIR}/package.json" ]] && grep -q '"prisma"' "${TARGET_DIR}/package.json" 2>/dev/null ); then
-  export HAS_PRISMA=true
-  if [[ -n "${GITHUB_ENV:-}" ]]; then
-    echo "HAS_PRISMA=true" >> "$GITHUB_ENV"
-  fi
+  set_env HAS_PRISMA true
   success "Prisma detected — running prisma generate"
   (cd "$TARGET_DIR" && npx prisma generate)
 else
-  export HAS_PRISMA=false
-  if [[ -n "${GITHUB_ENV:-}" ]]; then
-    echo "HAS_PRISMA=false" >> "$GITHUB_ENV"
-  fi
+  set_env HAS_PRISMA false
   info "Prisma not detected — skipping database setup"
 fi
 
@@ -239,16 +237,10 @@ fi
 if [[ -f "${TARGET_DIR}/playwright.config.ts" ]] || \
    [[ -f "${TARGET_DIR}/playwright.config.js" ]] || \
    ( [[ -f "${TARGET_DIR}/package.json" ]] && grep -q '"@playwright/test"' "${TARGET_DIR}/package.json" 2>/dev/null ); then
-  export HAS_PLAYWRIGHT=true
-  if [[ -n "${GITHUB_ENV:-}" ]]; then
-    echo "HAS_PLAYWRIGHT=true" >> "$GITHUB_ENV"
-  fi
+  set_env HAS_PLAYWRIGHT true
   success "Playwright detected"
 else
-  export HAS_PLAYWRIGHT=false
-  if [[ -n "${GITHUB_ENV:-}" ]]; then
-    echo "HAS_PLAYWRIGHT=false" >> "$GITHUB_ENV"
-  fi
+  set_env HAS_PLAYWRIGHT false
   info "Playwright not detected — skipping E2E setup"
 fi
 
