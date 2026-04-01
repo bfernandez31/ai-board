@@ -235,9 +235,9 @@ A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion it
 - SHIP: Purple (completed work)
 
 **Semantic Colors**:
-- Success actions: Green indicators
+- Success actions: Green indicators (`text-success` / `bg-success`)
 - Warnings: Orange highlights
-- Errors: Red messaging
+- Errors/Destructive actions: Red messaging (`text-destructive` / `bg-destructive`)
 - Information: Blue accents
 - In-progress operations: Blue indicators (pending/running states)
 

@@ -49,7 +49,7 @@ export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
         {projectName && (
           <>
             <div className="mt-6 px-2">
-              <p className="text-lg font-semibold text-zinc-50">{projectName}</p>
+              <p className="text-lg font-semibold text-foreground">{projectName}</p>
             </div>
             <div className="border-t border-border my-2" />
             {projectId && (
@@ -129,7 +129,7 @@ export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
 
               <Button
                 variant="outline"
-                className="w-full justify-center text-red-600 hover:text-red-700"
+                className="w-full justify-center text-destructive hover:text-destructive/90"
                 onClick={handleSignOut}
               >
                 <LogOut className="mr-2 h-4 w-4" />
