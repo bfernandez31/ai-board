@@ -28,7 +28,7 @@ _No setup tasks required._
 
 **CRITICAL**: US1 page implementation depends on this endpoint being available.
 
-- [ ] T001 Create GET /api/settings/profile endpoint with auth, Prisma query (User + Account + Subscription), and GitHub username resolution via GitHub API in `app/api/settings/profile/route.ts` per contract in `contracts/profile-api.md`
+- [x] T001 Create GET /api/settings/profile endpoint with auth, Prisma query (User + Account + Subscription), and GitHub username resolution via GitHub API in `app/api/settings/profile/route.ts` per contract in `contracts/profile-api.md`
 
 **Checkpoint**: API endpoint returns profile data for authenticated users. Can be tested independently via curl/HTTP client.
 
@@ -42,13 +42,13 @@ _No setup tasks required._
 
 ### Tests for User Story 1
 
-- [ ] T002 [P] [US1] Create integration test for GET /api/settings/profile endpoint (auth check, correct fields, missing subscription defaults to FREE, GitHub API failure graceful handling) in `tests/integration/settings/profile.test.ts`
-- [ ] T003 [P] [US1] Create component test for ProfileInfo (renders all fields, handles null name with email fallback, handles null avatar with initials fallback, plan badge with billing link) in `tests/unit/components/profile-info.test.tsx`
+- [x] T002 [P] [US1] Create integration test for GET /api/settings/profile endpoint (auth check, correct fields, missing subscription defaults to FREE, GitHub API failure graceful handling) in `tests/integration/settings/profile.test.ts`
+- [x] T003 [P] [US1] Create component test for ProfileInfo (renders all fields, handles null name with email fallback, handles null avatar with initials fallback, plan badge with billing link) in `tests/unit/components/profile-info.test.tsx`
 
 ### Implementation for User Story 1
 
-- [ ] T004 [P] [US1] Create ProfileInfo display component with avatar (using shadcn Avatar + AvatarFallback), field rows (name, email, GitHub link, registration date), and plan badge with billing link in `components/settings/profile-info.tsx`
-- [ ] T005 [US1] Create profile settings page as client component with TanStack Query data fetching from `/api/settings/profile`, loading/error states, and aurora theme styling following billing page pattern in `app/settings/profile/page.tsx`
+- [x] T004 [P] [US1] Create ProfileInfo display component with avatar (using shadcn Avatar + AvatarFallback), field rows (name, email, GitHub link, registration date), and plan badge with billing link in `components/settings/profile-info.tsx`
+- [x] T005 [US1] Create profile settings page as client component with TanStack Query data fetching from `/api/settings/profile`, loading/error states, and aurora theme styling following billing page pattern in `app/settings/profile/page.tsx`
 
 **Checkpoint**: Profile page is fully functional at `/settings/profile` with all six fields displayed. Can be tested independently.
 
@@ -62,8 +62,8 @@ _No setup tasks required._
 
 ### Implementation for User Story 2
 
-- [ ] T006 [P] [US2] Add "Profile" as the first settings menu item (before Billing) with User icon from lucide-react and link to `/settings/profile` in `components/auth/user-menu.tsx`
-- [ ] T007 [P] [US2] Add "Profile" as the first settings link (before Billing) with User icon from lucide-react and link to `/settings/profile` in `components/layout/mobile-menu.tsx`
+- [x] T006 [P] [US2] Add "Profile" as the first settings menu item (before Billing) with User icon from lucide-react and link to `/settings/profile` in `components/auth/user-menu.tsx`
+- [x] T007 [P] [US2] Add "Profile" as the first settings link (before Billing) with User icon from lucide-react and link to `/settings/profile` in `components/layout/mobile-menu.tsx`
 
 **Checkpoint**: Profile is accessible from both desktop and mobile navigation menus as the first settings item.
 
@@ -77,7 +77,7 @@ _No setup tasks required._
 
 ### Implementation for User Story 3
 
-- [ ] T008 [US3] Verify and adjust responsive layout in `components/settings/profile-info.tsx` and `app/settings/profile/page.tsx` — ensure single-column on mobile (<768px), effective space usage on desktop, consistent styling with other settings pages, WCAG AA contrast compliance
+- [x] T008 [US3] Verify and adjust responsive layout in `components/settings/profile-info.tsx` and `app/settings/profile/page.tsx` — ensure single-column on mobile (<768px), effective space usage on desktop, consistent styling with other settings pages, WCAG AA contrast compliance
 
 **Checkpoint**: Profile page is fully responsive across 320px–1920px viewports.
 
@@ -87,8 +87,8 @@ _No setup tasks required._
 
 **Purpose**: Final validation and quality checks across all user stories.
 
-- [ ] T009 Run quickstart.md validation scenarios against the completed implementation
-- [ ] T010 Verify all tests pass: `bun run test:unit tests/unit/components/profile-info.test.tsx` and `bun run test:integration tests/integration/settings/profile.test.ts`
+- [x] T009 Run quickstart.md validation scenarios against the completed implementation
+- [x] T010 Verify all tests pass: `bun run test:unit tests/unit/components/profile-info.test.tsx` and `bun run test:integration tests/integration/settings/profile.test.ts`
 
 ---
 
