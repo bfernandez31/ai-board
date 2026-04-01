@@ -14,19 +14,41 @@ interface CredentialTestButtonProps {
   credentialId: number;
 }
 
+function getTestState(testCredential: ReturnType<typeof useTestCredential>) {
+  if (testCredential.isPending) {
+    return {
+      icon: <Loader2 className="h-4 w-4 animate-spin" />,
+      className: "text-muted-foreground",
+      tooltip: "Testing...",
+    };
+  }
+
+  if (testCredential.isSuccess && testCredential.data?.readinessStatus === "READY") {
+    return {
+      icon: <CheckCircle2 className="h-4 w-4" />,
+      className: "text-green-600",
+      tooltip: "Credential is valid",
+    };
+  }
+
+  if (testCredential.isSuccess) {
+    return {
+      icon: <AlertCircle className="h-4 w-4" />,
+      className: "text-destructive",
+      tooltip: testCredential.data?.verificationMessage || "Credential validation failed",
+    };
+  }
+
+  return {
+    icon: <FlaskConical className="h-4 w-4" />,
+    className: "text-muted-foreground",
+    tooltip: testCredential.error?.message || "Test credential",
+  };
+}
+
 export function CredentialTestButton({ credentialId }: CredentialTestButtonProps) {
   const testCredential = useTestCredential();
-
-  const handleTest = () => {
-    testCredential.mutate(credentialId);
-  };
-
-  const isSuccess =
-    testCredential.isSuccess &&
-    testCredential.data?.readinessStatus === "READY";
-  const isFailure =
-    testCredential.isSuccess &&
-    testCredential.data?.readinessStatus !== "READY";
+  const { icon, className, tooltip } = getTestState(testCredential);
 
   return (
     <TooltipProvider>
@@ -35,39 +57,15 @@ export function CredentialTestButton({ credentialId }: CredentialTestButtonProps
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleTest}
+            onClick={() => testCredential.mutate(credentialId)}
             disabled={testCredential.isPending}
-            className={
-              isSuccess
-                ? "text-green-600"
-                : isFailure
-                  ? "text-destructive"
-                  : "text-muted-foreground"
-            }
+            className={className}
           >
-            {testCredential.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : isSuccess ? (
-              <CheckCircle2 className="h-4 w-4" />
-            ) : isFailure ? (
-              <AlertCircle className="h-4 w-4" />
-            ) : (
-              <FlaskConical className="h-4 w-4" />
-            )}
+            {icon}
             <span className="sr-only">Test credential</span>
           </Button>
         </TooltipTrigger>
-        <TooltipContent>
-          {testCredential.isPending
-            ? "Testing..."
-            : isSuccess
-              ? "Credential is valid"
-              : isFailure
-                ? testCredential.data?.verificationMessage || "Credential validation failed"
-                : testCredential.error
-                  ? testCredential.error.message
-                  : "Test credential"}
-        </TooltipContent>
+        <TooltipContent>{tooltip}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

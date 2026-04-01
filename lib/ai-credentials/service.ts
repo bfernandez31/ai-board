@@ -25,6 +25,19 @@ export async function createOrReplaceCredential(
 ): Promise<CredentialListItem> {
   const { encryptedValue, iv, authTag, preview } = encryptCredential(input.value);
 
+  const data = {
+    credentialType: input.credentialType,
+    label: input.label,
+    encryptedValue,
+    iv,
+    authTag,
+    preview,
+    readinessStatus: verificationResult.readinessStatus as CredentialReadiness,
+    lastVerifiedAt: new Date(),
+    verificationCode: verificationResult.verificationCode,
+    verificationMessage: verificationResult.verificationMessage,
+  };
+
   return prisma.userCredential.upsert({
     where: {
       userId_provider: {
@@ -32,32 +45,8 @@ export async function createOrReplaceCredential(
         provider: input.provider,
       },
     },
-    create: {
-      userId,
-      provider: input.provider,
-      credentialType: input.credentialType,
-      label: input.label,
-      encryptedValue,
-      iv,
-      authTag,
-      preview,
-      readinessStatus: verificationResult.readinessStatus as CredentialReadiness,
-      lastVerifiedAt: new Date(),
-      verificationCode: verificationResult.verificationCode,
-      verificationMessage: verificationResult.verificationMessage,
-    },
-    update: {
-      credentialType: input.credentialType,
-      label: input.label,
-      encryptedValue,
-      iv,
-      authTag,
-      preview,
-      readinessStatus: verificationResult.readinessStatus as CredentialReadiness,
-      lastVerifiedAt: new Date(),
-      verificationCode: verificationResult.verificationCode,
-      verificationMessage: verificationResult.verificationMessage,
-    },
+    create: { userId, provider: input.provider, ...data },
+    update: data,
     select: CREDENTIAL_SELECT,
   });
 }
@@ -119,50 +108,25 @@ export async function testCredential(
     credential.authTag
   );
 
-  const formatResult = validateFormat(credential.credentialType as 'API_KEY' | 'OAUTH_TOKEN', decrypted);
-  if (!formatResult.valid) {
-    const result: VerificationResult = {
-      readinessStatus: 'ACTION_REQUIRED',
-      verificationCode: 'INVALID_KEY',
-      verificationMessage: formatResult.error || 'Stored credential has invalid format.',
-    };
+  const credentialType = credential.credentialType as 'API_KEY' | 'OAUTH_TOKEN';
+  const formatResult = validateFormat(credentialType, decrypted);
 
-    await prisma.userCredential.update({
-      where: { id },
-      data: {
-        readinessStatus: result.readinessStatus,
-        lastVerifiedAt: new Date(),
-        verificationCode: result.verificationCode,
-        verificationMessage: result.verificationMessage,
-      },
-    });
-
-    return result;
-  }
-
-  const result = await verifyWithProvider(
-    credential.credentialType as 'API_KEY' | 'OAUTH_TOKEN',
-    decrypted
-  );
-
-  const updateData: {
-    readinessStatus: CredentialReadiness;
-    lastVerifiedAt?: Date;
-    verificationCode: string;
-    verificationMessage: string | null;
-  } = {
-    readinessStatus: result.readinessStatus as CredentialReadiness,
-    verificationCode: result.verificationCode,
-    verificationMessage: result.verificationMessage,
-  };
-
-  if (result.verificationCode !== 'UNREACHABLE') {
-    updateData.lastVerifiedAt = new Date();
-  }
+  const result: VerificationResult = formatResult.valid
+    ? await verifyWithProvider(credentialType, decrypted)
+    : {
+        readinessStatus: 'ACTION_REQUIRED',
+        verificationCode: 'INVALID_KEY',
+        verificationMessage: formatResult.error || 'Stored credential has invalid format.',
+      };
 
   await prisma.userCredential.update({
     where: { id },
-    data: updateData,
+    data: {
+      readinessStatus: result.readinessStatus as CredentialReadiness,
+      verificationCode: result.verificationCode,
+      verificationMessage: result.verificationMessage,
+      ...(result.verificationCode !== 'UNREACHABLE' && { lastVerifiedAt: new Date() }),
+    },
   });
 
   return result;

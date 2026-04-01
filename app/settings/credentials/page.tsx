@@ -8,7 +8,6 @@ export default function CredentialsSettingsPage() {
   return (
     <main className="container mx-auto py-10 max-w-4xl">
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
             <Shield className="h-5 w-5 text-primary" />
@@ -21,7 +20,6 @@ export default function CredentialsSettingsPage() {
           </div>
         </div>
 
-        {/* Description */}
         <div className="rounded-lg border aurora-bg-subtle p-4">
           <p className="text-sm text-muted-foreground">
             AI credentials allow workflows to authenticate with AI providers like Anthropic.
@@ -34,7 +32,6 @@ export default function CredentialsSettingsPage() {
           </p>
         </div>
 
-        {/* Add Credential Form */}
         <div>
           <h2 className="mb-4 text-lg font-semibold">Add or Replace Credential</h2>
           <div className="rounded-lg border p-4">
@@ -42,7 +39,6 @@ export default function CredentialsSettingsPage() {
           </div>
         </div>
 
-        {/* Credential List */}
         <div>
           <h2 className="mb-4 text-lg font-semibold">Your Credentials</h2>
           <CredentialList />
