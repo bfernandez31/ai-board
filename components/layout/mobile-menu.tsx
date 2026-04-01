@@ -77,7 +77,6 @@ export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
 
         <div className="flex flex-col gap-4 mt-4">
           {session?.user ? (
-            // Authenticated user menu
             <>
               <div className="flex items-center gap-3 px-2">
                 <Avatar>
@@ -146,7 +145,6 @@ export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
               </Button>
             </>
           ) : (
-            // Unauthenticated menu
             <Link href="/auth/signin" onClick={() => setOpen(false)}>
               <Button variant="default" className="w-full justify-center">
                 Sign In

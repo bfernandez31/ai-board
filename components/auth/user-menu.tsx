@@ -17,7 +17,6 @@ import { CreditCard, Key, KeyRound, LogOut, User } from "lucide-react"
 export function UserMenu() {
   const { data: session } = useSession()
 
-  // Show sign in button when not authenticated
   if (!session?.user) {
     return (
       <Link href="/auth/signin">
