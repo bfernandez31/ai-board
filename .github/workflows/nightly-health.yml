@@ -1,0 +1,51 @@
+name: Nightly Health Scans
+
+on:
+  schedule:
+    # 00:30 UTC = 02:30 CEST (French summer time) / 01:30 CET (winter)
+    - cron: '30 0 * * *'
+  workflow_dispatch: {} # Allow manual trigger
+
+jobs:
+  trigger-scans:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      APP_URL: ${{ vars.APP_URL }}
+      WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+      PROJECT_ID: 3
+
+    steps:
+      - name: Trigger all health scans for project ${{ env.PROJECT_ID }}
+        run: |
+          SCAN_TYPES="SECURITY COMPLIANCE TESTS SPEC_SYNC"
+          FAILED=0
+
+          for TYPE in $SCAN_TYPES; do
+            echo "🔄 Triggering $TYPE scan..."
+            HTTP_CODE=$(curl -X POST "${APP_URL}/api/projects/${PROJECT_ID}/health/scans" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+              -d "{\"scanType\": \"${TYPE}\"}" \
+              -s -o /tmp/response-${TYPE}.json -w "%{http_code}")
+
+            if [ "$HTTP_CODE" = "201" ]; then
+              SCAN_ID=$(jq -r '.scan.id' /tmp/response-${TYPE}.json)
+              echo "✅ $TYPE scan triggered (id: $SCAN_ID)"
+            elif [ "$HTTP_CODE" = "409" ]; then
+              echo "⏭️ $TYPE scan already running — skipped"
+            else
+              echo "❌ $TYPE scan failed (HTTP $HTTP_CODE):"
+              cat /tmp/response-${TYPE}.json
+              FAILED=$((FAILED + 1))
+            fi
+
+            # Small delay between dispatches to avoid overwhelming the API
+            sleep 2
+          done
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "::error::$FAILED scan(s) failed to trigger"
+            exit 1
+          fi

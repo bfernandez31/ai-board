@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
+import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
 import { prisma } from '@/lib/db/client';
 import { dispatchHealthScanWorkflow } from '@/lib/health/scan-dispatch';
 
@@ -27,7 +28,20 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
     }
 
-    const project = await verifyProjectAccess(projectId, request);
+    // Support workflow token auth (for scheduled/cron triggers) alongside session auth
+    let project;
+    if (await verifyWorkflowToken(request)) {
+      const p = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { id: true, name: true, githubOwner: true, githubRepo: true, clarificationPolicy: true },
+      });
+      if (!p) {
+        return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      }
+      project = p;
+    } else {
+      project = await verifyProjectAccess(projectId, request);
+    }
 
     const body = await request.json();
     const parsed = triggerScanSchema.safeParse(body);
