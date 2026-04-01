@@ -682,7 +682,26 @@ Workflows execute on GitHub Actions infrastructure:
 **Authentication**:
 - GitHub token for repository access
 - API token for status updates
-- `CLAUDE_CODE_OAUTH_TOKEN` for Claude CLI access, or `OPENAI_API_KEY` for Codex CLI access (resolved by agent type)
+- AI provider credential for agent access — resolved from the project owner's `UserCredential` at dispatch time (see AI Credential Guard below)
+
+### AI Credential Guard
+
+All AI workflow dispatches (speckit, quick-impl, ai-board-assist) are blocked if the project owner has no AI credential configured.
+
+**Pre-dispatch check** (`lib/ai-credentials/workflow.ts`):
+- Before calling `octokit.actions.createWorkflowDispatch()`, the dispatch function resolves the project owner's credential
+- If no credential exists, dispatch is rejected immediately with a user-facing error: _"No AI credential configured for this project owner. Please add your Anthropic key in Settings → AI Credentials before triggering workflows."_
+- This provides immediate feedback instead of a delayed workflow failure
+
+**Runtime credential retrieval** (within GitHub Actions):
+- Workflows call `GET /api/internal/credentials?projectId={id}` (authenticated by `WORKFLOW_API_TOKEN`)
+- The endpoint returns the env var name and decrypted value
+- The value is masked in CI logs via `::add-mask::` before being exported to `$GITHUB_ENV`
+- The credential is never passed as a workflow dispatch input
+
+**Env var mapping**:
+- `API_KEY` credential type → `ANTHROPIC_API_KEY`
+- `OAUTH_TOKEN` credential type → `CLAUDE_CODE_OAUTH_TOKEN`
 
 ### Workflow Timeouts
 
