@@ -50,7 +50,7 @@ export function DeleteCredentialDialog({
               onConfirm();
             }}
             disabled={isDeleting}
-            className="bg-destructive hover:bg-destructive/90 focus:ring-destructive"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive"
           >
             {isDeleting ? "Deleting..." : "Delete Credential"}
           </AlertDialogAction>
