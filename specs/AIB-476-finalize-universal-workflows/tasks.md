@@ -43,7 +43,7 @@
 
 ### Tests for User Story 1
 
-- [ ] T003 [US1] Create unit test file `tests/unit/scripts/run-command.test.ts` — test cases: (1) missing config.yml exits 0, (2) missing command key exits 0, (3) valid command executes and returns exit code, (4) invalid YAML exits 1, (5) missing arguments exits 1. Use Vitest with child_process.execSync to spawn the shell script.
+- [x] T003 [US1] Create unit test file `tests/unit/scripts/run-command.test.ts` — test cases: (1) missing config.yml exits 0, (2) missing command key exits 0, (3) valid command executes and returns exit code, (4) invalid YAML exits 1, (5) missing arguments exits 1. Use Vitest with child_process.execSync to spawn the shell script.
 
 ### Implementation for User Story 1
 
