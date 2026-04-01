@@ -457,6 +457,7 @@ The user menu provides authenticated account navigation via an avatar button in 
 
 **Dropdown Contents** (authenticated):
 - User display name and email (non-interactive label)
+- **Profile** → `/settings/profile` (User icon) — first settings item
 - **Billing** → `/settings/billing` (CreditCard icon)
 - **API Tokens** → `/settings/tokens` (Key icon)
 - **AI Credentials** → `/settings/credentials` (KeyRound icon)
@@ -464,7 +465,7 @@ The user menu provides authenticated account navigation via an avatar button in 
 
 **Unauthenticated State**: Replaced by a "Sign In" button linking to `/auth/signin`.
 
-**Mobile Behavior** (<768px): Avatar button is hidden; Billing, API Tokens, and AI Credentials links are surfaced inside the mobile hamburger menu instead.
+**Mobile Behavior** (<768px): Avatar button is hidden; Profile, Billing, API Tokens, and AI Credentials links are surfaced inside the mobile hamburger menu instead.
 
 **Component**: `components/auth/user-menu.tsx`
 
@@ -476,10 +477,11 @@ The mobile hamburger menu (`components/layout/mobile-menu.tsx`) is a slide-in `S
 
 **Authenticated User Contents**:
 1. User avatar, display name, and email
-2. **Billing** → `/settings/billing` (CreditCard icon)
-3. **API Tokens** → `/settings/tokens` (Key icon)
-4. **AI Credentials** → `/settings/credentials` (KeyRound icon)
-5. **Sign Out** button (red text, LogOut icon)
+2. **Profile** → `/settings/profile` (User icon) — first settings link
+3. **Billing** → `/settings/billing` (CreditCard icon)
+4. **API Tokens** → `/settings/tokens` (Key icon)
+5. **AI Credentials** → `/settings/credentials` (KeyRound icon)
+6. **Sign Out** button (red text, LogOut icon)
 
 **Project-specific section** (shown when `projectId` and `projectName` are provided):
 - Project name header with icon links: Board, Analytics, Activity
@@ -534,6 +536,38 @@ The notification bell provides access to mention notifications:
 - Continues while user is authenticated
 - Stops when user logs out
 - Syncs across open tabs/windows
+
+## Settings Pages
+
+### Profile Settings Page
+
+The profile settings page (`/settings/profile`) displays read-only account information for the authenticated user.
+
+**Access**: Authenticated users only. Unauthenticated visitors are redirected to `/auth/signin`.
+
+**Displayed Information**:
+- GitHub avatar as a circular image
+- Display name (falls back to email if name is null)
+- Email address
+- Linked GitHub username as a clickable link opening `https://github.com/{username}` in a new tab
+- Registration date in locale-aware format (e.g., "March 15, 2026") — date only, no time
+- Current subscription plan (FREE/PRO/TEAM) with a link to `/settings/billing`
+
+**Read-Only**: No edit forms or input fields are present. All displayed data reflects current account state.
+
+**Edge Cases**:
+- Missing avatar: Shows initials-based fallback placeholder
+- Missing name: Displays email address in place of the name
+- No subscription record: Plan displays as "Free"
+- GitHub API unavailable: Username and GitHub URL fields are omitted gracefully
+
+**Responsive Layout**: Single-column layout on mobile (<768px); uses available space on tablet and desktop without horizontal scrolling. Minimum supported viewport: 320px.
+
+**Styling**: Uses aurora theme (`aurora-*` CSS utility classes) consistent with other settings pages. All text meets WCAG AA contrast (4.5:1 minimum).
+
+**Component**: `components/settings/profile-info.tsx` — renders avatar, field rows, and plan badge. Page: `app/settings/profile/page.tsx`.
+
+---
 
 ## Navigation
 

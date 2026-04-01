@@ -3792,6 +3792,39 @@ Fetch unified activity feed for a project.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 
+## Profile Settings Endpoint
+
+### GET /api/settings/profile
+
+Returns the authenticated user's profile information for display on the `/settings/profile` page.
+
+**Authentication**: Required (session)
+
+**Response** (200 OK):
+```json
+{
+  "name": "Jane Smith",
+  "email": "jane@example.com",
+  "image": "https://avatars.githubusercontent.com/u/12345",
+  "createdAt": "2026-01-15T10:00:00.000Z",
+  "githubUsername": "janesmith",
+  "githubUrl": "https://github.com/janesmith",
+  "plan": "FREE"
+}
+```
+
+**Field Notes**:
+- `name`: nullable — null when the user has no GitHub display name
+- `image`: nullable — null when avatar is unavailable
+- `githubUsername` / `githubUrl`: nullable — null when GitHub API call fails or no GitHub account linked
+- `plan`: one of `FREE`, `PRO`, `TEAM`; defaults to `FREE` when no subscription record exists
+- `createdAt`: ISO 8601 UTC timestamp
+
+**Errors**:
+- `401`: Not authenticated
+
+---
+
 ## Token Endpoints
 
 ### GET /api/tokens
