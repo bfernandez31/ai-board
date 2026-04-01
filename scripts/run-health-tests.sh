@@ -186,6 +186,8 @@ FIXED_COUNT=$(echo "$ALL_AUTO_FIXED" | jq 'length')
 if [ "$FIXED_COUNT" -gt 0 ] && [ -n "$(git -C "$REPO_DIR" diff --name-only)" ]; then
   echo ""
   echo "📦 Committing $FIXED_COUNT auto-fixed test(s)..."
+  git -C "$REPO_DIR" config user.name "ai-board[bot]"
+  git -C "$REPO_DIR" config user.email "ai-board[bot]@users.noreply.github.com"
   git -C "$REPO_DIR" add -A
   git -C "$REPO_DIR" commit -m "fix(tests): auto-fix $FIXED_COUNT test failure(s) [health-scan]
 
