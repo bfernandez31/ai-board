@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import { isWorkflowTestMode } from './test-mode';
-import { getOwnerCredential } from '@/lib/ai-credentials/workflow';
+import { getOwnerCredential, MISSING_CREDENTIAL_ERROR } from '@/lib/ai-credentials/workflow';
 
 export interface AIBoardWorkflowInputs {
   ticket_id: string;
@@ -33,9 +33,7 @@ export async function dispatchAIBoardWorkflow(
   if (!isNaN(projectId)) {
     const credential = await getOwnerCredential(projectId);
     if (!credential) {
-      throw new Error(
-        'No AI credential configured for this project owner. Please add your Anthropic key in Settings → AI Credentials before triggering workflows.'
-      );
+      throw new Error(MISSING_CREDENTIAL_ERROR);
     }
   }
 
@@ -57,18 +55,7 @@ export async function dispatchAIBoardWorkflow(
       repo,
       workflow_id: 'ai-board-assist.yml',
       ref: 'main',
-      inputs: {
-        ticket_id: inputs.ticket_id,
-        stage: inputs.stage,
-        branch: inputs.branch,
-        user_id: inputs.user_id,
-        user: inputs.user,
-        comment: inputs.comment,
-        job_id: inputs.job_id,
-        project_id: inputs.project_id,
-        githubRepository: inputs.githubRepository,
-        agent: inputs.agent,
-      },
+      inputs: { ...inputs },
     });
   } catch (error) {
     console.error('[dispatch-ai-board] Failed to dispatch workflow:', error);

@@ -1,6 +1,7 @@
 import { Octokit } from '@octokit/rest';
 import { prisma } from '@/lib/db/client';
 import { isWorkflowTestMode } from './test-mode';
+import { getOwnerCredential, MISSING_CREDENTIAL_ERROR } from '@/lib/ai-credentials/workflow';
 
 export interface RollbackResetWorkflowInputs {
   ticketId: number;
@@ -19,6 +20,14 @@ export async function dispatchRollbackResetWorkflow(
   inputs: RollbackResetWorkflowInputs
 ): Promise<RollbackResetDispatchResult> {
   const githubToken = process.env.GITHUB_TOKEN;
+
+  // Validate BYOK credential before creating job or dispatching workflow
+  if (!isWorkflowTestMode(githubToken)) {
+    const credential = await getOwnerCredential(inputs.projectId);
+    if (!credential) {
+      throw new Error(MISSING_CREDENTIAL_ERROR);
+    }
+  }
 
   const job = await prisma.job.create({
     data: {

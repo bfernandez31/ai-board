@@ -1,5 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
+import { getOwnerCredential, MISSING_CREDENTIAL_ERROR } from '@/lib/ai-credentials/workflow';
 import type { HealthScanType } from '@prisma/client';
 
 export interface HealthScanDispatchInputs {
@@ -28,6 +29,15 @@ export async function dispatchHealthScanWorkflow(
     throw new Error('GITHUB_TOKEN not configured - required for workflow dispatch');
   }
 
+  // Validate BYOK credential before dispatching workflow
+  const projectId = parseInt(inputs.project_id, 10);
+  if (!isNaN(projectId)) {
+    const credential = await getOwnerCredential(projectId);
+    if (!credential) {
+      throw new Error(MISSING_CREDENTIAL_ERROR);
+    }
+  }
+
   const octokit = new Octokit({ auth: githubToken });
   const owner = process.env.GITHUB_OWNER;
   const repo = process.env.GITHUB_REPO;
@@ -42,14 +52,7 @@ export async function dispatchHealthScanWorkflow(
       repo,
       workflow_id: 'health-scan.yml',
       ref: 'main',
-      inputs: {
-        scan_id: inputs.scan_id,
-        project_id: inputs.project_id,
-        scan_type: inputs.scan_type,
-        base_commit: inputs.base_commit,
-        head_commit: inputs.head_commit,
-        githubRepository: inputs.githubRepository,
-      },
+      inputs: { ...inputs },
     });
   } catch (error) {
     console.error('[health-scan-dispatch] Failed to dispatch workflow:', error);

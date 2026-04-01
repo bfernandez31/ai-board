@@ -686,12 +686,14 @@ Workflows execute on GitHub Actions infrastructure:
 
 ### AI Credential Guard
 
-All AI workflow dispatches (speckit, quick-impl, ai-board-assist) are blocked if the project owner has no AI credential configured.
+All AI workflow dispatches (speckit, quick-impl, ai-board-assist, rollback-reset, health scan, stage transitions) are blocked if the project owner has no AI credential configured.
 
 **Pre-dispatch check** (`lib/ai-credentials/workflow.ts`):
-- Before calling `octokit.actions.createWorkflowDispatch()`, the dispatch function resolves the project owner's credential
-- If no credential exists, dispatch is rejected immediately with a user-facing error: _"No AI credential configured for this project owner. Please add your Anthropic key in Settings → AI Credentials before triggering workflows."_
+- Before calling `octokit.actions.createWorkflowDispatch()`, each dispatch function resolves the project owner's credential via `getOwnerCredential(projectId)`
+- If no credential exists, dispatch is rejected immediately with a user-facing error: _"No AI credential configured. Please add your Anthropic key in Settings → AI Credentials."_
+- Stage transition failures return `errorCode: 'MISSING_CREDENTIAL'` in the `TransitionResponse`; other dispatch functions throw
 - This provides immediate feedback instead of a delayed workflow failure
+- The check is bypassed in test mode (`isWorkflowTestMode` returns `true`)
 
 **Runtime credential retrieval** (within GitHub Actions):
 - Workflows call `GET /api/internal/credentials?projectId={id}` (authenticated by `WORKFLOW_API_TOKEN`)

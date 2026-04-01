@@ -3,6 +3,7 @@ import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
+import { getOwnerCredential, MISSING_CREDENTIAL_ERROR } from '@/lib/ai-credentials/workflow';
 
 const prisma = new PrismaClient();
 
@@ -21,7 +22,7 @@ export interface TransitionResult {
   success: boolean;
   jobId?: number;
   error?: string;
-  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB';
+  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB' | 'MISSING_CREDENTIAL';
   details?: {
     currentStage?: Stage;
     targetStage?: Stage;
@@ -158,6 +159,18 @@ export async function handleTicketTransition(
       };
     }
 
+    // Validate BYOK credential before creating job or dispatching workflow
+    if (!isWorkflowTestMode(process.env.GITHUB_TOKEN)) {
+      const credential = await getOwnerCredential(ticket.projectId);
+      if (!credential) {
+        return {
+          success: false,
+          error: MISSING_CREDENTIAL_ERROR,
+          errorCode: 'MISSING_CREDENTIAL',
+        };
+      }
+    }
+
     let job;
     if (isQuickImpl) {
       const [createdJob] = await prisma.$transaction([
@@ -165,7 +178,7 @@ export async function handleTicketTransition(
           data: {
             ticketId: ticket.id,
             projectId: ticket.projectId,
-            command: command,
+            command,
             status: JobStatus.PENDING,
             startedAt: new Date(),
             updatedAt: new Date(),
@@ -182,7 +195,7 @@ export async function handleTicketTransition(
         data: {
           ticketId: ticket.id,
           projectId: ticket.projectId,
-          command: command,
+          command,
           status: JobStatus.PENDING,
           startedAt: new Date(),
           updatedAt: new Date(),
@@ -251,7 +264,7 @@ export async function handleTicketTransition(
         } else {
           workflowInputs = {
             ticket_id: ticket.ticketKey,
-            command: command,
+            command,
             branch: ticket.branch || '',
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),

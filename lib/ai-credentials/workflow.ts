@@ -4,6 +4,9 @@ import { ENV_VAR_MAP } from './types';
 import type { WorkflowResolvedCredential } from './types';
 import type { UserCredential } from '@prisma/client';
 
+export const MISSING_CREDENTIAL_ERROR =
+  'No AI credential configured. Please add your Anthropic key in Settings → AI Credentials.';
+
 export async function getOwnerCredential(
   projectId: number
 ): Promise<UserCredential | null> {
