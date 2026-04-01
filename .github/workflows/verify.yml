@@ -39,6 +39,47 @@ on:
         required: true
         type: string
 
+      needs_postgres:
+        description: 'Start PostgreSQL service container'
+        required: false
+        default: 'true'
+        type: boolean
+      postgres_version:
+        description: 'PostgreSQL version'
+        required: false
+        default: '14'
+        type: string
+      needs_redis:
+        description: 'Start Redis service container'
+        required: false
+        default: 'false'
+        type: boolean
+      redis_version:
+        description: 'Redis version'
+        required: false
+        default: '7'
+        type: string
+      needs_mysql:
+        description: 'Start MySQL service container'
+        required: false
+        default: 'false'
+        type: boolean
+      mysql_version:
+        description: 'MySQL version'
+        required: false
+        default: '8'
+        type: string
+      needs_mongo:
+        description: 'Start MongoDB service container'
+        required: false
+        default: 'false'
+        type: boolean
+      mongo_version:
+        description: 'MongoDB version'
+        required: false
+        default: '7'
+        type: string
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -48,10 +89,10 @@ jobs:
       contents: write
       pull-requests: write
 
-    # PostgreSQL service container for testing
+    # Conditional service containers — image resolves to '' when not needed (skips container)
     services:
       postgres:
-        image: postgres:14
+        image: ${{ inputs.needs_postgres == true && format('postgres:{0}', inputs.postgres_version || '14') || '' }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -60,6 +101,36 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: ${{ inputs.needs_redis == true && format('redis:{0}', inputs.redis_version || '7') || '' }}
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mysql:
+        image: ${{ inputs.needs_mysql == true && format('mysql:{0}', inputs.mysql_version || '8') || '' }}
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+          MYSQL_DATABASE: test_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mongo:
+        image: ${{ inputs.needs_mongo == true && format('mongo:{0}', inputs.mongo_version || '7') || '' }}
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand(\"ping\").ok'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -135,16 +206,6 @@ jobs:
           fetch-depth: 0
           path: target
 
-      - name: Setup ai-board commands and skills
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
-        run: |
-          # Create symlinks so Claude can find ai-board commands and skills in target repo
-          mkdir -p target/.claude
-          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
-          ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
-          echo "✅ ai-board commands linked to target/.claude/commands"
-          echo "✅ ai-board skills linked to target/.claude/skills"
-
       - name: Setup Bun
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         uses: oven-sh/setup-bun@v1
@@ -163,10 +224,15 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Setup Environment
         if: ${{ env.SKIP_EXECUTION != 'true' }}
-        working-directory: target
-        run: bun install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: |
+          ai-board/.github/scripts/setup-environment.sh ${{ github.workspace }}/target --mode full
 
       - name: Configure Git
         if: ${{ env.SKIP_EXECUTION != 'true' }}
@@ -184,14 +250,9 @@ jobs:
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           echo "🔧 Setting up test environment..."
-          ../ai-board/.github/scripts/setup-test-env.sh
+          ${{ github.workspace }}/ai-board/.github/scripts/setup-test-env.sh
 
-      # Database setup steps
-      - name: Generate Prisma Client
-        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
-        working-directory: target
-        run: npx prisma generate
-
+      # Database setup steps (Prisma generate handled by setup-environment.sh full mode)
       - name: Apply Database Migrations
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
         working-directory: target
@@ -360,7 +421,7 @@ jobs:
         working-directory: target
         run: |
           echo "📊 Generating structured test failure report..."
-          node ../ai-board/.claude-plugin/scripts/generate-test-report.js \
+          node ${{ github.workspace }}/ai-board/.claude-plugin/scripts/generate-test-report.js \
             --unit unit-results.json \
             --e2e e2e-results.json \
             --output test-failures.json
@@ -383,7 +444,7 @@ jobs:
           echo "  3. Fix implementation if it violates spec (bugs)"
           echo "  4. Update test if spec documents new behavior (intentional changes)"
           echo ""
-          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.verify" "IMPORTANT: Read test-failures.json for structured failure report. CONTEXT: Tests were passing on main (baseline). Determine if failures are BUGS (fix implementation) or INTENTIONAL behavior changes (update tests). ALWAYS read specification (specs/*/spec.md) FIRST to understand intended behavior. Compare with git diff main...HEAD. If spec says X and implementation does Y, fix implementation. If spec requires new behavior and test expects old behavior, update test. Fix systematically. Run affected tests after each fix. Only mark complete when ALL tests pass."
+          ${{ github.workspace }}/ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.verify" "IMPORTANT: Read test-failures.json for structured failure report. CONTEXT: Tests were passing on main (baseline). Determine if failures are BUGS (fix implementation) or INTENTIONAL behavior changes (update tests). ALWAYS read specification (specs/*/spec.md) FIRST to understand intended behavior. Compare with git diff main...HEAD. If spec says X and implementation does Y, fix implementation. If spec requires new behavior and test expects old behavior, update test. Fix systematically. Run affected tests after each fix. Only mark complete when ALL tests pass."
 
       - name: Commit Test Fixes
         if: ${{ env.SKIP_EXECUTION != 'true' }}
@@ -413,7 +474,7 @@ jobs:
         run: |
           echo "🧹 Running code simplifier on recently modified code..."
 
-          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.code-simplifier"
+          ${{ github.workspace }}/ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.code-simplifier"
 
           git add .
           if ! git diff --staged --quiet; then
@@ -439,7 +500,7 @@ jobs:
           echo "   Feature specs: $(ls specs/$(git branch --show-current)/ 2>/dev/null | head -5 || echo 'None found')"
           echo "   Global specs: $(ls specs/specifications/ 2>/dev/null | head -5 || echo 'None found')"
 
-          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.sync-specifications"
+          ${{ github.workspace }}/ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.sync-specifications"
 
           git add specs/specifications/ CLAUDE.md 2>/dev/null || echo "   Warning: specs/specifications/ or CLAUDE.md not found"
           if ! git diff --staged --quiet; then
@@ -466,7 +527,7 @@ jobs:
         run: |
           echo "🚀 All tests passed! Creating PR..."
           echo "   Note: Ticket is already in VERIFY stage, no transition needed"
-          ../ai-board/.claude-plugin/scripts/bash/create-pr-only.sh \
+          ${{ github.workspace }}/ai-board/.claude-plugin/scripts/bash/create-pr-only.sh \
             "${TICKET_ID}" \
             "${PROJECT_ID}" \
             "${FEATURE_BRANCH}" \
@@ -496,7 +557,7 @@ jobs:
           # Always use Claude for code review — the command orchestrates Haiku/Sonnet agents
           # and benefits from a different agent reviewing the implementation
           # Capture output for quality score parsing (agent prints QUALITY_SCORE_JSON: marker)
-          ../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.code-review" "$PR_NUMBER" 2>&1 | tee code-review-output.log
+          ${{ github.workspace }}/ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.code-review" "$PR_NUMBER" 2>&1 | tee code-review-output.log
 
           echo "✅ Code review completed"
 

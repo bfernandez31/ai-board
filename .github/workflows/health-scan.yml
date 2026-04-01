@@ -35,15 +35,56 @@ on:
         type: string
         default: 'CLAUDE'
 
+      needs_postgres:
+        description: 'Start PostgreSQL service container'
+        required: false
+        default: 'true'
+        type: boolean
+      postgres_version:
+        description: 'PostgreSQL version'
+        required: false
+        default: '14'
+        type: string
+      needs_redis:
+        description: 'Start Redis service container'
+        required: false
+        default: 'false'
+        type: boolean
+      redis_version:
+        description: 'Redis version'
+        required: false
+        default: '7'
+        type: string
+      needs_mysql:
+        description: 'Start MySQL service container'
+        required: false
+        default: 'false'
+        type: boolean
+      mysql_version:
+        description: 'MySQL version'
+        required: false
+        default: '8'
+        type: string
+      needs_mongo:
+        description: 'Start MongoDB service container'
+        required: false
+        default: 'false'
+        type: boolean
+      mongo_version:
+        description: 'MongoDB version'
+        required: false
+        default: '7'
+        type: string
+
 jobs:
   run-health-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
-    # PostgreSQL service container for TESTS scan type (idle for other scan types)
+    # Conditional service containers — image resolves to '' when not needed (skips container)
     services:
       postgres:
-        image: postgres:14
+        image: ${{ inputs.needs_postgres == true && inputs.scan_type == 'TESTS' && format('postgres:{0}', inputs.postgres_version || '14') || '' }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -52,6 +93,36 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: ${{ inputs.needs_redis == true && inputs.scan_type == 'TESTS' && format('redis:{0}', inputs.redis_version || '7') || '' }}
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mysql:
+        image: ${{ inputs.needs_mysql == true && inputs.scan_type == 'TESTS' && format('mysql:{0}', inputs.mysql_version || '8') || '' }}
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+          MYSQL_DATABASE: test_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mongo:
+        image: ${{ inputs.needs_mongo == true && inputs.scan_type == 'TESTS' && format('mongo:{0}', inputs.mongo_version || '7') || '' }}
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand(\"ping\").ok'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -135,14 +206,6 @@ jobs:
           esac
           echo "✅ Mapped $INPUT_SCAN_TYPE → ai-board.$(grep command <<< "$(cat $GITHUB_OUTPUT)" | cut -d= -f2)"
 
-      - name: Setup ai-board commands and skills
-        run: |
-          mkdir -p target/.claude
-          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
-          ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
-          echo "✅ ai-board commands linked to target/.claude/commands"
-          echo "✅ ai-board skills linked to target/.claude/skills"
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -151,12 +214,20 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
 
-      # --- Test infrastructure setup (only for TESTS scan type) ---
-      - name: Install Dependencies
-        if: ${{ inputs.scan_type == 'TESTS' }}
-        working-directory: target
-        run: bun install --frozen-lockfile
+      - name: Setup Environment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: |
+          if [ "${{ inputs.scan_type }}" = "TESTS" ]; then
+            ai-board/.github/scripts/setup-environment.sh ${{ github.workspace }}/target --mode full
+          else
+            ai-board/.github/scripts/setup-environment.sh ${{ github.workspace }}/target --mode lightweight
+          fi
 
+      # --- Test infrastructure setup (only for TESTS scan type) ---
       - name: Setup Test Environment
         if: ${{ inputs.scan_type == 'TESTS' }}
         working-directory: target
@@ -167,26 +238,10 @@ jobs:
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           echo "🔧 Setting up test environment for health scan..."
-          ../ai-board/.github/scripts/setup-test-env.sh
-
-      - name: Detect Prisma
-        if: ${{ inputs.scan_type == 'TESTS' }}
-        id: detect-prisma
-        working-directory: target
-        run: |
-          if [ -f "prisma/schema.prisma" ]; then
-            echo "has_prisma=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_prisma=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Generate Prisma Client
-        if: ${{ inputs.scan_type == 'TESTS' && steps.detect-prisma.outputs.has_prisma == 'true' }}
-        working-directory: target
-        run: npx prisma generate
+          ${{ github.workspace }}/ai-board/.github/scripts/setup-test-env.sh
 
       - name: Apply Database Migrations
-        if: ${{ inputs.scan_type == 'TESTS' && steps.detect-prisma.outputs.has_prisma == 'true' }}
+        if: ${{ inputs.scan_type == 'TESTS' && env.HAS_PRISMA == 'true' }}
         working-directory: target
         run: npx prisma migrate deploy
 
@@ -286,7 +341,7 @@ jobs:
 
           SECONDS=0
 
-          if ../ai-board/.github/scripts/run-agent.sh "$INPUT_AGENT" "ai-board.${SCAN_CMD}" "${SCAN_ARGS}" 2>&1 | tee /tmp/scan_log.txt; then
+          if ${{ github.workspace }}/ai-board/.github/scripts/run-agent.sh "$INPUT_AGENT" "ai-board.${SCAN_CMD}" "${SCAN_ARGS}" 2>&1 | tee /tmp/scan_log.txt; then
             DURATION_MS=$((SECONDS * 1000))
             echo "duration_ms=$DURATION_MS" >> $GITHUB_OUTPUT
 

@@ -67,6 +67,47 @@ on:
         type: string
         default: 'CLAUDE'
 
+      needs_postgres:
+        description: 'Start PostgreSQL service container'
+        required: false
+        default: 'true'
+        type: boolean
+      postgres_version:
+        description: 'PostgreSQL version'
+        required: false
+        default: '14'
+        type: string
+      needs_redis:
+        description: 'Start Redis service container'
+        required: false
+        default: 'false'
+        type: boolean
+      redis_version:
+        description: 'Redis version'
+        required: false
+        default: '7'
+        type: string
+      needs_mysql:
+        description: 'Start MySQL service container'
+        required: false
+        default: 'false'
+        type: boolean
+      mysql_version:
+        description: 'MySQL version'
+        required: false
+        default: '8'
+        type: string
+      needs_mongo:
+        description: 'Start MongoDB service container'
+        required: false
+        default: 'false'
+        type: boolean
+      mongo_version:
+        description: 'MongoDB version'
+        required: false
+        default: '7'
+        type: string
+
 jobs:
   run-speckit:
     runs-on: ubuntu-latest
@@ -76,11 +117,10 @@ jobs:
       contents: write
       pull-requests: write
 
-    # PostgreSQL service container (only for implement command)
-    # Health checks ensure database is ready before test execution
+    # Conditional service containers — image resolves to '' when not needed (skips container)
     services:
       postgres:
-        image: postgres:14
+        image: ${{ inputs.needs_postgres == true && format('postgres:{0}', inputs.postgres_version || '14') || '' }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -89,6 +129,36 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: ${{ inputs.needs_redis == true && format('redis:{0}', inputs.redis_version || '7') || '' }}
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mysql:
+        image: ${{ inputs.needs_mysql == true && format('mysql:{0}', inputs.mysql_version || '8') || '' }}
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+          MYSQL_DATABASE: test_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mongo:
+        image: ${{ inputs.needs_mongo == true && format('mongo:{0}', inputs.mongo_version || '7') || '' }}
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand(\"ping\").ok'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -185,16 +255,6 @@ jobs:
           fetch-depth: 0
           path: target
 
-      - name: Setup ai-board commands and skills
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
-        run: |
-          # Create symlinks so Claude can find ai-board commands and skills in target repo
-          mkdir -p target/.claude
-          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
-          ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
-          echo "✅ ai-board commands linked to target/.claude/commands"
-          echo "✅ ai-board skills linked to target/.claude/skills"
-
       - name: Setup Bun
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         uses: oven-sh/setup-bun@v1
@@ -222,39 +282,18 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
-        working-directory: target
-        run: bun install --frozen-lockfile
-
-      - name: Detect Project Dependencies
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
-        working-directory: target
+      - name: Setup Environment
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
-          echo "🔍 Detecting project dependencies..."
-
-          # Check for Prisma
-          if [ -f "package.json" ] && grep -q '"prisma"' package.json; then
-            echo "✅ Prisma detected in package.json"
-            echo "HAS_PRISMA=true" >> $GITHUB_ENV
-          elif [ -f "prisma/schema.prisma" ]; then
-            echo "✅ Prisma detected (schema.prisma exists)"
-            echo "HAS_PRISMA=true" >> $GITHUB_ENV
+          if [ "${{ inputs.command }}" = "implement" ]; then
+            ai-board/.github/scripts/setup-environment.sh ${{ github.workspace }}/target --mode full
           else
-            echo "ℹ️ Prisma not detected - skipping database setup"
-            echo "HAS_PRISMA=false" >> $GITHUB_ENV
-          fi
-
-          # Check for Playwright
-          if [ -f "package.json" ] && grep -q '"@playwright/test"' package.json; then
-            echo "✅ Playwright detected in package.json"
-            echo "HAS_PLAYWRIGHT=true" >> $GITHUB_ENV
-          elif [ -f "playwright.config.ts" ] || [ -f "playwright.config.js" ]; then
-            echo "✅ Playwright detected (config file exists)"
-            echo "HAS_PLAYWRIGHT=true" >> $GITHUB_ENV
-          else
-            echo "ℹ️ Playwright not detected - skipping E2E setup"
-            echo "HAS_PLAYWRIGHT=false" >> $GITHUB_ENV
+            ai-board/.github/scripts/setup-environment.sh ${{ github.workspace }}/target --mode lightweight
           fi
 
       - name: Configure Git
@@ -264,7 +303,7 @@ jobs:
           git config --global user.email "bot@ai-board.app"
 
       - name: Setup Test Environment
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
         working-directory: target
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -273,7 +312,7 @@ jobs:
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           echo "🔧 Setting up test environment..."
-          ../ai-board/.github/scripts/setup-test-env.sh
+          ${{ github.workspace }}/ai-board/.github/scripts/setup-test-env.sh
 
       - name: Prepare Images for Claude (Specify Command)
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && inputs.attachments != '[]' }}
@@ -282,7 +321,7 @@ jobs:
           set -e
 
           # Call reusable script to download and prepare images
-          IMAGE_PATHS=$(../ai-board/.claude-plugin/scripts/bash/prepare-images.sh \
+          IMAGE_PATHS=$(${{ github.workspace }}/ai-board/.claude-plugin/scripts/bash/prepare-images.sh \
             "${{ inputs.ticket_id }}" \
             '${{ inputs.attachments }}')
 
@@ -299,12 +338,7 @@ jobs:
           EOF
           echo "SPECIFY_PAYLOAD_FILE=/tmp/specify_payload.json" >> "$GITHUB_ENV"
 
-      # Database setup steps (implement command only)
-      - name: Generate Prisma Client
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
-        working-directory: target
-        run: npx prisma generate
-
+      # Database setup steps (implement command only — Prisma generate handled by setup-environment.sh full mode)
       - name: Apply Database Migrations
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
         working-directory: target
@@ -351,14 +385,14 @@ jobs:
               # Add image paths if available
               if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
                 echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
-                ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.specify" "$payload" $IMAGE_PATHS
+                ${{ github.workspace }}/ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.specify" "$payload" $IMAGE_PATHS
               else
-                ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.specify" "$payload"
+                ${{ github.workspace }}/ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.specify" "$payload"
               fi
               ;;
             plan)
               echo "📋 Executing /ai-board.plan command..."
-              ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.plan"
+              ${{ github.workspace }}/ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.plan"
 
               # Commit plan changes
               git add .
@@ -378,7 +412,7 @@ jobs:
               fi
 
               echo "📋 Executing /ai-board.tasks command..."
-              ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.tasks"
+              ${{ github.workspace }}/ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.tasks"
 
               # Commit tasks changes
               git add .
@@ -398,14 +432,14 @@ jobs:
               fi
               ;;
             task)
-              ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.tasks"
+              ${{ github.workspace }}/ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.tasks"
               ;;
             implement)
-              ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.implement" "IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed"
+              ${{ github.workspace }}/ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.implement" "IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed"
               ;;
             clarify)
               echo '${{ inputs.answers_json }}' > clarifications.json
-              ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.clarify" "--answers clarifications.json"
+              ${{ github.workspace }}/ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.clarify" "--answers clarifications.json"
               ;;
             *)
               echo "❌ Unknown command: ${{ inputs.command }}"
@@ -430,7 +464,7 @@ jobs:
 
           echo "🔍 Checking: $FEATURE_DIR"
 
-          if ! ../ai-board/.claude-plugin/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/detection.json; then
+          if ! ${{ github.workspace }}/ai-board/.claude-plugin/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/detection.json; then
             cat /tmp/detection.json
             needs_continue=$(jq -r '.needs_continue' /tmp/detection.json)
             incomplete=$(jq -r '.incomplete_tasks' /tmp/detection.json)
@@ -456,9 +490,9 @@ jobs:
           for retry in $(seq 1 $MAX_RETRIES); do
             echo "🔄 Retry $retry/$MAX_RETRIES"
 
-            ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.implement" "--continue IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed" || true
+            ${{ github.workspace }}/ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.implement" "--continue IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed" || true
 
-            if ../ai-board/.claude-plugin/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/retry.json; then
+            if ${{ github.workspace }}/ai-board/.claude-plugin/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/retry.json; then
               echo "✅ Complete after $retry retries"
               break
             fi
@@ -616,7 +650,7 @@ jobs:
         run: |
           echo "🔄 Transitioning ticket to VERIFY stage..."
           echo "   This will trigger the verify workflow to run tests and create PR"
-          ../ai-board/.claude-plugin/scripts/bash/transition-to-verify.sh \
+          ${{ github.workspace }}/ai-board/.claude-plugin/scripts/bash/transition-to-verify.sh \
             "${TICKET_ID}" \
             "${PROJECT_ID}" \
             "${APP_URL}" \
