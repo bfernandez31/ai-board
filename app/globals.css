@@ -66,6 +66,8 @@
     --accent-foreground: var(--ctp-text);
     --destructive: var(--ctp-red);
     --destructive-foreground: 0 0% 100%;
+    --success: var(--ctp-green);
+    --success-foreground: 0 0% 100%;
     --border: var(--ctp-surface-0);
     --input: var(--ctp-surface-0);
     --ring: var(--primary-violet);

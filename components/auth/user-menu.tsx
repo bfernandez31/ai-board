@@ -79,7 +79,7 @@ export function UserMenu() {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          className="text-red-600 cursor-pointer"
+          className="text-destructive cursor-pointer"
           onClick={() => signOut({ callbackUrl: '/auth/signin' })}
         >
           <LogOut className="mr-2 h-4 w-4" />

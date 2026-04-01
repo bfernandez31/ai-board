@@ -129,7 +129,7 @@ export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
 
               <Button
                 variant="outline"
-                className="w-full justify-center text-red-600 hover:text-red-700"
+                className="w-full justify-center text-destructive hover:text-destructive/90"
                 onClick={handleSignOut}
               >
                 <LogOut className="mr-2 h-4 w-4" />

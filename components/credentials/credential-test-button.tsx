@@ -26,7 +26,7 @@ function getTestState(testCredential: ReturnType<typeof useTestCredential>) {
   if (testCredential.isSuccess && testCredential.data?.readinessStatus === "READY") {
     return {
       icon: <CheckCircle2 className="h-4 w-4" />,
-      className: "text-green-600",
+      className: "text-success",
       tooltip: "Credential is valid",
     };
   }
