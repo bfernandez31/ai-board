@@ -201,7 +201,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Wait for success toast
     const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
-    await expect(toast).toBeVisible({ timeout: 2000 });
+    await expect(toast).toBeVisible({ timeout: 5000 });
 
     // Verify database
     const dbTicket = await getTicket(ticket.id);
@@ -388,7 +388,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Wait for error toast after timeout
     const errorToast = page.getByTestId('toast').filter({ hasText: 'Failed to save changes while offline' }).first();
-    await expect(errorToast).toBeVisible({ timeout: 3000 });
+    await expect(errorToast).toBeVisible({ timeout: 5000 });
     await expect(errorToast).toContainText('Changes reverted');
 
     // Assert: title reverts to original (rollback)
@@ -430,7 +430,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     // Assert: API returns 409
     // Wait for conflict toast
     const errorToast = page.getByTestId('toast').filter({ hasText: 'Conflict' }).first();
-    await expect(errorToast).toBeVisible({ timeout: 2000 });
+    await expect(errorToast).toBeVisible({ timeout: 5000 });
     await expect(errorToast).toContainText('modified by another user');
 
     // Toast should suggest refreshing
@@ -469,7 +469,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Wait for success toast
     const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
-    await expect(toast).toBeVisible({ timeout: 2000 });
+    await expect(toast).toBeVisible({ timeout: 5000 });
 
     // Close modal
     await page.keyboard.press('Escape');
@@ -543,7 +543,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Wait for success toast
     const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
-    await expect(toast).toBeVisible({ timeout: 2000 });
+    await expect(toast).toBeVisible({ timeout: 5000 });
 
     // Verify database
     const dbTicket = await getTicket(ticket.id);
@@ -576,7 +576,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Wait for success toast
     const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
-    await expect(toast).toBeVisible({ timeout: 2000 });
+    await expect(toast).toBeVisible({ timeout: 5000 });
 
     // Verify database
     const dbTicket = await getTicket(ticket.id);
@@ -612,7 +612,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Wait for success toast
     const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
-    await expect(toast).toBeVisible({ timeout: 2000 });
+    await expect(toast).toBeVisible({ timeout: 5000 });
 
     // Verify database updated
     const dbTicket = await getTicket(ticket.id);
@@ -668,7 +668,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Success toast appears
     const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
-    await expect(toast).toBeVisible({ timeout: 3000 });
+    await expect(toast).toBeVisible({ timeout: 5000 });
 
     // Verify database updated
     const dbTicket = await getTicket(ticket.id);

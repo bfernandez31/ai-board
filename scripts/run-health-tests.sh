@@ -180,6 +180,22 @@ if [ "$(has_errors)" = "false" ]; then
   ALL_NON_FIXABLE="[]"
 fi
 
+# ── Phase 4b: Commit & push fixes ─────────────────────────────────
+
+FIXED_COUNT=$(echo "$ALL_AUTO_FIXED" | jq 'length')
+if [ "$FIXED_COUNT" -gt 0 ] && [ -n "$(git -C "$REPO_DIR" diff --name-only)" ]; then
+  echo ""
+  echo "📦 Committing $FIXED_COUNT auto-fixed test(s)..."
+  git -C "$REPO_DIR" add -A
+  git -C "$REPO_DIR" commit -m "fix(tests): auto-fix $FIXED_COUNT test failure(s) [health-scan]
+
+Automated fixes applied by health scan test fixer.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+  git -C "$REPO_DIR" push
+  echo "✅ Fixes committed and pushed"
+fi
+
 # ── Phase 5: Write Result ──────────────────────────────────────────
 
 echo ""

@@ -36,6 +36,7 @@ Only attempt **mechanical, low-risk** fixes:
 - **NEVER** weaken assertions to make tests pass
 - **NEVER** run tests — the orchestrator re-runs them after you finish
 - **NEVER** delete test files or test cases
+- **NEVER** commit or push — the orchestrator handles git operations after verifying fixes pass
 
 ## Output
 
