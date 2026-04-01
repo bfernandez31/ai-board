@@ -58,8 +58,8 @@ Each workflow update replaces hardcoded commands with `run-command.sh`, replaces
 
 **Independent Test**: Trigger an ai-board-assist or iterate workflow and confirm that no dependency install, Prisma, or Playwright steps execute — only symlinks, runtimes, and git config.
 
-- [ ] T008 [US4] Update `.github/workflows/ai-board-assist.yml` — (1) no service inputs needed, (2) replace hardcoded `bun install --frozen-lockfile` with conditional setup: VERIFY stage with /review uses `setup-environment.sh <target> --mode full`, other stages use `--mode lightweight`, (3) remove hardcoded `npx prisma generate/migrate/seed` (handled by full mode), (4) remove hardcoded `npx playwright install` (handled by full mode), (5) fix all script path references to `ai-board/.github/scripts/` prefix.
-- [ ] T009 [US4] Update `.github/workflows/iterate.yml` — (1) no service inputs needed, (2) replace any hardcoded setup with `setup-environment.sh <target> --mode lightweight`, (3) fix script path references, (4) minimal changes — this workflow is already lightweight.
+- [x] T008 [US4] Update `.github/workflows/ai-board-assist.yml` — (1) no service inputs needed, (2) replace hardcoded `bun install --frozen-lockfile` with conditional setup: VERIFY stage with /review uses `setup-environment.sh <target> --mode full`, other stages use `--mode lightweight`, (3) remove hardcoded `npx prisma generate/migrate/seed` (handled by full mode), (4) remove hardcoded `npx playwright install` (handled by full mode), (5) fix all script path references to `ai-board/.github/scripts/` prefix.
+- [x] T009 [US4] Update `.github/workflows/iterate.yml` — (1) no service inputs needed, (2) replace any hardcoded setup with `setup-environment.sh <target> --mode lightweight`, (3) fix script path references, (4) minimal changes — this workflow is already lightweight.
 
 **Checkpoint**: All 6 workflow files updated. Lightweight workflows (assist, iterate) skip heavy setup. All workflows use universal scripts.
 
