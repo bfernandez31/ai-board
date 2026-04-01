@@ -141,7 +141,7 @@ jobs:
           node-version: '22.20.0'
 
       - name: Setup Environment
-        run: ../ai-board/.github/scripts/setup-environment.sh target
+        run: ai-board/.github/scripts/setup-environment.sh target
 
       - name: Setup Test Environment
         if: ${{ inputs.scan_type == 'TESTS' }}

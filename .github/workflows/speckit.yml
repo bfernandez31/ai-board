@@ -199,7 +199,7 @@ jobs:
 
       - name: Setup Environment
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
-        run: ../ai-board/.github/scripts/setup-environment.sh target
+        run: ai-board/.github/scripts/setup-environment.sh target
 
       - name: Configure Git
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
