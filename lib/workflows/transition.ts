@@ -176,7 +176,7 @@ export async function handleTicketTransition(
           data: {
             ticketId: ticket.id,
             projectId: ticket.projectId,
-            command: command,
+            command,
             status: JobStatus.PENDING,
             startedAt: new Date(),
             updatedAt: new Date(),
@@ -193,7 +193,7 @@ export async function handleTicketTransition(
         data: {
           ticketId: ticket.id,
           projectId: ticket.projectId,
-          command: command,
+          command,
           status: JobStatus.PENDING,
           startedAt: new Date(),
           updatedAt: new Date(),
@@ -262,7 +262,7 @@ export async function handleTicketTransition(
         } else {
           workflowInputs = {
             ticket_id: ticket.ticketKey,
-            command: command,
+            command,
             branch: ticket.branch || '',
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),

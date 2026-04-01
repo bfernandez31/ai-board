@@ -56,6 +56,28 @@ import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
 const mockedGetOwnerCredential = vi.mocked(getOwnerCredential);
 const mockedIsWorkflowTestMode = vi.mocked(isWorkflowTestMode);
 
+function createTestTicket(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    ticketKey: 'AIB-100',
+    title: 'Test ticket',
+    description: '',
+    stage: 'INBOX',
+    workflowType: 'FULL',
+    branch: null,
+    projectId: 1,
+    version: 1,
+    project: {
+      id: 1,
+      githubOwner: 'owner',
+      githubRepo: 'repo',
+      defaultAgent: null,
+    },
+    agent: null,
+    ...overrides,
+  } as any;
+}
+
 describe('BYOK Credential Dispatch Guards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -78,26 +100,7 @@ describe('BYOK Credential Dispatch Guards', () => {
 
       const { handleTicketTransition } = await import('@/lib/workflows/transition');
 
-      const ticket = {
-        id: 1,
-        ticketKey: 'AIB-100',
-        title: 'Test ticket',
-        description: '',
-        stage: 'INBOX',
-        workflowType: 'FULL',
-        branch: null,
-        projectId: 1,
-        version: 1,
-        project: {
-          id: 1,
-          githubOwner: 'owner',
-          githubRepo: 'repo',
-          defaultAgent: null,
-        },
-        agent: null,
-      } as any;
-
-      const result = await handleTicketTransition(ticket, 'SPECIFY' as any);
+      const result = await handleTicketTransition(createTestTicket(), 'SPECIFY' as any);
 
       expect(result.success).toBe(false);
       expect(result.errorCode).toBe('MISSING_CREDENTIAL');
@@ -117,26 +120,7 @@ describe('BYOK Credential Dispatch Guards', () => {
 
       const { handleTicketTransition } = await import('@/lib/workflows/transition');
 
-      const ticket = {
-        id: 1,
-        ticketKey: 'AIB-100',
-        title: 'Test ticket',
-        description: '',
-        stage: 'INBOX',
-        workflowType: 'FULL',
-        branch: null,
-        projectId: 1,
-        version: 1,
-        project: {
-          id: 1,
-          githubOwner: 'owner',
-          githubRepo: 'repo',
-          defaultAgent: null,
-        },
-        agent: null,
-      } as any;
-
-      const result = await handleTicketTransition(ticket, 'SPECIFY' as any);
+      const result = await handleTicketTransition(createTestTicket(), 'SPECIFY' as any);
 
       // Should have progressed past credential check (may succeed or fail on dispatch)
       expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1);
@@ -148,26 +132,7 @@ describe('BYOK Credential Dispatch Guards', () => {
 
       const { handleTicketTransition } = await import('@/lib/workflows/transition');
 
-      const ticket = {
-        id: 1,
-        ticketKey: 'AIB-100',
-        title: 'Test ticket',
-        description: '',
-        stage: 'INBOX',
-        workflowType: 'FULL',
-        branch: null,
-        projectId: 1,
-        version: 1,
-        project: {
-          id: 1,
-          githubOwner: 'owner',
-          githubRepo: 'repo',
-          defaultAgent: null,
-        },
-        agent: null,
-      } as any;
-
-      const result = await handleTicketTransition(ticket, 'SPECIFY' as any);
+      const result = await handleTicketTransition(createTestTicket(), 'SPECIFY' as any);
 
       // Credential check should not have been called
       expect(mockedGetOwnerCredential).not.toHaveBeenCalled();
@@ -180,26 +145,7 @@ describe('BYOK Credential Dispatch Guards', () => {
 
       const { handleTicketTransition } = await import('@/lib/workflows/transition');
 
-      const ticket = {
-        id: 1,
-        ticketKey: 'AIB-100',
-        title: 'Test ticket',
-        description: '',
-        stage: 'INBOX',
-        workflowType: 'FULL',
-        branch: null,
-        projectId: 1,
-        version: 1,
-        project: {
-          id: 1,
-          githubOwner: 'owner',
-          githubRepo: 'repo',
-          defaultAgent: null,
-        },
-        agent: null,
-      } as any;
-
-      const result = await handleTicketTransition(ticket, 'BUILD' as any);
+      const result = await handleTicketTransition(createTestTicket(), 'BUILD' as any);
 
       expect(result.success).toBe(false);
       expect(result.errorCode).toBe('MISSING_CREDENTIAL');

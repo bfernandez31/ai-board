@@ -52,14 +52,7 @@ export async function dispatchHealthScanWorkflow(
       repo,
       workflow_id: 'health-scan.yml',
       ref: 'main',
-      inputs: {
-        scan_id: inputs.scan_id,
-        project_id: inputs.project_id,
-        scan_type: inputs.scan_type,
-        base_commit: inputs.base_commit,
-        head_commit: inputs.head_commit,
-        githubRepository: inputs.githubRepository,
-      },
+      inputs: { ...inputs },
     });
   } catch (error) {
     console.error('[health-scan-dispatch] Failed to dispatch workflow:', error);

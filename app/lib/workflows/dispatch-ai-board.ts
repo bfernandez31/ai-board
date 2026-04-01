@@ -55,18 +55,7 @@ export async function dispatchAIBoardWorkflow(
       repo,
       workflow_id: 'ai-board-assist.yml',
       ref: 'main',
-      inputs: {
-        ticket_id: inputs.ticket_id,
-        stage: inputs.stage,
-        branch: inputs.branch,
-        user_id: inputs.user_id,
-        user: inputs.user,
-        comment: inputs.comment,
-        job_id: inputs.job_id,
-        project_id: inputs.project_id,
-        githubRepository: inputs.githubRepository,
-        agent: inputs.agent,
-      },
+      inputs: { ...inputs },
     });
   } catch (error) {
     console.error('[dispatch-ai-board] Failed to dispatch workflow:', error);
