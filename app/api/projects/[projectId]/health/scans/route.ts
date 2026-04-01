@@ -31,14 +31,13 @@ export async function POST(
     // Support workflow token auth (for scheduled/cron triggers) alongside session auth
     let project;
     if (await verifyWorkflowToken(request)) {
-      const p = await prisma.project.findUnique({
+      project = await prisma.project.findUnique({
         where: { id: projectId },
         select: { id: true, name: true, githubOwner: true, githubRepo: true, clarificationPolicy: true },
       });
-      if (!p) {
+      if (!project) {
         return NextResponse.json({ error: 'Project not found' }, { status: 404 });
       }
-      project = p;
     } else {
       project = await verifyProjectAccess(projectId, request);
     }
