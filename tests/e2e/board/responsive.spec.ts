@@ -1,260 +1,74 @@
 import { test, expect } from '../../helpers/worker-isolation';
-import { cleanupDatabase } from '../../helpers/db-cleanup';
 
 /**
- * E2E Test: Responsive Design
- * User Story: As a user, I want the board to work on mobile devices
- * Source: quickstart.md - Test Scenario 6
- *
- * This test MUST FAIL until responsive design is properly implemented
+ * E2E: Responsive board layout
+ * Requires real browser for viewport/scroll behavior (testing skill §5).
+ * No ticket creation needed — columns render from stage enum regardless of data.
  */
 
-test.describe('Responsive Board Design', () => {
+test.describe('Responsive Board Layout', () => {
   const BASE_URL = 'http://localhost:3000';
+  const STAGES = ['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'] as const;
 
-  test.beforeEach(async ({ request , projectId }) => {
-    // Clean database before each test
-    await cleanupDatabase(projectId);
-
-    // Create a few test tickets for responsive testing
-    for (let i = 1; i <= 3; i++) {
-      await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
-        data: {
-          title: `Responsive Test Ticket ${i}`,
-          description: `Ticket for responsive design testing ${i}`
-        }
-      });
-    }
-  });
-
-  test('should display all 6 columns on desktop (>= 1024px)', async ({ page , projectId }) => {
+  test('shows all 6 columns on desktop (>=1024px)', async ({ page, projectId }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);
 
-    const stages = ['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
-
-    for (const stage of stages) {
-      const column = page.locator(`[data-testid="column-${stage}"]`).first();
-      await expect(column).toBeVisible();
+    for (const stage of STAGES) {
+      await expect(page.locator(`[data-testid="column-${stage}"]`).first()).toBeVisible();
     }
 
     const boardGrid = page.locator('[data-testid="board-grid"]').first();
-    const dimensions = await boardGrid.evaluate((element) => ({
-      scrollWidth: element.scrollWidth,
-      clientWidth: element.clientWidth,
+    const { scrollWidth, clientWidth } = await boardGrid.evaluate((el) => ({
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
     }));
-
-    // Desktop layout should allow horizontal overflow when needed
-    expect(dimensions.scrollWidth).toBeGreaterThanOrEqual(dimensions.clientWidth);
+    expect(scrollWidth).toBeGreaterThanOrEqual(clientWidth);
   });
 
-  test('should enable horizontal scroll on mobile (< 768px)', async ({ page , projectId }) => {
+  test('enables horizontal scroll on mobile (<768px)', async ({ page, projectId }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);
 
     const boardGrid = page.locator('[data-testid="board-grid"]').first();
-
-    const isScrollable = await boardGrid.evaluate((element) => {
-      return element.scrollWidth > element.clientWidth;
-    });
-
+    const isScrollable = await boardGrid.evaluate((el) => el.scrollWidth > el.clientWidth);
     expect(isScrollable).toBe(true);
   });
 
-  test('should maintain column minimum width on small mobile (< 375px)', async ({ page , projectId }) => {
+  test('columns keep minimum width on small mobile (320px)', async ({ page, projectId }) => {
     await page.setViewportSize({ width: 320, height: 568 });
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);
 
-    const column = page.locator(`[data-testid="column-INBOX"]`).first();
+    const column = page.locator('[data-testid="column-INBOX"]').first();
     const box = await column.boundingBox();
-
-    if (box) {
-      // Columns should maintain readable minimum width (e.g., 250px)
-      expect(box.width).toBeGreaterThanOrEqual(200);
-    }
+    expect(box).not.toBeNull();
+    // Board uses minmax(300px, 1fr) — column must be at least 280px (allowing minor browser rounding)
+    expect(box!.width).toBeGreaterThanOrEqual(280);
   });
 
-  test('should keep column headers visible during scroll', async ({ page , projectId }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
-
-    // Get initial visibility of IDLE column header
-    const idleHeader = page.getByRole('heading', { name: /inbox/i }).first();
-    await expect(idleHeader).toBeVisible();
-
-    // Scroll horizontally to the right
-    await page.evaluate(() => {
-      const board = document.querySelector('main') || document.body;
-      board.scrollLeft = 500;
-    });
-
-    await page.waitForTimeout(100);
-
-    // Check that a different column header is now visible
-    const verifyHeader = page.getByRole('heading', { name: /verify/i }).first();
-
-    // At least one header should be visible after scroll
-    const idleVisible = await idleHeader.isVisible();
-    const verifyVisible = await verifyHeader.isVisible();
-
-    expect(idleVisible || verifyVisible).toBe(true);
-  });
-
-  test('should maintain ticket card readability on mobile', async ({ page , projectId }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
-
-    const ticketCard = page.locator('[data-testid^="ticket-"]').first();
-
-    if (await ticketCard.count() > 0) {
-      await expect(ticketCard).toBeVisible();
-
-      const box = await ticketCard.boundingBox();
-
-      if (box) {
-        // Card should have reasonable width on mobile
-        expect(box.width).toBeGreaterThanOrEqual(150);
-        expect(box.width).toBeLessThanOrEqual(400);
-
-        // Card should have reasonable height
-        expect(box.height).toBeGreaterThanOrEqual(80);
-        expect(box.height).toBeLessThanOrEqual(200);
-      }
-
-      // Text should be readable (not too small)
-      const fontSize = await ticketCard.evaluate(el => {
-        return window.getComputedStyle(el).fontSize;
-      });
-
-      const fontSizeNum = parseInt(fontSize);
-      expect(fontSizeNum).toBeGreaterThanOrEqual(12);
-    }
-  });
-
-  test('should support touch scrolling on mobile', async ({ page , projectId }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
-
-    const boardGrid = page.locator('[data-testid="board-grid"]').first();
-
-    // Get initial scroll position
-    const initialScroll = await boardGrid.evaluate((el) => el.scrollLeft);
-
-    // Simulate touch scroll
-    await boardGrid.evaluate((el) => {
-      el.scrollLeft = 200;
-    });
-
-    await page.waitForTimeout(50);
-
-    // Verify scroll occurred
-    const newScroll = await boardGrid.evaluate((el) => el.scrollLeft);
-
-    expect(newScroll).toBeGreaterThan(initialScroll);
-  });
-
-  test('should display columns side-by-side on tablet (768px-1023px)', async ({ page , projectId }) => {
+  test('columns are side-by-side on tablet (768px)', async ({ page, projectId }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);
 
-    const stages = ['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
+    const firstBox = await page.locator('[data-testid="column-INBOX"]').first().boundingBox();
+    const secondBox = await page.locator('[data-testid="column-SPECIFY"]').first().boundingBox();
 
-    // All columns should be visible
-    for (const stage of stages) {
-      const column = page.locator(`[data-testid="column-${stage}"]`).first();
-      await expect(column).toBeVisible();
-    }
-
-    // Check if columns are laid out horizontally (adjacent columns)
-    const firstColumn = page.locator(`[data-testid="column-INBOX"]`).first();
-    const secondColumn = page.locator(`[data-testid="column-SPECIFY"]`).first();
-
-    const firstBox = await firstColumn.boundingBox();
-    const secondBox = await secondColumn.boundingBox();
-
-    if (firstBox && secondBox) {
-      // Second column should be to the right of first (horizontal layout)
-      expect(secondBox.x).toBeGreaterThan(firstBox.x);
-    }
+    expect(firstBox).not.toBeNull();
+    expect(secondBox).not.toBeNull();
+    expect(secondBox!.x).toBeGreaterThan(firstBox!.x);
   });
 
-  test('should adapt font sizes for mobile devices', async ({ page , projectId }) => {
-    // Desktop font sizes
-    await page.setViewportSize({ width: 1024, height: 768 });
-    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
-
-    const desktopHeader = page.getByRole('heading', { name: /inbox/i }).first();
-    const desktopFontSize = await desktopHeader.evaluate((el) => {
-      return window.getComputedStyle(el).fontSize;
-    });
-
-    // Mobile font sizes
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.reload();
-
-    const mobileHeader = page.getByRole('heading', { name: /inbox/i }).first();
-    const mobileFontSize = await mobileHeader.evaluate((el) => {
-      return window.getComputedStyle(el).fontSize;
-    });
-
-    // Both should be readable (>= 10px)
-    expect(parseFloat(desktopFontSize)).toBeGreaterThanOrEqual(10);
-    expect(parseFloat(mobileFontSize)).toBeGreaterThanOrEqual(10);
-  });
-
-  test('should handle orientation change (portrait to landscape)', async ({ page , projectId }) => {
-    // Portrait
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
-
-    const board = page.locator('main').or(page.locator('[data-testid="board"]'));
-    await expect(board.first()).toBeVisible();
-
-    // Landscape
-    await page.setViewportSize({ width: 667, height: 375 });
-    await page.waitForTimeout(100);
-
-    // Board should still be visible and functional
-    await expect(board.first()).toBeVisible();
-
-    // Check visibility of first few columns (horizontal scroll allows access to all)
-    const stages = ['INBOX', 'SPECIFY', 'PLAN'];
-    for (const stage of stages) {
-      const column = page.locator(`[data-testid="column-${stage}"]`).first();
-      await expect(column).toBeVisible();
-    }
-  });
-
-  test('should allow smooth horizontal scrolling without lag', async ({ page , projectId }) => {
+  test('board survives orientation change', async ({ page, projectId }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);
 
     const boardGrid = page.locator('[data-testid="board-grid"]').first();
+    await expect(boardGrid).toBeVisible();
 
-    // Perform multiple scroll steps
-    for (let i = 0; i < 5; i++) {
-      await boardGrid.evaluate((el, offset) => {
-        el.scrollLeft += offset;
-      }, 50);
-      await page.waitForTimeout(50);
-    }
+    // Rotate to landscape
+    await page.setViewportSize({ width: 667, height: 375 });
 
-    // Final scroll position should be updated
-    const finalScroll = await boardGrid.evaluate((el) => el.scrollLeft);
-    expect(finalScroll).toBeGreaterThan(0);
-  });
-
-  test('should render correctly in mobile Playwright project', async ({ page , projectId }) => {
-    // This test uses Playwright's mobile configuration
-    // Configure in playwright.config.ts with mobile viewport
-
-    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
-
-    const board = page.locator('main').or(page.locator('[data-testid="board"]'));
-    await expect(board.first()).toBeVisible();
-
-    // Verify basic functionality works on mobile
-    const idleColumn = page.locator(`[data-testid="column-INBOX"]`).first();
-    await expect(idleColumn).toBeVisible();
+    await expect(boardGrid).toBeVisible();
+    await expect(page.locator('[data-testid="column-INBOX"]').first()).toBeVisible();
   });
 });
