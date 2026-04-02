@@ -66,11 +66,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T010 [P] [US2] Create integration tests for config sync API endpoint (valid sync, invalid YAML, missing file, GitHub error, unauthorized) in tests/integration/projects/config-sync.test.ts
+- [x] T010 [P] [US2] Create integration tests for config sync API endpoint (valid sync, invalid YAML, missing file, GitHub error, unauthorized) in tests/integration/projects/config-sync.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Create config sync API endpoint at app/api/projects/[projectId]/config/sync/route.ts — POST handler that verifies project access via `verifyProjectAccess`, calls config sync from lib/config-sync.ts, returns stored config + syncedAt + warnings on success, returns validation errors (400), config-not-found (404), or GitHub errors (502) per contracts/config-sync-api.md
+- [x] T011 [US2] Create config sync API endpoint at app/api/projects/[projectId]/config/sync/route.ts — POST handler that verifies project access via `verifyProjectAccess`, calls config sync from lib/config-sync.ts, returns stored config + syncedAt + warnings on success, returns validation errors (400), config-not-found (404), or GitHub errors (502) per contracts/config-sync-api.md
 
 **Checkpoint**: Owners can manually sync config and see validation results. User Story 2 is fully functional and testable independently.
 
