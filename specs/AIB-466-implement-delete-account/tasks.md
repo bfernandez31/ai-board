@@ -26,7 +26,7 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T001 Fix Stripe error handling in `deleteUserAccount()` — change catch block in `lib/db/users.ts` to log and continue instead of re-throwing (GDPR compliance)
+- [x] T001 Fix Stripe error handling in `deleteUserAccount()` — change catch block in `lib/db/users.ts` to log and continue instead of re-throwing (GDPR compliance)
 
 **Checkpoint**: `deleteUserAccount()` no longer throws on Stripe failure — deletion always succeeds.
 

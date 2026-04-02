@@ -265,8 +265,9 @@ export async function getCurrentUserOrToken(
 
 /**
  * Delete a user account, canceling any active Stripe subscription first.
+ * Stripe cancellation failures are logged but do not block deletion (GDPR compliance).
  * @param userId - The user ID to delete
- * @throws Error if Stripe cancellation fails (blocks account deletion)
+ * @throws Error if user is not found
  */
 export async function deleteUserAccount(userId: string): Promise<void> {
   const user = await prisma.user.findUnique({
@@ -283,8 +284,8 @@ export async function deleteUserAccount(userId: string): Promise<void> {
     try {
       await stripe.subscriptions.cancel(user.subscription.stripeSubscriptionId)
     } catch (error) {
-      console.error("Failed to cancel Stripe subscription:", error)
-      throw new Error("Failed to cancel subscription. Account deletion blocked.")
+      console.error("Failed to cancel Stripe subscription during account deletion:", error)
+      // GDPR: right-to-erasure takes priority over billing cleanup
     }
   }
 
