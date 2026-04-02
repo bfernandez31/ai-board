@@ -40,11 +40,11 @@
 
 ### Tests for User Story 1
 
-- [ ] T002 [P] [US1] Unit test for `deleteUserAccount()` covering subscription cancel success, cancel failure (should not throw), no subscription, and non-existent user in `tests/unit/lib/delete-account.test.ts`
-- [ ] T003 [P] [US1] Integration test for `DELETE /api/account` covering 200 success with cascade deletion, 401 unauthenticated in `tests/integration/account/delete-account.test.ts`
-- [ ] T004 [P] [US1] Integration test for `GET /api/account/summary` covering correct counts, zero counts, 401 unauthenticated, subscription status in `tests/integration/account/account-summary.test.ts`
-- [ ] T005 [P] [US1] Component test for `DeleteAccountDialog` covering data count rendering, email mismatch disables button, email match enables button, loading state, double-click prevention in `tests/unit/components/delete-account-dialog.test.tsx`
-- [ ] T006 [P] [US1] Component test for `DangerZone` covering rendering and dialog open on button click in `tests/unit/components/danger-zone.test.tsx`
+- [x] T002 [P] [US1] Unit test for `deleteUserAccount()` covering subscription cancel success, cancel failure (should not throw), no subscription, and non-existent user in `tests/unit/lib/delete-account.test.ts`
+- [x] T003 [P] [US1] Integration test for `DELETE /api/account` covering 200 success with cascade deletion, 401 unauthenticated in `tests/integration/account/delete-account.test.ts`
+- [x] T004 [P] [US1] Integration test for `GET /api/account/summary` covering correct counts, zero counts, 401 unauthenticated, subscription status in `tests/integration/account/account-summary.test.ts`
+- [x] T005 [P] [US1] Component test for `DeleteAccountDialog` covering data count rendering, email mismatch disables button, email match enables button, loading state, double-click prevention in `tests/unit/components/delete-account-dialog.test.tsx`
+- [x] T006 [P] [US1] Component test for `DangerZone` covering rendering and dialog open on button click in `tests/unit/components/danger-zone.test.tsx`
 
 ### Implementation for User Story 1
 

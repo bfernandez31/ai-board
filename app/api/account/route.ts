@@ -10,10 +10,7 @@ export async function DELETE() {
     return NextResponse.json({ message: "Account deleted successfully" })
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     console.error("Failed to delete account:", error)

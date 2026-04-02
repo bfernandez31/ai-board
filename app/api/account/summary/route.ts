@@ -27,10 +27,14 @@ export async function GET() {
       hasActiveSubscription,
       plan: subscription?.plan ?? "FREE",
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    console.error("Account summary error:", error)
     return NextResponse.json(
-      { error: "Authentication required" },
-      { status: 401 }
+      { error: "Internal server error" },
+      { status: 500 }
     )
   }
 }
