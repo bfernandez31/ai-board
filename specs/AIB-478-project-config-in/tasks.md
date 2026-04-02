@@ -113,9 +113,9 @@
 
 **Purpose**: Ensure config fields flow through existing GET responses and verify end-to-end behavior
 
-- [ ] T016 Ensure `config` and `configSyncedAt` fields are included in GET /api/projects/:projectId response in app/api/projects/[projectId]/route.ts (and any project list endpoints) per contracts/config-sync-api.md
-- [ ] T017 Run quickstart.md verification checklist — confirm all 9 items pass
-- [ ] T018 Run `bun run type-check` and `bun run lint` to ensure no regressions
+- [x] T016 Ensure `config` and `configSyncedAt` fields are included in GET /api/projects/:projectId response in app/api/projects/[projectId]/route.ts (and any project list endpoints) per contracts/config-sync-api.md
+- [x] T017 Run quickstart.md verification checklist — confirm all 9 items pass
+- [x] T018 Run `bun run type-check` and `bun run lint` to ensure no regressions
 
 ---
 
