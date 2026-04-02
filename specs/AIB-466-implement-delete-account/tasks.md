@@ -50,9 +50,9 @@
 
 - [x] T007 [P] [US1] Create `GET /api/account/summary` route returning projectCount, credentialCount, tokenCount, hasActiveSubscription, plan in `app/api/account/summary/route.ts`
 - [x] T008 [P] [US1] Create `DELETE /api/account` route calling `deleteUserAccount()` with auth and error handling in `app/api/account/route.ts`
-- [ ] T009 [US1] Create `DeleteAccountDialog` component with email confirmation input, data count display, loading state, non-dismissible dialog, and signOut on success in `components/settings/delete-account-dialog.tsx`
-- [ ] T010 [US1] Create `DangerZone` component with red-bordered section, warning text, and delete button that opens the dialog in `components/settings/danger-zone.tsx`
-- [ ] T011 [US1] Integrate `DangerZone` into profile page — import and render after existing profile grid with visual separator, pass `profile.email` in `app/settings/profile/page.tsx`
+- [x] T009 [US1] Create `DeleteAccountDialog` component with email confirmation input, data count display, loading state, non-dismissible dialog, and signOut on success in `components/settings/delete-account-dialog.tsx`
+- [x] T010 [US1] Create `DangerZone` component with red-bordered section, warning text, and delete button that opens the dialog in `components/settings/danger-zone.tsx`
+- [x] T011 [US1] Integrate `DangerZone` into profile page — import and render after existing profile grid with visual separator, pass `profile.email` in `app/settings/profile/page.tsx`
 
 **Checkpoint**: Full delete flow works end-to-end for users with active subscriptions. Dialog shows data counts, requires email confirmation, cancels Stripe subscription, deletes all data, signs out, and redirects to landing page.
 

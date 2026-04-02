@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DangerZone } from '@/components/settings/danger-zone';
 
 interface ProfileData {
   name: string;
@@ -140,6 +141,10 @@ export default function ProfileSettingsPage() {
                   {profile.plan}
                 </Link>
               </div>
+            </div>
+
+            <div className="border-t pt-6">
+              <DangerZone userEmail={profile.email} />
             </div>
           </div>
         )}
