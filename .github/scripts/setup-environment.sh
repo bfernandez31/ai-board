@@ -197,13 +197,7 @@ ln -sf "../../ai-board/.claude-plugin/skills" "${TARGET_DIR}/.claude/skills"
 success "ai-board commands linked to ${TARGET_DIR}/.claude/commands"
 success "ai-board skills linked to ${TARGET_DIR}/.claude/skills"
 
-# ─── Full Phase: Dependency Installation ─────────────────────────────────────
-
-if [[ "$PHASE" == "full" ]]; then
-  info "Installing dependencies via: $INSTALL_CMD"
-  (cd "$TARGET_DIR" && eval "$INSTALL_CMD")
-  success "Dependencies installed"
-fi
+# ─── Full Phase: Dependency installation is handled by workflows via run-command.sh ──
 
 # ─── Full Phase: Agent CLI Installation ──────────────────────────────────────
 

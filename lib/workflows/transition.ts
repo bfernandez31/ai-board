@@ -242,6 +242,7 @@ export async function handleTicketTransition(
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            needs_postgres: 'true',
           };
 
           if (ticket.attachments) {
@@ -258,6 +259,7 @@ export async function handleTicketTransition(
             workflowType: ticket.workflowType,
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            needs_postgres: 'true',
           };
 
           workflowFile = 'verify.yml';
@@ -270,6 +272,7 @@ export async function handleTicketTransition(
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            ...(command === 'implement' && { needs_postgres: 'true' }),
           };
 
           if (targetStage === Stage.SPECIFY) {

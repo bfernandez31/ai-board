@@ -538,12 +538,13 @@ agent:
 5. Validates runtime on PATH and symlinks readable
 
 **Phase `full`** (implement, quick-impl, verify, health-scan TESTS) — all of lightweight, plus:
-6. Executes the configured `commands.install` dependency install command
-7. Installs the agent CLI specified by `agent.cli` (`claude-code` or `codex`)
-8. Exports env vars from the config `env` section (workflow secrets take precedence)
-9. Detects Prisma — sets `HAS_PRISMA=true` in `GITHUB_ENV`, runs `npx prisma generate`
-10. Detects Playwright — sets `HAS_PLAYWRIGHT=true` in `GITHUB_ENV`
-11. Validates node_modules exists and agent CLI on PATH
+6. Installs the agent CLI specified by `agent.cli` (`claude-code` or `codex`)
+7. Exports env vars from the config `env` section (workflow secrets take precedence)
+8. Detects Prisma — sets `HAS_PRISMA=true` in `GITHUB_ENV`, runs `npx prisma generate`
+9. Detects Playwright — sets `HAS_PLAYWRIGHT=true` in `GITHUB_ENV`
+10. Validates agent CLI on PATH
+
+Note: Dependency installation is NOT done by setup-environment.sh — workflows handle it explicitly via `run-command.sh target install` for visibility in CI logs.
 
 **Environment Variable Precedence**:
 Workflow-level secrets always override config-defined values via the pattern `export KEY="${KEY:-config_value}"`. Config env vars serve as defaults only; secrets are never overridden.

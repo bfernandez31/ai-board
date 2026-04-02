@@ -127,12 +127,13 @@ ai-board/.github/scripts/setup-environment.sh <target-dir> [--phase lightweight|
 4. Validation — verify runtime and symlinks in place
 
 **Phase `full`** (implement, quick-impl, verify, health-scan TESTS) — all of lightweight, plus:
-5. Install dependencies — execute `commands.install`
-6. Install agent CLI — Claude Code or Codex based on `agent.cli`
-7. Export env vars — merge config `env` with workflow secrets (workflow secrets take precedence)
-8. Detect Prisma — set `HAS_PRISMA=true` in `GITHUB_ENV`, run `npx prisma generate`
-9. Detect Playwright — set `HAS_PLAYWRIGHT=true` in `GITHUB_ENV`
-10. Validation — verify node_modules exists, agent CLI on PATH
+5. Install agent CLI — Claude Code or Codex based on `agent.cli`
+6. Export env vars — merge config `env` with workflow secrets (workflow secrets take precedence)
+7. Detect Prisma — set `HAS_PRISMA=true` in `GITHUB_ENV`, run `npx prisma generate`
+8. Detect Playwright — set `HAS_PLAYWRIGHT=true` in `GITHUB_ENV`
+9. Validation — verify agent CLI on PATH
+
+Note: Dependency installation is NOT done by setup-environment.sh. Workflows handle it explicitly via `run-command.sh target install` for visibility in CI logs.
 
 **Replaces**: The 15-20 lines of duplicated setup in each workflow YAML. Prisma generate is centralized here (no longer duplicated in each workflow).
 

@@ -101,6 +101,7 @@ export async function POST(
         base_commit: baseCommit ?? '',
         head_commit: '',
         githubRepository: `${project.githubOwner}/${project.githubRepo}`,
+        ...(scanType === 'TESTS' && { needs_postgres: 'true' }),
       });
     } catch (dispatchError) {
       // Mark scan as FAILED if dispatch fails

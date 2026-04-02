@@ -10,6 +10,7 @@ export interface HealthScanDispatchInputs {
   base_commit: string;
   head_commit: string;
   githubRepository: string;
+  needs_postgres?: string;
 }
 
 export async function dispatchHealthScanWorkflow(

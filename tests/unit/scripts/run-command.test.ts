@@ -67,10 +67,16 @@ describe('run-command.sh', () => {
     expect(result.stderr).toContain('Usage:');
   });
 
-  it('exits 0 silently when config.yml is missing', () => {
+  it('uses fallback default when config.yml is missing and key has a default', () => {
+    // Create a minimal package.json so bun install can succeed
+    writeFileSync(join(TMP_DIR, 'package.json'), '{"name":"test","dependencies":{}}');
     const result = runScript(`${TMP_DIR} install`);
     expect(result.exitCode).toBe(0);
-    // Should produce no stdout (silent skip)
+  });
+
+  it('exits 0 silently when config.yml is missing and key has no default', () => {
+    const result = runScript(`${TMP_DIR} nonexistent_key`);
+    expect(result.exitCode).toBe(0);
     expect(result.stdout).toBe('');
   });
 
