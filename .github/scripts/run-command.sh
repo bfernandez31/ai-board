@@ -80,13 +80,8 @@ fi
 # Extract command value
 COMMAND_VALUE=$(yq eval ".commands.${COMMAND_KEY}" "$CONFIG_FILE" 2>/dev/null)
 
-# Handle missing key or empty/null value — silent skip
-if [[ -z "$COMMAND_VALUE" || "$COMMAND_VALUE" == "null" ]]; then
-  exit 0
-fi
-
-# Handle explicitly empty string value — silent skip
-if [[ "$COMMAND_VALUE" == '""' || "$COMMAND_VALUE" == "''" ]]; then
+# Handle missing key, null, or empty value — silent skip
+if [[ -z "$COMMAND_VALUE" || "$COMMAND_VALUE" == "null" || "$COMMAND_VALUE" == '""' || "$COMMAND_VALUE" == "''" ]]; then
   exit 0
 fi
 
