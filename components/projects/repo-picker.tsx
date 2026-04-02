@@ -116,20 +116,24 @@ export function RepoPicker({ onSelect }: RepoPickerProps) {
 
       {/* Repo list */}
       <div className="space-y-2 max-h-[400px] overflow-y-auto">
-        {isLoading ? (
+        {isLoading && (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             <span className="ml-2 text-sm text-muted-foreground">
               Loading repositories...
             </span>
           </div>
-        ) : isError ? (
+        )}
+
+        {!isLoading && isError && (
           <div className="text-center py-8">
             <p className="text-sm text-destructive">
               {error instanceof Error ? error.message : 'Failed to load repositories'}
             </p>
           </div>
-        ) : reposData?.repos.length === 0 ? (
+        )}
+
+        {!isLoading && !isError && reposData?.repos.length === 0 && (
           <div className="text-center py-8">
             <p className="text-sm text-muted-foreground">
               {debouncedSearch
@@ -137,15 +141,15 @@ export function RepoPicker({ onSelect }: RepoPickerProps) {
                 : 'No repositories found'}
             </p>
           </div>
-        ) : (
-          reposData?.repos.map((repo) => (
-            <RepoPickerItem
-              key={repo.id}
-              repo={repo}
-              onSelect={onSelect}
-            />
-          ))
         )}
+
+        {!isLoading && !isError && reposData?.repos.map((repo) => (
+          <RepoPickerItem
+            key={repo.id}
+            repo={repo}
+            onSelect={onSelect}
+          />
+        ))}
       </div>
 
       {/* Pagination */}

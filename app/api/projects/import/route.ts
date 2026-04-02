@@ -70,50 +70,30 @@ export async function POST(request: NextRequest) {
 
     let newProject: { id: number; name: string; key: string; githubOwner: string; githubRepo: string };
 
+    const projectData = {
+      name: projectName,
+      description: projectDescription,
+      githubOwner: validated.githubOwner,
+      githubRepo: validated.githubRepo,
+      key: projectKey,
+      userId,
+      updatedAt: new Date(),
+    };
+    const projectSelect = { id: true, name: true, key: true, githubOwner: true, githubRepo: true } as const;
+
     try {
-      if (maxProjects !== null) {
-        newProject = await prisma.$transaction(
-          async (tx) => {
+      newProject = await prisma.$transaction(
+        async (tx) => {
+          if (maxProjects !== null) {
             const projectCount = await tx.project.count({ where: { userId } });
             if (projectCount >= maxProjects) {
               throw new Error('PLAN_LIMIT');
             }
+          }
 
-            const project = await tx.project.create({
-              data: {
-                name: projectName,
-                description: projectDescription,
-                githubOwner: validated.githubOwner,
-                githubRepo: validated.githubRepo,
-                key: projectKey,
-                userId,
-                updatedAt: new Date(),
-              },
-              select: { id: true, name: true, key: true, githubOwner: true, githubRepo: true },
-            });
-
-            await tx.projectMember.create({
-              data: { projectId: project.id, userId: aiBoardUserId, role: 'member' },
-            });
-
-            return project;
-          },
-          { isolationLevel: 'Serializable' }
-        );
-      } else {
-        // No limit
-        newProject = await prisma.$transaction(async (tx) => {
           const project = await tx.project.create({
-            data: {
-              name: projectName,
-              description: projectDescription,
-              githubOwner: validated.githubOwner,
-              githubRepo: validated.githubRepo,
-              key: projectKey,
-              userId,
-              updatedAt: new Date(),
-            },
-            select: { id: true, name: true, key: true, githubOwner: true, githubRepo: true },
+            data: projectData,
+            select: projectSelect,
           });
 
           await tx.projectMember.create({
@@ -121,8 +101,9 @@ export async function POST(request: NextRequest) {
           });
 
           return project;
-        });
-      }
+        },
+        maxProjects !== null ? { isolationLevel: 'Serializable' } : undefined
+      );
     } catch (error) {
       if (error instanceof Error && error.message === 'PLAN_LIMIT') {
         return NextResponse.json(

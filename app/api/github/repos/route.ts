@@ -3,6 +3,17 @@ import { requireAuth } from '@/lib/db/users';
 import { createUserGitHubClient, requireRepoScope } from '@/lib/github/user-client';
 import { prisma } from '@/lib/db/client';
 
+interface GitHubRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: { login: string; avatar_url: string };
+  description: string | null;
+  private: boolean;
+  pushed_at: string | null;
+  permissions?: { admin: boolean; push: boolean; pull: boolean } | undefined;
+}
+
 interface RepoPickerItem {
   id: number;
   name: string;
@@ -15,6 +26,33 @@ interface RepoPickerItem {
   hasAdminAccess: boolean;
   isAlreadyImported: boolean;
   existingProjectId: number | null;
+}
+
+function toGitHubRepo(r: {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: { login: string; avatar_url: string } | null;
+  description: string | null;
+  private: boolean;
+  pushed_at?: string | null;
+  permissions?: { admin?: boolean; push?: boolean; pull?: boolean } | null;
+}): GitHubRepo {
+  return {
+    id: r.id,
+    name: r.name,
+    full_name: r.full_name,
+    owner: {
+      login: r.owner?.login ?? '',
+      avatar_url: r.owner?.avatar_url ?? '',
+    },
+    description: r.description,
+    private: r.private,
+    pushed_at: r.pushed_at ?? null,
+    ...(r.permissions
+      ? { permissions: r.permissions as GitHubRepo['permissions'] }
+      : {}),
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -32,16 +70,7 @@ export async function GET(request: NextRequest) {
     const org = searchParams.get('org') ?? undefined;
     const q = searchParams.get('q') ?? undefined;
 
-    let repos: Array<{
-      id: number;
-      name: string;
-      full_name: string;
-      owner: { login: string; avatar_url: string };
-      description: string | null;
-      private: boolean;
-      pushed_at: string | null;
-      permissions?: { admin: boolean; push: boolean; pull: boolean };
-    }>;
+    let repos: GitHubRepo[];
     let totalCount: number;
 
     if (q) {
@@ -62,25 +91,7 @@ export async function GET(request: NextRequest) {
       }
 
       const { data } = await octokit.search.repos(searchParams_);
-
-      repos = data.items.map((item) => {
-        const mapped: (typeof repos)[number] = {
-          id: item.id,
-          name: item.name,
-          full_name: item.full_name,
-          owner: {
-            login: item.owner?.login ?? '',
-            avatar_url: item.owner?.avatar_url ?? '',
-          },
-          description: item.description,
-          private: item.private,
-          pushed_at: item.pushed_at ?? null,
-        };
-        if (item.permissions) {
-          mapped.permissions = item.permissions as { admin: boolean; push: boolean; pull: boolean };
-        }
-        return mapped;
-      });
+      repos = data.items.map(toGitHubRepo);
       totalCount = data.total_count;
     } else if (org) {
       const orgParams: Parameters<typeof octokit.repos.listForOrg>[0] = {
@@ -94,22 +105,7 @@ export async function GET(request: NextRequest) {
         orgParams.sort = sort;
       }
       const { data, headers } = await octokit.repos.listForOrg(orgParams);
-
-      repos = data.map((r) => {
-        const mapped: (typeof repos)[number] = {
-          id: r.id,
-          name: r.name,
-          full_name: r.full_name,
-          owner: { login: r.owner.login, avatar_url: r.owner.avatar_url },
-          description: r.description,
-          private: r.private,
-          pushed_at: r.pushed_at ?? null,
-        };
-        if (r.permissions) {
-          mapped.permissions = r.permissions as { admin: boolean; push: boolean; pull: boolean };
-        }
-        return mapped;
-      });
+      repos = data.map(toGitHubRepo);
       totalCount = parseTotalFromLink(headers.link ?? undefined, data.length, page, perPage);
     } else {
       const { data, headers } = await octokit.repos.listForAuthenticatedUser({
@@ -119,22 +115,7 @@ export async function GET(request: NextRequest) {
         page,
         type,
       });
-
-      repos = data.map((r) => {
-        const mapped: (typeof repos)[number] = {
-          id: r.id,
-          name: r.name,
-          full_name: r.full_name,
-          owner: { login: r.owner.login, avatar_url: r.owner.avatar_url },
-          description: r.description,
-          private: r.private,
-          pushed_at: r.pushed_at,
-        };
-        if (r.permissions) {
-          mapped.permissions = r.permissions as { admin: boolean; push: boolean; pull: boolean };
-        }
-        return mapped;
-      });
+      repos = data.map(toGitHubRepo);
       totalCount = parseTotalFromLink(headers.link ?? undefined, data.length, page, perPage);
     }
 

@@ -45,11 +45,12 @@ function formatPushedAt(pushedAt: string | null): string {
 export function RepoPickerItem({ repo, onSelect }: RepoPickerItemProps) {
   const isDisabled = repo.isAlreadyImported || !repo.hasAdminAccess;
 
-  const disabledReason = repo.isAlreadyImported
-    ? 'This repository is already linked to a project'
-    : !repo.hasAdminAccess
-      ? 'You need admin access to import this repository'
-      : undefined;
+  let disabledReason: string | undefined;
+  if (repo.isAlreadyImported) {
+    disabledReason = 'This repository is already linked to a project';
+  } else if (!repo.hasAdminAccess) {
+    disabledReason = 'You need admin access to import this repository';
+  }
 
   const handleClick = () => {
     if (!isDisabled) {
