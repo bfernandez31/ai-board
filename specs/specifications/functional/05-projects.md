@@ -216,6 +216,43 @@ Projects have a configurable default AI agent that determines which AI executes 
 - Ticket `agent` field is `null` by default (means: use project default)
 - Effective agent resolved at workflow dispatch time via `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`
 
+### Project Configuration
+
+Each project reads its runtime and service configuration from `.ai-board/config.yml` in its GitHub repository. The parsed config is stored in the database and used to supply the correct service inputs to every workflow dispatch.
+
+**Config Storage**:
+- Config is stored as structured JSON alongside the project record
+- Nullable — absence means no config has been synced; workflows use backward-compatible defaults (PostgreSQL 16, Bun)
+- The `env` section from `config.yml` is never stored in the database (secrets excluded)
+
+**Config Display in Settings**:
+- Project settings include a read-only Config card showing:
+  - Runtime details: language, framework, package manager
+  - Enabled services with their versions (e.g., PostgreSQL 14)
+  - Agent configuration
+  - Last sync timestamp
+- When no config has been synced, the card prompts the owner to sync
+
+**Manual Config Sync**:
+- Project owners and members can trigger a sync via the "Sync config" button in settings
+- The system fetches `.ai-board/config.yml` from the repository, validates the YAML, and stores the result
+- Validation errors are shown with specific field-level messages (e.g., "Invalid postgres_version: must be 14, 15, or 16")
+- If no config file is found, the system informs the user and suggests creating one
+
+**Auto-Import on Project Creation**:
+- When a new project is imported, the system automatically attempts to fetch and store the config
+- If the fetch fails (missing file, GitHub error), the project is created successfully with null config — no error
+
+**Auto-Refresh Before Dispatch**:
+- Before dispatching any workflow, the system checks whether the stored config is older than 1 hour
+- Stale config is refreshed automatically from GitHub; fresh config is used as-is
+- If auto-refresh fails, dispatch is blocked and a clear error is shown
+
+**Dynamic Service Inputs**:
+- All workflow dispatch paths (ticket transitions, health scans, AI-board assist, rollback-reset, deploy preview) read the project's stored config to supply the correct service container inputs
+- Example: a project declaring PostgreSQL 14 results in `needs_postgres: true` and `postgres_version: 14` in the dispatch
+- Projects without config receive the same defaults as before this feature was introduced
+
 ### Clarification Policy Configuration
 
 Projects have a configurable default clarification policy:

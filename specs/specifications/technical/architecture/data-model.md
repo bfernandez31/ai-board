@@ -78,6 +78,8 @@ model Project {
   userId               String
   clarificationPolicy  ClarificationPolicy  @default(AUTO)
   defaultAgent         Agent                @default(CLAUDE)
+  config               Json?
+  configSyncedAt       DateTime?
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
 
@@ -112,6 +114,8 @@ model Project {
 - `userId`: Owner of the project (required foreign key)
 - `clarificationPolicy`: Default policy for spec generation (enum, default: AUTO)
 - `defaultAgent`: Default AI agent for all tickets in the project (enum, default: CLAUDE)
+- `config`: Parsed `.ai-board/config.yml` content stored as JSON (nullable — null means no config synced)
+- `configSyncedAt`: Timestamp of the last successful config fetch from GitHub (nullable)
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
 
@@ -138,6 +142,10 @@ model Project {
 - Deployment URL displayed on project cards when configured (hidden when null)
 - Project description stored but not displayed on list view cards
 - Project key generation: derived from first 3 characters of name (uppercase), padded/disambiguated if needed
+- `config` is nullable; null means no config has been synced — workflows use backward-compatible defaults (PostgreSQL 16, Bun)
+- `config` stores the parsed config without the `env` section (secrets excluded from DB)
+- `configSyncedAt` drives staleness checks: config older than 1 hour is auto-refreshed before workflow dispatch
+- Config sync fails explicitly rather than silently using stale data — dispatch is blocked if auto-refresh fails
 
 ### Ticket
 

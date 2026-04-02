@@ -199,6 +199,37 @@ export async function dispatchWorkflow(params: {
 - **Action**: Transitions VERIFY → SHIP for tickets with merged branches
 - **Method**: Git ancestry check (`git merge-base --is-ancestor`)
 
+### Dynamic Service Inputs
+
+Before dispatching any workflow, the system maps the project's stored config to GitHub Actions service container inputs via `getProjectServiceInputs(project)` in `lib/workflows/service-inputs.ts`.
+
+**Mapping**:
+- Each entry in `config.services[]` maps to a `needs_{type}: "true"` / `{type}_version: "{version}"` pair
+- When `config` is null, backward-compatible defaults are used: `needs_postgres: "true"`, `postgres_version: "16"`
+- When `config` is present but `services` is empty, no service inputs are added
+
+**Examples**:
+
+| Config `services` | Dispatch inputs |
+|-------------------|-----------------|
+| `[{ type: "postgres", version: "14" }]` | `needs_postgres=true`, `postgres_version=14` |
+| `[{ type: "postgres", version: "16" }, { type: "redis", version: "7" }]` | `needs_postgres=true`, `postgres_version=16`, `needs_redis=true`, `redis_version=7` |
+| `[]` (empty) | *(no service inputs)* |
+| null (no config) | `needs_postgres=true`, `postgres_version=16` |
+
+> **Note**: `package_manager` is NOT a dispatch input. `setup-environment.sh` reads `runtime.manager` directly from the cloned repo's `.ai-board/config.yml` at workflow runtime. ORM setup (Prisma generate/migrate) is also centralized in `setup-environment.sh` — not hardcoded per-workflow.
+
+**Staleness & Auto-Refresh**:
+- All dispatch paths check `project.configSyncedAt` before dispatching
+- If null or older than 1 hour, the config is re-fetched from GitHub inline via `lib/config-sync.ts`
+- If the refresh fails (GitHub API error, invalid YAML), dispatch is blocked and an error is returned
+- If the config is fresh (within 1 hour), it is used without re-fetching
+
+**Affected Dispatch Paths**:
+- `lib/workflows/transition.ts` — stage transition dispatches
+- `lib/health/scan-dispatch.ts` — health scan dispatches
+- `app/lib/workflows/dispatch-ai-board.ts` — AI-board assist dispatches
+
 ### Agent Resolution
 
 Before dispatching any workflow, the system resolves the effective agent using a priority chain:
