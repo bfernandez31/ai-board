@@ -23,11 +23,14 @@ test.describe('Returning User Sign-In (User Story 2)', () => {
 
   test('returning user sign-in updates User record (not duplicated)', async () => {
     // Create initial user record with old data
+    // NOTE: Use 'retur-' prefix and '@ret.e2e.local' domain to avoid matching
+    // cleanupDatabase patterns ('auth-' prefix, '@github.com' email) which run
+    // concurrently in parallel Playwright workers and would delete this user mid-test.
     const userId = crypto.randomUUID();
     const initialUser = await prisma.user.create({
       data: {
-        id: `auth-returning-${userId}`,
-        email: `returning-${userId}@github.com`,
+        id: `retur-${userId}`,
+        email: `returning-${userId}@ret.e2e.local`,
         name: 'Old Name',
         image: 'https://github.com/old-avatar.png',
         emailVerified: new Date(),
@@ -98,11 +101,13 @@ test.describe('Returning User Sign-In (User Story 2)', () => {
 
   test('User record name is updated when changed on GitHub', async () => {
     // Create initial user
+    // NOTE: Use 'nmchg-' prefix and '@ret.e2e.local' domain to avoid cleanupDatabase
+    // race conditions in parallel Playwright workers.
     const userId = crypto.randomUUID();
     const initialUser = await prisma.user.create({
       data: {
-        id: `auth-namechange-${userId}`,
-        email: `namechange-${userId}@github.com`,
+        id: `nmchg-${userId}`,
+        email: `namechange-${userId}@ret.e2e.local`,
         name: 'Original Name',
         image: 'https://github.com/avatar.png',
         emailVerified: new Date(),
@@ -160,11 +165,13 @@ test.describe('Returning User Sign-In (User Story 2)', () => {
 
   test('returning user can access existing projects immediately', async () => {
     // Create user with existing project
+    // NOTE: Use 'projown-' prefix and '@ret.e2e.local' domain to avoid cleanupDatabase
+    // race conditions in parallel Playwright workers.
     const userId = crypto.randomUUID();
     const existingUser = await prisma.user.create({
       data: {
-        id: `auth-projectowner-${userId}`,
-        email: `projectowner-${userId}@github.com`,
+        id: `projown-${userId}`,
+        email: `projectowner-${userId}@ret.e2e.local`,
         name: 'Project Owner',
         emailVerified: new Date(),
         updatedAt: new Date(),

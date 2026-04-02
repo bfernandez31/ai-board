@@ -7,12 +7,34 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
+import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 
 describe('GET /api/settings/profile', () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
     ctx = await getTestContext();
+
+    // Billing tests (feature-gating, usage, subscription) delete the PRO subscription
+    // as part of their test setup. Re-provision it here so profile tests are not
+    // affected by test execution order.
+    const prisma = getPrismaClient();
+    const user = await prisma.user.findFirst({ where: { email: 'test@e2e.local' } });
+    if (user) {
+      await prisma.subscription.upsert({
+        where: { userId: user.id },
+        update: { plan: 'PRO', status: 'ACTIVE' },
+        create: {
+          userId: user.id,
+          stripeSubscriptionId: `sub_test_fixtures_${user.id}`,
+          stripePriceId: 'price_test_pro',
+          plan: 'PRO',
+          status: 'ACTIVE',
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        },
+      });
+    }
   });
 
   it('should return profile data for authenticated user', async () => {

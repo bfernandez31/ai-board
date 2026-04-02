@@ -45,7 +45,7 @@ export async function GET(
           status: 'COMPLETED',
           score: { not: null },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { completedAt: 'desc' },
         take: limit,
         select: {
           completedAt: true,
