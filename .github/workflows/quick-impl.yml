@@ -276,7 +276,12 @@ jobs:
           echo "IMAGE_PATHS=$IMAGE_PATHS" >> "$GITHUB_ENV"
           echo "IMAGE_COUNT=$(echo $IMAGE_PATHS | wc -w | tr -d ' ')" >> "$GITHUB_ENV"
 
-      # Database setup steps (Prisma generate handled by setup-environment.sh full phase)
+      # Database setup steps
+      - name: Generate Prisma Client
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.HAS_PRISMA == 'true' }}
+        working-directory: target
+        run: npx prisma generate
+
       - name: Apply Database Migrations
         if: ${{ env.SKIP_EXECUTION != 'true' && env.HAS_PRISMA == 'true' }}
         working-directory: target

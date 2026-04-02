@@ -255,12 +255,11 @@ fi
 if [[ "$PHASE" == "full" ]]; then
   info "Detecting project dependencies..."
 
-  # Prisma detection
+  # Prisma detection (generate runs AFTER dependency install — see workflow steps)
   if [[ -f "${TARGET_DIR}/prisma/schema.prisma" ]] || \
      ( [[ -f "${TARGET_DIR}/package.json" ]] && grep -q '"prisma"' "${TARGET_DIR}/package.json" 2>/dev/null ); then
     set_env HAS_PRISMA true
-    success "Prisma detected — running prisma generate"
-    (cd "$TARGET_DIR" && npx prisma generate)
+    success "Prisma detected (generate deferred until after dependency install)"
   else
     set_env HAS_PRISMA false
     info "Prisma not detected — skipping database setup"

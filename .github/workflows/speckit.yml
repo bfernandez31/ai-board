@@ -342,7 +342,12 @@ jobs:
           EOF
           echo "SPECIFY_PAYLOAD_FILE=/tmp/specify_payload.json" >> "$GITHUB_ENV"
 
-      # Database setup steps (implement command only — Prisma generate handled by setup-environment.sh full phase)
+      # Database setup steps (implement command only)
+      - name: Generate Prisma Client
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
+        working-directory: target
+        run: npx prisma generate
+
       - name: Apply Database Migrations
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
         working-directory: target
