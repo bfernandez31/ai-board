@@ -277,6 +277,43 @@ if [[ "$PHASE" == "full" ]]; then
   fi
 fi
 
+# ─── Full Phase: ORM Setup (post-install) ───────────────────────────────────
+
+run_orm_setup() {
+  if [[ "${HAS_PRISMA:-false}" != "true" ]]; then
+    info "No ORM detected — skipping ORM setup"
+    return 0
+  fi
+
+  info "Running Prisma ORM setup..."
+
+  # Determine the correct package runner for npx-equivalent commands
+  local runner="npx"
+  case "$MANAGER" in
+    bun)  runner="bunx" ;;
+    pnpm) runner="pnpm exec" ;;
+    yarn) runner="yarn" ;;
+  esac
+
+  # Generate Prisma Client
+  info "Generating Prisma client..."
+  (cd "$TARGET_DIR" && $runner prisma generate)
+  success "Prisma client generated"
+
+  # Apply database migrations (deploy mode — no prompts)
+  if [[ -n "${DATABASE_URL:-}" ]]; then
+    info "Applying database migrations..."
+    (cd "$TARGET_DIR" && $runner prisma migrate deploy)
+    success "Database migrations applied"
+  else
+    info "DATABASE_URL not set — skipping migrations (generate-only mode)"
+  fi
+}
+
+if [[ "$PHASE" == "full" ]]; then
+  run_orm_setup
+fi
+
 # ─── Final Validation ────────────────────────────────────────────────────────
 
 info "Running final validation ($PHASE)..."
