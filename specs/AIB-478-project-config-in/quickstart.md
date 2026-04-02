@@ -31,9 +31,17 @@ Pattern: Follow `lib/github/constitution-fetcher.ts` for the fetch pattern.
 ### Step 3: Dynamic Service Inputs (`lib/workflows/service-inputs.ts`)
 
 Replace hardcoded return with:
-1. If `project.config` is null → return defaults (PostgreSQL 16, Bun)
+1. If `project.config` is null → return defaults (PostgreSQL 16)
 2. If config exists → map `services` array to `needs_{type}` / `{type}_version` pairs
-3. Add `package_manager` from `runtime.manager`
+
+> **Note**: `package_manager` is NOT a dispatch input. `setup-environment.sh` reads `runtime.manager` directly from the cloned repo's `config.yml`.
+
+### Step 3b: Centralize ORM Setup (`.github/scripts/setup-environment.sh`)
+
+Move Prisma commands out of individual workflow YAML files and into the setup script:
+1. Add a post-install function that runs `prisma generate` + `prisma migrate deploy` when `HAS_PRISMA=true`
+2. Workflows call `setup-environment.sh --phase post-install` (or similar) after `Install Dependencies`
+3. Remove hardcoded `Generate Prisma Client` and `Apply Database Migrations` steps from health-scan.yml, speckit.yml, quick-impl.yml, verify.yml
 
 ### Step 4: Auto-Refresh Before Dispatch
 
@@ -105,3 +113,5 @@ bun run test:unit tests/unit/components/config-card.test.tsx
 - [ ] Config card displays formatted config data
 - [ ] Config card shows empty state for unconfigured projects
 - [ ] Existing projects with no config continue working identically
+- [ ] No workflow YAML file contains hardcoded ORM commands (prisma generate, prisma migrate)
+- [ ] `getProjectServiceInputs()` does NOT return `package_manager` (read by setup script instead)

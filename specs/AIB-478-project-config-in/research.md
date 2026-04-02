@@ -20,11 +20,12 @@
 
 ## Decision 3: Config-to-Service-Inputs Mapping
 
-- **Decision**: Map `services` array entries to workflow input flags. Each service type maps to `needs_{type}: 'true'` and `{type}_version: '{version}'`. The `runtime.manager` maps to a `package_manager` input.
-- **Rationale**: Workflow YAML files already accept `needs_postgres` and `postgres_version` as inputs. Extending this pattern to other services (redis, mysql, mongo) maintains consistency. Package manager is a new input that workflows need for correct `install` commands.
+- **Decision**: Map `services` array entries to workflow input flags. Each service type maps to `needs_{type}: 'true'` and `{type}_version: '{version}'`. Package manager is NOT a dispatch input — `setup-environment.sh` already reads `runtime.manager` directly from the cloned repo's `config.yml`.
+- **Rationale**: Workflow YAML files already accept `needs_postgres` and `postgres_version` as inputs. Extending this pattern to other services (redis, mysql, mongo) maintains consistency. Package manager doesn't need to be a dispatch input because the setup script reads it from the repo at runtime, avoiding duplication.
 - **Alternatives considered**:
   - Passing the entire config as a single JSON input — rejected because workflows need flat key-value inputs for GitHub Actions `inputs`
   - Only mapping postgres (status quo) — rejected because the feature spec explicitly requires dynamic service mapping
+  - Passing `package_manager` as dispatch input — rejected because `setup-environment.sh` already reads `runtime.manager` from `config.yml` in the cloned repo; duplicating it as a dispatch input creates two sources of truth
 
 ## Decision 4: Staleness Check and Auto-Refresh
 
@@ -58,9 +59,18 @@
   - Skip auto-import entirely (manual sync only) — rejected because the spec explicitly requires it (FR-009)
   - Background job for import — rejected as overengineering for a single API call
 
-## Decision 8: Concurrency Control for Auto-Refresh
+## Decision 8: ORM Setup Centralization in setup-environment.sh
 
-- **Decision**: Use optimistic locking via Prisma's `updateMany` with a `configSyncedAt` condition. Only one refresh will succeed; concurrent requests that lose the race simply re-read the freshly updated config.
+- **Decision**: Move all ORM-specific workflow steps (`prisma generate`, `prisma migrate deploy`) into `setup-environment.sh` so they run after dependency installation. Workflows MUST NOT hardcode ORM commands. The script detects Prisma (or other ORMs) from project files and runs the appropriate commands.
+- **Rationale**: Not all projects use Prisma. Hardcoding `npx prisma generate` and `npx prisma migrate deploy` in every workflow (health-scan, speckit, quick-impl, verify, iterate) creates maintenance burden and breaks for non-Prisma projects. The setup script already detects `HAS_PRISMA` — it should also run the commands. This was partially done (detection without execution) due to a dependency ordering bug that has since been fixed: the script now defers Prisma commands until after deps are installed.
+- **Alternatives considered**:
+  - Adding an `orm` field to config.yml — rejected because file-based detection (`prisma/schema.prisma` or `"prisma"` in package.json) is sufficient and doesn't require config changes
+  - Adding configurable `db_generate` / `db_migrate` commands to config.yml `commands` section — viable future enhancement but not needed now; Prisma is the only supported ORM and file detection works
+  - Keeping ORM commands in workflows with `if: HAS_PRISMA` guards — rejected because it duplicates the same steps across 5+ workflows and requires updating every workflow when adding a new ORM
+
+## Decision 9: Concurrency Control for Auto-Refresh
+
+- **Decision**: Use optimistic locking via the platform's Prisma `updateMany` with a `configSyncedAt` condition. Only one refresh will succeed; concurrent requests that lose the race simply re-read the freshly updated config.
 - **Rationale**: Per spec edge case, "only one refresh should execute." A DB-level conditional update is simpler and more reliable than application-level mutexes, especially in a serverless environment where multiple instances may process concurrent requests.
 - **Alternatives considered**:
   - In-memory lock/mutex — rejected because Next.js can run multiple instances (serverless functions)

@@ -94,8 +94,9 @@ The `getProjectServiceInputs()` function maps stored config to workflow dispatch
 | `services[type=redis]` | `needs_redis: 'true'`, `redis_version: '{version}'` | `needs_redis: 'true'`, `redis_version: '7'` |
 | `services[type=mysql]` | `needs_mysql: 'true'`, `mysql_version: '{version}'` | `needs_mysql: 'true'`, `mysql_version: '8'` |
 | `services[type=mongo]` | `needs_mongo: 'true'`, `mongo_version: '{version}'` | `needs_mongo: 'true'`, `mongo_version: '7'` |
-| `runtime.manager` | `package_manager: '{manager}'` | `package_manager: 'npm'` |
-| No config (null) | Defaults | `needs_postgres: 'true'`, `postgres_version: '16'`, `package_manager: 'bun'` |
+| No config (null) | Defaults | `needs_postgres: 'true'`, `postgres_version: '16'` |
+
+> **Note**: `package_manager` is NOT a dispatch input. `setup-environment.sh` reads `runtime.manager` directly from the cloned repo's `.ai-board/config.yml`. Dispatch only passes service container flags.
 
 ## Migration
 

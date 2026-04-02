@@ -71,6 +71,15 @@ app/
 ├── lib/schemas/clarification-policy.ts    # Extend projectUpdateSchema if needed
 └── lib/workflows/dispatch-ai-board.ts     # Add service inputs to AI-board dispatch
 
+.github/
+├── scripts/setup-environment.sh           # Centralize ORM setup (prisma generate + migrate)
+└── workflows/                             # Remove hardcoded Prisma steps from all workflows
+    ├── health-scan.yml
+    ├── speckit.yml
+    ├── quick-impl.yml
+    ├── verify.yml
+    └── iterate.yml
+
 components/
 └── settings/
     └── config-card.tsx                    # NEW: read-only config display + sync button
@@ -82,6 +91,8 @@ tests/
 │   └── projects/
 │       └── config-sync.test.ts            # NEW: sync API + dispatch integration tests
 ```
+
+> **Note on dispatch inputs**: `package_manager` is NOT a dispatch input. `setup-environment.sh` reads `runtime.manager` directly from the cloned repo's `config.yml`. Dispatch only passes service container flags (`needs_*`, `*_version`). ORM commands (prisma generate/migrate) are centralized in `setup-environment.sh` — not hardcoded per-workflow.
 
 ## Testing Strategy
 

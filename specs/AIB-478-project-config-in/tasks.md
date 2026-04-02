@@ -30,7 +30,8 @@
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
 - [ ] T003 Create config sync module in lib/config-sync.ts — fetch `.ai-board/config.yml` from GitHub via Octokit `repos.getContent` (follow lib/github/constitution-fetcher.ts pattern), parse YAML, validate via `validateConfig()` from lib/validations/config.ts, strip `env` section, store in `project.config` + update `configSyncedAt` with optimistic locking via Prisma `updateMany`
-- [ ] T004 Rewrite `getProjectServiceInputs()` in lib/workflows/service-inputs.ts to read from `project.config` — map `services` array to `needs_{type}`/`{type}_version` pairs, map `runtime.manager` to `package_manager`, return defaults (PostgreSQL 16, Bun) when config is null
+- [ ] T004 Rewrite `getProjectServiceInputs()` in lib/workflows/service-inputs.ts to read from `project.config` — map `services` array to `needs_{type}`/`{type}_version` pairs, return defaults (PostgreSQL 16) when config is null. NOTE: `package_manager` is NOT a dispatch input (setup-environment.sh reads it from config.yml directly)
+- [ ] T004b Centralize ORM setup in .github/scripts/setup-environment.sh — add a post-install phase (or new script) that runs `prisma generate` + `prisma migrate deploy` after dependency installation, using existing `HAS_PRISMA` detection. Remove hardcoded Prisma steps from all workflow YAML files (health-scan.yml, speckit.yml, quick-impl.yml, verify.yml). This ensures non-Prisma projects work without workflow changes.
 
 **Checkpoint**: Foundation ready — config can be fetched, validated, stored, and mapped to service inputs
 

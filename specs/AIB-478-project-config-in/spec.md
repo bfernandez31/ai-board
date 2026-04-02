@@ -133,9 +133,11 @@ When a project is first imported into the system, the config is automatically fe
 - **FR-002**: System MUST provide a mechanism for project owners to manually trigger a config sync from their repository's `.ai-board/config.yml` file
 - **FR-003**: System MUST validate config content against the defined schema during every sync operation and reject invalid configurations with specific, actionable error messages
 - **FR-004**: System MUST automatically refresh stale config (older than 1 hour) before dispatching any workflow
-- **FR-005**: All workflow dispatch paths (ticket transitions, AI-board assist, rollback-reset, deploy preview, health scans, iterate) MUST read the project's stored config and pass the correct service/runtime inputs to the dispatched workflow
+- **FR-005**: All workflow dispatch paths (ticket transitions, AI-board assist, rollback-reset, deploy preview, health scans, iterate) MUST read the project's stored config and pass the correct service inputs to the dispatched workflow
 - **FR-006**: System MUST map config service declarations to workflow service inputs (e.g., a project declaring PostgreSQL 14 results in `needs_postgres: true` and `postgres_version: 14` in dispatch inputs)
 - **FR-007**: System MUST use backward-compatible defaults (PostgreSQL 16, Bun) when a project has no stored config
+- **FR-013**: `setup-environment.sh` MUST handle ORM setup (detect, generate, migrate) based on project files — workflow YAML files MUST NOT hardcode ORM-specific commands (e.g., `npx prisma generate`, `npx prisma migrate deploy`). This centralizes database tooling in one place so projects using different ORMs or no ORM work without workflow changes.
+- **FR-014**: `package_manager` MUST NOT be passed as a workflow dispatch input — `setup-environment.sh` already reads `runtime.manager` directly from the cloned repository's `config.yml`. The dispatch only passes service container inputs (`needs_*`, `*_version`).
 - **FR-008**: System MUST display the stored config in a read-only format within project settings, including the last sync timestamp
 - **FR-009**: System MUST attempt to fetch and store config automatically when a new project is imported
 - **FR-010**: System MUST block workflow dispatch and surface a clear error when auto-refresh fails (rather than dispatching with stale or missing config)

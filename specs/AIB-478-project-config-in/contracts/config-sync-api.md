@@ -150,14 +150,13 @@ Not an API endpoint but a critical internal contract consumed by all workflow di
 
 ### Mapping Examples
 
-**With config (PostgreSQL 14 + Redis 7, npm)**:
+**With config (PostgreSQL 14 + Redis 7)**:
 ```json
 {
   "needs_postgres": "true",
   "postgres_version": "14",
   "needs_redis": "true",
-  "redis_version": "7",
-  "package_manager": "npm"
+  "redis_version": "7"
 }
 ```
 
@@ -165,14 +164,13 @@ Not an API endpoint but a critical internal contract consumed by all workflow di
 ```json
 {
   "needs_postgres": "true",
-  "postgres_version": "16",
-  "package_manager": "bun"
+  "postgres_version": "16"
 }
 ```
 
 **With config but no services**:
 ```json
-{
-  "package_manager": "yarn"
-}
+{}
 ```
+
+> **Note**: `package_manager` is NOT a dispatch input. `setup-environment.sh` reads `runtime.manager` directly from the cloned repo's `.ai-board/config.yml` at workflow runtime. Dispatch only passes service container flags (`needs_*`, `*_version`).
