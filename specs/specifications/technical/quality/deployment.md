@@ -29,6 +29,9 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 - `command`: ai-board command (specify|plan|task|implement|clarify)
 - `job_id`: Job record ID
 - `project_id`: Project identifier
+- `githubRepository`: Target repository (format: owner/repo)
+- `needs_postgres` / `needs_redis` / `needs_mysql` / `needs_mongo`: Boolean flags to provision service containers (default: false)
+- `postgres_version` / `redis_version` / `mysql_version` / `mongo_version`: Container image version tags (defaults: 14 / 7 / 8 / 7)
 
 **Environment Setup** (Double Checkout with Sparse Pattern):
 
@@ -76,27 +79,18 @@ steps:
       mkdir -p target/.claude
       ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
 
-  - name: Setup Bun
-    uses: oven-sh/setup-bun@v1
-    with:
-      bun-version: 1.3.1
+  - name: Setup ai-board environment
+    run: |
+      # Phase-aware: lightweight (symlinks + runtime) for specify/plan,
+      # full (+ deps, Prisma, Playwright) for implement/build
+      if [[ "${{ inputs.command }}" == "specify" || "${{ inputs.command }}" == "plan" ]]; then
+        ai-board/.github/scripts/setup-environment.sh target --phase lightweight
+      else
+        ai-board/.github/scripts/setup-environment.sh target --phase full
+      fi
 
-  - name: Setup Node.js
-    uses: actions/setup-node@v4
-    with:
-      node-version: '22.20.0'
-
-  - name: Setup Python
-    uses: actions/setup-python@v5
-    with:
-      python-version: '3.11'
-
-  - name: Install Dependencies
-    working-directory: target
-    run: bun install --frozen-lockfile
-
-  - name: Install Claude Code CLI
-    run: bun add -g @anthropic-ai/claude-code
+  - name: Install project dependencies
+    run: ai-board/.github/scripts/run-command.sh target install
 
   - name: Configure Git
     run: |
@@ -104,15 +98,26 @@ steps:
       git config --global user.email "bot@ai-board.app"
 ```
 
-**Database Setup** (implement command only):
+**Conditional Service Containers** (provisioned only when `needs_*` input is true):
 
 ```yaml
-  - name: Setup PostgreSQL
-    if: inputs.command == 'implement'
-    uses: actions/setup-postgresql@v1
-    with:
-      postgresql-version: '14'
+services:
+  postgres:
+    image: ${{ inputs.needs_postgres && format('postgres:{0}', inputs.postgres_version) || '' }}
+    # ... env, health-check omitted for brevity
+  redis:
+    image: ${{ inputs.needs_redis && format('redis:{0}', inputs.redis_version) || '' }}
+  mysql:
+    image: ${{ inputs.needs_mysql && format('mysql:{0}', inputs.mysql_version) || '' }}
+  mongo:
+    image: ${{ inputs.needs_mongo && format('mongo:{0}', inputs.mongo_version) || '' }}
+```
 
+When a `needs_*` flag is false, the corresponding image string is empty and GitHub Actions skips the container entirely — zero overhead.
+
+**Infrastructure Setup** (implement command only, hardcoded as provisioning steps):
+
+```yaml
   - name: Apply Prisma migrations
     if: inputs.command == 'implement'
     env:
@@ -121,7 +126,7 @@ steps:
       npx prisma migrate deploy
       npx prisma db seed
 
-  - name: Install Playwright
+  - name: Install Playwright browsers
     if: inputs.command == 'implement'
     run: npx playwright install --with-deps
 ```
