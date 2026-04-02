@@ -53,15 +53,15 @@
 
 ### Integration Tests for User Story 1
 
-- [ ] T015 [P] [US1] Integration test: POST /api/projects/import creates project with config sync, returns redirectTo /projects/{id} in tests/integration/projects/import.test.ts
-- [ ] T016 [P] [US1] Integration test: POST /api/projects/import 403 when user lacks admin access in tests/integration/projects/import.test.ts
-- [ ] T017 [P] [US1] Integration test: POST /api/projects/import 403 when subscription quota exceeded in tests/integration/projects/import.test.ts
-- [ ] T018 [P] [US1] Integration test: GET /api/github/repos returns paginated repos with isAlreadyImported flags in tests/integration/github/repos.test.ts
+- [x] T015 [P] [US1] Integration test: POST /api/projects/import creates project with config sync, returns redirectTo /projects/{id} in tests/integration/projects/import.test.ts
+- [x] T016 [P] [US1] Integration test: POST /api/projects/import 403 when user lacks admin access in tests/integration/projects/import.test.ts
+- [x] T017 [P] [US1] Integration test: POST /api/projects/import 403 when subscription quota exceeded in tests/integration/projects/import.test.ts
+- [x] T018 [P] [US1] Integration test: GET /api/github/repos returns paginated repos with isAlreadyImported flags in tests/integration/github/repos.test.ts
 
 ### Component Tests for User Story 1
 
-- [ ] T019 [P] [US1] Component test: RepoPickerItem shows repo details and disabled when no admin access in tests/unit/components/projects/repo-picker-item.test.tsx
-- [ ] T020 [P] [US1] Component test: ImportProjectModal shows picker when user has repo scope in tests/unit/components/projects/import-project-modal.test.tsx
+- [x] T019 [P] [US1] Component test: RepoPickerItem shows repo details and disabled when no admin access in tests/unit/components/projects/repo-picker-item.test.tsx
+- [x] T020 [P] [US1] Component test: ImportProjectModal shows picker when user has repo scope in tests/unit/components/projects/import-project-modal.test.tsx
 
 **Checkpoint**: Core import flow fully functional — user can import a repo with config and see it on the dashboard
 
@@ -73,7 +73,7 @@
 
 **Independent Test**: Import a repo without config → project created, user redirected to `/projects/{id}/setup`.
 
-- [ ] T021 [US2] Integration test: POST /api/projects/import without config returns redirectTo /projects/{id}/setup in tests/integration/projects/import.test.ts
+- [x] T021 [US2] Integration test: POST /api/projects/import without config returns redirectTo /projects/{id}/setup in tests/integration/projects/import.test.ts
 
 **Checkpoint**: Both import paths (with and without config) are fully tested
 
@@ -87,10 +87,10 @@
 
 ### Tests for User Story 3
 
-- [ ] T022 [P] [US3] Integration test: GET /api/github/auth-status returns hasRepoScope: false for token without repo scope in tests/integration/github/auth-status.test.ts
-- [ ] T023 [P] [US3] Integration test: GET /api/github/repos returns 403 MISSING_SCOPE when token lacks repo scope in tests/integration/github/repos.test.ts
-- [ ] T024 [P] [US3] Component test: ReauthPrompt renders scope explanation and re-authorize button in tests/unit/components/projects/reauth-prompt.test.tsx
-- [ ] T025 [US3] Component test: ImportProjectModal shows ReauthPrompt when hasRepoScope is false in tests/unit/components/projects/import-project-modal.test.tsx
+- [x] T022 [P] [US3] Integration test: GET /api/github/auth-status returns hasRepoScope: false for token without repo scope in tests/integration/github/auth-status.test.ts
+- [x] T023 [P] [US3] Integration test: GET /api/github/repos returns 403 MISSING_SCOPE when token lacks repo scope in tests/integration/github/repos.test.ts
+- [x] T024 [P] [US3] Component test: ReauthPrompt renders scope explanation and re-authorize button in tests/unit/components/projects/reauth-prompt.test.tsx
+- [x] T025 [US3] Component test: ImportProjectModal shows ReauthPrompt when hasRepoScope is false in tests/unit/components/projects/import-project-modal.test.tsx
 
 **Checkpoint**: Scope upgrade flow verified — existing users can re-authorize and proceed to import
 
@@ -102,8 +102,8 @@
 
 **Independent Test**: Attempt to import a repo already linked to a project → 409 error with existing project info; picker shows repo as already imported.
 
-- [ ] T026 [P] [US4] Integration test: POST /api/projects/import returns 409 with existingProjectId on duplicate githubOwner+githubRepo in tests/integration/projects/import.test.ts
-- [ ] T027 [US4] Component test: RepoPickerItem renders disabled state with tooltip when isAlreadyImported is true in tests/unit/components/projects/repo-picker-item.test.tsx
+- [x] T026 [P] [US4] Integration test: POST /api/projects/import returns 409 with existingProjectId on duplicate githubOwner+githubRepo in tests/integration/projects/import.test.ts
+- [x] T027 [US4] Component test: RepoPickerItem renders disabled state with tooltip when isAlreadyImported is true in tests/unit/components/projects/repo-picker-item.test.tsx
 
 **Checkpoint**: Duplicate prevention verified at both API and UI levels
 
@@ -115,9 +115,9 @@
 
 **Independent Test**: Load picker for user with repos across multiple orgs → search filters by name, org dropdown filters by org, pagination loads additional pages.
 
-- [ ] T028 [P] [US5] Integration test: GET /api/github/repos with q param uses GitHub Search API and returns filtered results in tests/integration/github/repos.test.ts
-- [ ] T029 [P] [US5] Integration test: GET /api/github/repos with org param filters to organization repos in tests/integration/github/repos.test.ts
-- [ ] T030 [US5] Component test: RepoPicker search input filters results and org dropdown filters by org in tests/unit/components/projects/repo-picker.test.tsx
+- [x] T028 [P] [US5] Integration test: GET /api/github/repos with q param uses GitHub Search API and returns filtered results in tests/integration/github/repos.test.ts
+- [x] T029 [P] [US5] Integration test: GET /api/github/repos with org param filters to organization repos in tests/integration/github/repos.test.ts
+- [x] T030 [US5] Component test: RepoPicker search input filters results and org dropdown filters by org in tests/unit/components/projects/repo-picker.test.tsx
 
 **Checkpoint**: All filtering, search, and pagination scenarios verified
 
@@ -127,8 +127,8 @@
 
 **Purpose**: Final validation across all user stories
 
-- [ ] T031 Run `bun run type-check` and `bun run lint` across all new and modified files
-- [ ] T032 Run quickstart.md validation steps (type-check, lint, unit tests, integration tests)
+- [x] T031 Run `bun run type-check` and `bun run lint` across all new and modified files
+- [x] T032 Run quickstart.md validation steps (type-check, lint, unit tests, integration tests)
 
 ---
 
