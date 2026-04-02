@@ -194,9 +194,13 @@ jobs:
         with:
           node-version: '22.20.0'
 
-      # 3. Setup environment (lightweight — assist doesn't run code)
+      # 3. Setup environment (full for verify stage which may need test infra, lightweight otherwise)
+      - name: Setup Environment (full)
+        if: ${{ env.SKIP_CLAUDE != 'true' && inputs.stage == 'verify' }}
+        run: ai-board/.github/scripts/setup-environment.sh target --phase full
+
       - name: Setup Environment (lightweight)
-        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        if: ${{ env.SKIP_CLAUDE != 'true' && inputs.stage != 'verify' }}
         run: ai-board/.github/scripts/setup-environment.sh target --phase lightweight
 
       - name: Configure Git

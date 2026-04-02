@@ -5,18 +5,17 @@
 # Usage: run-command.sh <target-directory> <command-key>
 #
 # Exit codes:
-#   0 — Config file missing (silent skip, no output)
-#   0 — Command key not defined in config (silent skip)
+#   0 — Command key not defined in config and no fallback default (silent skip)
 #   N — Command executed and returned exit code N
 #   1 — Invalid YAML syntax in config.yml
 #   1 — Missing required arguments
 #
 # Supported command keys: install, build, lint, type_check, test_unit, test_integration, test_e2e
 #
-# Design: When .ai-board/config.yml is absent, the script exits 0 silently.
-# This ensures backward compatibility for repos that haven't onboarded yet.
-# This is intentionally different from setup-environment.sh, which requires config
-# (since setup is only called for onboarded projects).
+# Design: When .ai-board/config.yml is absent, the script falls back to hardcoded
+# defaults (matching ai-board's own commands). This ensures backward compatibility
+# for repos that haven't onboarded yet. If a key has no config AND no default,
+# it exits 0 silently.
 
 set -euo pipefail
 
@@ -32,9 +31,29 @@ TARGET_DIR="$1"
 COMMAND_KEY="$2"
 CONFIG="${TARGET_DIR}/.ai-board/config.yml"
 
-# ─── Missing Config = Silent Skip ────────────────────────────────────────────
+# ─── Fallback Defaults ───────────────────────────────────────────────────────
+# When a target repo has no .ai-board/config.yml, these defaults preserve
+# backward compatibility for ai-board itself and any repo not yet onboarded.
+
+declare -A DEFAULTS=(
+  [install]="bun install --frozen-lockfile"
+  [build]="bun run build"
+  [lint]="bun run lint"
+  [type_check]="bun run type-check"
+  [test_unit]="bun run test:unit"
+  [test_integration]="bun run test:integration"
+  [test_e2e]="bunx playwright test"
+)
+
+# ─── Missing Config = Use Fallback Defaults ──────────────────────────────────
 
 if [[ ! -f "$CONFIG" ]]; then
+  if [[ -n "${DEFAULTS[$COMMAND_KEY]+_}" ]]; then
+    echo "ℹ️  No .ai-board/config.yml found, using fallback default for '$COMMAND_KEY'" >&2
+    cd "$TARGET_DIR" && eval "${DEFAULTS[$COMMAND_KEY]}"
+    exit $?
+  fi
+  # No config and no default for this key — silent skip
   exit 0
 fi
 

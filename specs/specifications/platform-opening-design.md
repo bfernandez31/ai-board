@@ -115,36 +115,42 @@ Two centralized scripts in the ai-board repo that read `.ai-board/config.yml` an
 
 **Location**: `.github/scripts/setup-environment.sh`
 
-**Responsibilities** (in order):
-1. Parse config — read `.ai-board/config.yml` from target repo
-2. Install runtime — node/bun/python based on `runtime.manager`
-3. Install dependencies — execute `commands.install`
-4. Install agent CLI — Claude Code or Codex based on `agent.cli`
-5. Export env vars — merge config `env` with workflow secrets
-6. Symlink plugin — `.claude/commands` and `.claude/skills` (as today)
-7. Validation — verify everything is in place, fail with clear message if not
-
 **Interface**:
 ```bash
-../ai-board/.github/scripts/setup-environment.sh <target-dir>
+ai-board/.github/scripts/setup-environment.sh <target-dir> [--phase lightweight|full]
 ```
 
-**Replaces**: The 15-20 lines of duplicated setup in each workflow YAML.
+**Phase `lightweight`** (specify, plan, clarify, iterate, assist):
+1. Parse config — read `.ai-board/config.yml` from target repo
+2. Install runtime — node/bun/python based on `runtime.manager`
+3. Symlink plugin — `.claude/commands` and `.claude/skills`
+4. Validation — verify runtime and symlinks in place
+
+**Phase `full`** (implement, quick-impl, verify, health-scan TESTS) — all of lightweight, plus:
+5. Install dependencies — execute `commands.install`
+6. Install agent CLI — Claude Code or Codex based on `agent.cli`
+7. Export env vars — merge config `env` with workflow secrets (workflow secrets take precedence)
+8. Detect Prisma — set `HAS_PRISMA=true` in `GITHUB_ENV`, run `npx prisma generate`
+9. Detect Playwright — set `HAS_PLAYWRIGHT=true` in `GITHUB_ENV`
+10. Validation — verify node_modules exists, agent CLI on PATH
+
+**Replaces**: The 15-20 lines of duplicated setup in each workflow YAML. Prisma generate is centralized here (no longer duplicated in each workflow).
 
 ### `run-command.sh`
 
 **Location**: `.github/scripts/run-command.sh`
+
+**Interface**:
+```bash
+ai-board/.github/scripts/run-command.sh <target-dir> <command-key>
+```
 
 **Responsibilities**:
 1. Read command from `commands.<key>` in config
 2. Execute in target repo directory
 3. Handle skip — if command not defined in config, exit 0 (silent skip)
 4. Capture result — exit code, stdout/stderr for workflow
-
-**Interface**:
-```bash
-../ai-board/.github/scripts/run-command.sh <target-dir> <command-key>
-```
+5. **Fallback defaults** — if `.ai-board/config.yml` is absent, use hardcoded defaults matching ai-board's own commands (backward compatibility)
 
 ### Impact on `run-agent.sh`
 
@@ -163,10 +169,11 @@ Minimal change: instead of hardcoding `bun add -g @anthropic-ai/claude-code`, it
 - run: ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
 ```
 
-**After** (2 lines):
+**After** (2-3 lines):
 ```yaml
-- run: ../ai-board/.github/scripts/setup-environment.sh target/
-- run: ../ai-board/.github/scripts/run-command.sh target/ test_unit
+- run: ai-board/.github/scripts/setup-environment.sh target --phase full
+- run: ai-board/.github/scripts/run-command.sh target install
+- run: ai-board/.github/scripts/run-command.sh target test_unit
 ```
 
 ---

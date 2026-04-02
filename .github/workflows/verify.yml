@@ -256,12 +256,7 @@ jobs:
           echo "🔧 Setting up test environment..."
           ../ai-board/.github/scripts/setup-test-env.sh
 
-      # Database setup steps
-      - name: Generate Prisma Client
-        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
-        working-directory: target
-        run: npx prisma generate
-
+      # Database setup steps (Prisma generate handled by setup-environment.sh full phase)
       - name: Apply Database Migrations
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
         working-directory: target
@@ -272,7 +267,7 @@ jobs:
         working-directory: target
         run: npx tsx tests/global-setup.ts
 
-      # Playwright setup - GitHub runners have system deps pre-installed
+      # Playwright setup (--with-deps installs required system libraries)
       - name: Get Playwright Version
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
         working-directory: target
@@ -290,7 +285,7 @@ jobs:
       - name: Install Playwright Browsers
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' && steps.playwright-cache.outputs.cache-hit != 'true' }}
         working-directory: target
-        run: npx playwright install chromium
+        run: npx playwright install chromium --with-deps
 
       # Phase 1: Test Execution
       - name: Run Unit Tests
