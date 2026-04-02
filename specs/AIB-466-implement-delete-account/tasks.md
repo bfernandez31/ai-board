@@ -96,9 +96,9 @@
 
 **Purpose**: Final validation and edge case coverage.
 
-- [ ] T016 Run `bun run type-check` and `bun run lint` to verify no type or lint errors
-- [ ] T017 Run full test suite with `bun run test:unit` and `bun run test:integration` to verify all tests pass
-- [ ] T018 Validate against quickstart.md — verify all files created/modified match the implementation plan
+- [x] T016 Run `bun run type-check` and `bun run lint` to verify no type or lint errors
+- [x] T017 Run full test suite with `bun run test:unit` and `bun run test:integration` to verify all tests pass
+- [x] T018 Validate against quickstart.md — verify all files created/modified match the implementation plan
 
 ---
 
