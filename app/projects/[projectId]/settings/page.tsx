@@ -6,6 +6,7 @@ import { ClarificationPolicyCard } from '@/components/settings/clarification-pol
 import { DefaultAgentCard } from '@/components/settings/default-agent-card';
 import { Button } from '@/components/ui/button';
 import { ConstitutionCard } from '@/components/settings/constitution-card';
+import { ConfigCard } from '@/components/settings/config-card';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -81,6 +82,14 @@ export default async function ProjectSettingsPage({
             project={{
               id: project.id,
               name: project.name,
+            }}
+          />
+
+          <ConfigCard
+            project={{
+              id: project.id,
+              config: project.config as Record<string, unknown> | null,
+              configSyncedAt: project.configSyncedAt?.toISOString() ?? null,
             }}
           />
         </div>

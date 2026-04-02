@@ -84,12 +84,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T012 [P] [US3] Create component test for ConfigCard (with config, without config, sync button interaction) in tests/unit/components/config-card.test.tsx
+- [x] T012 [P] [US3] Create component test for ConfigCard (with config, without config, sync button interaction) in tests/unit/components/config-card.test.tsx
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] Create ConfigCard component in components/settings/config-card.tsx — read-only formatted display of runtime (language, framework, package manager), enabled services (with versions), agent config, and last sync timestamp; "Sync config" button that calls POST /api/projects/:projectId/config/sync; empty state prompting sync when no config; follow existing card patterns from components/settings/clarification-policy-card.tsx and components/settings/constitution-card.tsx
-- [ ] T014 [US3] Integrate ConfigCard into project settings page — add ConfigCard to the settings layout, passing project data including config and configSyncedAt fields
+- [x] T013 [US3] Create ConfigCard component in components/settings/config-card.tsx — read-only formatted display of runtime (language, framework, package manager), enabled services (with versions), agent config, and last sync timestamp; "Sync config" button that calls POST /api/projects/:projectId/config/sync; empty state prompting sync when no config; follow existing card patterns from components/settings/clarification-policy-card.tsx and components/settings/constitution-card.tsx
+- [x] T014 [US3] Integrate ConfigCard into project settings page — add ConfigCard to the settings layout, passing project data including config and configSyncedAt fields
 
 **Checkpoint**: Owners can view their config and trigger manual sync from the settings UI. User Story 3 is fully functional and testable independently.
 
