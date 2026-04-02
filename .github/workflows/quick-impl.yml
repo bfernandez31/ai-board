@@ -188,6 +188,29 @@ jobs:
             -d '{"status": "RUNNING"}' \
             -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
 
+      - name: Fetch Owner AI Credential
+        if: ${{ env.SKIP_EXECUTION != 'true' && inputs.project_id }}
+        run: |
+          echo "🔑 Fetching owner AI credential for project ${{ inputs.project_id }}..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "${APP_URL}/api/internal/credentials?projectId=${{ inputs.project_id }}" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "⚠️ No owner credential found (HTTP $HTTP_CODE) — using repository secrets as fallback"
+          else
+            CRED_TYPE=$(echo "$BODY" | jq -r '.credentialType')
+            ENV_VAR=$(echo "$BODY" | jq -r '.envVar')
+            CRED_VALUE_B64=$(echo "$BODY" | jq -r '.value')
+            echo "::add-mask::${CRED_VALUE_B64}"
+            CRED_VALUE=$(echo "$CRED_VALUE_B64" | base64 -d)
+            echo "::add-mask::${CRED_VALUE}"
+            echo "${ENV_VAR}=${CRED_VALUE}" >> "$GITHUB_ENV"
+            echo "✅ Owner credential loaded (type: ${CRED_TYPE}, envVar: ${ENV_VAR})"
+          fi
+
       - name: Checkout ai-board (sparse - plugin only)
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         uses: actions/checkout@v4
