@@ -8,11 +8,13 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 
 | Workflow | Trigger | Purpose | Timeout |
 |----------|---------|---------|---------|
-| `speckit.yml` | workflow_dispatch | Main ai-board workflow execution | 120 min |
-| `quick-impl.yml` | workflow_dispatch | Quick-implementation path | 120 min |
+| `speckit.yml` | workflow_dispatch | Main ai-board workflow execution (specify/plan/implement) | 120 min |
+| `quick-impl.yml` | workflow_dispatch | Quick-implementation path (no spec/plan) | 120 min |
 | `cleanup.yml` | workflow_dispatch | Diff-based technical debt cleanup | 45 min |
 | `verify.yml` | workflow_dispatch | Test verification and PR creation | 45 min |
+| `iterate.yml` | workflow_dispatch | Minor fixes during VERIFY stage | 60 min |
 | `ai-board-assist.yml` | workflow_dispatch | AI-BOARD comment assistance | 60 min |
+| `health-scan.yml` | workflow_dispatch | Automated health scans (security/compliance/tests/spec-sync) | 60 min |
 | `deploy-preview.yml` | workflow_dispatch | Manual Vercel preview deployment | 15 min |
 | `auto-ship.yml` | deployment_status | Auto-transition VERIFY → SHIP | 5 min |
 | `test.yml` | push, pull_request | CI testing (future) | 30 min |
@@ -29,6 +31,10 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 - `command`: ai-board command (specify|plan|task|implement|clarify)
 - `job_id`: Job record ID
 - `project_id`: Project identifier
+- `needs_postgres` / `postgres_version`: Start PostgreSQL service container (default version: `14`)
+- `needs_redis` / `redis_version`: Start Redis service container (default version: `7`)
+- `needs_mysql` / `mysql_version`: Start MySQL service container (default version: `8`)
+- `needs_mongo` / `mongo_version`: Start MongoDB service container (default version: `7`)
 
 **Environment Setup** (Double Checkout with Sparse Pattern):
 
@@ -69,61 +75,48 @@ steps:
       token: ${{ secrets.GH_PAT }}
       fetch-depth: 0
       path: target
-
-  # Symlink ai-board commands to target context
-  - name: Setup ai-board commands
-    run: |
-      mkdir -p target/.claude
-      ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
-
-  - name: Setup Bun
-    uses: oven-sh/setup-bun@v1
-    with:
-      bun-version: 1.3.1
-
-  - name: Setup Node.js
-    uses: actions/setup-node@v4
-    with:
-      node-version: '22.20.0'
-
-  - name: Setup Python
-    uses: actions/setup-python@v5
-    with:
-      python-version: '3.11'
-
-  - name: Install Dependencies
-    working-directory: target
-    run: bun install --frozen-lockfile
-
-  - name: Install Claude Code CLI
-    run: bun add -g @anthropic-ai/claude-code
-
-  - name: Configure Git
-    run: |
-      git config --global user.name "ai-board[bot]"
-      git config --global user.email "bot@ai-board.app"
 ```
 
-**Database Setup** (implement command only):
+**Environment Setup via `setup-environment.sh`**:
+
+Workflows call `ai-board/.github/scripts/setup-environment.sh` with a `--mode` flag instead of running individual setup steps inline:
 
 ```yaml
-  - name: Setup PostgreSQL
-    if: inputs.command == 'implement'
-    uses: actions/setup-postgresql@v1
-    with:
-      postgresql-version: '14'
+  # Lightweight setup: symlinks, runtimes, git config, agent CLI (specify/plan commands)
+  - name: Setup environment (lightweight)
+    if: inputs.command == 'specify' || inputs.command == 'plan'
+    run: ai-board/.github/scripts/setup-environment.sh target --mode lightweight
 
-  - name: Apply Prisma migrations
+  # Full setup: lightweight + deps, Prisma, Playwright (implement command)
+  - name: Setup environment (full)
     if: inputs.command == 'implement'
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
-    run: |
-      npx prisma migrate deploy
-      npx prisma db seed
+    run: ai-board/.github/scripts/setup-environment.sh target --mode full
+```
 
-  - name: Install Playwright
-    if: inputs.command == 'implement'
-    run: npx playwright install --with-deps
+**Command Execution via `run-command.sh`**:
+
+All project-specific commands (install, test, lint, etc.) are dispatched through `run-command.sh`, which reads the target project's `.ai-board/config.yml`:
+
+```yaml
+  - name: Install dependencies
+    run: ai-board/.github/scripts/run-command.sh target install
+
+  - name: Run unit tests
+    run: ai-board/.github/scripts/run-command.sh target test_unit
+```
+
+When `.ai-board/config.yml` is absent, `run-command.sh` falls back to hardcoded defaults that match ai-board's own tech stack.
+
+**Conditional Service Containers**:
+
+Workflows declare service containers for all supported databases, but containers only start when the corresponding `needs_*` input is `true`. When `false`, the image expression resolves to an empty string and the container is not started:
+
+```yaml
+services:
+  postgres:
+    image: ${{ inputs.needs_postgres == true && format('postgres:{0}', inputs.postgres_version || '14') || '' }}
+  redis:
+    image: ${{ inputs.needs_redis == true && format('redis:{0}', inputs.redis_version || '7') || '' }}
 ```
 
 **Command Execution**:

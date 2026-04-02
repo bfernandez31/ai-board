@@ -291,6 +291,19 @@ Templates use `[PLACEHOLDER_NAME]` format for values filled by the command at ru
 
 ## Scripts
 
+### GitHub Workflow Scripts (`.github/scripts/`)
+
+Core scripts that all workflows call for environment setup and command execution. These scripts operate in the double-checkout workspace and reference the target directory explicitly.
+
+| Script | Purpose |
+|--------|---------|
+| `setup-environment.sh <target> [--mode lightweight\|full]` | Configure the runner environment. `lightweight` (default): symlinks, runtimes, git config, agent CLI. `full`: lightweight + dependency install, Prisma detect/generate/migrate/seed, Playwright detect/install, env export, global setup. |
+| `run-command.sh <target-dir> <command-key>` | Centralized command dispatch. Reads `commands.<key>` from `<target-dir>/.ai-board/config.yml` via yq and executes it. Falls back to hardcoded defaults when config is absent. Silently skips (`exit 0`) when the key is missing or the value is empty. Fails with exit 2 when config exists but contains invalid YAML. Supported keys: `install`, `build`, `lint`, `type_check`, `test_unit`, `test_integration`, `test_e2e`. |
+
+**Phase-aware setup pattern**: Workflows call `setup-environment.sh` with the appropriate mode based on the phase being executed:
+- `--mode lightweight`: specify, plan, assist, iterate — phases that do not execute project code
+- `--mode full`: implement, verify, health-scan (TESTS type) — phases that install dependencies and run tests
+
 ### Bash Scripts (`scripts/bash/`)
 
 Support scripts called by workflows and commands. All scripts source `common.sh` for shared logging and API helper functions.
@@ -409,4 +422,5 @@ commands:
 - Missing required fields produce structured errors with field path and guidance on how to fix them.
 - All errors are collected in a single pass (not fail-on-first).
 - Unknown fields at the top level or within known sections produce warnings (not errors), supporting forward compatibility.
-- A missing `.ai-board/config.yml` file fails immediately with: "Missing .ai-board/config.yml — this file is required for ai-board to operate on your project."
+- A missing `.ai-board/config.yml` file fails the app-side validation (`lib/validations/config.ts`) immediately with: "Missing .ai-board/config.yml — this file is required for ai-board to operate on your project."
+- At the workflow script level, `run-command.sh` handles a missing config file gracefully: it falls back to hardcoded default commands matching ai-board's own tech stack (`bun install --frozen-lockfile`, `bun run test:unit`, etc.) so that the workflow can still complete. If config exists but contains invalid YAML, `run-command.sh` exits with code 2 and a clear parse error.
