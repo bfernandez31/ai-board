@@ -77,6 +77,8 @@ model Project {
   updatedAt           DateTime
   clarificationPolicy ClarificationPolicy @default(AUTO)
   defaultAgent        Agent               @default(CLAUDE)
+  config              Json?
+  configSyncedAt      DateTime?
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
   members             ProjectMember[]

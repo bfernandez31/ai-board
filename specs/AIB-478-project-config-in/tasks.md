@@ -18,8 +18,8 @@
 
 **Purpose**: Database schema changes and Prisma client regeneration
 
-- [ ] T001 Add `config Json?` and `configSyncedAt DateTime?` fields to Project model in prisma/schema.prisma
-- [ ] T002 Run Prisma migration (`add_project_config_fields`) and regenerate client
+- [x] T001 Add `config Json?` and `configSyncedAt DateTime?` fields to Project model in prisma/schema.prisma
+- [x] T002 Run Prisma migration (`add_project_config_fields`) and regenerate client
 
 ---
 
