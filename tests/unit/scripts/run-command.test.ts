@@ -11,7 +11,7 @@ function runScript(args: string, expectSuccess = true): { stdout: string; stderr
     const result = execSync(`bash "${SCRIPT_PATH}" ${args}`, {
       encoding: 'utf-8',
       timeout: 10000,
-      env: { ...process.env, PATH: process.env.PATH },
+      env: process.env,
     });
     return { stdout: result, stderr: '', exitCode: 0 };
   } catch (error: unknown) {
