@@ -5,7 +5,8 @@
 #
 # Phase parameter controls execution tier:
 #   lightweight — yq bootstrap, config validation, package manager install, symlinks, partial validation
-#   full (default) — all lightweight steps PLUS dependency install, agent CLI, env export, Prisma, Playwright
+#   full (default) — all lightweight steps PLUS agent CLI, env export, dependency detection
+#   post-install — ORM setup (prisma generate/migrate); must run AFTER dependency install
 
 set -euo pipefail
 
@@ -55,8 +56,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate phase value
-if [[ "$PHASE" != "lightweight" && "$PHASE" != "full" ]]; then
-  error "Unrecognized phase: '$PHASE'. Must be 'lightweight' or 'full'."
+if [[ "$PHASE" != "lightweight" && "$PHASE" != "full" && "$PHASE" != "post-install" ]]; then
+  error "Unrecognized phase: '$PHASE'. Must be 'lightweight', 'full', or 'post-install'."
   exit 1
 fi
 
@@ -186,6 +187,44 @@ install_package_manager() {
   esac
 }
 
+# post-install phase: skip setup, jump straight to ORM setup
+if [[ "$PHASE" == "post-install" ]]; then
+  run_orm_setup() {
+    if [[ "${HAS_PRISMA:-false}" != "true" ]]; then
+      info "No ORM detected — skipping ORM setup"
+      return 0
+    fi
+
+    info "Running Prisma ORM setup..."
+
+    # Determine the correct package runner for npx-equivalent commands
+    local runner="npx"
+    case "$MANAGER" in
+      bun)  runner="bunx" ;;
+      pnpm) runner="pnpm exec" ;;
+      yarn) runner="yarn" ;;
+    esac
+
+    # Generate Prisma Client (safe to run now — dependencies are installed)
+    info "Generating Prisma client..."
+    (cd "$TARGET_DIR" && $runner prisma generate)
+    success "Prisma client generated"
+
+    # Apply database migrations (deploy mode — no prompts)
+    if [[ -n "${DATABASE_URL:-}" ]]; then
+      info "Applying database migrations..."
+      (cd "$TARGET_DIR" && $runner prisma migrate deploy)
+      success "Database migrations applied"
+    else
+      info "DATABASE_URL not set — skipping migrations (generate-only mode)"
+    fi
+  }
+
+  run_orm_setup
+  success "Post-install setup complete."
+  exit 0
+fi
+
 install_package_manager
 
 # ─── Plugin Symlink Creation ─────────────────────────────────────────────────
@@ -277,42 +316,11 @@ if [[ "$PHASE" == "full" ]]; then
   fi
 fi
 
-# ─── Full Phase: ORM Setup (post-install) ───────────────────────────────────
-
-run_orm_setup() {
-  if [[ "${HAS_PRISMA:-false}" != "true" ]]; then
-    info "No ORM detected — skipping ORM setup"
-    return 0
-  fi
-
-  info "Running Prisma ORM setup..."
-
-  # Determine the correct package runner for npx-equivalent commands
-  local runner="npx"
-  case "$MANAGER" in
-    bun)  runner="bunx" ;;
-    pnpm) runner="pnpm exec" ;;
-    yarn) runner="yarn" ;;
-  esac
-
-  # Generate Prisma Client
-  info "Generating Prisma client..."
-  (cd "$TARGET_DIR" && $runner prisma generate)
-  success "Prisma client generated"
-
-  # Apply database migrations (deploy mode — no prompts)
-  if [[ -n "${DATABASE_URL:-}" ]]; then
-    info "Applying database migrations..."
-    (cd "$TARGET_DIR" && $runner prisma migrate deploy)
-    success "Database migrations applied"
-  else
-    info "DATABASE_URL not set — skipping migrations (generate-only mode)"
-  fi
-}
-
-if [[ "$PHASE" == "full" ]]; then
-  run_orm_setup
-fi
+# ─── Full Phase: ORM Setup ──────────────────────────────────────────────────
+# NOTE: ORM setup (prisma generate, migrate) requires node_modules to exist.
+# It is NOT run during the 'full' phase. Workflows must call:
+#   setup-environment.sh <target> --phase post-install
+# AFTER dependency installation (run-command.sh target install).
 
 # ─── Final Validation ────────────────────────────────────────────────────────
 

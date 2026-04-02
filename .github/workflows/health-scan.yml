@@ -260,6 +260,10 @@ jobs:
         if: ${{ inputs.scan_type == 'TESTS' }}
         run: ai-board/.github/scripts/run-command.sh target install
 
+      - name: Post-Install Setup (ORM)
+        if: ${{ inputs.scan_type == 'TESTS' }}
+        run: ai-board/.github/scripts/setup-environment.sh target --phase post-install
+
       - name: Setup Test Environment
         if: ${{ inputs.scan_type == 'TESTS' }}
         working-directory: target

@@ -257,6 +257,10 @@ jobs:
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         run: ai-board/.github/scripts/run-command.sh target install
 
+      - name: Post-Install Setup (ORM)
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: ai-board/.github/scripts/setup-environment.sh target --phase post-install
+
       - name: Configure Git
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         run: |
