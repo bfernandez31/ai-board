@@ -68,8 +68,8 @@
 
 ### Tests for User Story 2
 
-- [ ] T012 [P] [US2] Add test cases to integration test verifying free user deletion without Stripe interaction in `tests/integration/account/delete-account.test.ts`
-- [ ] T013 [P] [US2] Add test case to component test verifying modal hides subscription info for free users in `tests/unit/components/delete-account-dialog.test.tsx`
+- [x] T012 [P] [US2] Add test cases to integration test verifying free user deletion without Stripe interaction in `tests/integration/account/delete-account.test.ts`
+- [x] T013 [P] [US2] Add test case to component test verifying modal hides subscription info for free users in `tests/unit/components/delete-account-dialog.test.tsx`
 
 **Checkpoint**: Delete flow verified for both paid and free users. Modal correctly adapts content based on subscription status.
 
@@ -85,8 +85,8 @@
 
 ### Tests for User Story 3
 
-- [ ] T014 [P] [US3] Add test cases to component test verifying cancel clears input, closes dialog, and no API call is made in `tests/unit/components/delete-account-dialog.test.tsx`
-- [ ] T015 [US3] Add test case verifying dialog does not dismiss on outside click or Escape key in `tests/unit/components/delete-account-dialog.test.tsx`
+- [x] T014 [P] [US3] Add test cases to component test verifying cancel clears input, closes dialog, and no API call is made in `tests/unit/components/delete-account-dialog.test.tsx`
+- [x] T015 [US3] Add test case verifying dialog does not dismiss on outside click or Escape key in `tests/unit/components/delete-account-dialog.test.tsx`
 
 **Checkpoint**: Cancel flow verified — modal closes cleanly with no side effects.
 
