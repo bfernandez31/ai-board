@@ -103,7 +103,7 @@
 
 ### Implementation for User Story 4
 
-- [ ] T015 [US4] Add non-blocking config auto-import to project creation flow — after project is created in lib/db/projects.ts `createProject()` (or the API handler that calls it), attempt config fetch via lib/config-sync.ts as a fire-and-forget side effect; if fetch fails (no file, API error), project creation still succeeds with null config per research.md Decision 7
+- [x] T015 [US4] Add non-blocking config auto-import to project creation flow — after project is created in lib/db/projects.ts `createProject()` (or the API handler that calls it), attempt config fetch via lib/config-sync.ts as a fire-and-forget side effect; if fetch fails (no file, API error), project creation still succeeds with null config per research.md Decision 7
 
 **Checkpoint**: New projects automatically have their config imported. User Story 4 is fully functional and testable independently.
 

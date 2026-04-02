@@ -8,6 +8,7 @@ import { requireAuth } from '@/lib/db/users';
 import { getUserSubscription } from '@/lib/billing/subscription';
 import { prisma } from '@/lib/db/client';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
+import { syncProjectConfig } from '@/lib/config-sync';
 
 // Validation schema for project creation
 const createProjectSchema = z.object({
@@ -126,6 +127,17 @@ export async function POST(request: NextRequest) {
           });
           return project;
         }, { isolationLevel: 'Serializable' });
+
+        // Fire-and-forget config import (non-blocking per Decision 7)
+        syncProjectConfig({
+          id: newProject.id,
+          githubOwner: newProject.githubOwner,
+          githubRepo: newProject.githubRepo,
+          configSyncedAt: null,
+        }).catch((err) => {
+          console.warn('[project-create] Config auto-import failed (non-blocking):', err);
+        });
+
         return NextResponse.json(newProject, { status: 201 });
       } catch (error) {
         if (error instanceof Error && error.message === 'PLAN_LIMIT') {
@@ -145,6 +157,16 @@ export async function POST(request: NextRequest) {
       githubOwner: validated.githubOwner,
       githubRepo: validated.githubRepo,
       key: projectKey,
+    });
+
+    // Fire-and-forget config import (non-blocking per Decision 7)
+    syncProjectConfig({
+      id: newProject.id,
+      githubOwner: newProject.githubOwner,
+      githubRepo: newProject.githubRepo,
+      configSyncedAt: null,
+    }).catch((err) => {
+      console.warn('[project-create] Config auto-import failed (non-blocking):', err);
     });
 
     return NextResponse.json(newProject, { status: 201 });
