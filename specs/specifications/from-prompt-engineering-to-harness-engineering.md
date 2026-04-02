@@ -51,22 +51,25 @@ agents.
 But for me, the core idea is different: it is an orchestration harness.
 
 Instead of asking an agent to "build the feature," I force the work through
-explicit stages: specify, plan, build, verify. Each stage produces a persistent
-artifact. Each stage can be reviewed. Each stage can be replayed. And most
-importantly, each stage can start from a clean session while still relying on
-previous artifacts.
+explicit stages: Specify, Plan, Build, Verify, Ship. Each stage produces a
+persistent artifact: a spec, an implementation plan, code, test results. Each
+stage can be reviewed. Each stage can be replayed. And most importantly, each
+stage can start from a clean session while still relying on previous artifacts.
 
 That is where Spec-Driven Development became useful to me, not as dogma, but as
-a practical response to a context-management problem.
+a practical response to a context-management problem. Each ticket in AI-Board
+carries its own spec and plan as files that live alongside the code. The agent
+does not need to remember what was decided three sessions ago. It reads the
+artifact and picks up from there.
 
 A long agent session almost always degrades over time. A chain of shorter
 sessions, each anchored on explicit artifacts, is far more robust. It is easier
 to reason about, easier to compare, easier to replay, and easier to measure.
 
-That is also why AI-Board tracks telemetry, quality scores, and review outputs.
-I do not just want a result. I want to understand the execution: how much it
-cost, how long it took, how many tokens it used, whether the review agreed with
-my intuition, and how one workflow compares to another.
+That is also why AI-Board tracks telemetry at every stage. Token usage, execution
+time, cost, quality scores from automated reviews. I do not just want a result.
+I want to understand the execution: whether the review agreed with my intuition,
+where tokens were spent, and how one workflow configuration compares to another.
 
 That changes the nature of evaluation. You stop judging a vibe. You start
 judging a system.
@@ -110,8 +113,10 @@ deterministic acceptance criteria.
 
 Not vague criteria like "this looks better." Real signals. A test passes or
 fails. Lint is green or red. An invariant is respected or broken. An expected
-output exists or does not. The agent does a small change, re-runs the check,
-and decides what to do next from that result.
+output exists or does not. In AI-Board, the Verify stage does exactly this: it
+runs the test suite against the agent's work and produces a pass/fail verdict.
+The agent does a small change, re-runs the check, and decides what to do next
+from that result.
 
 That enables a very different style of iteration.
 
@@ -161,9 +166,10 @@ But I also do not want a system that decides on its own what "good enough"
 means.
 
 The role of the human changes. The human is no longer manually producing every
-step of the output. The human designs the harness: the stages, the artifacts,
-the quality gates, the acceptance criteria, the review checkpoints, the
-escalation paths, and the stop conditions.
+step of the output. The human designs the harness: the stages, the artifacts, the quality gates, the
+acceptance criteria, the review checkpoints, the escalation paths, and the stop
+conditions. That is what I spend most of my time on with AI-Board. Not writing
+code, but shaping the system that writes code.
 
 That is a less visible role, but a much more strategic one.
 
