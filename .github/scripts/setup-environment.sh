@@ -300,14 +300,8 @@ for link in "commands" "skills"; do
   fi
 done
 
-# Full phase only: Check node_modules and agent CLI
+# Full phase only: Check agent CLI (node_modules checked by workflow after install)
 if [[ "$PHASE" == "full" ]]; then
-  # Check node_modules exists (for JS-based projects)
-  if [[ ! -d "${TARGET_DIR}/node_modules" ]]; then
-    error "Validation failed: node_modules/ not found in $TARGET_DIR"
-    VALIDATION_FAILED=true
-  fi
-
   # Check agent CLI on PATH
   case "$AGENT_CLI" in
     claude-code)
