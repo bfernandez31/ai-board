@@ -161,7 +161,7 @@ export async function handleTicketTransition(
       };
     }
 
-    // Validate BYOK credential before creating job or dispatching workflow
+    // Validate BYOK credential and ensure fresh config before dispatch
     if (!isWorkflowTestMode(process.env.GITHUB_TOKEN)) {
       const credential = await getOwnerCredential(ticket.projectId);
       if (!credential) {
@@ -171,10 +171,7 @@ export async function handleTicketTransition(
           errorCode: 'MISSING_CREDENTIAL',
         };
       }
-    }
 
-    // Ensure config is fresh before dispatch (auto-refresh if stale)
-    if (!isWorkflowTestMode(process.env.GITHUB_TOKEN)) {
       try {
         await ensureFreshConfig(ticket.project);
       } catch (configError) {
