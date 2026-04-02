@@ -10,6 +10,10 @@ runtime:
   manager_version: "1.3.1"
   node: "22"
 
+services:
+  - type: postgres
+    version: "14"
+
 commands:
   install: bun install --frozen-lockfile
   build: bun run build
