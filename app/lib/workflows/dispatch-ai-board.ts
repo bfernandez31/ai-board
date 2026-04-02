@@ -1,6 +1,8 @@
 import { Octokit } from '@octokit/rest';
 import { isWorkflowTestMode } from './test-mode';
 import { getOwnerCredential, MISSING_CREDENTIAL_ERROR } from '@/lib/ai-credentials/workflow';
+import { getProjectServiceInputs } from '@/lib/workflows/service-inputs';
+import type { Project } from '@prisma/client';
 
 export interface AIBoardWorkflowInputs {
   ticket_id: string;
@@ -16,7 +18,8 @@ export interface AIBoardWorkflowInputs {
 }
 
 export async function dispatchAIBoardWorkflow(
-  inputs: AIBoardWorkflowInputs
+  inputs: AIBoardWorkflowInputs,
+  project?: Pick<Project, 'config'>
 ): Promise<void> {
   const githubToken = process.env.GITHUB_TOKEN;
 
@@ -55,7 +58,7 @@ export async function dispatchAIBoardWorkflow(
       repo,
       workflow_id: 'ai-board-assist.yml',
       ref: 'main',
-      inputs: { ...inputs },
+      inputs: { ...inputs, ...getProjectServiceInputs(project) },
     });
   } catch (error) {
     console.error('[dispatch-ai-board] Failed to dispatch workflow:', error);

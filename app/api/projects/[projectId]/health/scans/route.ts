@@ -33,7 +33,7 @@ export async function POST(
     if (await verifyWorkflowToken(request)) {
       project = await prisma.project.findUnique({
         where: { id: projectId },
-        select: { id: true, name: true, githubOwner: true, githubRepo: true, clarificationPolicy: true },
+        select: { id: true, name: true, githubOwner: true, githubRepo: true, clarificationPolicy: true, config: true, configSyncedAt: true },
       });
       if (!project) {
         return NextResponse.json({ error: 'Project not found' }, { status: 404 });
@@ -92,6 +92,12 @@ export async function POST(
       },
     });
 
+    // Fetch config fields for dispatch (needed for service inputs + staleness check)
+    const projectWithConfig = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, githubOwner: true, githubRepo: true, config: true, configSyncedAt: true },
+    });
+
     // Dispatch workflow (non-blocking in test mode)
     try {
       await dispatchHealthScanWorkflow({
@@ -101,7 +107,7 @@ export async function POST(
         base_commit: baseCommit ?? '',
         head_commit: '',
         githubRepository: `${project.githubOwner}/${project.githubRepo}`,
-      });
+      }, projectWithConfig ?? undefined);
     } catch (dispatchError) {
       // Mark scan as FAILED if dispatch fails
       await prisma.healthScan.update({

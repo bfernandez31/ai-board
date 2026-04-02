@@ -45,14 +45,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T005 [P] [US1] Create unit tests for config→service-input mapping (with config, without config, no services, multiple services) in tests/unit/service-inputs.test.ts
-- [ ] T006 [P] [US1] Create integration tests for staleness check and auto-refresh logic in tests/integration/projects/config-sync.test.ts
+- [x] T005 [P] [US1] Create unit tests for config→service-input mapping (with config, without config, no services, multiple services) in tests/unit/service-inputs.test.ts
+- [x] T006 [P] [US1] Create integration tests for staleness check and auto-refresh logic in tests/integration/projects/config-sync.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Add staleness check + auto-refresh before dispatch in lib/workflows/transition.ts — before each `octokit.actions.createWorkflowDispatch` call, check if `project.configSyncedAt` is null or older than 1 hour; if stale, call config sync inline; if sync fails, block dispatch and surface error
-- [ ] T008 [P] [US1] Add staleness check + auto-refresh before dispatch in lib/health/scan-dispatch.ts — same pattern as T007
-- [ ] T009 [P] [US1] Add service inputs to AI-board workflow dispatch in app/lib/workflows/dispatch-ai-board.ts — spread `getProjectServiceInputs(project)` into dispatch inputs
+- [x] T007 [US1] Add staleness check + auto-refresh before dispatch in lib/workflows/transition.ts — before each `octokit.actions.createWorkflowDispatch` call, check if `project.configSyncedAt` is null or older than 1 hour; if stale, call config sync inline; if sync fails, block dispatch and surface error
+- [x] T008 [P] [US1] Add staleness check + auto-refresh before dispatch in lib/health/scan-dispatch.ts — same pattern as T007
+- [x] T009 [P] [US1] Add service inputs to AI-board workflow dispatch in app/lib/workflows/dispatch-ai-board.ts — spread `getProjectServiceInputs(project)` into dispatch inputs
 
 **Checkpoint**: All dispatch paths (ticket transitions, health scans, AI-board assist) use dynamic config with auto-refresh. User Story 1 is fully functional and testable independently.
 
