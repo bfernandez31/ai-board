@@ -4,6 +4,7 @@ import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
 import { getOwnerCredential, MISSING_CREDENTIAL_ERROR } from '@/lib/ai-credentials/workflow';
+import { getProjectServiceInputs } from '@/lib/workflows/service-inputs';
 
 const prisma = new PrismaClient();
 
@@ -242,6 +243,7 @@ export async function handleTicketTransition(
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            ...getProjectServiceInputs(ticket.project),
           };
 
           if (ticket.attachments) {
@@ -258,6 +260,7 @@ export async function handleTicketTransition(
             workflowType: ticket.workflowType,
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            ...getProjectServiceInputs(ticket.project),
           };
 
           workflowFile = 'verify.yml';
@@ -270,6 +273,7 @@ export async function handleTicketTransition(
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            ...(command === 'implement' && getProjectServiceInputs(ticket.project)),
           };
 
           if (targetStage === Stage.SPECIFY) {

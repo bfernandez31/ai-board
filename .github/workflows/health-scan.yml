@@ -35,15 +35,59 @@ on:
         type: string
         default: 'CLAUDE'
 
+      # Conditional service inputs
+      needs_postgres:
+        description: 'Provision PostgreSQL service container'
+        required: false
+        default: 'false'
+        type: boolean
+      needs_redis:
+        description: 'Provision Redis service container'
+        required: false
+        default: 'false'
+        type: boolean
+      needs_mysql:
+        description: 'Provision MySQL service container'
+        required: false
+        default: 'false'
+        type: boolean
+      needs_mongo:
+        description: 'Provision MongoDB service container'
+        required: false
+        default: 'false'
+        type: boolean
+
+      # Version inputs
+      postgres_version:
+        description: 'PostgreSQL version tag'
+        required: false
+        default: '14'
+        type: string
+      redis_version:
+        description: 'Redis version tag'
+        required: false
+        default: '7'
+        type: string
+      mysql_version:
+        description: 'MySQL version tag'
+        required: false
+        default: '8'
+        type: string
+      mongo_version:
+        description: 'MongoDB version tag'
+        required: false
+        default: '7'
+        type: string
+
 jobs:
   run-health-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
-    # PostgreSQL service container for TESTS scan type (idle for other scan types)
+    # Conditional service containers — only provisioned when needs_* is true
     services:
       postgres:
-        image: postgres:14
+        image: ${{ inputs.needs_postgres && inputs.scan_type == 'TESTS' && format('postgres:{0}', inputs.postgres_version) || '' }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -51,7 +95,40 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: ${{ inputs.needs_redis && inputs.scan_type == 'TESTS' && format('redis:{0}', inputs.redis_version) || '' }}
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mysql:
+        image: ${{ inputs.needs_mysql && inputs.scan_type == 'TESTS' && format('mysql:{0}', inputs.mysql_version) || '' }}
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mongo:
+        image: ${{ inputs.needs_mongo && inputs.scan_type == 'TESTS' && format('mongo:{0}', inputs.mongo_version) || '' }}
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -135,14 +212,6 @@ jobs:
           esac
           echo "✅ Mapped $INPUT_SCAN_TYPE → ai-board.$(grep command <<< "$(cat $GITHUB_OUTPUT)" | cut -d= -f2)"
 
-      - name: Setup ai-board commands and skills
-        run: |
-          mkdir -p target/.claude
-          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
-          ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
-          echo "✅ ai-board commands linked to target/.claude/commands"
-          echo "✅ ai-board skills linked to target/.claude/skills"
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -151,11 +220,18 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
 
+      - name: Setup Environment (full for TESTS)
+        if: ${{ inputs.scan_type == 'TESTS' }}
+        run: ai-board/.github/scripts/setup-environment.sh target --phase full
+
+      - name: Setup Environment (lightweight for non-TESTS)
+        if: ${{ inputs.scan_type != 'TESTS' }}
+        run: ai-board/.github/scripts/setup-environment.sh target --phase lightweight
+
       # --- Test infrastructure setup (only for TESTS scan type) ---
       - name: Install Dependencies
         if: ${{ inputs.scan_type == 'TESTS' }}
-        working-directory: target
-        run: bun install --frozen-lockfile
+        run: ai-board/.github/scripts/run-command.sh target install
 
       - name: Setup Test Environment
         if: ${{ inputs.scan_type == 'TESTS' }}
@@ -169,24 +245,9 @@ jobs:
           echo "🔧 Setting up test environment for health scan..."
           ../ai-board/.github/scripts/setup-test-env.sh
 
-      - name: Detect Prisma
-        if: ${{ inputs.scan_type == 'TESTS' }}
-        id: detect-prisma
-        working-directory: target
-        run: |
-          if [ -f "prisma/schema.prisma" ]; then
-            echo "has_prisma=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_prisma=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Generate Prisma Client
-        if: ${{ inputs.scan_type == 'TESTS' && steps.detect-prisma.outputs.has_prisma == 'true' }}
-        working-directory: target
-        run: npx prisma generate
-
+      # Prisma generate + HAS_PRISMA detection handled by setup-environment.sh full phase
       - name: Apply Database Migrations
-        if: ${{ inputs.scan_type == 'TESTS' && steps.detect-prisma.outputs.has_prisma == 'true' }}
+        if: ${{ inputs.scan_type == 'TESTS' && env.HAS_PRISMA == 'true' }}
         working-directory: target
         run: npx prisma migrate deploy
 
@@ -217,7 +278,7 @@ jobs:
       - name: Install Playwright Browsers
         if: ${{ inputs.scan_type == 'TESTS' && steps.playwright-version.outputs.has_playwright == 'true' && steps.playwright-cache.outputs.cache-hit != 'true' }}
         working-directory: target
-        run: npx playwright install chromium
+        run: npx playwright install chromium --with-deps
 
       # Step 4a: Execute TESTS scan via shell orchestrator (no LLM if all pass)
       - name: Execute Tests Scan (Shell Orchestrated)

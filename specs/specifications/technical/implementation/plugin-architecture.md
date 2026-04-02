@@ -291,6 +291,18 @@ Templates use `[PLACEHOLDER_NAME]` format for values filled by the command at ru
 
 ## Scripts
 
+### Workflow Support Scripts (`.github/scripts/`)
+
+Low-level scripts invoked directly by GitHub Actions workflow YAML. Not part of the plugin — loaded via sparse checkout of the ai-board repo.
+
+| Script | Called By | Purpose |
+|--------|-----------|---------|
+| `run-command.sh` | All workflows | Config-driven command executor: reads `.ai-board/config.yml` and runs the command mapped to a given key. Exits 0 silently when config is absent or the key is not defined, enabling backward compatibility for non-onboarded repos. |
+| `setup-environment.sh` | All workflows | Centralized environment setup with `--phase` parameter: `lightweight` installs only symlinks and runtime tools (for specify/plan); `full` also installs project dependencies, Prisma, and Playwright (for implement/build/verify). Defaults to `full` when `--phase` is omitted. |
+| `run-agent.sh` | All workflows | Agent CLI abstraction: invokes Claude Code or Codex depending on the `agent` input. |
+| `setup-test-env.sh` | `verify.yml` | Configure test environment variables and database for verification runs. |
+| `fetch-telemetry.sh` | Various | Collect and report workflow telemetry to the API. |
+
 ### Bash Scripts (`scripts/bash/`)
 
 Support scripts called by workflows and commands. All scripts source `common.sh` for shared logging and API helper functions.
@@ -409,4 +421,5 @@ commands:
 - Missing required fields produce structured errors with field path and guidance on how to fix them.
 - All errors are collected in a single pass (not fail-on-first).
 - Unknown fields at the top level or within known sections produce warnings (not errors), supporting forward compatibility.
-- A missing `.ai-board/config.yml` file fails immediately with: "Missing .ai-board/config.yml — this file is required for ai-board to operate on your project."
+- A missing `.ai-board/config.yml` file fails immediately with: "Missing .ai-board/config.yml — this file is required for ai-board to operate on your project." (API-side validation only.)
+- At runtime, `run-command.sh` exits 0 silently when `.ai-board/config.yml` is absent, enabling backward compatibility for repos that have not yet created a config file. `setup-environment.sh` is only called for onboarded projects and still requires the config.

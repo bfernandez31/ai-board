@@ -2,6 +2,7 @@ import { Octokit } from '@octokit/rest';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
 import { getOwnerCredential, MISSING_CREDENTIAL_ERROR } from '@/lib/ai-credentials/workflow';
 import type { HealthScanType } from '@prisma/client';
+import { getProjectServiceInputs } from '@/lib/workflows/service-inputs';
 
 export interface HealthScanDispatchInputs {
   scan_id: string;
@@ -52,7 +53,10 @@ export async function dispatchHealthScanWorkflow(
       repo,
       workflow_id: 'health-scan.yml',
       ref: 'main',
-      inputs: { ...inputs },
+      inputs: {
+        ...inputs,
+        ...(inputs.scan_type === 'TESTS' && getProjectServiceInputs()),
+      },
     });
   } catch (error) {
     console.error('[health-scan-dispatch] Failed to dispatch workflow:', error);

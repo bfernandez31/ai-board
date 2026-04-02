@@ -501,7 +501,7 @@ All 6 workflows (`speckit.yml`, `quick-impl.yml`, `verify.yml`, `cleanup.yml`, `
 
 **Interface**:
 ```bash
-.github/scripts/setup-environment.sh <target-directory>
+ai-board/.github/scripts/setup-environment.sh <target-directory> [--phase lightweight|full]
 ```
 
 **Configuration File** (`.ai-board/config.yml` in target repo):
@@ -530,15 +530,21 @@ agent:
   model: claude-opus-4-6
 ```
 
-**Setup Steps** (in order):
+**Phase `lightweight`** (specify, plan, clarify, iterate, assist):
 1. Bootstraps `yq` v4 if not already present on the runner
 2. Validates `.ai-board/config.yml` — fails with specific error for missing required fields (`runtime.manager`, `commands.install`, `agent.cli`)
 3. Installs the specified runtime at the configured version (bun, npm, yarn, or pnpm)
-4. Executes the configured `commands.install` dependency install command
-5. Installs the agent CLI specified by `agent.cli` (`claude-code` or `codex`)
-6. Exports env vars from the config `env` section (workflow secrets take precedence)
-7. Creates `.claude/commands` and `.claude/skills` symlinks in the target directory pointing to ai-board plugin directories
-8. Performs final validation confirming all expected tools are installed and symlinks are valid
+4. Creates `.claude/commands` and `.claude/skills` symlinks in the target directory pointing to ai-board plugin directories
+5. Validates runtime on PATH and symlinks readable
+
+**Phase `full`** (implement, quick-impl, verify, health-scan TESTS) — all of lightweight, plus:
+6. Installs the agent CLI specified by `agent.cli` (`claude-code` or `codex`)
+7. Exports env vars from the config `env` section (workflow secrets take precedence)
+8. Detects Prisma — sets `HAS_PRISMA=true` in `GITHUB_ENV`, runs `npx prisma generate`
+9. Detects Playwright — sets `HAS_PLAYWRIGHT=true` in `GITHUB_ENV`
+10. Validates agent CLI on PATH
+
+Note: Dependency installation is NOT done by setup-environment.sh — workflows handle it explicitly via `run-command.sh target install` for visibility in CI logs.
 
 **Environment Variable Precedence**:
 Workflow-level secrets always override config-defined values via the pattern `export KEY="${KEY:-config_value}"`. Config env vars serve as defaults only; secrets are never overridden.
@@ -563,8 +569,13 @@ Unsupported managers cause an immediate fail with a clear error listing supporte
 **Usage in Workflows**:
 All 6 core workflows (`speckit.yml`, `quick-impl.yml`, `verify.yml`, `ai-board-assist.yml`, `iterate.yml`, `health-scan.yml`) invoke this script after checking out target repositories:
 ```yaml
-- name: Setup environment
-  run: .github/scripts/setup-environment.sh "${{ github.workspace }}/target"
+# Lightweight — for commands that only read/analyze (specify, plan, clarify)
+- name: Setup Environment (lightweight)
+  run: ai-board/.github/scripts/setup-environment.sh target --phase lightweight
+
+# Full — for commands that execute code (implement, build, verify, tests)
+- name: Setup Environment (full)
+  run: ai-board/.github/scripts/setup-environment.sh target --phase full
 ```
 
 ### Telemetry Context Script

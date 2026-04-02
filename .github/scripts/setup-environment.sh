@@ -1,7 +1,11 @@
 #!/bin/bash
 # setup-environment.sh — Centralized environment setup for ai-board workflows
 # Reads .ai-board/config.yml from target repos and handles all setup automatically.
-# Usage: setup-environment.sh <target-directory>
+# Usage: setup-environment.sh <target-directory> [--phase <lightweight|full>]
+#
+# Phase parameter controls execution tier:
+#   lightweight — yq bootstrap, config validation, package manager install, symlinks, partial validation
+#   full (default) — all lightweight steps PLUS dependency install, agent CLI, env export, Prisma, Playwright
 
 set -euo pipefail
 
@@ -23,12 +27,40 @@ set_env() {
 # ─── Argument Parsing ─────────────────────────────────────────────────────────
 
 if [[ $# -lt 1 ]]; then
-  echo "Usage: setup-environment.sh <target-directory>"
+  echo "Usage: setup-environment.sh <target-directory> [--phase <lightweight|full>]"
   echo "  Reads .ai-board/config.yml from the target directory and configures the environment."
   exit 1
 fi
 
 TARGET_DIR="$1"
+shift
+
+# Parse optional --phase parameter (default: full)
+PHASE="full"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --phase)
+      if [[ $# -lt 2 ]]; then
+        error "Missing value for --phase parameter"
+        exit 1
+      fi
+      PHASE="$2"
+      shift 2
+      ;;
+    *)
+      error "Unrecognized argument: $1"
+      exit 1
+      ;;
+  esac
+done
+
+# Validate phase value
+if [[ "$PHASE" != "lightweight" && "$PHASE" != "full" ]]; then
+  error "Unrecognized phase: '$PHASE'. Must be 'lightweight' or 'full'."
+  exit 1
+fi
+
+info "Phase: $PHASE"
 
 if [[ ! -d "$TARGET_DIR" ]]; then
   error "Target directory does not exist: $TARGET_DIR"
@@ -156,13 +188,18 @@ install_package_manager() {
 
 install_package_manager
 
-# ─── Dependency Installation ─────────────────────────────────────────────────
+# ─── Plugin Symlink Creation ─────────────────────────────────────────────────
 
-info "Installing dependencies via: $INSTALL_CMD"
-(cd "$TARGET_DIR" && eval "$INSTALL_CMD")
-success "Dependencies installed"
+info "Creating plugin symlinks..."
+mkdir -p "${TARGET_DIR}/.claude"
+ln -sf "../../ai-board/.claude-plugin/commands" "${TARGET_DIR}/.claude/commands"
+ln -sf "../../ai-board/.claude-plugin/skills" "${TARGET_DIR}/.claude/skills"
+success "ai-board commands linked to ${TARGET_DIR}/.claude/commands"
+success "ai-board skills linked to ${TARGET_DIR}/.claude/skills"
 
-# ─── Agent CLI Installation ──────────────────────────────────────────────────
+# ─── Full Phase: Dependency installation is handled by workflows via run-command.sh ──
+
+# ─── Full Phase: Agent CLI Installation ──────────────────────────────────────
 
 install_agent_cli() {
   case "$AGENT_CLI" in
@@ -191,93 +228,68 @@ install_agent_cli() {
   esac
 }
 
-install_agent_cli
-
-# ─── Environment Variable Export ─────────────────────────────────────────────
-
-info "Exporting environment variables..."
-ENV_COUNT=0
-while IFS= read -r key; do
-  if [[ -n "$key" && "$key" != "null" ]]; then
-    val=$(yq eval ".env.${key}" "$CONFIG_FILE")
-    # Preserve existing values (workflow secrets take precedence)
-    if [[ -z "${!key:-}" ]]; then
-      set_env "$key" "$val"
-      ENV_COUNT=$((ENV_COUNT + 1))
-    fi
-  fi
-done < <(yq eval '.env | keys | .[]' "$CONFIG_FILE" 2>/dev/null || true)
-success "Exported $ENV_COUNT environment variables"
-
-# ─── Plugin Symlink Creation ─────────────────────────────────────────────────
-
-info "Creating plugin symlinks..."
-mkdir -p "${TARGET_DIR}/.claude"
-ln -sf "../../ai-board/.claude-plugin/commands" "${TARGET_DIR}/.claude/commands"
-ln -sf "../../ai-board/.claude-plugin/skills" "${TARGET_DIR}/.claude/skills"
-success "ai-board commands linked to ${TARGET_DIR}/.claude/commands"
-success "ai-board skills linked to ${TARGET_DIR}/.claude/skills"
-
-# ─── Project Dependency Detection ────────────────────────────────────────────
-
-info "Detecting project dependencies..."
-
-# Prisma detection
-if [[ -f "${TARGET_DIR}/prisma/schema.prisma" ]] || \
-   ( [[ -f "${TARGET_DIR}/package.json" ]] && grep -q '"prisma"' "${TARGET_DIR}/package.json" 2>/dev/null ); then
-  set_env HAS_PRISMA true
-  success "Prisma detected — running prisma generate"
-  (cd "$TARGET_DIR" && npx prisma generate)
-else
-  set_env HAS_PRISMA false
-  info "Prisma not detected — skipping database setup"
+if [[ "$PHASE" == "full" ]]; then
+  install_agent_cli
 fi
 
-# Playwright detection
-if [[ -f "${TARGET_DIR}/playwright.config.ts" ]] || \
-   [[ -f "${TARGET_DIR}/playwright.config.js" ]] || \
-   ( [[ -f "${TARGET_DIR}/package.json" ]] && grep -q '"@playwright/test"' "${TARGET_DIR}/package.json" 2>/dev/null ); then
-  set_env HAS_PLAYWRIGHT true
-  success "Playwright detected"
-else
-  set_env HAS_PLAYWRIGHT false
-  info "Playwright not detected — skipping E2E setup"
+# ─── Full Phase: Environment Variable Export ─────────────────────────────────
+
+if [[ "$PHASE" == "full" ]]; then
+  info "Exporting environment variables..."
+  ENV_COUNT=0
+  while IFS= read -r key; do
+    if [[ -n "$key" && "$key" != "null" ]]; then
+      val=$(yq eval ".env.${key}" "$CONFIG_FILE")
+      # Preserve existing values (workflow secrets take precedence)
+      if [[ -z "${!key:-}" ]]; then
+        set_env "$key" "$val"
+        ENV_COUNT=$((ENV_COUNT + 1))
+      fi
+    fi
+  done < <(yq eval '.env | keys | .[]' "$CONFIG_FILE" 2>/dev/null || true)
+  success "Exported $ENV_COUNT environment variables"
+fi
+
+# ─── Full Phase: Project Dependency Detection ────────────────────────────────
+
+if [[ "$PHASE" == "full" ]]; then
+  info "Detecting project dependencies..."
+
+  # Prisma detection
+  if [[ -f "${TARGET_DIR}/prisma/schema.prisma" ]] || \
+     ( [[ -f "${TARGET_DIR}/package.json" ]] && grep -q '"prisma"' "${TARGET_DIR}/package.json" 2>/dev/null ); then
+    set_env HAS_PRISMA true
+    success "Prisma detected — running prisma generate"
+    (cd "$TARGET_DIR" && npx prisma generate)
+  else
+    set_env HAS_PRISMA false
+    info "Prisma not detected — skipping database setup"
+  fi
+
+  # Playwright detection
+  if [[ -f "${TARGET_DIR}/playwright.config.ts" ]] || \
+     [[ -f "${TARGET_DIR}/playwright.config.js" ]] || \
+     ( [[ -f "${TARGET_DIR}/package.json" ]] && grep -q '"@playwright/test"' "${TARGET_DIR}/package.json" 2>/dev/null ); then
+    set_env HAS_PLAYWRIGHT true
+    success "Playwright detected"
+  else
+    set_env HAS_PLAYWRIGHT false
+    info "Playwright not detected — skipping E2E setup"
+  fi
 fi
 
 # ─── Final Validation ────────────────────────────────────────────────────────
 
-info "Running final validation..."
+info "Running final validation ($PHASE)..."
 VALIDATION_FAILED=false
 
-# Check package manager on PATH
+# Check package manager on PATH (both phases)
 if ! command -v "$MANAGER" &>/dev/null; then
   error "Validation failed: $MANAGER not found on PATH"
   VALIDATION_FAILED=true
 fi
 
-# Check node_modules exists (for JS-based projects)
-if [[ ! -d "${TARGET_DIR}/node_modules" ]]; then
-  error "Validation failed: node_modules/ not found in $TARGET_DIR"
-  VALIDATION_FAILED=true
-fi
-
-# Check agent CLI on PATH
-case "$AGENT_CLI" in
-  claude-code)
-    if ! command -v claude &>/dev/null; then
-      error "Validation failed: claude-code CLI not found on PATH"
-      VALIDATION_FAILED=true
-    fi
-    ;;
-  codex)
-    if ! command -v codex &>/dev/null; then
-      error "Validation failed: codex CLI not found on PATH"
-      VALIDATION_FAILED=true
-    fi
-    ;;
-esac
-
-# Check symlinks exist and targets are readable
+# Check symlinks exist and targets are readable (both phases)
 for link in "commands" "skills"; do
   link_path="${TARGET_DIR}/.claude/${link}"
   if [[ ! -L "$link_path" ]]; then
@@ -289,9 +301,34 @@ for link in "commands" "skills"; do
   fi
 done
 
+# Full phase only: Check node_modules and agent CLI
+if [[ "$PHASE" == "full" ]]; then
+  # Check node_modules exists (for JS-based projects)
+  if [[ ! -d "${TARGET_DIR}/node_modules" ]]; then
+    error "Validation failed: node_modules/ not found in $TARGET_DIR"
+    VALIDATION_FAILED=true
+  fi
+
+  # Check agent CLI on PATH
+  case "$AGENT_CLI" in
+    claude-code)
+      if ! command -v claude &>/dev/null; then
+        error "Validation failed: claude-code CLI not found on PATH"
+        VALIDATION_FAILED=true
+      fi
+      ;;
+    codex)
+      if ! command -v codex &>/dev/null; then
+        error "Validation failed: codex CLI not found on PATH"
+        VALIDATION_FAILED=true
+      fi
+      ;;
+  esac
+fi
+
 if [[ "$VALIDATION_FAILED" == "true" ]]; then
   error "Environment setup validation failed. See errors above."
   exit 1
 fi
 
-success "Environment setup complete. Validation passed."
+success "Environment setup complete ($PHASE). Validation passed."

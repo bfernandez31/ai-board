@@ -67,6 +67,50 @@ on:
         type: string
         default: 'CLAUDE'
 
+      # Conditional service inputs
+      needs_postgres:
+        description: 'Provision PostgreSQL service container'
+        required: false
+        default: 'false'
+        type: boolean
+      needs_redis:
+        description: 'Provision Redis service container'
+        required: false
+        default: 'false'
+        type: boolean
+      needs_mysql:
+        description: 'Provision MySQL service container'
+        required: false
+        default: 'false'
+        type: boolean
+      needs_mongo:
+        description: 'Provision MongoDB service container'
+        required: false
+        default: 'false'
+        type: boolean
+
+      # Version inputs
+      postgres_version:
+        description: 'PostgreSQL version tag'
+        required: false
+        default: '14'
+        type: string
+      redis_version:
+        description: 'Redis version tag'
+        required: false
+        default: '7'
+        type: string
+      mysql_version:
+        description: 'MySQL version tag'
+        required: false
+        default: '8'
+        type: string
+      mongo_version:
+        description: 'MongoDB version tag'
+        required: false
+        default: '7'
+        type: string
+
 jobs:
   run-speckit:
     runs-on: ubuntu-latest
@@ -76,11 +120,10 @@ jobs:
       contents: write
       pull-requests: write
 
-    # PostgreSQL service container (only for implement command)
-    # Health checks ensure database is ready before test execution
+    # Conditional service containers — only provisioned when needs_* is true
     services:
       postgres:
-        image: postgres:14
+        image: ${{ inputs.needs_postgres && format('postgres:{0}', inputs.postgres_version) || '' }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -88,7 +131,40 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: ${{ inputs.needs_redis && format('redis:{0}', inputs.redis_version) || '' }}
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mysql:
+        image: ${{ inputs.needs_mysql && format('mysql:{0}', inputs.mysql_version) || '' }}
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mongo:
+        image: ${{ inputs.needs_mongo && format('mongo:{0}', inputs.mongo_version) || '' }}
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -185,16 +261,6 @@ jobs:
           fetch-depth: 0
           path: target
 
-      - name: Setup ai-board commands and skills
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
-        run: |
-          # Create symlinks so Claude can find ai-board commands and skills in target repo
-          mkdir -p target/.claude
-          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
-          ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
-          echo "✅ ai-board commands linked to target/.claude/commands"
-          echo "✅ ai-board skills linked to target/.claude/skills"
-
       - name: Setup Bun
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         uses: oven-sh/setup-bun@v1
@@ -222,40 +288,17 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Setup Environment (lightweight)
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command != 'implement' }}
+        run: ai-board/.github/scripts/setup-environment.sh target --phase lightweight
+
+      - name: Setup Environment (full)
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        run: ai-board/.github/scripts/setup-environment.sh target --phase full
+
       - name: Install Dependencies
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
-        working-directory: target
-        run: bun install --frozen-lockfile
-
-      - name: Detect Project Dependencies
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
-        working-directory: target
-        run: |
-          echo "🔍 Detecting project dependencies..."
-
-          # Check for Prisma
-          if [ -f "package.json" ] && grep -q '"prisma"' package.json; then
-            echo "✅ Prisma detected in package.json"
-            echo "HAS_PRISMA=true" >> $GITHUB_ENV
-          elif [ -f "prisma/schema.prisma" ]; then
-            echo "✅ Prisma detected (schema.prisma exists)"
-            echo "HAS_PRISMA=true" >> $GITHUB_ENV
-          else
-            echo "ℹ️ Prisma not detected - skipping database setup"
-            echo "HAS_PRISMA=false" >> $GITHUB_ENV
-          fi
-
-          # Check for Playwright
-          if [ -f "package.json" ] && grep -q '"@playwright/test"' package.json; then
-            echo "✅ Playwright detected in package.json"
-            echo "HAS_PLAYWRIGHT=true" >> $GITHUB_ENV
-          elif [ -f "playwright.config.ts" ] || [ -f "playwright.config.js" ]; then
-            echo "✅ Playwright detected (config file exists)"
-            echo "HAS_PLAYWRIGHT=true" >> $GITHUB_ENV
-          else
-            echo "ℹ️ Playwright not detected - skipping E2E setup"
-            echo "HAS_PLAYWRIGHT=false" >> $GITHUB_ENV
-          fi
+        run: ai-board/.github/scripts/run-command.sh target install
 
       - name: Configure Git
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
@@ -299,12 +342,7 @@ jobs:
           EOF
           echo "SPECIFY_PAYLOAD_FILE=/tmp/specify_payload.json" >> "$GITHUB_ENV"
 
-      # Database setup steps (implement command only)
-      - name: Generate Prisma Client
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
-        working-directory: target
-        run: npx prisma generate
-
+      # Database setup steps (implement command only — Prisma generate handled by setup-environment.sh full phase)
       - name: Apply Database Migrations
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
         working-directory: target
