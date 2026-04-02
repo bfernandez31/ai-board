@@ -107,6 +107,9 @@ const authProxy = auth((request) => {
   }
 
   if (!request.auth) {
+    if (request.nextUrl.pathname.startsWith("/api/")) {
+      return createUnauthorizedApiResponse()
+    }
     return createSignInRedirectResponse(request)
   }
 

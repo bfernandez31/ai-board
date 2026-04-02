@@ -36,14 +36,14 @@ describe('GET /api/settings/profile', () => {
     expect(response.data).toHaveProperty('plan');
   });
 
-  it('should return FREE plan when no subscription exists', async () => {
+  it('should return plan from subscription when subscription exists', async () => {
     const response = await ctx.api.get<{
       plan: string;
     }>('/api/settings/profile');
 
     expect(response.status).toBe(200);
-    // Test user typically has no subscription, defaults to FREE
-    expect(response.data.plan).toBe('FREE');
+    // Test user has a PRO subscription provisioned by ensureTestFixtures (db-cleanup.ts)
+    expect(response.data.plan).toBe('PRO');
   });
 
   it('should return valid ISO date for createdAt', async () => {
