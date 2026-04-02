@@ -6,6 +6,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Job, Stage, UserCredential } from '@prisma/client';
+import type { HealthScanDispatchInputs } from '@/lib/health/scan-dispatch';
+import type { TicketWithProject } from '@/lib/workflows/transition';
 
 // Mock modules before importing subjects
 vi.mock('@/app/lib/workflows/test-mode', () => ({
@@ -56,13 +59,13 @@ import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
 const mockedGetOwnerCredential = vi.mocked(getOwnerCredential);
 const mockedIsWorkflowTestMode = vi.mocked(isWorkflowTestMode);
 
-function createTestTicket(overrides: Record<string, unknown> = {}) {
+function createTestTicket(overrides: Partial<TicketWithProject> = {}): TicketWithProject {
   return {
     id: 1,
     ticketKey: 'AIB-100',
     title: 'Test ticket',
     description: '',
-    stage: 'INBOX',
+    stage: 'INBOX' as Stage,
     workflowType: 'FULL',
     branch: null,
     projectId: 1,
@@ -75,7 +78,7 @@ function createTestTicket(overrides: Record<string, unknown> = {}) {
     },
     agent: null,
     ...overrides,
-  } as any;
+  } as TicketWithProject;
 }
 
 describe('BYOK Credential Dispatch Guards', () => {
@@ -100,7 +103,7 @@ describe('BYOK Credential Dispatch Guards', () => {
 
       const { handleTicketTransition } = await import('@/lib/workflows/transition');
 
-      const result = await handleTicketTransition(createTestTicket(), 'SPECIFY' as any);
+      const result = await handleTicketTransition(createTestTicket(), 'SPECIFY' as Stage);
 
       expect(result.success).toBe(false);
       expect(result.errorCode).toBe('MISSING_CREDENTIAL');
@@ -109,18 +112,18 @@ describe('BYOK Credential Dispatch Guards', () => {
     });
 
     it('should proceed when owner has a credential', async () => {
-      mockedGetOwnerCredential.mockResolvedValue({ id: 1, provider: 'ANTHROPIC' } as any);
+      mockedGetOwnerCredential.mockResolvedValue({ id: 1, provider: 'ANTHROPIC' } as UserCredential);
 
       const { prisma } = await import('@/lib/db/client');
       const mockedPrisma = vi.mocked(prisma);
 
       const mockJob = { id: 42, ticketId: 1, command: 'specify', status: 'PENDING' };
-      mockedPrisma.job.create.mockResolvedValue(mockJob as any);
+      mockedPrisma.job.create.mockResolvedValue(mockJob as Job);
       mockedPrisma.job.findFirst.mockResolvedValue(null);
 
       const { handleTicketTransition } = await import('@/lib/workflows/transition');
 
-      const result = await handleTicketTransition(createTestTicket(), 'SPECIFY' as any);
+      const result = await handleTicketTransition(createTestTicket(), 'SPECIFY' as Stage);
 
       // Should have progressed past credential check (may succeed or fail on dispatch)
       expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1);
@@ -132,7 +135,7 @@ describe('BYOK Credential Dispatch Guards', () => {
 
       const { handleTicketTransition } = await import('@/lib/workflows/transition');
 
-      const result = await handleTicketTransition(createTestTicket(), 'SPECIFY' as any);
+      const result = await handleTicketTransition(createTestTicket(), 'SPECIFY' as Stage);
 
       // Credential check should not have been called
       expect(mockedGetOwnerCredential).not.toHaveBeenCalled();
@@ -145,7 +148,7 @@ describe('BYOK Credential Dispatch Guards', () => {
 
       const { handleTicketTransition } = await import('@/lib/workflows/transition');
 
-      const result = await handleTicketTransition(createTestTicket(), 'BUILD' as any);
+      const result = await handleTicketTransition(createTestTicket(), 'BUILD' as Stage);
 
       expect(result.success).toBe(false);
       expect(result.errorCode).toBe('MISSING_CREDENTIAL');
@@ -178,7 +181,7 @@ describe('BYOK Credential Dispatch Guards', () => {
 
       const { prisma } = await import('@/lib/db/client');
       const mockedPrisma = vi.mocked(prisma);
-      mockedPrisma.job.create.mockResolvedValue({ id: 10 } as any);
+      mockedPrisma.job.create.mockResolvedValue({ id: 10 } as Job);
 
       const { dispatchRollbackResetWorkflow } = await import(
         '@/app/lib/workflows/dispatch-rollback-reset'
@@ -208,7 +211,7 @@ describe('BYOK Credential Dispatch Guards', () => {
         dispatchHealthScanWorkflow({
           scan_id: '1',
           project_id: '1',
-          scan_type: 'SECURITY' as any,
+          scan_type: 'SECURITY' as HealthScanDispatchInputs['scan_type'],
           base_commit: '',
           head_commit: '',
           githubRepository: 'owner/repo',
@@ -226,7 +229,7 @@ describe('BYOK Credential Dispatch Guards', () => {
         dispatchHealthScanWorkflow({
           scan_id: '1',
           project_id: '1',
-          scan_type: 'SECURITY' as any,
+          scan_type: 'SECURITY' as HealthScanDispatchInputs['scan_type'],
           base_commit: '',
           head_commit: '',
           githubRepository: 'owner/repo',
