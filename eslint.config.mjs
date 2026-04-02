@@ -30,7 +30,7 @@ const eslintConfig = [
       // Many legitimate patterns (localStorage reads, browser API checks after mount)
       // TODO: refactor these patterns incrementally, then re-enable as "error"
       "react-hooks/set-state-in-effect": "warn",
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-explicit-any": "error",
     },
   },
   eslintConfigPrettier,
