@@ -10,7 +10,7 @@
 #   1 — Invalid YAML syntax in config.yml
 #   1 — Missing required arguments
 #
-# Supported command keys: install, build, lint, type_check, test_unit, test_integration, test_e2e
+# Supported command keys: install, build, lint, type_check, test_unit, test_integration, test_e2e, db_setup, db_seed
 #
 # Design: When .ai-board/config.yml is absent, the script falls back to hardcoded
 # defaults (matching ai-board's own commands). This ensures backward compatibility
@@ -42,7 +42,9 @@ declare -A DEFAULTS=(
   [type_check]="bun run type-check"
   [test_unit]="bun run test:unit"
   [test_integration]="bun run test:integration"
-  [test_e2e]="bunx playwright test"
+  [test_e2e]="bun run test:e2e"
+  [db_setup]="bunx prisma generate && if [ -n \"\${DATABASE_URL:-}\" ]; then bunx prisma migrate deploy; fi"
+  [db_seed]="npx tsx tests/global-setup.ts"
 )
 
 # ─── Missing Config = Use Fallback Defaults ──────────────────────────────────

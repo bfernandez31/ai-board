@@ -180,47 +180,58 @@ install_package_manager() {
       fi
       success "pnpm activated: $(pnpm --version)"
       ;;
+    pip)
+      if ! command -v pip &>/dev/null && ! command -v pip3 &>/dev/null; then
+        error "pip not found. Ensure Python is installed (via actions/setup-python)."
+        exit 1
+      fi
+      success "pip already available: $(pip --version 2>/dev/null || pip3 --version)"
+      ;;
+    poetry)
+      if ! command -v poetry &>/dev/null; then
+        info "Installing poetry..."
+        pip install --user poetry
+        export PATH="${HOME}/.local/bin:${PATH}"
+        success "poetry installed: $(poetry --version)"
+      else
+        success "poetry already available: $(poetry --version)"
+      fi
+      ;;
+    cargo)
+      if ! command -v cargo &>/dev/null; then
+        error "cargo not found. Ensure Rust is installed (via actions-rust-lang/setup-rust-toolchain)."
+        exit 1
+      fi
+      success "cargo already available: $(cargo --version)"
+      ;;
+    maven)
+      if ! command -v mvn &>/dev/null; then
+        error "maven not found. Ensure Java + Maven are installed (via actions/setup-java)."
+        exit 1
+      fi
+      success "maven already available: $(mvn --version | head -1)"
+      ;;
+    gradle)
+      if ! command -v gradle &>/dev/null; then
+        error "gradle not found. Ensure Java + Gradle are installed (via actions/setup-java + gradle/actions/setup-gradle)."
+        exit 1
+      fi
+      success "gradle already available: $(gradle --version | head -1)"
+      ;;
     *)
-      error "Unsupported package manager: $MANAGER. Supported: bun, npm, yarn, pnpm"
+      error "Unsupported package manager: $MANAGER. Supported: bun, npm, yarn, pnpm, pip, poetry, cargo, maven, gradle"
       exit 1
       ;;
   esac
 }
 
-# post-install phase: skip setup, jump straight to ORM setup
+# post-install phase: config-driven ORM/database setup via run-command.sh
+# Projects declare their db_setup command in .ai-board/config.yml (e.g., prisma generate,
+# flyway migrate, liquibase update). Falls back to Prisma defaults for backward compat.
 if [[ "$PHASE" == "post-install" ]]; then
-  run_orm_setup() {
-    if [[ "${HAS_PRISMA:-false}" != "true" ]]; then
-      info "No ORM detected — skipping ORM setup"
-      return 0
-    fi
-
-    info "Running Prisma ORM setup..."
-
-    # Determine the correct package runner for npx-equivalent commands
-    local runner="npx"
-    case "$MANAGER" in
-      bun)  runner="bunx" ;;
-      pnpm) runner="pnpm exec" ;;
-      yarn) runner="yarn" ;;
-    esac
-
-    # Generate Prisma Client (safe to run now — dependencies are installed)
-    info "Generating Prisma client..."
-    (cd "$TARGET_DIR" && $runner prisma generate)
-    success "Prisma client generated"
-
-    # Apply database migrations (deploy mode — no prompts)
-    if [[ -n "${DATABASE_URL:-}" ]]; then
-      info "Applying database migrations..."
-      (cd "$TARGET_DIR" && $runner prisma migrate deploy)
-      success "Database migrations applied"
-    else
-      info "DATABASE_URL not set — skipping migrations (generate-only mode)"
-    fi
-  }
-
-  run_orm_setup
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  info "Running config-driven db_setup..."
+  "$SCRIPT_DIR/run-command.sh" "$TARGET_DIR" db_setup
   success "Post-install setup complete."
   exit 0
 fi
@@ -328,7 +339,15 @@ info "Running final validation ($PHASE)..."
 VALIDATION_FAILED=false
 
 # Check package manager on PATH (both phases)
-if ! command -v "$MANAGER" &>/dev/null; then
+# Some managers use different binary names (maven→mvn, pip→pip3)
+validate_manager_on_path() {
+  case "$MANAGER" in
+    maven) command -v mvn &>/dev/null ;;
+    pip)   command -v pip &>/dev/null || command -v pip3 &>/dev/null ;;
+    *)     command -v "$MANAGER" &>/dev/null ;;
+  esac
+}
+if ! validate_manager_on_path; then
   error "Validation failed: $MANAGER not found on PATH"
   VALIDATION_FAILED=true
 fi

@@ -304,9 +304,8 @@ jobs:
           echo "IMAGE_COUNT=$(echo $IMAGE_PATHS | wc -w | tr -d ' ')" >> "$GITHUB_ENV"
 
       - name: Seed Test Database
-        if: ${{ env.SKIP_EXECUTION != 'true' && env.HAS_PRISMA == 'true' }}
-        working-directory: target
-        run: npx tsx tests/global-setup.ts
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: ai-board/.github/scripts/run-command.sh target db_seed
 
       # Playwright setup steps
       - name: Get Playwright Version

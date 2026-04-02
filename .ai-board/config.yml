@@ -17,7 +17,9 @@ commands:
   type_check: bun run type-check
   test_unit: bun run test:unit
   test_integration: bun run test:integration
-  test_e2e: bunx playwright test
+  test_e2e: bun run test:e2e
+  db_setup: bunx prisma generate && if [ -n "${DATABASE_URL:-}" ]; then bunx prisma migrate deploy; fi
+  db_seed: npx tsx tests/global-setup.ts
 
 env:
   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test

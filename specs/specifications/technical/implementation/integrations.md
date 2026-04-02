@@ -545,7 +545,7 @@ project:
   framework: nextjs
 
 runtime:
-  manager: bun          # bun | npm | yarn | pnpm
+  manager: bun          # bun | npm | yarn | pnpm | pip | poetry | cargo | maven | gradle
   manager_version: "1.3.1"
   node: "22"
 
@@ -571,7 +571,7 @@ agent:
 **Phase `full`** (implement, quick-impl, verify, health-scan TESTS) — all of lightweight, plus:
 6. Installs the agent CLI specified by `agent.cli` (`claude-code` or `codex`)
 7. Exports env vars from the config `env` section (workflow secrets take precedence)
-8. Detects Prisma — sets `HAS_PRISMA=true` in `GITHUB_ENV`, runs `npx prisma generate`
+8. Detects Prisma — sets `HAS_PRISMA=true` in `GITHUB_ENV`
 9. Detects Playwright — sets `HAS_PLAYWRIGHT=true` in `GITHUB_ENV`
 10. Validates agent CLI on PATH
 
@@ -585,8 +585,13 @@ Workflow-level secrets always override config-defined values via the pattern `ex
 |-------------------|---------------|
 | `bun` | Direct binary install at configured version |
 | `npm` | Node.js assumed pre-installed; npm used directly |
-| `yarn` | `npm install -g yarn` |
-| `pnpm` | `npm install -g pnpm` |
+| `yarn` | Activated via corepack |
+| `pnpm` | Activated via corepack |
+| `pip` | Python assumed pre-installed; pip used directly |
+| `poetry` | Installed via `pip install --user poetry` |
+| `cargo` | Rust assumed pre-installed; cargo used directly |
+| `maven` | Java assumed pre-installed; mvn used directly |
+| `gradle` | Java + Gradle assumed pre-installed; gradle used directly |
 
 Unsupported managers cause an immediate fail with a clear error listing supported values.
 
@@ -607,7 +612,13 @@ All 6 core workflows (`speckit.yml`, `quick-impl.yml`, `verify.yml`, `ai-board-a
 # Full — for commands that execute code (implement, build, verify, tests)
 - name: Setup Environment (full)
   run: ai-board/.github/scripts/setup-environment.sh target --phase full
+
+# Post-install — config-driven ORM/database setup (after dependency install)
+- name: Post-Install Setup (ORM)
+  run: ai-board/.github/scripts/setup-environment.sh target --phase post-install
 ```
+
+**Phase `post-install`**: Executes `run-command.sh target db_setup` — config-driven ORM setup. Projects declare their own db_setup command (e.g., `bunx prisma generate`, `mvn flyway:migrate`, `poetry run alembic upgrade head`). Falls back to Prisma defaults for backward compatibility.
 
 ### Telemetry Context Script
 

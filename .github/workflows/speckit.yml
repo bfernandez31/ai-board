@@ -347,9 +347,8 @@ jobs:
           echo "SPECIFY_PAYLOAD_FILE=/tmp/specify_payload.json" >> "$GITHUB_ENV"
 
       - name: Seed Test Database
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
-        working-directory: target
-        run: npx tsx tests/global-setup.ts
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        run: ai-board/.github/scripts/run-command.sh target db_seed
 
       # Playwright setup steps (implement command only)
       - name: Get Playwright Version

@@ -285,8 +285,7 @@ jobs:
 
       - name: Seed Test Database
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
-        working-directory: target
-        run: npx tsx tests/global-setup.ts
+        run: ai-board/.github/scripts/run-command.sh target db_seed
 
       # Playwright setup (--with-deps installs required system libraries)
       - name: Get Playwright Version

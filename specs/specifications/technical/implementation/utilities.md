@@ -1377,9 +1377,9 @@ interface ValidationWarning {
 
 | Schema | Allowed Values |
 |--------|---------------|
-| `ProjectLanguageSchema` | `typescript`, `python`, `go`, `rust`, `java` |
-| `ProjectFrameworkSchema` | `nextjs`, `express`, `fastapi`, `django`, `gin`, `none` |
-| `PackageManagerSchema` | `bun`, `npm`, `yarn`, `pnpm`, `pip`, `poetry`, `cargo` |
+| `ProjectLanguageSchema` | `typescript`, `javascript`, `python`, `go`, `rust`, `java`, `kotlin` |
+| `ProjectFrameworkSchema` | `nextjs`, `express`, `fastapi`, `django`, `flask`, `gin`, `spring-boot`, `quarkus`, `micronaut`, `none` |
+| `PackageManagerSchema` | `bun`, `npm`, `yarn`, `pnpm`, `pip`, `poetry`, `cargo`, `maven`, `gradle` |
 | `ServiceTypeSchema` | `postgres`, `redis`, `mysql`, `mongo` |
 | `AgentCliSchema` | `claude-code`, `codex` |
 
