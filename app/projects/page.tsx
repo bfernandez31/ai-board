@@ -2,8 +2,7 @@ import type { Metadata } from 'next';
 import { ProjectsContainer } from '@/components/projects/projects-container';
 import { ProjectQuotaGate } from '@/components/projects/project-quota-gate';
 import { UsageBanner } from '@/components/billing/usage-banner';
-import { Button } from '@/components/ui/button';
-import { Upload, Plus } from 'lucide-react';
+import { ProjectsHeaderActions } from '@/components/projects/projects-header-actions';
 import type { ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
 
@@ -51,18 +50,7 @@ export default async function ProjectsPage() {
     <div className="container mx-auto py-8 px-4">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-3xl font-bold text-foreground">Projects</h1>
-        {projects.length > 0 && (
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <Button variant="outline" disabled>
-              <Upload className="mr-2 h-4 w-4" />
-              Import Project
-            </Button>
-            <Button disabled>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Project
-            </Button>
-          </div>
-        )}
+        {projects.length > 0 && <ProjectsHeaderActions />}
       </div>
 
       <UsageBanner />

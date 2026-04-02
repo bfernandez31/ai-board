@@ -20,9 +20,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T001 Update GitHub OAuth scope from `read:user user:email` to `read:user user:email repo` in lib/auth.ts
-- [ ] T002 [P] Create lib/github/user-client.ts with `getGitHubAccessToken`, `hasRepoScope`, `createUserGitHubClient`, and `requireRepoScope` functions
-- [ ] T003 [P] Add optional `accessToken?: string` parameter to `syncProjectConfig()` in lib/config-sync.ts to enable user-token config fetch
+- [x] T001 Update GitHub OAuth scope from `read:user user:email` to `read:user user:email repo` in lib/auth.ts
+- [x] T002 [P] Create lib/github/user-client.ts with `getGitHubAccessToken`, `hasRepoScope`, `createUserGitHubClient`, and `requireRepoScope` functions
+- [x] T003 [P] Add optional `accessToken?: string` parameter to `syncProjectConfig()` in lib/config-sync.ts to enable user-token config fetch
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 
@@ -36,20 +36,20 @@
 
 ### Tests for User Story 1
 
-- [ ] T004 [P] [US1] Unit tests for getGitHubAccessToken, hasRepoScope, createUserGitHubClient in tests/unit/lib/github/user-client.test.ts
-- [ ] T005 [P] [US1] Unit tests for import request Zod validation schema in tests/unit/lib/validations/import-project.test.ts
+- [x] T004 [P] [US1] Unit tests for getGitHubAccessToken, hasRepoScope, createUserGitHubClient in tests/unit/lib/github/user-client.test.ts
+- [x] T005 [P] [US1] Unit tests for import request Zod validation schema in tests/unit/lib/validations/import-project.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T006 [P] [US1] Create GET /api/github/auth-status endpoint — check Account exists + scope includes repo — in app/api/github/auth-status/route.ts
-- [ ] T007 [P] [US1] Create GET /api/github/orgs endpoint — list user orgs via octokit.orgs.listForAuthenticatedUser — in app/api/github/orgs/route.ts
-- [ ] T008 [US1] Create GET /api/github/repos endpoint — repo listing with pagination, search (GitHub Search API), org filter, sort, isAlreadyImported/hasAdminAccess flags — in app/api/github/repos/route.ts
-- [ ] T009 [US1] Create POST /api/projects/import endpoint — Zod validation, admin rights check, quota enforcement, serializable transaction, config sync, redirect logic — in app/api/projects/import/route.ts
-- [ ] T010 [P] [US1] Create ReauthPrompt component — aurora-styled card with explanation and signIn("github") button — in components/projects/reauth-prompt.tsx
-- [ ] T011 [P] [US1] Create RepoPickerItem component — repo row with name, description, visibility badge, push date, owner avatar, disabled states — in components/projects/repo-picker-item.tsx
-- [ ] T012 [US1] Create RepoPicker component — debounced search, org filter dropdown, pagination, loading/empty/error states, TanStack Query — in components/projects/repo-picker.tsx
-- [ ] T013 [US1] Create ImportProjectModal component — auth check → reauth or picker → confirm with optional name/description edit → POST import → redirect — in components/projects/import-project-modal.tsx
-- [ ] T014 [US1] Enable Import Project button and wire ImportProjectModal in components/projects/empty-projects-state.tsx and app/projects/page.tsx
+- [x] T006 [P] [US1] Create GET /api/github/auth-status endpoint — check Account exists + scope includes repo — in app/api/github/auth-status/route.ts
+- [x] T007 [P] [US1] Create GET /api/github/orgs endpoint — list user orgs via octokit.orgs.listForAuthenticatedUser — in app/api/github/orgs/route.ts
+- [x] T008 [US1] Create GET /api/github/repos endpoint — repo listing with pagination, search (GitHub Search API), org filter, sort, isAlreadyImported/hasAdminAccess flags — in app/api/github/repos/route.ts
+- [x] T009 [US1] Create POST /api/projects/import endpoint — Zod validation, admin rights check, quota enforcement, serializable transaction, config sync, redirect logic — in app/api/projects/import/route.ts
+- [x] T010 [P] [US1] Create ReauthPrompt component — aurora-styled card with explanation and signIn("github") button — in components/projects/reauth-prompt.tsx
+- [x] T011 [P] [US1] Create RepoPickerItem component — repo row with name, description, visibility badge, push date, owner avatar, disabled states — in components/projects/repo-picker-item.tsx
+- [x] T012 [US1] Create RepoPicker component — debounced search, org filter dropdown, pagination, loading/empty/error states, TanStack Query — in components/projects/repo-picker.tsx
+- [x] T013 [US1] Create ImportProjectModal component — auth check → reauth or picker → confirm with optional name/description edit → POST import → redirect — in components/projects/import-project-modal.tsx
+- [x] T014 [US1] Enable Import Project button and wire ImportProjectModal in components/projects/empty-projects-state.tsx and app/projects/page.tsx
 
 ### Integration Tests for User Story 1
 
