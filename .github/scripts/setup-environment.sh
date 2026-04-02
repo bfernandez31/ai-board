@@ -180,14 +180,32 @@ install_package_manager() {
       fi
       success "pnpm activated: $(pnpm --version)"
       ;;
-    pip)
-      if ! command -v pip &>/dev/null && ! command -v pip3 &>/dev/null; then
-        error "pip not found. Ensure Python is installed (via actions/setup-python)."
-        exit 1
+    pip|cargo|maven|gradle)
+      # Pre-installed managers: verify binary exists on PATH
+      local bin="$MANAGER" hint=""
+      case "$MANAGER" in
+        pip)    bin="pip"; hint="Ensure Python is installed (via actions/setup-python)." ;;
+        cargo)  bin="cargo"; hint="Ensure Rust is installed (via actions-rust-lang/setup-rust-toolchain)." ;;
+        maven)  bin="mvn"; hint="Ensure Java + Maven are installed (via actions/setup-java)." ;;
+        gradle) bin="gradle"; hint="Ensure Java + Gradle are installed (via actions/setup-java + gradle/actions/setup-gradle)." ;;
+      esac
+      if ! command -v "$bin" &>/dev/null; then
+        # pip may also be available as pip3
+        if [[ "$MANAGER" == "pip" ]] && command -v pip3 &>/dev/null; then
+          bin="pip3"
+        else
+          error "$MANAGER not found. $hint"
+          exit 1
+        fi
       fi
-      success "pip already available: $(pip --version 2>/dev/null || pip3 --version)"
+      success "$MANAGER already available: $($bin --version 2>&1 | head -1)"
       ;;
     poetry)
+      # Poetry requires pip to install
+      if ! command -v pip &>/dev/null && ! command -v pip3 &>/dev/null; then
+        error "pip not found (required to install poetry). Ensure Python is installed (via actions/setup-python)."
+        exit 1
+      fi
       if ! command -v poetry &>/dev/null; then
         info "Installing poetry..."
         pip install --user poetry
@@ -196,27 +214,6 @@ install_package_manager() {
       else
         success "poetry already available: $(poetry --version)"
       fi
-      ;;
-    cargo)
-      if ! command -v cargo &>/dev/null; then
-        error "cargo not found. Ensure Rust is installed (via actions-rust-lang/setup-rust-toolchain)."
-        exit 1
-      fi
-      success "cargo already available: $(cargo --version)"
-      ;;
-    maven)
-      if ! command -v mvn &>/dev/null; then
-        error "maven not found. Ensure Java + Maven are installed (via actions/setup-java)."
-        exit 1
-      fi
-      success "maven already available: $(mvn --version | head -1)"
-      ;;
-    gradle)
-      if ! command -v gradle &>/dev/null; then
-        error "gradle not found. Ensure Java + Gradle are installed (via actions/setup-java + gradle/actions/setup-gradle)."
-        exit 1
-      fi
-      success "gradle already available: $(gradle --version | head -1)"
       ;;
     *)
       error "Unsupported package manager: $MANAGER. Supported: bun, npm, yarn, pnpm, pip, poetry, cargo, maven, gradle"

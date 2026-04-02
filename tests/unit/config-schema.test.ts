@@ -30,6 +30,8 @@ function fullConfig() {
       test_unit: 'bun run test:unit',
       test_integration: 'bun run test:integration',
       test_e2e: 'bun run test:e2e',
+      db_setup: 'bunx prisma generate && bunx prisma migrate deploy',
+      db_seed: 'npx tsx tests/global-setup.ts',
     },
     env: { NODE_ENV: 'test', DATABASE_URL: 'postgresql://localhost:5432/myapp_test' },
     agent: { cli: 'claude-code', model: 'claude-sonnet-4-6' },
