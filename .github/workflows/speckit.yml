@@ -300,6 +300,10 @@ jobs:
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
         run: ai-board/.github/scripts/run-command.sh target install
 
+      - name: Post-Install Setup (ORM)
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        run: ai-board/.github/scripts/setup-environment.sh target --phase post-install
+
       - name: Configure Git
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         run: |
@@ -342,21 +346,9 @@ jobs:
           EOF
           echo "SPECIFY_PAYLOAD_FILE=/tmp/specify_payload.json" >> "$GITHUB_ENV"
 
-      # Database setup steps (implement command only)
-      - name: Generate Prisma Client
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
-        working-directory: target
-        run: npx prisma generate
-
-      - name: Apply Database Migrations
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
-        working-directory: target
-        run: npx prisma migrate deploy
-
       - name: Seed Test Database
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
-        working-directory: target
-        run: npx tsx tests/global-setup.ts
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        run: ai-board/.github/scripts/run-command.sh target db_seed
 
       # Playwright setup steps (implement command only)
       - name: Get Playwright Version

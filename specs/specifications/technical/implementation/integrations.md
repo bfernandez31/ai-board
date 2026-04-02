@@ -199,6 +199,37 @@ export async function dispatchWorkflow(params: {
 - **Action**: Transitions VERIFY → SHIP for tickets with merged branches
 - **Method**: Git ancestry check (`git merge-base --is-ancestor`)
 
+### Dynamic Service Inputs
+
+Before dispatching any workflow, the system maps the project's stored config to GitHub Actions service container inputs via `getProjectServiceInputs(project)` in `lib/workflows/service-inputs.ts`.
+
+**Mapping**:
+- Each entry in `config.services[]` maps to a `needs_{type}: "true"` / `{type}_version: "{version}"` pair
+- When `config` is null, backward-compatible defaults are used: `needs_postgres: "true"`, `postgres_version: "16"`
+- When `config` is present but `services` is empty, no service inputs are added
+
+**Examples**:
+
+| Config `services` | Dispatch inputs |
+|-------------------|-----------------|
+| `[{ type: "postgres", version: "14" }]` | `needs_postgres=true`, `postgres_version=14` |
+| `[{ type: "postgres", version: "16" }, { type: "redis", version: "7" }]` | `needs_postgres=true`, `postgres_version=16`, `needs_redis=true`, `redis_version=7` |
+| `[]` (empty) | *(no service inputs)* |
+| null (no config) | `needs_postgres=true`, `postgres_version=16` |
+
+> **Note**: `package_manager` is NOT a dispatch input. `setup-environment.sh` reads `runtime.manager` directly from the cloned repo's `.ai-board/config.yml` at workflow runtime. ORM setup (Prisma generate/migrate) is also centralized in `setup-environment.sh` — not hardcoded per-workflow.
+
+**Staleness & Auto-Refresh**:
+- All dispatch paths check `project.configSyncedAt` before dispatching
+- If null or older than 1 hour, the config is re-fetched from GitHub inline via `lib/config-sync.ts`
+- If the refresh fails (GitHub API error, invalid YAML), dispatch is blocked and an error is returned
+- If the config is fresh (within 1 hour), it is used without re-fetching
+
+**Affected Dispatch Paths**:
+- `lib/workflows/transition.ts` — stage transition dispatches
+- `lib/health/scan-dispatch.ts` — health scan dispatches
+- `app/lib/workflows/dispatch-ai-board.ts` — AI-board assist dispatches
+
 ### Agent Resolution
 
 Before dispatching any workflow, the system resolves the effective agent using a priority chain:
@@ -514,7 +545,7 @@ project:
   framework: nextjs
 
 runtime:
-  manager: bun          # bun | npm | yarn | pnpm
+  manager: bun          # bun | npm | yarn | pnpm | pip | poetry | cargo | maven | gradle
   manager_version: "1.3.1"
   node: "22"
 
@@ -540,7 +571,7 @@ agent:
 **Phase `full`** (implement, quick-impl, verify, health-scan TESTS) — all of lightweight, plus:
 6. Installs the agent CLI specified by `agent.cli` (`claude-code` or `codex`)
 7. Exports env vars from the config `env` section (workflow secrets take precedence)
-8. Detects Prisma — sets `HAS_PRISMA=true` in `GITHUB_ENV`, runs `npx prisma generate`
+8. Detects Prisma — sets `HAS_PRISMA=true` in `GITHUB_ENV`
 9. Detects Playwright — sets `HAS_PLAYWRIGHT=true` in `GITHUB_ENV`
 10. Validates agent CLI on PATH
 
@@ -554,8 +585,13 @@ Workflow-level secrets always override config-defined values via the pattern `ex
 |-------------------|---------------|
 | `bun` | Direct binary install at configured version |
 | `npm` | Node.js assumed pre-installed; npm used directly |
-| `yarn` | `npm install -g yarn` |
-| `pnpm` | `npm install -g pnpm` |
+| `yarn` | Activated via corepack |
+| `pnpm` | Activated via corepack |
+| `pip` | Python assumed pre-installed; pip used directly |
+| `poetry` | Installed via `pip install --user poetry` |
+| `cargo` | Rust assumed pre-installed; cargo used directly |
+| `maven` | Java assumed pre-installed; mvn used directly |
+| `gradle` | Java + Gradle assumed pre-installed; gradle used directly |
 
 Unsupported managers cause an immediate fail with a clear error listing supported values.
 
@@ -576,7 +612,13 @@ All 6 core workflows (`speckit.yml`, `quick-impl.yml`, `verify.yml`, `ai-board-a
 # Full — for commands that execute code (implement, build, verify, tests)
 - name: Setup Environment (full)
   run: ai-board/.github/scripts/setup-environment.sh target --phase full
+
+# Post-install — config-driven ORM/database setup (after dependency install)
+- name: Post-Install Setup (ORM)
+  run: ai-board/.github/scripts/setup-environment.sh target --phase post-install
 ```
+
+**Phase `post-install`**: Executes `run-command.sh target db_setup` — config-driven ORM setup. Projects declare their own db_setup command (e.g., `bunx prisma generate`, `mvn flyway:migrate`, `poetry run alembic upgrade head`). Falls back to Prisma defaults for backward compatibility.
 
 ### Telemetry Context Script
 

@@ -10,10 +10,12 @@ import { z } from 'zod';
 
 export const ProjectLanguageSchema = z.enum([
   'typescript',
+  'javascript',
   'python',
   'go',
   'rust',
   'java',
+  'kotlin',
 ]);
 
 export const ProjectFrameworkSchema = z.enum([
@@ -21,7 +23,11 @@ export const ProjectFrameworkSchema = z.enum([
   'express',
   'fastapi',
   'django',
+  'flask',
   'gin',
+  'spring-boot',
+  'quarkus',
+  'micronaut',
   'none',
 ]);
 
@@ -33,6 +39,8 @@ export const PackageManagerSchema = z.enum([
   'pip',
   'poetry',
   'cargo',
+  'maven',
+  'gradle',
 ]);
 
 export const ServiceTypeSchema = z.enum([
@@ -64,6 +72,9 @@ export const RuntimeSectionSchema = z.object({
   manager_version: z.string().optional(),
   node: z.string().optional(),
   python: z.string().optional(),
+  java: z.string().optional(),
+  go: z.string().optional(),
+  rust: z.string().optional(),
 });
 
 export const CommandsSectionSchema = z.object({
@@ -74,6 +85,8 @@ export const CommandsSectionSchema = z.object({
   test_unit: z.string().optional(),
   test_integration: z.string().optional(),
   test_e2e: z.string().optional(),
+  db_setup: z.string().optional(),
+  db_seed: z.string().optional(),
 });
 
 export const ServiceConfigSchema = z.object({
@@ -146,7 +159,7 @@ const KNOWN_ROOT_KEYS = new Set([
 
 const KNOWN_SECTION_KEYS: Record<string, Set<string>> = {
   project: new Set(['name', 'language', 'framework']),
-  runtime: new Set(['manager', 'manager_version', 'node', 'python']),
+  runtime: new Set(['manager', 'manager_version', 'node', 'python', 'java', 'go', 'rust']),
   commands: new Set([
     'install',
     'build',
@@ -155,6 +168,8 @@ const KNOWN_SECTION_KEYS: Record<string, Set<string>> = {
     'test_unit',
     'test_integration',
     'test_e2e',
+    'db_setup',
+    'db_seed',
   ]),
   agent: new Set(['cli', 'model']),
 };
@@ -291,10 +306,10 @@ function getFieldGuidance(path: string): string {
     project: "Add a 'project' section with 'name' and 'language'.",
     'project.name': 'Set project.name to your project name (e.g., "my-app").',
     'project.language':
-      'Set project.language to one of: typescript, python, go, rust, java.',
+      'Set project.language to one of: typescript, javascript, python, go, rust, java, kotlin.',
     runtime: "Add a 'runtime' section with 'manager'.",
     'runtime.manager':
-      'Set runtime.manager to one of: bun, npm, yarn, pnpm, pip, poetry, cargo.',
+      'Set runtime.manager to one of: bun, npm, yarn, pnpm, pip, poetry, cargo, maven, gradle.',
     commands: "Add a 'commands' section with 'install'.",
     'commands.install':
       'Set commands.install to your install command (e.g., "bun install").',

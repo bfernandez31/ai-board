@@ -5,7 +5,8 @@
 #
 # Phase parameter controls execution tier:
 #   lightweight — yq bootstrap, config validation, package manager install, symlinks, partial validation
-#   full (default) — all lightweight steps PLUS dependency install, agent CLI, env export, Prisma, Playwright
+#   full (default) — all lightweight steps PLUS agent CLI, env export, dependency detection
+#   post-install — ORM setup (prisma generate/migrate); must run AFTER dependency install
 
 set -euo pipefail
 
@@ -55,8 +56,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate phase value
-if [[ "$PHASE" != "lightweight" && "$PHASE" != "full" ]]; then
-  error "Unrecognized phase: '$PHASE'. Must be 'lightweight' or 'full'."
+if [[ "$PHASE" != "lightweight" && "$PHASE" != "full" && "$PHASE" != "post-install" ]]; then
+  error "Unrecognized phase: '$PHASE'. Must be 'lightweight', 'full', or 'post-install'."
   exit 1
 fi
 
@@ -179,12 +180,58 @@ install_package_manager() {
       fi
       success "pnpm activated: $(pnpm --version)"
       ;;
+    pip|cargo|maven|gradle)
+      # Pre-installed managers: verify binary exists on PATH
+      local bin="$MANAGER" hint=""
+      case "$MANAGER" in
+        pip)    bin="pip"; hint="Ensure Python is installed (via actions/setup-python)." ;;
+        cargo)  bin="cargo"; hint="Ensure Rust is installed (via actions-rust-lang/setup-rust-toolchain)." ;;
+        maven)  bin="mvn"; hint="Ensure Java + Maven are installed (via actions/setup-java)." ;;
+        gradle) bin="gradle"; hint="Ensure Java + Gradle are installed (via actions/setup-java + gradle/actions/setup-gradle)." ;;
+      esac
+      if ! command -v "$bin" &>/dev/null; then
+        # pip may also be available as pip3
+        if [[ "$MANAGER" == "pip" ]] && command -v pip3 &>/dev/null; then
+          bin="pip3"
+        else
+          error "$MANAGER not found. $hint"
+          exit 1
+        fi
+      fi
+      success "$MANAGER already available: $($bin --version 2>&1 | head -1)"
+      ;;
+    poetry)
+      # Poetry requires pip to install
+      if ! command -v pip &>/dev/null && ! command -v pip3 &>/dev/null; then
+        error "pip not found (required to install poetry). Ensure Python is installed (via actions/setup-python)."
+        exit 1
+      fi
+      if ! command -v poetry &>/dev/null; then
+        info "Installing poetry..."
+        pip install --user poetry
+        export PATH="${HOME}/.local/bin:${PATH}"
+        success "poetry installed: $(poetry --version)"
+      else
+        success "poetry already available: $(poetry --version)"
+      fi
+      ;;
     *)
-      error "Unsupported package manager: $MANAGER. Supported: bun, npm, yarn, pnpm"
+      error "Unsupported package manager: $MANAGER. Supported: bun, npm, yarn, pnpm, pip, poetry, cargo, maven, gradle"
       exit 1
       ;;
   esac
 }
+
+# post-install phase: config-driven ORM/database setup via run-command.sh
+# Projects declare their db_setup command in .ai-board/config.yml (e.g., prisma generate,
+# flyway migrate, liquibase update). Falls back to Prisma defaults for backward compat.
+if [[ "$PHASE" == "post-install" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  info "Running config-driven db_setup..."
+  "$SCRIPT_DIR/run-command.sh" "$TARGET_DIR" db_setup
+  success "Post-install setup complete."
+  exit 0
+fi
 
 install_package_manager
 
@@ -277,13 +324,27 @@ if [[ "$PHASE" == "full" ]]; then
   fi
 fi
 
+# ─── Full Phase: ORM Setup ──────────────────────────────────────────────────
+# NOTE: ORM setup (prisma generate, migrate) requires node_modules to exist.
+# It is NOT run during the 'full' phase. Workflows must call:
+#   setup-environment.sh <target> --phase post-install
+# AFTER dependency installation (run-command.sh target install).
+
 # ─── Final Validation ────────────────────────────────────────────────────────
 
 info "Running final validation ($PHASE)..."
 VALIDATION_FAILED=false
 
 # Check package manager on PATH (both phases)
-if ! command -v "$MANAGER" &>/dev/null; then
+# Some managers use different binary names (maven→mvn, pip→pip3)
+validate_manager_on_path() {
+  case "$MANAGER" in
+    maven) command -v mvn &>/dev/null ;;
+    pip)   command -v pip &>/dev/null || command -v pip3 &>/dev/null ;;
+    *)     command -v "$MANAGER" &>/dev/null ;;
+  esac
+}
+if ! validate_manager_on_path; then
   error "Validation failed: $MANAGER not found on PATH"
   VALIDATION_FAILED=true
 fi

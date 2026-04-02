@@ -260,6 +260,10 @@ jobs:
         if: ${{ inputs.scan_type == 'TESTS' }}
         run: ai-board/.github/scripts/run-command.sh target install
 
+      - name: Post-Install Setup (ORM)
+        if: ${{ inputs.scan_type == 'TESTS' }}
+        run: ai-board/.github/scripts/setup-environment.sh target --phase post-install
+
       - name: Setup Test Environment
         if: ${{ inputs.scan_type == 'TESTS' }}
         working-directory: target
@@ -271,16 +275,6 @@ jobs:
         run: |
           echo "🔧 Setting up test environment for health scan..."
           ../ai-board/.github/scripts/setup-test-env.sh
-
-      - name: Generate Prisma Client
-        if: ${{ inputs.scan_type == 'TESTS' && env.HAS_PRISMA == 'true' }}
-        working-directory: target
-        run: npx prisma generate
-
-      - name: Apply Database Migrations
-        if: ${{ inputs.scan_type == 'TESTS' && env.HAS_PRISMA == 'true' }}
-        working-directory: target
-        run: npx prisma migrate deploy
 
       # NOTE: No explicit DB seed step — vitest and Playwright each run their
       # own global-setup automatically. Running it here too caused double-seeding

@@ -1,15 +1,39 @@
 import type { Project } from '@prisma/client';
 
+interface ServiceEntry {
+  type: string;
+  version: string;
+}
+
 /**
- * Returns service inputs for workflow dispatch (needs_postgres, postgres_version, etc.).
+ * Maps project.config services array to workflow dispatch inputs.
  *
- * TODO(AIB-470): Read from project.config (stored in DB) once config sync is implemented.
- * See specs/specifications/platform-opening-design.md §3-4.
- * For now, returns hardcoded defaults for ai-board (the only project).
+ * With config: maps each service to needs_{type}/_{type}_version pairs.
+ * Without config (null): returns defaults (PostgreSQL 16) for backward compatibility.
+ * With config but empty services: returns empty object.
+ *
+ * NOTE: package_manager is NOT a dispatch input — setup-environment.sh reads
+ * runtime.manager directly from the cloned repo's config.yml.
  */
-export function getProjectServiceInputs(_project?: Project): Record<string, string> {
-  return {
-    needs_postgres: 'true',
-    postgres_version: '14',
-  };
+export function getProjectServiceInputs(project?: Pick<Project, 'config'>): Record<string, string> {
+  if (!project?.config) {
+    return {
+      needs_postgres: 'true',
+      postgres_version: '16',
+    };
+  }
+
+  const config = project.config as Record<string, unknown>;
+  const services = config.services as ServiceEntry[] | undefined;
+
+  if (!services || services.length === 0) {
+    return {};
+  }
+
+  const inputs: Record<string, string> = {};
+  for (const service of services) {
+    inputs[`needs_${service.type}`] = 'true';
+    inputs[`${service.type}_version`] = service.version;
+  }
+  return inputs;
 }

@@ -30,6 +30,8 @@ function fullConfig() {
       test_unit: 'bun run test:unit',
       test_integration: 'bun run test:integration',
       test_e2e: 'bun run test:e2e',
+      db_setup: 'bunx prisma generate && bunx prisma migrate deploy',
+      db_seed: 'npx tsx tests/global-setup.ts',
     },
     env: { NODE_ENV: 'test', DATABASE_URL: 'postgresql://localhost:5432/myapp_test' },
     agent: { cli: 'claude-code', model: 'claude-sonnet-4-6' },
@@ -101,6 +103,108 @@ describe('validateConfig — valid configs (US1)', () => {
     expect(typeof result.data.env).toBe('object');
     expect(typeof result.data.agent.cli).toBe('string');
     expect(typeof result.data.agent.model).toBe('string');
+  });
+});
+
+// ─── Multi-language support ────────────────────────────────────────
+
+describe('validateConfig — multi-language support', () => {
+  it('Java/Spring Boot/Maven config validates', () => {
+    const result = validateConfig({
+      version: 1,
+      project: { name: 'my-api', language: 'java', framework: 'spring-boot' },
+      runtime: { manager: 'maven', java: '21' },
+      commands: {
+        install: 'mvn install -DskipTests',
+        build: 'mvn package -DskipTests',
+        test_unit: 'mvn test',
+        db_setup: 'mvn flyway:migrate',
+      },
+      services: [{ type: 'postgres', version: '16' }],
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.project.language).toBe('java');
+    expect(result.data.project.framework).toBe('spring-boot');
+    expect(result.data.runtime.manager).toBe('maven');
+    expect(result.data.runtime.java).toBe('21');
+    expect(result.data.commands.db_setup).toBe('mvn flyway:migrate');
+  });
+
+  it('Java/Quarkus/Gradle config validates', () => {
+    const result = validateConfig({
+      version: 1,
+      project: { name: 'my-quarkus', language: 'java', framework: 'quarkus' },
+      runtime: { manager: 'gradle', java: '17' },
+      commands: { install: './gradlew build -x test' },
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.project.framework).toBe('quarkus');
+    expect(result.data.runtime.manager).toBe('gradle');
+  });
+
+  it('Python/FastAPI/Poetry config validates', () => {
+    const result = validateConfig({
+      version: 1,
+      project: { name: 'my-api', language: 'python', framework: 'fastapi' },
+      runtime: { manager: 'poetry', python: '3.12' },
+      commands: { install: 'poetry install' },
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.runtime.manager).toBe('poetry');
+    expect(result.data.runtime.python).toBe('3.12');
+  });
+
+  it('Go/Gin config validates with go runtime version', () => {
+    const result = validateConfig({
+      version: 1,
+      project: { name: 'my-api', language: 'go', framework: 'gin' },
+      runtime: { manager: 'npm', go: '1.22' },
+      commands: { install: 'go mod download' },
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.runtime.go).toBe('1.22');
+  });
+
+  it('Rust/Cargo config validates with rust runtime version', () => {
+    const result = validateConfig({
+      version: 1,
+      project: { name: 'my-cli', language: 'rust', framework: 'none' },
+      runtime: { manager: 'cargo', rust: '1.78' },
+      commands: { install: 'cargo build' },
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.runtime.manager).toBe('cargo');
+    expect(result.data.runtime.rust).toBe('1.78');
+  });
+
+  it('Kotlin/Micronaut/Gradle config validates', () => {
+    const result = validateConfig({
+      version: 1,
+      project: { name: 'my-service', language: 'kotlin', framework: 'micronaut' },
+      runtime: { manager: 'gradle', java: '21' },
+      commands: { install: './gradlew build -x test' },
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.project.language).toBe('kotlin');
+    expect(result.data.project.framework).toBe('micronaut');
   });
 });
 
@@ -214,6 +318,34 @@ describe('validateConfig — optional commands (US4)', () => {
 
     expect(result.data.commands.lint).toBeUndefined();
     expect(result.data.commands.build).toBe('bun run build');
+  });
+
+  it('db_setup and db_seed are optional and returned when present', () => {
+    const result = validateConfig(
+      validConfig({
+        commands: {
+          install: 'bun install',
+          db_setup: 'bunx prisma generate && bunx prisma migrate deploy',
+          db_seed: 'npx tsx tests/global-setup.ts',
+        },
+      }),
+    );
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.commands.db_setup).toBe('bunx prisma generate && bunx prisma migrate deploy');
+    expect(result.data.commands.db_seed).toBe('npx tsx tests/global-setup.ts');
+  });
+
+  it('db_setup and db_seed are undefined when omitted', () => {
+    const result = validateConfig(validConfig());
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.commands.db_setup).toBeUndefined();
+    expect(result.data.commands.db_seed).toBeUndefined();
   });
 });
 

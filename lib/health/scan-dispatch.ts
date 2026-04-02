@@ -1,8 +1,9 @@
 import { Octokit } from '@octokit/rest';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
 import { getOwnerCredential, MISSING_CREDENTIAL_ERROR } from '@/lib/ai-credentials/workflow';
-import type { HealthScanType } from '@prisma/client';
 import { getProjectServiceInputs } from '@/lib/workflows/service-inputs';
+import { ensureFreshConfig } from '@/lib/config-sync';
+import type { HealthScanType, Project } from '@prisma/client';
 
 export interface HealthScanDispatchInputs {
   scan_id: string;
@@ -14,7 +15,8 @@ export interface HealthScanDispatchInputs {
 }
 
 export async function dispatchHealthScanWorkflow(
-  inputs: HealthScanDispatchInputs
+  inputs: HealthScanDispatchInputs,
+  project?: Pick<Project, 'id' | 'githubOwner' | 'githubRepo' | 'configSyncedAt' | 'config'>
 ): Promise<void> {
   const githubToken = process.env.GITHUB_TOKEN;
 
@@ -39,6 +41,11 @@ export async function dispatchHealthScanWorkflow(
     }
   }
 
+  // Ensure config is fresh before dispatch (auto-refresh if stale)
+  if (project) {
+    await ensureFreshConfig(project);
+  }
+
   const octokit = new Octokit({ auth: githubToken });
   const owner = process.env.GITHUB_OWNER;
   const repo = process.env.GITHUB_REPO;
@@ -55,7 +62,7 @@ export async function dispatchHealthScanWorkflow(
       ref: 'main',
       inputs: {
         ...inputs,
-        ...(inputs.scan_type === 'TESTS' && getProjectServiceInputs()),
+        ...(inputs.scan_type === 'TESTS' && getProjectServiceInputs(project)),
       },
     });
   } catch (error) {

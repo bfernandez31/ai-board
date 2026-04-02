@@ -57,14 +57,17 @@ version: 1
 
 project:
   name: "My App"                    # Project display name
-  language: typescript               # typescript | python | go | rust | java
-  framework: nextjs                  # nextjs | express | fastapi | django | gin | none
+  language: typescript               # typescript | javascript | python | go | rust | java | kotlin
+  framework: nextjs                  # nextjs | express | fastapi | django | flask | gin | spring-boot | quarkus | micronaut | none
 
 runtime:
-  manager: bun                       # bun | npm | yarn | pnpm | pip | poetry | cargo
+  manager: bun                       # bun | npm | yarn | pnpm | pip | poetry | cargo | maven | gradle
   manager_version: "1.2"             # Package manager version
   node: "22"                         # Node.js version (if applicable)
   python: "3.12"                     # Python version (if applicable)
+  java: "21"                         # Java/JDK version (if applicable)
+  go: "1.22"                         # Go version (if applicable)
+  rust: "1.78"                       # Rust version (if applicable)
 
 services:                            # Sidecar services
   postgres:
@@ -86,7 +89,9 @@ commands:
   type_check: bun run type-check     # Type checking (optional)
   test_unit: bun run test:unit       # Unit tests
   test_integration: bun run test:integration  # Integration tests (optional)
-  test_e2e: bunx playwright test     # E2E tests (optional)
+  test_e2e: bun run test:e2e         # E2E tests (optional)
+  db_setup: bunx prisma generate && bunx prisma migrate deploy  # ORM setup (optional)
+  db_seed: npx tsx tests/global-setup.ts  # Database seeding (optional)
 
 env:                                 # Env vars injected into runner
   DATABASE_URL: postgresql://test:test@localhost:5432/myapp_test
@@ -129,13 +134,17 @@ ai-board/.github/scripts/setup-environment.sh <target-dir> [--phase lightweight|
 **Phase `full`** (implement, quick-impl, verify, health-scan TESTS) — all of lightweight, plus:
 5. Install agent CLI — Claude Code or Codex based on `agent.cli`
 6. Export env vars — merge config `env` with workflow secrets (workflow secrets take precedence)
-7. Detect Prisma — set `HAS_PRISMA=true` in `GITHUB_ENV`, run `npx prisma generate`
+7. Detect Prisma — set `HAS_PRISMA=true` in `GITHUB_ENV`
 8. Detect Playwright — set `HAS_PLAYWRIGHT=true` in `GITHUB_ENV`
 9. Validation — verify agent CLI on PATH
 
+**Phase `post-install`** — runs AFTER dependency installation:
+- Executes `run-command.sh target db_setup` — config-driven ORM setup (Prisma generate/migrate, Flyway, Liquibase, etc.)
+- Falls back to Prisma defaults for backward compatibility when no config
+
 Note: Dependency installation is NOT done by setup-environment.sh. Workflows handle it explicitly via `run-command.sh target install` for visibility in CI logs.
 
-**Replaces**: The 15-20 lines of duplicated setup in each workflow YAML. Prisma generate is centralized here (no longer duplicated in each workflow).
+**Replaces**: The 15-20 lines of duplicated setup in each workflow YAML. ORM setup is config-driven via `commands.db_setup` (no longer hardcoded to Prisma).
 
 ### `run-command.sh`
 

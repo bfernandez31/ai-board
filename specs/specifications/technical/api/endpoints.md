@@ -128,14 +128,61 @@ Fetch project details including clarification policy.
   "userId": "user-abc123",
   "clarificationPolicy": "AUTO",
   "createdAt": "2025-01-01T00:00:00.000Z",
-  "updatedAt": "2025-01-15T10:30:00.000Z"
+  "updatedAt": "2025-01-15T10:30:00.000Z",
+  "config": {
+    "version": 1,
+    "project": { "name": "ai-board", "language": "typescript", "framework": "nextjs" },
+    "runtime": { "manager": "bun" },
+    "services": [{ "type": "postgres", "version": "16" }],
+    "commands": { "install": "bun install" },
+    "agent": { "cli": "claude-code" }
+  },
+  "configSyncedAt": "2026-04-02T12:00:00.000Z"
 }
 ```
+
+`config` and `configSyncedAt` are `null` when no config has been synced.
 
 **Errors**:
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 - `404`: Project not found
+
+### POST /api/projects/:projectId/config/sync
+
+Fetch `.ai-board/config.yml` from the project's GitHub repository, validate it, and store the parsed result in the database.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**: None
+
+**Response** (200 OK — synced successfully):
+```json
+{
+  "config": {
+    "version": 1,
+    "project": { "name": "my-app", "language": "typescript", "framework": "nextjs" },
+    "runtime": { "manager": "bun" },
+    "services": [{ "type": "postgres", "version": "14" }],
+    "commands": { "install": "bun install" },
+    "agent": { "cli": "claude-code" }
+  },
+  "syncedAt": "2026-04-02T12:00:00.000Z",
+  "warnings": []
+}
+```
+
+Warnings are non-blocking (e.g., unknown fields): config is still stored but callers should surface the messages.
+
+**Errors**:
+- `400`: Invalid config YAML — body contains `{ "error": "Config validation failed", "code": "VALIDATION_ERROR", "details": [...] }`
+- `401`: Not authenticated
+- `404`: Project not found or no access; also returned when no `.ai-board/config.yml` exists in the repository (`"code": "CONFIG_NOT_FOUND"`)
+- `502`: GitHub API error — body contains `{ "error": "Failed to fetch config from GitHub", "code": "GITHUB_ERROR" }`
 
 ### PATCH /api/projects/:projectId
 
