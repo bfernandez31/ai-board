@@ -96,9 +96,8 @@ When no projects exist:
 - URLs are stable and shareable (bookmarks, external links)
 
 **Action Buttons**:
-- "Import Project" button (with icon)
-- "Create Project" button (with icon)
-- Buttons visible but functionality varies by implementation
+- "Import Project" button (with icon) — opens the Import Project modal; requires GitHub `repo` scope
+- "Create Project" button (with icon) — disabled (manual project creation is a future feature)
 
 **Responsive Layout**:
 - **Desktop** (≥640px): Page header displays title and action buttons in a horizontal row
@@ -439,6 +438,69 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - Button displays left arrow icon with "Back to Board" text
 - Navigates to `/projects/{projectId}/board`
 - Outline variant styling for secondary action appearance
+
+## Project Import
+
+### Overview
+
+Users import an existing GitHub repository as a new ai-board project. The import flow handles OAuth scope verification, repository selection, admin rights validation, config auto-loading, and project creation in a single modal flow.
+
+### OAuth Scope Requirement
+
+The import flow requires the GitHub OAuth token to include `repo` scope. This scope is requested during GitHub sign-in. Users who signed up before this scope was required see a re-authorization prompt the first time they attempt to import.
+
+**Re-authorization prompt**:
+- Explains why `repo` scope is needed
+- Provides a single "Authorize GitHub Access" button that initiates GitHub OAuth with `repo` scope
+- Returns the user to the import modal after authorization completes
+- User can dismiss without authorizing; no project is created
+
+### Repo Picker
+
+The repo picker lists the user's GitHub repositories (personal and organizational) with the following display per repository:
+- Repository name and full name (`owner/repo`)
+- Description (truncated)
+- Visibility badge (public or private)
+- Last push date
+- Owner avatar
+
+**Filtering and search**:
+- Text search filters by name and description (debounced 300 ms)
+- Organization filter narrows results to a single org or personal account
+- Pagination via "Load more" (30 repos per page, up to 100 per request)
+
+**Repository states in picker**:
+- **Selectable**: user has admin access and repo is not already imported
+- **Disabled — already imported**: repo is linked to an existing project (tooltip identifies the project)
+- **Disabled — no admin access**: user lacks admin permission on the repo
+
+### Import Flow
+
+1. User clicks "Import Project" — modal opens and checks GitHub auth status
+2. If `repo` scope is missing: re-authorization prompt is shown
+3. If `repo` scope is present: repo picker loads
+4. User selects a repository — confirmation step shows repo details with optional name and description fields
+5. User confirms — `POST /api/projects/import` is called
+6. On success: projects list is refreshed and user is redirected to the project board or setup wizard
+
+**Post-import redirect**:
+- `.ai-board/config.yml` present and valid → redirect to `/projects/{id}`
+- Config missing or invalid → redirect to `/projects/{id}/setup`
+
+### Validation and Error States
+
+- **Duplicate repo**: repo already linked to a project — blocked with message identifying the existing project
+- **No admin rights**: user lacks admin access on the selected repo — blocked before creation
+- **Quota exceeded**: subscription plan project limit reached — blocked with upgrade prompt
+- **GitHub rate limit**: displayed with estimated reset time
+- **Network failure**: inline error with retry option
+- **Malformed config**: project created, user redirected to setup wizard with warning
+
+### Constraints
+
+- Exactly one ai-board project per GitHub repository (global uniqueness on `githubOwner` + `githubRepo`)
+- Admin rights on the target repository are required at import time
+- Subscription-based project quota applies to imported projects equally
 
 ## External Repository Support
 

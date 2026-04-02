@@ -43,10 +43,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
 ### Active Providers
 
-- **GitHub OAuth**: standard production sign-in path
+- **GitHub OAuth**: standard production sign-in path; requests `read:user user:email repo` scopes
 - **Credentials / Preview Login**: available only when preview dev-login gating passes
 
 GitHub sign-in persists or updates the user through `app/lib/auth/user-service.ts`. Credentials sign-in delegates to `app/lib/auth/dev-login.ts`.
+
+### GitHub OAuth Scope
+
+The GitHub provider requests:
+
+```
+read:user user:email repo
+```
+
+- `read:user` / `user:email` — profile and email access (sign-in identity)
+- `repo` — full repository access required for listing private repos, reading `.ai-board/config.yml`, and verifying admin permissions during project import
+
+The `repo` scope is stored in the `Account.scope` field by NextAuth. Existing users whose tokens predate this scope see a re-authorization prompt when they attempt to import a project.
 
 ## Preview Dev Login
 
@@ -210,6 +223,36 @@ export async function getCurrentUser() {
   return session.user
 }
 ```
+
+## GitHub User Token Access
+
+**Primary file**: `lib/github/user-client.ts`
+
+For GitHub API operations that require the signed-in user's personal OAuth token (repo listing, config fetching from private repos), a separate user-token client is used rather than the server-level `GITHUB_TOKEN`.
+
+### Helpers
+
+| Function | Purpose |
+|----------|---------|
+| `getGitHubAccessToken(userId)` | Returns the user's GitHub access token from the `Account` table, or `null` if none exists |
+| `hasRepoScope(userId)` | Returns `true` if `Account.scope` includes `repo` |
+| `createUserGitHubClient(userId)` | Creates an `Octokit` instance authenticated with the user's token; throws if no token exists |
+| `requireRepoScope(userId)` | Throws a `MISSING_SCOPE` error if the user's token lacks `repo` scope |
+
+### Usage Pattern
+
+```typescript
+import { createUserGitHubClient, requireRepoScope } from "@/lib/github/user-client"
+
+export async function GET(request: NextRequest) {
+  const userId = await requireAuth(request)
+  await requireRepoScope(userId)
+  const octokit = await createUserGitHubClient(userId)
+  // use octokit with user's token
+}
+```
+
+The server-level `GITHUB_TOKEN` (used for workflow dispatch) and the user-token client are separate. The user-token client is used only for import-related GitHub API calls.
 
 ## PAT Authentication
 
