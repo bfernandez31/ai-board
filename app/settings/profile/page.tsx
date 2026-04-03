@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DangerZone } from '@/components/settings/danger-zone';
 
 interface ProfileData {
   name: string;
@@ -36,7 +37,7 @@ function ProfileSkeleton() {
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="rounded-lg border p-4">
             <div className="h-4 w-24 bg-muted animate-pulse rounded mb-2" />
             <div className="h-5 w-40 bg-muted animate-pulse rounded" />
@@ -140,6 +141,10 @@ export default function ProfileSettingsPage() {
                   {profile.plan}
                 </Link>
               </div>
+            </div>
+
+            <div className="border-t pt-6">
+              <DangerZone userEmail={profile.email} />
             </div>
           </div>
         )}

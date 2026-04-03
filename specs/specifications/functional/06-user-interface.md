@@ -904,6 +904,36 @@ The profile settings page (`/settings/profile`) displays a read-only summary of 
 - Stacks on mobile, uses a grid layout on desktop
 - Responsive across viewports from 320px to 1920px without horizontal scrolling
 
+### Danger Zone
+
+Below the profile fields, the profile settings page includes a **Danger Zone** section — a red-bordered card containing a "Delete my account" button.
+
+**Behavior**:
+- Clicking "Delete my account" opens the `DeleteAccountDialog` confirmation modal
+- The section clearly labels the action as permanent and irreversible
+
+#### DeleteAccountDialog
+
+A confirmation modal (shadcn/ui `Dialog`, not `AlertDialog`) that prevents accidental account deletion via an email-confirmation step.
+
+**On open**:
+- Fetches data counts from `GET /api/account/summary` to display how much data will be deleted
+- Displays: number of projects, AI credentials, personal access tokens, and subscription status (mentioning cancellation only if an active subscription exists)
+
+**Confirmation input**:
+- The user must type their exact email address into a text field
+- The "Delete permanently" button remains disabled until the input matches the user's email
+
+**Deletion flow**:
+1. User submits — button is disabled immediately to prevent duplicate requests
+2. `DELETE /api/account` is called
+3. On success: `signOut({ callbackUrl: '/' })` clears the session and redirects to the landing page
+4. On error: a toast notification is shown and the button is re-enabled
+
+**Modal dismissal**:
+- Clicking outside the modal or pressing Escape does **not** close the dialog while a deletion is in progress
+- Cancelling clears the typed email input
+
 ---
 
 ## Error Presentation

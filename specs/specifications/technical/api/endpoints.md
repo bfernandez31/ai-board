@@ -3467,6 +3467,71 @@ Fetches the authenticated user's profile data for the settings page.
 
 ---
 
+## Account Endpoints
+
+### GET /api/account/summary
+
+Fetches counts of the authenticated user's data for the delete-account confirmation modal.
+
+**Authentication**: Required (session)
+
+**Response** (200 OK):
+```json
+{
+  "projectCount": 5,
+  "credentialCount": 2,
+  "tokenCount": 3,
+  "hasActiveSubscription": true,
+  "plan": "PRO"
+}
+```
+
+**Field Descriptions**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `projectCount` | number | Number of projects owned by the user |
+| `credentialCount` | number | Number of AI credentials stored for the user |
+| `tokenCount` | number | Number of personal access tokens for the user |
+| `hasActiveSubscription` | boolean | `true` when the user has an `active` or `trialing` subscription |
+| `plan` | string | Current subscription plan: `"FREE"`, `"PRO"`, or `"TEAM"` |
+
+**Error Responses**:
+
+| Status | Body | Condition |
+|--------|------|-----------|
+| `401` | `{ "error": "Unauthorized" }` | No valid session |
+
+---
+
+### DELETE /api/account
+
+Permanently deletes the authenticated user's account and all associated data.
+
+**Authentication**: Required (session)
+
+**Request Body**: None — user is identified by the active session.
+
+**Processing Order**:
+1. Authenticate the user via session.
+2. Cancel any active Stripe subscription (errors are logged; deletion is not blocked).
+3. Delete the `User` record — Prisma cascade deletes all related records (projects, tickets, comments, credentials, tokens, notifications, push subscriptions, sessions, subscription).
+4. Return success — the client calls `signOut()` and redirects to the landing page.
+
+**Response** (200 OK):
+```json
+{ "message": "Account deleted successfully" }
+```
+
+**Error Responses**:
+
+| Status | Body | Condition |
+|--------|------|-----------|
+| `401` | `{ "error": "Unauthorized" }` | No valid session |
+| `500` | `{ "error": "Failed to delete account" }` | Server-side failure during deletion |
+
+---
+
 ## Billing Endpoints
 
 ### GET /api/billing/plans
