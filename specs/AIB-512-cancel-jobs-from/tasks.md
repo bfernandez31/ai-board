@@ -95,11 +95,11 @@
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Add component test for cancel button on job timeline in `tests/unit/components/jobs-timeline.test.tsx` — cancel button visible for PENDING/RUNNING jobs, hidden for terminal jobs, click triggers confirmation modal, disabled after first click
+- [x] T024 [P] [US3] Add component test for cancel button on job timeline in `tests/unit/components/jobs-timeline.test.tsx` — cancel button visible for PENDING/RUNNING jobs, hidden for terminal jobs, click triggers confirmation modal, disabled after first click
 
 ### Implementation for User Story 3
 
-- [ ] T025 [US3] Add always-visible cancel button on PENDING/RUNNING job timeline rows in `components/ticket/jobs-timeline.tsx` — XCircle icon button, triggers CancelConfirmationModal (reuse from US1), disabled after first click to prevent double-cancel
+- [x] T025 [US3] Add always-visible cancel button on PENDING/RUNNING job timeline rows in `components/ticket/jobs-timeline.tsx` — XCircle icon button, triggers CancelConfirmationModal (reuse from US1), disabled after first click to prevent double-cancel
 
 **Checkpoint**: Users have two access points for cancel: hover on board card (US1) and always-visible in detail modal (US3).
 
