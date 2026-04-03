@@ -3569,6 +3569,14 @@ Returns the aggregate health score and per-module status for a project.
         "fair": 1,
         "poor": 0
       }
+    },
+    "reviewQuality": {
+      "score": 74,
+      "label": "Good",
+      "lastScanDate": "2026-04-02T08:00:00Z",
+      "scanStatus": "COMPLETED",
+      "issuesFound": 3,
+      "summary": "3 missed findings"
     }
   },
   "lastFullScanDate": "2026-03-27T14:30:00Z",
@@ -3605,7 +3613,7 @@ Triggers a new health scan for the specified active module type.
 { "scanType": "SECURITY" }
 ```
 
-**Validation** (Zod): `scanType` required, enum `["SECURITY", "COMPLIANCE", "TESTS", "SPEC_SYNC"]`
+**Validation** (Zod): `scanType` required, enum `["SECURITY", "COMPLIANCE", "TESTS", "SPEC_SYNC", "REVIEW_QUALITY"]`
 
 **Behavior**:
 1. Validate `scanType`
@@ -3646,7 +3654,7 @@ Returns paginated scan history for a project.
 **Authorization**: `verifyProjectAccess(projectId)` — owner or member
 
 **Query params**:
-- `type` (optional): `"SECURITY" | "COMPLIANCE" | "TESTS" | "SPEC_SYNC"` — filter by scan type
+- `type` (optional): `"SECURITY" | "COMPLIANCE" | "TESTS" | "SPEC_SYNC" | "REVIEW_QUALITY"` — filter by scan type
 - `limit` (optional): integer 1–100, default 20
 - `cursor` (optional): scan ID for cursor-based pagination
 - `includeReport` (optional): `"true"` — include the `report` JSON string in each scan object (omitted by default for performance)
@@ -3768,6 +3776,9 @@ Returns score trend data for all active scan modules in a single response. Used 
     "SPEC_SYNC": [
       { "date": "2026-03-30T14:22:00.000Z", "score": 78 },
       { "date": "2026-03-28T09:00:00.000Z", "score": 75 }
+    ],
+    "REVIEW_QUALITY": [
+      { "date": "2026-04-02T08:00:00.000Z", "score": 74 }
     ]
   }
 }

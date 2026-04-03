@@ -15,7 +15,7 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 ```
 .claude-plugin/
 ├── plugin.json                          # Plugin metadata (name, version, description)
-├── commands/                            # 21 slash commands (ai-board.*.md)
+├── commands/                            # 22 slash commands (ai-board.*.md)
 │   ├── ai-board.specify.md              # Generate feature specification
 │   ├── ai-board.clarify.md              # Ask clarification questions on spec
 │   ├── ai-board.plan.md                 # Generate implementation plan
@@ -36,7 +36,8 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 │   ├── ai-board.health-security.md      # Health scan: OWASP/security analysis
 │   ├── ai-board.health-compliance.md    # Health scan: constitution compliance analysis
 │   ├── ai-board.health-tests.md         # Health scan: test execution + auto-fix
-│   └── ai-board.health-spec-sync.md     # Health scan: spec/code drift detection
+│   ├── ai-board.health-spec-sync.md     # Health scan: spec/code drift detection
+│   └── ai-board.health-review-quality.md # Health scan: PR review quality analysis
 ├── templates/                           # Document templates used by commands
 │   ├── spec-template.md                 # Specification template
 │   ├── plan-template.md                 # Implementation plan template
