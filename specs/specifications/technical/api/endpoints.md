@@ -407,6 +407,8 @@ Fetch all tickets for a project, grouped by stage. When `stage` or `workflowType
 **Query Parameters**:
 - `stage` (string, optional): Filter by stage — `INBOX|SPECIFY|PLAN|BUILD|VERIFY|SHIP|CLOSED`
 - `workflowType` (string, optional): Filter by workflow type — `FULL|QUICK|CLEAN`
+- `limit` (number, optional): Maximum number of tickets to return (min: 1). Only applies when at least one filter is provided. Results are sorted by `updatedAt` desc.
+- `updatedSince` (string, optional): ISO 8601 datetime. Only return tickets updated after this timestamp.
 
 **Response — no filters** (200 OK): Stage-grouped object
 ```json

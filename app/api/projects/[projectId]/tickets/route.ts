@@ -41,7 +41,7 @@ export async function GET(
     const ticketFiltersSchema = z.object({
       stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP', 'CLOSED']).optional(),
       workflowType: z.enum(['FULL', 'QUICK', 'CLEAN']).optional(),
-      limit: z.coerce.number().int().min(1).max(200).optional(),
+      limit: z.coerce.number().int().min(1).optional(),
       updatedSince: z.string().datetime().optional(),
     });
     const filtersParsed = ticketFiltersSchema.safeParse({

@@ -30,7 +30,7 @@ Environment variables (set by the workflow):
      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}"
 
    # Initial scan (no previous scan):
-   curl -s "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets?stage=SHIP&workflowType=FULL&limit=50" \
+   curl -s "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets?stage=SHIP&workflowType=FULL&limit=30" \
      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}"
    ```
    Note: When filter params are provided, the endpoint returns a flat array of matching tickets sorted by most recently updated first.
