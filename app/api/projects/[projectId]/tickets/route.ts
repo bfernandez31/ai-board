@@ -36,34 +36,41 @@ export async function GET(
       await verifyProjectAccess(projectId, request);
     }
 
-    // Optional filters: ?stage=SHIP&workflowType=FULL
+    // Optional filters: ?stage=SHIP&workflowType=FULL&limit=50&updatedSince=2025-01-01T00:00:00Z
     const { searchParams } = new URL(request.url);
     const ticketFiltersSchema = z.object({
       stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP', 'CLOSED']).optional(),
       workflowType: z.enum(['FULL', 'QUICK', 'CLEAN']).optional(),
+      limit: z.coerce.number().int().min(1).max(200).optional(),
+      updatedSince: z.string().datetime().optional(),
     });
     const filtersParsed = ticketFiltersSchema.safeParse({
       stage: searchParams.get('stage') || undefined,
       workflowType: searchParams.get('workflowType') || undefined,
+      limit: searchParams.get('limit') || undefined,
+      updatedSince: searchParams.get('updatedSince') || undefined,
     });
     if (!filtersParsed.success) {
       return NextResponse.json({ error: 'Invalid filter parameters', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
-    const { stage: stageParam, workflowType: workflowTypeParam } = filtersParsed.data;
+    const { stage: stageParam, workflowType: workflowTypeParam, limit: limitParam, updatedSince } = filtersParsed.data;
 
-    const ticketsByStage = await getTicketsByStage(projectId);
+    // If filters provided, query directly with Prisma for efficiency
+    if (stageParam || workflowTypeParam || limitParam || updatedSince) {
+      const where: Record<string, unknown> = { projectId };
+      if (stageParam) where.stage = stageParam;
+      if (workflowTypeParam) where.workflowType = workflowTypeParam;
+      if (updatedSince) where.updatedAt = { gte: new Date(updatedSince) };
 
-    // If filters provided, return a flat array instead of the stage-grouped object
-    if (stageParam || workflowTypeParam) {
-      const stages = stageParam ? [stageParam] : Object.keys(ticketsByStage);
-      const filtered = stages.flatMap((stage) =>
-        (ticketsByStage[stage as keyof typeof ticketsByStage] ?? []).filter(
-          (t) => !workflowTypeParam || t.workflowType === workflowTypeParam
-        )
-      );
+      const filtered = await prisma.ticket.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        ...(limitParam && { take: limitParam }),
+      });
       return NextResponse.json(filtered, { status: 200 });
     }
 
+    const ticketsByStage = await getTicketsByStage(projectId);
     return NextResponse.json(ticketsByStage, { status: 200 });
   } catch (error) {
     if (error instanceof Error) {

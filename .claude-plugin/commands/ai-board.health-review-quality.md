@@ -16,19 +16,26 @@ Environment variables (set by the workflow):
 
 ### Step 1 — PR Discovery
 
-1. Query the ai-board API for FULL workflow tickets in SHIP stage:
-   ```bash
-   curl -s "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets?stage=SHIP&workflowType=FULL" \
-     -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}"
-   ```
-   Note: When `stage`/`workflowType` params are provided, the endpoint returns a flat array of matching tickets.
-2. For each ticket's branch, use GitHub API to find the merged PR
-3. Determine the last REVIEW_QUALITY scan timestamp by querying:
+1. Determine the last REVIEW_QUALITY scan timestamp by querying:
    ```bash
    curl -s "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/health/scans?type=REVIEW_QUALITY&limit=1&status=COMPLETED" \
      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}"
    ```
-4. Filter to PRs merged AFTER the last scan timestamp
+2. Query the ai-board API for FULL workflow tickets in SHIP stage.
+   - If a previous scan exists, use its `completedAt` as `updatedSince` to fetch only tickets updated since then.
+   - If no previous scan (initial run), use `limit=50` to cap the number of tickets.
+   ```bash
+   # Incremental scan (previous scan exists):
+   curl -s "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets?stage=SHIP&workflowType=FULL&updatedSince=${LAST_SCAN_TIMESTAMP}" \
+     -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}"
+
+   # Initial scan (no previous scan):
+   curl -s "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets?stage=SHIP&workflowType=FULL&limit=50" \
+     -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}"
+   ```
+   Note: When filter params are provided, the endpoint returns a flat array of matching tickets sorted by most recently updated first.
+3. For each ticket's branch, use GitHub API to find the merged PR
+4. Filter to PRs merged AFTER the last scan timestamp (skip this step on initial scan — all returned tickets qualify)
 5. If no qualifying PRs found, write an empty report and exit
 
 ### Step 2 — Comment Collection (per PR)
