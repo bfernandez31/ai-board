@@ -106,8 +106,8 @@
 
 ### Implementation for User Story 5
 
-- [ ] T028 [US5] Add backup tag creation step (`backup/{ticketKey}/{stage}-{jobId}`) before hard reset in `.github/workflows/rollback-reset.yml`
-- [ ] T029 [US5] Add step to delete `backup/{ticketKey}/*` tags on successful verify start in `.github/workflows/verify.yml`
+- [x] T028 [US5] Add backup tag creation step (`backup/{ticketKey}/{stage}-{jobId}`) before hard reset in `.github/workflows/rollback-reset.yml`
+- [x] T029 [US5] Add step to delete `backup/{ticketKey}/*` tags on successful verify start in `.github/workflows/verify.yml`
 
 **Checkpoint**: All destructive rollbacks are safely backed up via git tags
 

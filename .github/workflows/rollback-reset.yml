@@ -91,6 +91,15 @@ jobs:
             echo "No spec folder found at $SPEC_DIR"
           fi
 
+      # --- Create backup tag before destructive reset ---
+      - name: Create backup tag
+        run: |
+          BACKUP_TAG="backup/${{ inputs.ticket_id }}/rollback-${{ inputs.job_id }}"
+          echo "Creating backup tag: $BACKUP_TAG"
+          git tag "$BACKUP_TAG" HEAD
+          git push origin "$BACKUP_TAG" || echo "Warning: Failed to push backup tag (non-blocking)"
+          echo "Backup tag created at $(git rev-parse HEAD)"
+
       # --- Reset branch to main (keeping nothing) ---
       - name: Reset to main branch
         run: |

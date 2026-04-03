@@ -192,6 +192,22 @@ jobs:
             -d '{"status": "RUNNING"}' \
             -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
 
+      # --- Cleanup backup tags from previous rollbacks ---
+      - name: Cleanup backup tags
+        run: |
+          echo "Checking for backup tags matching: backup/${{ inputs.ticket_id }}/"
+          TAGS=$(git ls-remote --tags origin "refs/tags/backup/${{ inputs.ticket_id }}/*" | awk '{print $2}')
+          if [ -z "$TAGS" ]; then
+            echo "No backup tags found for ${{ inputs.ticket_id }}"
+          else
+            echo "Found backup tags to clean up:"
+            echo "$TAGS"
+            for TAG in $TAGS; do
+              git push origin --delete "$TAG" || echo "Warning: Failed to delete $TAG (non-blocking)"
+            done
+            echo "Backup tag cleanup complete"
+          fi
+
       - name: Fetch Owner AI Credential
         if: ${{ env.SKIP_EXECUTION != 'true' && inputs.project_id }}
         run: |
