@@ -96,9 +96,29 @@ export function isValidTransition(
     return workflowType === 'FULL';
   }
 
+  // Special case: Rollback allows VERIFY → BUILD (only for FULL workflow)
+  if (fromStage === Stage.VERIFY && toStage === Stage.BUILD) {
+    return workflowType === 'FULL';
+  }
+
   // Special case: VERIFY → CLOSED (close operation)
   if (fromStage === Stage.VERIFY && toStage === Stage.CLOSED) {
     return true;
+  }
+
+  // Special case: Rollback allows SPECIFY → INBOX (any workflow)
+  if (fromStage === Stage.SPECIFY && toStage === Stage.INBOX) {
+    return true;
+  }
+
+  // Special case: Rollback allows PLAN → SPECIFY (any workflow)
+  if (fromStage === Stage.PLAN && toStage === Stage.SPECIFY) {
+    return true;
+  }
+
+  // Special case: Rollback allows BUILD → PLAN (only for FULL workflow)
+  if (fromStage === Stage.BUILD && toStage === Stage.PLAN) {
+    return workflowType === 'FULL';
   }
 
   // Normal sequential validation

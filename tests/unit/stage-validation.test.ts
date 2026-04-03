@@ -128,3 +128,45 @@ describe('Stage Validation - Rollback Support', () => {
     expect(result).toBe(true);
   });
 });
+
+describe('Stage Validation - New Rollback Paths', () => {
+  it('should allow SPECIFY → INBOX transition (any workflow)', () => {
+    expect(isValidTransition(Stage.SPECIFY, Stage.INBOX)).toBe(true);
+    expect(isValidTransition(Stage.SPECIFY, Stage.INBOX, 'FULL')).toBe(true);
+    expect(isValidTransition(Stage.SPECIFY, Stage.INBOX, 'QUICK')).toBe(true);
+  });
+
+  it('should allow PLAN → SPECIFY transition (any workflow)', () => {
+    expect(isValidTransition(Stage.PLAN, Stage.SPECIFY)).toBe(true);
+    expect(isValidTransition(Stage.PLAN, Stage.SPECIFY, 'FULL')).toBe(true);
+    expect(isValidTransition(Stage.PLAN, Stage.SPECIFY, 'QUICK')).toBe(true);
+  });
+
+  it('should allow BUILD → PLAN transition for FULL workflow', () => {
+    expect(isValidTransition(Stage.BUILD, Stage.PLAN, 'FULL')).toBe(true);
+  });
+
+  it('should reject BUILD → PLAN transition for QUICK workflow', () => {
+    expect(isValidTransition(Stage.BUILD, Stage.PLAN, 'QUICK')).toBe(false);
+  });
+
+  it('should reject BUILD → PLAN transition without workflowType', () => {
+    expect(isValidTransition(Stage.BUILD, Stage.PLAN)).toBe(false);
+  });
+
+  it('should allow VERIFY → BUILD transition for FULL workflow', () => {
+    expect(isValidTransition(Stage.VERIFY, Stage.BUILD, 'FULL')).toBe(true);
+  });
+
+  it('should reject VERIFY → BUILD transition for QUICK workflow', () => {
+    expect(isValidTransition(Stage.VERIFY, Stage.BUILD, 'QUICK')).toBe(false);
+  });
+
+  it('should reject VERIFY → BUILD transition without workflowType', () => {
+    expect(isValidTransition(Stage.VERIFY, Stage.BUILD)).toBe(false);
+  });
+
+  it('should reject SHIP → VERIFY (backwards from terminal)', () => {
+    expect(isValidTransition(Stage.SHIP, Stage.VERIFY)).toBe(false);
+  });
+});

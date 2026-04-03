@@ -75,3 +75,66 @@ export function canRollbackToPlan(
 
   return { allowed: true };
 }
+
+export function canRollbackToSpecify(
+  currentStage: Stage,
+  targetStage: Stage,
+  _workflowType: WorkflowType,
+  mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  // SPECIFY → INBOX
+  if (currentStage === 'SPECIFY' && targetStage === 'INBOX') {
+    const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
+    if (statusCheck) return statusCheck;
+    return { allowed: true };
+  }
+
+  // PLAN → SPECIFY
+  if (currentStage === 'PLAN' && targetStage === 'SPECIFY') {
+    const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
+    if (statusCheck) return statusCheck;
+    return { allowed: true };
+  }
+
+  return { allowed: false, reason: 'Rollback only available from SPECIFY to INBOX or PLAN to SPECIFY' };
+}
+
+export function canRollbackBuildToPlan(
+  currentStage: Stage,
+  targetStage: Stage,
+  workflowType: WorkflowType,
+  mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  if (currentStage !== 'BUILD' || targetStage !== 'PLAN') {
+    return { allowed: false, reason: 'Rollback only available from BUILD to PLAN stage' };
+  }
+
+  if (workflowType !== 'FULL') {
+    return { allowed: false, reason: 'BUILD to PLAN rollback only available for FULL workflows.' };
+  }
+
+  const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
+  if (statusCheck) return statusCheck;
+
+  return { allowed: true };
+}
+
+export function canRollbackToBuild(
+  currentStage: Stage,
+  targetStage: Stage,
+  workflowType: WorkflowType,
+  mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  if (currentStage !== 'VERIFY' || targetStage !== 'BUILD') {
+    return { allowed: false, reason: 'Rollback only available from VERIFY to BUILD stage' };
+  }
+
+  if (workflowType !== 'FULL') {
+    return { allowed: false, reason: 'VERIFY to BUILD rollback only available for FULL workflows.' };
+  }
+
+  const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
+  if (statusCheck) return statusCheck;
+
+  return { allowed: true };
+}

@@ -118,6 +118,7 @@ export async function PATCH(
         status: true,
         completedAt: true,
         startedAt: true,
+        workflowRunId: true,
       },
     });
 
@@ -177,6 +178,7 @@ export async function PATCH(
       status: JobStatus;
       startedAt?: Date;
       completedAt?: Date;
+      workflowRunId?: bigint;
       qualityScore?: number;
       qualityScoreDetails?: string;
     } = {
@@ -185,6 +187,11 @@ export async function PATCH(
 
     if (requestedStatus === 'RUNNING' && !job.startedAt) {
       updateData.startedAt = new Date();
+    }
+
+    // Persist workflowRunId on first RUNNING transition only
+    if (requestedStatus === 'RUNNING' && validationResult.data.workflowRunId && !job.workflowRunId) {
+      updateData.workflowRunId = BigInt(validationResult.data.workflowRunId);
     }
 
     if (isTerminalState) {

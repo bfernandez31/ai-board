@@ -29,17 +29,17 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Extend PENDING valid transitions to include CANCELLED in `app/lib/job-state-machine.ts`
-- [ ] T004 Add optional `workflowRunId` to Zod schema in `app/lib/job-update-validator.ts`
-- [ ] T005 Persist `workflowRunId` on RUNNING transition (only if currently null) in `app/api/jobs/[id]/status/route.ts`
-- [ ] T006 [P] Create cancel workflow helper `lib/workflows/cancel-workflow.ts` using `octokit.actions.cancelWorkflowRun()`
-- [ ] T007 [P] Create branch deletion helper `lib/workflows/delete-branch.ts` using `octokit.git.deleteRef()`
-- [ ] T008 Add `canRollbackToSpecify()`, `canRollbackBuildToPlan()`, `canRollbackToBuild()` functions in `app/lib/workflows/rollback-validator.ts`
-- [ ] T009 Add new valid rollback transitions (SPECIFY→INBOX, PLAN→SPECIFY, BUILD→PLAN, VERIFY→BUILD) in `lib/stage-transitions.ts`
-- [ ] T010 [P] Unit test: PENDING→CANCELLED transition validity in `tests/unit/job-state-machine.test.ts` (extend existing)
-- [ ] T011 [P] Unit test: new rollback validator functions in `tests/unit/rollback-validator.test.ts` (extend existing)
-- [ ] T012 [P] Unit test: `isValidTransition()` for new rollback paths in `tests/unit/stage-transitions.test.ts` (extend or create)
-- [ ] T013 [P] Integration test: workflowRunId persistence on RUNNING callback in `tests/integration/jobs/status.test.ts` (extend existing)
+- [x] T003 Extend PENDING valid transitions to include CANCELLED in `app/lib/job-state-machine.ts`
+- [x] T004 Add optional `workflowRunId` to Zod schema in `app/lib/job-update-validator.ts`
+- [x] T005 Persist `workflowRunId` on RUNNING transition (only if currently null) in `app/api/jobs/[id]/status/route.ts`
+- [x] T006 [P] Create cancel workflow helper `lib/workflows/cancel-workflow.ts` using `octokit.actions.cancelWorkflowRun()`
+- [x] T007 [P] Create branch deletion helper `lib/workflows/delete-branch.ts` using `octokit.git.deleteRef()`
+- [x] T008 Add `canRollbackToSpecify()`, `canRollbackBuildToPlan()`, `canRollbackToBuild()` functions in `app/lib/workflows/rollback-validator.ts`
+- [x] T009 Add new valid rollback transitions (SPECIFY→INBOX, PLAN→SPECIFY, BUILD→PLAN, VERIFY→BUILD) in `lib/stage-transitions.ts`
+- [x] T010 [P] Unit test: PENDING→CANCELLED transition validity in `tests/unit/job-state-machine.test.ts` (extend existing)
+- [x] T011 [P] Unit test: new rollback validator functions in `tests/unit/rollback-validator.test.ts` (extend existing)
+- [x] T012 [P] Unit test: `isValidTransition()` for new rollback paths in `tests/unit/stage-transitions.test.ts` (extend or create)
+- [x] T013 [P] Integration test: workflowRunId persistence on RUNNING callback in `tests/integration/jobs/status.test.ts` (extend existing)
 
 **Checkpoint**: Foundation ready — cancel and rollback user stories can now begin
 

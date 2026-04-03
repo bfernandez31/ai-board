@@ -286,6 +286,50 @@ describe('Jobs Status', () => {
     });
   });
 
+  describe('workflowRunId persistence', () => {
+    it('should persist workflowRunId on RUNNING status update', async () => {
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'RUNNING', workflowRunId: 12345678901 }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.status).toBe('RUNNING');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.workflowRunId).toBe(BigInt(12345678901));
+    });
+
+    it('should not overwrite existing workflowRunId on subsequent RUNNING update', async () => {
+      // First RUNNING update with workflowRunId
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, {
+        status: 'RUNNING',
+        workflowRunId: 12345678901,
+      });
+
+      // Second RUNNING update (idempotent) with different workflowRunId
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, {
+        status: 'RUNNING',
+        workflowRunId: 99999999999,
+      });
+
+      // Original workflowRunId should be preserved
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.workflowRunId).toBe(BigInt(12345678901));
+    });
+
+    it('should accept RUNNING without workflowRunId (backwards compatible)', async () => {
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'RUNNING' }
+      );
+
+      expect(response.status).toBe(200);
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.workflowRunId).toBeNull();
+    });
+  });
+
   describe('Job status lifecycle', () => {
     it('should track full job lifecycle: PENDING → RUNNING → COMPLETED', async () => {
       // Verify initial PENDING state (startedAt is set at job creation)

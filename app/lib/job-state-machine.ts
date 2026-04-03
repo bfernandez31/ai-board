@@ -19,7 +19,7 @@ export type JobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCEL
  * Terminal states (COMPLETED, FAILED, CANCELLED) can only transition to themselves.
  */
 export const VALID_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
-  PENDING: ['PENDING', 'RUNNING'],
+  PENDING: ['PENDING', 'RUNNING', 'CANCELLED'],
   RUNNING: ['RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED'],
   COMPLETED: ['COMPLETED'],  // Terminal - only idempotent transitions
   FAILED: ['FAILED'],        // Terminal - only idempotent transitions
