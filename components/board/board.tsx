@@ -983,68 +983,19 @@ export function Board({
         return null;
       };
 
-      // Rollback mode: Dragging from BUILD to INBOX
-      if (dragSource === Stage.BUILD && stage === Stage.INBOX) {
-        const mostRecentWorkflowJob = getMostRecentWorkflowJob();
+      // Rollback mode: validate eligibility and show amber/disabled style
+      const rollbackValidators: Record<string, () => import('@/app/lib/workflows/rollback-validator').RollbackValidation> = {
+        [`${Stage.BUILD}→${Stage.INBOX}`]: () => canRollbackToInbox(dragSource, stage, activeTicket.workflowType, getMostRecentWorkflowJob()),
+        [`${Stage.VERIFY}→${Stage.PLAN}`]: () => canRollbackToPlan(dragSource, stage, activeTicket.workflowType, getMostRecentWorkflowJob()),
+        [`${Stage.VERIFY}→${Stage.BUILD}`]: () => canRollbackToBuild(dragSource, stage, activeTicket.workflowType, getMostRecentWorkflowJob()),
+        [`${Stage.SPECIFY}→${Stage.INBOX}`]: () => canRollbackToSpecify(dragSource, stage, activeTicket.workflowType, getMostRecentWorkflowJob()),
+        [`${Stage.PLAN}→${Stage.SPECIFY}`]: () => canRollbackToSpecify(dragSource, stage, activeTicket.workflowType, getMostRecentWorkflowJob()),
+        [`${Stage.BUILD}→${Stage.PLAN}`]: () => canRollbackBuildToPlan(dragSource, stage, activeTicket.workflowType, getMostRecentWorkflowJob()),
+      };
 
-        // Validate rollback eligibility (only for quick-impl workflows)
-        const validation = canRollbackToInbox(
-          dragSource,
-          stage,
-          activeTicket.workflowType,
-          mostRecentWorkflowJob
-        );
-
-        if (validation.allowed) {
-          // Rollback eligible - amber border
-          return 'border-4 border-dashed border-amber-500 bg-amber-500/10';
-        } else {
-          // Rollback not allowed - disabled with tooltip hint
-          return 'opacity-50 cursor-not-allowed';
-        }
-      }
-
-      // Rollback mode: Dragging from VERIFY to PLAN (AIB-75)
-      if (dragSource === Stage.VERIFY && stage === Stage.PLAN) {
-        const mostRecentWorkflowJob = getMostRecentWorkflowJob();
-        const validation = canRollbackToPlan(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
-        return validation.allowed
-          ? 'border-4 border-dashed border-amber-500 bg-amber-500/10'
-          : 'opacity-50 cursor-not-allowed';
-      }
-
-      // Rollback mode: VERIFY → BUILD (AIB-513)
-      if (dragSource === Stage.VERIFY && stage === Stage.BUILD) {
-        const mostRecentWorkflowJob = getMostRecentWorkflowJob();
-        const validation = canRollbackToBuild(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
-        return validation.allowed
-          ? 'border-4 border-dashed border-amber-500 bg-amber-500/10'
-          : 'opacity-50 cursor-not-allowed';
-      }
-
-      // Rollback mode: SPECIFY → INBOX (AIB-513)
-      if (dragSource === Stage.SPECIFY && stage === Stage.INBOX) {
-        const mostRecentWorkflowJob = getMostRecentWorkflowJob();
-        const validation = canRollbackToSpecify(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
-        return validation.allowed
-          ? 'border-4 border-dashed border-amber-500 bg-amber-500/10'
-          : 'opacity-50 cursor-not-allowed';
-      }
-
-      // Rollback mode: PLAN → SPECIFY (AIB-513)
-      if (dragSource === Stage.PLAN && stage === Stage.SPECIFY) {
-        const mostRecentWorkflowJob = getMostRecentWorkflowJob();
-        const validation = canRollbackToSpecify(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
-        return validation.allowed
-          ? 'border-4 border-dashed border-amber-500 bg-amber-500/10'
-          : 'opacity-50 cursor-not-allowed';
-      }
-
-      // Rollback mode: BUILD → PLAN (FULL only, AIB-513)
-      if (dragSource === Stage.BUILD && stage === Stage.PLAN) {
-        const mostRecentWorkflowJob = getMostRecentWorkflowJob();
-        const validation = canRollbackBuildToPlan(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
-        return validation.allowed
+      const rollbackValidator = rollbackValidators[`${dragSource}→${stage}`];
+      if (rollbackValidator) {
+        return rollbackValidator().allowed
           ? 'border-4 border-dashed border-amber-500 bg-amber-500/10'
           : 'opacity-50 cursor-not-allowed';
       }

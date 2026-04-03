@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jobStatusUpdateSchema } from '@/app/lib/job-update-validator';
 import {
   canTransition,
-  InvalidTransitionError,
   JobStatus,
 } from '@/app/lib/job-state-machine';
 import { prisma } from '@/lib/db/client';
@@ -268,14 +267,6 @@ export async function PATCH(
       stack: error instanceof Error ? error.stack : undefined,
       elapsedMs: elapsedTime,
     });
-
-    // Handle specific error types
-    if (error instanceof InvalidTransitionError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
 
     // Generic internal server error
     return NextResponse.json(
