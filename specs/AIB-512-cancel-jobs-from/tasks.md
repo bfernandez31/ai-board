@@ -126,8 +126,8 @@
 **Purpose**: Final validation and cross-cutting improvements.
 
 - [ ] T031 [P] Add E2E test for board drag rollback in `tests/e2e/board-rollback.spec.ts` — drag BUILD→PLAN (confirmation → stage change), drag with RUNNING job (blocked), valid/invalid column highlighting
-- [ ] T032 Run `bun run type-check` and `bun run lint` to verify no type or lint errors
-- [ ] T033 Run full test suite (`bun run test`) to verify all existing tests still pass (SC-008)
+- [x] T032 Run `bun run type-check` and `bun run lint` to verify no type or lint errors
+- [x] T033 Run full test suite (`bun run test`) to verify all existing tests still pass (SC-008)
 - [ ] T034 Run quickstart.md validation — verify cancel flow and rollback flow work end-to-end per quickstart.md steps
 
 ---
