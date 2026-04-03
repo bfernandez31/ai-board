@@ -18,7 +18,7 @@
 
 **Purpose**: No new project setup needed — all changes modify existing files. This phase handles shared validation infrastructure changes that both user stories depend on.
 
-- [ ] T001 Add `unrecognized_keys` handling to `mapZodErrors()` in `lib/validations/config.ts`
+- [x] T001 Add `unrecognized_keys` handling to `mapZodErrors()` in `lib/validations/config.ts`
 
 ---
 
@@ -28,11 +28,11 @@
 
 **⚠️ CRITICAL**: Both user stories depend on the `.strict()` migration completing first
 
-- [ ] T002 Replace `.passthrough()` with `.strict()` on `ProjectConfigSchema` in `lib/validations/config.ts`
-- [ ] T003 [P] Add `.strict()` to `ProjectSectionSchema` in `lib/validations/config.ts`
-- [ ] T004 [P] Add `.strict()` to `RuntimeSectionSchema` in `lib/validations/config.ts`
-- [ ] T005 [P] Add `.strict()` to `CommandsSectionSchema` in `lib/validations/config.ts`
-- [ ] T006 [P] Add `.strict()` to `AgentSectionSchema` in `lib/validations/config.ts`
+- [x] T002 Replace `.passthrough()` with `.strict()` on `ProjectConfigSchema` in `lib/validations/config.ts`
+- [x] T003 [P] Add `.strict()` to `ProjectSectionSchema` in `lib/validations/config.ts`
+- [x] T004 [P] Add `.strict()` to `RuntimeSectionSchema` in `lib/validations/config.ts`
+- [x] T005 [P] Add `.strict()` to `CommandsSectionSchema` in `lib/validations/config.ts`
+- [x] T006 [P] Add `.strict()` to `AgentSectionSchema` in `lib/validations/config.ts`
 
 **Checkpoint**: Schema enforcement foundation ready — user story implementation can begin
 
@@ -46,13 +46,13 @@
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Add unit tests for `stripServiceCredentials()` function in `tests/unit/config-schema.test.ts` — test stripping of `username`/`password` from services, partial credentials (only one present), and no-credential configs
-- [ ] T008 [P] [US1] Add integration tests verifying credentials absent from stored config and sync API response in `tests/integration/projects/config-sync.test.ts`
+- [x] T007 [P] [US1] Add unit tests for `stripServiceCredentials()` function in `tests/unit/config-schema.test.ts` — test stripping of `username`/`password` from services, partial credentials (only one present), and no-credential configs
+- [x] T008 [P] [US1] Add integration tests verifying credentials absent from stored config and sync API response in `tests/integration/projects/config-sync.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Implement `stripServiceCredentials()` export function in `lib/validations/config.ts` — accepts validated `ProjectConfig`, returns plain object with `username` and `password` removed from each service entry
-- [ ] T010 [US1] Update `lib/config-sync.ts` to call `stripServiceCredentials()` after validation and alongside existing `env` stripping, before DB write and API response
+- [x] T009 [US1] Implement `stripServiceCredentials()` export function in `lib/validations/config.ts` — accepts validated `ProjectConfig`, returns plain object with `username` and `password` removed from each service entry
+- [x] T010 [US1] Update `lib/config-sync.ts` to call `stripServiceCredentials()` after validation and alongside existing `env` stripping, before DB write and API response
 
 **Checkpoint**: Service credentials are stripped from all config sync operations — US1 fully functional and testable
 
@@ -66,11 +66,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T011 [US2] Update existing "unknown fields produce warnings" tests in `tests/unit/config-schema.test.ts` — change expectations from `success: true` with warnings to `success: false` with `unknown_field` errors for root-level and nested unknown fields
+- [x] T011 [US2] Update existing "unknown fields produce warnings" tests in `tests/unit/config-schema.test.ts` — change expectations from `success: true` with warnings to `success: false` with `unknown_field` errors for root-level and nested unknown fields
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Verify `.strict()` integration with `mapZodErrors()` handles `unrecognized_keys` issues correctly in `lib/validations/config.ts` — ensure error messages clearly identify unknown field name and location (satisfies FR-005)
+- [x] T012 [US2] Verify `.strict()` integration with `mapZodErrors()` handles `unrecognized_keys` issues correctly in `lib/validations/config.ts` — ensure error messages clearly identify unknown field name and location (satisfies FR-005)
 
 **Checkpoint**: Unknown fields in configs are now rejected with descriptive errors — US2 fully functional and testable
 
@@ -80,11 +80,11 @@
 
 **Purpose**: Validation, cleanup, and verification across both user stories
 
-- [ ] T013 Run `bun run type-check` to verify no type errors across all modified files
-- [ ] T014 Run `bun run lint` to verify no lint errors across all modified files
-- [ ] T015 Run `bun run test:unit tests/unit/config-schema.test.ts` to verify all unit tests pass
-- [ ] T016 Run `bun run test:integration tests/integration/projects/config-sync.test.ts` to verify all integration tests pass
-- [ ] T017 Run quickstart.md validation per `specs/AIB-486-compliance-fix-2/quickstart.md`
+- [x] T013 Run `bun run type-check` to verify no type errors across all modified files
+- [x] T014 Run `bun run lint` to verify no lint errors across all modified files
+- [x] T015 Run `bun run test:unit tests/unit/config-schema.test.ts` to verify all unit tests pass
+- [x] T016 Run `bun run test:integration tests/integration/projects/config-sync.test.ts` to verify all integration tests pass
+- [x] T017 Run quickstart.md validation per `specs/AIB-486-compliance-fix-2/quickstart.md`
 
 ---
 

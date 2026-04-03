@@ -65,7 +65,7 @@ export const ProjectSectionSchema = z.object({
   name: z.string().min(1, 'project.name must be a non-empty string'),
   language: ProjectLanguageSchema,
   framework: ProjectFrameworkSchema.default('none'),
-});
+}).strict();
 
 export const RuntimeSectionSchema = z.object({
   manager: PackageManagerSchema,
@@ -75,7 +75,7 @@ export const RuntimeSectionSchema = z.object({
   java: z.string().optional(),
   go: z.string().optional(),
   rust: z.string().optional(),
-});
+}).strict();
 
 export const CommandsSectionSchema = z.object({
   install: z.string().min(1, 'commands.install must be a non-empty string'),
@@ -87,7 +87,7 @@ export const CommandsSectionSchema = z.object({
   test_e2e: z.string().optional(),
   db_setup: z.string().optional(),
   db_seed: z.string().optional(),
-});
+}).strict();
 
 export const ServiceConfigSchema = z.object({
   type: ServiceTypeSchema,
@@ -100,7 +100,7 @@ export const ServiceConfigSchema = z.object({
 export const AgentSectionSchema = z.object({
   cli: AgentCliSchema.default('claude-code'),
   model: z.string().optional(),
-});
+}).strict();
 
 // ─── Root Config Schema ─────────────────────────────────────────────
 
@@ -114,7 +114,7 @@ export const ProjectConfigSchema = z
     env: z.record(z.string(), z.string()).default({}),
     agent: AgentSectionSchema.default({ cli: 'claude-code' }),
   })
-  .passthrough();
+  .strict();
 
 // ─── Inferred Types ─────────────────────────────────────────────────
 
@@ -232,9 +232,21 @@ function mapZodErrors(
   issues: z.ZodIssue[],
   rawObj: Record<string, unknown>,
 ): ValidationError[] {
-  return issues.map((issue) => {
+  return issues.flatMap((issue): ValidationError | ValidationError[] => {
     const path = issue.path.join('.');
     const actualValue = resolvePathValue(rawObj, issue.path as (string | number)[]);
+
+    // Zod: unrecognized_keys — .strict() rejects unknown fields
+    if (issue.code === 'unrecognized_keys') {
+      const unrecognized = issue as z.ZodIssue & { keys: string[] };
+      const keys = unrecognized.keys || [];
+      return keys.map((key): ValidationError => ({
+        path: path ? `${path}.${key}` : key,
+        type: 'unknown_field',
+        value: undefined,
+        message: `Unknown field '${path ? `${path}.${key}` : key}' is not allowed in the config schema.`,
+      }));
+    }
 
     // Zod v4: invalid_type — distinguish missing (undefined) from wrong type
     if (issue.code === 'invalid_type') {
@@ -315,6 +327,22 @@ function getFieldGuidance(path: string): string {
       'Set commands.install to your install command (e.g., "bun install").',
   };
   return guidance[path] || '';
+}
+
+// ─── Credential Stripping ───────────────────────────────────────────
+
+/**
+ * Strip sensitive credentials (username, password) from service entries.
+ * Returns a plain object with credentials removed from each service.
+ */
+export function stripServiceCredentials(
+  config: ProjectConfig,
+): Omit<ProjectConfig, 'services'> & { services: Record<string, unknown>[] } {
+  const { services, ...rest } = config;
+  const strippedServices = services.map(
+    ({ username: _u, password: _p, ...service }) => service,
+  );
+  return { ...rest, services: strippedServices };
 }
 
 // ─── Public API ─────────────────────────────────────────────────────
