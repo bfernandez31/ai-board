@@ -28,6 +28,8 @@ Tests verify behavior from specs. Testing Trophy architecture prioritizes fast i
 **Non-Negotiable Rules**:
 - Tests verify behavior, not implementation details
 - No feature is complete without passing tests
+- Mocks MUST target the same module instance the code under test imports — verify mock path matches the actual import chain
+- Test assertions MUST NOT be inside conditional blocks (if, ternary) that can silently pass without executing
 
 **Test Selection Decision Tree**:
 1. Is it a pure function with no side effects? → **Vitest unit test**
@@ -47,6 +49,7 @@ Security is not an afterthought. Input validation, secure database queries, and 
 
 **Non-Negotiable Rules**:
 - Validate ALL user inputs before processing (use Zod schemas for validation)
+- Zod schema constraints (min, max, string length) MUST match corresponding database column constraints in prisma/schema.prisma
 - Use Prisma parameterized queries exclusively—no raw SQL except for complex migrations
 - Never expose sensitive data (API keys, passwords, internal IDs) in API responses
 - All secrets in environment variables, never committed to git
@@ -60,6 +63,8 @@ All database changes go through Prisma migrations. Transactions protect multi-st
 - All schema changes via `prisma migrate dev` or `prisma migrate deploy`
 - Never manually alter production database schema
 - Use Prisma transactions for operations affecting multiple tables
+- After a database mutation, never use the pre-mutation in-memory object for subsequent operations — re-read from DB or use the mutation's return value
+- If an external call (workflow dispatch, API) fails after a DB mutation, the database state must remain consistent (no orphaned PENDING rows, no success returned to caller)
 - Soft deletes (via `deletedAt` field) for user-generated content
 - Database constraints (unique, foreign keys) enforced at schema level
 - No optional fields without default values or explicit null handling
@@ -82,6 +87,8 @@ See CLAUDE.md for the full tech stack and forbidden dependencies. The constituti
 **Error Handling**:
 - Every API route MUST have try-catch blocks
 - Return structured error responses: `{ error: string, code?: string }`
+- Authentication/authorization errors MUST return 401/403, never fall through to a generic 500
+- External call failures MUST be propagated to the caller — never silently swallowed (no empty catch, no `|| true` on critical operations)
 - Log errors with context (request ID, user ID if applicable)
 - User-facing error messages must be clear and actionable
 
@@ -122,4 +129,4 @@ Auto-resolved specification decisions MUST preserve quality while avoiding unnec
 - Agent instruction files MUST NOT contradict constitution principles
 - Agent instruction files provide tactical guidance; constitution provides strategic rules
 
-**Version**: 1.6.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2026-03-16
+**Version**: 1.7.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2026-04-03
