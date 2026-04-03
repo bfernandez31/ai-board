@@ -86,13 +86,13 @@
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Add handlers for PLAN→SPECIFY, BUILD→PLAN, VERIFY→BUILD rollback paths in `app/api/projects/[projectId]/tickets/[id]/transition/route.ts`
-- [ ] T022 [US3] Extend `handleDragStart` to compute valid rollback targets from rollback matrix in `components/board/board.tsx`
-- [ ] T023 [US3] Pass `validRollbackTargets` and `isDraggingRollback` to column components, apply `opacity-30` to invalid targets in `components/board/board-column.tsx`
-- [ ] T024 [US3] Create rollback confirmation dialog with stage-specific French messages in `components/board/rollback-confirm-dialog.tsx` (new or extend existing)
-- [ ] T025 [US3] Extend `handleDragEnd` to handle new rollback transitions, show confirmation dialog, call transition endpoint on confirm in `components/board/board.tsx`
-- [ ] T026 [P] [US3] Integration test: new rollback transitions (PLAN→SPECIFY, BUILD→PLAN, VERIFY→BUILD, rejection scenarios) in `tests/integration/tickets/transitions.test.ts` (extend existing)
-- [ ] T027 [P] [US3] E2E test: rollback drag-and-drop (drag BUILD→PLAN, column greying, drag rejection for RUNNING jobs) in `tests/e2e/rollback-new-paths.spec.ts` (new)
+- [x] T021 [US3] Add handlers for PLAN→SPECIFY, BUILD→PLAN, VERIFY→BUILD rollback paths in `app/api/projects/[projectId]/tickets/[id]/transition/route.ts`
+- [x] T022 [US3] Extend `handleDragStart` to compute valid rollback targets from rollback matrix in `components/board/board.tsx`
+- [x] T023 [US3] Pass `validRollbackTargets` and `isDraggingRollback` to column components, apply `opacity-30` to invalid targets in `components/board/board-column.tsx`
+- [x] T024 [US3] Create rollback confirmation dialog with stage-specific French messages in `components/board/rollback-confirm-dialog.tsx` (new or extend existing)
+- [x] T025 [US3] Extend `handleDragEnd` to handle new rollback transitions, show confirmation dialog, call transition endpoint on confirm in `components/board/board.tsx`
+- [x] T026 [P] [US3] Integration test: new rollback transitions (PLAN→SPECIFY, BUILD→PLAN, VERIFY→BUILD, rejection scenarios) in `tests/integration/tickets/transitions.test.ts` (extend existing)
+- [x] T027 [P] [US3] E2E test: rollback drag-and-drop (drag BUILD→PLAN, column greying, drag rejection for RUNNING jobs) in `tests/e2e/rollback-new-paths.spec.ts` (new)
 
 **Checkpoint**: Users can recover failed/cancelled tickets via drag-and-drop rollback
 

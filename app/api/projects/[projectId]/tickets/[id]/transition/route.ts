@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
-import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
+import { canRollbackToInbox, canRollbackToPlan, canRollbackToSpecify, canRollbackBuildToPlan, canRollbackToBuild } from '@/app/lib/workflows/rollback-validator';
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
@@ -89,6 +89,9 @@ export async function POST(
 
     const isRollbackToInboxAttempt = ticket.stage === 'BUILD' && targetStage === 'INBOX';
     const isRollbackToPlanAttempt = ticket.stage === 'VERIFY' && targetStage === 'PLAN';
+    const isPlanToSpecifyRollback = ticket.stage === 'PLAN' && targetStage === 'SPECIFY';
+    const isBuildToPlanRollback = ticket.stage === 'BUILD' && targetStage === 'PLAN';
+    const isVerifyToBuildRollback = ticket.stage === 'VERIFY' && targetStage === 'BUILD';
 
     if (isRollbackToInboxAttempt) {
       const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
@@ -199,6 +202,157 @@ export async function POST(
         previewUrl: updatedTicket.previewUrl,
         updatedAt: updatedTicket.updatedAt.toISOString(),
         resetJobId,
+      });
+    }
+
+    // PLAN → SPECIFY rollback
+    if (isPlanToSpecifyRollback) {
+      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
+      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
+
+      const validation = canRollbackToSpecify(
+        ticket.stage,
+        targetStage as Stage,
+        ticket.workflowType,
+        mostRecentJob
+      );
+
+      if (!validation.allowed) {
+        return NextResponse.json({ error: validation.reason }, { status: 400 });
+      }
+
+      const updatedTicket = await prisma.$transaction(async (tx) => {
+        const updated = await tx.ticket.update({
+          where: { id: ticket.id },
+          data: {
+            stage: 'SPECIFY',
+            version: { increment: 1 },
+          },
+        });
+
+        if (mostRecentJob) {
+          await tx.job.delete({ where: { id: mostRecentJob.id } });
+        }
+
+        return updated;
+      });
+
+      return NextResponse.json({
+        id: updatedTicket.id,
+        stage: updatedTicket.stage,
+        version: updatedTicket.version,
+        updatedAt: updatedTicket.updatedAt.toISOString(),
+      });
+    }
+
+    // BUILD → PLAN rollback (FULL workflow)
+    if (isBuildToPlanRollback) {
+      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
+      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
+
+      const validation = canRollbackBuildToPlan(
+        ticket.stage,
+        targetStage as Stage,
+        ticket.workflowType,
+        mostRecentJob
+      );
+
+      if (!validation.allowed) {
+        return NextResponse.json({ error: validation.reason }, { status: 400 });
+      }
+
+      const ticketWithProject = await prisma.ticket.findUnique({
+        where: { id: ticket.id },
+        include: { project: true },
+      });
+
+      if (!ticketWithProject) {
+        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
+      }
+
+      const updatedTicket = await prisma.$transaction(async (tx) => {
+        const updated = await tx.ticket.update({
+          where: { id: ticket.id },
+          data: {
+            stage: 'PLAN',
+            previewUrl: null,
+            version: { increment: 1 },
+          },
+        });
+
+        if (mostRecentJob) {
+          await tx.job.delete({ where: { id: mostRecentJob.id } });
+        }
+
+        return updated;
+      });
+
+      let resetJobId: number | undefined;
+      if (updatedTicket.branch) {
+        try {
+          const dispatchResult = await dispatchRollbackResetWorkflow({
+            ticketId: updatedTicket.id,
+            ticketKey: ticket.ticketKey,
+            projectId: ticket.projectId,
+            branch: updatedTicket.branch,
+            githubOwner: ticketWithProject.project.githubOwner,
+            githubRepo: ticketWithProject.project.githubRepo,
+          });
+          resetJobId = dispatchResult.jobId;
+        } catch (dispatchError) {
+          console.error('[Transition] Failed to dispatch rollback-reset workflow:', dispatchError);
+        }
+      }
+
+      return NextResponse.json({
+        id: updatedTicket.id,
+        stage: updatedTicket.stage,
+        version: updatedTicket.version,
+        previewUrl: updatedTicket.previewUrl,
+        updatedAt: updatedTicket.updatedAt.toISOString(),
+        resetJobId,
+      });
+    }
+
+    // VERIFY → BUILD rollback (FULL workflow)
+    if (isVerifyToBuildRollback) {
+      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
+      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
+
+      const validation = canRollbackToBuild(
+        ticket.stage,
+        targetStage as Stage,
+        ticket.workflowType,
+        mostRecentJob
+      );
+
+      if (!validation.allowed) {
+        return NextResponse.json({ error: validation.reason }, { status: 400 });
+      }
+
+      const updatedTicket = await prisma.$transaction(async (tx) => {
+        const updated = await tx.ticket.update({
+          where: { id: ticket.id },
+          data: {
+            stage: 'BUILD',
+            previewUrl: null,
+            version: { increment: 1 },
+          },
+        });
+
+        if (mostRecentJob) {
+          await tx.job.delete({ where: { id: mostRecentJob.id } });
+        }
+
+        return updated;
+      });
+
+      return NextResponse.json({
+        id: updatedTicket.id,
+        stage: updatedTicket.stage,
+        version: updatedTicket.version,
+        previewUrl: updatedTicket.previewUrl,
+        updatedAt: updatedTicket.updatedAt.toISOString(),
       });
     }
 

@@ -307,4 +307,88 @@ describe('Ticket Transitions', () => {
       expect(response.status).toBe(400);
     });
   });
+
+  describe('New Rollback Transitions (AIB-513)', () => {
+    async function createAndAdvance(targetStage: string): Promise<number> {
+      const created = await ctx.createTicket({ title: `[e2e] Rollback ${targetStage}` });
+      const ticketId = created.id;
+
+      const stages = ['SPECIFY', 'PLAN', 'BUILD', 'VERIFY'];
+      const targetIdx = stages.indexOf(targetStage);
+
+      for (let i = 0; i <= targetIdx; i++) {
+        if (i > 0) {
+          // Complete previous job before moving forward
+          const t = await prisma.ticket.findUnique({ where: { id: ticketId }, include: { jobs: { orderBy: { id: 'desc' } } } });
+          if (t?.jobs[0]) {
+            await prisma.job.update({ where: { id: t.jobs[0].id }, data: { status: 'COMPLETED', completedAt: new Date() } });
+          }
+        }
+        await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`, { targetStage: stages[i] });
+      }
+
+      return ticketId;
+    }
+
+    it('should rollback PLAN → SPECIFY with FAILED job', async () => {
+      const ticketId = await createAndAdvance('PLAN');
+
+      // Mark the plan job as FAILED
+      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, include: { jobs: { orderBy: { id: 'desc' } } } });
+      await prisma.job.update({ where: { id: ticket!.jobs[0]!.id }, data: { status: 'FAILED', completedAt: new Date() } });
+
+      const response = await ctx.api.post<{ id: number; stage: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+        { targetStage: 'SPECIFY' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.stage).toBe('SPECIFY');
+    });
+
+    it('should rollback BUILD → PLAN with FAILED job (FULL workflow)', async () => {
+      const ticketId = await createAndAdvance('BUILD');
+
+      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, include: { jobs: { orderBy: { id: 'desc' } } } });
+      await prisma.job.update({ where: { id: ticket!.jobs[0]!.id }, data: { status: 'FAILED', completedAt: new Date() } });
+
+      const response = await ctx.api.post<{ id: number; stage: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+        { targetStage: 'PLAN' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.stage).toBe('PLAN');
+    });
+
+    it('should rollback VERIFY → BUILD with FAILED job (FULL workflow)', async () => {
+      const ticketId = await createAndAdvance('VERIFY');
+
+      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, include: { jobs: { orderBy: { id: 'desc' } } } });
+      await prisma.job.update({ where: { id: ticket!.jobs[0]!.id }, data: { status: 'FAILED', completedAt: new Date() } });
+
+      const response = await ctx.api.post<{ id: number; stage: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+        { targetStage: 'BUILD' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.stage).toBe('BUILD');
+    });
+
+    it('should reject rollback when job is RUNNING', async () => {
+      const ticketId = await createAndAdvance('PLAN');
+
+      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, include: { jobs: { orderBy: { id: 'desc' } } } });
+      await prisma.job.update({ where: { id: ticket!.jobs[0]!.id }, data: { status: 'RUNNING' } });
+
+      const response = await ctx.api.post<{ error: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+        { targetStage: 'SPECIFY' }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toContain('running');
+    });
+  });
 });
