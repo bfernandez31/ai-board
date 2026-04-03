@@ -54,6 +54,50 @@ on:
         required: true
         type: string
 
+      # Conditional service inputs
+      needs_postgres:
+        description: 'Provision PostgreSQL service container'
+        required: false
+        default: 'false'
+        type: boolean
+      needs_redis:
+        description: 'Provision Redis service container'
+        required: false
+        default: 'false'
+        type: boolean
+      needs_mysql:
+        description: 'Provision MySQL service container'
+        required: false
+        default: 'false'
+        type: boolean
+      needs_mongo:
+        description: 'Provision MongoDB service container'
+        required: false
+        default: 'false'
+        type: boolean
+
+      # Version inputs
+      postgres_version:
+        description: 'PostgreSQL version tag'
+        required: false
+        default: '14'
+        type: string
+      redis_version:
+        description: 'Redis version tag'
+        required: false
+        default: '7'
+        type: string
+      mysql_version:
+        description: 'MySQL version tag'
+        required: false
+        default: '8'
+        type: string
+      mongo_version:
+        description: 'MongoDB version tag'
+        required: false
+        default: '7'
+        type: string
+
 jobs:
   ai-board-assist:
     runs-on: ubuntu-latest
@@ -61,6 +105,22 @@ jobs:
 
     permissions:
       contents: write
+
+    # Conditional service containers — only provisioned when needs_* is true
+    services:
+      postgres:
+        image: ${{ inputs.needs_postgres && format('postgres:{0}', inputs.postgres_version) || '' }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ai_board_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
