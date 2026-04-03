@@ -310,6 +310,98 @@ describe('Jobs Status', () => {
     });
   });
 
+  describe('workflowRunId on RUNNING callback', () => {
+    it('should store workflowRunId when provided with RUNNING status', async () => {
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'RUNNING', workflowRunId: '12345678901' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.status).toBe('RUNNING');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.workflowRunId).toBe(BigInt('12345678901'));
+    });
+
+    it('should accept numeric workflowRunId', async () => {
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'RUNNING', workflowRunId: 12345678901 }
+      );
+
+      expect(response.status).toBe(200);
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.workflowRunId).toBe(BigInt('12345678901'));
+    });
+
+    it('should accept RUNNING without workflowRunId (backwards compatible)', async () => {
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'RUNNING' }
+      );
+
+      expect(response.status).toBe(200);
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.workflowRunId).toBeNull();
+    });
+  });
+
+  describe('POST /api/jobs/:id/cancel', () => {
+    it('should cancel a PENDING job', async () => {
+      const response = await ctx.api.post<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/cancel`
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.status).toBe('CANCELLED');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.status).toBe('CANCELLED');
+      expect(job?.completedAt).not.toBeNull();
+    });
+
+    it('should cancel a RUNNING job', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const response = await ctx.api.post<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/cancel`
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.status).toBe('CANCELLED');
+    });
+
+    it('should reject cancelling a COMPLETED job', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'COMPLETED' });
+
+      const response = await ctx.api.post<{ error: string }>(
+        `/api/jobs/${jobId}/cancel`
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toContain('COMPLETED');
+    });
+
+    it('should reject cancelling a FAILED job', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'FAILED' });
+
+      const response = await ctx.api.post<{ error: string }>(
+        `/api/jobs/${jobId}/cancel`
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toContain('FAILED');
+    });
+
+    it('should return 404 for non-existent job', async () => {
+      const response = await ctx.api.post('/api/jobs/999999/cancel');
+      expect(response.status).toBe(404);
+    });
+  });
+
   describe('Multiple jobs per ticket', () => {
     it('should handle multiple jobs for same ticket', async () => {
       // Complete the first job using workflow API

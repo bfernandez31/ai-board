@@ -27,19 +27,20 @@ model Account {
 }
 
 model Job {
-  id          Int       @id @default(autoincrement())
-  ticketId    Int
-  command     String    @db.VarChar(50)
-  status      JobStatus @default(PENDING)
-  branch      String?   @db.VarChar(200)
-  commitSha   String?   @db.VarChar(40)
-  logs        String?
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime
-  projectId   Int
-  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  id            Int       @id @default(autoincrement())
+  ticketId      Int
+  command       String    @db.VarChar(50)
+  status        JobStatus @default(PENDING)
+  branch        String?   @db.VarChar(200)
+  commitSha     String?   @db.VarChar(40)
+  logs          String?
+  workflowRunId BigInt?   // GitHub Actions workflow run ID, populated on RUNNING callback
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
+  projectId     Int
+  ticket        Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   // Claude telemetry metrics (aggregated from all API calls in the job)
   inputTokens         Int? // Total input tokens consumed

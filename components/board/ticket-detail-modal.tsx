@@ -119,6 +119,9 @@ interface TicketDetailModalProps {
 
   /** Full job data with telemetry fields for Stats tab display */
   fullJobs?: TicketJobWithTelemetry[];
+
+  /** Callback to cancel a running/pending job */
+  onCancelJob?: ((jobId: number) => void) | undefined;
 }
 
 /**
@@ -180,6 +183,7 @@ export function TicketDetailModal({
   initialTab = 'details',
   jobs = [],
   fullJobs = [],
+  onCancelJob,
 }: TicketDetailModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1260,7 +1264,7 @@ export function TicketDetailModal({
           {/* Stats Tab - only rendered when jobs exist */}
           {hasJobs && (
             <TabsContent value="stats" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4" data-testid="stats-tab-content">
-              <TicketStats jobs={fullJobs} polledJobs={jobs} />
+              <TicketStats jobs={fullJobs} polledJobs={jobs} onCancelJob={onCancelJob} />
             </TabsContent>
           )}
         </Tabs>

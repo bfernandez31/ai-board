@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
-import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
+import { canRollbackToInbox, canRollbackToPlan, canRollbackToSpecify, canRollbackToBuild } from '@/app/lib/workflows/rollback-validator';
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
@@ -87,8 +87,95 @@ export async function POST(
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     }
 
-    const isRollbackToInboxAttempt = ticket.stage === 'BUILD' && targetStage === 'INBOX';
-    const isRollbackToPlanAttempt = ticket.stage === 'VERIFY' && targetStage === 'PLAN';
+    const isRollbackToInboxAttempt = (ticket.stage === 'BUILD' && targetStage === 'INBOX') ||
+      (ticket.stage === 'SPECIFY' && targetStage === 'INBOX');
+    const isRollbackToPlanAttempt = (ticket.stage === 'VERIFY' && targetStage === 'PLAN') ||
+      (ticket.stage === 'BUILD' && targetStage === 'PLAN');
+    const isRollbackToSpecifyAttempt = ticket.stage === 'PLAN' && targetStage === 'SPECIFY';
+    const isRollbackToBuildAttempt = ticket.stage === 'VERIFY' && targetStage === 'BUILD';
+
+    // PLAN → SPECIFY rollback
+    if (isRollbackToSpecifyAttempt) {
+      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
+      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
+
+      const validation = canRollbackToSpecify(
+        ticket.stage,
+        targetStage as Stage,
+        ticket.workflowType,
+        mostRecentJob
+      );
+
+      if (!validation.allowed) {
+        return NextResponse.json({ error: validation.reason }, { status: 400 });
+      }
+
+      const updatedTicket = await prisma.$transaction(async (tx) => {
+        const updated = await tx.ticket.update({
+          where: { id: ticket.id },
+          data: { stage: 'SPECIFY', version: { increment: 1 } },
+        });
+
+        if (mostRecentJob) {
+          await tx.job.delete({ where: { id: mostRecentJob.id } });
+        }
+
+        return updated;
+      });
+
+      return NextResponse.json({
+        id: updatedTicket.id,
+        stage: updatedTicket.stage,
+        workflowType: updatedTicket.workflowType,
+        branch: updatedTicket.branch,
+        version: updatedTicket.version,
+        updatedAt: updatedTicket.updatedAt.toISOString(),
+      });
+    }
+
+    // VERIFY → BUILD rollback (no git action, just stage change)
+    if (isRollbackToBuildAttempt) {
+      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
+      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
+
+      const validation = canRollbackToBuild(
+        ticket.stage,
+        targetStage as Stage,
+        ticket.workflowType,
+        mostRecentJob
+      );
+
+      if (!validation.allowed) {
+        return NextResponse.json({ error: validation.reason }, { status: 400 });
+      }
+
+      const updatedTicket = await prisma.$transaction(async (tx) => {
+        const updated = await tx.ticket.update({
+          where: { id: ticket.id },
+          data: {
+            stage: 'BUILD',
+            previewUrl: null,
+            version: { increment: 1 },
+          },
+        });
+
+        if (mostRecentJob) {
+          await tx.job.delete({ where: { id: mostRecentJob.id } });
+        }
+
+        return updated;
+      });
+
+      return NextResponse.json({
+        id: updatedTicket.id,
+        stage: updatedTicket.stage,
+        workflowType: updatedTicket.workflowType,
+        branch: updatedTicket.branch,
+        version: updatedTicket.version,
+        previewUrl: updatedTicket.previewUrl,
+        updatedAt: updatedTicket.updatedAt.toISOString(),
+      });
+    }
 
     if (isRollbackToInboxAttempt) {
       const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };

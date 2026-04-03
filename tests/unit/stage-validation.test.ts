@@ -128,3 +128,41 @@ describe('Stage Validation - Rollback Support', () => {
     expect(result).toBe(true);
   });
 });
+
+describe('Stage Validation - AIB-514 Extended Rollback Support', () => {
+  it('should allow SPECIFY → INBOX transition (any workflow)', () => {
+    expect(isValidTransition(Stage.SPECIFY, Stage.INBOX)).toBe(true);
+    expect(isValidTransition(Stage.SPECIFY, Stage.INBOX, 'FULL')).toBe(true);
+    expect(isValidTransition(Stage.SPECIFY, Stage.INBOX, 'QUICK')).toBe(true);
+  });
+
+  it('should allow PLAN → SPECIFY transition (any workflow)', () => {
+    expect(isValidTransition(Stage.PLAN, Stage.SPECIFY)).toBe(true);
+    expect(isValidTransition(Stage.PLAN, Stage.SPECIFY, 'FULL')).toBe(true);
+  });
+
+  it('should allow BUILD → PLAN transition for FULL workflow', () => {
+    expect(isValidTransition(Stage.BUILD, Stage.PLAN, 'FULL')).toBe(true);
+  });
+
+  it('should reject BUILD → PLAN transition for QUICK workflow', () => {
+    expect(isValidTransition(Stage.BUILD, Stage.PLAN, 'QUICK')).toBe(false);
+  });
+
+  it('should reject BUILD → PLAN transition without workflowType', () => {
+    expect(isValidTransition(Stage.BUILD, Stage.PLAN)).toBe(false);
+  });
+
+  it('should allow VERIFY → BUILD transition (any workflow)', () => {
+    expect(isValidTransition(Stage.VERIFY, Stage.BUILD)).toBe(true);
+    expect(isValidTransition(Stage.VERIFY, Stage.BUILD, 'FULL')).toBe(true);
+  });
+
+  it('should allow VERIFY → PLAN transition for FULL workflow', () => {
+    expect(isValidTransition(Stage.VERIFY, Stage.PLAN, 'FULL')).toBe(true);
+  });
+
+  it('should reject VERIFY → PLAN transition for QUICK workflow', () => {
+    expect(isValidTransition(Stage.VERIFY, Stage.PLAN, 'QUICK')).toBe(false);
+  });
+});

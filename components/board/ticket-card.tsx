@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, X } from 'lucide-react';
 import { TicketWithVersion } from '@/lib/types';
 import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { AgentIcon } from '@/components/ui/agent-icon';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { JobStatusIndicator } from './job-status-indicator';
+import { CancelJobDialog } from './cancel-job-dialog';
 import { Job } from '@prisma/client';
 import { classifyJobType } from '@/lib/utils/job-type-classifier';
 import { TicketCardDeployIcon } from './ticket-card-deploy-icon';
@@ -32,6 +33,8 @@ interface DraggableTicketCardProps {
   activePreviewTicket?: { ticketKey: string } | null;
   /** Ticket ID with active deployment (PENDING/RUNNING deploy job) */
   activeDeploymentTicket?: number | null;
+  /** Callback to cancel a running/pending job */
+  onCancelJob?: ((jobId: number) => void) | undefined;
 }
 
 /**
@@ -47,10 +50,12 @@ export const TicketCard = React.memo(
     isDraggable = true,
     onTicketClick,
     activePreviewTicket,
-    activeDeploymentTicket
+    activeDeploymentTicket,
+    onCancelJob,
   }: DraggableTicketCardProps) => {
     const isMounted = useHasMounted();
     const [showDeployModal, setShowDeployModal] = useState(false);
+    const [showCancelDialog, setShowCancelDialog] = useState(false);
 
     // Deploy preview mutation
     const { mutate: deployPreview } = useDeployPreview(ticket.projectId);
@@ -94,6 +99,19 @@ export const TicketCard = React.memo(
 
     const isDeployJobActive = deployJob != null && (deployJob.status === 'PENDING' || deployJob.status === 'RUNNING');
     const showDeployButton = (!deployJob && isDeployable) || (deployJob != null && !isDeployJobActive && ticket.stage === 'VERIFY');
+    const isWorkflowJobCancellable = workflowJob != null && (workflowJob.status === 'PENDING' || workflowJob.status === 'RUNNING');
+
+    const handleCancelClick = useCallback((e: React.MouseEvent) => {
+      e.stopPropagation();
+      setShowCancelDialog(true);
+    }, []);
+
+    const handleCancelConfirm = useCallback(() => {
+      if (workflowJob && onCancelJob) {
+        onCancelJob(workflowJob.id);
+      }
+      setShowCancelDialog(false);
+    }, [workflowJob, onCancelJob]);
 
     const handleClick = () => {
       // Prevent click during drag
@@ -185,20 +203,47 @@ export const TicketCard = React.memo(
             {ticket.title}
           </h3>
 
+          {/* Cancel Job Dialog */}
+          <CancelJobDialog
+            open={showCancelDialog}
+            onOpenChange={setShowCancelDialog}
+            onConfirm={handleCancelConfirm}
+            command={workflowJob?.command || ''}
+          />
+
           {/* Job Status Indicators (Single-line layout with right-aligned compact icons) */}
           {(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl) && (
             <div className="border-t border-border pt-3">
               <div className="flex items-center justify-between gap-3">
-                {/* Left: Workflow Job Indicator (simplified display) */}
+                {/* Left: Workflow Job Indicator with cancel button */}
                 {workflowJob && (
-                  <JobStatusIndicator
-                    status={workflowJob.status}
-                    command={workflowJob.command}
-                    jobType={classifyJobType(workflowJob.command)}
-                    stage={ticket.stage}
-                    animated={true}
-                    completedAt={workflowJob.completedAt}
-                  />
+                  <div className="flex items-center gap-1.5 group/job">
+                    <JobStatusIndicator
+                      status={workflowJob.status}
+                      command={workflowJob.command}
+                      jobType={classifyJobType(workflowJob.command)}
+                      stage={ticket.stage}
+                      animated={true}
+                      completedAt={workflowJob.completedAt}
+                    />
+                    {isWorkflowJobCancellable && onCancelJob && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={handleCancelClick}
+                            className="opacity-0 group-hover/job:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/10"
+                            data-testid="cancel-job-button"
+                            aria-label="Cancel workflow"
+                          >
+                            <X className="h-3.5 w-3.5 text-destructive" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">Cancel workflow</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                 )}
 
                 {/* Right: Compact icon indicators (Preview + Deploy + AI-BOARD) */}

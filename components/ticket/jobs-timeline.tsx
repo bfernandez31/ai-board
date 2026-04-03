@@ -15,6 +15,7 @@ import {
   Ban,
   ChevronDown,
   ChevronRight,
+  X,
 } from 'lucide-react';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import {
@@ -60,7 +61,7 @@ function formatCommandName(command: string): string {
  *
  * Single job entry with expandable token breakdown
  */
-function JobRow({ job }: { job: TicketJobWithTelemetry }) {
+function JobRow({ job, onCancelJob }: { job: TicketJobWithTelemetry; onCancelJob?: ((jobId: number) => void) | undefined }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const statusConfig = STATUS_ICONS[job.status] ?? DEFAULT_STATUS;
@@ -111,6 +112,21 @@ function JobRow({ job }: { job: TicketJobWithTelemetry }) {
           <span className="text-sm text-ctp-green w-16 text-right" data-testid={`job-cost-${job.id}`}>
             {job.costUsd != null ? formatCost(job.costUsd) : '-'}
           </span>
+
+          {/* Cancel Button (for PENDING/RUNNING jobs) */}
+          {onCancelJob && (job.status === 'PENDING' || job.status === 'RUNNING') && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancelJob(job.id);
+              }}
+              className="p-1 rounded hover:bg-destructive/10 transition-colors"
+              data-testid={`cancel-job-${job.id}`}
+              aria-label="Cancel job"
+            >
+              <X className="w-4 h-4 text-destructive" />
+            </button>
+          )}
 
           {/* Expand/Collapse Indicator */}
           {hasTelemetry && (
@@ -179,9 +195,10 @@ function JobRow({ job }: { job: TicketJobWithTelemetry }) {
  */
 interface JobsTimelineProps {
   jobs: TicketJobWithTelemetry[];
+  onCancelJob?: ((jobId: number) => void) | undefined;
 }
 
-export function JobsTimeline({ jobs }: JobsTimelineProps) {
+export function JobsTimeline({ jobs, onCancelJob }: JobsTimelineProps) {
   if (jobs.length === 0) {
     return (
       <div className="text-sm text-ctp-overlay0" data-testid="no-jobs-message">
@@ -197,7 +214,7 @@ export function JobsTimeline({ jobs }: JobsTimelineProps) {
       </h3>
       <div className="space-y-2">
         {jobs.map((job) => (
-          <JobRow key={job.id} job={job} />
+          <JobRow key={job.id} job={job} onCancelJob={onCancelJob} />
         ))}
       </div>
     </div>

@@ -23,6 +23,7 @@ interface StageColumnProps {
   isBlockedByJob?: boolean;
   activePreviewTicket?: { ticketKey: string } | null;
   activeDeploymentTicket?: number | null;
+  onCancelJob?: ((jobId: number) => void) | undefined;
 }
 
 // Stage configuration matching original design
@@ -142,6 +143,7 @@ export const StageColumn = React.memo(
     isBlockedByJob = false,
     activePreviewTicket,
     activeDeploymentTicket,
+    onCancelJob,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
@@ -262,6 +264,7 @@ export const StageColumn = React.memo(
                     isDraggable={isDraggable}
                     activePreviewTicket={activePreviewTicket || null}
                     activeDeploymentTicket={activeDeploymentTicket || null}
+                    onCancelJob={onCancelJob}
                     {...(onTicketClick && { onTicketClick })}
                   />
                 );

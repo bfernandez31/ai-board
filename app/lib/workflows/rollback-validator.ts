@@ -39,12 +39,35 @@ export function canRollbackToInbox(
   workflowType: WorkflowType,
   mostRecentWorkflowJob: Job | null
 ): RollbackValidation {
-  if (currentStage !== 'BUILD' || targetStage !== 'INBOX') {
-    return { allowed: false, reason: 'Rollback only available from BUILD to INBOX stage' };
+  // BUILD → INBOX (QUICK only, existing)
+  if (currentStage === 'BUILD' && targetStage === 'INBOX' && workflowType === 'QUICK') {
+    const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
+    if (statusCheck) return statusCheck;
+    return { allowed: true };
   }
 
-  if (workflowType !== 'QUICK') {
+  // SPECIFY → INBOX (any workflow)
+  if (currentStage === 'SPECIFY' && targetStage === 'INBOX') {
+    const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
+    if (statusCheck) return statusCheck;
+    return { allowed: true };
+  }
+
+  if (currentStage === 'BUILD' && targetStage === 'INBOX' && workflowType !== 'QUICK') {
     return { allowed: false, reason: 'Rollback only available for quick-impl workflows. Normal workflows cannot be rolled back.' };
+  }
+
+  return { allowed: false, reason: 'Invalid rollback transition to INBOX' };
+}
+
+export function canRollbackToSpecify(
+  currentStage: Stage,
+  targetStage: Stage,
+  _workflowType: WorkflowType,
+  mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  if (currentStage !== 'PLAN' || targetStage !== 'SPECIFY') {
+    return { allowed: false, reason: 'Rollback only available from PLAN to SPECIFY stage' };
   }
 
   const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
@@ -59,19 +82,80 @@ export function canRollbackToPlan(
   workflowType: WorkflowType,
   mostRecentWorkflowJob: Job | null
 ): RollbackValidation {
-  if (currentStage !== 'VERIFY' || targetStage !== 'PLAN') {
-    return { allowed: false, reason: 'Rollback only available from VERIFY to PLAN stage' };
+  // BUILD → PLAN (FULL only)
+  if (currentStage === 'BUILD' && targetStage === 'PLAN') {
+    if (workflowType !== 'FULL') {
+      return { allowed: false, reason: 'Rollback only available for FULL workflows.' };
+    }
+    const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
+    if (statusCheck) return statusCheck;
+    return { allowed: true };
   }
 
-  if (workflowType === 'QUICK') {
-    return { allowed: false, reason: 'Rollback only available for FULL workflows. QUICK workflows skip PLAN stage.' };
-  }
-  if (workflowType === 'CLEAN') {
-    return { allowed: false, reason: 'Rollback only available for FULL workflows. CLEAN workflows have different stage progression.' };
+  // VERIFY → PLAN (FULL only, existing)
+  if (currentStage === 'VERIFY' && targetStage === 'PLAN') {
+    if (workflowType === 'QUICK') {
+      return { allowed: false, reason: 'Rollback only available for FULL workflows. QUICK workflows skip PLAN stage.' };
+    }
+    if (workflowType === 'CLEAN') {
+      return { allowed: false, reason: 'Rollback only available for FULL workflows. CLEAN workflows have different stage progression.' };
+    }
+    const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['COMPLETED', 'FAILED', 'CANCELLED']);
+    if (statusCheck) return statusCheck;
+    return { allowed: true };
   }
 
-  const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['COMPLETED', 'FAILED', 'CANCELLED']);
+  return { allowed: false, reason: 'Invalid rollback transition to PLAN' };
+}
+
+export function canRollbackToBuild(
+  currentStage: Stage,
+  targetStage: Stage,
+  _workflowType: WorkflowType,
+  mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  if (currentStage !== 'VERIFY' || targetStage !== 'BUILD') {
+    return { allowed: false, reason: 'Rollback only available from VERIFY to BUILD stage' };
+  }
+
+  const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
   if (statusCheck) return statusCheck;
 
   return { allowed: true };
+}
+
+/**
+ * Rollback confirmation messages for each transition.
+ */
+export const ROLLBACK_MESSAGES: Record<string, string> = {
+  'SPECIFY→INBOX': 'Revenir à Inbox ? La branche sera supprimée.',
+  'PLAN→SPECIFY': 'Revenir à Specify ? Le plan partiel sera écrasé au prochain run.',
+  'BUILD→PLAN': 'Revenir à Plan ? Le code sera réinitialisé (backup créé).',
+  'BUILD→INBOX': 'Revenir à Inbox ? Le ticket sera réinitialisé.',
+  'VERIFY→BUILD': 'Revenir à Build ? Le code est conservé.',
+  'VERIFY→PLAN': 'Revenir à Plan ? Le code sera réinitialisé (backup créé).',
+};
+
+/**
+ * Check if a transition is a valid rollback and return the validation result.
+ */
+export function validateRollback(
+  currentStage: Stage,
+  targetStage: Stage,
+  workflowType: WorkflowType,
+  mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  if (targetStage === 'INBOX') {
+    return canRollbackToInbox(currentStage, targetStage, workflowType, mostRecentWorkflowJob);
+  }
+  if (targetStage === 'SPECIFY') {
+    return canRollbackToSpecify(currentStage, targetStage, workflowType, mostRecentWorkflowJob);
+  }
+  if (targetStage === 'PLAN') {
+    return canRollbackToPlan(currentStage, targetStage, workflowType, mostRecentWorkflowJob);
+  }
+  if (targetStage === 'BUILD') {
+    return canRollbackToBuild(currentStage, targetStage, workflowType, mostRecentWorkflowJob);
+  }
+  return { allowed: false, reason: 'Invalid rollback transition' };
 }

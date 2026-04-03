@@ -91,6 +91,26 @@ export function isValidTransition(
     return workflowType === 'QUICK';
   }
 
+  // Rollback: SPECIFY → INBOX (any workflow, failed/cancelled job)
+  if (fromStage === Stage.SPECIFY && toStage === Stage.INBOX) {
+    return true;
+  }
+
+  // Rollback: PLAN → SPECIFY (any workflow, failed/cancelled job)
+  if (fromStage === Stage.PLAN && toStage === Stage.SPECIFY) {
+    return true;
+  }
+
+  // Rollback: BUILD → PLAN (FULL workflow, failed/cancelled job)
+  if (fromStage === Stage.BUILD && toStage === Stage.PLAN) {
+    return workflowType === 'FULL';
+  }
+
+  // Rollback: VERIFY → BUILD (any workflow, failed/cancelled job)
+  if (fromStage === Stage.VERIFY && toStage === Stage.BUILD) {
+    return true;
+  }
+
   // Special case: Rollback allows VERIFY → PLAN (only for FULL workflow)
   if (fromStage === Stage.VERIFY && toStage === Stage.PLAN) {
     return workflowType === 'FULL';

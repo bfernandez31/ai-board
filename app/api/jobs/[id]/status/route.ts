@@ -179,12 +179,18 @@ export async function PATCH(
       completedAt?: Date;
       qualityScore?: number;
       qualityScoreDetails?: string;
+      workflowRunId?: bigint;
     } = {
       status: requestedStatus,
     };
 
     if (requestedStatus === 'RUNNING' && !job.startedAt) {
       updateData.startedAt = new Date();
+    }
+
+    // Store workflowRunId on RUNNING callback (first time only)
+    if (requestedStatus === 'RUNNING' && validationResult.data.workflowRunId != null) {
+      updateData.workflowRunId = validationResult.data.workflowRunId;
     }
 
     if (isTerminalState) {

@@ -21,6 +21,7 @@ export const jobStatusUpdateSchema = z.object({
   status: z.enum(['RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED']),
   qualityScore: z.number().int().min(0).max(100).optional(),
   qualityScoreDetails: z.string().optional(),
+  workflowRunId: z.union([z.number(), z.string()]).transform(val => typeof val === 'string' ? BigInt(val) : BigInt(val)).optional(),
 });
 
 /**

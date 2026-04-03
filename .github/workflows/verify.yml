@@ -235,6 +235,24 @@ jobs:
           fetch-depth: 0
           path: target
 
+      # AIB-514: Clean up backup tags from previous rollbacks (BUILD succeeded = backup no longer needed)
+      - name: Clean backup tags
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
+        run: |
+          echo "Cleaning backup tags for ${{ inputs.ticket_id }}..."
+          TAGS=$(git tag -l "backup/${{ inputs.ticket_id }}/*" 2>/dev/null || true)
+          if [ -n "$TAGS" ]; then
+            echo "$TAGS" | while read -r tag; do
+              echo "  Deleting tag: $tag"
+              git push origin ":refs/tags/$tag" 2>/dev/null || echo "  Warning: remote tag $tag already gone"
+              git tag -d "$tag" 2>/dev/null || true
+            done
+            echo "Backup tags cleaned up"
+          else
+            echo "No backup tags found"
+          fi
+
       - name: Setup Bun
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         uses: oven-sh/setup-bun@v1
