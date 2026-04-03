@@ -160,9 +160,8 @@ describe('RepoPicker', () => {
     // Click the first non-disabled repo button
     const buttons = screen.getAllByRole('button').filter(btn => !btn.hasAttribute('disabled'));
     const repoButton = buttons.find(btn => btn.textContent?.includes('octocat/repo-alpha'));
-    if (repoButton) {
-      await user.click(repoButton);
-      expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ name: 'repo-alpha' }));
-    }
+    expect(repoButton).toBeDefined();
+    await user.click(repoButton!);
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ name: 'repo-alpha' }));
   });
 });

@@ -12,10 +12,11 @@ export const importProjectSchema = z.object({
   name: z
     .string()
     .min(1)
-    .max(255)
+    .max(100, 'Project name must be 100 characters or less')
     .optional(),
   description: z
     .string()
+    .max(1000, 'Description must be 1000 characters or less')
     .optional(),
 });
 

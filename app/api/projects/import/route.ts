@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
       repoData = { description: data.description };
     } catch (error) {
-      if (error instanceof Error && error.message.includes('Not Found')) {
+      if ((error as { status?: number }).status === 404) {
         return NextResponse.json(
           {
             error: 'Repository not found or you do not have access.',
@@ -115,24 +115,38 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Handle unique constraint violation (duplicate repo)
+      // Handle unique constraint violations
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        const existingProject = await prisma.project.findFirst({
-          where: {
-            githubOwner: validated.githubOwner,
-            githubRepo: validated.githubRepo,
-          },
-          select: { id: true, name: true, key: true },
-        });
+        const target = (error.meta?.target as string[]) ?? [];
+        const isRepoConflict = target.includes('githubOwner') || target.includes('githubRepo');
 
+        if (isRepoConflict) {
+          const existingProject = await prisma.project.findFirst({
+            where: {
+              githubOwner: validated.githubOwner,
+              githubRepo: validated.githubRepo,
+            },
+            select: { id: true, name: true, key: true },
+          });
+
+          return NextResponse.json(
+            {
+              error: `This repository is already linked to project "${existingProject?.name ?? 'Unknown'}" (${existingProject?.key ?? 'N/A'}).`,
+              code: 'DUPLICATE_REPO',
+              existingProjectId: existingProject?.id ?? null,
+            },
+            { status: 409 }
+          );
+        }
+
+        // Other unique constraint violation (e.g., key collision) — retry-worthy
         return NextResponse.json(
           {
-            error: `This repository is already linked to project "${existingProject?.name ?? 'Unknown'}" (${existingProject?.key ?? 'N/A'}).`,
-            code: 'DUPLICATE_REPO',
-            existingProjectId: existingProject?.id ?? null,
+            error: 'A conflict occurred while creating the project. Please try again.',
+            code: 'CONFLICT',
           },
           { status: 409 }
         );

@@ -72,13 +72,21 @@ export async function GET(request: NextRequest) {
 
     let repos: GitHubRepo[];
     let totalCount: number;
+    let hasNextPage: boolean;
 
     if (q) {
       // Use GitHub Search API for text search
       const { data: user } = await octokit.users.getAuthenticated();
-      const searchQuery = org
-        ? `${q} org:${org} fork:true`
-        : `${q} user:${user.login} fork:true`;
+
+      let searchQuery: string;
+      if (org) {
+        searchQuery = `${q} org:${org} fork:true`;
+      } else {
+        // Include user's own repos and org memberships for "All accounts" search
+        const { data: userOrgs } = await octokit.orgs.listForAuthenticatedUser({ per_page: 100 });
+        const qualifiers = [`user:${user.login}`, ...userOrgs.map((o: { login: string }) => `org:${o.login}`)].join(' ');
+        searchQuery = `${q} ${qualifiers} fork:true`;
+      }
 
       const searchParams_: Parameters<typeof octokit.search.repos>[0] = {
         q: searchQuery,
@@ -93,6 +101,7 @@ export async function GET(request: NextRequest) {
       const { data } = await octokit.search.repos(searchParams_);
       repos = data.items.map(toGitHubRepo);
       totalCount = data.total_count;
+      hasNextPage = totalCount > page * perPage;
     } else if (org) {
       const orgParams: Parameters<typeof octokit.repos.listForOrg>[0] = {
         org,
@@ -107,6 +116,7 @@ export async function GET(request: NextRequest) {
       const { data, headers } = await octokit.repos.listForOrg(orgParams);
       repos = data.map(toGitHubRepo);
       totalCount = parseTotalFromLink(headers.link ?? undefined, data.length, page, perPage);
+      hasNextPage = hasNextPageFromLink(headers.link ?? undefined);
     } else {
       const { data, headers } = await octokit.repos.listForAuthenticatedUser({
         sort: sort === 'full_name' ? 'full_name' : sort,
@@ -117,6 +127,7 @@ export async function GET(request: NextRequest) {
       });
       repos = data.map(toGitHubRepo);
       totalCount = parseTotalFromLink(headers.link ?? undefined, data.length, page, perPage);
+      hasNextPage = hasNextPageFromLink(headers.link ?? undefined);
     }
 
     // Batch-check which repos are already imported
@@ -154,8 +165,6 @@ export async function GET(request: NextRequest) {
         existingProjectId,
       };
     });
-
-    const hasNextPage = repos.length === perPage;
 
     return NextResponse.json({
       repos: items,
@@ -221,4 +230,12 @@ function parseTotalFromLink(
   }
 
   return (page - 1) * perPage + currentCount;
+}
+
+/**
+ * Check if a GitHub Link header contains a "next" relation.
+ */
+function hasNextPageFromLink(link: string | undefined): boolean {
+  if (!link) return false;
+  return link.includes('rel="next"');
 }
