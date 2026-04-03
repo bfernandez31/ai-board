@@ -111,11 +111,11 @@
 
 **Independent Test**: Trigger a workflow, verify the RUNNING status callback populates workflowRunId on the job record.
 
-- [ ] T026 [P] [US5] Update `.github/workflows/speckit.yml` to include `workflowRunId: ${{ github.run_id }}` in RUNNING status callback and check for 409 response (abort if CANCELLED)
-- [ ] T027 [P] [US5] Update `.github/workflows/quick-impl.yml` to include `workflowRunId: ${{ github.run_id }}` in RUNNING status callback and check for 409 response
-- [ ] T028 [P] [US5] Update `.github/workflows/verify.yml` to include `workflowRunId: ${{ github.run_id }}` in RUNNING status callback and check for 409 response
-- [ ] T029 [P] [US5] Update `.github/workflows/deploy-preview.yml` to include `workflowRunId: ${{ github.run_id }}` in RUNNING status callback and check for 409 response
-- [ ] T030 [P] [US5] Update `.github/workflows/iterate.yml` to include `workflowRunId: ${{ github.run_id }}` in RUNNING status callback and check for 409 response
+- [x] T026 [P] [US5] Update `.github/workflows/speckit.yml` to include `workflowRunId: ${{ github.run_id }}` in RUNNING status callback and check for 409 response (abort if CANCELLED)
+- [x] T027 [P] [US5] Update `.github/workflows/quick-impl.yml` to include `workflowRunId: ${{ github.run_id }}` in RUNNING status callback and check for 409 response
+- [x] T028 [P] [US5] Update `.github/workflows/verify.yml` to include `workflowRunId: ${{ github.run_id }}` in RUNNING status callback and check for 409 response
+- [x] T029 [P] [US5] Update `.github/workflows/deploy-preview.yml` to include `workflowRunId: ${{ github.run_id }}` in RUNNING status callback and check for 409 response
+- [x] T030 [P] [US5] Update `.github/workflows/iterate.yml` to include `workflowRunId: ${{ github.run_id }}` in RUNNING status callback and check for 409 response
 
 **Checkpoint**: All workflows report their run ID and respect CANCELLED state.
 
