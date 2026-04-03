@@ -95,7 +95,7 @@ export const ServiceConfigSchema = z.object({
   database: z.string().optional(),
   username: z.string().optional(),
   password: z.string().optional(),
-});
+}).strict();
 
 export const AgentSectionSchema = z.object({
   cli: AgentCliSchema.default('claude-code'),
@@ -144,75 +144,6 @@ export interface ValidationWarning {
 export type ValidationResult =
   | { success: true; data: ProjectConfig; warnings: ValidationWarning[] }
   | { success: false; errors: ValidationError[]; warnings: ValidationWarning[] };
-
-// ─── Known Keys (for unknown field detection) ───────────────────────
-
-const KNOWN_ROOT_KEYS = new Set([
-  'version',
-  'project',
-  'runtime',
-  'services',
-  'commands',
-  'env',
-  'agent',
-]);
-
-const KNOWN_SECTION_KEYS: Record<string, Set<string>> = {
-  project: new Set(['name', 'language', 'framework']),
-  runtime: new Set(['manager', 'manager_version', 'node', 'python', 'java', 'go', 'rust']),
-  commands: new Set([
-    'install',
-    'build',
-    'lint',
-    'type_check',
-    'test_unit',
-    'test_integration',
-    'test_e2e',
-    'db_setup',
-    'db_seed',
-  ]),
-  agent: new Set(['cli', 'model']),
-};
-
-// ─── Unknown Field Detection ────────────────────────────────────────
-
-function collectUnknownFieldWarnings(raw: unknown): ValidationWarning[] {
-  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-    return [];
-  }
-
-  const warnings: ValidationWarning[] = [];
-  const obj = raw as Record<string, unknown>;
-
-  for (const key of Object.keys(obj)) {
-    if (!KNOWN_ROOT_KEYS.has(key)) {
-      warnings.push({
-        path: key,
-        message: `Unknown field '${key}' — this field is not part of the config schema and will be ignored.`,
-      });
-    }
-  }
-
-  for (const [section, knownKeys] of Object.entries(KNOWN_SECTION_KEYS)) {
-    const sectionObj = obj[section];
-    if (
-      typeof sectionObj === 'object' &&
-      sectionObj !== null &&
-      !Array.isArray(sectionObj)
-    ) {
-      for (const key of Object.keys(sectionObj as Record<string, unknown>)) {
-        if (!knownKeys.has(key)) {
-          warnings.push({
-            path: `${section}.${key}`,
-            message: `Unknown field '${section}.${key}' — this field is not part of the ${section} section schema and will be ignored.`,
-          });
-        }
-      }
-    }
-  }
-
-  return warnings;
-}
 
 // ─── Zod Error Mapping ──────────────────────────────────────────────
 
@@ -348,7 +279,7 @@ export function stripServiceCredentials(
 // ─── Public API ─────────────────────────────────────────────────────
 
 export function validateConfig(raw: unknown): ValidationResult {
-  const warnings = collectUnknownFieldWarnings(raw);
+  const warnings: ValidationWarning[] = [];
   const result = ProjectConfigSchema.safeParse(raw);
 
   if (result.success) {
