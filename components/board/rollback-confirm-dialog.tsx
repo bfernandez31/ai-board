@@ -11,9 +11,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
 
-type RollbackPath = 'PLAN_TO_SPECIFY' | 'BUILD_TO_PLAN' | 'VERIFY_TO_BUILD';
+type RollbackPath = 'SPECIFY_TO_INBOX' | 'PLAN_TO_SPECIFY' | 'BUILD_TO_PLAN' | 'VERIFY_TO_BUILD';
 
 const ROLLBACK_MESSAGES: Record<RollbackPath, { title: string; description: string }> = {
+  SPECIFY_TO_INBOX: {
+    title: 'Revenir à Inbox',
+    description: 'Revenir a Inbox ? La branche sera supprimee et le ticket reinitialise.',
+  },
   PLAN_TO_SPECIFY: {
     title: 'Revenir à Specify',
     description: 'Revenir a Specify ? La specification sera conservee.',

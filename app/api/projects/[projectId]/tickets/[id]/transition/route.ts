@@ -8,6 +8,7 @@ import { canRollbackToInbox, canRollbackToPlan, canRollbackToSpecify, canRollbac
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
+import { deleteBranch } from '@/app/lib/workflows/delete-branch';
 
 const TransitionRequestSchema = z.object({
   targetStage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']),
@@ -92,6 +93,7 @@ export async function POST(
     const isPlanToSpecifyRollback = ticket.stage === 'PLAN' && targetStage === 'SPECIFY';
     const isBuildToPlanRollback = ticket.stage === 'BUILD' && targetStage === 'PLAN';
     const isVerifyToBuildRollback = ticket.stage === 'VERIFY' && targetStage === 'BUILD';
+    const isSpecifyToInboxRollback = ticket.stage === 'SPECIFY' && targetStage === 'INBOX';
 
     if (isRollbackToInboxAttempt) {
       const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
@@ -352,6 +354,66 @@ export async function POST(
         stage: updatedTicket.stage,
         version: updatedTicket.version,
         previewUrl: updatedTicket.previewUrl,
+        updatedAt: updatedTicket.updatedAt.toISOString(),
+      });
+    }
+
+    // SPECIFY → INBOX rollback (with branch cleanup)
+    if (isSpecifyToInboxRollback) {
+      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
+      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
+
+      const validation = canRollbackToSpecify(
+        ticket.stage,
+        targetStage as Stage,
+        ticket.workflowType,
+        mostRecentJob
+      );
+
+      if (!validation.allowed) {
+        return NextResponse.json({ error: validation.reason }, { status: 400 });
+      }
+
+      // Delete branch via GitHub API if ticket has a branch
+      if (ticket.branch) {
+        const ticketWithProject = await prisma.ticket.findUnique({
+          where: { id: ticket.id },
+          include: { project: true },
+        });
+
+        if (ticketWithProject?.project) {
+          await deleteBranch(
+            ticket.branch,
+            ticketWithProject.project.githubOwner,
+            ticketWithProject.project.githubRepo
+          );
+        }
+      }
+
+      const updatedTicket = await prisma.$transaction(async (tx) => {
+        const updated = await tx.ticket.update({
+          where: { id: ticket.id },
+          data: {
+            stage: 'INBOX',
+            branch: null,
+            workflowType: 'FULL',
+            version: 1,
+          },
+        });
+
+        if (mostRecentJob) {
+          await tx.job.delete({ where: { id: mostRecentJob.id } });
+        }
+
+        return updated;
+      });
+
+      return NextResponse.json({
+        id: updatedTicket.id,
+        stage: updatedTicket.stage,
+        workflowType: updatedTicket.workflowType,
+        branch: updatedTicket.branch,
+        version: updatedTicket.version,
         updatedAt: updatedTicket.updatedAt.toISOString(),
       });
     }

@@ -121,9 +121,9 @@
 
 ### Implementation for User Story 6
 
-- [ ] T030 [US6] Add SPECIFY→INBOX handler in `app/api/projects/[projectId]/tickets/[id]/transition/route.ts` — validate, delete branch via GitHub API if set, update ticket (stage=INBOX, branch=null), delete job
-- [ ] T031 [US6] Add SPECIFY→INBOX rollback confirmation and drag target in `components/board/board.tsx` and `components/board/rollback-confirm-dialog.tsx`
-- [ ] T032 [P] [US6] Integration test: SPECIFY→INBOX with branch, SPECIFY→INBOX without branch in `tests/integration/tickets/transitions.test.ts` (extend)
+- [x] T030 [US6] Add SPECIFY→INBOX handler in `app/api/projects/[projectId]/tickets/[id]/transition/route.ts` — validate, delete branch via GitHub API if set, update ticket (stage=INBOX, branch=null), delete job
+- [x] T031 [US6] Add SPECIFY→INBOX rollback confirmation and drag target in `components/board/board.tsx` and `components/board/rollback-confirm-dialog.tsx`
+- [x] T032 [P] [US6] Integration test: SPECIFY→INBOX with branch, SPECIFY→INBOX without branch in `tests/integration/tickets/transitions.test.ts` (extend)
 
 **Checkpoint**: Full rollback matrix is complete
 

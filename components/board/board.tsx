@@ -604,6 +604,10 @@ export function Board({
       }
 
       // AIB-513: Detect new rollback paths and show confirmation dialog
+      if (ticket.stage === Stage.SPECIFY && targetStage === Stage.INBOX) {
+        setPendingNewRollback({ ticket, targetStage, rollbackPath: 'SPECIFY_TO_INBOX' });
+        return;
+      }
       if (ticket.stage === Stage.PLAN && targetStage === Stage.SPECIFY) {
         setPendingNewRollback({ ticket, targetStage, rollbackPath: 'PLAN_TO_SPECIFY' });
         return;
@@ -1018,6 +1022,15 @@ export function Board({
           : 'opacity-50 cursor-not-allowed';
       }
 
+      // Rollback mode: SPECIFY → INBOX (AIB-513)
+      if (dragSource === Stage.SPECIFY && stage === Stage.INBOX) {
+        const mostRecentWorkflowJob = getMostRecentWorkflowJob();
+        const validation = canRollbackToSpecify(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
+        return validation.allowed
+          ? 'border-4 border-dashed border-amber-500 bg-amber-500/10'
+          : 'opacity-50 cursor-not-allowed';
+      }
+
       // Rollback mode: PLAN → SPECIFY (AIB-513)
       if (dragSource === Stage.PLAN && stage === Stage.SPECIFY) {
         const mostRecentWorkflowJob = getMostRecentWorkflowJob();
@@ -1167,6 +1180,7 @@ export function Board({
                 (dragSource === Stage.BUILD && stage === Stage.INBOX) ||
                 (dragSource === Stage.VERIFY && stage === Stage.PLAN) ||
                 (dragSource === Stage.VERIFY && stage === Stage.BUILD) ||
+                (dragSource === Stage.SPECIFY && stage === Stage.INBOX) ||
                 (dragSource === Stage.PLAN && stage === Stage.SPECIFY) ||
                 (dragSource === Stage.BUILD && stage === Stage.PLAN);
               const isBlocked = isDragging && draggedTicketHasJob && !isRollbackTarget;

@@ -390,5 +390,47 @@ describe('Ticket Transitions', () => {
       expect(response.status).toBe(400);
       expect(response.data.error).toContain('running');
     });
+
+    it('should rollback SPECIFY → INBOX with FAILED job and clear branch', async () => {
+      const ticketId = await createAndAdvance('SPECIFY');
+
+      // Set branch on ticket (simulating workflow having created one)
+      await prisma.ticket.update({ where: { id: ticketId }, data: { branch: 'test-specify-branch' } });
+
+      // Mark the specify job as FAILED
+      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, include: { jobs: { orderBy: { id: 'desc' } } } });
+      await prisma.job.update({ where: { id: ticket!.jobs[0]!.id }, data: { status: 'FAILED', completedAt: new Date() } });
+
+      const response = await ctx.api.post<{ id: number; stage: string; branch: string | null; workflowType: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+        { targetStage: 'INBOX' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.stage).toBe('INBOX');
+      expect(response.data.branch).toBeNull();
+      expect(response.data.workflowType).toBe('FULL');
+
+      // Verify job was deleted
+      const updatedTicket = await prisma.ticket.findUnique({ where: { id: ticketId }, include: { jobs: true } });
+      expect(updatedTicket?.jobs).toHaveLength(0);
+    });
+
+    it('should rollback SPECIFY → INBOX without branch', async () => {
+      const ticketId = await createAndAdvance('SPECIFY');
+
+      // Mark the specify job as CANCELLED
+      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, include: { jobs: { orderBy: { id: 'desc' } } } });
+      await prisma.job.update({ where: { id: ticket!.jobs[0]!.id }, data: { status: 'CANCELLED', completedAt: new Date() } });
+
+      const response = await ctx.api.post<{ id: number; stage: string; branch: string | null }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+        { targetStage: 'INBOX' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.stage).toBe('INBOX');
+      expect(response.data.branch).toBeNull();
+    });
   });
 });
