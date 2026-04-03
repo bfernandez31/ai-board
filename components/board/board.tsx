@@ -86,6 +86,7 @@ function mergeTransitionFields(serverData: Record<string, unknown>, current: Tic
     version: data.version || current.version,
     branch: data.branch !== undefined ? data.branch : current.branch,
     workflowType: data.workflowType || current.workflowType,
+    previewUrl: data.previewUrl ?? current.previewUrl ?? null,
     updatedAt: data.updatedAt || current.updatedAt,
   };
 }
@@ -794,18 +795,6 @@ export function Board({
     setPendingRollback(null);
 
     await performTransition(ticket, targetStage, {
-      mergeServerData: (serverData, current): TicketWithVersion => {
-        const data = serverData as Partial<TicketWithVersion>;
-        return {
-          ...current,
-          stage: data.stage || current.stage,
-          version: data.version || current.version,
-          branch: data.branch !== undefined ? data.branch : current.branch,
-          workflowType: data.workflowType || current.workflowType,
-          previewUrl: data.previewUrl ?? current.previewUrl ?? null,
-          updatedAt: data.updatedAt || current.updatedAt,
-        };
-      },
       onApiError: (error) => {
         toast({
           variant: 'destructive',
