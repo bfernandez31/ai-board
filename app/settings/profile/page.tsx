@@ -37,7 +37,7 @@ function ProfileSkeleton() {
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="rounded-lg border p-4">
             <div className="h-4 w-24 bg-muted animate-pulse rounded mb-2" />
             <div className="h-5 w-40 bg-muted animate-pulse rounded" />
