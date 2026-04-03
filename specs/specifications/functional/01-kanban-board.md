@@ -39,13 +39,26 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
 - Quick implementation tickets are visually distinguished on the board
 
 **Rollback Capabilities**:
-- **BUILD to INBOX**: Quick-implementation tickets can return to INBOX if job failed/cancelled
-- **VERIFY to PLAN**: Full workflow tickets can return to PLAN to re-implement
-  - Available when: workflowType=FULL and latest workflow job is COMPLETED, FAILED, or CANCELLED
-  - Requires confirmation modal explaining consequences
-  - Reverts implementation changes while preserving spec files
-  - Clears preview URL and deletes the workflow job record
-  - Visual feedback: amber/red dashed border on PLAN column during drag
+
+Rollback is only available when the ticket's last workflow job is FAILED or CANCELLED (except VERIFY→PLAN which also allows COMPLETED). Tickets with RUNNING or PENDING jobs cannot be rolled back.
+
+Valid rollback transitions:
+
+| From | To | Workflow Type | Conditions | Git Action |
+|------|----|---------------|------------|------------|
+| SPECIFY | INBOX | FULL | Last job FAILED/CANCELLED | Branch deleted (if present) |
+| PLAN | SPECIFY | FULL | Last job FAILED/CANCELLED | None (re-run specify overwrites plan) |
+| BUILD | PLAN | FULL | Last job FAILED/CANCELLED | Backup tag created, branch reset |
+| BUILD | INBOX | QUICK | Last job FAILED/CANCELLED | workflowType reset to FULL |
+| VERIFY | BUILD | FULL | Last job FAILED/CANCELLED | None (re-run verify) |
+| VERIFY | PLAN | FULL | Last job COMPLETED/FAILED/CANCELLED | Backup tag created, branch reset |
+
+**Destructive rollbacks** (BUILD→PLAN, VERIFY→PLAN) create a backup git tag (`backup/{ticketKey}/{stage}-{jobId}`) before resetting the branch, preserving partial work for potential cherry-pick recovery. Backup tags are automatically deleted at the start of the next successful verify run.
+
+**Board visual feedback during rollback drag**:
+- Valid rollback target columns are highlighted; invalid columns are greyed out
+- Dragging a ticket with a FAILED/CANCELLED job shows only valid drop targets
+- A confirmation dialog appears before any rollback executes, with contextual messaging describing the consequences (e.g., branch deletion, code reset)
 
 **Alternative Resolution**:
 - **VERIFY to CLOSED**: Tickets can be closed without shipping
@@ -98,6 +111,25 @@ Tickets are ordered differently depending on their stage:
   - Recently modified tickets appear at the top
   - Helps teams focus on active work
   - Provides visibility into stale tickets at the bottom
+
+### Cancel Running Jobs
+
+Users can cancel a RUNNING or PENDING job directly from the board without navigating to the ticket detail:
+
+**Board card (hover)**:
+- When hovering a ticket card that has an active (RUNNING or PENDING) job, a cancel button (X icon) appears next to the job status indicator
+- Clicking the cancel button opens a confirmation dialog: "Annuler le workflow {command} en cours ?"
+- After confirmation, the job transitions to CANCELLED and the card updates within the next polling cycle (≤2s)
+- The cancel button is disabled immediately after the first click to prevent duplicate requests
+
+**Ticket detail modal (always visible)**:
+- A cancel button is always visible on each RUNNING or PENDING job row in the job timeline
+- Clicking it triggers the same confirmation dialog and cancellation flow
+
+**Cancellation behavior**:
+- RUNNING jobs: the associated GitHub Actions workflow run is terminated via the GitHub API
+- PENDING jobs (no workflow run started yet): marked CANCELLED directly without calling GitHub API; if the workflow starts afterward, its first status callback is rejected with 409, causing it to self-abort
+- If the job reaches a terminal state before the cancel request is processed, the UI updates to reflect the current status without showing an error
 
 ### Visual Feedback
 
