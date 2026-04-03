@@ -107,8 +107,8 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T018 Run `bun run type-check` and `bun run lint` to verify no type or lint errors
-- [ ] T019 Run quickstart.md validation steps — verify scan trigger, dashboard rendering, and end-to-end flow
+- [x] T018 Run `bun run type-check` and `bun run lint` to verify no type or lint errors
+- [x] T019 Run quickstart.md validation steps — verify scan trigger, dashboard rendering, and end-to-end flow
 
 ---
 
