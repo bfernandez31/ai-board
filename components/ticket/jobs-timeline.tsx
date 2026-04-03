@@ -15,7 +15,11 @@ import {
   Ban,
   ChevronDown,
   ChevronRight,
+  X,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CancelJobDialog } from '@/components/board/cancel-job-dialog';
+import { useCancelJob } from '@/app/lib/hooks/mutations/useCancelJob';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import {
   formatCost,
@@ -60,12 +64,15 @@ function formatCommandName(command: string): string {
  *
  * Single job entry with expandable token breakdown
  */
-function JobRow({ job }: { job: TicketJobWithTelemetry }) {
+function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: number }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const cancelJobMutation = useCancelJob(projectId ?? 0);
 
   const statusConfig = STATUS_ICONS[job.status] ?? DEFAULT_STATUS;
   const StatusIcon = statusConfig.icon;
   const isRunning = job.status === 'RUNNING';
+  const isCancellable = projectId && (job.status === 'PENDING' || job.status === 'RUNNING');
 
   // Check if job has telemetry data to expand
   const hasTelemetry =
@@ -76,52 +83,79 @@ function JobRow({ job }: { job: TicketJobWithTelemetry }) {
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger
-        className="w-full flex items-center justify-between p-3 border border-ctp-mauve/15 rounded-lg transition-colors aurora-bg-muted"
-        data-testid={`job-row-${job.id}`}
-        disabled={!hasTelemetry}
-      >
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          {/* Status Icon */}
-          <StatusIcon
-            className={`w-5 h-5 flex-shrink-0 ${statusConfig.color} ${isRunning ? 'animate-spin' : ''}`}
-            aria-label={statusConfig.label}
-          />
+      {isCancellable && (
+        <CancelJobDialog
+          open={showCancelDialog}
+          onOpenChange={setShowCancelDialog}
+          onConfirm={() => {
+            cancelJobMutation.mutate(job.id);
+            setShowCancelDialog(false);
+          }}
+          command={job.command}
+          isPending={cancelJobMutation.isPending}
+        />
+      )}
+      <div className="flex items-center gap-1">
+        <CollapsibleTrigger
+          className="w-full flex items-center justify-between p-3 border border-ctp-mauve/15 rounded-lg transition-colors aurora-bg-muted"
+          data-testid={`job-row-${job.id}`}
+          disabled={!hasTelemetry}
+        >
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            {/* Status Icon */}
+            <StatusIcon
+              className={`w-5 h-5 flex-shrink-0 ${statusConfig.color} ${isRunning ? 'animate-spin' : ''}`}
+              aria-label={statusConfig.label}
+            />
 
-          {/* Command Name */}
-          <span className="font-medium text-foreground truncate">
-            {formatCommandName(job.command)}
-          </span>
-
-          {/* Model Badge */}
-          {job.model && (
-            <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded hidden sm:inline">
-              {job.model}
+            {/* Command Name */}
+            <span className="font-medium text-foreground truncate">
+              {formatCommandName(job.command)}
             </span>
-          )}
-        </div>
 
-        <div className="flex items-center gap-4 flex-shrink-0">
-          {/* Duration */}
-          <span className="text-sm text-ctp-blue" data-testid={`job-duration-${job.id}`}>
-            {job.durationMs != null ? formatDuration(job.durationMs) : '-'}
-          </span>
+            {/* Model Badge */}
+            {job.model && (
+              <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded hidden sm:inline">
+                {job.model}
+              </span>
+            )}
+          </div>
 
-          {/* Cost */}
-          <span className="text-sm text-ctp-green w-16 text-right" data-testid={`job-cost-${job.id}`}>
-            {job.costUsd != null ? formatCost(job.costUsd) : '-'}
-          </span>
+          <div className="flex items-center gap-4 flex-shrink-0">
+            {/* Duration */}
+            <span className="text-sm text-ctp-blue" data-testid={`job-duration-${job.id}`}>
+              {job.durationMs != null ? formatDuration(job.durationMs) : '-'}
+            </span>
 
-          {/* Expand/Collapse Indicator */}
-          {hasTelemetry && (
-            isOpen ? (
-              <ChevronDown className="w-4 h-4 text-ctp-overlay0" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-ctp-overlay0" />
-            )
-          )}
-        </div>
-      </CollapsibleTrigger>
+            {/* Cost */}
+            <span className="text-sm text-ctp-green w-16 text-right" data-testid={`job-cost-${job.id}`}>
+              {job.costUsd != null ? formatCost(job.costUsd) : '-'}
+            </span>
+
+            {/* Expand/Collapse Indicator */}
+            {hasTelemetry && (
+              isOpen ? (
+                <ChevronDown className="w-4 h-4 text-ctp-overlay0" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-ctp-overlay0" />
+              )
+            )}
+          </div>
+        </CollapsibleTrigger>
+
+        {/* Cancel Button for active jobs */}
+        {isCancellable && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+            onClick={() => setShowCancelDialog(true)}
+            data-testid={`cancel-job-${job.id}`}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
 
       {hasTelemetry && (
         <CollapsibleContent className="pt-2">
@@ -179,9 +213,10 @@ function JobRow({ job }: { job: TicketJobWithTelemetry }) {
  */
 interface JobsTimelineProps {
   jobs: TicketJobWithTelemetry[];
+  projectId?: number;
 }
 
-export function JobsTimeline({ jobs }: JobsTimelineProps) {
+export function JobsTimeline({ jobs, projectId }: JobsTimelineProps) {
   if (jobs.length === 0) {
     return (
       <div className="text-sm text-ctp-overlay0" data-testid="no-jobs-message">
@@ -197,7 +232,7 @@ export function JobsTimeline({ jobs }: JobsTimelineProps) {
       </h3>
       <div className="space-y-2">
         {jobs.map((job) => (
-          <JobRow key={job.id} job={job} />
+          <JobRow key={job.id} job={job} {...(projectId != null ? { projectId } : {})} />
         ))}
       </div>
     </div>

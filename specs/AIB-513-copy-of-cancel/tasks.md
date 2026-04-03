@@ -72,7 +72,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Add cancel button/action on PENDING/RUNNING job rows in `components/ticket/jobs-timeline.tsx` — reuse `useCancelJob` hook and `CancelJobDialog` from US1
+- [x] T020 [US2] Add cancel button/action on PENDING/RUNNING job rows in `components/ticket/jobs-timeline.tsx` — reuse `useCancelJob` hook and `CancelJobDialog` from US1
 
 **Checkpoint**: Users can cancel jobs from both board view and ticket detail modal
 

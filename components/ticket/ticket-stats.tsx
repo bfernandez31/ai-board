@@ -24,6 +24,8 @@ interface TicketStatsProps {
   jobs: TicketJobWithTelemetry[];
   /** Lightweight polled jobs for real-time status updates */
   polledJobs: TicketJob[];
+  /** Project ID for cancel job functionality */
+  projectId?: number;
 }
 
 /**
@@ -152,7 +154,7 @@ function ToolsUsageSection({ toolsUsage }: { toolsUsage: TicketStatsType['toolsU
  *
  * Merges full job data (from server) with polled status updates (real-time)
  */
-export function TicketStats({ jobs, polledJobs }: TicketStatsProps) {
+export function TicketStats({ jobs, polledJobs, projectId }: TicketStatsProps) {
   // Merge full jobs with polled status updates
   // This ensures status is always up-to-date while preserving telemetry data
   const mergedJobs = useMemo<TicketJobWithTelemetry[]>(() => {
@@ -179,7 +181,7 @@ export function TicketStats({ jobs, polledJobs }: TicketStatsProps) {
       <StatsSummaryCards stats={stats} />
 
       {/* Jobs Timeline */}
-      <JobsTimeline jobs={stats.jobs} />
+      <JobsTimeline jobs={stats.jobs} {...(projectId != null ? { projectId } : {})} />
 
       {/* Tools Usage */}
       <ToolsUsageSection toolsUsage={stats.toolsUsage} />
