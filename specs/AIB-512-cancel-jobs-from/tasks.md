@@ -18,8 +18,8 @@
 
 **Purpose**: Add workflowRunId field to Job model and generate Prisma client.
 
-- [ ] T001 Add `workflowRunId BigInt?` field and `@@index([workflowRunId])` to Job model in `prisma/schema.prisma`
-- [ ] T002 Run Prisma migration (`bunx prisma migrate dev --name add-workflow-run-id`) and regenerate client (`bunx prisma generate`)
+- [x] T001 Add `workflowRunId BigInt?` field and `@@index([workflowRunId])` to Job model in `prisma/schema.prisma`
+- [x] T002 Run Prisma migration (`bunx prisma migrate dev --name add-workflow-run-id`) and regenerate client (`bunx prisma generate`)
 
 ---
 

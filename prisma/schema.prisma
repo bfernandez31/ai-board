@@ -38,6 +38,7 @@ model Job {
   completedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime
+  workflowRunId BigInt?    // GitHub Actions workflow run ID for cancel support
   projectId   Int
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
@@ -62,6 +63,7 @@ model Job {
   @@index([status])
   @@index([ticketId])
   @@index([ticketId, status, startedAt])
+  @@index([workflowRunId])
 }
 
 model Project {
