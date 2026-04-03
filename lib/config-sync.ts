@@ -7,8 +7,8 @@
 import { Octokit } from '@octokit/rest';
 import { parse as parseYaml } from 'yaml';
 import { prisma } from '@/lib/db/client';
-import { validateConfig } from '@/lib/validations/config';
-import type { ValidationResult, ValidationWarning } from '@/lib/validations/config';
+import { validateConfig, stripServiceCredentials } from '@/lib/validations/config';
+import type { ValidationWarning } from '@/lib/validations/config';
 import type { Project, Prisma } from '@prisma/client';
 
 const CONFIG_FILE_PATH = '.ai-board/config.yml';
@@ -116,12 +116,10 @@ export async function syncProjectConfig(
     };
   }
 
-  if (parsed == null) {
-    parsed = {};
-  }
+  parsed ??= {};
 
   // 3. Validate via Zod schema
-  const validation: ValidationResult = validateConfig(parsed);
+  const validation = validateConfig(parsed);
   if (!validation.success) {
     return {
       success: false,
@@ -131,8 +129,9 @@ export async function syncProjectConfig(
     };
   }
 
-  // 4. Strip env section before storing
-  const { env: _env, ...configWithoutEnv } = validation.data;
+  // 4. Strip env section and service credentials before storing
+  const strippedConfig = stripServiceCredentials(validation.data);
+  const { env: _env, ...configWithoutEnv } = strippedConfig;
 
   // 5. Store in DB with optimistic locking
   const now = new Date();

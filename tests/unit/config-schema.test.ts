@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { validateConfig } from '@/lib/validations/config';
+import { validateConfig, stripServiceCredentials } from '@/lib/validations/config';
+import type { ProjectConfig } from '@/lib/validations/config';
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -381,25 +382,100 @@ describe('validateConfig — version validation (US5)', () => {
   });
 });
 
-// ─── Unknown Fields (FR-014) ────────────────────────────────────────
+// ─── Unknown Fields (FR-014) — now rejected with errors ─────────────
 
-describe('validateConfig — unknown fields produce warnings', () => {
-  it('unknown top-level key produces a warning, not an error', () => {
+describe('validateConfig — unknown fields produce errors', () => {
+  it('unknown top-level key produces a validation error, not a warning', () => {
     const result = validateConfig({ ...validConfig(), custom_field: 'hello' });
 
-    expect(result.success).toBe(true);
-    expect(result.warnings.length).toBeGreaterThanOrEqual(1);
-    expect(result.warnings.some((w) => w.path === 'custom_field')).toBe(true);
+    expect(result.success).toBe(false);
+    if (result.success) return;
+
+    const unknownError = result.errors.find((e) => e.path === 'custom_field');
+    expect(unknownError).toBeDefined();
+    expect(unknownError!.type).toBe('unknown_field');
+    expect(unknownError!.message).toContain('custom_field');
   });
 
-  it('unknown key within a known section produces a warning', () => {
+  it('unknown key within a known section produces a validation error', () => {
     const result = validateConfig(
       validConfig({
         project: { name: 'my-app', language: 'typescript', color: 'blue' },
       }),
     );
 
+    expect(result.success).toBe(false);
+    if (result.success) return;
+
+    const colorError = result.errors.find((e) => e.path === 'project.color');
+    expect(colorError).toBeDefined();
+    expect(colorError!.type).toBe('unknown_field');
+  });
+});
+
+// ─── US1: stripServiceCredentials ───────────────────────────────────
+
+describe('stripServiceCredentials', () => {
+  it('strips username and password from service entries', () => {
+    const config = fullConfig();
+    const result = validateConfig(config);
     expect(result.success).toBe(true);
-    expect(result.warnings.some((w) => w.path === 'project.color')).toBe(true);
+    if (!result.success) return;
+
+    const stripped = stripServiceCredentials(result.data);
+    for (const service of stripped.services) {
+      expect(service).not.toHaveProperty('username');
+      expect(service).not.toHaveProperty('password');
+    }
+    expect(stripped.services[0]).toEqual({ type: 'postgres', version: '14', database: 'myapp_test' });
+    expect(stripped.services[1]).toEqual({ type: 'redis', version: '7' });
+  });
+
+  it('handles partial credentials (only username present)', () => {
+    const config = validConfig({
+      services: [{ type: 'postgres', version: '16', username: 'admin' }],
+    });
+    const result = validateConfig(config);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const stripped = stripServiceCredentials(result.data);
+    expect(stripped.services[0]).not.toHaveProperty('username');
+    expect(stripped.services[0]).toEqual({ type: 'postgres', version: '16' });
+  });
+
+  it('handles partial credentials (only password present)', () => {
+    const config = validConfig({
+      services: [{ type: 'redis', version: '7', password: 'secret' }],
+    });
+    const result = validateConfig(config);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const stripped = stripServiceCredentials(result.data);
+    expect(stripped.services[0]).not.toHaveProperty('password');
+    expect(stripped.services[0]).toEqual({ type: 'redis', version: '7' });
+  });
+
+  it('handles config with no services', () => {
+    const config = validConfig();
+    const result = validateConfig(config);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const stripped = stripServiceCredentials(result.data);
+    expect(stripped.services).toEqual([]);
+  });
+
+  it('handles services without any credentials', () => {
+    const config = validConfig({
+      services: [{ type: 'postgres', version: '16', database: 'mydb' }],
+    });
+    const result = validateConfig(config);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const stripped = stripServiceCredentials(result.data);
+    expect(stripped.services[0]).toEqual({ type: 'postgres', version: '16', database: 'mydb' });
   });
 });

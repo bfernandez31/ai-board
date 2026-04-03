@@ -1342,7 +1342,7 @@ Defines and validates the versioned YAML schema for `.ai-board/config.yml` — t
 
 **Function**: `validateConfig(raw: unknown): ValidationResult`
 
-Validates a parsed YAML object against the v1 config schema. Collects all errors in a single pass and emits warnings for unknown fields (forward compatibility).
+Validates a parsed YAML object against the v1 config schema. Collects all errors in a single pass. Unknown fields at any level are rejected as validation errors.
 
 ```typescript
 type ValidationResult =
@@ -1353,7 +1353,7 @@ type ValidationResult =
 **Behavior**:
 - Returns `success: true` with a fully typed `ProjectConfig` (defaults populated) on valid input
 - Returns `success: false` with all `ValidationError` objects collected at once on invalid input
-- Always returns `warnings` for unknown top-level or section-level keys
+- Unknown fields (at the root or in any section) produce `ValidationError` entries with `type: "unknown_field"` and cause a `success: false` result — they are not silently stored
 
 **Types**:
 
@@ -1372,6 +1372,17 @@ interface ValidationWarning {
 ```
 
 **Exported schemas and types**: `ProjectConfigSchema`, `ProjectConfig`, `ProjectSection`, `RuntimeSection`, `CommandsSection`, `ServiceConfig`, `AgentSection`, `ValidationError`, `ValidationWarning`, `ValidationResult`
+
+---
+
+**Function**: `stripServiceCredentials(config: ProjectConfig): Omit<ProjectConfig, 'services'> & { services: Record<string, unknown>[] }`
+
+Strips `username` and `password` fields from every entry in `config.services`. Called by `lib/config-sync.ts` before writing to the database and before returning the config in API responses. The `env` section is stripped separately via destructuring in the sync handler.
+
+**Behavior**:
+- Each service entry retains `type`, `version`, and `database` — credential fields are omitted
+- If a service entry does not contain `username` or `password`, it is returned unchanged
+- Does not mutate the input — returns a new object
 
 ### Enum Values
 

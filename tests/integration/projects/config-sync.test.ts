@@ -95,4 +95,48 @@ describe('Config Sync - Staleness and Auto-Refresh', () => {
       expect(response.status).toBe(404);
     });
   });
+
+  describe('Service credential stripping', () => {
+    it('stored config does not contain username or password in services', async () => {
+      const configWithCredentials = {
+        version: 1,
+        project: { name: 'test', language: 'typescript', framework: 'nextjs' },
+        runtime: { manager: 'bun' },
+        services: [
+          { type: 'postgres', version: '14', database: 'mydb', username: 'admin', password: 'secret' },
+          { type: 'redis', version: '7' },
+        ],
+        commands: { install: 'bun install' },
+        agent: { cli: 'claude-code' },
+      };
+
+      // Simulate what config-sync does: validate, strip credentials, strip env, store
+      const { validateConfig, stripServiceCredentials } = await import('@/lib/validations/config');
+      const validation = validateConfig(configWithCredentials);
+      expect(validation.success).toBe(true);
+      if (!validation.success) return;
+
+      const stripped = stripServiceCredentials(validation.data);
+      const { env: _env, ...configToStore } = stripped;
+
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { config: configToStore, configSyncedAt: new Date() },
+      });
+
+      const project = await prisma.project.findUnique({
+        where: { id: ctx.projectId },
+        select: { config: true },
+      });
+
+      const storedConfig = project?.config as Record<string, unknown>;
+      const services = storedConfig.services as Record<string, unknown>[];
+      for (const service of services) {
+        expect(service).not.toHaveProperty('username');
+        expect(service).not.toHaveProperty('password');
+      }
+      expect(services[0]).toEqual({ type: 'postgres', version: '14', database: 'mydb' });
+      expect(services[1]).toEqual({ type: 'redis', version: '7' });
+    });
+  });
 });
