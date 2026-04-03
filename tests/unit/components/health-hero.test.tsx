@@ -20,6 +20,7 @@ function makeModules(overrides: Partial<HealthResponse['modules']> = {}): Health
     tests: { ...defaultModule },
     specSync: { ...defaultModule },
     qualityGate: { ...defaultModule, passive: true, summary: 'No verify jobs yet' },
+    reviewQuality: { ...defaultModule },
     ...overrides,
   };
 }
@@ -66,7 +67,7 @@ describe('HealthHero', () => {
     expect(screen.getByText('Poor')).toBeInTheDocument();
   });
 
-  it('renders all 5 sub-score badges', () => {
+  it('renders all 6 sub-score badges', () => {
     renderWithProviders(
       <HealthHero globalScore={80} modules={makeModules()} lastFullScanDate={null} />
     );
@@ -75,6 +76,7 @@ describe('HealthHero', () => {
     expect(screen.getByText('Tests')).toBeInTheDocument();
     expect(screen.getByText('Spec Sync')).toBeInTheDocument();
     expect(screen.getByText('Quality Gate')).toBeInTheDocument();
+    expect(screen.getByText('Review Quality')).toBeInTheDocument();
   });
 
   it('shows last full scan date', () => {

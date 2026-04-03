@@ -46,6 +46,7 @@ export function HealthHero({ globalScore, modules, lastFullScanDate }: HealthHer
         <HealthSubScoreBadge label="Tests" score={modules.tests.score} />
         <HealthSubScoreBadge label="Spec Sync" score={modules.specSync.score} />
         <HealthSubScoreBadge label="Quality Gate" score={modules.qualityGate.score} />
+        <HealthSubScoreBadge label="Review Quality" score={modules.reviewQuality.score} />
       </div>
     </div>
   );
