@@ -23,6 +23,7 @@ import {
   formatDuration,
   formatAbbreviatedNumber,
 } from '@/lib/analytics/aggregations';
+import { formatCommandName } from '@/lib/utils/format-command';
 import { CancelConfirmationModal } from '@/components/board/cancel-confirmation-modal';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
 
@@ -48,22 +49,11 @@ const STATUS_ICONS: Record<string, StatusConfig> = {
 };
 
 /**
- * Format command name for display
- * e.g., "comment-specify" -> "Comment Specify", "quick-impl" -> "Quick Impl"
- */
-function formatCommandName(command: string): string {
-  return command
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
-/**
  * JobRow Component
  *
  * Single job entry with expandable token breakdown
  */
-function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: number }) {
+function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: number | undefined }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const cancelJobMutation = useCancelJob(projectId ?? 0);
@@ -216,7 +206,7 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
  */
 interface JobsTimelineProps {
   jobs: TicketJobWithTelemetry[];
-  projectId?: number;
+  projectId?: number | undefined;
 }
 
 export function JobsTimeline({ jobs, projectId }: JobsTimelineProps) {
@@ -235,7 +225,7 @@ export function JobsTimeline({ jobs, projectId }: JobsTimelineProps) {
       </h3>
       <div className="space-y-2">
         {jobs.map((job) => (
-          <JobRow key={job.id} job={job} {...(projectId != null ? { projectId } : {})} />
+          <JobRow key={job.id} job={job} projectId={projectId} />
         ))}
       </div>
     </div>

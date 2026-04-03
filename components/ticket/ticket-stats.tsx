@@ -181,7 +181,7 @@ export function TicketStats({ jobs, polledJobs, projectId }: TicketStatsProps) {
       <StatsSummaryCards stats={stats} />
 
       {/* Jobs Timeline */}
-      <JobsTimeline jobs={stats.jobs} {...(projectId != null ? { projectId } : {})} />
+      <JobsTimeline jobs={stats.jobs} projectId={projectId} />
 
       {/* Tools Usage */}
       <ToolsUsageSection toolsUsage={stats.toolsUsage} />

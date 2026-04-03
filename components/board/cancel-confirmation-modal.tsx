@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { formatCommandName } from '@/lib/utils/format-command';
 
 import {
   AlertDialog,
@@ -23,10 +24,7 @@ interface CancelConfirmationModalProps {
 
 export const CancelConfirmationModal = React.memo(
   ({ open, onOpenChange, onConfirm, jobCommand, isCancelling }: CancelConfirmationModalProps) => {
-    const formattedCommand = jobCommand
-      .split('-')
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ');
+    const formattedCommand = formatCommandName(jobCommand);
 
     return (
       <AlertDialog open={open} onOpenChange={onOpenChange}>

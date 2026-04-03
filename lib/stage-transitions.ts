@@ -96,17 +96,14 @@ export function isValidTransition(
     return workflowType === 'FULL';
   }
 
-  // New rollback transitions (FULL workflow only)
-  if (fromStage === Stage.SPECIFY && toStage === Stage.INBOX) {
-    return workflowType === 'FULL';
-  }
-  if (fromStage === Stage.PLAN && toStage === Stage.SPECIFY) {
-    return workflowType === 'FULL';
-  }
-  if (fromStage === Stage.BUILD && toStage === Stage.PLAN) {
-    return workflowType === 'FULL';
-  }
-  if (fromStage === Stage.VERIFY && toStage === Stage.BUILD) {
+  // Additional rollback transitions (FULL workflow only): each stage can roll back one step
+  const fullWorkflowRollbacks: [Stage, Stage][] = [
+    [Stage.SPECIFY, Stage.INBOX],
+    [Stage.PLAN, Stage.SPECIFY],
+    [Stage.BUILD, Stage.PLAN],
+    [Stage.VERIFY, Stage.BUILD],
+  ];
+  if (fullWorkflowRollbacks.some(([from, to]) => fromStage === from && toStage === to)) {
     return workflowType === 'FULL';
   }
 
