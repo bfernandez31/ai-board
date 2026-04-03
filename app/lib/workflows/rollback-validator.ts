@@ -75,3 +75,83 @@ export function canRollbackToPlan(
 
   return { allowed: true };
 }
+
+export function canRollbackSpecifyToInbox(
+  currentStage: Stage,
+  targetStage: Stage,
+  workflowType: WorkflowType,
+  mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  if (currentStage !== 'SPECIFY' || targetStage !== 'INBOX') {
+    return { allowed: false, reason: 'Rollback only available from SPECIFY to INBOX stage' };
+  }
+
+  if (workflowType !== 'FULL') {
+    return { allowed: false, reason: 'Rollback from SPECIFY to INBOX only available for FULL workflows.' };
+  }
+
+  const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
+  if (statusCheck) return statusCheck;
+
+  return { allowed: true };
+}
+
+export function canRollbackPlanToSpecify(
+  currentStage: Stage,
+  targetStage: Stage,
+  workflowType: WorkflowType,
+  mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  if (currentStage !== 'PLAN' || targetStage !== 'SPECIFY') {
+    return { allowed: false, reason: 'Rollback only available from PLAN to SPECIFY stage' };
+  }
+
+  if (workflowType !== 'FULL') {
+    return { allowed: false, reason: 'Rollback from PLAN to SPECIFY only available for FULL workflows.' };
+  }
+
+  const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
+  if (statusCheck) return statusCheck;
+
+  return { allowed: true };
+}
+
+export function canRollbackBuildToPlan(
+  currentStage: Stage,
+  targetStage: Stage,
+  workflowType: WorkflowType,
+  mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  if (currentStage !== 'BUILD' || targetStage !== 'PLAN') {
+    return { allowed: false, reason: 'Rollback only available from BUILD to PLAN stage' };
+  }
+
+  if (workflowType !== 'FULL') {
+    return { allowed: false, reason: 'Rollback from BUILD to PLAN only available for FULL workflows.' };
+  }
+
+  const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
+  if (statusCheck) return statusCheck;
+
+  return { allowed: true };
+}
+
+export function canRollbackVerifyToBuild(
+  currentStage: Stage,
+  targetStage: Stage,
+  workflowType: WorkflowType,
+  mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  if (currentStage !== 'VERIFY' || targetStage !== 'BUILD') {
+    return { allowed: false, reason: 'Rollback only available from VERIFY to BUILD stage' };
+  }
+
+  if (workflowType !== 'FULL') {
+    return { allowed: false, reason: 'Rollback from VERIFY to BUILD only available for FULL workflows.' };
+  }
+
+  const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
+  if (statusCheck) return statusCheck;
+
+  return { allowed: true };
+}

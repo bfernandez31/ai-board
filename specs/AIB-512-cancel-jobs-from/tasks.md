@@ -29,11 +29,11 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T003 Extend `jobStatusUpdateSchema` in `app/api/jobs/[id]/status/route.ts` to accept optional `workflowRunId` (positive BigInt) on RUNNING status, populate first-write-wins; return 409 if job is already CANCELLED
-- [ ] T004 [P] Create cancel workflow run utility in `lib/workflows/cancel-workflow-run.ts` — parse owner/repo from githubRepository, call `octokit.actions.cancelWorkflowRun()`, handle 202 (success) and 409 (already finished)
-- [ ] T005 [P] Extend `isValidTransition()` in `lib/stage-transitions.ts` to add new rollback transitions: SPECIFY→INBOX, PLAN→SPECIFY, BUILD→PLAN, VERIFY→BUILD (all FULL workflow)
-- [ ] T006 [P] Add rollback validator functions in `app/lib/workflows/rollback-validator.ts`: `canRollbackSpecifyToInbox()`, `canRollbackPlanToSpecify()`, `canRollbackBuildToPlan()`, `canRollbackVerifyToBuild()` — each checks correct stage, FULL workflow type, and last job is FAILED/CANCELLED
-- [ ] T007 [P] Add `getValidRollbackTargets(stage, workflowType, lastJobStatus)` function in `lib/stage-transitions.ts` returning array of valid rollback target stages based on rollback matrix (empty array if no rollback possible)
+- [x] T003 Extend `jobStatusUpdateSchema` in `app/api/jobs/[id]/status/route.ts` to accept optional `workflowRunId` (positive BigInt) on RUNNING status, populate first-write-wins; return 409 if job is already CANCELLED
+- [x] T004 [P] Create cancel workflow run utility in `lib/workflows/cancel-workflow-run.ts` — parse owner/repo from githubRepository, call `octokit.actions.cancelWorkflowRun()`, handle 202 (success) and 409 (already finished)
+- [x] T005 [P] Extend `isValidTransition()` in `lib/stage-transitions.ts` to add new rollback transitions: SPECIFY→INBOX, PLAN→SPECIFY, BUILD→PLAN, VERIFY→BUILD (all FULL workflow)
+- [x] T006 [P] Add rollback validator functions in `app/lib/workflows/rollback-validator.ts`: `canRollbackSpecifyToInbox()`, `canRollbackPlanToSpecify()`, `canRollbackBuildToPlan()`, `canRollbackVerifyToBuild()` — each checks correct stage, FULL workflow type, and last job is FAILED/CANCELLED
+- [x] T007 [P] Add `getValidRollbackTargets(stage, workflowType, lastJobStatus)` function in `lib/stage-transitions.ts` returning array of valid rollback target stages based on rollback matrix (empty array if no rollback possible)
 
 **Checkpoint**: Foundation ready — cancel endpoint, rollback transitions, and drag UI work can now begin.
 

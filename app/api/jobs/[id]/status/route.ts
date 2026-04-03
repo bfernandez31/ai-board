@@ -118,6 +118,7 @@ export async function PATCH(
         status: true,
         completedAt: true,
         startedAt: true,
+        workflowRunId: true,
       },
     });
 
@@ -130,6 +131,16 @@ export async function PATCH(
     }
 
     currentStatus = job.status as JobStatus;
+
+    // If job is already CANCELLED and workflow tries to set RUNNING, return 409
+    // This signals the workflow to abort immediately
+    if (currentStatus === 'CANCELLED' && requestedStatus === 'RUNNING') {
+      console.log('[Job Status Update] Job already cancelled, rejecting RUNNING callback:', { jobId });
+      return NextResponse.json(
+        { error: 'Job already cancelled', status: 'CANCELLED' },
+        { status: 409 }
+      );
+    }
 
     // Check if this is an idempotent request (same status)
     if (currentStatus === requestedStatus) {
@@ -179,12 +190,18 @@ export async function PATCH(
       completedAt?: Date;
       qualityScore?: number;
       qualityScoreDetails?: string;
+      workflowRunId?: bigint;
     } = {
       status: requestedStatus,
     };
 
     if (requestedStatus === 'RUNNING' && !job.startedAt) {
       updateData.startedAt = new Date();
+    }
+
+    // Populate workflowRunId on RUNNING status (first-write-wins)
+    if (requestedStatus === 'RUNNING' && validationResult.data.workflowRunId && !job.workflowRunId) {
+      updateData.workflowRunId = BigInt(validationResult.data.workflowRunId);
     }
 
     if (isTerminalState) {
