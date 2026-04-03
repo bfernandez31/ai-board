@@ -995,7 +995,7 @@ interface GeneratedTicket {
 
 ### Command Output Format
 
-Active module scan commands (`health-security`, `health-compliance`, `health-tests`, `health-spec-sync`) write a JSON result file to `/tmp/health-scan-result.json`. The workflow reads this file with `jq` to extract fields for storage and ticket creation.
+Active module scan commands (`health-security`, `health-compliance`, `health-tests`, `health-spec-sync`, `health-review-quality`) write a JSON result file to `/tmp/health-scan-result.json`. The workflow reads this file with `jq` to extract fields for storage and ticket creation.
 
 ```json
 {
@@ -1021,7 +1021,8 @@ type ScanReport =
   | ComplianceReport
   | TestsReport
   | SpecSyncReport
-  | QualityGateReport;
+  | QualityGateReport
+  | ReviewQualityReport;
 ```
 
 | `type` value | Module | Grouping strategy |
@@ -1031,6 +1032,71 @@ type ScanReport =
 | `"TESTS"` | Tests | Two arrays: `autoFixed` / `nonFixable` |
 | `"SPEC_SYNC"` | Spec Sync | `specs[]` with `status: "synced" | "drifted"` and optional `drift` string |
 | `"QUALITY_GATE"` | Quality Gate (passive) | `dimensions[]` score breakdown + `recentTickets[]` |
+| `"REVIEW_QUALITY"` | Review Quality | `missedFindings[]` + `cumulativeAnalysis` with `recurringPatterns[]` |
+
+**ReviewQualityReport structure**:
+```typescript
+interface ReviewQualityReport {
+  type: 'REVIEW_QUALITY';
+  summary: {
+    prsAnalyzed: number;
+    totalMissedFindings: number;
+    coverageScore: number;       // 0–100
+    scoreBreakdown: {
+      base: 100;
+      highPenalty: number;       // sum of -15 per high finding
+      mediumPenalty: number;     // sum of -8 per medium finding
+      lowPenalty: number;        // sum of -3 per low finding
+    };
+  };
+  missedFindings: MissedFinding[];
+  cumulativeAnalysis: {
+    windowDays: 30;
+    reportsAnalyzed: number;
+    recurringPatterns: RecurringPattern[];
+  };
+  generatedTickets: GeneratedTicket[];
+}
+
+interface MissedFinding {
+  id: string;
+  prNumber: number;
+  source: 'codex' | 'copilot';
+  category: ReviewGapCategory;
+  severity: 'high' | 'medium' | 'low';
+  description: string;
+  file: string;
+  line: number;
+  sourceCommentUrl?: string;
+}
+
+interface RecurringPattern {
+  category: ReviewGapCategory;
+  occurrences: number;           // ≥ 3
+  prNumbers: number[];
+  suggestedRule: string;
+  target: 'constitution' | 'review-prompt';
+  alreadyTicketed: boolean;
+  ticketKey?: string;
+}
+
+type ReviewGapCategory =
+  | 'state-lifecycle'
+  | 'edge-case-validation'
+  | 'test-quality'
+  | 'error-handling'
+  | 'ui-ux-state'
+  | 'ci-workflow'
+  | 'api-contract'
+  | 'security'
+  | 'performance';
+```
+
+**ReviewQualityReport scoring**: base 100, penalty −15 per high finding, −8 per medium, −3 per low, floor 0. Only FULL workflow PRs merged since the last scan are analyzed; QUICK workflow PRs are excluded.
+
+**Filtering**: doc/spec staleness, TypeScript/ESLint-catchable issues, and duplicate findings (same file + overlapping line range within 5 lines) are excluded.
+
+**Cumulative analysis**: Runs after every incremental collection over the previous 30 days of scan reports. Patterns with ≥ 3 occurrences across distinct PRs are reported. Deduplication against existing open `[Review Gap]` tickets prevents duplicate ticket creation.
 
 **SecurityReport categories**: `injection`, `authentication`, `sensitive-data`, `access-control`, `misconfiguration`, `dependencies`, `cryptography`
 

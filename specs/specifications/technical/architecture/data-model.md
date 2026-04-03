@@ -989,7 +989,7 @@ model HealthScan {
 
 **Concurrent scan constraint**: Only one PENDING or RUNNING scan per `(projectId, scanType)` is allowed. Enforced at application level (409 on conflict).
 
-**Validation**: `score` is set only when `status = COMPLETED`; `scanType` is limited to the 4 active types (SECURITY, COMPLIANCE, TESTS, SPEC_SYNC).
+**Validation**: `score` is set only when `status = COMPLETED`; `scanType` is limited to the 5 active types (SECURITY, COMPLIANCE, TESTS, SPEC_SYNC, REVIEW_QUALITY).
 
 ---
 
@@ -1009,11 +1009,13 @@ model HealthScore {
   testsScore       Int?
   specSyncScore    Int?
   qualityGate      Int?      // derived from latest verify job qualityScore
+  reviewQualityScore Int?
 
   lastSecurityScan    DateTime?
   lastComplianceScan  DateTime?
   lastTestsScan       DateTime?
   lastSpecSyncScan    DateTime?
+  lastReviewQualityScan DateTime?
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -1026,11 +1028,11 @@ model HealthScore {
 
 **Global score calculation**:
 ```
-availableModules = [security, compliance, tests, specSync, qualityGate].filter(score !== null)
+availableModules = [security, compliance, tests, specSync, qualityGate, reviewQuality].filter(score !== null)
 globalScore = sum(availableModules.map(m => m.score)) / availableModules.length
 ```
 
-Equal 20% weighting with proportional redistribution when modules are unscanned.
+Equal weighting with proportional redistribution when modules are unscanned.
 
 **Derived fields**:
 - `qualityGate`: Latest COMPLETED verify job's `qualityScore` for the project
@@ -1090,10 +1092,11 @@ enum HealthScanType {
   COMPLIANCE
   TESTS
   SPEC_SYNC
+  REVIEW_QUALITY
 }
 ```
 
-Only the 4 active types above are stored as `HealthScan` records. Quality Gate is a passive module derived from existing `Job` records.
+Only the 5 active types above are stored as `HealthScan` records. Quality Gate is a passive module derived from existing `Job` records.
 
 ### HealthScanStatus
 

@@ -8,6 +8,7 @@ import type {
   TestsReport,
   SpecSyncReport,
   QualityGateReport,
+  ReviewQualityReport,
   ReportIssue,
 } from '@/lib/health/types';
 
@@ -27,6 +28,8 @@ export function DrawerIssues({ report }: DrawerIssuesProps) {
       return <SpecSyncIssues report={report} />;
     case 'QUALITY_GATE':
       return <QualityGateIssues report={report} />;
+    case 'REVIEW_QUALITY':
+      return <ReviewQualityIssues report={report} />;
     default:
       report satisfies never;
       return null;
@@ -227,6 +230,85 @@ function QualityGateIssues({ report }: { report: QualityGateReport }) {
   );
 }
 
+// --- Review Quality: missed findings by category + cumulative patterns ---
+
+const SEVERITY_COLORS: Record<string, string> = {
+  high: 'text-ctp-red bg-ctp-red/10',
+  medium: 'text-ctp-yellow bg-ctp-yellow/10',
+  low: 'text-ctp-blue bg-ctp-blue/10',
+};
+
+function ReviewQualityIssues({ report }: { report: ReviewQualityReport }) {
+  if (report.missedFindings.length === 0 && report.cumulativeAnalysis.recurringPatterns.length === 0) {
+    return <EmptyIssues label="No review gaps detected" />;
+  }
+
+  const findingsByCategory = groupBy(report.missedFindings, (f) => f.category);
+  const patterns = report.cumulativeAnalysis.recurringPatterns;
+
+  return (
+    <div className="space-y-4">
+      {report.missedFindings.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-foreground">Missed Findings</h4>
+          {Object.entries(findingsByCategory).map(([category, findings]) => (
+            <div key={category} className="space-y-1.5">
+              <span className="text-xs font-medium text-foreground capitalize">
+                {category.replace(/-/g, ' ')} ({findings.length})
+              </span>
+              <div className="space-y-1 pl-5">
+                {findings.map((f) => (
+                  <div key={f.id} className="space-y-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[10px] font-medium rounded px-1.5 py-0.5 ${SEVERITY_COLORS[f.severity]}`}>
+                        {f.severity}
+                      </span>
+                      <p className="text-xs text-foreground">• {f.description}</p>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground font-mono pl-2.5">
+                      {f.file}:{f.line} (PR #{f.prNumber}, {f.source})
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {patterns.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-foreground">Cumulative Patterns</h4>
+          {patterns.map((p) => (
+            <div key={p.category} className="aurora-glass rounded-md px-3 py-2 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-foreground capitalize">
+                  {p.category.replace(/-/g, ' ')}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {p.occurrences} PRs
+                </span>
+              </div>
+              <blockquote className="text-xs text-muted-foreground border-l-2 border-border pl-2">
+                {p.suggestedRule}
+              </blockquote>
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                <span>Target: {p.target}</span>
+                {p.alreadyTicketed && p.ticketKey && (
+                  <span className="text-ctp-green">Ticketed: {p.ticketKey}</span>
+                )}
+                {!p.alreadyTicketed && (
+                  <span className="text-ctp-yellow">Pending ticket</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // --- Shared helpers ---
 
 function IssueList({ issues }: { issues: ReportIssue[] }) {
@@ -264,12 +346,12 @@ function EmptyIssues({ label }: { label: string }) {
   );
 }
 
-function groupBy(issues: ReportIssue[], keyFn: (issue: ReportIssue) => string): Record<string, ReportIssue[]> {
-  const groups: Record<string, ReportIssue[]> = {};
-  for (const issue of issues) {
-    const key = keyFn(issue);
+function groupBy<T>(items: T[], keyFn: (item: T) => string): Record<string, T[]> {
+  const groups: Record<string, T[]> = {};
+  for (const item of items) {
+    const key = keyFn(item);
     if (!groups[key]) groups[key] = [];
-    groups[key].push(issue);
+    groups[key].push(item);
   }
   return groups;
 }

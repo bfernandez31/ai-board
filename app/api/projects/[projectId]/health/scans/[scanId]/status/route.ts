@@ -30,6 +30,7 @@ const SCAN_TYPE_TO_SCORE_FIELD: Record<HealthScanType, string> = {
   COMPLIANCE: 'complianceScore',
   TESTS: 'testsScore',
   SPEC_SYNC: 'specSyncScore',
+  REVIEW_QUALITY: 'reviewQualityScore',
 };
 
 const SCAN_TYPE_TO_DATE_FIELD: Record<HealthScanType, string> = {
@@ -37,6 +38,7 @@ const SCAN_TYPE_TO_DATE_FIELD: Record<HealthScanType, string> = {
   COMPLIANCE: 'lastComplianceScan',
   TESTS: 'lastTestsScan',
   SPEC_SYNC: 'lastSpecSyncScan',
+  REVIEW_QUALITY: 'lastReviewQualityScan',
 };
 
 export async function PATCH(
@@ -158,6 +160,7 @@ export async function PATCH(
           testsScore: healthScore.testsScore,
           specSyncScore: healthScore.specSyncScore,
           qualityGate: healthScore.qualityGate,
+          reviewQualityScore: healthScore.reviewQualityScore,
         });
 
         await prisma.healthScore.update({

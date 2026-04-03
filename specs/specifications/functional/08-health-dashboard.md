@@ -22,21 +22,21 @@ The hero zone at the top of the page displays the project's overall health:
   - 0–49: "Poor"
   - No data: "No data yet"
 - **Color**: A semantic color corresponding to the label (no hardcoded hex values)
-- **Sub-score badges**: Five compact badges below the score, one per contributing module (Security, Compliance, Tests, Spec Sync, Quality Gate), each showing its individual score and color
+- **Sub-score badges**: Six compact badges below the score, one per contributing module (Security, Compliance, Tests, Spec Sync, Quality Gate, Review Quality), each showing its individual score and color
 
-The global score is a weighted average of all contributing modules that have been scanned (20% each). Modules that have never been scanned are excluded from the calculation; their weight is redistributed proportionally among scanned modules.
+The global score is a weighted average of all contributing modules that have been scanned. Modules that have never been scanned are excluded from the calculation; their weight is redistributed proportionally among scanned modules.
 
 **"Last full scan" text**: Below the badges, the page shows the time elapsed since the most recent completed scan of any type (e.g., "Last full scan: 2 days ago"). Displays nothing meaningful until at least one scan has completed.
 
 ## Module Cards
 
-Below the hero zone, five module cards are arranged in a 2-column grid. Clicking anywhere on a card (except the action button) opens the Scan Detail Drawer for that module.
+Below the hero zone, six module cards are arranged in a 2-column grid. Clicking anywhere on a card (except the action button) opens the Scan Detail Drawer for that module.
 
 | Row | Left | Right |
 |-----|------|-------|
 | 1 | Security | Compliance |
 | 2 | Tests | Quality Gate |
-| 3 | Spec Sync | |
+| 3 | Spec Sync | Review Quality |
 
 On small screens (< `sm` breakpoint), the grid collapses to a single column.
 
@@ -53,7 +53,7 @@ Each card renders one of four states based on the module's scan data:
 
 ### Active vs. Passive Modules
 
-**Active modules** (Security, Compliance, Tests, Spec Sync) support user-triggered scans. Their cards display an action button and the commit range analyzed.
+**Active modules** (Security, Compliance, Tests, Spec Sync, Review Quality) support user-triggered scans. Their cards display an action button and the commit range analyzed.
 
 **Passive modules** (Quality Gate) derive data from existing Job records and display a "passive" label instead of an action button:
 - **Quality Gate**: 30-day rolling average of quality scores from COMPLETED verify jobs of FULL-workflow tickets at SHIP stage. Contributes 20% to the global Health Score. The card also shows ticket count, a trend indicator (vs the previous 30-day window), and a threshold distribution (Excellent/Good/Fair/Poor).
@@ -97,12 +97,15 @@ When an active module scan completes and issues are found, the system automatica
 | Compliance | One ticket per violated constitution principle |
 | Tests | One ticket per unfixable failing test |
 | Spec Sync | One ticket per desynchronized spec |
+| Review Quality | One ticket per recurring review gap pattern (title: `[Review Gap] Add rule for {pattern description}`) |
 
 Each ticket includes the affected files, line numbers, and issue descriptions. When a scan finds zero issues, no tickets are created. Tickets created this way appear on the board immediately and are linked from the "Generated Tickets" section of the Scan Detail Drawer.
 
 ## Incremental Scanning
 
 The first scan of any module type performs a full analysis with no base commit. Each subsequent scan of the same type uses the previous scan's `headCommit` as the `baseCommit`, limiting analysis to only the commits introduced since the last scan. Each module type maintains its own independent scan cursor.
+
+**Review Quality exception**: The Review Quality module does not use a commit-based cursor. Instead, it uses the previous scan's `completedAt` timestamp to find FULL workflow PRs merged since the last run. When no such PRs exist, the scan exits gracefully with no report and no score update. After each incremental collection, it also runs a cumulative analysis over the previous 30 days of scan reports to surface recurring patterns.
 
 ## Scan Detail Drawer
 
@@ -134,6 +137,7 @@ Issues from the latest scan are displayed in groups according to the module's gr
 | Tests | Two categories: "Auto-fixed" and "Non-fixable" |
 | Spec Sync | By sync status (synced / drifted) with drift summary |
 | Quality Gate | Dimension breakdown (Compliance, Bug Detection, Code Comments, Historical Context, Spec Sync) with average scores; threshold distribution; trend chart (score per ticket over time); list of recent SHIP tickets with individual scores |
+| Review Quality | Missed findings grouped by category (with severity badges); cumulative recurring patterns with suggested constitution rules; links to generated `[Review Gap]` tickets |
 
 Each issue entry shows severity/category, description, and affected file with line number when available. Malformed or missing report data renders a fallback message ("Report data unavailable") instead of an error.
 
@@ -163,4 +167,5 @@ The health dashboard polls the health score endpoint every 2 seconds while any a
 - **Workflow dispatch failure**: Scan record transitions to FAILED with an error message; card shows the "Retry" button
 - **All modules score 0**: Global score displays "0" with label "Poor"
 - **Score update failure on scan completion**: Scan record is COMPLETED but the aggregate retains its previous value; the next successful scan recalculates the aggregate
+- **Review Quality — no new PRs**: When no FULL workflow PRs have merged since the last Review Quality scan, the scan exits gracefully with no score update; the card retains its previous score
 - **Unauthorized access**: Standard project access verification returns 403; unauthenticated users are redirected to sign-in

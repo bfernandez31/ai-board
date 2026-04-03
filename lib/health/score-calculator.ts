@@ -6,12 +6,13 @@ interface ModuleScores {
   testsScore: number | null;
   specSyncScore: number | null;
   qualityGate: number | null;
+  reviewQualityScore: number | null;
 }
 
 /**
  * Calculate the global health score from available module sub-scores.
- * Uses proportional weight redistribution: each module gets equal weight (20%),
- * but only modules with non-null scores are included — weights are redistributed.
+ * Each module gets equal weight, and only modules with non-null scores
+ * are included — weights are proportionally redistributed.
  *
  * Returns null if no modules have scores.
  */
@@ -22,6 +23,7 @@ export function calculateGlobalScore(modules: ModuleScores): number | null {
     modules.testsScore,
     modules.specSyncScore,
     modules.qualityGate,
+    modules.reviewQualityScore,
   ].filter((s): s is number => s !== null);
 
   if (scores.length === 0) return null;

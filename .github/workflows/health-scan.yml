@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       scan_type:
-        description: 'Scan type (SECURITY|COMPLIANCE|TESTS|SPEC_SYNC)'
+        description: 'Scan type (SECURITY|COMPLIANCE|TESTS|SPEC_SYNC|REVIEW_QUALITY)'
         required: true
         type: string
       base_commit:
@@ -232,6 +232,9 @@ jobs:
             SPEC_SYNC)
               echo "command=health-spec-sync" >> $GITHUB_OUTPUT
               ;;
+            REVIEW_QUALITY)
+              echo "command=health-review-quality" >> $GITHUB_OUTPUT
+              ;;
             *)
               echo "❌ Unknown scan type: $INPUT_SCAN_TYPE"
               exit 1
@@ -421,7 +424,7 @@ jobs:
       # Step 5: Create remediation tickets from scan results (US2 T013)
       # NOTE: Tickets are created BEFORE marking COMPLETED per spec (integrations.md)
       - name: Create Remediation Tickets
-        if: ${{ steps.scan.outputs.scan_success == 'true' && steps.scan.outputs.issues_found > 0 }}
+        if: ${{ steps.scan.outputs.scan_success == 'true' && (steps.scan.outputs.issues_found > 0 || inputs.scan_type == 'REVIEW_QUALITY') }}
         run: |
           SCAN_TYPE="$INPUT_SCAN_TYPE"
           REPORT_FILE="/tmp/scan_report.json"
@@ -507,6 +510,26 @@ jobs:
                 SHORT_NAME=$(echo "$SPEC_PATH" | sed 's|^specs/specifications/||; s|\.md$||')
                 TITLE="[Spec Sync] ${SHORT_NAME}"
                 DESC=$(printf 'Health scan detected spec drift:\n\n- **Spec**: %s\n- **Drift**: %s' "$SPEC_PATH" "$DRIFT")
+
+                curl -X POST "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets" \
+                  -H "Content-Type: application/json" \
+                  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+                  -d "$(jq -n --arg t "$TITLE" --arg d "$DESC" '{title: $t, description: $d, stage: "INBOX", workflowType: "QUICK"}')" \
+                  -f -s -S || echo "⚠️ Failed to create ticket: $TITLE"
+              done
+              ;;
+            REVIEW_QUALITY)
+              # One ticket per recurring pattern (not per finding)
+              # The report's recurringPatterns array already has patterns with 3+ occurrences
+              jq -c '.cumulativeAnalysis.recurringPatterns // [] | .[] | select(.alreadyTicketed == false)' "$REPORT_FILE" | while read -r pattern; do
+                CATEGORY=$(printf '%s' "$pattern" | jq -r '.category')
+                OCCURRENCES=$(printf '%s' "$pattern" | jq -r '.occurrences')
+                PR_NUMS=$(printf '%s' "$pattern" | jq -r '[.prNumbers[] | "#\(.)"] | join(", ")')
+                SUGGESTED_RULE=$(printf '%s' "$pattern" | jq -r '.suggestedRule')
+                TARGET=$(printf '%s' "$pattern" | jq -r '.target')
+                DISPLAY_CATEGORY=$(echo "$CATEGORY" | tr '-' ' ')
+                TITLE="[Review Gap] Add rule for ${DISPLAY_CATEGORY}"
+                DESC=$(printf 'Health scan detected a recurring review gap pattern.\n\n**Category**: %s\n**Occurrences**: %s PRs (%s)\n\n**Suggested Rule**:\n> %s\n\n**Target**: %s' "$CATEGORY" "$OCCURRENCES" "$PR_NUMS" "$SUGGESTED_RULE" "$TARGET")
 
                 curl -X POST "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets" \
                   -H "Content-Type: application/json" \

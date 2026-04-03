@@ -65,12 +65,69 @@ const qualityGateReportSchema = z.object({
   recentTickets: z.array(qualityTicketSchema),
 });
 
+const reviewGapCategoryEnum = z.enum([
+  'state-lifecycle',
+  'edge-case-validation',
+  'test-quality',
+  'error-handling',
+  'ui-ux-state',
+  'ci-workflow',
+  'api-contract',
+  'security',
+  'performance',
+]);
+
+const missedFindingSchema = z.object({
+  id: z.string(),
+  prNumber: z.number().int().positive(),
+  source: z.enum(['codex', 'copilot']),
+  category: reviewGapCategoryEnum,
+  severity: z.enum(['high', 'medium', 'low']),
+  description: z.string(),
+  file: z.string(),
+  line: z.number().int().positive(),
+  sourceCommentUrl: z.string().optional(),
+});
+
+const recurringPatternSchema = z.object({
+  category: reviewGapCategoryEnum,
+  occurrences: z.number().int().min(3),
+  prNumbers: z.array(z.number().int().positive()),
+  suggestedRule: z.string(),
+  target: z.enum(['constitution', 'review-prompt']),
+  alreadyTicketed: z.boolean(),
+  ticketKey: z.string().optional(),
+});
+
+const reviewQualityReportSchema = z.object({
+  type: z.literal('REVIEW_QUALITY'),
+  summary: z.object({
+    prsAnalyzed: z.number().int().min(0),
+    totalMissedFindings: z.number().int().min(0),
+    coverageScore: z.number().int().min(0).max(100),
+    scoreBreakdown: z.object({
+      base: z.literal(100),
+      highPenalty: z.number().int().max(0),
+      mediumPenalty: z.number().int().max(0),
+      lowPenalty: z.number().int().max(0),
+    }),
+  }),
+  missedFindings: z.array(missedFindingSchema),
+  cumulativeAnalysis: z.object({
+    windowDays: z.literal(30),
+    reportsAnalyzed: z.number().int().min(0),
+    recurringPatterns: z.array(recurringPatternSchema),
+  }),
+  generatedTickets: z.array(generatedTicketSchema),
+});
+
 const scanReportSchema = z.discriminatedUnion('type', [
   securityReportSchema,
   complianceReportSchema,
   testsReportSchema,
   specSyncReportSchema,
   qualityGateReportSchema,
+  reviewQualityReportSchema,
 ]);
 
 /**

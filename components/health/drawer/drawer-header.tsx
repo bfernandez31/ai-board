@@ -6,6 +6,7 @@ import {
   TestTubeDiagonal,
   FileCheck,
   Award,
+  ClipboardCheck,
   type LucideIcon,
 } from 'lucide-react';
 import { getScoreColor } from '@/lib/quality-score';
@@ -18,6 +19,7 @@ const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
   TESTS: TestTubeDiagonal,
   SPEC_SYNC: FileCheck,
   QUALITY_GATE: Award,
+  REVIEW_QUALITY: ClipboardCheck,
 };
 
 interface DrawerHeaderProps {

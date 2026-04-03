@@ -6,11 +6,12 @@ import { prisma } from '@/lib/db/client';
 import { dispatchHealthScanWorkflow } from '@/lib/health/scan-dispatch';
 
 const triggerScanSchema = z.object({
-  scanType: z.enum(['SECURITY', 'COMPLIANCE', 'TESTS', 'SPEC_SYNC']),
+  scanType: z.enum(['SECURITY', 'COMPLIANCE', 'TESTS', 'SPEC_SYNC', 'REVIEW_QUALITY']),
 });
 
 const scanHistorySchema = z.object({
-  type: z.enum(['SECURITY', 'COMPLIANCE', 'TESTS', 'SPEC_SYNC']).optional(),
+  type: z.enum(['SECURITY', 'COMPLIANCE', 'TESTS', 'SPEC_SYNC', 'REVIEW_QUALITY']).optional(),
+  status: z.enum(['PENDING', 'RUNNING', 'COMPLETED', 'FAILED']).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   cursor: z.coerce.number().int().positive().optional(),
   includeReport: z.enum(['true', 'false']).optional(),
@@ -140,11 +141,15 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
     }
 
-    await verifyProjectAccess(projectId, request);
+    // Support workflow token auth (for health scan commands) alongside session auth
+    if (!(await verifyWorkflowToken(request))) {
+      await verifyProjectAccess(projectId, request);
+    }
 
     const { searchParams } = new URL(request.url);
     const parsed = scanHistorySchema.safeParse({
       type: searchParams.get('type') || undefined,
+      status: searchParams.get('status') || undefined,
       limit: searchParams.get('limit') || undefined,
       cursor: searchParams.get('cursor') || undefined,
       includeReport: searchParams.get('includeReport') || undefined,
@@ -157,11 +162,12 @@ export async function GET(
       );
     }
 
-    const { type, limit, cursor, includeReport } = parsed.data;
+    const { type, status, limit, cursor, includeReport } = parsed.data;
     const shouldIncludeReport = includeReport === 'true';
 
     const where: Record<string, unknown> = { projectId };
     if (type) where.scanType = type;
+    if (status) where.status = status;
     if (cursor) where.id = { lt: cursor };
 
     const scans = await prisma.healthScan.findMany({

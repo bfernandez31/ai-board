@@ -6,6 +6,7 @@ export const SCAN_COMMAND_MAP: Record<HealthScanType, string> = {
   COMPLIANCE: 'health-compliance',
   TESTS: 'health-tests',
   SPEC_SYNC: 'health-spec-sync',
+  REVIEW_QUALITY: 'health-review-quality',
 } as const;
 
 /** Returns the Claude Code command name for a given scan type */
