@@ -47,15 +47,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Add integration tests for cancel endpoint in `tests/integration/jobs/cancel-job.test.ts` — cancel RUNNING job (GitHub API called), cancel PENDING job (no GitHub API), cancel already-COMPLETED job (alreadyTerminal), cancel without auth (401/403), double-cancel idempotent, invalid job ID (404), GitHub API failure (502)
-- [ ] T009 [P] [US1] Add integration tests for job status workflowRunId extension in `tests/integration/jobs/job-status.test.ts` — RUNNING with workflowRunId populates field, RUNNING without workflowRunId keeps null, RUNNING on CANCELLED job returns 409, second RUNNING callback with different workflowRunId first-write-wins
+- [x] T008 [P] [US1] Add integration tests for cancel endpoint in `tests/integration/jobs/cancel-job.test.ts` — cancel RUNNING job (GitHub API called), cancel PENDING job (no GitHub API), cancel already-COMPLETED job (alreadyTerminal), cancel without auth (401/403), double-cancel idempotent, invalid job ID (404), GitHub API failure (502)
+- [x] T009 [P] [US1] Add integration tests for job status workflowRunId extension in `tests/integration/jobs/job-status.test.ts` — RUNNING with workflowRunId populates field, RUNNING without workflowRunId keeps null, RUNNING on CANCELLED job returns 409, second RUNNING callback with different workflowRunId first-write-wins
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Create cancel job endpoint in `app/api/jobs/[id]/cancel/route.ts` — POST handler with session auth, `verifyProjectAccess()`, handle PENDING (direct CANCELLED), RUNNING (call `cancelWorkflowRun()` then CANCELLED), already-terminal (200 + alreadyTerminal), GitHub API failure (502 without status change)
-- [ ] T011 [P] [US1] Create cancel confirmation modal component in `components/board/cancel-confirmation-modal.tsx` — AlertDialog (shadcn/ui), props: open, onOpenChange, onConfirm, jobCommand, isCancelling; message: "Annuler le workflow {command} en cours ?"
-- [ ] T012 [P] [US1] Create cancel job mutation hook in `lib/hooks/mutations/useCancelJob.ts` — `useMutation` calling POST `/api/jobs/{jobId}/cancel`, invalidates `queryKeys.projects.jobsStatus(projectId)` on success
-- [ ] T013 [US1] Add hover-revealed cancel X button to `components/board/ticket-card.tsx` — visible only when ticket has PENDING/RUNNING job, positioned next to job status indicator, `onClick` with `stopPropagation` opens CancelConfirmationModal, disabled while mutation is in-flight
+- [x] T010 [US1] Create cancel job endpoint in `app/api/jobs/[id]/cancel/route.ts` — POST handler with session auth, `verifyProjectAccess()`, handle PENDING (direct CANCELLED), RUNNING (call `cancelWorkflowRun()` then CANCELLED), already-terminal (200 + alreadyTerminal), GitHub API failure (502 without status change)
+- [x] T011 [P] [US1] Create cancel confirmation modal component in `components/board/cancel-confirmation-modal.tsx` — AlertDialog (shadcn/ui), props: open, onOpenChange, onConfirm, jobCommand, isCancelling; message: "Annuler le workflow {command} en cours ?"
+- [x] T012 [P] [US1] Create cancel job mutation hook in `lib/hooks/mutations/useCancelJob.ts` — `useMutation` calling POST `/api/jobs/{jobId}/cancel`, invalidates `queryKeys.projects.jobsStatus(projectId)` on success
+- [x] T013 [US1] Add hover-revealed cancel X button to `components/board/ticket-card.tsx` — visible only when ticket has PENDING/RUNNING job, positioned next to job status indicator, `onClick` with `stopPropagation` opens CancelConfirmationModal, disabled while mutation is in-flight
 
 **Checkpoint**: Users can cancel jobs from the board. Core cancel functionality is complete.
 
