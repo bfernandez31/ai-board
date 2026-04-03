@@ -16,11 +16,12 @@ Environment variables (set by the workflow):
 
 ### Step 1 — PR Discovery
 
-1. Query the ai-board API for tickets with FULL workflow in SHIP stage:
+1. Query the ai-board API for FULL workflow tickets in SHIP stage:
    ```bash
    curl -s "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets?stage=SHIP&workflowType=FULL" \
      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}"
    ```
+   Note: When `stage`/`workflowType` params are provided, the endpoint returns a flat array of matching tickets.
 2. For each ticket's branch, use GitHub API to find the merged PR
 3. Determine the last REVIEW_QUALITY scan timestamp by querying:
    ```bash
@@ -100,9 +101,10 @@ coverageScore = max(0, 100 - (highCount * 15) - (mediumCount * 8) - (lowCount * 
    - Determine target: `constitution` (for architectural/design patterns) or `review-prompt` (for code-level checks)
 5. Check for existing `[Review Gap]` tickets to avoid duplicates:
    ```bash
-   curl -s "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets?search=[Review Gap]" \
+   curl -s "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets/search?q=[Review Gap]" \
      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}"
    ```
+   Note: The search endpoint returns `{ results: [{ ticketKey, title, stage }], totalCount }`. Match each recurring pattern's category against existing ticket titles to set `alreadyTicketed`.
 6. Set `alreadyTicketed: true` and include `ticketKey` for patterns with existing tickets
 
 ### Step 8 — Output

@@ -7,7 +7,7 @@ import { TicketAttachmentsArraySchema } from '@/app/lib/schemas/ticket';
 import { validateImageFile } from '@/app/lib/validations/image';
 import { extractImageUrls } from '@/app/lib/parsers/markdown';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
-import { ZodError } from 'zod';
+import { z, ZodError } from 'zod';
 import formidable, { Fields, Files } from 'formidable';
 import { promises as fs } from 'fs';
 import { Readable } from 'stream';
@@ -36,7 +36,34 @@ export async function GET(
       await verifyProjectAccess(projectId, request);
     }
 
+    // Optional filters: ?stage=SHIP&workflowType=FULL
+    const { searchParams } = new URL(request.url);
+    const ticketFiltersSchema = z.object({
+      stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP', 'CLOSED']).optional(),
+      workflowType: z.enum(['FULL', 'QUICK', 'CLEAN']).optional(),
+    });
+    const filtersParsed = ticketFiltersSchema.safeParse({
+      stage: searchParams.get('stage') || undefined,
+      workflowType: searchParams.get('workflowType') || undefined,
+    });
+    if (!filtersParsed.success) {
+      return NextResponse.json({ error: 'Invalid filter parameters', code: 'VALIDATION_ERROR' }, { status: 400 });
+    }
+    const { stage: stageParam, workflowType: workflowTypeParam } = filtersParsed.data;
+
     const ticketsByStage = await getTicketsByStage(projectId);
+
+    // If filters provided, return a flat array instead of the stage-grouped object
+    if (stageParam || workflowTypeParam) {
+      const stages = stageParam ? [stageParam] : Object.keys(ticketsByStage);
+      const filtered = stages.flatMap((stage) =>
+        (ticketsByStage[stage as keyof typeof ticketsByStage] ?? []).filter(
+          (t) => !workflowTypeParam || t.workflowType === workflowTypeParam
+        )
+      );
+      return NextResponse.json(filtered, { status: 200 });
+    }
+
     return NextResponse.json(ticketsByStage, { status: 200 });
   } catch (error) {
     if (error instanceof Error) {

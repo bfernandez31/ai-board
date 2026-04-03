@@ -396,28 +396,34 @@ List organizations the authenticated user belongs to.
 
 ### GET /api/projects/:projectId/tickets
 
-Fetch all tickets for a project, grouped by stage.
+Fetch all tickets for a project, grouped by stage. When `stage` or `workflowType` query params are provided, returns a flat filtered array instead.
 
-**Authentication**: Required (session)
-**Authorization**: Must be project owner or member
+**Authentication**: Required (session or workflow Bearer token)
+**Authorization**: Must be project owner or member (workflow token bypasses)
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
 
 **Query Parameters**:
-- `stage` (optional): Filter by stage (INBOX|SPECIFY|PLAN|BUILD|VERIFY|SHIP)
+- `stage` (string, optional): Filter by stage — `INBOX|SPECIFY|PLAN|BUILD|VERIFY|SHIP|CLOSED`
+- `workflowType` (string, optional): Filter by workflow type — `FULL|QUICK|CLEAN`
 
-**Response** (200 OK):
+**Response — no filters** (200 OK): Stage-grouped object
 ```json
 {
-  "tickets": [
+  "INBOX": [...],
+  "SPECIFY": [...],
+  "PLAN": [...],
+  "BUILD": [...],
+  "VERIFY": [...],
+  "SHIP": [
     {
       "id": 42,
       "ticketNumber": 5,
       "ticketKey": "ABC-5",
       "title": "Add login feature",
       "description": "Implement user authentication",
-      "stage": "SPECIFY",
+      "stage": "SHIP",
       "projectId": 1,
       "branch": "042-add-login-feature",
       "workflowType": "FULL",
@@ -430,6 +436,20 @@ Fetch all tickets for a project, grouped by stage.
     }
   ]
 }
+```
+
+**Response — with filters** (200 OK): Flat array of matching tickets
+```json
+[
+  {
+    "id": 42,
+    "ticketKey": "ABC-5",
+    "title": "Add login feature",
+    "stage": "SHIP",
+    "workflowType": "FULL",
+    ...
+  }
+]
 ```
 
 **Sorting Behavior**:
