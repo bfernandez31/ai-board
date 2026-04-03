@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, X } from 'lucide-react';
 import { TicketWithVersion } from '@/lib/types';
 import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { AgentIcon } from '@/components/ui/agent-icon';
@@ -15,8 +15,10 @@ import { classifyJobType } from '@/lib/utils/job-type-classifier';
 import { TicketCardDeployIcon } from './ticket-card-deploy-icon';
 import { TicketCardPreviewIcon } from './ticket-card-preview-icon';
 import { DeployConfirmationModal } from './deploy-confirmation-modal';
+import { CancelJobDialog } from './cancel-job-dialog';
 import { isTicketDeployable } from '@/app/lib/utils/deploy-preview-eligibility';
 import { useDeployPreview } from '@/app/lib/hooks/mutations/useDeployPreview';
+import { useCancelJob } from '@/app/lib/hooks/mutations/useCancelJob';
 import { useHasMounted } from '@/lib/hooks/use-has-mounted';
 import { QualityScoreBadge } from '@/components/ticket/quality-score-badge';
 
@@ -51,9 +53,13 @@ export const TicketCard = React.memo(
   }: DraggableTicketCardProps) => {
     const isMounted = useHasMounted();
     const [showDeployModal, setShowDeployModal] = useState(false);
+    const [showCancelDialog, setShowCancelDialog] = useState(false);
 
     // Deploy preview mutation
     const { mutate: deployPreview } = useDeployPreview(ticket.projectId);
+
+    // Cancel job mutation
+    const cancelJobMutation = useCancelJob(ticket.projectId);
 
     // Check if ticket is deployable
     const isDeployable = React.useMemo(() => {
@@ -119,7 +125,7 @@ export const TicketCard = React.memo(
         {...(isMounted ? listeners : {})}
       >
         <Card
-          className="aurora-glass aurora-glass-hover border p-4 transition-all hover:-translate-y-0.5 overflow-hidden"
+          className="aurora-glass aurora-glass-hover border p-4 transition-all hover:-translate-y-0.5 overflow-hidden group"
           role="article"
           aria-label={`Ticket ${ticket.ticketKey}: ${ticket.title}`}
         >
@@ -163,6 +169,20 @@ export const TicketCard = React.memo(
             </div>
           </div>
 
+          {/* Cancel Job Dialog */}
+          {workflowJob && (workflowJob.status === 'PENDING' || workflowJob.status === 'RUNNING') && (
+            <CancelJobDialog
+              open={showCancelDialog}
+              onOpenChange={setShowCancelDialog}
+              onConfirm={() => {
+                cancelJobMutation.mutate(workflowJob.id);
+                setShowCancelDialog(false);
+              }}
+              command={workflowJob.command}
+              isPending={cancelJobMutation.isPending}
+            />
+          )}
+
           {/* Deploy Confirmation Modal */}
           <DeployConfirmationModal
             open={showDeployModal}
@@ -189,16 +209,35 @@ export const TicketCard = React.memo(
           {(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl) && (
             <div className="border-t border-border pt-3">
               <div className="flex items-center justify-between gap-3">
-                {/* Left: Workflow Job Indicator (simplified display) */}
+                {/* Left: Workflow Job Indicator with cancel button */}
                 {workflowJob && (
-                  <JobStatusIndicator
-                    status={workflowJob.status}
-                    command={workflowJob.command}
-                    jobType={classifyJobType(workflowJob.command)}
-                    stage={ticket.stage}
-                    animated={true}
-                    completedAt={workflowJob.completedAt}
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <JobStatusIndicator
+                      status={workflowJob.status}
+                      command={workflowJob.command}
+                      jobType={classifyJobType(workflowJob.command)}
+                      stage={ticket.stage}
+                      animated={true}
+                      completedAt={workflowJob.completedAt}
+                    />
+                    {(workflowJob.status === 'PENDING' || workflowJob.status === 'RUNNING') && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            data-testid="cancel-job-button"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowCancelDialog(true);
+                            }}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Annuler</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                 )}
 
                 {/* Right: Compact icon indicators (Preview + Deploy + AI-BOARD) */}

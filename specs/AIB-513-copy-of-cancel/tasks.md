@@ -53,12 +53,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Create cancel job endpoint `app/api/jobs/[id]/cancel/route.ts` — session auth, validate PENDING/RUNNING, call GitHub API if RUNNING, mark CANCELLED
-- [ ] T015 [US1] Create cancel mutation hook `app/lib/hooks/useCancelJob.ts` — TanStack Query mutation with optimistic update, invalidate ticket queries on settlement
-- [ ] T016 [US1] Create cancel confirmation dialog `components/board/cancel-job-dialog.tsx` — shadcn/ui AlertDialog with French text "Annuler le workflow {command} en cours ?", double-click prevention
-- [ ] T017 [US1] Add cancel button (X icon) to ticket card on hover for PENDING/RUNNING jobs in `components/board/ticket-card.tsx`
-- [ ] T018 [P] [US1] Integration test: cancel endpoint scenarios (PENDING, RUNNING with runId, already CANCELLED, COMPLETED rejected, auth) in `tests/integration/jobs/cancel.test.ts` (new)
-- [ ] T019 [P] [US1] Component test: cancel button visibility and dialog behavior in `tests/unit/components/cancel-job-dialog.test.tsx` (new)
+- [x] T014 [US1] Create cancel job endpoint `app/api/jobs/[id]/cancel/route.ts` — session auth, validate PENDING/RUNNING, call GitHub API if RUNNING, mark CANCELLED
+- [x] T015 [US1] Create cancel mutation hook `app/lib/hooks/useCancelJob.ts` — TanStack Query mutation with optimistic update, invalidate ticket queries on settlement
+- [x] T016 [US1] Create cancel confirmation dialog `components/board/cancel-job-dialog.tsx` — shadcn/ui AlertDialog with French text "Annuler le workflow {command} en cours ?", double-click prevention
+- [x] T017 [US1] Add cancel button (X icon) to ticket card on hover for PENDING/RUNNING jobs in `components/board/ticket-card.tsx`
+- [x] T018 [P] [US1] Integration test: cancel endpoint scenarios (PENDING, RUNNING with runId, already CANCELLED, COMPLETED rejected, auth) in `tests/integration/jobs/cancel.test.ts` (new)
+- [x] T019 [P] [US1] Component test: cancel button visibility and dialog behavior in `tests/unit/components/cancel-job-dialog.test.tsx` (new)
 
 **Checkpoint**: Users can cancel jobs from the board view
 
