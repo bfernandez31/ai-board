@@ -593,10 +593,13 @@ jobs:
             PAYLOAD=$(printf '%s' "$PAYLOAD" | jq --argjson c "$COST" '. + {costUsd: $c}')
           fi
 
+          # Write payload to file to avoid "Argument list too long" with large reports
+          printf '%s' "$PAYLOAD" > /tmp/scan_payload.json
+
           curl -X PATCH "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/health/scans/${INPUT_SCAN_ID}/status" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-            -d "$PAYLOAD" \
+            -d @/tmp/scan_payload.json \
             -f -s -S
 
           echo "✅ Scan status updated to COMPLETED (score: $SCAN_SCORE)"
