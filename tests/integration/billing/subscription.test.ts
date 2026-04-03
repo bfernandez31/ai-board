@@ -4,13 +4,17 @@ import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup'
 describe('GET /api/billing/subscription', () => {
   let ctx: TestContext;
 
+  async function getTestPrisma() {
+    const { getPrismaClient } = await import('@/tests/helpers/db-cleanup');
+    return getPrismaClient();
+  }
+
   beforeEach(async () => {
     ctx = await getTestContext();
     await ctx.cleanup();
     // Global setup seeds test@e2e.local with a PRO subscription; delete it so
     // the "no subscription → FREE" test runs against a clean state.
-    const { getPrismaClient } = await import('@/tests/helpers/db-cleanup');
-    const prisma = getPrismaClient();
+    const prisma = await getTestPrisma();
     const user = await prisma.user.findFirst({ where: { email: 'test@e2e.local' } });
     if (user) {
       await prisma.subscription.deleteMany({ where: { userId: user.id } });
@@ -33,8 +37,7 @@ describe('GET /api/billing/subscription', () => {
   });
 
   it('should return subscription data for subscribed user', async () => {
-    const { getPrismaClient } = await import('@/tests/helpers/db-cleanup');
-    const prisma = getPrismaClient();
+    const prisma = await getTestPrisma();
 
     const user = await prisma.user.findFirst({
       where: { email: 'test@e2e.local' },

@@ -133,11 +133,9 @@ export async function syncProjectConfig(
 
   // 4. Strip env section and service credentials before storing
   const { env: _env, ...configWithoutEnv } = validation.data;
-  if (configWithoutEnv.services) {
-    configWithoutEnv.services = configWithoutEnv.services.map(
-      ({ username: _u, password: _p, ...rest }) => rest
-    );
-  }
+  configWithoutEnv.services = configWithoutEnv.services.map(
+    ({ username: _u, password: _p, ...rest }) => rest
+  );
 
   // 5. Store in DB with optimistic locking
   const now = new Date();
