@@ -188,7 +188,7 @@ function collectUnknownFieldWarnings(raw: unknown): ValidationWarning[] {
     if (!KNOWN_ROOT_KEYS.has(key)) {
       warnings.push({
         path: key,
-        message: `Unknown field '${key}' — this field is not part of the config schema and will be ignored.`,
+        message: `Unknown field '${key}' — this field is not part of the config schema and will be stripped.`,
       });
     }
   }
@@ -204,7 +204,7 @@ function collectUnknownFieldWarnings(raw: unknown): ValidationWarning[] {
         if (!knownKeys.has(key)) {
           warnings.push({
             path: `${section}.${key}`,
-            message: `Unknown field '${section}.${key}' — this field is not part of the ${section} section schema and will be ignored.`,
+            message: `Unknown field '${section}.${key}' — this field is not part of the ${section} section schema and will be stripped.`,
           });
         }
       }

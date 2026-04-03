@@ -46,7 +46,7 @@ Fetches `.ai-board/config.yml` from the project's GitHub repository, validates i
   "config": { "..." },
   "syncedAt": "2026-04-02T12:00:00.000Z",
   "warnings": [
-    { "path": "custom_field", "message": "Unknown field 'custom_field' — this field is not part of the config schema and will be ignored." }
+    { "path": "custom_field", "message": "Unknown field 'custom_field' — this field is not part of the config schema and will be stripped." }
   ]
 }
 ```
