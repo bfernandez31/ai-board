@@ -1,0 +1,89 @@
+# Rollback Transitions API Contract
+# POST /api/projects/{projectId}/tickets/{id}/transition (extended)
+# New rollback paths integrated into existing transition endpoint (FR-014)
+
+endpoint: /api/projects/{projectId}/tickets/{id}/transition
+method: POST
+auth: session (NextAuth) or workflow token
+
+# New rollback transitions (additions to existing endpoint behavior)
+new_rollback_paths:
+
+  specify_to_inbox:
+    request:
+      targetStage: "INBOX"
+    preconditions:
+      - ticket.stage == "SPECIFY"
+      - mostRecentJob.status in ["FAILED", "CANCELLED"]
+    behavior:
+      - Validate rollback via canRollbackToInbox (extended)
+      - Delete branch via GitHub API if ticket.branch is set
+      - Update ticket: stage=INBOX, branch=null, version increment
+      - Delete the failed/cancelled job record
+    response:
+      id: integer
+      stage: "INBOX"
+      branch: null
+      version: integer
+      updatedAt: string
+
+  plan_to_specify:
+    request:
+      targetStage: "SPECIFY"
+    preconditions:
+      - ticket.stage == "PLAN"
+      - mostRecentJob.status in ["FAILED", "CANCELLED"]
+    behavior:
+      - Validate rollback via new canRollbackToSpecify function
+      - Update ticket: stage=SPECIFY, version increment
+      - Delete the failed/cancelled job record
+    response:
+      id: integer
+      stage: "SPECIFY"
+      version: integer
+      updatedAt: string
+
+  build_to_plan:
+    request:
+      targetStage: "PLAN"
+    preconditions:
+      - ticket.stage == "BUILD"
+      - ticket.workflowType == "FULL"
+      - mostRecentJob.status in ["FAILED", "CANCELLED"]
+    behavior:
+      - Validate rollback via new canRollbackBuildToPlan function
+      - Update ticket: stage=PLAN, previewUrl=null, version increment
+      - Delete the failed/cancelled job record
+      - Dispatch rollback-reset workflow (creates backup tag + git reset)
+    response:
+      id: integer
+      stage: "PLAN"
+      version: integer
+      previewUrl: null
+      updatedAt: string
+      resetJobId: integer (optional, if workflow dispatched)
+
+  verify_to_build:
+    request:
+      targetStage: "BUILD"
+    preconditions:
+      - ticket.stage == "VERIFY"
+      - ticket.workflowType == "FULL"
+      - mostRecentJob.status in ["FAILED", "CANCELLED"]
+    behavior:
+      - Validate rollback via new canRollbackToBuild function
+      - Update ticket: stage=BUILD, previewUrl=null, version increment
+      - Delete the failed/cancelled job record
+    response:
+      id: integer
+      stage: "BUILD"
+      version: integer
+      previewUrl: null
+      updatedAt: string
+
+confirmation_dialogs:
+  specify_to_inbox: "Revenir a Inbox ? La branche sera supprimee."
+  plan_to_specify: "Revenir a Specify ? La specification sera conservee."
+  build_to_plan: "Revenir a Plan ? Le code sera reinitialise (backup cree)."
+  verify_to_build: "Revenir a Build ? La verification sera relancee."
+  verify_to_plan: "Revenir a Plan ? Le code sera reinitialise (backup cree)."

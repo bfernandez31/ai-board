@@ -1,0 +1,67 @@
+# Cancel Job API Contract
+# POST /api/jobs/{id}/cancel
+
+endpoint: /api/jobs/{id}/cancel
+method: POST
+auth: session (NextAuth)
+
+path_params:
+  id:
+    type: integer
+    description: Job ID to cancel
+
+request_body: null  # No body required
+
+responses:
+  200:
+    description: Job successfully cancelled
+    body:
+      id: integer
+      status: "CANCELLED"
+      completedAt: string (ISO 8601)
+    example:
+      id: 456
+      status: "CANCELLED"
+      completedAt: "2026-04-03T12:00:00.000Z"
+
+  400:
+    description: Job cannot be cancelled (wrong status or already terminal)
+    body:
+      error: string
+    examples:
+      - error: "Job is already in terminal state: COMPLETED"
+      - error: "Job status FAILED does not allow cancellation"
+
+  401:
+    description: Unauthorized (no valid session)
+    body:
+      error: "Unauthorized"
+
+  403:
+    description: User does not have access to the project containing this job
+    body:
+      error: "Forbidden"
+
+  404:
+    description: Job not found
+    body:
+      error: "Job not found"
+
+  500:
+    description: Internal server error
+    body:
+      error: "Internal server error"
+
+behavior:
+  - Validates user session and project access (via job → ticket → project)
+  - Checks job status is PENDING or RUNNING
+  - If RUNNING and workflowRunId is set: calls GitHub Actions API to cancel the workflow run
+  - If RUNNING and workflowRunId is null: logs warning, proceeds with local cancel
+  - If PENDING: skips GitHub API call (no workflow to cancel)
+  - Marks job as CANCELLED with completedAt timestamp
+  - GitHub API failure does NOT block local cancellation (fire-and-forget with logging)
+  - Idempotent: re-cancelling an already CANCELLED job returns 200
+
+concurrency:
+  - Re-reads job status before update to prevent race conditions
+  - If job transitioned to a terminal state between check and update, returns current state

@@ -1,0 +1,33 @@
+# Job Status Update Extension Contract
+# PATCH /api/jobs/{id}/status (extended)
+
+endpoint: /api/jobs/{id}/status
+method: PATCH
+auth: workflow token (Authorization: Bearer)
+
+# Extension to existing endpoint
+new_field:
+  workflowRunId:
+    type: integer (BigInt)
+    required: false
+    description: GitHub Actions workflow run ID, sent with RUNNING status update
+    behavior:
+      - Only accepted when status is "RUNNING"
+      - Only set if job.workflowRunId is currently null (first RUNNING callback wins)
+      - Ignored for other status values
+      - Stored as BigInt in database
+
+request_body_extension:
+  status: "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED"
+  workflowRunId: integer (optional, only with RUNNING)
+  qualityScore: integer (optional, only with COMPLETED)
+  qualityScoreDetails: string (optional, only with COMPLETED)
+
+example_request:
+  status: "RUNNING"
+  workflowRunId: 12345678901
+
+example_response:
+  id: 456
+  status: "RUNNING"
+  completedAt: null
