@@ -232,6 +232,166 @@ Update project details including clarification policy.
 - `403`: User is not project owner (members cannot update project settings)
 - `404`: Project not found
 
+### POST /api/projects/import
+
+Import a GitHub repository as a new ai-board project.
+
+**Authentication**: Required (session)
+**Authorization**: User must have `repo` scope on their GitHub token and admin access on the target repository
+
+**Request Body**:
+```json
+{
+  "githubOwner": "octocat",
+  "githubRepo": "my-app",
+  "name": "My App",
+  "description": "My awesome app"
+}
+```
+
+| Field | Required | Default |
+|-------|----------|---------|
+| `githubOwner` | Yes | — |
+| `githubRepo` | Yes | — |
+| `name` | No | Repository name |
+| `description` | No | Repository description or `""` |
+
+**Response** (201 Created — config present):
+```json
+{
+  "project": {
+    "id": 5,
+    "name": "My App",
+    "key": "MYA",
+    "githubOwner": "octocat",
+    "githubRepo": "my-app",
+    "hasConfig": true
+  },
+  "redirectTo": "/projects/5"
+}
+```
+
+**Response** (201 Created — no config):
+```json
+{
+  "project": {
+    "id": 5,
+    "name": "My App",
+    "key": "MYA",
+    "githubOwner": "octocat",
+    "githubRepo": "my-app",
+    "hasConfig": false
+  },
+  "redirectTo": "/projects/5/setup"
+}
+```
+
+**Errors**:
+- `400`: `{ "error": "Validation error", "code": "VALIDATION_ERROR" }`
+- `401`: Not authenticated
+- `403` (quota): `{ "error": "Project limit reached...", "code": "PLAN_LIMIT" }`
+- `403` (no admin): `{ "error": "You need admin access to this repository to import it.", "code": "INSUFFICIENT_PERMISSIONS" }`
+- `403` (no scope): `{ "error": "GitHub token lacks repo scope", "code": "MISSING_SCOPE" }`
+- `409` (duplicate repo): `{ "error": "This repository is already linked to project \"Existing Project\" (KEY-123).", "code": "DUPLICATE_REPO", "existingProjectId": 3 }`
+- `409` (other conflict): `{ "error": "A conflict occurred while creating the project. Please try again.", "code": "CONFLICT" }`
+- `502`: GitHub API error
+
+## GitHub Endpoints
+
+### GET /api/github/auth-status
+
+Check whether the current user has a GitHub account with `repo` scope.
+
+**Authentication**: Required (session)
+
+**Response** (200 OK):
+```json
+{
+  "hasGitHubAccount": true,
+  "hasRepoScope": true
+}
+```
+
+`hasRepoScope` is `false` when the token exists but was issued before `repo` scope was requested. `hasGitHubAccount` is `false` when the user has no linked GitHub account.
+
+**Errors**:
+- `401`: Not authenticated
+
+### GET /api/github/repos
+
+List GitHub repositories accessible to the authenticated user.
+
+**Authentication**: Required (session)
+
+**Query Parameters**:
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `page` | number | 1 | Page number |
+| `per_page` | number | 30 | Items per page (max 100) |
+| `sort` | string | `"pushed"` | Sort: `pushed`, `updated`, `full_name` |
+| `type` | string | `"all"` | Filter: `all`, `owner`, `member` |
+| `org` | string | — | Filter by organization login |
+| `q` | string | — | Search query (uses GitHub Search API) |
+
+**Response** (200 OK):
+```json
+{
+  "repos": [
+    {
+      "id": 123456,
+      "name": "my-app",
+      "fullName": "octocat/my-app",
+      "owner": "octocat",
+      "ownerAvatar": "https://avatars.githubusercontent.com/u/1?v=4",
+      "description": "My awesome app",
+      "isPrivate": false,
+      "pushedAt": "2026-03-28T12:00:00Z",
+      "hasAdminAccess": true,
+      "isAlreadyImported": false,
+      "existingProjectId": null
+    }
+  ],
+  "totalCount": 42,
+  "page": 1,
+  "perPage": 30,
+  "hasNextPage": true
+}
+```
+
+**Fields**:
+- `hasAdminAccess`: `true` when the user has admin permission on the repository
+- `isAlreadyImported`: `true` when the repository is already linked to an ai-board project
+- `existingProjectId`: project ID when `isAlreadyImported` is `true`, otherwise `null`
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: `{ "error": "GitHub token lacks repo scope", "code": "MISSING_SCOPE" }`
+- `429`: `{ "error": "GitHub rate limit exceeded. Resets at {time}.", "code": "RATE_LIMITED", "resetAt": "..." }`
+- `502`: GitHub API error
+
+### GET /api/github/orgs
+
+List organizations the authenticated user belongs to.
+
+**Authentication**: Required (session)
+
+**Response** (200 OK):
+```json
+{
+  "orgs": [
+    {
+      "login": "my-org",
+      "avatarUrl": "https://avatars.githubusercontent.com/u/2?v=4"
+    }
+  ]
+}
+```
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: `{ "error": "GitHub token lacks repo scope", "code": "MISSING_SCOPE" }`
+
 ## Ticket Endpoints
 
 ### GET /api/projects/:projectId/tickets

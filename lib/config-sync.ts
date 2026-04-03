@@ -43,7 +43,8 @@ export function isConfigStale(project: Pick<Project, 'configSyncedAt'>): boolean
  * Uses optimistic locking via updateMany with configSyncedAt condition.
  */
 export async function syncProjectConfig(
-  project: Pick<Project, 'id' | 'githubOwner' | 'githubRepo' | 'configSyncedAt'>
+  project: Pick<Project, 'id' | 'githubOwner' | 'githubRepo' | 'configSyncedAt'>,
+  accessToken?: string
 ): Promise<ConfigSyncOutcome> {
   // In test mode, return mock data
   if (process.env.TEST_MODE === 'true') {
@@ -63,7 +64,7 @@ export async function syncProjectConfig(
     return { success: true, config: mockConfig, syncedAt: now, warnings: [] };
   }
 
-  const token = process.env.GITHUB_TOKEN;
+  const token = accessToken ?? process.env.GITHUB_TOKEN;
   if (!token) {
     return { success: false, code: 'GITHUB_ERROR', error: 'GITHUB_TOKEN not configured' };
   }
