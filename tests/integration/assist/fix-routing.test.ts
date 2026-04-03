@@ -20,6 +20,7 @@ const COMMAND_PATH = resolve(
 );
 
 const workflowContent = readFileSync(WORKFLOW_PATH, 'utf-8');
+const commandContent = readFileSync(COMMAND_PATH, 'utf-8');
 
 describe('/fix workflow routing', () => {
   it('should have /fix command routing block in workflow', () => {
@@ -84,30 +85,26 @@ describe('/fix command file integration', () => {
   });
 
   it('should have valid frontmatter', () => {
-    const content = readFileSync(COMMAND_PATH, 'utf-8');
-    expect(content).toMatch(/^---\n/);
-    expect(content).toContain('command:');
-    expect(content).toContain('category:');
-    expect(content).toContain('purpose:');
+    expect(commandContent).toMatch(/^---\n/);
+    expect(commandContent).toContain('command:');
+    expect(commandContent).toContain('category:');
+    expect(commandContent).toContain('purpose:');
   });
 
   it('should reference $ARGUMENTS for input', () => {
-    const content = readFileSync(COMMAND_PATH, 'utf-8');
-    expect(content).toContain('$ARGUMENTS');
+    expect(commandContent).toContain('$ARGUMENTS');
   });
 
   it('should reference required environment variables', () => {
-    const content = readFileSync(COMMAND_PATH, 'utf-8');
-    expect(content).toContain('TICKET_ID');
-    expect(content).toContain('BRANCH');
-    expect(content).toContain('STAGE');
-    expect(content).toContain('USER_ID');
-    expect(content).toContain('USER');
-    expect(content).toContain('PROJECT_ID');
+    expect(commandContent).toContain('TICKET_ID');
+    expect(commandContent).toContain('BRANCH');
+    expect(commandContent).toContain('STAGE');
+    expect(commandContent).toContain('USER_ID');
+    expect(commandContent).toContain('USER');
+    expect(commandContent).toContain('PROJECT_ID');
   });
 
   it('should specify result file path format', () => {
-    const content = readFileSync(COMMAND_PATH, 'utf-8');
-    expect(content).toContain('specs/$BRANCH/.ai-board-result.md');
+    expect(commandContent).toContain('specs/$BRANCH/.ai-board-result.md');
   });
 });
