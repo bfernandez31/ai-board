@@ -381,6 +381,27 @@ describe('validateConfig — version validation (US5)', () => {
   });
 });
 
+// ─── Service Credentials in Schema (Security) ─────────────────────
+
+describe('validateConfig — service credentials accepted but must be stripped downstream', () => {
+  it('services with username/password pass schema validation', () => {
+    const result = validateConfig(
+      validConfig({
+        services: [
+          { type: 'postgres', version: '14', database: 'mydb', username: 'admin', password: 'secret' },
+        ],
+      }),
+    );
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    // Schema accepts these fields (they exist in YAML configs)
+    expect(result.data.services[0].username).toBe('admin');
+    expect(result.data.services[0].password).toBe('secret');
+  });
+});
+
 // ─── Unknown Fields (FR-014) ────────────────────────────────────────
 
 describe('validateConfig — unknown fields produce warnings', () => {
@@ -401,5 +422,14 @@ describe('validateConfig — unknown fields produce warnings', () => {
 
     expect(result.success).toBe(true);
     expect(result.warnings.some((w) => w.path === 'project.color')).toBe(true);
+  });
+
+  it('unknown top-level fields are stripped from validated data', () => {
+    const result = validateConfig({ ...validConfig(), custom_field: 'hello' });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data).not.toHaveProperty('custom_field');
   });
 });

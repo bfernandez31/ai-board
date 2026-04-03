@@ -114,7 +114,7 @@ export const ProjectConfigSchema = z
     env: z.record(z.string(), z.string()).default({}),
     agent: AgentSectionSchema.default({ cli: 'claude-code' }),
   })
-  .passthrough();
+  .strip();
 
 // ─── Inferred Types ─────────────────────────────────────────────────
 
