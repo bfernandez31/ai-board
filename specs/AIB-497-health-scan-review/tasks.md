@@ -91,15 +91,15 @@
 
 ### Integration Tests (US1 + US2)
 
-- [ ] T015 [P] Create integration tests in `tests/integration/health/` for Review Quality API endpoints: POST scan creation with `REVIEW_QUALITY`, PATCH status with report updates score and HealthScore, GET health returns `reviewQuality` module, GET scans filters by `REVIEW_QUALITY`, GET trends includes `REVIEW_QUALITY` data points, concurrent scan prevention (409)
+- [x] T015 [P] Create integration tests in `tests/integration/health/` for Review Quality API endpoints: POST scan creation with `REVIEW_QUALITY`, PATCH status with report updates score and HealthScore, GET health returns `reviewQuality` module, GET scans filters by `REVIEW_QUALITY`, GET trends includes `REVIEW_QUALITY` data points, concurrent scan prevention (409)
 
 ### Unit Tests (US2 scoring + tickets)
 
-- [ ] T016 [P] Create unit tests in `tests/unit/` for: `calculateGlobalScore` includes `reviewQualityScore` (6-module average), `groupIssuesIntoTickets` for `REVIEW_QUALITY` creates correct ticket format, coverage score formula (100 base, penalties, floor at 0), Zod schema validates/rejects `REVIEW_QUALITY` reports
+- [x] T016 [P] Create unit tests in `tests/unit/` for: `calculateGlobalScore` includes `reviewQualityScore` (6-module average), `groupIssuesIntoTickets` for `REVIEW_QUALITY` creates correct ticket format, coverage score formula (100 base, penalties, floor at 0), Zod schema validates/rejects `REVIEW_QUALITY` reports
 
 ### Component Tests (US3 dashboard)
 
-- [ ] T017 [P] Create component tests in `tests/unit/components/` for: Review Quality card renders score/findings/trend, card shows "Never scanned" with no data, detail drawer shows findings grouped by category, drawer shows cumulative patterns section, scan trigger button works for `REVIEW_QUALITY`
+- [x] T017 [P] Create component tests in `tests/unit/components/` for: Review Quality card renders score/findings/trend, card shows "Never scanned" with no data, detail drawer shows findings grouped by category, drawer shows cumulative patterns section, scan trigger button works for `REVIEW_QUALITY`
 
 ---
 

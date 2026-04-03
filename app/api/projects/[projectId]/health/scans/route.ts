@@ -6,11 +6,11 @@ import { prisma } from '@/lib/db/client';
 import { dispatchHealthScanWorkflow } from '@/lib/health/scan-dispatch';
 
 const triggerScanSchema = z.object({
-  scanType: z.enum(['SECURITY', 'COMPLIANCE', 'TESTS', 'SPEC_SYNC']),
+  scanType: z.enum(['SECURITY', 'COMPLIANCE', 'TESTS', 'SPEC_SYNC', 'REVIEW_QUALITY']),
 });
 
 const scanHistorySchema = z.object({
-  type: z.enum(['SECURITY', 'COMPLIANCE', 'TESTS', 'SPEC_SYNC']).optional(),
+  type: z.enum(['SECURITY', 'COMPLIANCE', 'TESTS', 'SPEC_SYNC', 'REVIEW_QUALITY']).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   cursor: z.coerce.number().int().positive().optional(),
   includeReport: z.enum(['true', 'false']).optional(),
