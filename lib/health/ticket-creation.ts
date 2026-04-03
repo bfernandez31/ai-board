@@ -5,6 +5,7 @@ import type {
   ComplianceReport,
   TestsReport,
   SpecSyncReport,
+  ReviewQualityReport,
   ScanReport,
 } from '@/lib/health/types';
 
@@ -35,6 +36,8 @@ export function groupIssuesIntoTickets(
       return groupTestIssues(report as TestsReport);
     case 'SPEC_SYNC':
       return groupSpecSyncIssues(report as SpecSyncReport);
+    case 'REVIEW_QUALITY':
+      return groupReviewQualityIssues(report as ReviewQualityReport);
     default:
       return [];
   }
@@ -132,4 +135,27 @@ function groupSpecSyncIssues(report: SpecSyncReport): RemediationTicket[] {
       stage: 'INBOX',
       workflowType: 'QUICK',
     }));
+}
+
+function groupReviewQualityIssues(report: ReviewQualityReport): RemediationTicket[] {
+  const patterns = report.cumulativeAnalysis?.recurringPatterns ?? [];
+  return patterns
+    .filter((p) => !p.alreadyTicketed)
+    .map((p) => {
+      const displayCategory = p.category.replace(/-/g, ' ');
+      const prList = p.prNumbers.map((n) => `#${n}`).join(', ');
+      const desc = truncateDescription(
+        `Health scan detected a recurring review gap pattern.\n\n` +
+        `**Category**: ${p.category}\n` +
+        `**Occurrences**: ${p.occurrences} PRs (${prList})\n\n` +
+        `**Suggested Rule**:\n> ${p.suggestedRule}\n\n` +
+        `**Target**: ${p.target}`
+      );
+      return {
+        title: `[Review Gap] Add rule for ${displayCategory}`,
+        description: desc,
+        stage: 'INBOX' as const,
+        workflowType: 'QUICK' as const,
+      };
+    });
 }

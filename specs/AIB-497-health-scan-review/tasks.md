@@ -47,9 +47,9 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Create Claude command file `.claude-plugin/commands/ai-board.health-review-quality.md` implementing: PR discovery (FULL workflow tickets in SHIP stage), comment collection from 3 sources (ai-board custom `### Code review`, Codex bot, Copilot bot), cross-referencing with 5-line tolerance, filtering (doc/spec staleness, TS/ESLint-catchable), classification into 9 categories, severity assessment, coverage scoring (`max(0, 100 - high*15 - medium*8 - low*3)`), cumulative 30-day analysis, recurring pattern detection (3+ PRs), ticket dedup check, and JSON output to `/tmp/health-scan-result.json`
-- [ ] T009 [P] [US1] Add `REVIEW_QUALITY` case in scan type routing in `.github/workflows/health-scan.yml` — map to `ai-board.health-review-quality` command (alongside SECURITY/COMPLIANCE/SPEC_SYNC for LLM agent execution)
-- [ ] T010 [P] [US1] Add `REVIEW_QUALITY` to the scan type loop in `.github/workflows/nightly-health.yml`
+- [x] T008 [US1] Create Claude command file `.claude-plugin/commands/ai-board.health-review-quality.md` implementing: PR discovery (FULL workflow tickets in SHIP stage), comment collection from 3 sources (ai-board custom `### Code review`, Codex bot, Copilot bot), cross-referencing with 5-line tolerance, filtering (doc/spec staleness, TS/ESLint-catchable), classification into 9 categories, severity assessment, coverage scoring (`max(0, 100 - high*15 - medium*8 - low*3)`), cumulative 30-day analysis, recurring pattern detection (3+ PRs), ticket dedup check, and JSON output to `/tmp/health-scan-result.json`
+- [x] T009 [P] [US1] Add `REVIEW_QUALITY` case in scan type routing in `.github/workflows/health-scan.yml` — map to `ai-board.health-review-quality` command (alongside SECURITY/COMPLIANCE/SPEC_SYNC for LLM agent execution)
+- [x] T010 [P] [US1] Add `REVIEW_QUALITY` to the scan type loop in `.github/workflows/nightly-health.yml`
 
 **Checkpoint**: Nightly scan execution fully functional — scan can be triggered, runs review quality analysis, and stores results
 
@@ -63,7 +63,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Add `REVIEW_QUALITY` case to `groupIssuesIntoTickets()` in `lib/health/ticket-creation.ts`; implement `groupReviewQualityIssues()` — one ticket per recurring pattern (not per finding), title `[Review Gap] Add rule for {category}`, description with PR numbers/evidence/suggested rule/target, skip patterns where `alreadyTicketed === true`
+- [x] T011 [US2] Add `REVIEW_QUALITY` case to `groupIssuesIntoTickets()` in `lib/health/ticket-creation.ts`; implement `groupReviewQualityIssues()` — one ticket per recurring pattern (not per finding), title `[Review Gap] Add rule for {category}`, description with PR numbers/evidence/suggested rule/target, skip patterns where `alreadyTicketed === true`
 
 **Checkpoint**: Pattern detection and ticket creation operational — recurring review gaps automatically generate improvement tickets
 

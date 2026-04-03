@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Trigger all health scans for project ${{ env.PROJECT_ID }}
         run: |
-          SCAN_TYPES="SECURITY COMPLIANCE TESTS SPEC_SYNC"
+          SCAN_TYPES="SECURITY COMPLIANCE TESTS SPEC_SYNC REVIEW_QUALITY"
           FAILED=0
 
           for TYPE in $SCAN_TYPES; do
