@@ -107,6 +107,19 @@ Users can monitor job progress:
 - Polling stops automatically when job reaches terminal state
 - Board automatically refreshes when job completes and ticket stage changes
 
+### Job Cancellation
+
+Users can cancel a PENDING or RUNNING workflow job directly from the board:
+
+- A cancel button (×) appears on the ticket card when hovering over the job status indicator for PENDING or RUNNING jobs
+- Clicking the button opens a confirmation dialog naming the workflow being cancelled
+- On confirmation, the system calls `POST /api/jobs/:id/cancel`, which:
+  1. Marks the job as CANCELLED in the database
+  2. Cancels the associated GitHub Actions workflow run if the run ID is known
+- After cancellation, ticket and job cache is invalidated and the board refreshes
+- Cancellation is only available for workflow jobs (not deploy or AI-BOARD comment jobs)
+- The cancel button is not shown for jobs in terminal states (COMPLETED, FAILED, CANCELLED)
+
 ### Job Telemetry Metrics
 
 Each workflow job captures agent usage metrics via OTLP telemetry. Both Claude Code and Codex agents send telemetry to the same endpoint using their respective event name prefixes (`claude_code.*` and `codex.*`).

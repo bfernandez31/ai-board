@@ -1255,7 +1255,11 @@ Transition ticket to target stage with workflow dispatch.
 - **SPECIFY → PLAN**: Validates specify job completed, creates job, dispatches workflow (plan command)
 - **PLAN → BUILD**: Validates plan job completed, creates job, dispatches workflow (implement command)
 - **BUILD → VERIFY**: Creates job, dispatches verify workflow with workflowType (FULL runs tests, QUICK skips to PR)
-- **BUILD → INBOX**: Rollback if job failed/cancelled, resets workflowType to FULL
+- **BUILD → INBOX**: Rollback (QUICK only) if job failed/cancelled, resets workflowType to FULL
+- **SPECIFY → INBOX**: Rollback if specify job failed/cancelled (any workflow type)
+- **PLAN → SPECIFY**: Rollback if plan job failed/cancelled (any workflow type)
+- **BUILD → PLAN**: Rollback (FULL only) if implement job failed/cancelled
+- **VERIFY → BUILD**: Rollback if verify job failed/cancelled (any workflow type)
 - **VERIFY → PLAN**: Rollback for FULL workflows only:
   1. Validates latest job is COMPLETED, FAILED, or CANCELLED
   2. Clears previewUrl on ticket
@@ -2795,6 +2799,7 @@ Update job status (workflow-only endpoint).
 
 **Validation**:
 - `status`: Required, enum (RUNNING|COMPLETED|FAILED|CANCELLED)
+- `workflowRunId`: Optional, number or string; accepted only when `status = "RUNNING"`; stored as BigInt; used later to cancel the GitHub Actions workflow run via the UI
 - `qualityScore`: Optional, integer 0-100 inclusive; only accepted when `status = "COMPLETED"` for verify jobs; ignored otherwise
 - `qualityScoreDetails`: Optional, JSON string with dimension sub-scores; stored alongside `qualityScore`
 - State machine transitions enforced
@@ -2822,6 +2827,39 @@ Valid transitions:
 
 Invalid transitions return 400 error
 ```
+
+### POST /api/jobs/:id/cancel
+
+Cancel a running or pending job from the UI.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `id` (number, required): Job ID
+
+**Request Body**: None
+
+**Behavior**:
+1. Fetches the job and verifies user has access to the parent project
+2. Rejects if status is not PENDING or RUNNING (400)
+3. If `workflowRunId` is set, calls the GitHub Actions API to cancel the workflow run (failure is logged but does not block the response)
+4. Sets job status to CANCELLED and records `completedAt`
+
+**Response** (200 OK):
+```json
+{
+  "id": 123,
+  "status": "CANCELLED",
+  "completedAt": "2025-01-15T10:35:00.000Z"
+}
+```
+
+**Errors**:
+- `400`: Job is not in a cancellable state
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Job not found
 
 ## Telemetry Endpoints
 

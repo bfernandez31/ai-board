@@ -14,11 +14,17 @@ stateDiagram-v2
     INBOX --> BUILD: Quick impl ⚡
 
     SPECIFY --> PLAN: Generate plan
+    SPECIFY --> INBOX: Rollback 🔄
+
     PLAN --> BUILD: Implement
+    PLAN --> SPECIFY: Rollback 🔄
 
     BUILD --> VERIFY: Test & PR
+    BUILD --> PLAN: Rollback 🔄 (FULL only)
+    BUILD --> INBOX: Rollback 🔄 (QUICK only)
 
-    VERIFY --> PLAN: Rollback 🔄
+    VERIFY --> PLAN: Rollback 🔄 (FULL only)
+    VERIFY --> BUILD: Rollback 🔄
     VERIFY --> SHIP: Merge PR
     VERIFY --> CLOSED: Close without ship
 
@@ -112,7 +118,11 @@ Users move tickets between stages using drag-and-drop:
 
 **Special Behaviors**:
 - INBOX tickets can drop on SPECIFY (normal workflow, blue highlighting) or BUILD (quick implementation, green highlighting)
+- SPECIFY tickets with a failed/cancelled job can drop on INBOX (rollback)
+- PLAN tickets with a failed/cancelled job can drop on SPECIFY (rollback)
+- BUILD tickets with a failed/cancelled job can drop on INBOX (QUICK workflows) or PLAN (FULL workflows, rollback)
 - VERIFY tickets (workflowType=FULL, job COMPLETED/FAILED/CANCELLED) can drop on PLAN (rollback, amber/red dashed highlighting)
+- VERIFY tickets with a failed/cancelled job can drop on BUILD (rollback)
 - All other transitions show next sequential stage as valid drop zone
 
 ### Stage Transition Behavior
@@ -128,6 +138,14 @@ Users move tickets between stages using drag-and-drop:
 - Confirmation modal appears before transition
 - Modal explains trade-offs (speed vs. documentation)
 - User must confirm or cancel the operation
+
+**Simple Rollbacks (stage rewind)**:
+The following rollbacks move the ticket to the previous stage without any git operations:
+- SPECIFY → INBOX: Available when specify job is FAILED or CANCELLED (any workflow type)
+- PLAN → SPECIFY: Available when plan job is FAILED or CANCELLED (any workflow type)
+- BUILD → INBOX: Available for QUICK workflow when implement job is FAILED or CANCELLED
+- BUILD → PLAN: Available for FULL workflow when implement job is FAILED or CANCELLED
+- VERIFY → BUILD: Available when verify job is FAILED or CANCELLED (any workflow type)
 
 **VERIFY to PLAN Rollback**:
 - When dropping VERIFY ticket on PLAN column (FULL workflows only)
