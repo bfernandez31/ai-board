@@ -22,6 +22,7 @@ const MODULE_GRID: { type: HealthModuleType; key: keyof NonNullable<ReturnType<t
   { type: 'TESTS', key: 'tests' },
   { type: 'QUALITY_GATE', key: 'qualityGate' },
   { type: 'SPEC_SYNC', key: 'specSync' },
+  { type: 'REVIEW_QUALITY', key: 'reviewQuality' },
 ];
 
 const ACTIVE_SCAN_SET = new Set<string>(ACTIVE_SCAN_TYPES);

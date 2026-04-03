@@ -6,6 +6,7 @@ import {
   TestTubeDiagonal,
   FileCheck,
   Award,
+  ClipboardCheck,
   Loader2,
   AlertTriangle,
   Play,
@@ -27,6 +28,7 @@ const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
   TESTS: TestTubeDiagonal,
   SPEC_SYNC: FileCheck,
   QUALITY_GATE: Award,
+  REVIEW_QUALITY: ClipboardCheck,
 };
 
 type CardState = 'never_scanned' | 'scanning' | 'completed' | 'failed';

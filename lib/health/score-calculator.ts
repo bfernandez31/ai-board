@@ -6,6 +6,7 @@ interface ModuleScores {
   testsScore: number | null;
   specSyncScore: number | null;
   qualityGate: number | null;
+  reviewQualityScore: number | null;
 }
 
 /**
@@ -22,6 +23,7 @@ export function calculateGlobalScore(modules: ModuleScores): number | null {
     modules.testsScore,
     modules.specSyncScore,
     modules.qualityGate,
+    modules.reviewQualityScore,
   ].filter((s): s is number => s !== null);
 
   if (scores.length === 0) return null;

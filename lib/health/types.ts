@@ -9,6 +9,7 @@ export const ACTIVE_SCAN_TYPES: HealthScanType[] = [
   'COMPLIANCE',
   'TESTS',
   'SPEC_SYNC',
+  'REVIEW_QUALITY',
 ];
 
 /** All 5 module types for display */
@@ -18,6 +19,7 @@ export const ALL_MODULE_TYPES: HealthModuleType[] = [
   'TESTS',
   'QUALITY_GATE',
   'SPEC_SYNC',
+  'REVIEW_QUALITY',
 ];
 
 /** Module display metadata */
@@ -33,6 +35,7 @@ export const MODULE_METADATA: Record<HealthModuleType, ModuleMetadata> = {
   TESTS: { key: 'TESTS', label: 'Tests', passive: false },
   SPEC_SYNC: { key: 'SPEC_SYNC', label: 'Spec Sync', passive: false },
   QUALITY_GATE: { key: 'QUALITY_GATE', label: 'Quality Gate', passive: true },
+  REVIEW_QUALITY: { key: 'REVIEW_QUALITY', label: 'Review Quality', passive: false },
 };
 
 /** Threshold distribution for Quality Gate */
@@ -78,6 +81,7 @@ export interface HealthResponse {
     tests: HealthModuleStatus;
     specSync: HealthModuleStatus;
     qualityGate: HealthModuleStatus;
+    reviewQuality: HealthModuleStatus;
   };
   lastFullScanDate: string | null;
   activeScans: ActiveScanInfo[];
@@ -201,10 +205,70 @@ export interface QualityGateReport {
   recentTickets: QualityTicket[];
 }
 
+/** Review gap category for classification */
+export type ReviewGapCategory =
+  | 'state-lifecycle'
+  | 'edge-case-validation'
+  | 'test-quality'
+  | 'error-handling'
+  | 'ui-ux-state'
+  | 'ci-workflow'
+  | 'api-contract'
+  | 'security'
+  | 'performance';
+
+/** A single review gap — an issue caught by Codex or Copilot but not by ai-board custom */
+export interface MissedFinding {
+  id: string;
+  prNumber: number;
+  source: 'codex' | 'copilot';
+  category: ReviewGapCategory;
+  severity: 'high' | 'medium' | 'low';
+  description: string;
+  file: string;
+  line: number;
+  sourceCommentUrl?: string | undefined;
+}
+
+/** Aggregated insight from cumulative analysis */
+export interface RecurringPattern {
+  category: ReviewGapCategory;
+  occurrences: number;
+  prNumbers: number[];
+  suggestedRule: string;
+  target: 'constitution' | 'review-prompt';
+  alreadyTicketed: boolean;
+  ticketKey?: string | undefined;
+}
+
+/** Review Quality: missed findings and cumulative patterns */
+export interface ReviewQualityReport {
+  type: 'REVIEW_QUALITY';
+  summary: {
+    prsAnalyzed: number;
+    totalMissedFindings: number;
+    coverageScore: number;
+    scoreBreakdown: {
+      base: 100;
+      highPenalty: number;
+      mediumPenalty: number;
+      lowPenalty: number;
+    };
+  };
+  missedFindings: MissedFinding[];
+  cumulativeAnalysis: {
+    windowDays: 30;
+    reportsAnalyzed: number;
+    recurringPatterns: RecurringPattern[];
+  };
+  generatedTickets: GeneratedTicket[];
+}
+
 /** Discriminated union of all report types */
 export type ScanReport =
   | SecurityReport
   | ComplianceReport
   | TestsReport
   | SpecSyncReport
-  | QualityGateReport;
+  | QualityGateReport
+  | ReviewQualityReport;

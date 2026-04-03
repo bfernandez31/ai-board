@@ -18,9 +18,9 @@
 
 **Purpose**: Prisma migration and TypeScript type definitions — foundational data layer for all stories
 
-- [ ] T001 Add `REVIEW_QUALITY` to `HealthScanType` enum and add `reviewQualityScore Int?` + `lastReviewQualityScan DateTime?` to `HealthScore` model in `prisma/schema.prisma`, then run `bunx prisma migrate dev --name add-review-quality-scan-type && bunx prisma generate`
-- [ ] T002 Add `MissedFinding`, `ReviewGapCategory`, `RecurringPattern`, and `ReviewQualityReport` interfaces to `lib/health/types.ts`; add `REVIEW_QUALITY` to `ACTIVE_SCAN_TYPES`, `ALL_MODULE_TYPES`, and `MODULE_METADATA`; add `ReviewQualityReport` to `ScanReport` union; add `reviewQuality` to `HealthResponse.modules`
-- [ ] T003 Add `missedFindingSchema`, `recurringPatternSchema`, and `reviewQualityReportSchema` Zod schemas to `lib/health/report-schemas.ts`; add `reviewQualityReportSchema` to the `scanReportSchema` discriminated union
+- [x] T001 Add `REVIEW_QUALITY` to `HealthScanType` enum and add `reviewQualityScore Int?` + `lastReviewQualityScan DateTime?` to `HealthScore` model in `prisma/schema.prisma`, then run `bunx prisma migrate dev --name add-review-quality-scan-type && bunx prisma generate`
+- [x] T002 Add `MissedFinding`, `ReviewGapCategory`, `RecurringPattern`, and `ReviewQualityReport` interfaces to `lib/health/types.ts`; add `REVIEW_QUALITY` to `ACTIVE_SCAN_TYPES`, `ALL_MODULE_TYPES`, and `MODULE_METADATA`; add `ReviewQualityReport` to `ScanReport` union; add `reviewQuality` to `HealthResponse.modules`
+- [x] T003 Add `missedFindingSchema`, `recurringPatternSchema`, and `reviewQualityReportSchema` Zod schemas to `lib/health/report-schemas.ts`; add `reviewQualityReportSchema` to the `scanReportSchema` discriminated union
 
 ---
 
@@ -30,10 +30,10 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 [P] Add `REVIEW_QUALITY: 'health-review-quality'` to `SCAN_COMMAND_MAP` in `lib/health/scan-commands.ts`
-- [ ] T005 [P] Add `reviewQualityScore` to `ModuleScores` interface and include it in the `scores` array for global score calculation in `lib/health/score-calculator.ts`
-- [ ] T006 [P] Add `reviewQuality` module to the health API response in `app/api/projects/[projectId]/health/route.ts` — read `reviewQualityScore` and `lastReviewQualityScan` from `HealthScore`, query active scans for `REVIEW_QUALITY` type, and generate summary text
-- [ ] T007 [P] Update score update logic in `app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts` to handle `REVIEW_QUALITY` scan completion — update `HealthScore.reviewQualityScore` and `HealthScore.lastReviewQualityScan`, recalculate `globalScore`
+- [x] T004 [P] Add `REVIEW_QUALITY: 'health-review-quality'` to `SCAN_COMMAND_MAP` in `lib/health/scan-commands.ts`
+- [x] T005 [P] Add `reviewQualityScore` to `ModuleScores` interface and include it in the `scores` array for global score calculation in `lib/health/score-calculator.ts`
+- [x] T006 [P] Add `reviewQuality` module to the health API response in `app/api/projects/[projectId]/health/route.ts` — read `reviewQualityScore` and `lastReviewQualityScan` from `HealthScore`, query active scans for `REVIEW_QUALITY` type, and generate summary text
+- [x] T007 [P] Update score update logic in `app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts` to handle `REVIEW_QUALITY` scan completion — update `HealthScore.reviewQualityScore` and `HealthScore.lastReviewQualityScan`, recalculate `globalScore`
 
 **Checkpoint**: Backend infrastructure ready — user story implementation can now begin in parallel
 
@@ -77,9 +77,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T012 [P] [US3] Add `{ type: 'REVIEW_QUALITY', key: 'reviewQuality' }` to `MODULE_GRID` in `components/health/health-dashboard.tsx`
-- [ ] T013 [P] [US3] Add `ClipboardCheck` icon import from lucide-react and `REVIEW_QUALITY` case in icon selection in `components/health/health-module-card.tsx`
-- [ ] T014 [US3] Add `REVIEW_QUALITY` case to drawer issue rendering in `components/health/drawer/drawer-issues.tsx` — render missed findings grouped by category with severity badges, add "Cumulative Patterns" section showing recurring patterns with occurrence count, suggested rule in blockquote, target (constitution vs review prompt), and links to generated tickets; handle "Never scanned" state per `drawer-states.tsx` pattern
+- [x] T012 [P] [US3] Add `{ type: 'REVIEW_QUALITY', key: 'reviewQuality' }` to `MODULE_GRID` in `components/health/health-dashboard.tsx`
+- [x] T013 [P] [US3] Add `ClipboardCheck` icon import from lucide-react and `REVIEW_QUALITY` case in icon selection in `components/health/health-module-card.tsx`
+- [x] T014 [US3] Add `REVIEW_QUALITY` case to drawer issue rendering in `components/health/drawer/drawer-issues.tsx` — render missed findings grouped by category with severity badges, add "Cumulative Patterns" section showing recurring patterns with occurrence count, suggested rule in blockquote, target (constitution vs review prompt), and links to generated tickets; handle "Never scanned" state per `drawer-states.tsx` pattern
 
 **Checkpoint**: Dashboard fully integrated — Review Quality card and detail drawer visible and functional
 

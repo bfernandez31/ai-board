@@ -124,6 +124,7 @@ export async function GET(
     const complianceScan = scanStatusMap.get('COMPLIANCE');
     const testsScan = scanStatusMap.get('TESTS');
     const specSyncScan = scanStatusMap.get('SPEC_SYNC');
+    const reviewQualityScan = scanStatusMap.get('REVIEW_QUALITY');
 
     const modules: HealthResponse['modules'] = {
       security: buildModuleStatus(
@@ -163,6 +164,12 @@ export async function GET(
         trendDelta: qualityGateData.trendDelta,
         distribution: qualityGateData.distribution,
       },
+      reviewQuality: buildModuleStatus(
+        healthScore?.reviewQualityScore ?? null,
+        healthScore?.lastReviewQualityScan ?? null,
+        activeScanMap.get('REVIEW_QUALITY') ?? reviewQualityScan?.status ?? null,
+        reviewQualityScan?.issuesFound ?? null,
+      ),
     };
 
     // Calculate global score
@@ -172,6 +179,7 @@ export async function GET(
       testsScore: healthScore?.testsScore ?? null,
       specSyncScore: healthScore?.specSyncScore ?? null,
       qualityGate: qualityGateScore,
+      reviewQualityScore: healthScore?.reviewQualityScore ?? null,
     });
 
     // Find last full scan date (most recent completed scan of any type)
@@ -180,6 +188,7 @@ export async function GET(
       healthScore?.lastComplianceScan,
       healthScore?.lastTestsScan,
       healthScore?.lastSpecSyncScan,
+      healthScore?.lastReviewQualityScan,
     ].filter((d): d is Date => d != null);
 
     const lastFullScanDate = lastScanDates.length > 0
