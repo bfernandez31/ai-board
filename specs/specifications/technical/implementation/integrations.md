@@ -225,6 +225,13 @@ Before dispatching any workflow, the system maps the project's stored config to 
 - If the refresh fails (GitHub API error, invalid YAML), dispatch is blocked and an error is returned
 - If the config is fresh (within 1 hour), it is used without re-fetching
 
+**Credential Stripping**:
+Before the config is persisted to the database, `lib/config-sync.ts` strips all sensitive fields:
+- The top-level `env` section (environment variable values) is removed entirely
+- Service-level `username` and `password` fields are removed from every entry in `services[]`
+
+Only non-sensitive structural data (`type`, `version`, `database`) is stored. Raw credentials are never written to the database.
+
 **Affected Dispatch Paths**:
 - `lib/workflows/transition.ts` — stage transition dispatches
 - `lib/health/scan-dispatch.ts` — health scan dispatches

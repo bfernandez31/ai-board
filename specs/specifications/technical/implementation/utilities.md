@@ -1342,7 +1342,7 @@ Defines and validates the versioned YAML schema for `.ai-board/config.yml` — t
 
 **Function**: `validateConfig(raw: unknown): ValidationResult`
 
-Validates a parsed YAML object against the v1 config schema. Collects all errors in a single pass and emits warnings for unknown fields (forward compatibility).
+Validates a parsed YAML object against the v1 config schema. Collects all errors in a single pass, strips unknown fields from the validated output, and emits warnings for any unknown fields encountered.
 
 ```typescript
 type ValidationResult =
@@ -1351,9 +1351,9 @@ type ValidationResult =
 ```
 
 **Behavior**:
-- Returns `success: true` with a fully typed `ProjectConfig` (defaults populated) on valid input
+- Returns `success: true` with a fully typed `ProjectConfig` (defaults populated, unknown fields stripped) on valid input
 - Returns `success: false` with all `ValidationError` objects collected at once on invalid input
-- Always returns `warnings` for unknown top-level or section-level keys
+- Always returns `warnings` for unknown top-level or section-level keys — unknown fields are stripped from the output but surfaced as warnings
 
 **Types**:
 
