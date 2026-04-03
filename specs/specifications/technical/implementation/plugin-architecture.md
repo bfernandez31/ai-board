@@ -15,7 +15,7 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 ```
 .claude-plugin/
 ├── plugin.json                          # Plugin metadata (name, version, description)
-├── commands/                            # 21 slash commands (ai-board.*.md)
+├── commands/                            # 22 slash commands (ai-board.*.md)
 │   ├── ai-board.specify.md              # Generate feature specification
 │   ├── ai-board.clarify.md              # Ask clarification questions on spec
 │   ├── ai-board.plan.md                 # Generate implementation plan
@@ -31,6 +31,7 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 │   ├── ai-board.sync-specifications.md  # Sync branch specs → global docs
 │   ├── ai-board.assist.md               # AI assistant for @ai-board mentions
 │   ├── ai-board.compare.md              # Compare tickets (telemetry/specs)
+│   ├── ai-board.fix.md                  # Fix PR review findings (all sources)
 │   ├── ai-board.analyze.md              # Cross-artifact consistency analysis
 │   ├── ai-board.constitution.md         # Create/update project constitution
 │   ├── ai-board.health-security.md      # Health scan: OWASP/security analysis
@@ -92,6 +93,7 @@ Each command is designed to run at a specific workflow stage. Commands are invok
 | `ai-board.iterate` | VERIFY | `iterate.yml` | Fix minor issues during review |
 | `ai-board.assist` | Any (SPECIFY/PLAN/BUILD/VERIFY) | `ai-board-assist.yml` | AI assistance via @ai-board mentions |
 | `ai-board.compare` | Any | `ai-board-assist.yml` | Compare tickets (telemetry + specs) |
+| `ai-board.fix` | VERIFY | `ai-board-assist.yml` | Fix PR review findings from all sources (ai-board, Codex, Copilot) via `/fix` command |
 | `ai-board.analyze` | Local only | — | Cross-artifact consistency analysis |
 | `ai-board.constitution` | Local only | — | Create/update project constitution |
 | `ai-board.health-security` | Health scan | `health-scan.yml` | OWASP Top 10 security analysis; outputs `SecurityReport` JSON |

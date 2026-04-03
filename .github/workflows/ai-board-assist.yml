@@ -379,6 +379,27 @@ jobs:
                 fi
               fi
             fi
+          elif echo "$COMMENT" | grep -qE "/fix\b"; then
+            echo "📌 Detected /fix command - routing to ai-board.fix"
+
+            # Stage validation: /fix is only available in VERIFY stage where PRs exist
+            if [ "$STAGE" != "verify" ]; then
+              echo "❌ /fix command is only available in VERIFY stage"
+              OUTPUT=$(printf '@[%s:%s] fix **Fix Failed**\n\nThe /fix command is only available in VERIFY stage where PRs exist.\n\nCurrent stage: %s' "$USER_ID" "$USER" "$STAGE")
+            else
+              # Look up PR number from branch
+              PR_NUMBER=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+              if [ -z "$PR_NUMBER" ]; then
+                echo "❌ No PR found for branch: $BRANCH"
+                OUTPUT=$(printf '@[%s:%s] fix **Fix Failed**\n\nNo PR found for branch `%s`.\n\nPlease ensure a PR has been created before requesting a fix.' "$USER_ID" "$USER" "$BRANCH")
+              else
+                echo "✅ Found PR #$PR_NUMBER for branch $BRANCH"
+                # Extract arguments after /fix (finding numbers or "all")
+                ARGS=$(echo "$COMMENT" | sed -n 's/.*\/fix[[:space:]]*\(.*\)/\1/p')
+                OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.fix" "$PR_NUMBER $ARGS" || true)
+              fi
+            fi
           else
             echo "📌 Using ai-board.assist for general request"
             OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.assist" "\"$COMMENT\"" || true)
