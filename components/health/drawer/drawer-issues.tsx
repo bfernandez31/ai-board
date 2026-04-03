@@ -9,7 +9,6 @@ import type {
   SpecSyncReport,
   QualityGateReport,
   ReviewQualityReport,
-  MissedFinding,
   ReportIssue,
 } from '@/lib/health/types';
 
@@ -244,7 +243,7 @@ function ReviewQualityIssues({ report }: { report: ReviewQualityReport }) {
     return <EmptyIssues label="No review gaps detected" />;
   }
 
-  const findingsByCategory = groupMissedFindings(report.missedFindings);
+  const findingsByCategory = groupBy(report.missedFindings, (f) => f.category);
   const patterns = report.cumulativeAnalysis.recurringPatterns;
 
   return (
@@ -310,15 +309,6 @@ function ReviewQualityIssues({ report }: { report: ReviewQualityReport }) {
   );
 }
 
-function groupMissedFindings(findings: MissedFinding[]): Record<string, MissedFinding[]> {
-  const groups: Record<string, MissedFinding[]> = {};
-  for (const finding of findings) {
-    if (!groups[finding.category]) groups[finding.category] = [];
-    groups[finding.category]!.push(finding);
-  }
-  return groups;
-}
-
 // --- Shared helpers ---
 
 function IssueList({ issues }: { issues: ReportIssue[] }) {
@@ -356,12 +346,12 @@ function EmptyIssues({ label }: { label: string }) {
   );
 }
 
-function groupBy(issues: ReportIssue[], keyFn: (issue: ReportIssue) => string): Record<string, ReportIssue[]> {
-  const groups: Record<string, ReportIssue[]> = {};
-  for (const issue of issues) {
-    const key = keyFn(issue);
+function groupBy<T>(items: T[], keyFn: (item: T) => string): Record<string, T[]> {
+  const groups: Record<string, T[]> = {};
+  for (const item of items) {
+    const key = keyFn(item);
     if (!groups[key]) groups[key] = [];
-    groups[key].push(issue);
+    groups[key].push(item);
   }
   return groups;
 }

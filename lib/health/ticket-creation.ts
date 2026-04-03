@@ -154,8 +154,8 @@ function groupReviewQualityIssues(report: ReviewQualityReport): RemediationTicke
       return {
         title: `[Review Gap] Add rule for ${displayCategory}`,
         description: desc,
-        stage: 'INBOX' as const,
-        workflowType: 'QUICK' as const,
+        stage: 'INBOX',
+        workflowType: 'QUICK',
       };
     });
 }

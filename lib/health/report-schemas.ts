@@ -65,21 +65,23 @@ const qualityGateReportSchema = z.object({
   recentTickets: z.array(qualityTicketSchema),
 });
 
+const reviewGapCategoryEnum = z.enum([
+  'state-lifecycle',
+  'edge-case-validation',
+  'test-quality',
+  'error-handling',
+  'ui-ux-state',
+  'ci-workflow',
+  'api-contract',
+  'security',
+  'performance',
+]);
+
 const missedFindingSchema = z.object({
   id: z.string(),
   prNumber: z.number().int().positive(),
   source: z.enum(['codex', 'copilot']),
-  category: z.enum([
-    'state-lifecycle',
-    'edge-case-validation',
-    'test-quality',
-    'error-handling',
-    'ui-ux-state',
-    'ci-workflow',
-    'api-contract',
-    'security',
-    'performance',
-  ]),
+  category: reviewGapCategoryEnum,
   severity: z.enum(['high', 'medium', 'low']),
   description: z.string(),
   file: z.string(),
@@ -88,17 +90,7 @@ const missedFindingSchema = z.object({
 });
 
 const recurringPatternSchema = z.object({
-  category: z.enum([
-    'state-lifecycle',
-    'edge-case-validation',
-    'test-quality',
-    'error-handling',
-    'ui-ux-state',
-    'ci-workflow',
-    'api-contract',
-    'security',
-    'performance',
-  ]),
+  category: reviewGapCategoryEnum,
   occurrences: z.number().int().min(3),
   prNumbers: z.array(z.number().int().positive()),
   suggestedRule: z.string(),
