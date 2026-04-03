@@ -107,9 +107,9 @@ const reviewQualityReportSchema = z.object({
     coverageScore: z.number().int().min(0).max(100),
     scoreBreakdown: z.object({
       base: z.literal(100),
-      highPenalty: z.number(),
-      mediumPenalty: z.number(),
-      lowPenalty: z.number(),
+      highPenalty: z.number().int().max(0),
+      mediumPenalty: z.number().int().max(0),
+      lowPenalty: z.number().int().max(0),
     }),
   }),
   missedFindings: z.array(missedFindingSchema),

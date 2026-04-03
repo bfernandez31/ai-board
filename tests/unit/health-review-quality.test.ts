@@ -11,8 +11,8 @@ const validReport: ReviewQualityReport = {
   summary: {
     prsAnalyzed: 3,
     totalMissedFindings: 2,
-    coverageScore: 72,
-    scoreBreakdown: { base: 100, highPenalty: -15, mediumPenalty: -8, lowPenalty: -6 },
+    coverageScore: 77,
+    scoreBreakdown: { base: 100, highPenalty: -15, mediumPenalty: -8, lowPenalty: 0 },
   },
   missedFindings: [
     {
@@ -183,7 +183,7 @@ describe('parseScanReport for REVIEW_QUALITY', () => {
     expect(result).not.toBeNull();
     expect(result!.type).toBe('REVIEW_QUALITY');
     const parsed = result as ReviewQualityReport;
-    expect(parsed.summary.coverageScore).toBe(72);
+    expect(parsed.summary.coverageScore).toBe(77);
     expect(parsed.missedFindings).toHaveLength(2);
     expect(parsed.cumulativeAnalysis.recurringPatterns).toHaveLength(2);
   });
@@ -231,15 +231,10 @@ describe('parseScanReport for REVIEW_QUALITY', () => {
 describe('coverage score formula: max(0, 100 - high*15 - medium*8 - low*3)', () => {
   it('validates that the fixture score matches the formula', () => {
     // validReport: 1 high (-15), 1 medium (-8), 0 low -> 100 - 15 - 8 = 77
-    // The fixture uses coverageScore: 72 with breakdown -15, -8, -6 (implies 2 low findings externally)
-    // Verify the breakdown adds up: 100 + (-15) + (-8) + (-6) = 71
-    // The schema only validates 0-100 range; the actual calculation is done by the scanner
     const { base, highPenalty, mediumPenalty, lowPenalty } = validReport.summary.scoreBreakdown;
     const computed = base + highPenalty + mediumPenalty + lowPenalty;
-    expect(computed).toBe(71);
-    // coverageScore is the clamped value from the scanner (may differ slightly due to rounding)
-    expect(validReport.summary.coverageScore).toBeGreaterThanOrEqual(0);
-    expect(validReport.summary.coverageScore).toBeLessThanOrEqual(100);
+    expect(computed).toBe(77);
+    expect(validReport.summary.coverageScore).toBe(computed);
   });
 
   it('schema rejects coverageScore outside 0-100 range', () => {

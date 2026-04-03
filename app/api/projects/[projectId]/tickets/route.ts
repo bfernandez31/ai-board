@@ -29,7 +29,12 @@ export async function GET(
     }
 
     const projectId = parseInt(projectIdString, 10);
-    await verifyProjectAccess(projectId, request);
+
+    // Support workflow token auth (for health scan commands) alongside session auth
+    const workflowAuth = validateWorkflowAuth(request);
+    if (!workflowAuth.isValid) {
+      await verifyProjectAccess(projectId, request);
+    }
 
     const ticketsByStage = await getTicketsByStage(projectId);
     return NextResponse.json(ticketsByStage, { status: 200 });

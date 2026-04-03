@@ -12,7 +12,7 @@ export const ACTIVE_SCAN_TYPES: HealthScanType[] = [
   'REVIEW_QUALITY',
 ];
 
-/** All 5 module types for display */
+/** All 6 module types for display */
 export const ALL_MODULE_TYPES: HealthModuleType[] = [
   'SECURITY',
   'COMPLIANCE',

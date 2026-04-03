@@ -6,12 +6,12 @@ import { DrawerIssues } from '@/components/health/drawer/drawer-issues';
 import type { HealthModuleStatus, ReviewQualityReport } from '@/lib/health/types';
 
 const completedModule: HealthModuleStatus = {
-  score: 72,
+  score: 77,
   label: 'Fair',
   lastScanDate: '2026-04-02T10:00:00Z',
   scanStatus: 'COMPLETED',
-  issuesFound: 8,
-  summary: '8 missed findings across 3 PRs',
+  issuesFound: 2,
+  summary: '2 missed findings across 3 PRs',
 };
 
 const neverScannedModule: HealthModuleStatus = {
@@ -28,8 +28,8 @@ const reviewReport: ReviewQualityReport = {
   summary: {
     prsAnalyzed: 3,
     totalMissedFindings: 2,
-    coverageScore: 72,
-    scoreBreakdown: { base: 100, highPenalty: -15, mediumPenalty: -8, lowPenalty: -6 },
+    coverageScore: 77,
+    scoreBreakdown: { base: 100, highPenalty: -15, mediumPenalty: -8, lowPenalty: 0 },
   },
   missedFindings: [
     {
@@ -77,8 +77,8 @@ describe('Health Review Quality', () => {
         <HealthModuleCard moduleType="REVIEW_QUALITY" module={completedModule} />
       );
       expect(screen.getByText('Review Quality')).toBeInTheDocument();
-      expect(screen.getByText('72')).toBeInTheDocument();
-      expect(screen.getByText('8 missed findings across 3 PRs')).toBeInTheDocument();
+      expect(screen.getByText('77')).toBeInTheDocument();
+      expect(screen.getByText('2 missed findings across 3 PRs')).toBeInTheDocument();
     });
 
     it('shows "Never scanned" state with null score', () => {
