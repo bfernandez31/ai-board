@@ -73,6 +73,12 @@ export function DeleteAccountDialog({
   const emailMatches =
     emailInput.toLowerCase() === userEmail.toLowerCase();
 
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen && deleteMutation.isPending) return;
+    if (!nextOpen) setEmailInput('');
+    onOpenChange(nextOpen);
+  }
+
   function handleCancel() {
     setEmailInput('');
     onOpenChange(false);
@@ -84,7 +90,7 @@ export function DeleteAccountDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}

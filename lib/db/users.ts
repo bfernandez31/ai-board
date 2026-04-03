@@ -280,7 +280,10 @@ export async function deleteUserAccount(userId: string): Promise<void> {
   }
 
   // Cancel Stripe subscription before deleting account
-  if (user.subscription?.stripeSubscriptionId) {
+  if (
+    user.subscription?.stripeSubscriptionId &&
+    (user.subscription.status === "ACTIVE" || user.subscription.status === "TRIALING")
+  ) {
     try {
       await stripe.subscriptions.cancel(user.subscription.stripeSubscriptionId)
     } catch (error) {

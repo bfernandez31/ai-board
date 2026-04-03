@@ -3340,7 +3340,7 @@ Fetches counts of the authenticated user's data for the delete-account confirmat
 
 | Status | Body | Condition |
 |--------|------|-----------|
-| `401` | `{ "error": "Authentication required" }` | No valid session |
+| `401` | `{ "error": "Unauthorized" }` | No valid session |
 
 ---
 
@@ -3367,7 +3367,7 @@ Permanently deletes the authenticated user's account and all associated data.
 
 | Status | Body | Condition |
 |--------|------|-----------|
-| `401` | `{ "error": "Authentication required" }` | No valid session |
+| `401` | `{ "error": "Unauthorized" }` | No valid session |
 | `500` | `{ "error": "Failed to delete account" }` | Server-side failure during deletion |
 
 ---
