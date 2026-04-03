@@ -69,19 +69,19 @@
 
 ### Tests for User Story 2
 
-- [ ] T014 [P] [US2] Add integration tests for extended rollback transitions in `tests/integration/tickets/rollback-transitions.test.ts` — SPECIFY→INBOX with FAILED job (branch deleted), PLAN→SPECIFY with FAILED job (no git action), BUILD→PLAN with FAILED job (rollback-reset dispatched), VERIFY→BUILD with FAILED job (stage updated), each with RUNNING job (rejected 400), each with wrong workflow type (rejected 400)
-- [ ] T015 [P] [US2] Add unit tests for `getValidRollbackTargets()` in `tests/unit/stage-transitions.test.ts` — correct targets for each stage/workflowType/jobStatus combination, empty array for non-terminal statuses, empty array for stages with no rollback
-- [ ] T016 [P] [US2] Add component test for rollback target highlighting in `tests/unit/components/stage-column.test.tsx` — valid targets highlighted, invalid targets greyed out during drag
+- [x] T014 [P] [US2] Add integration tests for extended rollback transitions in `tests/integration/tickets/rollback-transitions.test.ts` — SPECIFY→INBOX with FAILED job (branch deleted), PLAN→SPECIFY with FAILED job (no git action), BUILD→PLAN with FAILED job (rollback-reset dispatched), VERIFY→BUILD with FAILED job (stage updated), each with RUNNING job (rejected 400), each with wrong workflow type (rejected 400)
+- [x] T015 [P] [US2] Add unit tests for `getValidRollbackTargets()` in `tests/unit/stage-transitions.test.ts` — correct targets for each stage/workflowType/jobStatus combination, empty array for non-terminal statuses, empty array for stages with no rollback
+- [x] T016 [P] [US2] Add component test for rollback target highlighting in `tests/unit/components/stage-column.test.tsx` — valid targets highlighted, invalid targets greyed out during drag
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Extend transition route handler in `app/api/projects/[projectId]/tickets/[id]/transition/route.ts` — add cases for SPECIFY→INBOX (delete branch, reset ticket), PLAN→SPECIFY (stage change only), BUILD→PLAN (create rollback-reset job, dispatch workflow), VERIFY→BUILD (stage change only)
-- [ ] T018 [US2] Extend board drag handler in `components/board/board.tsx` — on `handleDragStart` compute valid rollback targets via `getValidRollbackTargets()`, store in state, pass to StageColumn, on `handleDragEnd` detect rollback transitions and show confirmation modal
-- [ ] T019 [US2] Add stage column visual feedback in `components/board/stage-column.tsx` — when dragging ticket with failed/cancelled job: highlight valid rollback targets with stage color border, grey overlay with reduced opacity for invalid targets
-- [ ] T020 [US2] Add rollback confirmation modals in `components/board/board.tsx` — SPECIFY→INBOX: "Revenir a Inbox ? La branche sera supprimee.", PLAN→SPECIFY: "Revenir a Specify ? Le plan partiel sera ecrase au prochain lancement.", BUILD→PLAN: "Revenir a Plan ? Le code sera reinitialise (backup cree).", VERIFY→BUILD: "Revenir a Build ? Le code actuel sera conserve, verify sera relance."
-- [ ] T021 [US2] Block drag for active jobs in `components/board/board.tsx` — extend `draggedTicketHasJob` logic to block rollback drag when last job is RUNNING or PENDING (per FR-013)
-- [ ] T022 [US2] Extend rollback-reset workflow in `.github/workflows/rollback-reset.yml` — accept new `stage` input, create backup tag `backup/{ticketKey}/{stage}-{jobId}` and push to origin before `git reset --hard`
-- [ ] T023 [US2] Add backup tag cleanup to verify workflow in `.github/workflows/verify.yml` — at start of run, list and delete all `backup/{ticketKey}/*` tags from origin (handle no-tags case gracefully)
+- [x] T017 [US2] Extend transition route handler in `app/api/projects/[projectId]/tickets/[id]/transition/route.ts` — add cases for SPECIFY→INBOX (delete branch, reset ticket), PLAN→SPECIFY (stage change only), BUILD→PLAN (create rollback-reset job, dispatch workflow), VERIFY→BUILD (stage change only)
+- [x] T018 [US2] Extend board drag handler in `components/board/board.tsx` — on `handleDragStart` compute valid rollback targets via `getValidRollbackTargets()`, store in state, pass to StageColumn, on `handleDragEnd` detect rollback transitions and show confirmation modal
+- [x] T019 [US2] Add stage column visual feedback in `components/board/stage-column.tsx` — when dragging ticket with failed/cancelled job: highlight valid rollback targets with stage color border, grey overlay with reduced opacity for invalid targets
+- [x] T020 [US2] Add rollback confirmation modals in `components/board/board.tsx` — SPECIFY→INBOX: "Revenir a Inbox ? La branche sera supprimee.", PLAN→SPECIFY: "Revenir a Specify ? Le plan partiel sera ecrase au prochain lancement.", BUILD→PLAN: "Revenir a Plan ? Le code sera reinitialise (backup cree).", VERIFY→BUILD: "Revenir a Build ? Le code actuel sera conserve, verify sera relance."
+- [x] T021 [US2] Block drag for active jobs in `components/board/board.tsx` — extend `draggedTicketHasJob` logic to block rollback drag when last job is RUNNING or PENDING (per FR-013)
+- [x] T022 [US2] Extend rollback-reset workflow in `.github/workflows/rollback-reset.yml` — accept new `stage` input, create backup tag `backup/{ticketKey}/{stage}-{jobId}` and push to origin before `git reset --hard`
+- [x] T023 [US2] Add backup tag cleanup to verify workflow in `.github/workflows/verify.yml` — at start of run, list and delete all `backup/{ticketKey}/*` tags from origin (handle no-tags case gracefully)
 
 **Checkpoint**: Users can drag-and-drop failed/cancelled tickets to valid rollback stages. Backup tags are created/cleaned automatically.
 

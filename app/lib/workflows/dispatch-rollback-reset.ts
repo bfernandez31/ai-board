@@ -10,6 +10,7 @@ export interface RollbackResetWorkflowInputs {
   branch: string;
   githubOwner: string;
   githubRepo: string;
+  stage?: string;
 }
 
 export interface RollbackResetDispatchResult {
@@ -74,6 +75,7 @@ export async function dispatchRollbackResetWorkflow(
         branch: inputs.branch,
         job_id: job.id.toString(),
         githubRepository: `${inputs.githubOwner}/${inputs.githubRepo}`,
+        stage: inputs.stage || 'verify',
       },
     });
 

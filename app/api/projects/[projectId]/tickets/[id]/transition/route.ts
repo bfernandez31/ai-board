@@ -4,7 +4,14 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
-import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
+import {
+  canRollbackToInbox,
+  canRollbackToPlan,
+  canRollbackSpecifyToInbox,
+  canRollbackPlanToSpecify,
+  canRollbackBuildToPlan,
+  canRollbackVerifyToBuild,
+} from '@/app/lib/workflows/rollback-validator';
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
@@ -89,6 +96,10 @@ export async function POST(
 
     const isRollbackToInboxAttempt = ticket.stage === 'BUILD' && targetStage === 'INBOX';
     const isRollbackToPlanAttempt = ticket.stage === 'VERIFY' && targetStage === 'PLAN';
+    const isSpecifyToInbox = ticket.stage === 'SPECIFY' && targetStage === 'INBOX';
+    const isPlanToSpecify = ticket.stage === 'PLAN' && targetStage === 'SPECIFY';
+    const isBuildToPlan = ticket.stage === 'BUILD' && targetStage === 'PLAN';
+    const isVerifyToBuild = ticket.stage === 'VERIFY' && targetStage === 'BUILD';
 
     if (isRollbackToInboxAttempt) {
       const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
@@ -199,6 +210,175 @@ export async function POST(
         previewUrl: updatedTicket.previewUrl,
         updatedAt: updatedTicket.updatedAt.toISOString(),
         resetJobId,
+      });
+    }
+
+    // SPECIFY → INBOX: Delete branch (if exists), reset ticket to INBOX
+    if (isSpecifyToInbox) {
+      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
+      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
+
+      const validation = canRollbackSpecifyToInbox(
+        ticket.stage, targetStage as Stage, ticket.workflowType, mostRecentJob
+      );
+      if (!validation.allowed) {
+        return NextResponse.json({ error: validation.reason }, { status: 400 });
+      }
+
+      // Delete branch via GitHub if exists
+      if (ticket.branch) {
+        try {
+          const ticketWithProject = await prisma.ticket.findUnique({
+            where: { id: ticket.id }, include: { project: true },
+          });
+          if (ticketWithProject) {
+            const { deleteBranchAndPRs } = await import('@/lib/github/delete-branch-and-prs');
+            const { Octokit } = await import('@octokit/rest');
+            const githubToken = process.env.GITHUB_TOKEN;
+            if (githubToken) {
+              const octokit = new Octokit({ auth: githubToken });
+              await deleteBranchAndPRs(
+                octokit,
+                ticketWithProject.project.githubOwner,
+                ticketWithProject.project.githubRepo,
+                ticket.branch
+              );
+            }
+          }
+        } catch (branchError) {
+          console.error('[Transition] Failed to delete branch for SPECIFY→INBOX:', branchError);
+        }
+      }
+
+      const updatedTicket = await prisma.$transaction(async (tx) => {
+        const updated = await tx.ticket.update({
+          where: { id: ticket.id },
+          data: { stage: 'INBOX', branch: null, workflowType: 'FULL', version: 1 },
+        });
+        if (mostRecentJob) {
+          await tx.job.delete({ where: { id: mostRecentJob.id } });
+        }
+        return updated;
+      });
+
+      return NextResponse.json({
+        id: updatedTicket.id, stage: updatedTicket.stage,
+        workflowType: updatedTicket.workflowType, branch: updatedTicket.branch,
+        version: updatedTicket.version, updatedAt: updatedTicket.updatedAt.toISOString(),
+      });
+    }
+
+    // PLAN → SPECIFY: Stage change only, no git action
+    if (isPlanToSpecify) {
+      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
+      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
+
+      const validation = canRollbackPlanToSpecify(
+        ticket.stage, targetStage as Stage, ticket.workflowType, mostRecentJob
+      );
+      if (!validation.allowed) {
+        return NextResponse.json({ error: validation.reason }, { status: 400 });
+      }
+
+      const updatedTicket = await prisma.$transaction(async (tx) => {
+        const updated = await tx.ticket.update({
+          where: { id: ticket.id },
+          data: { stage: 'SPECIFY', version: { increment: 1 } },
+        });
+        if (mostRecentJob) {
+          await tx.job.delete({ where: { id: mostRecentJob.id } });
+        }
+        return updated;
+      });
+
+      return NextResponse.json({
+        id: updatedTicket.id, stage: updatedTicket.stage,
+        version: updatedTicket.version, updatedAt: updatedTicket.updatedAt.toISOString(),
+      });
+    }
+
+    // BUILD → PLAN: Backup tag + git reset via rollback-reset workflow
+    if (isBuildToPlan) {
+      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
+      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
+
+      const validation = canRollbackBuildToPlan(
+        ticket.stage, targetStage as Stage, ticket.workflowType, mostRecentJob
+      );
+      if (!validation.allowed) {
+        return NextResponse.json({ error: validation.reason }, { status: 400 });
+      }
+
+      const ticketWithProject = await prisma.ticket.findUnique({
+        where: { id: ticket.id }, include: { project: true },
+      });
+      if (!ticketWithProject) {
+        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
+      }
+
+      const updatedTicket = await prisma.$transaction(async (tx) => {
+        const updated = await tx.ticket.update({
+          where: { id: ticket.id },
+          data: { stage: 'PLAN', previewUrl: null, version: { increment: 1 } },
+        });
+        if (mostRecentJob) {
+          await tx.job.delete({ where: { id: mostRecentJob.id } });
+        }
+        return updated;
+      });
+
+      let resetJobId: number | undefined;
+      if (updatedTicket.branch) {
+        try {
+          const dispatchResult = await dispatchRollbackResetWorkflow({
+            ticketId: updatedTicket.id,
+            ticketKey: ticket.ticketKey,
+            projectId: ticket.projectId,
+            branch: updatedTicket.branch,
+            githubOwner: ticketWithProject.project.githubOwner,
+            githubRepo: ticketWithProject.project.githubRepo,
+            stage: 'build',
+          });
+          resetJobId = dispatchResult.jobId;
+        } catch (dispatchError) {
+          console.error('[Transition] Failed to dispatch rollback-reset for BUILD→PLAN:', dispatchError);
+        }
+      }
+
+      return NextResponse.json({
+        id: updatedTicket.id, stage: updatedTicket.stage,
+        workflowType: updatedTicket.workflowType, branch: updatedTicket.branch,
+        version: updatedTicket.version, previewUrl: updatedTicket.previewUrl,
+        updatedAt: updatedTicket.updatedAt.toISOString(), resetJobId,
+      });
+    }
+
+    // VERIFY → BUILD: Stage change only, no git action
+    if (isVerifyToBuild) {
+      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
+      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
+
+      const validation = canRollbackVerifyToBuild(
+        ticket.stage, targetStage as Stage, ticket.workflowType, mostRecentJob
+      );
+      if (!validation.allowed) {
+        return NextResponse.json({ error: validation.reason }, { status: 400 });
+      }
+
+      const updatedTicket = await prisma.$transaction(async (tx) => {
+        const updated = await tx.ticket.update({
+          where: { id: ticket.id },
+          data: { stage: 'BUILD', version: { increment: 1 } },
+        });
+        if (mostRecentJob) {
+          await tx.job.delete({ where: { id: mostRecentJob.id } });
+        }
+        return updated;
+      });
+
+      return NextResponse.json({
+        id: updatedTicket.id, stage: updatedTicket.stage,
+        version: updatedTicket.version, updatedAt: updatedTicket.updatedAt.toISOString(),
       });
     }
 
