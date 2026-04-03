@@ -272,6 +272,79 @@ describe('Tickets CRUD', () => {
       expect(ticket).toHaveProperty('updatedAt');
     });
 
+    it('should filter by stage and return flat array', async () => {
+      // Create a ticket (lands in INBOX)
+      await ctx.api.post(`/api/projects/${ctx.projectId}/tickets`, {
+        title: '[e2e] Filter test ticket',
+        description: 'For stage filter test',
+      });
+
+      const response = await ctx.api.get<Array<{ id: number; stage: string }>>(
+        `/api/projects/${ctx.projectId}/tickets?stage=INBOX`
+      );
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.data)).toBe(true);
+      for (const ticket of response.data) {
+        expect(ticket.stage).toBe('INBOX');
+      }
+    });
+
+    it('should respect limit param', async () => {
+      // Create 3 tickets
+      for (let i = 0; i < 3; i++) {
+        await ctx.api.post(`/api/projects/${ctx.projectId}/tickets`, {
+          title: `[e2e] Limit test ${i}`,
+          description: `Ticket ${i} for limit test`,
+        });
+      }
+
+      const response = await ctx.api.get<Array<{ id: number }>>(
+        `/api/projects/${ctx.projectId}/tickets?stage=INBOX&limit=2`
+      );
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.data)).toBe(true);
+      expect(response.data.length).toBe(2);
+    });
+
+    it('should filter by updatedSince', async () => {
+      const beforeCreate = new Date().toISOString();
+
+      // Small delay to ensure timestamp separation
+      await new Promise((r) => setTimeout(r, 50));
+
+      await ctx.api.post(`/api/projects/${ctx.projectId}/tickets`, {
+        title: '[e2e] UpdatedSince test',
+        description: 'Created after the timestamp',
+      });
+
+      const response = await ctx.api.get<Array<{ id: number; title: string }>>(
+        `/api/projects/${ctx.projectId}/tickets?stage=INBOX&updatedSince=${beforeCreate}`
+      );
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.data)).toBe(true);
+      expect(response.data.length).toBeGreaterThanOrEqual(1);
+      expect(response.data.some((t) => t.title === '[e2e] UpdatedSince test')).toBe(true);
+    });
+
+    it('should return 400 for invalid limit', async () => {
+      const response = await ctx.api.get<{ error: string }>(
+        `/api/projects/${ctx.projectId}/tickets?stage=INBOX&limit=0`
+      );
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 400 for invalid updatedSince format', async () => {
+      const response = await ctx.api.get<{ error: string }>(
+        `/api/projects/${ctx.projectId}/tickets?stage=INBOX&updatedSince=not-a-date`
+      );
+
+      expect(response.status).toBe(400);
+    });
+
     it('should return empty arrays when project has no tickets', async () => {
       const response = await ctx.api.get<{
         INBOX: unknown[];
