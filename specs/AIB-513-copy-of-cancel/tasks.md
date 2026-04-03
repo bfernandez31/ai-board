@@ -18,8 +18,8 @@
 
 **Purpose**: Database schema change for workflowRunId field
 
-- [ ] T001 Add `workflowRunId BigInt?` field to Job model in `prisma/schema.prisma` and run migration
-- [ ] T002 Run `bunx prisma generate` to regenerate Prisma client after migration
+- [x] T001 Add `workflowRunId BigInt?` field to Job model in `prisma/schema.prisma` and run migration
+- [x] T002 Run `bunx prisma generate` to regenerate Prisma client after migration
 
 ---
 

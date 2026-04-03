@@ -51,6 +51,9 @@ model Job {
   model               String?  @db.VarChar(50) // Primary model used
   toolsUsed           String[] @default([]) // List of tools used (Edit, Write, Bash, etc.)
 
+  // GitHub Actions workflow run ID for cancellation
+  workflowRunId       BigInt?
+
   // Quality score (0-100) computed from code review agent dimension scores
   // Only populated for COMPLETED verify jobs of FULL workflow tickets
   qualityScore        Int?
