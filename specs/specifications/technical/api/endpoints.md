@@ -176,7 +176,7 @@ Fetch `.ai-board/config.yml` from the project's GitHub repository, validate it, 
 }
 ```
 
-Warnings are non-blocking (e.g., unknown fields): config is still stored but callers should surface the messages.
+Unknown fields cause a `400` validation error — the config is rejected and not stored. Warnings are reserved for other non-blocking notices; callers should surface any warning messages returned on success.
 
 **Errors**:
 - `400`: Invalid config YAML — body contains `{ "error": "Config validation failed", "code": "VALIDATION_ERROR", "details": [...] }`
