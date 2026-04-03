@@ -851,6 +851,42 @@ AI-BOARD Assistant is available in specific stages:
 - `@ai-board remove phase 5 from the plan`
 - `@ai-board the validation isn't working correctly`
 
+### Slash Commands
+
+Some `@ai-board` comments use structured slash commands for specific automated actions. These are routed by `ai-board-assist.yml` before the general-purpose assistant runs.
+
+| Command | Stage | Description |
+|---------|-------|-------------|
+| `@ai-board /review` | VERIFY only | Re-runs the automated code review on the open PR |
+| `@ai-board /compare` | Any | Compares two tickets by telemetry and spec data |
+| `@ai-board /fix [numbers\|all]` | VERIFY only | Applies fixes for PR review findings from all sources |
+
+**`/fix` Command**:
+
+The `/fix` command automatically addresses PR review findings from three sources: ai-board custom reviews (`### Code review` format), Codex bot inline comments (`chatgpt-codex-connector[bot]`), and GitHub Copilot inline comments.
+
+Invocation forms:
+- `@ai-board /fix` — fix all pertinent findings from all sources
+- `@ai-board /fix all` — identical to no arguments
+- `@ai-board /fix 1 3` — fix only ai-board findings #1 and #3
+
+**Behavior**:
+1. Parses review comments from all three sources
+2. Deduplicates across sources using priority order: ai-board custom > Codex > Copilot
+3. Filters Codex and Copilot findings for pertinence using project context (constitution + CLAUDE.md), rejecting documentation nitpicks, TypeScript/ESLint-caught issues, overengineering suggestions, and false positives
+4. Applies targeted code fixes for each pertinent finding
+5. Updates `specs/specifications/` files when a fix directly contradicts a documented contract (field names, error codes, response shapes)
+6. Runs type-check and lint after all fixes; resolves any introduced errors
+7. Pushes a single grouped commit: `fix(review): address N review findings`
+8. Posts a summary comment with counts: N findings fixed, M specs updated, K findings rejected (with individual reasons)
+
+**Error cases**:
+- No open PR → posts error comment indicating no PR was found
+- PR with no review comments → posts error suggesting the user run `/review` first
+- All findings rejected as non-actionable → no commit is made; summary reports all rejection reasons
+
+Only one `/fix` job runs per ticket at a time. Stage transitions are blocked while a fix job is active.
+
 ### VERIFY Stage Intelligence
 
 When mentioned in VERIFY stage, AI-BOARD quantifies the issue:
@@ -923,6 +959,7 @@ For minor issues in VERIFY, AI-BOARD triggers the iterate workflow:
 - `comment-verify`: VERIFY stage assistance
 - `comment-ship`: SHIP stage assistance (not implemented)
 - `iterate`: Automatic fixes during VERIFY
+- `fix`: PR review remediation via `/fix` command
 
 ### Response Format
 
