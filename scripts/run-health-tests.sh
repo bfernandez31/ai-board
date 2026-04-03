@@ -139,6 +139,7 @@ echo "════════════════════════�
 ALL_AUTO_FIXED="[]"
 ALL_NON_FIXABLE="[]"
 ITERATION=0
+PREV_FAILED=$TOTAL_FAILED
 
 while [ "$(has_errors)" = "true" ] && [ $ITERATION -lt $MAX_ITERATIONS ]; do
   ITERATION=$((ITERATION + 1))
@@ -171,7 +172,23 @@ while [ "$(has_errors)" = "true" ] && [ $ITERATION -lt $MAX_ITERATIONS ]; do
 
   NEW_SUMMARY=$(read_summary)
   NEW_FAILED=$(echo "$NEW_SUMMARY" | jq -r '.totalFailed')
-  echo "  After fix: $NEW_FAILED failures remaining"
+  echo "  After fix: $NEW_FAILED failures remaining (was $PREV_FAILED)"
+
+  # Degradation guard: if more failures than before, revert and stop
+  if [ "$NEW_FAILED" -gt "$PREV_FAILED" ]; then
+    echo ""
+    echo "  🚨 Degradation detected: $PREV_FAILED → $NEW_FAILED failures"
+    echo "  Reverting all changes from this iteration..."
+    git -C "$REPO_DIR" checkout .
+    # Remove any untracked files the agent may have created
+    git -C "$REPO_DIR" clean -fd --quiet
+    # Discard fixes claimed by this iteration since we reverted
+    ALL_AUTO_FIXED="[]"
+    echo "  ✅ Reverted. Stopping fix loop."
+    break
+  fi
+
+  PREV_FAILED=$NEW_FAILED
 done
 
 if [ "$(has_errors)" = "false" ]; then
