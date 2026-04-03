@@ -35,6 +35,10 @@ export const AI_BOARD_COMMANDS: AIBoardCommand[] = [
     name: '/review',
     description: 'Request code review for the current PR',
   },
+  {
+    name: '/fix',
+    description: 'Fix PR review findings from code review',
+  },
 ];
 
 /**

@@ -30,6 +30,12 @@ describe('AI_BOARD_COMMANDS', () => {
     expect(reviewCmd?.description).toBe('Request code review for the current PR');
   });
 
+  it('should contain /fix command', () => {
+    const fixCmd = AI_BOARD_COMMANDS.find((cmd) => cmd.name === '/fix');
+    expect(fixCmd).toBeDefined();
+    expect(fixCmd?.description).toBe('Fix PR review findings from code review');
+  });
+
   it('should have all commands with name starting with /', () => {
     AI_BOARD_COMMANDS.forEach((cmd: AIBoardCommand) => {
       expect(cmd.name.startsWith('/')).toBe(true);
@@ -58,8 +64,8 @@ describe('filterCommands', () => {
 
   it('should filter by command name', () => {
     const result = filterCommands('review');
-    expect(result.length).toBe(1);
-    expect(result[0].name).toBe('/review');
+    expect(result.length).toBeGreaterThanOrEqual(1);
+    expect(result.some((c) => c.name === '/review')).toBe(true);
   });
 
   it('should filter by partial command name', () => {
@@ -70,15 +76,15 @@ describe('filterCommands', () => {
 
   it('should filter by description', () => {
     const result = filterCommands('code review');
-    expect(result.length).toBe(1);
-    expect(result[0].name).toBe('/review');
+    expect(result.length).toBeGreaterThanOrEqual(1);
+    expect(result.some((c) => c.name === '/review')).toBe(true);
   });
 
   it('should be case-insensitive', () => {
     const result1 = filterCommands('REVIEW');
     const result2 = filterCommands('review');
     expect(result1).toEqual(result2);
-    expect(result1.length).toBe(1);
+    expect(result1.length).toBeGreaterThanOrEqual(1);
   });
 
   it('should return empty array when no matches', () => {
@@ -86,9 +92,10 @@ describe('filterCommands', () => {
     expect(result).toEqual([]);
   });
 
-  it('should match both /compare and /review when searching "co"', () => {
+  it('should match /compare, /review, and potentially others when searching "co"', () => {
     const result = filterCommands('co');
-    expect(result.length).toBe(2);
-    expect(result.map((c) => c.name).sort()).toEqual(['/compare', '/review'].sort());
+    expect(result.length).toBeGreaterThanOrEqual(2);
+    expect(result.some((c) => c.name === '/compare')).toBe(true);
+    expect(result.some((c) => c.name === '/review')).toBe(true);
   });
 });

@@ -16,8 +16,8 @@
 
 **Purpose**: Establish command skeleton and workflow integration points
 
-- [ ] T001 [P] Create /fix command file skeleton with frontmatter, env var documentation, and output rules in .claude-plugin/commands/ai-board.fix.md (reference pattern from .claude-plugin/commands/ai-board.assist.md and .claude-plugin/commands/ai-board.code-review.md)
-- [ ] T002 [P] Register /fix in autocomplete by adding entry `{ name: '/fix', description: 'Fix PR review findings from code review' }` to AI_BOARD_COMMANDS array in app/lib/data/ai-board-commands.ts
+- [x] T001 [P] Create /fix command file skeleton with frontmatter, env var documentation, and output rules in .claude-plugin/commands/ai-board.fix.md (reference pattern from .claude-plugin/commands/ai-board.assist.md and .claude-plugin/commands/ai-board.code-review.md)
+- [x] T002 [P] Register /fix in autocomplete by adding entry `{ name: '/fix', description: 'Fix PR review findings from code review' }` to AI_BOARD_COMMANDS array in app/lib/data/ai-board-commands.ts
 
 ---
 
@@ -27,8 +27,8 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Add /fix command routing elif block in .github/workflows/ai-board-assist.yml (after /review block, before else fallback): detect `/fix\b` in $COMMENT, validate VERIFY stage, lookup PR via `gh pr list --head "$BRANCH"`, extract args, invoke `run-agent.sh "CLAUDE" "ai-board.fix" "$PR_NUMBER $ARGS"`
-- [ ] T004 Add argument parsing section to .claude-plugin/commands/ai-board.fix.md: parse $ARGUMENTS to extract PR number (first arg) and optional finding numbers or "all" keyword; document three invocation forms (no args, specific numbers, "all")
+- [x] T003 Add /fix command routing elif block in .github/workflows/ai-board-assist.yml (after /review block, before else fallback): detect `/fix\b` in $COMMENT, validate VERIFY stage, lookup PR via `gh pr list --head "$BRANCH"`, extract args, invoke `run-agent.sh "CLAUDE" "ai-board.fix" "$PR_NUMBER $ARGS"`
+- [x] T004 Add argument parsing section to .claude-plugin/commands/ai-board.fix.md: parse $ARGUMENTS to extract PR number (first arg) and optional finding numbers or "all" keyword; document three invocation forms (no args, specific numbers, "all")
 
 **Checkpoint**: /fix command is routable and receives parsed arguments — story implementation can begin
 
@@ -42,15 +42,15 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Add review source fetching section to .claude-plugin/commands/ai-board.fix.md: fetch PR issue comments via `gh api repos/{owner}/{repo}/issues/{pr}/comments` for ai-board reviews (filter by `### Code review` header), and PR review comments via `gh api repos/{owner}/{repo}/pulls/{pr}/comments` for Codex (filter by `chatgpt-codex-connector[bot]`) and Copilot (filter by `Copilot` author)
-- [ ] T006 [US1] Add ai-board custom review parsing section to .claude-plugin/commands/ai-board.fix.md: parse numbered findings with regex `/^(\d+)\.\s+(.+)$/`, extract file paths and line ranges from GitHub permalink URLs `/blob\/[a-f0-9]+\/(.+)#L(\d+)(?:-L(\d+))?/`, map to ReviewFinding structure per data-model.md
-- [ ] T007 [US1] Add Codex and Copilot parsing section to .claude-plugin/commands/ai-board.fix.md: extract findings from inline review comments using `path`, `line`/`original_line` fields from API response; detect P1/P2 priority badges for Codex; map to ReviewFinding structure
-- [ ] T008 [US1] Add deduplication section to .claude-plugin/commands/ai-board.fix.md: deduplicate findings by (file_path, line_range_overlap) tuple with priority order ai-board > Codex > Copilot; when overlapping line ranges found, keep highest-priority source and mark lower-priority as rejected with reason "duplicate of #N"
-- [ ] T009 [US1] Add pertinence filtering section to .claude-plugin/commands/ai-board.fix.md: evaluate each Codex/Copilot finding against project context (constitution + CLAUDE.md); reject findings matching categories: documentation nitpicks, issues already caught by TypeScript/ESLint, overengineering suggestions, false positives; ai-board findings skip this filter (always pertinent); record rejection reasons per FindingResolution structure
-- [ ] T010 [US1] Add fix application section to .claude-plugin/commands/ai-board.fix.md: for each pertinent finding, apply minimal targeted code fix respecting project patterns; process findings sequentially; if a later fix conflicts with an already-applied fix, mark as "conflict with higher-priority fix" and skip
-- [ ] T011 [US1] Add post-fix validation section to .claude-plugin/commands/ai-board.fix.md: run `bun run type-check && bun run lint` after all fixes; if errors introduced, attempt to resolve them; if unresolvable, report failure and do not commit
-- [ ] T012 [US1] Add commit and push section to .claude-plugin/commands/ai-board.fix.md: create single commit with message `fix(review): address N review findings`, push to PR branch; skip commit if no fixes were applied
-- [ ] T013 [US1] Add result file and summary comment section to .claude-plugin/commands/ai-board.fix.md: write `specs/$BRANCH/.ai-board-result.md` with SUCCESS/ERROR status, files modified list, and summary; format summary comment as `@[$USER_ID:$USER] fix **Review Fixes Applied**` with counts (N fixed, M specs updated, K rejected) and per-finding detail; enforce <1500 char limit
+- [x] T005 [US1] Add review source fetching section to .claude-plugin/commands/ai-board.fix.md: fetch PR issue comments via `gh api repos/{owner}/{repo}/issues/{pr}/comments` for ai-board reviews (filter by `### Code review` header), and PR review comments via `gh api repos/{owner}/{repo}/pulls/{pr}/comments` for Codex (filter by `chatgpt-codex-connector[bot]`) and Copilot (filter by `Copilot` author)
+- [x] T006 [US1] Add ai-board custom review parsing section to .claude-plugin/commands/ai-board.fix.md: parse numbered findings with regex `/^(\d+)\.\s+(.+)$/`, extract file paths and line ranges from GitHub permalink URLs `/blob\/[a-f0-9]+\/(.+)#L(\d+)(?:-L(\d+))?/`, map to ReviewFinding structure per data-model.md
+- [x] T007 [US1] Add Codex and Copilot parsing section to .claude-plugin/commands/ai-board.fix.md: extract findings from inline review comments using `path`, `line`/`original_line` fields from API response; detect P1/P2 priority badges for Codex; map to ReviewFinding structure
+- [x] T008 [US1] Add deduplication section to .claude-plugin/commands/ai-board.fix.md: deduplicate findings by (file_path, line_range_overlap) tuple with priority order ai-board > Codex > Copilot; when overlapping line ranges found, keep highest-priority source and mark lower-priority as rejected with reason "duplicate of #N"
+- [x] T009 [US1] Add pertinence filtering section to .claude-plugin/commands/ai-board.fix.md: evaluate each Codex/Copilot finding against project context (constitution + CLAUDE.md); reject findings matching categories: documentation nitpicks, issues already caught by TypeScript/ESLint, overengineering suggestions, false positives; ai-board findings skip this filter (always pertinent); record rejection reasons per FindingResolution structure
+- [x] T010 [US1] Add fix application section to .claude-plugin/commands/ai-board.fix.md: for each pertinent finding, apply minimal targeted code fix respecting project patterns; process findings sequentially; if a later fix conflicts with an already-applied fix, mark as "conflict with higher-priority fix" and skip
+- [x] T011 [US1] Add post-fix validation section to .claude-plugin/commands/ai-board.fix.md: run `bun run type-check && bun run lint` after all fixes; if errors introduced, attempt to resolve them; if unresolvable, report failure and do not commit
+- [x] T012 [US1] Add commit and push section to .claude-plugin/commands/ai-board.fix.md: create single commit with message `fix(review): address N review findings`, push to PR branch; skip commit if no fixes were applied
+- [x] T013 [US1] Add result file and summary comment section to .claude-plugin/commands/ai-board.fix.md: write `specs/$BRANCH/.ai-board-result.md` with SUCCESS/ERROR status, files modified list, and summary; format summary comment as `@[$USER_ID:$USER] fix **Review Fixes Applied**` with counts (N fixed, M specs updated, K rejected) and per-finding detail; enforce <1500 char limit
 
 **Checkpoint**: At this point, `@ai-board /fix` (no args) should work end-to-end — parse all reviews, deduplicate, filter, fix, validate, commit, push, and report.
 
@@ -64,8 +64,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Add selective filtering logic to .claude-plugin/commands/ai-board.fix.md: when finding numbers are specified in arguments, mark findings not in the requested set as `skipped`; when "all" keyword is used, treat as no-args (fix all); when specified finding numbers don't exist, report as `not_found` in summary
-- [ ] T015 [US2] Update summary comment format in .claude-plugin/commands/ai-board.fix.md to include skipped findings section and not-found finding IDs when selective mode is used
+- [x] T014 [US2] Add selective filtering logic to .claude-plugin/commands/ai-board.fix.md: when finding numbers are specified in arguments, mark findings not in the requested set as `skipped`; when "all" keyword is used, treat as no-args (fix all); when specified finding numbers don't exist, report as `not_found` in summary
+- [x] T015 [US2] Update summary comment format in .claude-plugin/commands/ai-board.fix.md to include skipped findings section and not-found finding IDs when selective mode is used
 
 **Checkpoint**: `@ai-board /fix 1 3` and `@ai-board /fix all` should work correctly alongside the base `/fix` command.
 
@@ -79,9 +79,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T016 [US3] Add spec contradiction detection section to .claude-plugin/commands/ai-board.fix.md: after each code fix, check if the changed code involves a route/feature documented in `specs/specifications/`; detect direct contradictions (field names, error codes, response shapes) between the fix and the documented contract
-- [ ] T017 [US3] Add spec update logic to .claude-plugin/commands/ai-board.fix.md: when a contradiction is detected, update the relevant spec file to match the fix; include spec files in the commit's modified files list; update summary comment to report "M specs updated" count
-- [ ] T018 [US3] Update result file section in .claude-plugin/commands/ai-board.fix.md to include updated spec file paths in the Files Modified list
+- [x] T016 [US3] Add spec contradiction detection section to .claude-plugin/commands/ai-board.fix.md: after each code fix, check if the changed code involves a route/feature documented in `specs/specifications/`; detect direct contradictions (field names, error codes, response shapes) between the fix and the documented contract
+- [x] T017 [US3] Add spec update logic to .claude-plugin/commands/ai-board.fix.md: when a contradiction is detected, update the relevant spec file to match the fix; include spec files in the commit's modified files list; update summary comment to report "M specs updated" count
+- [x] T018 [US3] Update result file section in .claude-plugin/commands/ai-board.fix.md to include updated spec file paths in the Files Modified list
 
 **Checkpoint**: Fixes that contradict specs now update both code and spec files atomically.
 
@@ -95,8 +95,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T019 [US4] Add error handling section to .claude-plugin/commands/ai-board.fix.md: handle no-PR case (error already caught in workflow routing — add result file with ERROR status); handle PR-exists-but-no-reviews case (post error suggesting `/review` first); handle all-findings-rejected case (no commit, summary lists all rejections with reasons)
-- [ ] T020 [US4] Add type-check/lint failure error path to .claude-plugin/commands/ai-board.fix.md: when post-fix validation fails and cannot be resolved, write ERROR result file with message "Fix introduced errors that could not be resolved" and list the specific failures
+- [x] T019 [US4] Add error handling section to .claude-plugin/commands/ai-board.fix.md: handle no-PR case (error already caught in workflow routing — add result file with ERROR status); handle PR-exists-but-no-reviews case (post error suggesting `/review` first); handle all-findings-rejected case (no commit, summary lists all rejections with reasons)
+- [x] T020 [US4] Add type-check/lint failure error path to .claude-plugin/commands/ai-board.fix.md: when post-fix validation fails and cannot be resolved, write ERROR result file with message "Fix introduced errors that could not be resolved" and list the specific failures
 
 **Checkpoint**: All error paths produce clear, actionable error messages.
 
@@ -108,20 +108,20 @@
 
 ### Unit Tests
 
-- [ ] T021 [P] Write unit test for finding number argument parsing (no args, specific numbers, "all" keyword, invalid input) in tests/unit/fix-command-parsing.test.ts
-- [ ] T022 [P] Write unit test for deduplication logic (same file + overlapping lines across sources, priority ordering) in tests/unit/fix-command-dedup.test.ts
-- [ ] T023 [P] Write unit test for pertinence filtering rules (documentation nitpick rejection, overengineering rejection, false positive rejection, valid finding acceptance) in tests/unit/fix-command-pertinence.test.ts
+- [x] T021 [P] Write unit test for finding number argument parsing (no args, specific numbers, "all" keyword, invalid input) in tests/unit/fix-command-parsing.test.ts
+- [x] T022 [P] Write unit test for deduplication logic (same file + overlapping lines across sources, priority ordering) in tests/unit/fix-command-dedup.test.ts
+- [x] T023 [P] Write unit test for pertinence filtering rules (documentation nitpick rejection, overengineering rejection, false positive rejection, valid finding acceptance) in tests/unit/fix-command-pertinence.test.ts
 
 ### Integration Tests
 
-- [ ] T024 [P] Write integration test for /fix workflow routing: verify command is recognized, stage validation rejects non-VERIFY stages, and PR lookup works in tests/integration/assist/fix-routing.test.ts
-- [ ] T025 [P] Write integration test for /fix review parsing: verify ai-board, Codex, and Copilot comment formats are parsed correctly into ReviewFinding structures in tests/integration/assist/fix-parsing.test.ts
+- [x] T024 [P] Write integration test for /fix workflow routing: verify command is recognized, stage validation rejects non-VERIFY stages, and PR lookup works in tests/integration/assist/fix-routing.test.ts
+- [x] T025 [P] Write integration test for /fix review parsing: verify ai-board, Codex, and Copilot comment formats are parsed correctly into ReviewFinding structures in tests/integration/assist/fix-parsing.test.ts
 
 ### Validation
 
-- [ ] T026 Run `bun run type-check` to verify no type errors introduced
-- [ ] T027 Run `bun run lint` to verify no lint errors introduced
-- [ ] T028 Run quickstart.md verification checklist: confirm command file exists, workflow routes correctly, autocomplete registered, all tests pass
+- [x] T026 Run `bun run type-check` to verify no type errors introduced
+- [x] T027 Run `bun run lint` to verify no lint errors introduced
+- [x] T028 Run quickstart.md verification checklist: confirm command file exists, workflow routes correctly, autocomplete registered, all tests pass
 
 ---
 
