@@ -39,13 +39,19 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
 - Quick implementation tickets are visually distinguished on the board
 
 **Rollback Capabilities**:
-- **BUILD to INBOX**: Quick-implementation tickets can return to INBOX if job failed/cancelled
-- **VERIFY to PLAN**: Full workflow tickets can return to PLAN to re-implement
-  - Available when: workflowType=FULL and latest workflow job is COMPLETED, FAILED, or CANCELLED
-  - Requires confirmation modal explaining consequences
-  - Reverts implementation changes while preserving spec files
-  - Clears preview URL and deletes the workflow job record
-  - Visual feedback: amber/red dashed border on PLAN column during drag
+
+Rollbacks are available when the ticket's most recent workflow job is FAILED or CANCELLED. During a drag, only valid rollback target columns are highlighted; all other columns are greyed out.
+
+| Transition | Conditions | Effect |
+|---|---|---|
+| SPECIFY → INBOX | Any workflow type | Deletes branch (if present); moves ticket to INBOX |
+| PLAN → SPECIFY | Any workflow type | Moves ticket to SPECIFY; no git operation |
+| BUILD → INBOX | QUICK workflow only | Resets workflowType to FULL; moves ticket to INBOX |
+| BUILD → PLAN | FULL workflow only | Creates backup git tag; dispatches rollback-reset workflow (git reset to pre-BUILD state, preserves spec files); clears preview URL |
+| VERIFY → BUILD | FULL workflow only | Moves ticket to BUILD; no git operation |
+| VERIFY → PLAN | FULL workflow only | Creates backup git tag; dispatches rollback-reset workflow (git reset to pre-BUILD state, preserves spec files); clears preview URL; deletes implement job record |
+
+A confirmation dialog with a stage-specific French message appears before every rollback. All rollbacks use optimistic locking (ticket version) to prevent concurrent conflicts.
 
 **Alternative Resolution**:
 - **VERIFY to CLOSED**: Tickets can be closed without shipping
@@ -133,8 +139,14 @@ Tickets are ordered differently depending on their stage:
   - Adaptive sizing: smaller icons (20px) and text (14px) on mobile, larger (24px icons, 16px text) on desktop
   - Reduced padding on mobile (12px) vs desktop (16px)
 
+**Cancel Button**:
+- Ticket cards display a cancel button (X icon) on hover when the ticket has a RUNNING or PENDING job
+- Clicking opens a confirmation dialog: "Annuler le workflow {command} en cours ?"
+- On confirmation the job is cancelled (GitHub Actions run cancelled if a workflowRunId is present; local CANCELLED state otherwise)
+- The cancel button does not appear for jobs in terminal states (COMPLETED, FAILED, CANCELLED)
+
 **Locked State Overlays**:
-- When a ticket with an active job is dragged, all drop columns show a blocked overlay
+- When a ticket with an active (PENDING or RUNNING) job is dragged, all drop columns show a blocked overlay
 - Overlay displays a Ban icon with contextual message:
   - Job lock: "Workflow in progress - Wait for job completion"
 - Drop zones appear with 50% opacity and "not-allowed" cursor

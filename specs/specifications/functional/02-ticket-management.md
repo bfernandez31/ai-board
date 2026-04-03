@@ -112,7 +112,11 @@ Users move tickets between stages using drag-and-drop:
 
 **Special Behaviors**:
 - INBOX tickets can drop on SPECIFY (normal workflow, blue highlighting) or BUILD (quick implementation, green highlighting)
-- VERIFY tickets (workflowType=FULL, job COMPLETED/FAILED/CANCELLED) can drop on PLAN (rollback, amber/red dashed highlighting)
+- When dragging a ticket whose latest job is FAILED or CANCELLED, only valid rollback targets are highlighted; all other columns are greyed out
+  - SPECIFY tickets: INBOX is valid
+  - PLAN tickets: SPECIFY is valid
+  - BUILD tickets (QUICK): INBOX is valid; BUILD tickets (FULL): PLAN is valid
+  - VERIFY tickets (FULL): BUILD and PLAN are valid
 - All other transitions show next sequential stage as valid drop zone
 
 ### Stage Transition Behavior
@@ -129,23 +133,20 @@ Users move tickets between stages using drag-and-drop:
 - Modal explains trade-offs (speed vs. documentation)
 - User must confirm or cancel the operation
 
-**VERIFY to PLAN Rollback**:
-- When dropping VERIFY ticket on PLAN column (FULL workflows only)
-- Confirmation modal appears explaining consequences:
-  - Implementation commits will be removed (git reset to pre-BUILD state)
-  - Spec files in `specs/{branch}/` folder are preserved automatically
-  - Preview URL will be cleared
-  - Original implement job record will be deleted
-- Triggers rollback-reset workflow that:
-  - Identifies the last commit before BUILD phase began
-  - Backs up spec files using git stash
-  - Performs hard reset to pre-BUILD commit
-  - Restores spec files and commits them
-  - Force-pushes the reset branch
-- Available when latest workflow job is COMPLETED, FAILED, or CANCELLED
-- Not available for QUICK workflow type
-- Not available when job is RUNNING or PENDING
-- Creates a `rollback-reset` job to track the git reset operation
+**Rollback Transitions**:
+
+All rollbacks require confirmation with a stage-specific French message and are available only when the most recent non-AI-BOARD job is FAILED or CANCELLED. Running or pending jobs block all rollbacks.
+
+| Rollback | Conditions | Git Effect | Dialog Message |
+|---|---|---|---|
+| SPECIFY → INBOX | Any workflow | Deletes branch if present | "Revenir a Inbox ? La branche sera supprimee." |
+| PLAN → SPECIFY | Any workflow | None | "Revenir a Specify ?" |
+| BUILD → INBOX | QUICK workflow | None | "Revenir a Inbox ?" |
+| BUILD → PLAN | FULL workflow | Backup tag created; rollback-reset workflow resets branch to pre-BUILD state, preserves spec files, clears previewUrl | "Revenir a Plan ? Le code sera reinitialise (backup cree)." |
+| VERIFY → BUILD | FULL workflow | None | "Revenir a Build ?" |
+| VERIFY → PLAN | FULL workflow | Backup tag created; rollback-reset workflow resets branch to pre-BUILD state, preserves spec files, clears previewUrl; implement job record deleted | "Revenir a Plan ? Le code sera reinitialise (backup cree)." |
+
+**Backup tags** (BUILD→PLAN, VERIFY→PLAN): Created before any destructive reset in the format `backup/{ticketKey}/{stage}-{jobId}`. These are automatically deleted when the ticket's next verify workflow begins, as the backup is no longer needed once BUILD succeeds again.
 
 **Close Ticket (VERIFY to CLOSED)**:
 - When dropping VERIFY ticket on Close zone in SHIP column

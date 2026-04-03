@@ -278,18 +278,19 @@ Jobs track GitHub Actions workflow executions.
 
 ```prisma
 model Job {
-  id          Int       @id @default(autoincrement())
-  ticketId    Int
-  projectId   Int
-  command     String    @db.VarChar(50)
-  status      JobStatus @default(PENDING)
-  branch      String?   @db.VarChar(200)
-  commitSha   String?   @db.VarChar(40)
-  logs        String?   @db.Text
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              Int       @id @default(autoincrement())
+  ticketId        Int
+  projectId       Int
+  command         String    @db.VarChar(50)
+  status          JobStatus @default(PENDING)
+  branch          String?   @db.VarChar(200)
+  commitSha       String?   @db.VarChar(40)
+  logs            String?   @db.Text
+  workflowRunId   BigInt?
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Claude telemetry metrics (aggregated from all API calls in the job)
   inputTokens         Int?      // Total input tokens consumed
@@ -326,6 +327,7 @@ model Job {
 - `branch`: Git branch name (max 200 chars, nullable)
 - `commitSha`: Git commit hash (max 40 chars, nullable)
 - `logs`: Complete execution logs (text, unlimited)
+- `workflowRunId`: GitHub Actions workflow run ID (BigInt, nullable); set when workflow reports RUNNING status; used to cancel the run via GitHub API
 - `startedAt`: Execution start timestamp (set on creation)
 - `completedAt`: Execution completion timestamp (nullable, set on terminal state)
 - `createdAt`: Record creation timestamp
@@ -362,9 +364,11 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 
 **Business Rules**:
 - Created when workflow dispatched (status: PENDING)
-- Status updated by workflow via API (Bearer token auth)
+- Status updated by workflow via API (Bearer token auth); RUNNING status update also sets `workflowRunId` if provided
+- `workflowRunId` is set once and not overwritten by subsequent status updates
 - Terminal states cannot transition to other states
 - Idempotent updates allowed (same status returns 200)
+- Jobs can be cancelled via `POST /api/jobs/:id/cancel` (session auth); cancels the GitHub Actions run when `workflowRunId` is present
 - Most recent job (by startedAt) used for transition validation
 - Jobs retained indefinitely for audit trail, except:
   - Deleted when VERIFY to PLAN rollback occurs (job record removed as part of rollback)

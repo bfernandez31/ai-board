@@ -1255,15 +1255,26 @@ Transition ticket to target stage with workflow dispatch.
 - **SPECIFY → PLAN**: Validates specify job completed, creates job, dispatches workflow (plan command)
 - **PLAN → BUILD**: Validates plan job completed, creates job, dispatches workflow (implement command)
 - **BUILD → VERIFY**: Creates job, dispatches verify workflow with workflowType (FULL runs tests, QUICK skips to PR)
-- **BUILD → INBOX**: Rollback if job failed/cancelled, resets workflowType to FULL
-- **VERIFY → PLAN**: Rollback for FULL workflows only:
+- **VERIFY → SHIP**: Manual transition (no workflow)
+
+**Rollback Transitions** (all require latest non-AI-BOARD job to be FAILED or CANCELLED):
+- **SPECIFY → INBOX**: Deletes branch (if present) via GitHub API; moves ticket to INBOX
+- **PLAN → SPECIFY**: Moves ticket to SPECIFY; no git operation
+- **BUILD → INBOX**: QUICK workflow only; resets workflowType to FULL; moves ticket to INBOX
+- **BUILD → PLAN**: FULL workflow only:
+  1. Validates latest job is FAILED or CANCELLED
+  2. Clears previewUrl on ticket
+  3. Updates ticket stage to PLAN
+  4. Dispatches rollback-reset workflow (creates backup git tag, resets branch to pre-BUILD state, preserves spec files)
+  5. Creates rollback-reset job to track the git reset operation
+- **VERIFY → BUILD**: FULL workflow only; moves ticket to BUILD; no git operation
+- **VERIFY → PLAN**: FULL workflow only:
   1. Validates latest job is COMPLETED, FAILED, or CANCELLED
   2. Clears previewUrl on ticket
   3. Deletes implement job record
   4. Updates ticket stage to PLAN
-  5. Dispatches rollback-reset workflow (git reset to pre-BUILD state, preserves spec files)
+  5. Dispatches rollback-reset workflow (creates backup git tag, resets branch to pre-BUILD state, preserves spec files)
   6. Creates rollback-reset job to track the git reset operation
-- **VERIFY → SHIP**: Manual transition (no workflow)
 
 **Errors**:
 - `400`: Invalid transition (non-sequential, job not completed, rollback not allowed)
@@ -2795,6 +2806,7 @@ Update job status (workflow-only endpoint).
 
 **Validation**:
 - `status`: Required, enum (RUNNING|COMPLETED|FAILED|CANCELLED)
+- `workflowRunId`: Optional, BigInt; accepted only when `status = "RUNNING"`; stored on the job record to enable UI cancellation; not overwritten by subsequent updates
 - `qualityScore`: Optional, integer 0-100 inclusive; only accepted when `status = "COMPLETED"` for verify jobs; ignored otherwise
 - `qualityScoreDetails`: Optional, JSON string with dimension sub-scores; stored alongside `qualityScore`
 - State machine transitions enforced
@@ -2822,6 +2834,37 @@ Valid transitions:
 
 Invalid transitions return 400 error
 ```
+
+### POST /api/jobs/:id/cancel
+
+Cancel a PENDING or RUNNING job from the UI.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (via the job's ticket's project)
+
+**Path Parameters**:
+- `id` (number, required): Job ID
+
+**Response** (200 OK):
+```json
+{
+  "id": 123,
+  "status": "CANCELLED",
+  "completedAt": "2026-04-03T22:10:00.000Z"
+}
+```
+
+**Behavior**:
+- RUNNING jobs with `workflowRunId`: GitHub Actions workflow run is cancelled before the job is marked CANCELLED locally. If the GitHub API call fails, the job is still marked CANCELLED and the error is logged.
+- PENDING jobs (no `workflowRunId`): Job is marked CANCELLED locally with no GitHub API call.
+- Already CANCELLED jobs: Returns 200 idempotently.
+- COMPLETED or FAILED jobs: Returns 400.
+
+**Errors**:
+- `400`: Job is in a terminal state that does not allow cancellation (COMPLETED or FAILED)
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Job not found
 
 ## Telemetry Endpoints
 
