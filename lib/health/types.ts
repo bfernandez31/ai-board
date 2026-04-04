@@ -56,6 +56,7 @@ export interface HealthModuleStatus {
   passive?: boolean;
   jobId?: number | null;
   summary: string;
+  skipReason?: string | null;
   ticketCount?: number;
   trend?: 'up' | 'down' | 'stable' | null;
   trendDelta?: number | null;

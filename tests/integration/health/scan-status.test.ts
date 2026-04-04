@@ -114,6 +114,82 @@ describe('Scan Status PATCH Endpoint', () => {
     expect(response.status).toBe(404);
   });
 
+  it('transitions RUNNING → SKIPPED', async () => {
+    const scan = await createScan('RUNNING');
+    const response = await makeRequest(ctx.projectId, scan.id, {
+      status: 'SKIPPED',
+      skipReason: 'No qualifying PRs since last scan',
+    });
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.scan.status).toBe('SKIPPED');
+    expect(data.scan.score).toBeNull();
+
+    // Verify completedAt was set
+    const updated = await prisma.healthScan.findUnique({ where: { id: scan.id } });
+    expect(updated!.completedAt).not.toBeNull();
+  });
+
+  it('rejects PENDING → SKIPPED (invalid transition)', async () => {
+    const scan = await createScan('PENDING');
+    const response = await makeRequest(ctx.projectId, scan.id, {
+      status: 'SKIPPED',
+    });
+    expect(response.status).toBe(409);
+  });
+
+  it('rejects SKIPPED status when score is provided', async () => {
+    const scan = await createScan('RUNNING');
+    const response = await makeRequest(ctx.projectId, scan.id, {
+      status: 'SKIPPED',
+      score: 100,
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it('does NOT update HealthScore aggregate on SKIPPED', async () => {
+    // Seed HealthScore with a previous COMPLETED score
+    await prisma.healthScore.create({
+      data: {
+        projectId: ctx.projectId,
+        securityScore: 75,
+        globalScore: 75,
+      },
+    });
+
+    const scan = await createScan('RUNNING');
+    await makeRequest(ctx.projectId, scan.id, {
+      status: 'SKIPPED',
+      skipReason: 'No changed files to scan',
+    });
+
+    // HealthScore should be unchanged
+    const healthScore = await prisma.healthScore.findUnique({
+      where: { projectId: ctx.projectId },
+    });
+    expect(healthScore!.securityScore).toBe(75);
+    expect(healthScore!.globalScore).toBe(75);
+  });
+
+  it('preserves existing COMPLETED scans after SKIPPED enum is added', async () => {
+    // Create a historical COMPLETED scan with score 100
+    const historicalScan = await prisma.healthScan.create({
+      data: {
+        projectId: ctx.projectId,
+        scanType: 'SECURITY',
+        status: 'COMPLETED',
+        score: 100,
+        completedAt: new Date('2026-03-01T10:00:00Z'),
+      },
+    });
+
+    // Query it back — should be unchanged
+    const scan = await prisma.healthScan.findUnique({ where: { id: historicalScan.id } });
+    expect(scan!.status).toBe('COMPLETED');
+    expect(scan!.score).toBe(100);
+  });
+
   it('recalculates globalScore across multiple modules', async () => {
     // Create existing HealthScore with one module
     await prisma.healthScore.create({

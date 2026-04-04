@@ -26,6 +26,23 @@ Before scanning for drift, understand the project:
 
 Discover all `.md` files under `specs/specifications/` recursively. Each project may organize this directory differently (flat files, subdirectories by domain, functional vs technical split, etc.).
 
+**Early Exit Check (SKIPPED detection)**: If the `specs/specifications/` directory does not exist or contains 0 `.md` files, write a SKIPPED result and exit early:
+```json
+{
+  "score": null,
+  "skipped": true,
+  "skipReason": "No spec files found",
+  "issuesFound": 0,
+  "issuesFixed": 0,
+  "report": {
+    "type": "SPEC_SYNC",
+    "specs": [],
+    "generatedTickets": []
+  }
+}
+```
+Write this to `/tmp/health-scan-result.json` and stop — do NOT proceed to Phase 3 or beyond.
+
 For each spec file found:
 1. **Read its content** to understand what area of the codebase it documents
 2. **Classify its subject** — does it describe API endpoints, data models, UI behavior, architecture, schemas, workflows, or something else?

@@ -138,6 +138,35 @@ describe('Health Trends GET Endpoint', () => {
     expect(data.trends.SPEC_SYNC).toEqual([]);
   });
 
+  it('excludes SKIPPED scans from trend data points', async () => {
+    // COMPLETED scan - should be included
+    await prisma.healthScan.create({
+      data: {
+        projectId: ctx.projectId,
+        scanType: 'SECURITY',
+        status: 'COMPLETED',
+        score: 85,
+        completedAt: new Date(Date.now() - 86400000),
+      },
+    });
+
+    // SKIPPED scan - should be excluded
+    await prisma.healthScan.create({
+      data: {
+        projectId: ctx.projectId,
+        scanType: 'SECURITY',
+        status: 'SKIPPED',
+        score: null,
+        completedAt: new Date(),
+      },
+    });
+
+    const response = await makeRequest(ctx.projectId);
+    const data = await response.json();
+    expect(data.trends.SECURITY).toHaveLength(1);
+    expect(data.trends.SECURITY[0].score).toBe(85);
+  });
+
   it('returns 400 for invalid project ID', async () => {
     const response = await GET(
       new NextRequest('http://localhost/api/projects/abc/health/trends'),

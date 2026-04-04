@@ -31,11 +31,12 @@ const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
   REVIEW_QUALITY: ClipboardCheck,
 };
 
-type CardState = 'never_scanned' | 'scanning' | 'completed' | 'failed';
+type CardState = 'never_scanned' | 'scanning' | 'completed' | 'failed' | 'skipped';
 
 function getCardState(module: HealthModuleStatus, isScanning: boolean): CardState {
   if (isScanning) return 'scanning';
   if (module.scanStatus === 'FAILED') return 'failed';
+  if (module.scanStatus === 'SKIPPED') return 'skipped';
   if (module.score !== null || module.label === 'OK') return 'completed';
   return 'never_scanned';
 }
@@ -96,7 +97,13 @@ export function HealthModuleCard({
         <ScoreBadge score={module.score} label={module.label} state={state} />
       </div>
 
-      <p className="text-sm text-muted-foreground">{module.summary}</p>
+      <p className="text-sm text-muted-foreground">
+        {state === 'skipped' ? (module.skipReason ? `Skipped: ${module.skipReason}` : 'Skipped') : module.summary}
+      </p>
+
+      {state === 'skipped' && module.skipReason && (
+        <p className="text-xs text-muted-foreground">{module.skipReason}</p>
+      )}
 
       {trendData && trendData.length >= 3 && (
         <Sparkline
@@ -144,6 +151,7 @@ const BUTTON_LABELS: Record<CardState, string> = {
   completed: 'Re-run',
   failed: 'Retry',
   scanning: '',
+  skipped: 'Re-run',
 };
 
 function ScanButton({
@@ -186,6 +194,14 @@ function ScoreBadge({
   label: string | null;
   state: CardState;
 }) {
+  if (state === 'skipped') {
+    return (
+      <span className="text-xs font-medium text-muted-foreground bg-muted rounded-md px-2 py-0.5">
+        N/A
+      </span>
+    );
+  }
+
   if (state === 'failed') {
     return (
       <span className="text-xs font-medium text-ctp-red bg-ctp-red/10 rounded-md px-2 py-0.5">
