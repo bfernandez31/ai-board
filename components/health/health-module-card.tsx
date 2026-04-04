@@ -31,10 +31,11 @@ const MODULE_ICONS: Record<HealthModuleType, LucideIcon> = {
   REVIEW_QUALITY: ClipboardCheck,
 };
 
-type CardState = 'never_scanned' | 'scanning' | 'completed' | 'failed';
+type CardState = 'never_scanned' | 'scanning' | 'completed' | 'failed' | 'skipped';
 
 function getCardState(module: HealthModuleStatus, isScanning: boolean): CardState {
   if (isScanning) return 'scanning';
+  if (module.scanStatus === 'SKIPPED') return 'skipped';
   if (module.scanStatus === 'FAILED') return 'failed';
   if (module.score !== null || module.label === 'OK') return 'completed';
   return 'never_scanned';
@@ -143,6 +144,7 @@ const BUTTON_LABELS: Record<CardState, string> = {
   never_scanned: 'Run scan',
   completed: 'Re-run',
   failed: 'Retry',
+  skipped: 'Re-run',
   scanning: '',
 };
 
@@ -199,6 +201,21 @@ function ScoreBadge({
       <span className="text-xs font-medium text-muted-foreground bg-muted rounded-md px-2 py-0.5">
         ...
       </span>
+    );
+  }
+
+  if (state === 'skipped') {
+    return (
+      <div className="flex items-center gap-1.5">
+        {score !== null && (
+          <span className={`text-xs font-medium ${getScoreColor(score).text} ${getScoreColor(score).bg} rounded-md px-2 py-0.5`}>
+            {score}
+          </span>
+        )}
+        <span className="text-xs font-medium text-muted-foreground bg-muted rounded-md px-2 py-0.5">
+          Skipped
+        </span>
+      </div>
     );
   }
 

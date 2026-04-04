@@ -31,6 +31,24 @@ const failed: HealthModuleStatus = {
   summary: 'Scan failed',
 };
 
+const skippedWithPreviousScore: HealthModuleStatus = {
+  score: 75,
+  label: 'Good',
+  lastScanDate: '2026-03-20T00:00:00Z',
+  scanStatus: 'SKIPPED',
+  issuesFound: null,
+  summary: 'Nothing to evaluate',
+};
+
+const skippedNoPreviousScore: HealthModuleStatus = {
+  score: null,
+  label: null,
+  lastScanDate: null,
+  scanStatus: 'SKIPPED',
+  issuesFound: null,
+  summary: 'Nothing to evaluate',
+};
+
 describe('HealthModuleCard', () => {
   it('renders "never scanned" state with "Run scan" button', () => {
     renderWithProviders(
@@ -85,6 +103,25 @@ describe('HealthModuleCard', () => {
     expect(screen.getByText('passive')).toBeInTheDocument();
     const buttons = screen.queryAllByRole('button').filter(el => el.tagName === 'BUTTON');
     expect(buttons).toHaveLength(0);
+  });
+
+  it('renders "skipped" state with "Skipped" badge and "Re-run" button', () => {
+    renderWithProviders(
+      <HealthModuleCard moduleType="SECURITY" module={skippedWithPreviousScore} />
+    );
+    expect(screen.getByText('Skipped')).toBeInTheDocument();
+    expect(screen.getByText('Nothing to evaluate')).toBeInTheDocument();
+    expect(screen.getByText('Re-run')).toBeInTheDocument();
+    // Previous score should still be displayed
+    expect(screen.getByText('75')).toBeInTheDocument();
+  });
+
+  it('renders "skipped" state with no previous score', () => {
+    renderWithProviders(
+      <HealthModuleCard moduleType="REVIEW_QUALITY" module={skippedNoPreviousScore} />
+    );
+    expect(screen.getByText('Skipped')).toBeInTheDocument();
+    expect(screen.getByText('Nothing to evaluate')).toBeInTheDocument();
   });
 
   it('calls onTriggerScan when action button is clicked', async () => {

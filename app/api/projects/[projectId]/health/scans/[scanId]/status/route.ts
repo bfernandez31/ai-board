@@ -6,7 +6,7 @@ import { calculateGlobalScore } from '@/lib/health/score-calculator';
 import type { HealthScanStatus, HealthScanType } from '@prisma/client';
 
 const statusUpdateSchema = z.object({
-  status: z.enum(['RUNNING', 'COMPLETED', 'FAILED']),
+  status: z.enum(['RUNNING', 'COMPLETED', 'FAILED', 'SKIPPED']),
   score: z.number().int().min(0).max(100).optional(),
   report: z.string().optional(),
   issuesFound: z.number().int().min(0).optional(),
@@ -19,10 +19,11 @@ const statusUpdateSchema = z.object({
 });
 
 const VALID_TRANSITIONS: Record<string, HealthScanStatus[]> = {
-  PENDING: ['RUNNING', 'FAILED'],
-  RUNNING: ['COMPLETED', 'FAILED'],
+  PENDING: ['RUNNING', 'FAILED', 'SKIPPED'],
+  RUNNING: ['COMPLETED', 'FAILED', 'SKIPPED'],
   COMPLETED: [],
   FAILED: [],
+  SKIPPED: [],
 };
 
 const SCAN_TYPE_TO_SCORE_FIELD: Record<HealthScanType, string> = {
@@ -79,6 +80,14 @@ export async function PATCH(
       );
     }
 
+    // Reject score for SKIPPED
+    if (data.status === 'SKIPPED' && data.score !== undefined) {
+      return NextResponse.json(
+        { error: 'Score must not be provided for skipped scans' },
+        { status: 400 }
+      );
+    }
+
     // Find the scan
     const scan = await prisma.healthScan.findFirst({
       where: { id: scanId, projectId },
@@ -114,7 +123,7 @@ export async function PATCH(
       updateData.startedAt = now;
     }
 
-    if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+    if (data.status === 'COMPLETED' || data.status === 'FAILED' || data.status === 'SKIPPED') {
       updateData.completedAt = now;
     }
 

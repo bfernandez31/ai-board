@@ -147,7 +147,11 @@ function HistoryEntry({ scan }: { scan: ScanHistoryItem }) {
             )}
           </div>
         </TooltipProvider>
-        {scan.score !== null && scoreColors ? (
+        {scan.status === 'SKIPPED' ? (
+          <span className="text-xs font-medium text-muted-foreground bg-muted rounded-md px-2 py-0.5">
+            Skipped
+          </span>
+        ) : scan.score !== null && scoreColors ? (
           <span className={`text-xs font-medium ${scoreColors.text} ${scoreColors.bg} rounded-md px-2 py-0.5`}>
             {scan.score}
           </span>

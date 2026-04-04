@@ -13,7 +13,7 @@ interface DrawerStatesProps {
   onTriggerScan?: (() => void) | undefined;
 }
 
-type DrawerState = 'never_scanned' | 'scanning' | 'failed' | 'passive_no_data';
+type DrawerState = 'never_scanned' | 'scanning' | 'failed' | 'passive_no_data' | 'skipped';
 
 function getDrawerState(
   moduleType: HealthModuleType,
@@ -21,6 +21,7 @@ function getDrawerState(
   isScanning: boolean,
 ): DrawerState {
   if (isScanning) return 'scanning';
+  if (moduleStatus.scanStatus === 'SKIPPED') return 'skipped';
   if (moduleStatus.scanStatus === 'FAILED') return 'failed';
   const meta = MODULE_METADATA[moduleType];
   if (meta.passive && moduleStatus.score === null && moduleStatus.label !== 'OK') {
@@ -76,6 +77,22 @@ export function DrawerStates({
             {meta.label} is a passive module that collects data from other workflows.
             Data will appear here as tickets are processed.
           </p>
+        </div>
+      );
+
+    case 'skipped':
+      return (
+        <div className="flex flex-col items-center justify-center py-12 space-y-3">
+          <Info className="h-8 w-8 text-muted-foreground" />
+          <p className="text-sm font-medium text-muted-foreground">Nothing to evaluate</p>
+          <p className="text-xs text-muted-foreground text-center max-w-xs">
+            The latest {meta.label} scan found nothing to evaluate. Previous scores are preserved.
+          </p>
+          {onTriggerScan && (
+            <Button size="sm" variant="outline" onClick={onTriggerScan}>
+              Re-run scan
+            </Button>
+          )}
         </div>
       );
 

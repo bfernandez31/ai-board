@@ -21,7 +21,12 @@ function buildModuleStatus(
   let label: string | null = null;
   let summary: string;
 
-  if (score !== null) {
+  if (scanStatus === 'SKIPPED') {
+    summary = 'Nothing to evaluate';
+    if (score !== null) {
+      label = getScoreDisplayLabel(score);
+    }
+  } else if (score !== null) {
     label = getScoreDisplayLabel(score);
     summary = issuesFound !== null && issuesFound > 0 ? `${issuesFound} issues found` : 'All clear';
   } else {
@@ -91,7 +96,7 @@ export async function GET(
     const latestScans = await prisma.healthScan.findMany({
       where: {
         projectId,
-        status: 'COMPLETED',
+        status: { in: ['COMPLETED', 'SKIPPED'] },
       },
       orderBy: { createdAt: 'desc' },
       distinct: ['scanType'],

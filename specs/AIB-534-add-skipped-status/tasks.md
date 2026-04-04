@@ -18,8 +18,8 @@
 
 **Purpose**: Database schema change that all subsequent phases depend on
 
-- [ ] T001 Add `SKIPPED` value to `HealthScanStatus` enum in `prisma/schema.prisma`
-- [ ] T002 Run Prisma migration and regenerate client (`bunx prisma migrate dev --name add_skipped_health_scan_status && bunx prisma generate`)
+- [x] T001 Add `SKIPPED` value to `HealthScanStatus` enum in `prisma/schema.prisma`
+- [x] T002 Run Prisma migration and regenerate client (`bunx prisma migrate dev --name add_skipped_health_scan_status && bunx prisma generate`)
 
 ---
 
@@ -29,12 +29,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Add `'SKIPPED'` to Zod `statusUpdateSchema.status` enum in `app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts`
-- [ ] T004 Add SKIPPED to `VALID_TRANSITIONS` map (PENDING → SKIPPED, RUNNING → SKIPPED, SKIPPED → []) in `app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts`
-- [ ] T005 Add validation: reject score when `status === 'SKIPPED'` (return 400) in `app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts`
-- [ ] T006 Set `completedAt` for SKIPPED status and skip HealthScore upsert block when `status === 'SKIPPED'` in `app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts`
-- [ ] T007 Update `latestScans` query filter from `status: 'COMPLETED'` to `status: { in: ['COMPLETED', 'SKIPPED'] }` in `app/api/projects/[projectId]/health/route.ts`
-- [ ] T008 Update `buildModuleStatus()` to detect `scanStatus === 'SKIPPED'` and set `summary: 'Nothing to evaluate'` and pass `scanStatus` through to response in `app/api/projects/[projectId]/health/route.ts`
+- [x] T003 Add `'SKIPPED'` to Zod `statusUpdateSchema.status` enum in `app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts`
+- [x] T004 Add SKIPPED to `VALID_TRANSITIONS` map (PENDING → SKIPPED, RUNNING → SKIPPED, SKIPPED → []) in `app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts`
+- [x] T005 Add validation: reject score when `status === 'SKIPPED'` (return 400) in `app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts`
+- [x] T006 Set `completedAt` for SKIPPED status and skip HealthScore upsert block when `status === 'SKIPPED'` in `app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts`
+- [x] T007 Update `latestScans` query filter from `status: 'COMPLETED'` to `status: { in: ['COMPLETED', 'SKIPPED'] }` in `app/api/projects/[projectId]/health/route.ts`
+- [x] T008 Update `buildModuleStatus()` to detect `scanStatus === 'SKIPPED'` and set `summary: 'Nothing to evaluate'` and pass `scanStatus` through to response in `app/api/projects/[projectId]/health/route.ts`
 
 **Checkpoint**: API layer complete — SKIPPED transitions work end-to-end, HealthScore preserved
 
@@ -49,13 +49,13 @@
 ### Tests for User Story 1
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T009 [P] [US1] Create SKIPPED status transition tests in `tests/integration/health/health-scan-skipped.test.ts` (new file — justified: PATCH SKIPPED flows don't belong in GET endpoint test file). Tests: PENDING → SKIPPED succeeds, RUNNING → SKIPPED succeeds, SKIPPED → any returns 409, SKIPPED with score returns 400, SKIPPED does not update HealthScore aggregate, SKIPPED scan appears in scan history
-- [ ] T010 [P] [US1] Extend `tests/integration/health/health-score.test.ts` with test: GET /health returns correct module status when latest scan is SKIPPED (score from previous HealthScore, summary "Nothing to evaluate", scanStatus "SKIPPED")
-- [ ] T011 [P] [US1] Extend `tests/integration/health/health-score.test.ts` with test: global score is unaffected by SKIPPED scans (module with SKIPPED latest scan excluded from recalculation)
+- [x] T009 [P] [US1] Create SKIPPED status transition tests in `tests/integration/health/health-scan-skipped.test.ts` (new file — justified: PATCH SKIPPED flows don't belong in GET endpoint test file). Tests: PENDING → SKIPPED succeeds, RUNNING → SKIPPED succeeds, SKIPPED → any returns 409, SKIPPED with score returns 400, SKIPPED does not update HealthScore aggregate, SKIPPED scan appears in scan history
+- [x] T010 [P] [US1] Extend `tests/integration/health/health-score.test.ts` with test: GET /health returns correct module status when latest scan is SKIPPED (score from previous HealthScore, summary "Nothing to evaluate", scanStatus "SKIPPED")
+- [x] T011 [P] [US1] Extend `tests/integration/health/health-score.test.ts` with test: global score is unaffected by SKIPPED scans (module with SKIPPED latest scan excluded from recalculation)
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Update workflow to detect SKIPPED result and send `{ status: "SKIPPED" }` without score to PATCH endpoint in `.github/workflows/health-scan.yml` — check result JSON for `status: "SKIPPED"` or `skipped: true` in "Merge Scan Outputs" step, skip remediation ticket creation for SKIPPED scans
+- [x] T012 [US1] Update workflow to detect SKIPPED result and send `{ status: "SKIPPED" }` without score to PATCH endpoint in `.github/workflows/health-scan.yml` — check result JSON for `status: "SKIPPED"` or `skipped: true` in "Merge Scan Outputs" step, skip remediation ticket creation for SKIPPED scans
 
 **Checkpoint**: User Story 1 complete — SKIPPED flows work end-to-end with full test coverage
 
@@ -69,13 +69,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T013 [P] [US2] Extend `tests/unit/components/health-module-card.test.tsx` with tests: `skipped` card state renders "Skipped" badge, previous score is still displayed when available, "No scan yet" shown when no previous score exists
+- [x] T013 [P] [US2] Extend `tests/unit/components/health-module-card.test.tsx` with tests: `skipped` card state renders "Skipped" badge, previous score is still displayed when available, "No scan yet" shown when no previous score exists
 
 ### Implementation for User Story 2
 
-- [ ] T014 [P] [US2] Add `'skipped'` to `CardState` union type, update `getCardState()` to return `'skipped'` when `module.scanStatus === 'SKIPPED'`, add `skipped` case in `ScoreBadge` with muted styling, add `skipped: 'Re-run'` to `BUTTON_LABELS` in `components/health/health-module-card.tsx`
-- [ ] T015 [P] [US2] Add `'skipped'` to `DrawerState` type, add detection in `getDrawerState()` for `scanStatus === 'SKIPPED'`, add `skipped` switch case with "Nothing to evaluate" message and info icon in `components/health/drawer/drawer-states.tsx`
-- [ ] T016 [P] [US2] Add SKIPPED badge rendering in `HistoryEntry` — detect `scan.status === 'SKIPPED'` and show "Skipped" badge instead of score in `components/health/drawer/drawer-history.tsx`
+- [x] T014 [P] [US2] Add `'skipped'` to `CardState` union type, update `getCardState()` to return `'skipped'` when `module.scanStatus === 'SKIPPED'`, add `skipped` case in `ScoreBadge` with muted styling, add `skipped: 'Re-run'` to `BUTTON_LABELS` in `components/health/health-module-card.tsx`
+- [x] T015 [P] [US2] Add `'skipped'` to `DrawerState` type, add detection in `getDrawerState()` for `scanStatus === 'SKIPPED'`, add `skipped` switch case with "Nothing to evaluate" message and info icon in `components/health/drawer/drawer-states.tsx`
+- [x] T016 [P] [US2] Add SKIPPED badge rendering in `HistoryEntry` — detect `scan.status === 'SKIPPED'` and show "Skipped" badge instead of score in `components/health/drawer/drawer-history.tsx`
 
 **Checkpoint**: User Story 2 complete — all UI components correctly distinguish SKIPPED state
 
@@ -89,8 +89,8 @@
 
 ### Verification for User Story 3
 
-- [ ] T017 [US3] Verify that `app/api/projects/[projectId]/health/trends/route.ts` already filters `status: 'COMPLETED'` (SKIPPED automatically excluded — no code change needed)
-- [ ] T018 [US3] Verify that `lib/health/score-calculator.ts` `calculateGlobalScore()` already excludes null-scored modules (no code change needed)
+- [x] T017 [US3] Verify that `app/api/projects/[projectId]/health/trends/route.ts` already filters `status: 'COMPLETED'` (SKIPPED automatically excluded — no code change needed)
+- [x] T018 [US3] Verify that `lib/health/score-calculator.ts` `calculateGlobalScore()` already excludes null-scored modules (no code change needed)
 
 **Checkpoint**: User Story 3 verified — trend exclusion works via existing filters
 
@@ -104,7 +104,7 @@
 
 ### Implementation for User Story 4
 
-- [ ] T019 [US4] Ensure the SKIPPED detection in `.github/workflows/health-scan.yml` only applies to REVIEW_QUALITY, SECURITY, and SPEC_SYNC scan types — COMPLIANCE and TESTS_FIX always proceed to COMPLETED even if result indicates nothing found
+- [x] T019 [US4] Ensure the SKIPPED detection in `.github/workflows/health-scan.yml` only applies to REVIEW_QUALITY, SECURITY, and SPEC_SYNC scan types — COMPLIANCE and TESTS_FIX always proceed to COMPLETED even if result indicates nothing found
 
 **Checkpoint**: User Story 4 complete — scan type guardrails in place
 
@@ -114,12 +114,12 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T020 Run `bun run type-check` and fix any TypeScript errors
-- [ ] T021 Run `bun run lint` and fix any linting errors
-- [ ] T022 Run `bun run test:unit tests/unit/components/health-module-card.test.tsx` and verify all tests pass
-- [ ] T023 Run `bun run test:integration tests/integration/health/health-scan-skipped.test.ts` and verify all tests pass
-- [ ] T024 Run `bun run test:integration tests/integration/health/health-score.test.ts` and verify all tests pass
-- [ ] T025 Run quickstart.md verification checklist
+- [x] T020 Run `bun run type-check` and fix any TypeScript errors
+- [x] T021 Run `bun run lint` and fix any linting errors
+- [x] T022 Run `bun run test:unit tests/unit/components/health-module-card.test.tsx` and verify all tests pass
+- [x] T023 Run `bun run test:integration tests/integration/health/health-scan-skipped.test.ts` and verify all tests pass
+- [x] T024 Run `bun run test:integration tests/integration/health/health-score.test.ts` and verify all tests pass
+- [x] T025 Run quickstart.md verification checklist
 
 ---
 

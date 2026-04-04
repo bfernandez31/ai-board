@@ -156,6 +156,66 @@ describe('Health Score GET Endpoint', () => {
     expect(data.activeScans[0].status).toBe('RUNNING');
   });
 
+  it('returns correct module status when latest scan is SKIPPED', async () => {
+    // Seed a HealthScore with a previous security score
+    await prisma.healthScore.create({
+      data: {
+        projectId: ctx.projectId,
+        securityScore: 75,
+        lastSecurityScan: new Date('2026-03-20T00:00:00Z'),
+      },
+    });
+
+    // Create a SKIPPED scan as the latest for SECURITY
+    await prisma.healthScan.create({
+      data: {
+        projectId: ctx.projectId,
+        scanType: 'SECURITY',
+        status: 'SKIPPED',
+        completedAt: new Date('2026-03-28T00:00:00Z'),
+      },
+    });
+
+    const response = await makeRequest(ctx.projectId);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    // Score comes from HealthScore (not overwritten)
+    expect(data.modules.security.score).toBe(75);
+    expect(data.modules.security.scanStatus).toBe('SKIPPED');
+    expect(data.modules.security.summary).toBe('Nothing to evaluate');
+  });
+
+  it('global score is unaffected by SKIPPED scans', async () => {
+    // Seed HealthScore with security and compliance scores
+    await prisma.healthScore.create({
+      data: {
+        projectId: ctx.projectId,
+        securityScore: 80,
+        complianceScore: 90,
+        lastSecurityScan: new Date('2026-03-20T00:00:00Z'),
+        lastComplianceScan: new Date('2026-03-20T00:00:00Z'),
+      },
+    });
+
+    // Create a SKIPPED scan for SECURITY (should not affect global score)
+    await prisma.healthScan.create({
+      data: {
+        projectId: ctx.projectId,
+        scanType: 'SECURITY',
+        status: 'SKIPPED',
+        completedAt: new Date('2026-03-28T00:00:00Z'),
+      },
+    });
+
+    const response = await makeRequest(ctx.projectId);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    // Global score from HealthScore: (80 + 90) / 2 = 85
+    expect(data.globalScore).toBe(85);
+  });
+
   it('returns 400 for invalid project ID', async () => {
     const response = await GET(
       new NextRequest('http://localhost/api/projects/invalid/health'),
