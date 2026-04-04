@@ -3823,7 +3823,8 @@ Returns the aggregate health score and per-module status for a project.
       "lastScanDate": "2026-03-27T14:30:00Z",
       "scanStatus": "COMPLETED",
       "issuesFound": 3,
-      "summary": "3 issues found"
+      "summary": "3 issues found",
+      "skipReason": null
     },
     "compliance": {
       "score": 92,
@@ -3887,6 +3888,8 @@ Returns the aggregate health score and per-module status for a project.
 ```
 
 **Score labels**: 90–100 → "Excellent", 70–89 → "Good", 50–69 → "Fair", 0–49 → "Poor", no data → "No data yet" with `globalScore: null`.
+
+**SKIPPED module behavior**: When a module's most recent scan is SKIPPED, `scanStatus` is `"SKIPPED"`, `summary` is `"Skipped: {reason}"`, and `skipReason` is populated. The `score` field reflects the last COMPLETED score (preserved in the `HealthScore` aggregate) — SKIPPED scans do not overwrite it. SKIPPED modules are excluded from the global score calculation if they have no prior COMPLETED score.
 
 **Errors**:
 - `400`: Invalid project ID
@@ -4015,18 +4018,22 @@ Workflow callback endpoint to update scan status and results. Uses the same Bear
   "durationMs": 45000,
   "tokensUsed": 12000,
   "costUsd": 0.15,
-  "errorMessage": null
+  "errorMessage": null,
+  "skipReason": null
 }
 ```
 
 **Validation** (Zod):
-- `status`: Required, enum `["RUNNING", "COMPLETED", "FAILED"]`
-- `score`: Optional integer 0–100 (required when `status = COMPLETED`)
+- `status`: Required, enum `["RUNNING", "COMPLETED", "FAILED", "SKIPPED"]`
+- `score`: Optional integer 0–100 (required when `status = COMPLETED`; must be absent/null when `status = SKIPPED`)
+- `skipReason`: Optional string, max 500 chars (meaningful only when `status = SKIPPED`)
 - `headCommit`: Optional string, 40 chars
 - `issuesFound` / `issuesFixed`: Optional integers ≥ 0
 - `durationMs` / `tokensUsed`: Optional integers ≥ 0
 - `costUsd`: Optional float ≥ 0
 - `errorMessage`: Optional string, max 2000 chars
+
+**Valid status transitions**: PENDING→RUNNING, RUNNING→COMPLETED, RUNNING→FAILED, RUNNING→SKIPPED
 
 **Response** (200 OK):
 ```json
@@ -4038,8 +4045,12 @@ Workflow callback endpoint to update scan status and results. Uses the same Bear
 2. Recalculate `globalScore` from all non-null sub-scores
 3. Update the module's last scan timestamp
 
+**Side effects on SKIPPED**: None — the `HealthScore` aggregate is NOT updated. The previous COMPLETED sub-score (if any) is preserved. `completedAt` is set (terminal state).
+
+**Defensive guard**: If `status = SKIPPED` is sent for a `COMPLIANCE` or `TESTS` scan, the endpoint treats it as `COMPLETED` with the provided score (or rejects with 400 if score is absent). Agents for these types should never emit `skipped: true`, but the API enforces it defensively.
+
 **Errors**:
-- `400`: Invalid scan ID, or score missing for COMPLETED status
+- `400`: Invalid scan ID, score missing for COMPLETED, or score present for SKIPPED
 - `401`: Invalid workflow token
 - `404`: Scan not found or wrong project
 - `409`: Invalid status transition (e.g., COMPLETED → RUNNING)
