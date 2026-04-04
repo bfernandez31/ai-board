@@ -1055,23 +1055,29 @@ AI provider identifier for BYOK credentials.
 ```prisma
 enum CredentialProvider {
   ANTHROPIC
+  OPENAI
 }
 ```
 
 Extensible enumeration — new providers can be added without structural schema changes.
 
+**Agent mapping**:
+- `ANTHROPIC` → used by the `CLAUDE` agent
+- `OPENAI` → used by the `CODEX` agent
+
 ### CredentialType
 
 ```prisma
 enum CredentialType {
-  API_KEY      // Provider API key (e.g., sk-ant-api03-...)
+  API_KEY      // Provider API key (e.g., sk-ant-api03-... or sk-...)
   OAUTH_TOKEN  // OAuth bearer token
 }
 ```
 
 **Env var mapping**:
-- `API_KEY` → `ANTHROPIC_API_KEY`
-- `OAUTH_TOKEN` → `CLAUDE_CODE_OAUTH_TOKEN`
+- `ANTHROPIC` / `API_KEY` → `ANTHROPIC_API_KEY`
+- `ANTHROPIC` / `OAUTH_TOKEN` → `CLAUDE_CODE_OAUTH_TOKEN`
+- `OPENAI` / `API_KEY` → `OPENAI_API_KEY`
 
 ### CredentialReadiness
 
