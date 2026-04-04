@@ -5,6 +5,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
   DndContext,
   closestCenter,
+  pointerWithin,
   MouseSensor,
   TouchSensor,
   useSensor,
@@ -12,6 +13,7 @@ import {
   DragStartEvent,
   DragEndEvent,
 } from '@dnd-kit/core';
+import type { CollisionDetection } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { StageColumn } from './stage-column';
 import { DragOverlay } from './drag-overlay';
@@ -252,11 +254,23 @@ export function Board({
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250, // Long-press duration for deliberate drag on touch devices
-        tolerance: 20, // Allow vertical scroll gestures without triggering drag (T905)
+        delay: 300, // Long-press duration for deliberate drag on touch devices
+        tolerance: 8, // Tighter tolerance: cancel drag activation if finger moves >8px during long-press
       },
     })
   );
+
+  // Custom collision detection: require pointer to be physically inside
+  // trash-zone / close-zone (pointerWithin), but use closestCenter for columns.
+  // This prevents accidental drops on action zones when dragging near screen edges.
+  const collisionDetection: CollisionDetection = useCallback((...args) => {
+    const pointerCollisions = pointerWithin(...args);
+    const actionZoneHit = pointerCollisions.find(
+      (c) => c.id === 'trash-zone' || c.id === 'close-zone'
+    );
+    if (actionZoneHit) return [actionZoneHit];
+    return closestCenter(...args);
+  }, []);
 
   // Get all tickets as a flat array for updates
   const allTickets = useMemo(() => {
@@ -679,6 +693,17 @@ export function Board({
     },
     [isOnline, toast, performTransition]
   );
+
+  // Handle drag cancel - resets all drag state when touch is interrupted
+  // This prevents the UI from getting stuck in drag mode on mobile
+  // (e.g., when the browser cancels the touch due to scroll conflicts)
+  const handleDragCancel = useCallback(() => {
+    setActiveTicket(null);
+    setIsDragging(false);
+    setDragSource(null);
+    setDraggedTicketHasJob(false);
+    setValidRollbackTargets([]);
+  }, []);
 
   // Handle ticket click to open modal
   const handleTicketClick = useCallback((ticket: TicketWithVersion) => {
@@ -1188,9 +1213,10 @@ export function Board({
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={collisionDetection}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
         <div className="w-full h-full relative">
           {/* Drop Zone Visual Feedback - Full Board */}

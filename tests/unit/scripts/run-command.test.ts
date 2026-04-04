@@ -27,19 +27,12 @@ function runScript(args: string, expectSuccess = true): { stdout: string; stderr
   }
 }
 
-describe('run-command.sh', () => {
-  beforeAll(() => {
-    // Ensure yq is available (it should be from setup-environment.sh or CI)
-    try {
-      execSync('which yq', { encoding: 'utf-8' });
-    } catch {
-      // Install yq for test environment
-      execSync(
-        'sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.1/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq',
-        { encoding: 'utf-8', timeout: 30000 }
-      );
-    }
-  });
+// yq is required — available in CI via setup-environment.sh, may not be installed locally
+const hasYq = (() => {
+  try { execSync('which yq', { encoding: 'utf-8' }); return true; } catch { return false; }
+})();
+
+describe.skipIf(!hasYq)('run-command.sh', () => {
 
   beforeEach(() => {
     // Clean up tmp dir before each test
