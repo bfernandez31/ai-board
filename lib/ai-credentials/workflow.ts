@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/db/client';
 import { decryptCredential } from './crypto';
-import { getEnvVar } from './types';
-import type { WorkflowResolvedCredential } from './types';
+import { getEnvVar, type WorkflowResolvedCredential } from './types';
 import type { CredentialProvider, UserCredential } from '@prisma/client';
 
 export function getMissingCredentialError(provider: CredentialProvider = 'ANTHROPIC'): string {

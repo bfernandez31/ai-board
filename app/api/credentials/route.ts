@@ -3,8 +3,7 @@ import { z, ZodError } from 'zod';
 import { getCurrentUserOrToken } from '@/lib/db/users';
 import { createOrReplaceCredential, listCredentials } from '@/lib/ai-credentials/service';
 import { getProviderModule } from '@/lib/ai-credentials/providers';
-import { PROVIDER_ALLOWED_TYPES } from '@/lib/ai-credentials/types';
-import type { CredentialListItem } from '@/lib/ai-credentials/types';
+import { PROVIDER_ALLOWED_TYPES, type CredentialListItem } from '@/lib/ai-credentials/types';
 
 const createCredentialSchema = z.object({
   provider: z.enum(['ANTHROPIC', 'OPENAI']),

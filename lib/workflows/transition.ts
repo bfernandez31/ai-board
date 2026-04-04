@@ -1,4 +1,4 @@
-import { PrismaClient, Stage, JobStatus, Ticket, Project, Agent } from '@prisma/client';
+import { Stage, JobStatus, Ticket, Project, Agent } from '@prisma/client';
 import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
@@ -7,8 +7,7 @@ import { getOwnerCredential, getMissingCredentialError } from '@/lib/ai-credenti
 import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
 import { getProjectServiceInputs } from '@/lib/workflows/service-inputs';
 import { ensureFreshConfig } from '@/lib/config-sync';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/db/client';
 
 /** Stage-to-command mapping (null = manual/no workflow) */
 export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
@@ -231,7 +230,7 @@ export async function handleTicketTransition(
           errorCode: 'GITHUB_ERROR',
         };
       }
-      let workflowFile: string = '';
+      let workflowFile = '';
 
       try {
         const octokit = new Octokit({

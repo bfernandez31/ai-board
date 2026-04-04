@@ -151,11 +151,9 @@ export function CredentialForm() {
           id="value"
           type="password"
           placeholder={
-            isOpenAI
-              ? "sk-proj-..."
-              : credentialType === "API_KEY"
-                ? "sk-ant-api03-..."
-                : "Paste your OAuth token"
+            isOpenAI ? "sk-proj-..."
+              : credentialType === "OAUTH_TOKEN" ? "Paste your OAuth token"
+              : "sk-ant-api03-..."
           }
           value={value}
           onChange={(e) => handleValueChange(e.target.value)}
