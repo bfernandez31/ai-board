@@ -24,7 +24,13 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Load spec.md and extract user stories with their priorities (P1, P2, P3, etc.)
    - If data-model.md exists: Extract entities and map to user stories
    - If contracts/ exists: Map endpoints to user stories
-   - If research.md exists: Extract decisions for setup tasks
+   - If research.md exists: Extract decisions for setup tasks AND the "Existing Test Files" inventory
+   - **File path validation** (MANDATORY):
+     - Load the "Existing Files" section from research.md
+     - If missing: run `Glob` to discover existing files in impacted domains, for both source and tests
+     - For each task that references a file: verify the path is real (existing file) or justified as new (no existing file covers that responsibility)
+     - For test files specifically (constitution): if an existing test file covers the domain → task MUST say "Extend [existing file path]", not "Create new file". Create a new test file ONLY when: (a) no existing file covers the domain, OR (b) adding would mix unrelated concerns
+     - Never invent or guess file names — use real paths from the filesystem
    - Generate tasks organized by user story (see Task Generation Rules below)
    - Generate dependency graph showing user story completion order
    - Create parallel execution examples per user story
@@ -35,7 +41,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Phase 1: Setup tasks (project initialization)
    - Phase 2: Foundational tasks (blocking prerequisites for all user stories)
    - Phase 3+: One phase per user story (in priority order from spec.md)
-   - Each phase includes: story goal, independent test criteria, tests (if requested), implementation tasks
+   - Each phase includes: story goal, independent test criteria, tests , implementation tasks
    - Final Phase: Polish & cross-cutting concerns
    - All tasks must follow the strict checklist format (see Task Generation Rules below)
    - Clear file paths for each task
@@ -59,7 +65,7 @@ The tasks.md should be immediately executable - each task must be specific enoug
 
 **CRITICAL**: Tasks MUST be organized by user story to enable independent implementation and testing.
 
-**Tests are OPTIONAL**: Only generate test tasks if explicitly requested in the feature specification or if user requests TDD approach.
+**Tests are INCLUDED by default** (constitution). Only skip test tasks if the user explicitly instructs not to generate tests.
 
 ### Checklist Format (REQUIRED)
 
@@ -101,12 +107,12 @@ Every task MUST strictly follow this format:
      - Models needed for that story
      - Services needed for that story
      - Endpoints/UI needed for that story
-     - If tests requested: Tests specific to that story
+     - Tests specific to that story
    - Mark story dependencies (most stories should be independent)
 
 2. **From Contracts**:
    - Map each contract/endpoint → to the user story it serves
-   - If tests requested: Each contract → contract test task [P] before implementation in that story's phase
+   - Each contract → contract test task [P] before implementation in that story's phase
 
 3. **From Data Model**:
    - Map each entity to the user story(ies) that need it
@@ -123,6 +129,6 @@ Every task MUST strictly follow this format:
 - **Phase 1**: Setup (project initialization)
 - **Phase 2**: Foundational (blocking prerequisites - MUST complete before user stories)
 - **Phase 3+**: User Stories in priority order (P1, P2, P3...)
-  - Within each story: Tests (if requested) → Models → Services → Endpoints → Integration
+  - Within each story: Tests  → Models → Services → Endpoints → Integration
   - Each phase should be a complete, independently testable increment
 - **Final Phase**: Polish & Cross-Cutting Concerns

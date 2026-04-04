@@ -53,12 +53,21 @@ You **MUST** consider the user input before proceeding (if not empty).
      Task: "Find best practices for {tech} in {domain}"
    ```
 
-3. **Consolidate findings** in `research.md` using format:
+3. **Discover existing files** (MANDATORY):
+   - Identify all modules/domains that will be impacted by this feature
+   - Scan the codebase for existing source and test files in those domains using `Glob` with domain keywords
+   - Record findings in `research.md` under an **"Existing Files"** section:
+     - Exact path, what it covers, whether to extend or create new
+     - For test files specifically: enforces constitution "Search existing tests FIRST — extend, don't duplicate"
+   - This inventory is REQUIRED before the Implementation Phases and Testing Strategy sections can be written
+   - The plan MUST reference real file paths from this discovery — never invent file names. If a file needs to be modified, use its actual path. If a new file is needed, verify no existing file already covers that responsibility.
+
+4. **Consolidate findings** in `research.md` using format:
    - Decision: [what was chosen]
    - Rationale: [why chosen]
    - Alternatives considered: [what else evaluated]
 
-**Output**: research.md with all NEEDS CLARIFICATION resolved
+**Output**: research.md (with Existing Test Files section) with all NEEDS CLARIFICATION resolved
 
 ### Phase 1: Design & Contracts
 
@@ -86,19 +95,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Testing Strategy (include in plan)
 
-When defining the Testing section of the plan, use this decision tree to assign test types per user story:
-
-1. Pure function with no React/API dependencies? → **Unit test** (`tests/unit/`)
-2. React component with user interactions? → **Component test** (`tests/unit/components/`) with mocked hooks
-3. API endpoint or database operation? → **Integration test** (`tests/integration/[domain]/`) with Vitest + Prisma
-4. REQUIRES a real browser (OAuth, drag-drop, keyboard nav, viewport)? → **E2E test** (`tests/e2e/`) with Playwright
-5. Unsure? → Default to **Integration test** (fastest full-stack feedback)
-
-**Critical rules**:
-- API tests use Vitest, NOT Playwright (10-20x faster)
-- E2E is expensive (~5s each) — only for browser-required features
-- Search existing tests FIRST — extend, don't duplicate
-- RTL query priority: `getByRole` > `getByLabelText` > `getByText` > `getByTestId`
+Follow the testing strategy defined in the project's constitution. Use the "Existing Files" inventory from Phase 0 to determine which test files to extend. Create a new test file ONLY when no existing file covers the domain, or when adding would mix unrelated concerns.
 
 ## Key rules
 

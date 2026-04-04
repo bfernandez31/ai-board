@@ -23,11 +23,12 @@ UI components follow shadcn/ui patterns; server logic follows Next.js convention
 - Shared utilities in `/lib/[utility].ts` with single responsibility
 
 ### III. Test-Driven Development (NON-NEGOTIABLE)
-Tests verify behavior from specs. Testing Trophy architecture prioritizes fast integration tests over slow E2E tests. See CLAUDE.md for test commands, locations, and layer details.
+Tests verify behavior from specs. Testing Trophy architecture prioritizes fast integration tests over slow E2E tests.
 
 **Non-Negotiable Rules**:
 - Tests verify behavior, not implementation details
 - No feature is complete without passing tests
+- Search existing tests FIRST — extend, don't duplicate. Create a new test file only when no existing file covers the domain, or when adding would mix unrelated concerns.
 - Mocks MUST target the same module instance the code under test imports — verify mock path matches the actual import chain
 - Test assertions MUST NOT be inside conditional blocks (if, ternary) that can silently pass without executing
 
