@@ -1259,7 +1259,7 @@ Transition ticket to target stage with workflow dispatch.
 - **VERIFY → PLAN**: Rollback for FULL workflows only:
   1. Validates latest job is COMPLETED, FAILED, or CANCELLED
   2. Clears previewUrl on ticket
-  3. Deletes implement job record
+  3. Deletes most recent job record (ordered by startedAt desc)
   4. Updates ticket stage to PLAN
   5. Dispatches rollback-reset workflow (git reset to pre-BUILD state, preserves spec files)
   6. Creates rollback-reset job to track the git reset operation
@@ -2774,6 +2774,48 @@ Create a new job for a ticket (workflow-only endpoint).
 - Workflow orchestration for multi-stage operations
 - Internal job creation by GitHub Actions workflows
 
+### POST /api/jobs/:id/cancel
+
+Cancel a running or pending job, terminating the associated GitHub Actions workflow run.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (resolved via job → ticket → project)
+
+**Path Parameters**:
+- `id` (number, required): Job ID
+
+**Request Body**: None
+
+**Response** (200 OK — cancelled successfully):
+```json
+{
+  "id": 123,
+  "status": "CANCELLED",
+  "completedAt": "2026-04-03T14:32:15.123Z"
+}
+```
+
+**Response** (200 OK — job already terminal, no-op):
+```json
+{
+  "id": 123,
+  "status": "COMPLETED",
+  "completedAt": "2026-04-03T14:30:00.000Z",
+  "alreadyTerminal": true
+}
+```
+
+**Errors**:
+- `403`: User is neither project owner nor member
+- `404`: Job not found
+- `502`: GitHub Actions API call failed (job status unchanged)
+
+**Behavior**:
+- PENDING job (no `workflowRunId`): marks job CANCELLED directly without calling GitHub API
+- RUNNING job (has `workflowRunId`): calls GitHub Actions cancel API, then marks job CANCELLED
+- Already-terminal job: returns 200 with `alreadyTerminal: true` and current status (idempotent)
+- GitHub API failure: returns 502, job status is not modified
+
 ### PATCH /api/jobs/:id/status
 
 Update job status (workflow-only endpoint).
@@ -2787,7 +2829,8 @@ Update job status (workflow-only endpoint).
 **Request Body**:
 ```json
 {
-  "status": "COMPLETED",
+  "status": "RUNNING",
+  "workflowRunId": 12345678901,
   "qualityScore": 83,
   "qualityScoreDetails": "{\"dimensions\":{\"bugDetection\":{\"score\":90,\"weight\":0.30},\"compliance\":{\"score\":80,\"weight\":0.40},\"codeComments\":{\"score\":70,\"weight\":0.20},\"historicalContext\":{\"score\":85,\"weight\":0.10},\"specSync\":{\"score\":95,\"weight\":0.00}},\"finalScore\":83}"
 }
@@ -2795,6 +2838,7 @@ Update job status (workflow-only endpoint).
 
 **Validation**:
 - `status`: Required, enum (RUNNING|COMPLETED|FAILED|CANCELLED)
+- `workflowRunId`: Optional BigInt, positive integer; only accepted when `status = "RUNNING"`; written once (first-write-wins — ignored if `workflowRunId` already populated)
 - `qualityScore`: Optional, integer 0-100 inclusive; only accepted when `status = "COMPLETED"` for verify jobs; ignored otherwise
 - `qualityScoreDetails`: Optional, JSON string with dimension sub-scores; stored alongside `qualityScore`
 - State machine transitions enforced
@@ -2812,6 +2856,7 @@ Update job status (workflow-only endpoint).
 - `400`: Invalid status or invalid state transition
 - `401`: Invalid or missing workflow token
 - `404`: Job not found
+- `409`: Job is already CANCELLED — workflow should abort
 
 **State Machine**:
 ```
@@ -2822,6 +2867,8 @@ Valid transitions:
 
 Invalid transitions return 400 error
 ```
+
+**Workflow self-abort on cancel**: When a workflow sends a RUNNING status update for a job that has already been marked CANCELLED (e.g., user cancelled a PENDING job before it started), the endpoint returns 409. Workflows must check the response status and abort if they receive 409.
 
 ## Telemetry Endpoints
 

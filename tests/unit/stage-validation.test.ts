@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Stage, isValidTransition, getNextStage } from '../../lib/stage-transitions';
+import { Stage, isValidTransition, getNextStage, getValidRollbackTargets } from '../../lib/stage-transitions';
 
 /**
  * Unit Tests: Stage Validation Logic
@@ -84,47 +84,131 @@ describe('Stage Validation - Quick-Impl Support', () => {
 });
 
 describe('Stage Validation - Rollback Support', () => {
-  /**
-   * Test: Rollback Path - BUILD → INBOX for QUICK workflow
-   * Given: Ticket in BUILD stage with workflowType=QUICK
-   * When: Validate transition to INBOX
-   * Then: Returns true (rollback special case)
-   */
   it('should allow BUILD → INBOX transition for QUICK workflow (rollback)', () => {
-    const result = isValidTransition(Stage.BUILD, Stage.INBOX, 'QUICK');
-    expect(result).toBe(true);
+    expect(isValidTransition(Stage.BUILD, Stage.INBOX, 'QUICK')).toBe(true);
   });
 
-  /**
-   * Test: Block Rollback for FULL workflow
-   * Given: Ticket in BUILD stage with workflowType=FULL
-   * When: Validate transition to INBOX
-   * Then: Returns false (rollback only for QUICK workflows)
-   */
   it('should reject BUILD → INBOX transition for FULL workflow', () => {
-    const result = isValidTransition(Stage.BUILD, Stage.INBOX, 'FULL');
-    expect(result).toBe(false);
+    expect(isValidTransition(Stage.BUILD, Stage.INBOX, 'FULL')).toBe(false);
   });
 
-  /**
-   * Test: Block Rollback without workflowType specified
-   * Given: Ticket in BUILD stage without workflowType parameter
-   * When: Validate transition to INBOX
-   * Then: Returns false (defaults to blocking without explicit QUICK)
-   */
   it('should reject BUILD → INBOX transition without workflowType', () => {
-    const result = isValidTransition(Stage.BUILD, Stage.INBOX);
-    expect(result).toBe(false);
+    expect(isValidTransition(Stage.BUILD, Stage.INBOX)).toBe(false);
   });
 
-  /**
-   * Test: Normal BUILD → VERIFY transition
-   * Given: Ticket in BUILD stage
-   * When: Validate transition to VERIFY
-   * Then: Returns true (normal sequential transition)
-   */
   it('should allow BUILD → VERIFY transition (normal workflow)', () => {
-    const result = isValidTransition(Stage.BUILD, Stage.VERIFY);
-    expect(result).toBe(true);
+    expect(isValidTransition(Stage.BUILD, Stage.VERIFY)).toBe(true);
+  });
+});
+
+describe('Stage Validation - Extended Rollback Paths', () => {
+  it('should allow SPECIFY → INBOX transition for FULL workflow', () => {
+    expect(isValidTransition(Stage.SPECIFY, Stage.INBOX, 'FULL')).toBe(true);
+  });
+
+  it('should reject SPECIFY → INBOX transition without workflowType', () => {
+    expect(isValidTransition(Stage.SPECIFY, Stage.INBOX)).toBe(false);
+  });
+
+  it('should reject SPECIFY → INBOX transition for QUICK workflow', () => {
+    expect(isValidTransition(Stage.SPECIFY, Stage.INBOX, 'QUICK')).toBe(false);
+  });
+
+  it('should allow PLAN → SPECIFY transition for FULL workflow', () => {
+    expect(isValidTransition(Stage.PLAN, Stage.SPECIFY, 'FULL')).toBe(true);
+  });
+
+  it('should reject PLAN → SPECIFY transition without workflowType', () => {
+    expect(isValidTransition(Stage.PLAN, Stage.SPECIFY)).toBe(false);
+  });
+
+  it('should reject PLAN → SPECIFY transition for QUICK workflow', () => {
+    expect(isValidTransition(Stage.PLAN, Stage.SPECIFY, 'QUICK')).toBe(false);
+  });
+
+  it('should allow BUILD → PLAN transition for FULL workflow', () => {
+    expect(isValidTransition(Stage.BUILD, Stage.PLAN, 'FULL')).toBe(true);
+  });
+
+  it('should reject BUILD → PLAN transition for QUICK workflow', () => {
+    expect(isValidTransition(Stage.BUILD, Stage.PLAN, 'QUICK')).toBe(false);
+  });
+
+  it('should reject BUILD → PLAN transition without workflowType', () => {
+    expect(isValidTransition(Stage.BUILD, Stage.PLAN)).toBe(false);
+  });
+
+  it('should allow VERIFY → BUILD transition for FULL workflow', () => {
+    expect(isValidTransition(Stage.VERIFY, Stage.BUILD, 'FULL')).toBe(true);
+  });
+
+  it('should reject VERIFY → BUILD transition for QUICK workflow', () => {
+    expect(isValidTransition(Stage.VERIFY, Stage.BUILD, 'QUICK')).toBe(false);
+  });
+
+  it('should reject VERIFY → BUILD transition without workflowType', () => {
+    expect(isValidTransition(Stage.VERIFY, Stage.BUILD)).toBe(false);
+  });
+
+  it('should reject SHIP → VERIFY (backwards from terminal)', () => {
+    expect(isValidTransition(Stage.SHIP, Stage.VERIFY)).toBe(false);
+  });
+});
+
+describe('Stage Validation - getValidRollbackTargets', () => {
+  describe('FULL workflow', () => {
+    it('should return [INBOX] for SPECIFY with FAILED job', () => {
+      expect(getValidRollbackTargets(Stage.SPECIFY, 'FULL', 'FAILED')).toEqual([Stage.INBOX]);
+    });
+
+    it('should return [SPECIFY] for PLAN with CANCELLED job', () => {
+      expect(getValidRollbackTargets(Stage.PLAN, 'FULL', 'CANCELLED')).toEqual([Stage.SPECIFY]);
+    });
+
+    it('should return [PLAN] for BUILD with FAILED job', () => {
+      expect(getValidRollbackTargets(Stage.BUILD, 'FULL', 'FAILED')).toEqual([Stage.PLAN]);
+    });
+
+    it('should return [BUILD, PLAN] for VERIFY with FAILED job', () => {
+      expect(getValidRollbackTargets(Stage.VERIFY, 'FULL', 'FAILED')).toEqual([Stage.BUILD, Stage.PLAN]);
+    });
+
+    it('should return [PLAN] for VERIFY with COMPLETED job (existing rollback)', () => {
+      expect(getValidRollbackTargets(Stage.VERIFY, 'FULL', 'COMPLETED')).toEqual([Stage.PLAN]);
+    });
+  });
+
+  describe('QUICK workflow', () => {
+    it('should return [INBOX] for BUILD with FAILED job', () => {
+      expect(getValidRollbackTargets(Stage.BUILD, 'QUICK', 'FAILED')).toEqual([Stage.INBOX]);
+    });
+
+    it('should return [] for SPECIFY (no rollback in QUICK)', () => {
+      expect(getValidRollbackTargets(Stage.SPECIFY, 'QUICK', 'FAILED')).toEqual([]);
+    });
+  });
+
+  describe('non-terminal statuses', () => {
+    it('should return [] for RUNNING job', () => {
+      expect(getValidRollbackTargets(Stage.BUILD, 'FULL', 'RUNNING')).toEqual([]);
+    });
+
+    it('should return [] for PENDING job', () => {
+      expect(getValidRollbackTargets(Stage.BUILD, 'FULL', 'PENDING')).toEqual([]);
+    });
+
+    it('should return [] for null job status', () => {
+      expect(getValidRollbackTargets(Stage.BUILD, 'FULL', null)).toEqual([]);
+    });
+  });
+
+  describe('stages with no rollback', () => {
+    it('should return [] for INBOX', () => {
+      expect(getValidRollbackTargets(Stage.INBOX, 'FULL', 'FAILED')).toEqual([]);
+    });
+
+    it('should return [] for SHIP', () => {
+      expect(getValidRollbackTargets(Stage.SHIP, 'FULL', 'FAILED')).toEqual([]);
+    });
   });
 });

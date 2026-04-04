@@ -1,13 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Stage, type Job } from '@prisma/client';
+import { Stage, type Job, type WorkflowType } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
-import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
+import {
+  canRollbackToInbox,
+  canRollbackToPlan,
+  canRollbackSpecifyToInbox,
+  canRollbackPlanToSpecify,
+  canRollbackBuildToPlan,
+  canRollbackVerifyToBuild,
+  type RollbackValidation,
+  type Job as RollbackJob,
+} from '@/app/lib/workflows/rollback-validator';
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
+
+type TicketWithJobs = { id: number; stage: string; workflowType: string; ticketKey: string; projectId: number; branch: string | null; jobs?: Job[] };
+
+/** Extract most recent job and run validator. Returns error response or the job. */
+function validateRollback(
+  ticket: TicketWithJobs,
+  targetStage: Stage,
+  validator: (stage: Stage, target: Stage, wt: WorkflowType, job: RollbackJob | null) => RollbackValidation
+): { error: NextResponse } | { mostRecentJob: Job | null } {
+  const mostRecentJob = (ticket as TicketWithJobs & { jobs: Job[] }).jobs?.[0] || null;
+  const validation = validator(ticket.stage as Stage, targetStage, ticket.workflowType as WorkflowType, mostRecentJob);
+  if (!validation.allowed) {
+    return { error: NextResponse.json({ error: validation.reason }, { status: 400 }) };
+  }
+  return { mostRecentJob };
+}
+
+/** Common transaction: update ticket and delete most recent job. */
+async function rollbackTransaction(
+  ticketId: number,
+  updateData: Record<string, unknown>,
+  mostRecentJob: Job | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.ticket.update({ where: { id: ticketId }, data: updateData });
+    if (mostRecentJob) {
+      await tx.job.delete({ where: { id: mostRecentJob.id } });
+    }
+    return updated;
+  });
+}
 
 const TransitionRequestSchema = z.object({
   targetStage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']),
@@ -89,98 +129,53 @@ export async function POST(
 
     const isRollbackToInboxAttempt = ticket.stage === 'BUILD' && targetStage === 'INBOX';
     const isRollbackToPlanAttempt = ticket.stage === 'VERIFY' && targetStage === 'PLAN';
+    const isSpecifyToInbox = ticket.stage === 'SPECIFY' && targetStage === 'INBOX';
+    const isPlanToSpecify = ticket.stage === 'PLAN' && targetStage === 'SPECIFY';
+    const isBuildToPlan = ticket.stage === 'BUILD' && targetStage === 'PLAN';
+    const isVerifyToBuild = ticket.stage === 'VERIFY' && targetStage === 'BUILD';
 
+    // BUILD → INBOX rollback (QUICK workflow)
     if (isRollbackToInboxAttempt) {
-      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
-      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
+      const result = validateRollback(ticket, targetStage as Stage, canRollbackToInbox);
+      if ('error' in result) return result.error;
 
-      const validation = canRollbackToInbox(
-        ticket.stage,
-        targetStage as Stage,
-        ticket.workflowType,
-        mostRecentJob
+      const updatedTicket = await rollbackTransaction(
+        ticket.id,
+        { stage: 'INBOX', workflowType: 'FULL', branch: null, version: 1 },
+        result.mostRecentJob
       );
 
-      if (!validation.allowed) {
-        return NextResponse.json({ error: validation.reason }, { status: 400 });
-      }
-
-      const updatedTicket = await prisma.$transaction(async (tx) => {
-        const updated = await tx.ticket.update({
-          where: { id: ticket.id },
-          data: { stage: 'INBOX', workflowType: 'FULL', branch: null, version: 1 },
-        });
-
-        if (mostRecentJob) {
-          await tx.job.delete({
-            where: { id: mostRecentJob.id },
-          });
-        }
-
-        return updated;
-      });
-
       return NextResponse.json({
-        id: updatedTicket.id,
-        stage: updatedTicket.stage,
-        workflowType: updatedTicket.workflowType,
-        branch: updatedTicket.branch,
-        version: updatedTicket.version,
-        updatedAt: updatedTicket.updatedAt.toISOString(),
+        id: updatedTicket.id, stage: updatedTicket.stage,
+        workflowType: updatedTicket.workflowType, branch: updatedTicket.branch,
+        version: updatedTicket.version, updatedAt: updatedTicket.updatedAt.toISOString(),
       });
     }
 
+    // VERIFY → PLAN rollback (FULL workflow, dispatches rollback-reset)
     if (isRollbackToPlanAttempt) {
-      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
-      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
-
-      const validation = canRollbackToPlan(
-        ticket.stage,
-        targetStage as Stage,
-        ticket.workflowType,
-        mostRecentJob
-      );
-
-      if (!validation.allowed) {
-        return NextResponse.json({ error: validation.reason }, { status: 400 });
-      }
+      const result = validateRollback(ticket, targetStage as Stage, canRollbackToPlan);
+      if ('error' in result) return result.error;
 
       const ticketWithProject = await prisma.ticket.findUnique({
-        where: { id: ticket.id },
-        include: { project: true },
+        where: { id: ticket.id }, include: { project: true },
       });
-
       if (!ticketWithProject) {
         return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
       }
 
-      const updatedTicket = await prisma.$transaction(async (tx) => {
-        const updated = await tx.ticket.update({
-          where: { id: ticket.id },
-          data: {
-            stage: 'PLAN',
-            previewUrl: null,
-            version: { increment: 1 },
-          },
-        });
-
-        if (mostRecentJob) {
-          await tx.job.delete({
-            where: { id: mostRecentJob.id },
-          });
-        }
-
-        return updated;
-      });
+      const updatedTicket = await rollbackTransaction(
+        ticket.id,
+        { stage: 'PLAN', previewUrl: null, version: { increment: 1 } },
+        result.mostRecentJob
+      );
 
       let resetJobId: number | undefined;
       if (updatedTicket.branch) {
         try {
           const dispatchResult = await dispatchRollbackResetWorkflow({
-            ticketId: updatedTicket.id,
-            ticketKey: ticket.ticketKey,
-            projectId: ticket.projectId,
-            branch: updatedTicket.branch,
+            ticketId: updatedTicket.id, ticketKey: ticket.ticketKey,
+            projectId: ticket.projectId, branch: updatedTicket.branch,
             githubOwner: ticketWithProject.project.githubOwner,
             githubRepo: ticketWithProject.project.githubRepo,
           });
@@ -191,14 +186,128 @@ export async function POST(
       }
 
       return NextResponse.json({
-        id: updatedTicket.id,
-        stage: updatedTicket.stage,
-        workflowType: updatedTicket.workflowType,
-        branch: updatedTicket.branch,
-        version: updatedTicket.version,
-        previewUrl: updatedTicket.previewUrl,
-        updatedAt: updatedTicket.updatedAt.toISOString(),
-        resetJobId,
+        id: updatedTicket.id, stage: updatedTicket.stage,
+        workflowType: updatedTicket.workflowType, branch: updatedTicket.branch,
+        version: updatedTicket.version, previewUrl: updatedTicket.previewUrl,
+        updatedAt: updatedTicket.updatedAt.toISOString(), resetJobId,
+      });
+    }
+
+    // SPECIFY → INBOX: Delete branch (if exists), reset ticket to INBOX
+    if (isSpecifyToInbox) {
+      const result = validateRollback(ticket, targetStage as Stage, canRollbackSpecifyToInbox);
+      if ('error' in result) return result.error;
+
+      if (ticket.branch) {
+        try {
+          const ticketWithProject = await prisma.ticket.findUnique({
+            where: { id: ticket.id }, include: { project: true },
+          });
+          if (ticketWithProject) {
+            const { deleteBranchAndPRs } = await import('@/lib/github/delete-branch-and-prs');
+            const { Octokit } = await import('@octokit/rest');
+            const githubToken = process.env.GITHUB_TOKEN;
+            if (githubToken) {
+              const octokit = new Octokit({ auth: githubToken });
+              await deleteBranchAndPRs(
+                octokit,
+                ticketWithProject.project.githubOwner,
+                ticketWithProject.project.githubRepo,
+                ticket.branch
+              );
+            }
+          }
+        } catch (branchError) {
+          console.error('[Transition] Failed to delete branch for SPECIFY→INBOX:', branchError);
+        }
+      }
+
+      const updatedTicket = await rollbackTransaction(
+        ticket.id,
+        { stage: 'INBOX', branch: null, workflowType: 'FULL', version: 1 },
+        result.mostRecentJob
+      );
+
+      return NextResponse.json({
+        id: updatedTicket.id, stage: updatedTicket.stage,
+        workflowType: updatedTicket.workflowType, branch: updatedTicket.branch,
+        version: updatedTicket.version, updatedAt: updatedTicket.updatedAt.toISOString(),
+      });
+    }
+
+    // PLAN → SPECIFY: Stage change only
+    if (isPlanToSpecify) {
+      const result = validateRollback(ticket, targetStage as Stage, canRollbackPlanToSpecify);
+      if ('error' in result) return result.error;
+
+      const updatedTicket = await rollbackTransaction(
+        ticket.id,
+        { stage: 'SPECIFY', version: { increment: 1 } },
+        result.mostRecentJob
+      );
+
+      return NextResponse.json({
+        id: updatedTicket.id, stage: updatedTicket.stage,
+        version: updatedTicket.version, updatedAt: updatedTicket.updatedAt.toISOString(),
+      });
+    }
+
+    // BUILD → PLAN: Backup tag + git reset via rollback-reset workflow
+    if (isBuildToPlan) {
+      const result = validateRollback(ticket, targetStage as Stage, canRollbackBuildToPlan);
+      if ('error' in result) return result.error;
+
+      const ticketWithProject = await prisma.ticket.findUnique({
+        where: { id: ticket.id }, include: { project: true },
+      });
+      if (!ticketWithProject) {
+        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
+      }
+
+      const updatedTicket = await rollbackTransaction(
+        ticket.id,
+        { stage: 'PLAN', previewUrl: null, version: { increment: 1 } },
+        result.mostRecentJob
+      );
+
+      let resetJobId: number | undefined;
+      if (updatedTicket.branch) {
+        try {
+          const dispatchResult = await dispatchRollbackResetWorkflow({
+            ticketId: updatedTicket.id, ticketKey: ticket.ticketKey,
+            projectId: ticket.projectId, branch: updatedTicket.branch,
+            githubOwner: ticketWithProject.project.githubOwner,
+            githubRepo: ticketWithProject.project.githubRepo,
+            stage: 'build',
+          });
+          resetJobId = dispatchResult.jobId;
+        } catch (dispatchError) {
+          console.error('[Transition] Failed to dispatch rollback-reset for BUILD→PLAN:', dispatchError);
+        }
+      }
+
+      return NextResponse.json({
+        id: updatedTicket.id, stage: updatedTicket.stage,
+        workflowType: updatedTicket.workflowType, branch: updatedTicket.branch,
+        version: updatedTicket.version, previewUrl: updatedTicket.previewUrl,
+        updatedAt: updatedTicket.updatedAt.toISOString(), resetJobId,
+      });
+    }
+
+    // VERIFY → BUILD: Stage change only
+    if (isVerifyToBuild) {
+      const result = validateRollback(ticket, targetStage as Stage, canRollbackVerifyToBuild);
+      if ('error' in result) return result.error;
+
+      const updatedTicket = await rollbackTransaction(
+        ticket.id,
+        { stage: 'BUILD', version: { increment: 1 } },
+        result.mostRecentJob
+      );
+
+      return NextResponse.json({
+        id: updatedTicket.id, stage: updatedTicket.stage,
+        version: updatedTicket.version, updatedAt: updatedTicket.updatedAt.toISOString(),
       });
     }
 

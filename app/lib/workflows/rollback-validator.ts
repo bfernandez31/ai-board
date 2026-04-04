@@ -75,3 +75,53 @@ export function canRollbackToPlan(
 
   return { allowed: true };
 }
+
+/**
+ * Generic single-step FULL-workflow rollback validator.
+ * Covers: SPECIFY→INBOX, PLAN→SPECIFY, BUILD→PLAN, VERIFY→BUILD
+ */
+function canRollbackFullOneStep(
+  currentStage: Stage,
+  targetStage: Stage,
+  expectedFrom: Stage,
+  expectedTo: Stage,
+  workflowType: WorkflowType,
+  mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  if (currentStage !== expectedFrom || targetStage !== expectedTo) {
+    return { allowed: false, reason: `Rollback only available from ${expectedFrom} to ${expectedTo} stage` };
+  }
+
+  if (workflowType !== 'FULL') {
+    return { allowed: false, reason: `Rollback from ${expectedFrom} to ${expectedTo} only available for FULL workflows.` };
+  }
+
+  const statusCheck = validateJobStatus(mostRecentWorkflowJob, ['FAILED', 'CANCELLED']);
+  if (statusCheck) return statusCheck;
+
+  return { allowed: true };
+}
+
+export function canRollbackSpecifyToInbox(
+  currentStage: Stage, targetStage: Stage, workflowType: WorkflowType, mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  return canRollbackFullOneStep(currentStage, targetStage, 'SPECIFY', 'INBOX', workflowType, mostRecentWorkflowJob);
+}
+
+export function canRollbackPlanToSpecify(
+  currentStage: Stage, targetStage: Stage, workflowType: WorkflowType, mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  return canRollbackFullOneStep(currentStage, targetStage, 'PLAN', 'SPECIFY', workflowType, mostRecentWorkflowJob);
+}
+
+export function canRollbackBuildToPlan(
+  currentStage: Stage, targetStage: Stage, workflowType: WorkflowType, mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  return canRollbackFullOneStep(currentStage, targetStage, 'BUILD', 'PLAN', workflowType, mostRecentWorkflowJob);
+}
+
+export function canRollbackVerifyToBuild(
+  currentStage: Stage, targetStage: Stage, workflowType: WorkflowType, mostRecentWorkflowJob: Job | null
+): RollbackValidation {
+  return canRollbackFullOneStep(currentStage, targetStage, 'VERIFY', 'BUILD', workflowType, mostRecentWorkflowJob);
+}

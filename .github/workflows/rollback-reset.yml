@@ -23,6 +23,11 @@ on:
         description: 'GitHub repository in format owner/repo (e.g., bfernandez31/ai-board)'
         required: true
         type: string
+      stage:
+        description: 'Source stage for backup tag naming (e.g., build, verify)'
+        required: false
+        type: string
+        default: 'verify'
 
 env:
   APP_URL: ${{ vars.APP_URL }}
@@ -31,7 +36,7 @@ env:
 
 jobs:
   rollback-reset:
-    name: Rollback from VERIFY to PLAN
+    name: Rollback from ${{ inputs.stage || 'verify' }} to PLAN
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -42,7 +47,7 @@ jobs:
           curl -s -X PATCH \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
-            -d '{"status": "RUNNING"}' \
+            -d '{"status": "RUNNING", "workflowRunId": ${{ github.run_id }}}' \
             ${{ env.APP_URL }}/api/jobs/${{ inputs.job_id }}/status
 
       # --- Checkout target repository at feature branch ---
@@ -91,6 +96,15 @@ jobs:
             echo "No spec folder found at $SPEC_DIR"
           fi
 
+      # --- Create backup tag before destructive reset ---
+      - name: Create backup tag
+        run: |
+          BACKUP_TAG="backup/${{ inputs.ticket_id }}/${{ inputs.stage }}-${{ inputs.job_id }}"
+          echo "Creating backup tag: $BACKUP_TAG"
+          git tag "$BACKUP_TAG"
+          git push origin "$BACKUP_TAG" || echo "Warning: Failed to push backup tag (non-fatal)"
+          echo "Backup tag created and pushed"
+
       # --- Reset branch to main (keeping nothing) ---
       - name: Reset to main branch
         run: |
@@ -133,9 +147,10 @@ jobs:
           git add "$SPEC_DIR"
 
           # Commit with clear rollback message
+          SOURCE_STAGE=$(echo "${{ inputs.stage }}" | tr '[:lower:]' '[:upper:]')
           git commit \
-            -m "rollback(VERIFY→PLAN): preserve spec files for ${{ inputs.ticket_id }}" \
-            -m "Implementation removed due to VERIFY stage rollback. Spec files (spec.md, plan.md, tasks.md) preserved for re-implementation." \
+            -m "rollback(${SOURCE_STAGE}→PLAN): preserve spec files for ${{ inputs.ticket_id }}" \
+            -m "Implementation removed due to ${SOURCE_STAGE} stage rollback. Spec files (spec.md, plan.md, tasks.md) preserved for re-implementation." \
             -m "Triggered by: ai-board rollback workflow"
 
           echo "Spec files committed"
@@ -145,9 +160,10 @@ jobs:
         if: steps.backup.outputs.has_specs != 'true'
         run: |
           # Create an empty commit to mark the rollback
+          SOURCE_STAGE=$(echo "${{ inputs.stage }}" | tr '[:lower:]' '[:upper:]')
           git commit --allow-empty \
-            -m "rollback(VERIFY→PLAN): reset branch for ${{ inputs.ticket_id }}" \
-            -m "Implementation removed due to VERIFY stage rollback. No spec files found to preserve." \
+            -m "rollback(${SOURCE_STAGE}→PLAN): reset branch for ${{ inputs.ticket_id }}" \
+            -m "Implementation removed due to ${SOURCE_STAGE} stage rollback. No spec files found to preserve." \
             -m "Triggered by: ai-board rollback workflow"
 
           echo "Empty rollback commit created"

@@ -96,6 +96,17 @@ export function isValidTransition(
     return workflowType === 'FULL';
   }
 
+  // Additional rollback transitions (FULL workflow only): each stage can roll back one step
+  const fullWorkflowRollbacks: [Stage, Stage][] = [
+    [Stage.SPECIFY, Stage.INBOX],
+    [Stage.PLAN, Stage.SPECIFY],
+    [Stage.BUILD, Stage.PLAN],
+    [Stage.VERIFY, Stage.BUILD],
+  ];
+  if (fullWorkflowRollbacks.some(([from, to]) => fromStage === from && toStage === to)) {
+    return workflowType === 'FULL';
+  }
+
   // Special case: VERIFY → CLOSED (close operation)
   if (fromStage === Stage.VERIFY && toStage === Stage.CLOSED) {
     return true;
@@ -124,4 +135,52 @@ export function getAllStages(): Stage[] {
  */
 export function isTerminalStage(stage: Stage): boolean {
   return stage === Stage.SHIP || stage === Stage.CLOSED;
+}
+
+/**
+ * Get valid rollback target stages for a ticket based on its current stage,
+ * workflow type, and last job status.
+ *
+ * Returns an empty array if no rollback is possible (e.g., job still running,
+ * wrong workflow type, or stage has no rollback options).
+ */
+export function getValidRollbackTargets(
+  stage: Stage,
+  workflowType: 'QUICK' | 'FULL' | 'CLEAN',
+  lastJobStatus: string | null
+): Stage[] {
+  // Rollback only allowed when last job is terminal failed/cancelled
+  const terminalFailedStatuses = ['FAILED', 'CANCELLED'];
+  if (!lastJobStatus || !terminalFailedStatuses.includes(lastJobStatus)) {
+    // Exception: VERIFY→PLAN allows COMPLETED status for existing rollback
+    if (stage === Stage.VERIFY && lastJobStatus === 'COMPLETED' && workflowType === 'FULL') {
+      return [Stage.PLAN];
+    }
+    return [];
+  }
+
+  const targets: Stage[] = [];
+
+  if (workflowType === 'FULL') {
+    switch (stage) {
+      case Stage.SPECIFY:
+        targets.push(Stage.INBOX);
+        break;
+      case Stage.PLAN:
+        targets.push(Stage.SPECIFY);
+        break;
+      case Stage.BUILD:
+        targets.push(Stage.PLAN);
+        break;
+      case Stage.VERIFY:
+        targets.push(Stage.BUILD, Stage.PLAN);
+        break;
+    }
+  } else if (workflowType === 'QUICK') {
+    if (stage === Stage.BUILD) {
+      targets.push(Stage.INBOX);
+    }
+  }
+
+  return targets;
 }

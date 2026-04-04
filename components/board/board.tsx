@@ -19,12 +19,13 @@ import { OfflineIndicator } from './offline-indicator';
 import { TicketDetailModal } from './ticket-detail-modal';
 import { QuickImplModal } from './quick-impl-modal';
 import { RollbackVerifyModal } from './rollback-verify-modal';
+import { RollbackConfirmationModal } from './rollback-confirmation-modal';
 import { TrashZone } from './trash-zone';
 import { CloseZone } from './close-zone';
 import { DeleteConfirmationModal } from './delete-confirmation-modal';
 import { CloseConfirmationModal } from './close-confirmation-modal';
 import { useOnlineStatus } from '@/hooks/use-online-status';
-import { Stage, isValidTransition, getAllStages } from '@/lib/stage-transitions';
+import { Stage, isValidTransition, getAllStages, getValidRollbackTargets } from '@/lib/stage-transitions';
 import { TicketWithVersion } from '@/lib/types';
 import {
   updateTicketStageOptimistically,
@@ -39,7 +40,14 @@ import { Job, ClarificationPolicy } from '@prisma/client';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { DualJobState } from '@/lib/types/job-types';
 import { getWorkflowJob, getAIBoardJob, getDeployJob } from '@/lib/utils/job-filtering';
-import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
+import {
+  canRollbackToInbox,
+  canRollbackToPlan,
+  canRollbackSpecifyToInbox,
+  canRollbackPlanToSpecify,
+  canRollbackBuildToPlan,
+  canRollbackVerifyToBuild,
+} from '@/app/lib/workflows/rollback-validator';
 import { isTicketDeletable, getDeletionBlockReason } from '@/lib/utils/trash-zone-eligibility';
 import { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
 import { useHoverCapability } from '@/lib/hooks/use-hover-capability';
@@ -152,6 +160,15 @@ export function Board({
     targetStage: Stage;
   } | null>(null);
 
+  // Pending rollback for new extended rollback transitions (AIB-512)
+  const [pendingRollback, setPendingRollback] = useState<{
+    ticket: TicketWithVersion;
+    targetStage: Stage;
+  } | null>(null);
+
+  // Valid rollback targets during drag (AIB-512)
+  const [validRollbackTargets, setValidRollbackTargets] = useState<Stage[]>([]);
+
   // Delete confirmation state (T023)
   const [ticketToDelete, setTicketToDelete] = useState<TicketWithVersion | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -180,7 +197,7 @@ export function Board({
   });
   const hasHover = useHoverCapability();
 
-  const isAnyModalOpen = isModalOpen || isNewTicketModalOpen || isShortcutsHelpOpen || deleteModalOpen || !!pendingTransition || !!pendingVerifyRollback || !!pendingCloseTransition;
+  const isAnyModalOpen = isModalOpen || isNewTicketModalOpen || isShortcutsHelpOpen || deleteModalOpen || !!pendingTransition || !!pendingVerifyRollback || !!pendingRollback || !!pendingCloseTransition;
 
   const handleShortcutsHelpChange = useCallback((open: boolean) => {
     setIsShortcutsHelpOpen(open);
@@ -468,6 +485,15 @@ export function Board({
       const jobs = getTicketJobs(ticket.id);
       const hasActiveWorkflowJob = jobs.workflow && jobs.workflow.status !== 'COMPLETED';
       setDraggedTicketHasJob(!!hasActiveWorkflowJob);
+
+      // Compute valid rollback targets (AIB-512)
+      const lastJobStatus = jobs.workflow?.status ?? null;
+      const targets = getValidRollbackTargets(
+        ticket.stage,
+        ticket.workflowType as 'QUICK' | 'FULL' | 'CLEAN',
+        lastJobStatus
+      );
+      setValidRollbackTargets(targets);
     }
   }, [getTicketJobs]);
 
@@ -545,6 +571,7 @@ export function Board({
       setIsDragging(false);
       setDragSource(null);
       setDraggedTicketHasJob(false);
+      setValidRollbackTargets([]);
 
       const { active, over } = event;
 
@@ -592,6 +619,17 @@ export function Board({
       // AIB-75: Detect VERIFY → PLAN and show rollback modal
       if (ticket.stage === Stage.VERIFY && targetStage === Stage.PLAN) {
         setPendingVerifyRollback({ ticket, targetStage });
+        return;
+      }
+
+      // AIB-512: Detect new rollback transitions and show confirmation modal
+      const isNewRollback =
+        (ticket.stage === Stage.SPECIFY && targetStage === Stage.INBOX) ||
+        (ticket.stage === Stage.PLAN && targetStage === Stage.SPECIFY) ||
+        (ticket.stage === Stage.BUILD && targetStage === Stage.PLAN) ||
+        (ticket.stage === Stage.VERIFY && targetStage === Stage.BUILD);
+      if (isNewRollback) {
+        setPendingRollback({ ticket, targetStage });
         return;
       }
 
@@ -803,6 +841,69 @@ export function Board({
     setPendingVerifyRollback(null);
   }, []);
 
+  // AIB-512: Rollback confirmation messages (French per codebase convention)
+  const ROLLBACK_MESSAGES: Record<string, { title: string; description: string }> = {
+    'SPECIFY→INBOX': {
+      title: 'Revenir a Inbox ?',
+      description: 'La branche sera supprimee.',
+    },
+    'PLAN→SPECIFY': {
+      title: 'Revenir a Specify ?',
+      description: 'Le plan partiel sera ecrase au prochain lancement.',
+    },
+    'BUILD→PLAN': {
+      title: 'Revenir a Plan ?',
+      description: 'Le code sera reinitialise (backup cree).',
+    },
+    'VERIFY→BUILD': {
+      title: 'Revenir a Build ?',
+      description: 'Le code actuel sera conserve, verify sera relance.',
+    },
+  };
+
+  // AIB-512: Handle extended rollback confirmation
+  const handleRollbackConfirm = useCallback(async () => {
+    if (!pendingRollback) return;
+
+    const { ticket, targetStage } = pendingRollback;
+    setPendingRollback(null);
+
+    await performTransition(ticket, targetStage, {
+      mergeServerData: (serverData, current): TicketWithVersion => {
+        const data = serverData as Partial<TicketWithVersion>;
+        return {
+          ...current,
+          stage: data.stage || current.stage,
+          version: data.version || current.version,
+          branch: data.branch !== undefined ? data.branch : current.branch,
+          previewUrl: data.previewUrl ?? current.previewUrl ?? null,
+          workflowType: data.workflowType || current.workflowType,
+          updatedAt: data.updatedAt || current.updatedAt,
+        };
+      },
+      onApiError: (error) => {
+        toast({
+          variant: 'destructive',
+          title: 'Rollback failed',
+          description: error.error || 'An error occurred during rollback.',
+        });
+      },
+      successToast: {
+        title: 'Ticket rolled back',
+        description: `${ticket.ticketKey} moved to ${targetStage}.`,
+      },
+      networkErrorToast: {
+        title: 'Network error',
+        description: 'Could not rollback ticket. Please check your connection.',
+      },
+    });
+  }, [pendingRollback, performTransition, toast]);
+
+  // AIB-512: Handle extended rollback cancellation
+  const handleRollbackCancel = useCallback(() => {
+    setPendingRollback(null);
+  }, []);
+
   // Delete confirmation handlers (T023)
   const handleDeleteConfirm = useCallback(() => {
     if (!ticketToDelete) return;
@@ -917,6 +1018,28 @@ export function Board({
         return null;
       };
 
+      // AIB-512: Rollback mode for new transitions — highlight valid rollback targets
+      if (validRollbackTargets.length > 0 && validRollbackTargets.includes(stage)) {
+        // Validate specific transition
+        const mostRecentWorkflowJob = getMostRecentWorkflowJob();
+        let validation = { allowed: false };
+
+        if (dragSource === Stage.SPECIFY && stage === Stage.INBOX) {
+          validation = canRollbackSpecifyToInbox(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
+        } else if (dragSource === Stage.PLAN && stage === Stage.SPECIFY) {
+          validation = canRollbackPlanToSpecify(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
+        } else if (dragSource === Stage.BUILD && stage === Stage.PLAN) {
+          validation = canRollbackBuildToPlan(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
+        } else if (dragSource === Stage.VERIFY && stage === Stage.BUILD) {
+          validation = canRollbackVerifyToBuild(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
+        }
+
+        if (validation.allowed) {
+          return 'border-4 border-dashed border-amber-500 bg-amber-500/10';
+        }
+        return 'opacity-50 cursor-not-allowed';
+      }
+
       // Rollback mode: Dragging from BUILD to INBOX
       if (dragSource === Stage.BUILD && stage === Stage.INBOX) {
         const mostRecentWorkflowJob = getMostRecentWorkflowJob();
@@ -996,7 +1119,7 @@ export function Board({
         return 'opacity-50 cursor-not-allowed';
       }
     },
-    [isDragging, dragSource, draggedTicketHasJob, activeTicket, initialJobs, polledJobs]
+    [isDragging, dragSource, draggedTicketHasJob, activeTicket, initialJobs, polledJobs, validRollbackTargets]
   );
 
   // AIB-148: Filter out CLOSED stage from board display - CLOSED tickets are not shown on the board
@@ -1085,11 +1208,11 @@ export function Board({
             }}
           >
             {stages.map((stage) => {
-              // Exception for rollback: INBOX is not blocked when dragging failed BUILD ticket
+              // Exception for rollback: allow rollback targets even when ticket has active job
               const isRollbackToInbox = dragSource === Stage.BUILD && stage === Stage.INBOX;
-              // Exception for rollback: PLAN is not blocked when dragging VERIFY ticket (AIB-75)
               const isRollbackToPlan = dragSource === Stage.VERIFY && stage === Stage.PLAN;
-              const isBlocked = isDragging && draggedTicketHasJob && !isRollbackToInbox && !isRollbackToPlan;
+              const isNewRollbackTarget = validRollbackTargets.includes(stage);
+              const isBlocked = isDragging && draggedTicketHasJob && !isRollbackToInbox && !isRollbackToPlan && !isNewRollbackTarget;
 
               return (
                 <StageColumn
@@ -1155,6 +1278,15 @@ export function Board({
         open={!!pendingVerifyRollback}
         onConfirm={handleVerifyRollbackConfirm}
         onCancel={handleVerifyRollbackCancel}
+      />
+
+      {/* Extended Rollback Confirmation Modal (AIB-512) */}
+      <RollbackConfirmationModal
+        open={!!pendingRollback}
+        onConfirm={handleRollbackConfirm}
+        onCancel={handleRollbackCancel}
+        title={pendingRollback ? (ROLLBACK_MESSAGES[`${pendingRollback.ticket.stage}→${pendingRollback.targetStage}`]?.title ?? 'Confirmer le rollback ?') : ''}
+        description={pendingRollback ? (ROLLBACK_MESSAGES[`${pendingRollback.ticket.stage}→${pendingRollback.targetStage}`]?.description ?? '') : ''}
       />
 
       {/* Delete Confirmation Modal (T018, T023) */}

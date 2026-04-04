@@ -212,6 +212,22 @@ sequenceDiagram
     API-->>VW: 200 OK
 ```
 
+### Job Cancellation
+
+Users can cancel a RUNNING or PENDING job from two surfaces:
+- **Board card** (hover): a cancel button (X icon) appears next to the status indicator when hovering a card with an active job
+- **Ticket detail modal**: a cancel button is always visible on each active job row in the job timeline
+
+Both surfaces require confirmation before proceeding ("Annuler le workflow {command} en cours ?").
+
+**Cancellation mechanics**:
+- RUNNING job: the system calls the GitHub Actions API to cancel the workflow run using the stored `workflowRunId`, then marks the job CANCELLED
+- PENDING job (no `workflowRunId`): the job is marked CANCELLED directly; if the workflow run starts after this, its first RUNNING status callback is rejected with 409 so the workflow self-aborts
+- Already-terminal job: returns the current status without error (idempotent)
+- GitHub API failure: the job status is not changed and an error is returned
+
+The cancel button is disabled after the first click to prevent duplicate requests.
+
 ### Job Restrictions
 
 **Concurrent Job Prevention**:

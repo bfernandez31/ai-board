@@ -207,11 +207,17 @@ jobs:
       - name: Update Job Status - Running
         if: ${{ inputs.job_id }}
         run: |
-          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+          HTTP_CODE=$(curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-            -d '{"status": "RUNNING"}' \
-            -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
+            -d '{"status": "RUNNING", "workflowRunId": ${{ github.run_id }}}' \
+            -s -o /dev/null -w "%{http_code}") || true
+          if [ "$HTTP_CODE" = "409" ]; then
+            echo "🚫 Job already CANCELLED — aborting workflow"
+            exit 1
+          elif [ "$HTTP_CODE" != "200" ]; then
+            echo "⚠️ Failed to update job status to RUNNING (HTTP $HTTP_CODE)"
+          fi
 
       - name: Fetch Owner AI Credential
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.project_id }}

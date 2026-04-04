@@ -158,7 +158,7 @@ jobs:
           curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-            -d '{"status": "RUNNING"}' \
+            -d '{"status": "RUNNING", "workflowRunId": ${{ github.run_id }}}' \
             -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
 
       - name: Fetch Owner AI Credential

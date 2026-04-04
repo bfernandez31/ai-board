@@ -15,6 +15,7 @@ import {
   Ban,
   ChevronDown,
   ChevronRight,
+  X,
 } from 'lucide-react';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import {
@@ -22,6 +23,9 @@ import {
   formatDuration,
   formatAbbreviatedNumber,
 } from '@/lib/analytics/aggregations';
+import { formatCommandName } from '@/lib/utils/format-command';
+import { CancelConfirmationModal } from '@/components/board/cancel-confirmation-modal';
+import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
 
 /**
  * Status configuration type
@@ -45,27 +49,19 @@ const STATUS_ICONS: Record<string, StatusConfig> = {
 };
 
 /**
- * Format command name for display
- * e.g., "comment-specify" -> "Comment Specify", "quick-impl" -> "Quick Impl"
- */
-function formatCommandName(command: string): string {
-  return command
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
-/**
  * JobRow Component
  *
  * Single job entry with expandable token breakdown
  */
-function JobRow({ job }: { job: TicketJobWithTelemetry }) {
+function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: number | undefined }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const cancelJobMutation = useCancelJob(projectId ?? 0);
 
   const statusConfig = STATUS_ICONS[job.status] ?? DEFAULT_STATUS;
   const StatusIcon = statusConfig.icon;
   const isRunning = job.status === 'RUNNING';
+  const isCancellable = projectId != null && (job.status === 'PENDING' || job.status === 'RUNNING');
 
   // Check if job has telemetry data to expand
   const hasTelemetry =
@@ -112,6 +108,23 @@ function JobRow({ job }: { job: TicketJobWithTelemetry }) {
             {job.costUsd != null ? formatCost(job.costUsd) : '-'}
           </span>
 
+          {/* Cancel Button - always visible for PENDING/RUNNING jobs */}
+          {isCancellable && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setShowCancelModal(true);
+              }}
+              disabled={cancelJobMutation.isPending}
+              className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+              aria-label="Cancel workflow"
+              data-testid={`cancel-job-${job.id}`}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+
           {/* Expand/Collapse Indicator */}
           {hasTelemetry && (
             isOpen ? (
@@ -122,6 +135,20 @@ function JobRow({ job }: { job: TicketJobWithTelemetry }) {
           )}
         </div>
       </CollapsibleTrigger>
+
+      {/* Cancel Confirmation Modal */}
+      {isCancellable && (
+        <CancelConfirmationModal
+          open={showCancelModal}
+          onOpenChange={setShowCancelModal}
+          onConfirm={() => {
+            cancelJobMutation.mutate(job.id);
+            setShowCancelModal(false);
+          }}
+          jobCommand={job.command}
+          isCancelling={cancelJobMutation.isPending}
+        />
+      )}
 
       {hasTelemetry && (
         <CollapsibleContent className="pt-2">
@@ -179,9 +206,10 @@ function JobRow({ job }: { job: TicketJobWithTelemetry }) {
  */
 interface JobsTimelineProps {
   jobs: TicketJobWithTelemetry[];
+  projectId?: number | undefined;
 }
 
-export function JobsTimeline({ jobs }: JobsTimelineProps) {
+export function JobsTimeline({ jobs, projectId }: JobsTimelineProps) {
   if (jobs.length === 0) {
     return (
       <div className="text-sm text-ctp-overlay0" data-testid="no-jobs-message">
@@ -197,7 +225,7 @@ export function JobsTimeline({ jobs }: JobsTimelineProps) {
       </h3>
       <div className="space-y-2">
         {jobs.map((job) => (
-          <JobRow key={job.id} job={job} />
+          <JobRow key={job.id} job={job} projectId={projectId} />
         ))}
       </div>
     </div>

@@ -186,11 +186,17 @@ jobs:
       - name: Update Job Status - Running
         if: ${{ inputs.job_id }}
         run: |
-          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+          HTTP_CODE=$(curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-            -d '{"status": "RUNNING"}' \
-            -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
+            -d '{"status": "RUNNING", "workflowRunId": ${{ github.run_id }}}' \
+            -s -o /dev/null -w "%{http_code}") || true
+          if [ "$HTTP_CODE" = "409" ]; then
+            echo "🚫 Job already CANCELLED — aborting workflow"
+            exit 1
+          elif [ "$HTTP_CODE" != "200" ]; then
+            echo "⚠️ Failed to update job status to RUNNING (HTTP $HTTP_CODE)"
+          fi
 
       - name: Fetch Owner AI Credential
         if: ${{ env.SKIP_EXECUTION != 'true' && inputs.project_id }}
@@ -234,6 +240,24 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
           path: target
+
+      # AIB-512: Clean up backup tags for this ticket (must run after checkout so origin is defined)
+      - name: Cleanup backup tags
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
+        run: |
+          echo "Checking for backup tags for ${{ inputs.ticket_id }}..."
+          TAGS=$(git ls-remote --tags origin "refs/tags/backup/${{ inputs.ticket_id }}/*" 2>/dev/null | awk '{print $2}' | sed 's|refs/tags/||')
+          if [ -n "$TAGS" ]; then
+            echo "Found backup tags to clean up:"
+            echo "$TAGS"
+            for TAG in $TAGS; do
+              git push origin --delete "refs/tags/$TAG" 2>/dev/null || echo "Warning: Could not delete tag $TAG"
+            done
+            echo "Backup tag cleanup complete"
+          else
+            echo "No backup tags found — nothing to clean up"
+          fi
 
       - name: Setup Bun
         if: ${{ env.SKIP_EXECUTION != 'true' }}

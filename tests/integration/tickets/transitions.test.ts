@@ -250,6 +250,183 @@ describe('Ticket Transitions', () => {
     });
   });
 
+  describe('Rollback Transitions', () => {
+    async function createTicketInStage(stage: string, jobStatus: string = 'FAILED') {
+      const createResp = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        { title: '[e2e] Rollback test', description: 'Rollback transition test' }
+      );
+      const ticketId = createResp.data.id;
+
+      await prisma.ticket.update({
+        where: { id: ticketId },
+        data: { stage: stage as 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY', workflowType: 'FULL' },
+      });
+
+      await prisma.job.create({
+        data: {
+          ticketId,
+          projectId: ctx.projectId,
+          command: 'specify',
+          status: jobStatus as 'FAILED' | 'CANCELLED' | 'RUNNING' | 'PENDING',
+          startedAt: new Date(),
+          updatedAt: new Date(),
+          completedAt: ['FAILED', 'CANCELLED', 'COMPLETED'].includes(jobStatus) ? new Date() : undefined,
+        },
+      });
+
+      return ticketId;
+    }
+
+    describe('SPECIFY → INBOX', () => {
+      it('should rollback with FAILED job and clear branch/jobs', async () => {
+        const ticketId = await createTicketInStage('SPECIFY', 'FAILED');
+        await prisma.ticket.update({ where: { id: ticketId }, data: { branch: 'test-specify-branch' } });
+
+        const response = await ctx.api.post<{ id: number; stage: string; branch: string | null }>(
+          `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+          { targetStage: 'INBOX' }
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.data.stage).toBe('INBOX');
+        expect(response.data.branch).toBeNull();
+
+        const ticket = await prisma.ticket.findUnique({
+          where: { id: ticketId },
+          include: { jobs: true },
+        });
+        expect(ticket!.jobs.length).toBe(0);
+      });
+
+      it('should rollback with CANCELLED job (no branch)', async () => {
+        const ticketId = await createTicketInStage('SPECIFY', 'CANCELLED');
+
+        const response = await ctx.api.post<{ id: number; stage: string; branch: string | null }>(
+          `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+          { targetStage: 'INBOX' }
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.data.stage).toBe('INBOX');
+        expect(response.data.branch).toBeNull();
+      });
+
+      it('should reject with RUNNING job', async () => {
+        const ticketId = await createTicketInStage('SPECIFY', 'RUNNING');
+
+        const response = await ctx.api.post<{ error: string }>(
+          `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+          { targetStage: 'INBOX' }
+        );
+
+        expect(response.status).toBe(400);
+      });
+    });
+
+    describe('PLAN → SPECIFY', () => {
+      it('should rollback with FAILED job', async () => {
+        const ticketId = await createTicketInStage('PLAN', 'FAILED');
+
+        const response = await ctx.api.post<{ id: number; stage: string }>(
+          `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+          { targetStage: 'SPECIFY' }
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.data.stage).toBe('SPECIFY');
+      });
+
+      it('should reject with RUNNING job', async () => {
+        const ticketId = await createTicketInStage('PLAN', 'RUNNING');
+
+        const response = await ctx.api.post<{ error: string }>(
+          `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+          { targetStage: 'SPECIFY' }
+        );
+
+        expect(response.status).toBe(400);
+      });
+    });
+
+    describe('BUILD → PLAN', () => {
+      it('should rollback with FAILED job (FULL workflow)', async () => {
+        const ticketId = await createTicketInStage('BUILD', 'FAILED');
+
+        const response = await ctx.api.post<{ id: number; stage: string }>(
+          `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+          { targetStage: 'PLAN' }
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.data.stage).toBe('PLAN');
+      });
+
+      it('should reject with PENDING job', async () => {
+        const ticketId = await createTicketInStage('BUILD', 'PENDING');
+
+        const response = await ctx.api.post<{ error: string }>(
+          `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+          { targetStage: 'PLAN' }
+        );
+
+        expect(response.status).toBe(400);
+      });
+
+      it('should reject for QUICK workflow', async () => {
+        const ticketId = await createTicketInStage('BUILD', 'FAILED');
+        await prisma.ticket.update({
+          where: { id: ticketId },
+          data: { workflowType: 'QUICK' },
+        });
+
+        const response = await ctx.api.post<{ error: string }>(
+          `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+          { targetStage: 'PLAN' }
+        );
+
+        expect(response.status).toBe(400);
+      });
+    });
+
+    describe('VERIFY → BUILD', () => {
+      it('should rollback with FAILED job', async () => {
+        const ticketId = await createTicketInStage('VERIFY', 'FAILED');
+
+        const response = await ctx.api.post<{ id: number; stage: string }>(
+          `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+          { targetStage: 'BUILD' }
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.data.stage).toBe('BUILD');
+      });
+
+      it('should rollback with CANCELLED job', async () => {
+        const ticketId = await createTicketInStage('VERIFY', 'CANCELLED');
+
+        const response = await ctx.api.post<{ id: number; stage: string }>(
+          `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+          { targetStage: 'BUILD' }
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.data.stage).toBe('BUILD');
+      });
+
+      it('should reject with RUNNING job', async () => {
+        const ticketId = await createTicketInStage('VERIFY', 'RUNNING');
+
+        const response = await ctx.api.post<{ error: string }>(
+          `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+          { targetStage: 'BUILD' }
+        );
+
+        expect(response.status).toBe(400);
+      });
+    });
+  });
+
   describe('Ticket policy', () => {
     it('should allow override of clarificationPolicy on ticket creation', async () => {
       const createResponse = await ctx.api.post<{ id: number }>(

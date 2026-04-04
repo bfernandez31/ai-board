@@ -40,11 +40,18 @@ jobs:
       # --- Update job to RUNNING ---
       - name: Update job status → RUNNING
         run: |
-          curl -s -X PATCH \
+          HTTP_CODE=$(curl -s -X PATCH \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
-            -d '{"status": "RUNNING"}' \
-            ${{ env.APP_URL }}/api/jobs/${{ inputs.job_id }}/status
+            -d '{"status": "RUNNING", "workflowRunId": ${{ github.run_id }}}' \
+            -o /dev/null -w "%{http_code}" \
+            ${{ env.APP_URL }}/api/jobs/${{ inputs.job_id }}/status) || true
+          if [ "$HTTP_CODE" = "409" ]; then
+            echo "🚫 Job already CANCELLED — aborting workflow"
+            exit 1
+          elif [ "$HTTP_CODE" != "200" ]; then
+            echo "⚠️ Failed to update job status to RUNNING (HTTP $HTTP_CODE)"
+          fi
 
       # --- Checkout the branch to deploy ---
       - name: Checkout target branch

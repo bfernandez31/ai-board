@@ -310,6 +310,64 @@ describe('Jobs Status', () => {
     });
   });
 
+  describe('workflowRunId Extension', () => {
+    it('should populate workflowRunId on RUNNING status via API', async () => {
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'RUNNING', workflowRunId: 12345678901 }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.status).toBe('RUNNING');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.workflowRunId).toBe(BigInt(12345678901));
+    });
+
+    it('should keep workflowRunId null when not provided', async () => {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'RUNNING', startedAt: new Date() },
+      });
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.workflowRunId).toBeNull();
+    });
+
+    it('should first-write-wins — second update does not overwrite workflowRunId', async () => {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'RUNNING', workflowRunId: BigInt(11111111111), startedAt: new Date() },
+      });
+
+      const response = await workflowApi.patch(`/api/jobs/${jobId}/status`, {
+        status: 'RUNNING',
+        workflowRunId: 22222222222,
+      });
+
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.workflowRunId).toBe(BigInt(11111111111));
+    });
+
+    it('should return 409 when RUNNING callback hits a CANCELLED job', async () => {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'CANCELLED', completedAt: new Date() },
+      });
+
+      const response = await workflowApi.patch<{ error: string; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'RUNNING', workflowRunId: 99999999999 }
+      );
+
+      expect(response.status).toBe(409);
+      expect(response.data.error).toBe('Job already cancelled');
+      expect(response.data.status).toBe('CANCELLED');
+    });
+  });
+
   describe('Multiple jobs per ticket', () => {
     it('should handle multiple jobs for same ticket', async () => {
       // Complete the first job using workflow API

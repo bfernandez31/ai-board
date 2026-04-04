@@ -278,18 +278,19 @@ Jobs track GitHub Actions workflow executions.
 
 ```prisma
 model Job {
-  id          Int       @id @default(autoincrement())
-  ticketId    Int
-  projectId   Int
-  command     String    @db.VarChar(50)
-  status      JobStatus @default(PENDING)
-  branch      String?   @db.VarChar(200)
-  commitSha   String?   @db.VarChar(40)
-  logs        String?   @db.Text
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              Int       @id @default(autoincrement())
+  ticketId        Int
+  projectId       Int
+  command         String    @db.VarChar(50)
+  status          JobStatus @default(PENDING)
+  branch          String?   @db.VarChar(200)
+  commitSha       String?   @db.VarChar(40)
+  logs            String?
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+  workflowRunId   BigInt?   // GitHub Actions workflow run ID (populated on first RUNNING callback)
 
   // Claude telemetry metrics (aggregated from all API calls in the job)
   inputTokens         Int?      // Total input tokens consumed
@@ -312,6 +313,7 @@ model Job {
   @@index([projectId])
   @@index([ticketId, status, startedAt])
   @@index([status])
+  @@index([workflowRunId])
 }
 ```
 
@@ -338,6 +340,7 @@ model Job {
 - `durationMs`: Total duration of Claude API calls in milliseconds (nullable)
 - `model`: Primary Claude model used (max 50 chars, nullable)
 - `toolsUsed`: Array of Claude tools used during execution (default: empty array)
+- `workflowRunId`: GitHub Actions workflow run ID as BigInt (nullable, populated by the workflow's first RUNNING status callback; enables job cancellation via GitHub API)
 - `qualityScore`: Final weighted code quality score 0-100 (nullable, FULL workflow verify jobs only)
 - `qualityScoreDetails`: JSON string containing all five dimension sub-scores, weights, and computed final score (nullable, populated alongside `qualityScore`)
 
@@ -350,6 +353,7 @@ model Job {
 - Index on projectId for polling all project jobs
 - Composite index (ticketId, status, startedAt) for job completion validation
 - Index on status for filtering running jobs
+- Index on workflowRunId for cancel lookups
 
 **State Machine**:
 ```
@@ -367,8 +371,11 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - Idempotent updates allowed (same status returns 200)
 - Most recent job (by startedAt) used for transition validation
 - Jobs retained indefinitely for audit trail, except:
-  - Deleted when VERIFY to PLAN rollback occurs (job record removed as part of rollback)
+  - Deleted when a rollback transition occurs (job record removed as part of rollback)
 - AI-BOARD jobs (command like 'comment-%') don't block transitions or count toward rollback validation
+- `workflowRunId` is set once (first-write-wins) when the workflow sends its first RUNNING callback; subsequent RUNNING callbacks with a run ID are ignored if already populated
+- When a PENDING job is cancelled before `workflowRunId` is set, any subsequent RUNNING callback for that job receives a 409 response, signalling the workflow to self-abort
+- Users can cancel RUNNING or PENDING jobs via `POST /api/jobs/:id/cancel` (session auth); cancellation calls the GitHub Actions API for RUNNING jobs or marks CANCELLED directly for PENDING jobs
 
 **Telemetry Data Usage**:
 - Telemetry fields aggregated and displayed in ticket Stats tab
@@ -1138,7 +1145,8 @@ enum Stage {
 
 **Transitions**:
 - Sequential progression only (one stage forward)
-- Limited rollback: BUILD → INBOX (quick-impl failed), VERIFY → PLAN (full workflow re-implementation)
+- Rollback paths (FULL workflow): SPECIFY → INBOX, PLAN → SPECIFY, BUILD → PLAN, VERIFY → BUILD, VERIFY → PLAN
+- Rollback paths (QUICK workflow): BUILD → INBOX (quick-impl failed/cancelled)
 - Alternative resolution: VERIFY → CLOSED (close without shipping)
 - No skipping stages
 - Initial: INBOX
