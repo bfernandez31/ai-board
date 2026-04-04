@@ -14,7 +14,7 @@ import {
 import { useCreateCredential } from "@/lib/hooks/mutations/useCredentials";
 
 export function CredentialForm() {
-  const [provider] = useState("ANTHROPIC");
+  const [provider, setProvider] = useState("ANTHROPIC");
   const [credentialType, setCredentialType] = useState("API_KEY");
   const [label, setLabel] = useState("");
   const [value, setValue] = useState("");
@@ -22,18 +22,27 @@ export function CredentialForm() {
 
   const createCredential = useCreateCredential();
 
-  function validateFormat(type: string, val: string): string | null {
+  function validateFormat(prov: string, type: string, val: string): string | null {
     if (!val) return null;
-    if (type === "API_KEY") {
-      if (!val.startsWith("sk-ant-api")) {
-        return 'API key must start with "sk-ant-api"';
+    if (prov === "ANTHROPIC") {
+      if (type === "API_KEY") {
+        if (!val.startsWith("sk-ant-api")) {
+          return 'API key must start with "sk-ant-api"';
+        }
+        if (val.length < 90) {
+          return "API key appears too short";
+        }
+      } else if (type === "OAUTH_TOKEN") {
+        if (val.length < 20) {
+          return "OAuth token must be at least 20 characters";
+        }
       }
-      if (val.length < 90) {
-        return "API key appears too short";
+    } else if (prov === "OPENAI") {
+      if (!val.startsWith("sk-")) {
+        return 'API key must start with "sk-"';
       }
-    } else if (type === "OAUTH_TOKEN") {
       if (val.length < 20) {
-        return "OAuth token must be at least 20 characters";
+        return "API key appears too short";
       }
     }
     return null;
@@ -41,18 +50,28 @@ export function CredentialForm() {
 
   function handleValueChange(newValue: string) {
     setValue(newValue);
-    setFormatError(validateFormat(credentialType, newValue));
+    setFormatError(validateFormat(provider, credentialType, newValue));
   }
 
   function handleTypeChange(newType: string) {
     setCredentialType(newType);
-    setFormatError(validateFormat(newType, value));
+    setFormatError(validateFormat(provider, newType, value));
+  }
+
+  function handleProviderChange(newProvider: string) {
+    setProvider(newProvider);
+    // OpenAI only supports API_KEY
+    if (newProvider === "OPENAI") {
+      setCredentialType("API_KEY");
+    }
+    setValue("");
+    setFormatError(null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const error = validateFormat(credentialType, value);
+    const error = validateFormat(provider, credentialType, value);
     if (error) {
       setFormatError(error);
       return;
@@ -78,25 +97,32 @@ export function CredentialForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="provider">Provider</Label>
-          <Select value={provider} disabled>
+          <Select value={provider} onValueChange={handleProviderChange}>
             <SelectTrigger id="provider">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ANTHROPIC">Anthropic</SelectItem>
+              <SelectItem value="OPENAI">OpenAI</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="credentialType">Credential Type</Label>
-          <Select value={credentialType} onValueChange={handleTypeChange}>
+          <Select
+            value={credentialType}
+            onValueChange={handleTypeChange}
+            disabled={provider === "OPENAI"}
+          >
             <SelectTrigger id="credentialType">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="API_KEY">API Key</SelectItem>
-              <SelectItem value="OAUTH_TOKEN">OAuth Token</SelectItem>
+              {provider === "ANTHROPIC" && (
+                <SelectItem value="OAUTH_TOKEN">OAuth Token</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -122,9 +148,11 @@ export function CredentialForm() {
           id="value"
           type="password"
           placeholder={
-            credentialType === "API_KEY"
-              ? "sk-ant-api03-..."
-              : "Paste your OAuth token"
+            provider === "OPENAI"
+              ? "sk-..."
+              : credentialType === "API_KEY"
+                ? "sk-ant-api03-..."
+                : "Paste your OAuth token"
           }
           value={value}
           onChange={(e) => handleValueChange(e.target.value)}

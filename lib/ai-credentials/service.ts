@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db/client';
 import type { CredentialProvider, CredentialReadiness } from '@prisma/client';
 import { encryptCredential, decryptCredential } from './crypto';
-import { validateFormat, verifyWithProvider } from './providers/anthropic';
+import { validateFormat, verifyWithProvider } from './providers';
 import type { CreateCredentialInput, CredentialListItem, VerificationResult } from './types';
 
 const CREDENTIAL_SELECT = {
@@ -129,10 +129,10 @@ export async function testCredential(
     return result;
   }
 
-  const formatResult = validateFormat(credentialType, decrypted);
+  const formatResult = validateFormat(credential.provider, credentialType, decrypted);
 
   const result: VerificationResult = formatResult.valid
-    ? await verifyWithProvider(credentialType, decrypted)
+    ? await verifyWithProvider(credential.provider, credentialType, decrypted)
     : {
         readinessStatus: 'ACTION_REQUIRED',
         verificationCode: 'INVALID_KEY',

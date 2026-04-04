@@ -108,7 +108,7 @@ describe('BYOK Credential Dispatch Guards', () => {
       expect(result.success).toBe(false);
       expect(result.errorCode).toBe('MISSING_CREDENTIAL');
       expect(result.error).toBe(MISSING_CREDENTIAL_ERROR);
-      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1);
+      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1, 'ANTHROPIC');
     });
 
     it('should proceed when owner has a credential', async () => {
@@ -126,7 +126,7 @@ describe('BYOK Credential Dispatch Guards', () => {
       const result = await handleTicketTransition(createTestTicket(), 'SPECIFY' as Stage);
 
       // Should have progressed past credential check (may succeed or fail on dispatch)
-      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1);
+      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1, 'ANTHROPIC');
     });
 
     it('should skip credential check in test mode', async () => {

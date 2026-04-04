@@ -22,13 +22,13 @@ export default function CredentialsSettingsPage() {
 
         <div className="rounded-lg border aurora-bg-subtle p-4">
           <p className="text-sm text-muted-foreground">
-            AI credentials allow workflows to authenticate with AI providers like Anthropic.
+            AI credentials allow workflows to authenticate with AI providers.
             Your credential is encrypted at rest and only decrypted during workflow execution.
             Each provider supports one credential per account.
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Supported types: <strong>API Key</strong> (sk-ant-api...) or{" "}
-            <strong>OAuth Token</strong> (from Claude Code OAuth flow).
+            <strong>Anthropic</strong>: API Key (sk-ant-api...) or OAuth Token (Claude Code OAuth flow).{" "}
+            <strong>OpenAI</strong>: API Key (sk-...) for Codex agent workflows.
           </p>
         </div>
 
