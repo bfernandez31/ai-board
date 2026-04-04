@@ -13,6 +13,7 @@ import { DrawerTickets } from './drawer/drawer-tickets';
 import { DrawerHistory } from './drawer/drawer-history';
 import { DrawerStates } from './drawer/drawer-states';
 import { ScoreTrendChart } from './drawer/score-trend-chart';
+import { Button } from '@/components/ui/button';
 import { useScanReport } from '@/app/lib/hooks/useScanReport';
 import { MODULE_METADATA } from '@/lib/health/types';
 import type { HealthModuleType, HealthModuleStatus, TrendDataPoint } from '@/lib/health/types';
@@ -97,6 +98,11 @@ export function ScanDetailDrawer({
                   {moduleStatus?.skipReason || 'No reason provided'}
                 </p>
                 <p className="text-2xl font-bold text-muted-foreground">N/A</p>
+                {onTriggerScan && moduleMeta && !moduleMeta.passive && (
+                  <Button size="sm" variant="outline" onClick={onTriggerScan}>
+                    Re-run scan
+                  </Button>
+                )}
               </div>
             )}
 
