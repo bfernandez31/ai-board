@@ -17,6 +17,16 @@ import { NAVIGATION_ITEMS } from './nav-items';
 import { useTicketSearch } from '@/app/lib/hooks/queries/useTicketSearch';
 import { Loader2 } from 'lucide-react';
 
+const STAGE_BADGE: Record<string, { label: string; className: string }> = {
+  INBOX: { label: 'Inbox', className: 'bg-ctp-overlay0 text-zinc-50' },
+  SPECIFY: { label: 'Specify', className: 'bg-ctp-lavender text-zinc-900' },
+  PLAN: { label: 'Plan', className: 'bg-ctp-blue text-zinc-900' },
+  BUILD: { label: 'Build', className: 'bg-ctp-peach-light text-zinc-900' },
+  VERIFY: { label: 'Verify', className: 'bg-ctp-flamingo text-zinc-900' },
+  SHIP: { label: 'Ship', className: 'bg-ctp-green text-zinc-900' },
+  CLOSED: { label: 'Closed', className: 'bg-accent text-zinc-50' },
+};
+
 interface CommandPaletteProps {
   projectId: number;
   open: boolean;
@@ -127,22 +137,28 @@ export function CommandPalette({ projectId, open, onOpenChange }: CommandPalette
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     </div>
                   )}
-                  {ticketData?.results.map((ticket) => (
-                    <CommandItem
-                      key={ticket.id}
-                      value={`${ticket.ticketKey} ${ticket.title}`}
-                      onSelect={() =>
-                        handleSelect(
-                          `/projects/${projectId}/board?ticket=${ticket.ticketKey}&modal=open`
-                        )
-                      }
-                    >
-                      <span className="font-mono text-xs text-muted-foreground mr-2">
-                        {ticket.ticketKey}
-                      </span>
-                      {ticket.title}
-                    </CommandItem>
-                  ))}
+                  {ticketData?.results.map((ticket) => {
+                    const badge = STAGE_BADGE[ticket.stage] ?? { label: ticket.stage, className: 'bg-muted text-muted-foreground' };
+                    return (
+                      <CommandItem
+                        key={ticket.id}
+                        value={`${ticket.ticketKey} ${ticket.title}`}
+                        onSelect={() =>
+                          handleSelect(
+                            `/projects/${projectId}/board?ticket=${ticket.ticketKey}&modal=open`
+                          )
+                        }
+                      >
+                        <span className="font-mono text-xs text-muted-foreground mr-2">
+                          {ticket.ticketKey}
+                        </span>
+                        <span className="truncate flex-1">{ticket.title}</span>
+                        <span className={`ml-2 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                      </CommandItem>
+                    );
+                  })}
                   {!ticketLoading && debouncedSearch.length >= 2 && ticketData?.results.length === 0 && (
                     <p className="py-4 text-center text-sm text-muted-foreground">
                       No tickets found.

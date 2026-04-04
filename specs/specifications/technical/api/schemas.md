@@ -176,7 +176,7 @@ export const searchTicketsSchema = z.object({
     .min(1)
     .max(50)
     .optional()
-    .default(10),
+    .default(20),
 });
 
 export type SearchTicketsInput = z.infer<typeof searchTicketsSchema>;
@@ -184,7 +184,7 @@ export type SearchTicketsInput = z.infer<typeof searchTicketsSchema>;
 
 **Validation Rules**:
 - **q**: Search query string, 2-100 characters required
-- **limit**: Optional result limit (default: 10, max: 50)
+- **limit**: Optional result limit (default: 20, max: 50)
 
 **Usage**:
 - Used by `/api/projects/:projectId/tickets/search` endpoint

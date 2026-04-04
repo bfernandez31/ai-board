@@ -26,7 +26,7 @@
 
 **Forbidden**: No UI libs besides shadcn/ui + Radix. No ORMs besides Prisma. No state libs (Redux, Zustand, etc.) — use React hooks + TanStack Query.
 
-**Colors**: NEVER hardcode hex/rgb colors (`text-[#...]`, `bg-[#...]`). Use Tailwind semantic tokens only (`text-foreground`, `bg-card`, `text-muted-foreground`, etc.). All text must be readable (WCAG AA 4.5:1 contrast). See `globals.css` and `tailwind.config.ts` for available tokens.
+**Colors**: NEVER hardcode hex/rgb colors (`text-[#...]`, `bg-[#...]`). Prefer Tailwind semantic tokens (`text-foreground`, `bg-card`, `text-muted-foreground`, etc.) for theme-adaptive surfaces and text. **Exception**: Tailwind palette classes (`text-zinc-50`, `text-zinc-900`) and project theme tokens (`ctp-*`, `bg-accent`) are allowed for fixed-contrast needs like colored badges or stage indicators where text color must stay constant regardless of theme. All text must be readable (WCAG AA 4.5:1 contrast). See `globals.css` and `tailwind.config.ts` for available tokens.
 
 **Tailwind Classes**: NEVER construct Tailwind class names dynamically (e.g., `.replace('text-', 'bg-')`, `` `bg-${color}` ``). Tailwind's purger only detects classes that appear as complete literal strings in source code. Always return full static class strings from helper functions.
 

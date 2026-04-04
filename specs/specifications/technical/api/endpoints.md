@@ -1055,7 +1055,7 @@ Search tickets within a project by key, title, or description.
 
 **Query Parameters**:
 - `q` (string, required): Search query (minimum 2 characters)
-- `limit` (number, optional): Maximum results to return (default: 10, max: 50)
+- `limit` (number, optional): Maximum results to return (default: 20, max: 50)
 
 **Response** (200 OK):
 ```json
@@ -1087,7 +1087,7 @@ Search tickets within a project by key, title, or description.
   3. Title contains query (score: 2)
   4. Description contains query (score: 1)
 - Within same relevance score, ordered by most recently updated
-- Limited to specified limit (default 10, max 50)
+- Limited to specified limit (default 20, max 50)
 
 **Fields**:
 - `id`: Ticket ID (for opening modal via URL parameter)
@@ -2285,7 +2285,7 @@ Fetch paginated list of comparisons for a ticket.
 - `id` (number, required): Ticket ID
 
 **Query Parameters**:
-- `limit` (number, optional): Maximum results to return (default: 10, max: 50)
+- `limit` (number, optional): Maximum results to return (default: 20, max: 50)
 
 **Response** (200 OK):
 ```json

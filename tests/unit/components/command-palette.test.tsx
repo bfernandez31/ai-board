@@ -113,14 +113,15 @@ describe('CommandPalette', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('shows ticket results when search query >= 2 chars', async () => {
+  it('shows ticket results with stage badges when search query >= 2 chars', async () => {
     mockTicketSearch.mockReturnValue({
       data: {
         results: [
           { id: 1, ticketKey: 'AIB-1', title: 'Fix bug', stage: 'BUILD' },
-          { id: 2, ticketKey: 'AIB-2', title: 'Add feature', stage: 'INBOX' },
+          { id: 2, ticketKey: 'AIB-2', title: 'Fix feature', stage: 'INBOX' },
+          { id: 3, ticketKey: 'AIB-3', title: 'Fix closed task', stage: 'CLOSED' },
         ],
-        totalCount: 2,
+        totalCount: 3,
       },
       isLoading: false,
     });
@@ -133,6 +134,10 @@ describe('CommandPalette', () => {
     await waitFor(() => {
       expect(screen.getByText('AIB-1')).toBeInTheDocument();
       expect(screen.getByText('Fix bug')).toBeInTheDocument();
+      // Stage badges should be visible
+      expect(screen.getByText('Build')).toBeInTheDocument();
+      expect(screen.getByText('Inbox')).toBeInTheDocument();
+      expect(screen.getByText('Closed')).toBeInTheDocument();
     });
   });
 
