@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/select";
 import { useCreateCredential } from "@/lib/hooks/mutations/useCredentials";
 
+type Provider = "ANTHROPIC" | "OPENAI";
+
 export function CredentialForm() {
-  const [provider] = useState("ANTHROPIC");
+  const [provider, setProvider] = useState<Provider>("ANTHROPIC");
   const [credentialType, setCredentialType] = useState("API_KEY");
   const [label, setLabel] = useState("");
   const [value, setValue] = useState("");
@@ -22,8 +24,20 @@ export function CredentialForm() {
 
   const createCredential = useCreateCredential();
 
-  function validateFormat(type: string, val: string): string | null {
+  function validateFormat(prov: Provider, type: string, val: string): string | null {
     if (!val) return null;
+    if (prov === "OPENAI") {
+      if (type === "API_KEY") {
+        if (!val.startsWith("sk-")) {
+          return 'API key must start with "sk-"';
+        }
+        if (val.length < 20) {
+          return "API key appears too short";
+        }
+      }
+      return null;
+    }
+    // ANTHROPIC
     if (type === "API_KEY") {
       if (!val.startsWith("sk-ant-api")) {
         return 'API key must start with "sk-ant-api"';
@@ -41,18 +55,28 @@ export function CredentialForm() {
 
   function handleValueChange(newValue: string) {
     setValue(newValue);
-    setFormatError(validateFormat(credentialType, newValue));
+    setFormatError(validateFormat(provider, credentialType, newValue));
   }
 
   function handleTypeChange(newType: string) {
     setCredentialType(newType);
-    setFormatError(validateFormat(newType, value));
+    setFormatError(validateFormat(provider, newType, value));
+  }
+
+  function handleProviderChange(newProvider: Provider) {
+    setProvider(newProvider);
+    if (newProvider === "OPENAI") {
+      setCredentialType("API_KEY");
+      setFormatError(validateFormat(newProvider, "API_KEY", value));
+    } else {
+      setFormatError(validateFormat(newProvider, credentialType, value));
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const error = validateFormat(credentialType, value);
+    const error = validateFormat(provider, credentialType, value);
     if (error) {
       setFormatError(error);
       return;
@@ -73,30 +97,35 @@ export function CredentialForm() {
     }
   }
 
+  const isOpenAI = provider === "OPENAI";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="provider">Provider</Label>
-          <Select value={provider} disabled>
+          <Select value={provider} onValueChange={handleProviderChange}>
             <SelectTrigger id="provider">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ANTHROPIC">Anthropic</SelectItem>
+              <SelectItem value="OPENAI">OpenAI</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="credentialType">Credential Type</Label>
-          <Select value={credentialType} onValueChange={handleTypeChange}>
+          <Select value={credentialType} onValueChange={handleTypeChange} disabled={isOpenAI}>
             <SelectTrigger id="credentialType">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="API_KEY">API Key</SelectItem>
-              <SelectItem value="OAUTH_TOKEN">OAuth Token</SelectItem>
+              {!isOpenAI && (
+                <SelectItem value="OAUTH_TOKEN">OAuth Token</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -122,9 +151,11 @@ export function CredentialForm() {
           id="value"
           type="password"
           placeholder={
-            credentialType === "API_KEY"
-              ? "sk-ant-api03-..."
-              : "Paste your OAuth token"
+            isOpenAI
+              ? "sk-proj-..."
+              : credentialType === "API_KEY"
+                ? "sk-ant-api03-..."
+                : "Paste your OAuth token"
           }
           value={value}
           onChange={(e) => handleValueChange(e.target.value)}

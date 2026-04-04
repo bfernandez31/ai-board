@@ -3,7 +3,8 @@ import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
-import { getOwnerCredential, MISSING_CREDENTIAL_ERROR } from '@/lib/ai-credentials/workflow';
+import { getOwnerCredential, getMissingCredentialError } from '@/lib/ai-credentials/workflow';
+import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
 import { getProjectServiceInputs } from '@/lib/workflows/service-inputs';
 import { ensureFreshConfig } from '@/lib/config-sync';
 
@@ -163,11 +164,13 @@ export async function handleTicketTransition(
 
     // Validate BYOK credential and ensure fresh config before dispatch
     if (!isWorkflowTestMode(process.env.GITHUB_TOKEN)) {
-      const credential = await getOwnerCredential(ticket.projectId);
+      const effectiveAgentForCred = resolveEffectiveAgent(ticket);
+      const provider = AGENT_PROVIDER_MAP[effectiveAgentForCred];
+      const credential = await getOwnerCredential(ticket.projectId, provider);
       if (!credential) {
         return {
           success: false,
-          error: MISSING_CREDENTIAL_ERROR,
+          error: getMissingCredentialError(provider),
           errorCode: 'MISSING_CREDENTIAL',
         };
       }

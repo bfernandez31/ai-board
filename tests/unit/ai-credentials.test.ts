@@ -7,6 +7,8 @@ process.env.CREDENTIAL_ENCRYPTION_KEY = TEST_KEY;
 
 import { encryptCredential, decryptCredential } from '@/lib/ai-credentials/crypto';
 import { validateFormat } from '@/lib/ai-credentials/providers/anthropic';
+import { validateFormat as validateOpenAIFormat } from '@/lib/ai-credentials/providers/openai';
+import { getProviderModule } from '@/lib/ai-credentials/providers';
 
 describe('ai-credentials/crypto', () => {
   describe('encryptCredential / decryptCredential round-trip', () => {
@@ -140,5 +142,58 @@ describe('ai-credentials/providers/anthropic - validateFormat', () => {
       const result = validateFormat('OAUTH_TOKEN', 'short');
       expect(result.valid).toBe(false);
     });
+  });
+});
+
+describe('ai-credentials/providers/openai - validateFormat', () => {
+  describe('API_KEY format', () => {
+    it('should accept valid OpenAI API key with sk- prefix', () => {
+      const result = validateOpenAIFormat('API_KEY', 'sk-proj-' + 'a'.repeat(40));
+      expect(result.valid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should reject key without sk- prefix', () => {
+      const result = validateOpenAIFormat('API_KEY', 'invalid-key-' + 'a'.repeat(40));
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('must start with "sk-"');
+    });
+
+    it('should reject key that is too short', () => {
+      const result = validateOpenAIFormat('API_KEY', 'sk-short');
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('too short');
+    });
+
+    it('should accept key with various sk- prefixes', () => {
+      expect(validateOpenAIFormat('API_KEY', 'sk-svcacct-' + 'a'.repeat(40)).valid).toBe(true);
+      expect(validateOpenAIFormat('API_KEY', 'sk-' + 'a'.repeat(40)).valid).toBe(true);
+    });
+  });
+
+  describe('OAUTH_TOKEN rejection', () => {
+    it('should reject OAUTH_TOKEN for OpenAI', () => {
+      const result = validateOpenAIFormat('OAUTH_TOKEN', 'a'.repeat(40));
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('does not support OAuth');
+    });
+  });
+});
+
+describe('ai-credentials/providers - registry', () => {
+  it('should return the correct module for ANTHROPIC', () => {
+    const mod = getProviderModule('ANTHROPIC');
+    expect(mod.validateFormat).toBeDefined();
+    expect(mod.verifyWithProvider).toBeDefined();
+    // Anthropic module should accept sk-ant-api format
+    expect(mod.validateFormat('API_KEY', 'sk-ant-api03-' + 'a'.repeat(80)).valid).toBe(true);
+  });
+
+  it('should return the correct module for OPENAI', () => {
+    const mod = getProviderModule('OPENAI');
+    expect(mod.validateFormat).toBeDefined();
+    expect(mod.verifyWithProvider).toBeDefined();
+    // OpenAI module should accept sk- format
+    expect(mod.validateFormat('API_KEY', 'sk-proj-' + 'a'.repeat(40)).valid).toBe(true);
   });
 });

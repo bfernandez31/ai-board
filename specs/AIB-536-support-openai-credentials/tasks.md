@@ -18,9 +18,9 @@
 
 **Purpose**: Database migration and core provider infrastructure that all user stories depend on.
 
-- [ ] T001 Add `OPENAI` to `CredentialProvider` enum in `prisma/schema.prisma` and run migration (`bunx prisma migrate dev --name add-openai-credential-provider` then `bunx prisma generate`)
-- [ ] T002 [P] Create OpenAI provider module in `lib/ai-credentials/providers/openai.ts` implementing `validateFormat(credentialType, value)` (sk- prefix + min 20 chars, reject OAUTH_TOKEN) and `verifyWithProvider(credentialType, value)` (GET `https://api.openai.com/v1/models` with Bearer token, 10s timeout, same result codes as Anthropic)
-- [ ] T003 [P] Create provider registry in `lib/ai-credentials/providers/index.ts` exporting `getProviderModule(provider)` that returns `{ validateFormat, verifyWithProvider }` for ANTHROPIC or OPENAI
+- [x] T001 Add `OPENAI` to `CredentialProvider` enum in `prisma/schema.prisma` and run migration (`bunx prisma migrate dev --name add-openai-credential-provider` then `bunx prisma generate`)
+- [x] T002 [P] Create OpenAI provider module in `lib/ai-credentials/providers/openai.ts` implementing `validateFormat(credentialType, value)` (sk- prefix + min 20 chars, reject OAUTH_TOKEN) and `verifyWithProvider(credentialType, value)` (GET `https://api.openai.com/v1/models` with Bearer token, 10s timeout, same result codes as Anthropic)
+- [x] T003 [P] Create provider registry in `lib/ai-credentials/providers/index.ts` exporting `getProviderModule(provider)` that returns `{ validateFormat, verifyWithProvider }` for ANTHROPIC or OPENAI
 
 ---
 
@@ -30,8 +30,8 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 Update type definitions in `lib/ai-credentials/types.ts`: add `AGENT_PROVIDER_MAP`, `PROVIDER_ALLOWED_TYPES`, refactor `ENV_VAR_MAP` to provider-aware composite keys, add `getEnvVar(provider, credentialType)` helper, widen `WorkflowCredentialRequest.provider` and `WorkflowResolvedCredential.provider` to `CredentialProvider`
-- [ ] T005 Update credential service in `lib/ai-credentials/service.ts`: replace direct `anthropic` provider import with `getProviderModule(credential.provider)` from the registry; update `testCredential()` to route through correct provider module; scope OAuth skip logic to `ANTHROPIC` + `OAUTH_TOKEN` only
+- [x] T004 Update type definitions in `lib/ai-credentials/types.ts`: add `AGENT_PROVIDER_MAP`, `PROVIDER_ALLOWED_TYPES`, refactor `ENV_VAR_MAP` to provider-aware composite keys, add `getEnvVar(provider, credentialType)` helper, widen `WorkflowCredentialRequest.provider` and `WorkflowResolvedCredential.provider` to `CredentialProvider`
+- [x] T005 Update credential service in `lib/ai-credentials/service.ts`: replace direct `anthropic` provider import with `getProviderModule(credential.provider)` from the registry; update `testCredential()` to route through correct provider module; scope OAuth skip logic to `ANTHROPIC` + `OAUTH_TOKEN` only
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -46,15 +46,15 @@
 ### Tests for User Story 1
 **RULE (constitution): Extend existing test files. All paths verified against filesystem.**
 
-- [ ] T006 [P] [US1] Extend `tests/unit/ai-credentials.test.ts` with OpenAI format validation tests: sk- prefix passes, missing prefix fails, too-short key fails, OAUTH_TOKEN rejected for OPENAI, provider registry returns correct module for each provider
-- [ ] T007 [P] [US1] Extend `tests/unit/components/credential-form.test.tsx` with provider selection tests: provider selector enabled with ANTHROPIC + OPENAI options, selecting OPENAI locks credential type to API_KEY, OpenAI format validation (sk- prefix), switching back to ANTHROPIC re-enables OAUTH_TOKEN
-- [ ] T008 [P] [US1] Extend `tests/integration/credentials/credential-validation.test.ts` with OpenAI API validation tests: POST with OPENAI provider and valid format succeeds, POST with OPENAI + OAUTH_TOKEN returns 400, POST with OPENAI + invalid key format returns 400
+- [x] T006 [P] [US1] Extend `tests/unit/ai-credentials.test.ts` with OpenAI format validation tests: sk- prefix passes, missing prefix fails, too-short key fails, OAUTH_TOKEN rejected for OPENAI, provider registry returns correct module for each provider
+- [x] T007 [P] [US1] Extend `tests/unit/components/credential-form.test.tsx` with provider selection tests: provider selector enabled with ANTHROPIC + OPENAI options, selecting OPENAI locks credential type to API_KEY, OpenAI format validation (sk- prefix), switching back to ANTHROPIC re-enables OAUTH_TOKEN
+- [x] T008 [P] [US1] Extend `tests/integration/credentials/credential-validation.test.ts` with OpenAI API validation tests: POST with OPENAI provider and valid format succeeds, POST with OPENAI + OAUTH_TOKEN returns 400, POST with OPENAI + invalid key format returns 400
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Update credential API route in `app/api/credentials/route.ts`: add `'OPENAI'` to Zod provider enum, add provider-type constraint validation (OPENAI + OAUTH_TOKEN = 400), use `getProviderModule(validated.provider)` for format validation and live verification, scope OAuth skip to ANTHROPIC only
-- [ ] T010 [US1] Update credential form in `components/credentials/credential-form.tsx`: enable provider Select, add OPENAI SelectItem, when OPENAI selected force credentialType to API_KEY and disable type selector (hide OAUTH_TOKEN), update placeholder to `sk-proj-...`, update client-side `validateFormat()` for sk- prefix when OPENAI
-- [ ] T011 [US1] Verify provider display in `components/credentials/credential-item.tsx`: ensure OPENAI provider name displays correctly, verify verification messages reference correct provider name
+- [x] T009 [US1] Update credential API route in `app/api/credentials/route.ts`: add `'OPENAI'` to Zod provider enum, add provider-type constraint validation (OPENAI + OAUTH_TOKEN = 400), use `getProviderModule(validated.provider)` for format validation and live verification, scope OAuth skip to ANTHROPIC only
+- [x] T010 [US1] Update credential form in `components/credentials/credential-form.tsx`: enable provider Select, add OPENAI SelectItem, when OPENAI selected force credentialType to API_KEY and disable type selector (hide OAUTH_TOKEN), update placeholder to `sk-proj-...`, update client-side `validateFormat()` for sk- prefix when OPENAI
+- [x] T011 [US1] Verify provider display in `components/credentials/credential-item.tsx`: ensure OPENAI provider name displays correctly, verify verification messages reference correct provider name
 
 **Checkpoint**: User Story 1 fully functional - users can save, validate, and store OpenAI API keys
 
@@ -69,14 +69,14 @@
 ### Tests for User Story 2
 **RULE (constitution): Extend existing test files.**
 
-- [ ] T012 [P] [US2] Extend `tests/unit/credential-dispatch-guard.test.ts` with provider-aware dispatch tests: Codex-agent ticket resolves OPENAI provider, missing OPENAI credential blocks dispatch with provider-specific error, CLAUDE ticket continues to resolve ANTHROPIC
-- [ ] T013 [P] [US2] Extend `tests/integration/credentials/workflow-credential.test.ts` with OpenAI workflow credential tests: GET `/api/internal/credentials?projectId=1&provider=OPENAI` returns OPENAI_API_KEY envVar, default (no provider param) returns ANTHROPIC credential (backward compat), provider-specific 404 error message
+- [x] T012 [P] [US2] Extend `tests/unit/credential-dispatch-guard.test.ts` with provider-aware dispatch tests: Codex-agent ticket resolves OPENAI provider, missing OPENAI credential blocks dispatch with provider-specific error, CLAUDE ticket continues to resolve ANTHROPIC
+- [x] T013 [P] [US2] Extend `tests/integration/credentials/workflow-credential.test.ts` with OpenAI workflow credential tests: GET `/api/internal/credentials?projectId=1&provider=OPENAI` returns OPENAI_API_KEY envVar, default (no provider param) returns ANTHROPIC credential (backward compat), provider-specific 404 error message
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Update workflow credential functions in `lib/ai-credentials/workflow.ts`: add optional `provider` parameter to `getOwnerCredential()` (default ANTHROPIC), use `getEnvVar(credential.provider, credential.credentialType)` in `buildWorkflowPayload()`, replace `MISSING_CREDENTIAL_ERROR` with `getMissingCredentialError(provider)` for provider-specific messages
-- [ ] T015 [US2] Update transition dispatch in `lib/workflows/transition.ts`: after `resolveEffectiveAgent(ticket)`, compute provider via `AGENT_PROVIDER_MAP[effectiveAgent]`, pass provider to `getOwnerCredential()`, use `getMissingCredentialError(provider)` for errors
-- [ ] T016 [US2] Update internal credential endpoint in `app/api/internal/credentials/route.ts`: add optional `provider` query param (default ANTHROPIC), pass provider to `getOwnerCredential()`, update 404 error message to be provider-aware
+- [x] T014 [US2] Update workflow credential functions in `lib/ai-credentials/workflow.ts`: add optional `provider` parameter to `getOwnerCredential()` (default ANTHROPIC), use `getEnvVar(credential.provider, credential.credentialType)` in `buildWorkflowPayload()`, replace `MISSING_CREDENTIAL_ERROR` with `getMissingCredentialError(provider)` for provider-specific messages
+- [x] T015 [US2] Update transition dispatch in `lib/workflows/transition.ts`: after `resolveEffectiveAgent(ticket)`, compute provider via `AGENT_PROVIDER_MAP[effectiveAgent]`, pass provider to `getOwnerCredential()`, use `getMissingCredentialError(provider)` for errors
+- [x] T016 [US2] Update internal credential endpoint in `app/api/internal/credentials/route.ts`: add optional `provider` query param (default ANTHROPIC), pass provider to `getOwnerCredential()`, update 404 error message to be provider-aware
 
 **Checkpoint**: User Story 2 fully functional - Codex workflows resolve OpenAI credentials, Claude workflows unchanged
 
@@ -91,11 +91,11 @@
 ### Tests for User Story 3
 **RULE (constitution): Extend existing test files.**
 
-- [ ] T017 [P] [US3] Extend `tests/integration/credentials/credentials-api.test.ts` with OpenAI credential lifecycle tests: full CRUD lifecycle for OPENAI credential, user can have both ANTHROPIC and OPENAI credentials simultaneously, replacing OPENAI credential (upsert behavior)
+- [x] T017 [P] [US3] Extend `tests/integration/credentials/credentials-api.test.ts` with OpenAI credential lifecycle tests: full CRUD lifecycle for OPENAI credential, user can have both ANTHROPIC and OPENAI credentials simultaneously, replacing OPENAI credential (upsert behavior)
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] No additional implementation needed - credential test and delete operations are provider-agnostic. Verify that POST `/api/credentials/[id]/test` correctly routes through OpenAI provider module for OPENAI credentials (already handled by T005 service update). Verify DELETE works for OPENAI credentials.
+- [x] T018 [US3] No additional implementation needed - credential test and delete operations are provider-agnostic. Verify that POST `/api/credentials/[id]/test` correctly routes through OpenAI provider module for OPENAI credentials (already handled by T005 service update). Verify DELETE works for OPENAI credentials.
 
 **Checkpoint**: User Story 3 complete - full credential lifecycle (save, test, delete) works for OpenAI
 
@@ -110,12 +110,12 @@
 ### Tests for User Story 4
 **RULE (constitution): Extend existing test files.**
 
-- [ ] T019 [US4] Extend `tests/unit/credential-dispatch-guard.test.ts` with hardcoded CLAUDE command tests: ai-board-assist dispatch always checks ANTHROPIC credential regardless of ticket agent, code-review dispatch always checks ANTHROPIC credential
+- [x] T019 [US4] Extend `tests/unit/credential-dispatch-guard.test.ts` with hardcoded CLAUDE command tests: ai-board-assist dispatch always checks ANTHROPIC credential regardless of ticket agent, code-review dispatch always checks ANTHROPIC credential
 
 ### Implementation for User Story 4
 
-- [ ] T020 [P] [US4] Update ai-board-assist dispatch in `app/lib/workflows/dispatch-ai-board.ts`: always pass `provider: 'ANTHROPIC'` to `getOwnerCredential()` regardless of ticket agent
-- [ ] T021 [P] [US4] Update rollback-reset dispatch in `app/lib/workflows/dispatch-rollback-reset.ts`: resolve provider from agent via `AGENT_PROVIDER_MAP[resolveEffectiveAgent(ticket)]`, pass provider to `getOwnerCredential()`
+- [x] T020 [P] [US4] Update ai-board-assist dispatch in `app/lib/workflows/dispatch-ai-board.ts`: always pass `provider: 'ANTHROPIC'` to `getOwnerCredential()` regardless of ticket agent
+- [x] T021 [P] [US4] Update rollback-reset dispatch in `app/lib/workflows/dispatch-rollback-reset.ts`: resolve provider from agent via `AGENT_PROVIDER_MAP[resolveEffectiveAgent(ticket)]`, pass provider to `getOwnerCredential()`
 
 **Checkpoint**: User Story 4 complete - hardcoded CLAUDE commands always use Anthropic credentials
 
@@ -129,7 +129,7 @@
 
 ### Implementation for User Story 5
 
-- [ ] T022 [US5] Update health scan dispatch in `lib/health/scan-dispatch.ts`: pass `'ANTHROPIC'` to `getOwnerCredential()` since health scans always use Claude
+- [x] T022 [US5] Update health scan dispatch in `lib/health/scan-dispatch.ts`: pass `'ANTHROPIC'` to `getOwnerCredential()` since health scans always use Claude
 
 **Checkpoint**: User Story 5 complete - health scans correctly resolve credentials
 
@@ -139,10 +139,10 @@
 
 **Purpose**: Final validation across all user stories.
 
-- [ ] T023 Run `bun run type-check` to verify all type changes compile cleanly across all modified files
-- [ ] T024 Run `bun run lint` to verify no linting regressions
-- [ ] T025 Run `bun run test:unit` to verify all unit tests pass (T006, T007, T012, T019)
-- [ ] T026 Run `bun run test:integration` to verify all integration tests pass (T008, T013, T017)
+- [x] T023 Run `bun run type-check` to verify all type changes compile cleanly across all modified files
+- [x] T024 Run `bun run lint` to verify no linting regressions
+- [x] T025 Run `bun run test:unit` to verify all unit tests pass (T006, T007, T012, T019)
+- [x] T026 Run `bun run test:integration` to verify all integration tests pass (T008, T013, T017)
 
 ---
 

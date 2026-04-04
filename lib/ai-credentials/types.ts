@@ -1,12 +1,12 @@
-import type { CredentialProvider, CredentialType, CredentialReadiness } from '@prisma/client';
+import type { Agent, CredentialProvider, CredentialType, CredentialReadiness } from '@prisma/client';
 
 export interface WorkflowCredentialRequest {
   projectId: number;
-  provider: 'ANTHROPIC';
+  provider: CredentialProvider;
 }
 
 export interface WorkflowResolvedCredential {
-  provider: 'ANTHROPIC';
+  provider: CredentialProvider;
   credentialType: 'API_KEY' | 'OAUTH_TOKEN';
   envVar: string;
   secret: string;
@@ -52,7 +52,25 @@ export interface FormatValidationResult {
   error?: string;
 }
 
-export const ENV_VAR_MAP: Record<CredentialType, string> = {
-  API_KEY: 'ANTHROPIC_API_KEY',
-  OAUTH_TOKEN: 'CLAUDE_CODE_OAUTH_TOKEN',
+export const AGENT_PROVIDER_MAP: Record<Agent, CredentialProvider> = {
+  CLAUDE: 'ANTHROPIC',
+  CODEX: 'OPENAI',
 };
+
+export const PROVIDER_ALLOWED_TYPES: Record<CredentialProvider, CredentialType[]> = {
+  ANTHROPIC: ['API_KEY', 'OAUTH_TOKEN'],
+  OPENAI: ['API_KEY'],
+};
+
+export const ENV_VAR_MAP: Record<string, string> = {
+  'ANTHROPIC:API_KEY': 'ANTHROPIC_API_KEY',
+  'ANTHROPIC:OAUTH_TOKEN': 'CLAUDE_CODE_OAUTH_TOKEN',
+  'OPENAI:API_KEY': 'OPENAI_API_KEY',
+};
+
+export function getEnvVar(provider: CredentialProvider, credentialType: CredentialType): string {
+  const key = `${provider}:${credentialType}`;
+  const envVar = ENV_VAR_MAP[key];
+  if (!envVar) throw new Error(`No env var mapping for ${key}`);
+  return envVar;
+}

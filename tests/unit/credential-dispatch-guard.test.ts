@@ -53,7 +53,7 @@ vi.mock('@/lib/stage-transitions', () => ({
   Stage: {},
 }));
 
-import { getOwnerCredential, MISSING_CREDENTIAL_ERROR } from '@/lib/ai-credentials/workflow';
+import { getOwnerCredential, MISSING_CREDENTIAL_ERROR, getMissingCredentialError } from '@/lib/ai-credentials/workflow';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
 
 const mockedGetOwnerCredential = vi.mocked(getOwnerCredential);
@@ -107,8 +107,8 @@ describe('BYOK Credential Dispatch Guards', () => {
 
       expect(result.success).toBe(false);
       expect(result.errorCode).toBe('MISSING_CREDENTIAL');
-      expect(result.error).toBe(MISSING_CREDENTIAL_ERROR);
-      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1);
+      expect(result.error).toContain('credential configured');
+      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1, 'ANTHROPIC');
     });
 
     it('should proceed when owner has a credential', async () => {
@@ -126,7 +126,7 @@ describe('BYOK Credential Dispatch Guards', () => {
       const result = await handleTicketTransition(createTestTicket(), 'SPECIFY' as Stage);
 
       // Should have progressed past credential check (may succeed or fail on dispatch)
-      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1);
+      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1, 'ANTHROPIC');
     });
 
     it('should skip credential check in test mode', async () => {
@@ -242,9 +242,88 @@ describe('BYOK Credential Dispatch Guards', () => {
 
   describe('MISSING_CREDENTIAL_ERROR constant', () => {
     it('should contain actionable guidance', () => {
-      expect(MISSING_CREDENTIAL_ERROR).toContain('AI credential');
+      expect(MISSING_CREDENTIAL_ERROR).toContain('credential configured');
       expect(MISSING_CREDENTIAL_ERROR).toContain('Settings');
       expect(MISSING_CREDENTIAL_ERROR).toContain('AI Credentials');
+    });
+  });
+
+  describe('provider-aware credential dispatch', () => {
+    it('should resolve OPENAI provider for Codex-agent ticket', async () => {
+      mockedGetOwnerCredential.mockResolvedValue(null);
+
+      const { handleTicketTransition } = await import('@/lib/workflows/transition');
+
+      const codexTicket = createTestTicket({
+        agent: 'CODEX' as TicketWithProject['agent'],
+      });
+
+      const result = await handleTicketTransition(codexTicket, 'SPECIFY' as Stage);
+
+      expect(result.success).toBe(false);
+      expect(result.errorCode).toBe('MISSING_CREDENTIAL');
+      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1, 'OPENAI');
+    });
+
+    it('should use provider-specific error message for missing OPENAI credential', async () => {
+      mockedGetOwnerCredential.mockResolvedValue(null);
+
+      const { handleTicketTransition } = await import('@/lib/workflows/transition');
+
+      const codexTicket = createTestTicket({
+        agent: 'CODEX' as TicketWithProject['agent'],
+      });
+
+      const result = await handleTicketTransition(codexTicket, 'SPECIFY' as Stage);
+
+      expect(result.error).toContain('OpenAI');
+      expect(result.error).toContain('credential configured');
+    });
+
+    it('should resolve ANTHROPIC provider for CLAUDE-agent ticket', async () => {
+      mockedGetOwnerCredential.mockResolvedValue(null);
+
+      const { handleTicketTransition } = await import('@/lib/workflows/transition');
+
+      const claudeTicket = createTestTicket({
+        agent: 'CLAUDE' as TicketWithProject['agent'],
+      });
+
+      const result = await handleTicketTransition(claudeTicket, 'SPECIFY' as Stage);
+
+      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1, 'ANTHROPIC');
+    });
+
+    it('should generate provider-specific error messages', () => {
+      expect(getMissingCredentialError('ANTHROPIC')).toContain('Anthropic');
+      expect(getMissingCredentialError('OPENAI')).toContain('OpenAI');
+    });
+  });
+
+  describe('hardcoded CLAUDE commands', () => {
+    it('should always check ANTHROPIC credential for ai-board-assist regardless of ticket agent', async () => {
+      mockedGetOwnerCredential.mockResolvedValue(null);
+
+      const { dispatchAIBoardWorkflow } = await import(
+        '@/app/lib/workflows/dispatch-ai-board'
+      );
+
+      await expect(
+        dispatchAIBoardWorkflow({
+          ticket_id: 'AIB-100',
+          stage: 'BUILD',
+          branch: 'test-branch',
+          user_id: 'user1',
+          user: 'testuser',
+          comment: 'test comment',
+          job_id: '1',
+          project_id: '1',
+          githubRepository: 'owner/repo',
+          agent: 'CODEX',
+        })
+      ).rejects.toThrow('Anthropic');
+
+      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1, 'ANTHROPIC');
     });
   });
 });

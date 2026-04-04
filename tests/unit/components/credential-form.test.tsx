@@ -114,4 +114,96 @@ describe('CredentialForm', () => {
 
     expect(screen.getByRole('button', { name: /saving/i })).toBeDisabled();
   });
+
+  describe('OpenAI provider selection', () => {
+    async function selectProvider(user: ReturnType<typeof userEvent.setup>, name: string) {
+      const providerTrigger = screen.getByLabelText(/provider/i);
+      await user.click(providerTrigger);
+      // Radix Select may render option text in both trigger and listbox; use getAllByText and pick the option
+      const matches = screen.getAllByText(name);
+      await user.click(matches[matches.length - 1]);
+    }
+
+    it('should have provider selector enabled with ANTHROPIC and OPENAI options', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<CredentialForm />);
+
+      const providerTrigger = screen.getByLabelText(/provider/i);
+      expect(providerTrigger).not.toBeDisabled();
+
+      // Open the provider select
+      await user.click(providerTrigger);
+
+      expect(screen.getAllByText('Anthropic').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('OpenAI').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should lock credential type to API_KEY when OPENAI is selected', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<CredentialForm />);
+
+      await selectProvider(user, 'OpenAI');
+
+      // Credential type should be disabled
+      const typeTrigger = screen.getByLabelText(/credential type/i);
+      expect(typeTrigger).toHaveAttribute('data-disabled');
+    });
+
+    it('should validate OpenAI API key format (sk- prefix)', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<CredentialForm />);
+
+      await selectProvider(user, 'OpenAI');
+
+      const valueInput = screen.getByLabelText(/api key/i);
+      await user.type(valueInput, 'invalid-key');
+
+      expect(screen.getByText(/api key must start with "sk-"/i)).toBeInTheDocument();
+    });
+
+    it('should re-enable OAUTH_TOKEN when switching back to ANTHROPIC', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<CredentialForm />);
+
+      // Select OpenAI
+      await selectProvider(user, 'OpenAI');
+
+      // Switch back to Anthropic
+      await selectProvider(user, 'Anthropic');
+
+      // Credential type should be enabled
+      const typeTrigger = screen.getByLabelText(/credential type/i);
+      expect(typeTrigger).not.toHaveAttribute('data-disabled');
+
+      // Open credential type selector and verify OAuth Token is available
+      await user.click(typeTrigger);
+      const oauthMatches = screen.getAllByText('OAuth Token');
+      expect(oauthMatches.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should submit with OPENAI provider', async () => {
+      mockMutateAsync.mockResolvedValue({ id: 2 });
+      const user = userEvent.setup();
+      renderWithProviders(<CredentialForm />);
+
+      await selectProvider(user, 'OpenAI');
+
+      const labelInput = screen.getByLabelText(/label/i);
+      const valueInput = screen.getByLabelText(/api key/i);
+      const validKey = 'sk-proj-' + 'a'.repeat(40);
+
+      await user.type(labelInput, 'My OpenAI Key');
+      await user.type(valueInput, validKey);
+      await user.click(screen.getByRole('button', { name: /save credential/i }));
+
+      await waitFor(() => {
+        expect(mockMutateAsync).toHaveBeenCalledWith({
+          provider: 'OPENAI',
+          credentialType: 'API_KEY',
+          label: 'My OpenAI Key',
+          value: validKey,
+        });
+      });
+    });
+  });
 });

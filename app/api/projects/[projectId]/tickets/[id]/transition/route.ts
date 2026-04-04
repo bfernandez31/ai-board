@@ -17,6 +17,8 @@ import {
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
+import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
+import { resolveEffectiveAgent } from '@/lib/workflows/transition';
 
 type TicketWithJobs = { id: number; stage: string; workflowType: string; ticketKey: string; projectId: number; branch: string | null; jobs?: Job[] };
 
@@ -173,11 +175,13 @@ export async function POST(
       let resetJobId: number | undefined;
       if (updatedTicket.branch) {
         try {
+          const effectiveAgent = resolveEffectiveAgent(ticketWithProject);
           const dispatchResult = await dispatchRollbackResetWorkflow({
             ticketId: updatedTicket.id, ticketKey: ticket.ticketKey,
             projectId: ticket.projectId, branch: updatedTicket.branch,
             githubOwner: ticketWithProject.project.githubOwner,
             githubRepo: ticketWithProject.project.githubRepo,
+            provider: AGENT_PROVIDER_MAP[effectiveAgent],
           });
           resetJobId = dispatchResult.jobId;
         } catch (dispatchError) {
@@ -273,12 +277,14 @@ export async function POST(
       let resetJobId: number | undefined;
       if (updatedTicket.branch) {
         try {
+          const effectiveAgent = resolveEffectiveAgent(ticketWithProject);
           const dispatchResult = await dispatchRollbackResetWorkflow({
             ticketId: updatedTicket.id, ticketKey: ticket.ticketKey,
             projectId: ticket.projectId, branch: updatedTicket.branch,
             githubOwner: ticketWithProject.project.githubOwner,
             githubRepo: ticketWithProject.project.githubRepo,
             stage: 'build',
+            provider: AGENT_PROVIDER_MAP[effectiveAgent],
           });
           resetJobId = dispatchResult.jobId;
         } catch (dispatchError) {

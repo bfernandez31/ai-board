@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
-import { getOwnerCredential, buildWorkflowPayload } from '@/lib/ai-credentials/workflow';
+import { getOwnerCredential, buildWorkflowPayload, getMissingCredentialError } from '@/lib/ai-credentials/workflow';
+import type { CredentialProvider } from '@prisma/client';
 
 const querySchema = z.object({
   projectId: z.coerce.number().int().positive(),
@@ -25,16 +26,14 @@ export async function GET(request: NextRequest) {
   }
 
   const { projectId } = parsed.data;
+  const provider = (request.nextUrl.searchParams.get('provider') || 'ANTHROPIC') as CredentialProvider;
 
   try {
-    const credential = await getOwnerCredential(projectId);
+    const credential = await getOwnerCredential(projectId, provider);
 
     if (!credential) {
       return NextResponse.json(
-        {
-          error:
-            'No AI credential configured for project owner. Please add your Anthropic key in Settings.',
-        },
+        { error: getMissingCredentialError(provider) },
         { status: 404 }
       );
     }

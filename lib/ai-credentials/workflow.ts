@@ -1,14 +1,19 @@
 import { prisma } from '@/lib/db/client';
 import { decryptCredential } from './crypto';
-import { ENV_VAR_MAP } from './types';
+import { getEnvVar } from './types';
 import type { WorkflowResolvedCredential } from './types';
-import type { UserCredential } from '@prisma/client';
+import type { CredentialProvider, UserCredential } from '@prisma/client';
 
-export const MISSING_CREDENTIAL_ERROR =
-  'No AI credential configured. Please add your Anthropic key in Settings → AI Credentials.';
+export function getMissingCredentialError(provider: CredentialProvider = 'ANTHROPIC'): string {
+  const providerName = provider === 'OPENAI' ? 'OpenAI' : 'Anthropic';
+  return `No ${providerName} credential configured. Please add your ${providerName} key in Settings → AI Credentials.`;
+}
+
+export const MISSING_CREDENTIAL_ERROR = getMissingCredentialError('ANTHROPIC');
 
 export async function getOwnerCredential(
-  projectId: number
+  projectId: number,
+  provider: CredentialProvider = 'ANTHROPIC'
 ): Promise<UserCredential | null> {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -20,7 +25,7 @@ export async function getOwnerCredential(
   return prisma.userCredential.findFirst({
     where: {
       userId: project.userId,
-      provider: 'ANTHROPIC',
+      provider,
     },
   });
 }
@@ -35,9 +40,9 @@ export function buildWorkflowPayload(
   );
 
   return {
-    provider: 'ANTHROPIC',
+    provider: credential.provider,
     credentialType: credential.credentialType as 'API_KEY' | 'OAUTH_TOKEN',
-    envVar: ENV_VAR_MAP[credential.credentialType],
+    envVar: getEnvVar(credential.provider, credential.credentialType),
     secret,
     ownerUserId: credential.userId,
   };

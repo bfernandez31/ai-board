@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
-import { getOwnerCredential, MISSING_CREDENTIAL_ERROR } from '@/lib/ai-credentials/workflow';
+import { getOwnerCredential, getMissingCredentialError } from '@/lib/ai-credentials/workflow';
 import { getProjectServiceInputs } from '@/lib/workflows/service-inputs';
 import { ensureFreshConfig } from '@/lib/config-sync';
 import type { HealthScanType, Project } from '@prisma/client';
@@ -32,12 +32,12 @@ export async function dispatchHealthScanWorkflow(
     throw new Error('GITHUB_TOKEN not configured - required for workflow dispatch');
   }
 
-  // Validate BYOK credential before dispatching workflow
+  // Health scans always use Claude → resolve ANTHROPIC credential
   const projectId = parseInt(inputs.project_id, 10);
   if (!isNaN(projectId)) {
-    const credential = await getOwnerCredential(projectId);
+    const credential = await getOwnerCredential(projectId, 'ANTHROPIC');
     if (!credential) {
-      throw new Error(MISSING_CREDENTIAL_ERROR);
+      throw new Error(getMissingCredentialError('ANTHROPIC'));
     }
   }
 
