@@ -9,6 +9,7 @@ describe('calculateGlobalScore', () => {
       testsScore: null,
       specSyncScore: null,
       qualityGate: null,
+      reviewQualityScore: null,
     })).toBeNull();
   });
 
@@ -19,6 +20,7 @@ describe('calculateGlobalScore', () => {
       testsScore: null,
       specSyncScore: null,
       qualityGate: null,
+      reviewQualityScore: null,
     })).toBe(80);
   });
 
@@ -29,6 +31,7 @@ describe('calculateGlobalScore', () => {
       testsScore: null,
       specSyncScore: null,
       qualityGate: null,
+      reviewQualityScore: null,
     })).toBe(70);
   });
 
@@ -39,6 +42,7 @@ describe('calculateGlobalScore', () => {
       testsScore: 60,
       specSyncScore: 40,
       qualityGate: 20,
+      reviewQualityScore: null,
     })).toBe(60);
   });
 
@@ -49,6 +53,7 @@ describe('calculateGlobalScore', () => {
       testsScore: null,
       specSyncScore: null,
       qualityGate: null,
+      reviewQualityScore: null,
     })).toBe(50);
   });
 
@@ -59,6 +64,7 @@ describe('calculateGlobalScore', () => {
       testsScore: 0,
       specSyncScore: 0,
       qualityGate: 0,
+      reviewQualityScore: 0,
     })).toBe(0);
   });
 
@@ -69,6 +75,7 @@ describe('calculateGlobalScore', () => {
       testsScore: 100,
       specSyncScore: 100,
       qualityGate: 100,
+      reviewQualityScore: 100,
     })).toBe(100);
   });
 });

@@ -232,6 +232,17 @@ test.describe('Returning User Updates', () => {
   });
 
   test('returning user can access existing projects', async () => {
+    // Create user first (simulates a returning user who previously signed in)
+    await prisma.user.create({
+      data: {
+        id: testUserId,
+        email: testEmail,
+        name: 'Returning User',
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
     // Create project for existing user
     const project = await prisma.project.create({
       data: {

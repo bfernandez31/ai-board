@@ -31,7 +31,7 @@ describe('ReauthPrompt', () => {
 
     await user.click(screen.getByRole('button', { name: /Authorize GitHub Access/i }));
 
-    expect(signIn).toHaveBeenCalledWith('github', { callbackUrl: expect.any(String) });
+    expect(signIn).toHaveBeenCalledWith('github', { callbackUrl: expect.any(String) }, { scope: 'read:user user:email repo' });
   });
 
   it('calls onDismiss when "Not now" is clicked', async () => {
