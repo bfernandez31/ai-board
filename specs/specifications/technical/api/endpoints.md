@@ -3985,7 +3985,7 @@ Workflow callback endpoint to update scan status and results. Uses the same Bear
 { "scan": { "id": 42, "status": "COMPLETED", "score": 85 } }
 ```
 
-**Side effects on COMPLETED**:
+**Side effects on COMPLETED** (executed atomically in a single database transaction):
 1. Update corresponding sub-score in `HealthScore` aggregate
 2. Recalculate `globalScore` from all non-null sub-scores
 3. Update the module's last scan timestamp

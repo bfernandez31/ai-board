@@ -995,7 +995,7 @@ model HealthScan {
 
 ### HealthScore
 
-Cached aggregate health score per project (one record per project). Stores the computed global score and individual sub-scores for each of the 5 contributing modules. Upserted after every successful scan completion.
+Cached aggregate health score per project (one record per project). Stores the computed global score and individual sub-scores for each of the 5 contributing modules. Upserted after every successful scan completion within the same database transaction as the `HealthScan` status update, ensuring consistency between the two tables.
 
 ```prisma
 model HealthScore {
