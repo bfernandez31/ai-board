@@ -38,7 +38,7 @@ vi.mock('@/lib/billing/stripe', () => ({
   },
 }));
 
-import { deleteUserAccount } from '@/lib/db/users';
+import { deleteUserAccount, StripeCleanupError } from '@/lib/db/users';
 import { prisma } from '@/lib/db/client';
 import { stripe } from '@/lib/billing/stripe';
 
@@ -50,7 +50,7 @@ describe('deleteUserAccount', () => {
   it('should cancel Stripe subscription and delete user when subscription exists', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       stripeCustomerId: 'cus_123',
-      subscription: { stripeSubscriptionId: 'sub_123' },
+      subscription: { stripeSubscriptionId: 'sub_123', status: 'ACTIVE' },
     } as never);
     vi.mocked(stripe.subscriptions.cancel).mockResolvedValue({} as never);
     vi.mocked(prisma.user.delete).mockResolvedValue({} as never);
@@ -61,22 +61,30 @@ describe('deleteUserAccount', () => {
     expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } });
   });
 
-  it('should log and continue when Stripe cancellation fails (GDPR compliance)', async () => {
+  it('should delete user then throw StripeCleanupError with cause when Stripe cancellation fails (GDPR compliance)', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       stripeCustomerId: 'cus_123',
-      subscription: { stripeSubscriptionId: 'sub_123' },
+      subscription: { stripeSubscriptionId: 'sub_123', status: 'ACTIVE' },
     } as never);
-    vi.mocked(stripe.subscriptions.cancel).mockRejectedValue(new Error('Stripe API error'));
+    const stripeError = new Error('Stripe API error');
+    vi.mocked(stripe.subscriptions.cancel).mockRejectedValue(stripeError);
     vi.mocked(prisma.user.delete).mockResolvedValue({} as never);
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    await deleteUserAccount('user-1');
+    try {
+      await deleteUserAccount('user-1');
+      expect.fail('Should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(StripeCleanupError);
+      expect((error as StripeCleanupError).message).toBe(
+        'Stripe subscription cancellation failed during account deletion'
+      );
+      expect((error as StripeCleanupError).cause).toBe(stripeError);
+    }
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Failed to cancel Stripe subscription during account deletion:',
-      expect.any(Error)
-    );
+    // GDPR: user must still be deleted even though Stripe call failed
+    expect(prisma.user.delete).toHaveBeenCalledOnce();
     expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } });
 
     consoleSpy.mockRestore();
