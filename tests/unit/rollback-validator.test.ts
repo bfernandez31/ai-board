@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { canRollbackToInbox, canRollbackToPlan, type Job } from '@/app/lib/workflows/rollback-validator';
+import { canRollbackToInbox, canRollbackToPlan, canRollbackSpecifyToInbox, canRollbackPlanToSpecify, canRollbackBuildToPlan, canRollbackVerifyToBuild, type Job } from '@/app/lib/workflows/rollback-validator';
 import { Stage, JobStatus, WorkflowType } from '@prisma/client';
 
 describe('canRollbackToInbox', () => {
@@ -330,5 +330,141 @@ describe('canRollbackToPlan', () => {
       // Validator allows it (assumes filtering happened upstream)
       expect(result.allowed).toBe(true);
     });
+  });
+});
+
+describe('canRollbackSpecifyToInbox', () => {
+  it('should allow SPECIFY → INBOX with FULL workflow and FAILED job', () => {
+    const job: Job = { id: 1, status: 'FAILED' as JobStatus, command: 'specify' };
+    const result = canRollbackSpecifyToInbox('SPECIFY' as Stage, 'INBOX' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('should allow SPECIFY → INBOX with CANCELLED job', () => {
+    const job: Job = { id: 1, status: 'CANCELLED' as JobStatus, command: 'specify' };
+    const result = canRollbackSpecifyToInbox('SPECIFY' as Stage, 'INBOX' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('should block when job is RUNNING', () => {
+    const job: Job = { id: 1, status: 'RUNNING' as JobStatus, command: 'specify' };
+    const result = canRollbackSpecifyToInbox('SPECIFY' as Stage, 'INBOX' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('running');
+  });
+
+  it('should block when no job exists', () => {
+    const result = canRollbackSpecifyToInbox('SPECIFY' as Stage, 'INBOX' as Stage, 'FULL' as WorkflowType, null);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toBe('No workflow job found for this ticket');
+  });
+
+  it('should block wrong stage transition (BUILD → INBOX)', () => {
+    const job: Job = { id: 1, status: 'FAILED' as JobStatus, command: 'implement' };
+    const result = canRollbackSpecifyToInbox('BUILD' as Stage, 'INBOX' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(false);
+  });
+
+  it('should block QUICK workflow', () => {
+    const job: Job = { id: 1, status: 'FAILED' as JobStatus, command: 'specify' };
+    const result = canRollbackSpecifyToInbox('SPECIFY' as Stage, 'INBOX' as Stage, 'QUICK' as WorkflowType, job);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('FULL');
+  });
+});
+
+describe('canRollbackPlanToSpecify', () => {
+  it('should allow PLAN → SPECIFY with FULL workflow and FAILED job', () => {
+    const job: Job = { id: 1, status: 'FAILED' as JobStatus, command: 'plan' };
+    const result = canRollbackPlanToSpecify('PLAN' as Stage, 'SPECIFY' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('should allow PLAN → SPECIFY with CANCELLED job', () => {
+    const job: Job = { id: 1, status: 'CANCELLED' as JobStatus, command: 'plan' };
+    const result = canRollbackPlanToSpecify('PLAN' as Stage, 'SPECIFY' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('should block when job is RUNNING', () => {
+    const job: Job = { id: 1, status: 'RUNNING' as JobStatus, command: 'plan' };
+    const result = canRollbackPlanToSpecify('PLAN' as Stage, 'SPECIFY' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(false);
+  });
+
+  it('should block QUICK workflow', () => {
+    const job: Job = { id: 1, status: 'FAILED' as JobStatus, command: 'plan' };
+    const result = canRollbackPlanToSpecify('PLAN' as Stage, 'SPECIFY' as Stage, 'QUICK' as WorkflowType, job);
+    expect(result.allowed).toBe(false);
+  });
+
+  it('should block wrong stage (BUILD → SPECIFY)', () => {
+    const job: Job = { id: 1, status: 'FAILED' as JobStatus, command: 'implement' };
+    const result = canRollbackPlanToSpecify('BUILD' as Stage, 'SPECIFY' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(false);
+  });
+});
+
+describe('canRollbackBuildToPlan', () => {
+  it('should allow BUILD → PLAN with FULL workflow and FAILED job', () => {
+    const job: Job = { id: 1, status: 'FAILED' as JobStatus, command: 'implement' };
+    const result = canRollbackBuildToPlan('BUILD' as Stage, 'PLAN' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('should allow BUILD → PLAN with CANCELLED job', () => {
+    const job: Job = { id: 1, status: 'CANCELLED' as JobStatus, command: 'implement' };
+    const result = canRollbackBuildToPlan('BUILD' as Stage, 'PLAN' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('should block QUICK workflow', () => {
+    const job: Job = { id: 1, status: 'FAILED' as JobStatus, command: 'quick-impl' };
+    const result = canRollbackBuildToPlan('BUILD' as Stage, 'PLAN' as Stage, 'QUICK' as WorkflowType, job);
+    expect(result.allowed).toBe(false);
+  });
+
+  it('should block when job is RUNNING', () => {
+    const job: Job = { id: 1, status: 'RUNNING' as JobStatus, command: 'implement' };
+    const result = canRollbackBuildToPlan('BUILD' as Stage, 'PLAN' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(false);
+  });
+
+  it('should block wrong stage (VERIFY → PLAN)', () => {
+    const job: Job = { id: 1, status: 'FAILED' as JobStatus, command: 'verify' };
+    const result = canRollbackBuildToPlan('VERIFY' as Stage, 'PLAN' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(false);
+  });
+});
+
+describe('canRollbackVerifyToBuild', () => {
+  it('should allow VERIFY → BUILD with FULL workflow and FAILED job', () => {
+    const job: Job = { id: 1, status: 'FAILED' as JobStatus, command: 'verify' };
+    const result = canRollbackVerifyToBuild('VERIFY' as Stage, 'BUILD' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('should allow VERIFY → BUILD with CANCELLED job', () => {
+    const job: Job = { id: 1, status: 'CANCELLED' as JobStatus, command: 'verify' };
+    const result = canRollbackVerifyToBuild('VERIFY' as Stage, 'BUILD' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('should block QUICK workflow', () => {
+    const job: Job = { id: 1, status: 'FAILED' as JobStatus, command: 'verify' };
+    const result = canRollbackVerifyToBuild('VERIFY' as Stage, 'BUILD' as Stage, 'QUICK' as WorkflowType, job);
+    expect(result.allowed).toBe(false);
+  });
+
+  it('should block when job is COMPLETED', () => {
+    const job: Job = { id: 1, status: 'COMPLETED' as JobStatus, command: 'verify' };
+    const result = canRollbackVerifyToBuild('VERIFY' as Stage, 'BUILD' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(false);
+  });
+
+  it('should block wrong stage (BUILD → BUILD)', () => {
+    const job: Job = { id: 1, status: 'FAILED' as JobStatus, command: 'implement' };
+    const result = canRollbackVerifyToBuild('BUILD' as Stage, 'BUILD' as Stage, 'FULL' as WorkflowType, job);
+    expect(result.allowed).toBe(false);
   });
 });
