@@ -145,7 +145,7 @@ If a Team user has active project members and attempts to downgrade, the system 
 
 ### Account Deletion
 
-When a user deletes their account, any active Stripe subscription is cancelled via the API before the account is removed, preventing orphaned billing records.
+When a user deletes their account, the system attempts to cancel any active Stripe subscription, then deletes the user record. The user record is always deleted regardless of whether Stripe cancellation succeeds, satisfying the GDPR right-to-erasure requirement. If Stripe cancellation fails, the error is propagated to the caller after deletion completes so the API can return a failure response for operational visibility.
 
 ## Downgrade Behavior
 

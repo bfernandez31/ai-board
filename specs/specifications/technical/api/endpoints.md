@@ -3536,9 +3536,10 @@ Permanently deletes the authenticated user's account and all associated data.
 
 **Processing Order**:
 1. Authenticate the user via session.
-2. Cancel any active Stripe subscription (errors are logged; deletion is not blocked).
-3. Delete the `User` record — Prisma cascade deletes all related records (projects, tickets, comments, credentials, tokens, notifications, push subscriptions, sessions, subscription).
-4. Return success — the client calls `signOut()` and redirects to the landing page.
+2. Attempt to cancel any active Stripe subscription. If cancellation fails, the error is captured and held.
+3. Delete the `User` record — Prisma cascade deletes all related records (projects, tickets, comments, credentials, tokens, notifications, push subscriptions, sessions, subscription). This step always runs to satisfy GDPR right-to-erasure, even when Stripe cancellation failed.
+4. If Stripe cancellation failed (step 2), throw a `StripeCleanupError` (with the original error as `cause`). The API handler catches this and returns a `500` response.
+5. Otherwise, return success — the client calls `signOut()` and redirects to the landing page.
 
 **Response** (200 OK):
 ```json
