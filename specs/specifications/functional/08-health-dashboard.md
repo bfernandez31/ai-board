@@ -24,7 +24,7 @@ The hero zone at the top of the page displays the project's overall health:
 - **Color**: A semantic color corresponding to the label (no hardcoded hex values)
 - **Sub-score badges**: Six compact badges below the score, one per contributing module (Security, Compliance, Tests, Spec Sync, Quality Gate, Review Quality), each showing its individual score and color
 
-The global score is a weighted average of all contributing modules that have been scanned. Modules that have never been scanned are excluded from the calculation; their weight is redistributed proportionally among scanned modules.
+The global score is a weighted average of all contributing modules that have been scanned with a meaningful result. Modules that have never been scanned, or whose most recent scan was SKIPPED, are excluded from the calculation; their weight is redistributed proportionally among the remaining modules.
 
 **"Last full scan" text**: Below the badges, the page shows the time elapsed since the most recent completed scan of any type (e.g., "Last full scan: 2 days ago"). Displays nothing meaningful until at least one scan has completed.
 
@@ -42,7 +42,7 @@ On small screens (< `sm` breakpoint), the grid collapses to a single column.
 
 ### Card States
 
-Each card renders one of four states based on the module's scan data:
+Each card renders one of five states based on the module's scan data:
 
 | State | Trigger | Display |
 |-------|---------|---------|
@@ -50,6 +50,7 @@ Each card renders one of four states based on the module's scan data:
 | **Scanning** | A PENDING or RUNNING scan exists | Spinner, "Scanning…" label, button disabled |
 | **Completed** | Most recent scan is COMPLETED | Numeric score badge, summary text, commit range, severity tags, "Run scan" button |
 | **Failed** | Most recent scan is FAILED | "Failed" badge, error message, "Retry" button |
+| **Skipped** | Most recent scan is SKIPPED | Muted "Skipped" badge (no numeric score), "Nothing to evaluate" summary, previous score retained if one exists from a prior COMPLETED scan, "Re-run" button |
 
 ### Active vs. Passive Modules
 
@@ -71,7 +72,7 @@ Each card displays:
 
 **Quality Gate card extras** (when data is available): ticket count (e.g., "5 tickets"), trend indicator arrow (up/down/stable) with numeric delta, and a threshold distribution showing counts per bucket (Excellent ≥ 90, Good ≥ 70, Fair ≥ 50, Poor < 50).
 
-**Active module card extras** (when 3 or more completed scans exist): a mini sparkline (~40px height, no axes, labels, or grid) appears below the summary text showing how the module's score has trended across recent scans in chronological order (oldest left, most recent right). The sparkline color matches the module's current score color coding. Modules with fewer than 3 completed scans show no sparkline.
+**Active module card extras** (when 3 or more completed scans exist): a mini sparkline (~40px height, no axes, labels, or grid) appears below the summary text showing how the module's score has trended across recent scans in chronological order (oldest left, most recent right). The sparkline color matches the module's current score color coding. Modules with fewer than 3 completed scans show no sparkline. SKIPPED scans are excluded from sparkline data points.
 
 ## Triggering a Scan
 
@@ -89,7 +90,7 @@ Clicking the action button on an active module card triggers a scan:
 
 ## Automatic Ticket Creation
 
-When an active module scan completes and issues are found, the system automatically creates remediation tickets in the project's INBOX stage with the QUICK workflow type. Tickets are grouped according to each module's issue structure:
+When an active module scan completes with COMPLETED status and issues are found, the system automatically creates remediation tickets in the project's INBOX stage with the QUICK workflow type. Tickets are grouped according to each module's issue structure:
 
 | Module | Grouping Rule |
 |--------|--------------|
@@ -125,6 +126,7 @@ The drawer renders content appropriate to the module's current state:
 | **Scanning** | Progress indicator with "Scanning…" label |
 | **Completed** | Full report content (issues, tickets, history sections) |
 | **Failed** | Error message and relevant logs if available; "Retry" option for active modules |
+| **Skipped** | "Nothing to evaluate" message with info icon explaining why the scan was skipped; "Re-run" button for active modules |
 
 ### Issues Section (Completed Scans)
 
@@ -147,11 +149,11 @@ For active modules, the drawer lists any tickets that were generated from the sc
 
 ### Score Trend Section (Active Modules)
 
-For active modules with at least one completed scan, the drawer displays an area chart showing the module's score evolution over time. The X-axis displays dates in chronological order (oldest on the left, most recent on the right). The chart includes date and score (0–100) axes and interactive hover tooltips showing the scan date and score at each data point. It uses the same visual pattern as the Quality Gate score chart. Trend data is fetched once on dashboard mount and is not re-fetched during the 2-second scan polling cycle. The API returns the most recent N scans sorted chronologically (ascending) for chart display.
+For active modules with at least one completed scan, the drawer displays an area chart showing the module's score evolution over time. SKIPPED scans are excluded from trend chart data points. The X-axis displays dates in chronological order (oldest on the left, most recent on the right). The chart includes date and score (0–100) axes and interactive hover tooltips showing the scan date and score at each data point. It uses the same visual pattern as the Quality Gate score chart. Trend data is fetched once on dashboard mount and is not re-fetched during the 2-second scan polling cycle. The API returns the most recent N scans sorted chronologically (ascending) for chart display.
 
 ### History Section
 
-The History section lists previous scans for the selected module in reverse chronological order. Each entry shows the scan date, a color-coded score badge, and up to four compact metric icons for issues found (AlertTriangle), cost in USD (Coins), tokens consumed (Zap), and execution duration (Clock). Each metric icon displays a tooltip on hover explaining the metric. Icons are shown only when the corresponding data value is available; null values are hidden. History is loaded in pages of 20 with a "Load more" button at the bottom. Modules with no scan history display "No scan history."
+The History section lists previous scans for the selected module in reverse chronological order. Each entry shows the scan date, a color-coded score badge, and up to four compact metric icons for issues found (AlertTriangle), cost in USD (Coins), tokens consumed (Zap), and execution duration (Clock). Each metric icon displays a tooltip on hover explaining the metric. Icons are shown only when the corresponding data value is available; null values are hidden. SKIPPED scan entries display a muted "Skipped" badge instead of a score, with "Nothing to evaluate" as their summary. History is loaded in pages of 20 with a "Load more" button at the bottom. Modules with no scan history display "No scan history."
 
 ### Content Refresh
 
@@ -167,5 +169,5 @@ The health dashboard polls the health score endpoint every 2 seconds while any a
 - **Workflow dispatch failure**: Scan record transitions to FAILED with an error message; card shows the "Retry" button
 - **All modules score 0**: Global score displays "0" with label "Poor"
 - **Score update failure on scan completion**: Scan record is COMPLETED but the aggregate retains its previous value; the next successful scan recalculates the aggregate
-- **Review Quality — no new PRs**: When no FULL workflow PRs have merged since the last Review Quality scan, the scan exits gracefully with no score update; the card retains its previous score
+- **Review Quality — no new PRs**: When no FULL workflow PRs have merged since the last Review Quality scan, the scan completes with SKIPPED status and null score; the card retains its previous score and displays the "Skipped" state
 - **Unauthorized access**: Standard project access verification returns 403; unauthenticated users are redirected to sign-in

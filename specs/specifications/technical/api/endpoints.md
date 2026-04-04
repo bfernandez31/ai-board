@@ -4020,8 +4020,8 @@ Workflow callback endpoint to update scan status and results. Uses the same Bear
 ```
 
 **Validation** (Zod):
-- `status`: Required, enum `["RUNNING", "COMPLETED", "FAILED"]`
-- `score`: Optional integer 0–100 (required when `status = COMPLETED`)
+- `status`: Required, enum `["RUNNING", "COMPLETED", "FAILED", "SKIPPED"]`
+- `score`: Optional integer 0–100 (required when `status = COMPLETED`; must be omitted or null when `status = SKIPPED`)
 - `headCommit`: Optional string, 40 chars
 - `issuesFound` / `issuesFixed`: Optional integers ≥ 0
 - `durationMs` / `tokensUsed`: Optional integers ≥ 0
@@ -4038,8 +4038,10 @@ Workflow callback endpoint to update scan status and results. Uses the same Bear
 2. Recalculate `globalScore` from all non-null sub-scores
 3. Update the module's last scan timestamp
 
+**Side effects on SKIPPED**: None — `HealthScore` aggregate is not updated. The scan record is marked terminal with `completedAt` set and `score` null.
+
 **Errors**:
-- `400`: Invalid scan ID, or score missing for COMPLETED status
+- `400`: Invalid scan ID, score missing for COMPLETED status, or score provided for SKIPPED status
 - `401`: Invalid workflow token
 - `404`: Scan not found or wrong project
 - `409`: Invalid status transition (e.g., COMPLETED → RUNNING)

@@ -956,7 +956,7 @@ Per-principle constitution compliance evaluation for a participant.
 
 ### HealthScan
 
-An individual scan execution record linked to a project and identified by scan type. Tracks the full lifecycle from PENDING through COMPLETED or FAILED. Stores the commit range analyzed (enabling incremental scanning), scan results, and operational telemetry.
+An individual scan execution record linked to a project and identified by scan type. Tracks the full lifecycle from PENDING through COMPLETED, FAILED, or SKIPPED. Stores the commit range analyzed (enabling incremental scanning), scan results, and operational telemetry.
 
 ```prisma
 model HealthScan {
@@ -996,13 +996,13 @@ model HealthScan {
 
 **Concurrent scan constraint**: Only one PENDING or RUNNING scan per `(projectId, scanType)` is allowed. Enforced at application level (409 on conflict).
 
-**Validation**: `score` is set only when `status = COMPLETED`; `scanType` is limited to the 5 active types (SECURITY, COMPLIANCE, TESTS, SPEC_SYNC, REVIEW_QUALITY).
+**Validation**: `score` is set only when `status = COMPLETED`; `score` must be null when `status = SKIPPED`; `scanType` is limited to the 5 active types (SECURITY, COMPLIANCE, TESTS, SPEC_SYNC, REVIEW_QUALITY).
 
 ---
 
 ### HealthScore
 
-Cached aggregate health score per project (one record per project). Stores the computed global score and individual sub-scores for each of the 5 contributing modules. Upserted after every successful scan completion within the same database transaction as the `HealthScan` status update, ensuring consistency between the two tables.
+Cached aggregate health score per project (one record per project). Stores the computed global score and individual sub-scores for each of the 5 contributing modules. Upserted after every COMPLETED scan within the same database transaction as the `HealthScan` status update, ensuring consistency between the two tables. SKIPPED scans do not trigger a HealthScore upsert — the aggregate retains its previous value.
 
 ```prisma
 model HealthScore {
@@ -1113,15 +1113,17 @@ enum HealthScanStatus {
   RUNNING
   COMPLETED
   FAILED
+  SKIPPED
 }
 ```
 
 | Value | Description | Transitions To |
 |-------|-------------|----------------|
-| PENDING | Scan created, workflow dispatched | RUNNING, FAILED |
-| RUNNING | Workflow executing scan | COMPLETED, FAILED |
+| PENDING | Scan created, workflow dispatched | RUNNING, FAILED, SKIPPED |
+| RUNNING | Workflow executing scan | COMPLETED, FAILED, SKIPPED |
 | COMPLETED | Scan finished with results | Terminal |
 | FAILED | Scan encountered an error | Terminal |
+| SKIPPED | Scan found nothing to evaluate | Terminal |
 
 ---
 
