@@ -334,7 +334,11 @@ jobs:
               fi
               echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
               if [ "$SKIPPED" = "true" ]; then
-                echo "skip_reason=$(jq -r '.skipReason // "No reason provided"' "$RESULT_FILE")" >> $GITHUB_OUTPUT
+                {
+                  echo "skip_reason<<EOF_SKIP_REASON"
+                  jq -r '.skipReason // "No reason provided"' "$RESULT_FILE"
+                  echo "EOF_SKIP_REASON"
+                } >> $GITHUB_OUTPUT
               fi
 
               echo "scan_success=true" >> $GITHUB_OUTPUT
@@ -402,7 +406,11 @@ jobs:
               fi
               echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
               if [ "$SKIPPED" = "true" ]; then
-                echo "skip_reason=$(jq -r '.skipReason // "No reason provided"' "$RESULT_FILE")" >> $GITHUB_OUTPUT
+                {
+                  echo "skip_reason<<EOF_SKIP_REASON"
+                  jq -r '.skipReason // "No reason provided"' "$RESULT_FILE"
+                  echo "EOF_SKIP_REASON"
+                } >> $GITHUB_OUTPUT
               fi
 
               echo "scan_success=true" >> $GITHUB_OUTPUT

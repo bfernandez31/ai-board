@@ -44,9 +44,10 @@ export function ScanDetailDrawer({
   // Determine if we have a completed scan with report data
   const hasCompletedScan = !isLoading && data?.scan?.status === 'COMPLETED';
   const hasReport = hasCompletedScan && data?.report !== null;
+  const isSkipped = !isLoading && data?.scan?.status === 'SKIPPED';
 
   // Determine if we should show non-standard states
-  const showStates = !isLoading && !hasCompletedScan && (
+  const showStates = !isLoading && !hasCompletedScan && !isSkipped && (
     isScanning ||
     moduleStatus?.scanStatus === 'FAILED' ||
     !data?.scan
@@ -87,6 +88,16 @@ export function ScanDetailDrawer({
                 errorMessage={data?.scan?.errorMessage}
                 onTriggerScan={onTriggerScan}
               />
+            )}
+
+            {isSkipped && (
+              <div className="rounded-lg border border-border bg-muted/50 p-4 text-center space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Skipped</p>
+                <p className="text-xs text-muted-foreground">
+                  {moduleStatus?.skipReason || 'No reason provided'}
+                </p>
+                <p className="text-2xl font-bold text-muted-foreground">N/A</p>
+              </div>
             )}
 
             {trendData && trendData.length > 0 && (
