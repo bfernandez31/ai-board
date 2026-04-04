@@ -101,7 +101,7 @@ describe('HealthModuleCard', () => {
       <HealthModuleCard moduleType="REVIEW_QUALITY" module={skipped} />
     );
     expect(screen.getByText('N/A')).toBeInTheDocument();
-    expect(screen.getByText('No qualifying PRs since last scan')).toBeInTheDocument();
+    expect(screen.getByText('Skipped: No qualifying PRs since last scan')).toBeInTheDocument();
     expect(screen.getByText('Re-run')).toBeInTheDocument();
   });
 

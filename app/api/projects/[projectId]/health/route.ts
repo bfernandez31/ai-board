@@ -4,13 +4,7 @@ import { prisma } from '@/lib/db/client';
 import { calculateGlobalScore, getScoreLabel, getScoreColorConfig } from '@/lib/health/score-calculator';
 import { getQualityGateData } from '@/lib/health/quality-gate';
 import type { HealthResponse, HealthModuleStatus } from '@/lib/health/types';
-
-function getScoreDisplayLabel(score: number): string {
-  if (score >= 90) return 'Excellent';
-  if (score >= 70) return 'Good';
-  if (score >= 50) return 'Fair';
-  return 'Poor';
-}
+import type { HealthScanType } from '@prisma/client';
 
 function buildModuleStatus(
   score: number | null,
@@ -23,7 +17,7 @@ function buildModuleStatus(
   let summary: string;
 
   if (scanStatus === 'SKIPPED') {
-    label = score !== null ? getScoreDisplayLabel(score) : null;
+    label = score !== null ? getScoreLabel(score) : null;
     summary = skipReason ? `Skipped: ${skipReason}` : 'Skipped';
     return {
       score,
@@ -37,7 +31,7 @@ function buildModuleStatus(
   }
 
   if (score !== null) {
-    label = getScoreDisplayLabel(score);
+    label = getScoreLabel(score);
     summary = issuesFound !== null && issuesFound > 0 ? `${issuesFound} issues found` : 'All clear';
   } else {
     summary = 'No scan yet';
@@ -155,7 +149,7 @@ export async function GET(
 
     // Helper to extract skip reason from a terminal scan's report JSON
     function getSkipReason(scanType: string): string | null {
-      const terminal = latestTerminalMap.get(scanType as import('@prisma/client').HealthScanType);
+      const terminal = latestTerminalMap.get(scanType as HealthScanType);
       if (!terminal || terminal.status !== 'SKIPPED') return null;
       if (terminal.report) {
         try {
@@ -168,9 +162,9 @@ export async function GET(
 
     // Determine effective scan status: active scan overrides, then latest terminal scan
     function getEffectiveScanStatus(scanType: string): string | null {
-      const active = activeScanMap.get(scanType as import('@prisma/client').HealthScanType);
+      const active = activeScanMap.get(scanType as HealthScanType);
       if (active) return active;
-      const terminal = latestTerminalMap.get(scanType as import('@prisma/client').HealthScanType);
+      const terminal = latestTerminalMap.get(scanType as HealthScanType);
       if (terminal) return terminal.status;
       return null;
     }
@@ -213,11 +207,11 @@ export async function GET(
       ),
       qualityGate: {
         score: qualityGateScore,
-        label: qualityGateScore !== null ? getScoreDisplayLabel(qualityGateScore) : null,
+        label: qualityGateScore !== null ? getScoreLabel(qualityGateScore) : null,
         lastScanDate: qualityGateDate?.toISOString() ?? null,
         passive: true,
         summary: qualityGateData.ticketCount > 0
-          ? `${qualityGateData.ticketCount} ticket${qualityGateData.ticketCount !== 1 ? 's' : ''} — ${getScoreDisplayLabel(qualityGateScore!)}`
+          ? `${qualityGateData.ticketCount} ticket${qualityGateData.ticketCount !== 1 ? 's' : ''} — ${getScoreLabel(qualityGateScore!)}`
           : 'No verify jobs yet',
         ticketCount: qualityGateData.ticketCount,
         trend: qualityGateData.trend,

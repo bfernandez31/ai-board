@@ -101,10 +101,6 @@ export function HealthModuleCard({
         {state === 'skipped' ? (module.skipReason ? `Skipped: ${module.skipReason}` : 'Skipped') : module.summary}
       </p>
 
-      {state === 'skipped' && module.skipReason && (
-        <p className="text-xs text-muted-foreground">{module.skipReason}</p>
-      )}
-
       {trendData && trendData.length >= 3 && (
         <Sparkline
           data={trendData}

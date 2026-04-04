@@ -74,7 +74,7 @@ export async function PATCH(
     const data = parsed.data;
 
     // Require score for COMPLETED
-    if (data.status === 'COMPLETED' && (data.score === undefined || data.score === null)) {
+    if (data.status === 'COMPLETED' && data.score == null) {
       return NextResponse.json(
         { error: 'Score required for completed scans' },
         { status: 400 }
@@ -82,7 +82,7 @@ export async function PATCH(
     }
 
     // SKIPPED must NOT have a score
-    if (data.status === 'SKIPPED' && data.score !== undefined && data.score !== null) {
+    if (data.status === 'SKIPPED' && data.score != null) {
       return NextResponse.json(
         { error: 'Score must not be provided for skipped scans' },
         { status: 400 }
