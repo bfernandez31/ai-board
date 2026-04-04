@@ -62,12 +62,6 @@ export const PROVIDER_ENV_VAR_MAP: Record<CredentialProvider, Record<string, str
   },
 };
 
-/** @deprecated Use PROVIDER_ENV_VAR_MAP instead */
-export const ENV_VAR_MAP: Record<CredentialType, string> = {
-  API_KEY: 'ANTHROPIC_API_KEY',
-  OAUTH_TOKEN: 'CLAUDE_CODE_OAUTH_TOKEN',
-};
-
 export const AGENT_PROVIDER_MAP: Record<Agent, CredentialProvider> = {
   CLAUDE: 'ANTHROPIC',
   CODEX: 'OPENAI',

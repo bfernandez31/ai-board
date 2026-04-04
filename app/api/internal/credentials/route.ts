@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 import { getOwnerCredential, buildWorkflowPayload } from '@/lib/ai-credentials/workflow';
-import type { CredentialProvider } from '@prisma/client';
 
 const querySchema = z.object({
   projectId: z.coerce.number().int().positive(),
@@ -30,7 +29,7 @@ export async function GET(request: NextRequest) {
   const { projectId, provider } = parsed.data;
 
   try {
-    const credential = await getOwnerCredential(projectId, provider as CredentialProvider);
+    const credential = await getOwnerCredential(projectId, provider);
 
     if (!credential) {
       return NextResponse.json(

@@ -35,8 +35,8 @@ export function buildWorkflowPayload(
     credential.authTag
   );
 
-  const providerMap = PROVIDER_ENV_VAR_MAP[credential.provider];
-  const envVar = providerMap[credential.credentialType] ?? providerMap['API_KEY'] ?? `${credential.provider}_API_KEY`;
+  // Credential type is validated at creation time, so the lookup always succeeds
+  const envVar = PROVIDER_ENV_VAR_MAP[credential.provider][credential.credentialType]!;
 
   return {
     provider: credential.provider,

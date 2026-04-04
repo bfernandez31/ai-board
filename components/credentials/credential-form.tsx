@@ -13,6 +13,12 @@ import {
 } from "@/components/ui/select";
 import { useCreateCredential } from "@/lib/hooks/mutations/useCredentials";
 
+function getPlaceholder(provider: string, credentialType: string): string {
+  if (provider === "OPENAI") return "sk-...";
+  if (credentialType === "API_KEY") return "sk-ant-api03-...";
+  return "Paste your OAuth token";
+}
+
 export function CredentialForm() {
   const [provider, setProvider] = useState("ANTHROPIC");
   const [credentialType, setCredentialType] = useState("API_KEY");
@@ -147,13 +153,7 @@ export function CredentialForm() {
         <Input
           id="value"
           type="password"
-          placeholder={
-            provider === "OPENAI"
-              ? "sk-..."
-              : credentialType === "API_KEY"
-                ? "sk-ant-api03-..."
-                : "Paste your OAuth token"
-          }
+          placeholder={getPlaceholder(provider, credentialType)}
           value={value}
           onChange={(e) => handleValueChange(e.target.value)}
           required
