@@ -126,49 +126,53 @@ export async function PATCH(
       if (data[field] !== undefined) updateData[field] = data[field];
     }
 
-    // Update scan record
-    const updatedScan = await prisma.healthScan.update({
-      where: { id: scanId },
-      data: updateData,
-    });
-
-    // On COMPLETED: update HealthScore aggregate
-    if (data.status === 'COMPLETED' && data.score !== undefined) {
-      const scoreField = SCAN_TYPE_TO_SCORE_FIELD[scan.scanType];
-      const dateField = SCAN_TYPE_TO_DATE_FIELD[scan.scanType];
-
-      const scoreUpdate: Record<string, unknown> = {
-        [scoreField]: data.score,
-        [dateField]: now,
-      };
-
-      await prisma.healthScore.upsert({
-        where: { projectId },
-        update: scoreUpdate,
-        create: { projectId, ...scoreUpdate },
+    // Update scan and HealthScore aggregate in a single transaction
+    const updatedScan = await prisma.$transaction(async (tx) => {
+      const scanResult = await tx.healthScan.update({
+        where: { id: scanId },
+        data: updateData,
       });
 
-      // Recalculate global score
-      const healthScore = await prisma.healthScore.findUnique({
-        where: { projectId },
-      });
+      // On COMPLETED: update HealthScore aggregate
+      if (data.status === 'COMPLETED' && data.score !== undefined) {
+        const scoreField = SCAN_TYPE_TO_SCORE_FIELD[scan.scanType];
+        const dateField = SCAN_TYPE_TO_DATE_FIELD[scan.scanType];
 
-      if (healthScore) {
-        const globalScore = calculateGlobalScore({
-          securityScore: healthScore.securityScore,
-          complianceScore: healthScore.complianceScore,
-          testsScore: healthScore.testsScore,
-          specSyncScore: healthScore.specSyncScore,
-          qualityGate: healthScore.qualityGate,
-          reviewQualityScore: healthScore.reviewQualityScore,
-        });
+        const scoreUpdate: Record<string, unknown> = {
+          [scoreField]: data.score,
+          [dateField]: now,
+        };
 
-        await prisma.healthScore.update({
+        await tx.healthScore.upsert({
           where: { projectId },
-          data: { globalScore },
+          update: scoreUpdate,
+          create: { projectId, ...scoreUpdate },
         });
+
+        // Recalculate global score
+        const healthScore = await tx.healthScore.findUnique({
+          where: { projectId },
+        });
+
+        if (healthScore) {
+          const globalScore = calculateGlobalScore({
+            securityScore: healthScore.securityScore,
+            complianceScore: healthScore.complianceScore,
+            testsScore: healthScore.testsScore,
+            specSyncScore: healthScore.specSyncScore,
+            qualityGate: healthScore.qualityGate,
+            reviewQualityScore: healthScore.reviewQualityScore,
+          });
+
+          await tx.healthScore.update({
+            where: { projectId },
+            data: { globalScore },
+          });
+        }
       }
-    }
+
+      return scanResult;
+    });
 
     return NextResponse.json({
       scan: {
