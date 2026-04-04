@@ -138,11 +138,14 @@ export async function GET(
     const timeline = mergeConversationEvents(commentsWithISOTimestamps, jobs);
 
     // Return unified timeline with mentioned users
-    return NextResponse.json({
-      timeline,
-      mentionedUsers: mentionedUsersMap,
-      currentUserId, // Include in body for frontend ownership checks
-    });
+    // Use JSON replacer to serialize BigInt fields (workflowRunId) that JSON.stringify cannot handle
+    const body = JSON.parse(
+      JSON.stringify(
+        { timeline, mentionedUsers: mentionedUsersMap, currentUserId },
+        (_key, value) => (typeof value === 'bigint' ? value.toString() : value)
+      )
+    );
+    return NextResponse.json(body);
   } catch (error) {
     console.error('[Timeline API Error]', error);
 
