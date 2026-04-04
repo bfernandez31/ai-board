@@ -143,32 +143,26 @@ export async function PATCH(
           [dateField]: now,
         };
 
-        await tx.healthScore.upsert({
+        const healthScore = await tx.healthScore.upsert({
           where: { projectId },
           update: scoreUpdate,
           create: { projectId, ...scoreUpdate },
         });
 
         // Recalculate global score
-        const healthScore = await tx.healthScore.findUnique({
-          where: { projectId },
+        const globalScore = calculateGlobalScore({
+          securityScore: healthScore.securityScore,
+          complianceScore: healthScore.complianceScore,
+          testsScore: healthScore.testsScore,
+          specSyncScore: healthScore.specSyncScore,
+          qualityGate: healthScore.qualityGate,
+          reviewQualityScore: healthScore.reviewQualityScore,
         });
 
-        if (healthScore) {
-          const globalScore = calculateGlobalScore({
-            securityScore: healthScore.securityScore,
-            complianceScore: healthScore.complianceScore,
-            testsScore: healthScore.testsScore,
-            specSyncScore: healthScore.specSyncScore,
-            qualityGate: healthScore.qualityGate,
-            reviewQualityScore: healthScore.reviewQualityScore,
-          });
-
-          await tx.healthScore.update({
-            where: { projectId },
-            data: { globalScore },
-          });
-        }
+        await tx.healthScore.update({
+          where: { projectId },
+          data: { globalScore },
+        });
       }
 
       return scanResult;
