@@ -285,11 +285,11 @@ model Job {
   status          JobStatus @default(PENDING)
   branch          String?   @db.VarChar(200)
   commitSha       String?   @db.VarChar(40)
-  logs            String?   @db.Text
+  logs            String?
   startedAt       DateTime  @default(now())
   completedAt     DateTime?
   createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  updatedAt       DateTime
   workflowRunId   BigInt?   // GitHub Actions workflow run ID (populated on first RUNNING callback)
 
   // Claude telemetry metrics (aggregated from all API calls in the job)
@@ -1145,7 +1145,8 @@ enum Stage {
 
 **Transitions**:
 - Sequential progression only (one stage forward)
-- Limited rollback: BUILD → INBOX (quick-impl failed), VERIFY → PLAN (full workflow re-implementation)
+- Rollback paths (FULL workflow): SPECIFY → INBOX, PLAN → SPECIFY, BUILD → PLAN, VERIFY → BUILD, VERIFY → PLAN
+- Rollback paths (QUICK workflow): BUILD → INBOX (quick-impl failed/cancelled)
 - Alternative resolution: VERIFY → CLOSED (close without shipping)
 - No skipping stages
 - Initial: INBOX

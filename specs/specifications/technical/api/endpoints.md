@@ -1259,7 +1259,7 @@ Transition ticket to target stage with workflow dispatch.
 - **VERIFY → PLAN**: Rollback for FULL workflows only:
   1. Validates latest job is COMPLETED, FAILED, or CANCELLED
   2. Clears previewUrl on ticket
-  3. Deletes implement job record
+  3. Deletes most recent job record (ordered by startedAt desc)
   4. Updates ticket stage to PLAN
   5. Dispatches rollback-reset workflow (git reset to pre-BUILD state, preserves spec files)
   6. Creates rollback-reset job to track the git reset operation

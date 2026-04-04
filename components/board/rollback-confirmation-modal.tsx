@@ -43,7 +43,7 @@ export const RollbackConfirmationModal = React.memo(
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={onConfirm}
-              className="bg-amber-600 text-white hover:bg-amber-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Confirmer le rollback
             </AlertDialogAction>

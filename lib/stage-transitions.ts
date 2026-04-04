@@ -154,7 +154,7 @@ export function getValidRollbackTargets(
   if (!lastJobStatus || !terminalFailedStatuses.includes(lastJobStatus)) {
     // Exception: VERIFY→PLAN allows COMPLETED status for existing rollback
     if (stage === Stage.VERIFY && lastJobStatus === 'COMPLETED' && workflowType === 'FULL') {
-      return [Stage.PLAN, Stage.BUILD];
+      return [Stage.PLAN];
     }
     return [];
   }

@@ -25,8 +25,8 @@ describe('getValidRollbackTargets', () => {
       expect(getValidRollbackTargets(Stage.VERIFY, 'FULL', 'FAILED')).toEqual([Stage.BUILD, Stage.PLAN]);
     });
 
-    it('should return [PLAN, BUILD] for VERIFY with COMPLETED job (existing rollback)', () => {
-      expect(getValidRollbackTargets(Stage.VERIFY, 'FULL', 'COMPLETED')).toEqual([Stage.PLAN, Stage.BUILD]);
+    it('should return [PLAN] for VERIFY with COMPLETED job (existing rollback)', () => {
+      expect(getValidRollbackTargets(Stage.VERIFY, 'FULL', 'COMPLETED')).toEqual([Stage.PLAN]);
     });
   });
 

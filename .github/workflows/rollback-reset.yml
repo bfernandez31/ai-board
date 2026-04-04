@@ -36,7 +36,7 @@ env:
 
 jobs:
   rollback-reset:
-    name: Rollback from VERIFY to PLAN
+    name: Rollback from ${{ inputs.stage || 'verify' }} to PLAN
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -47,7 +47,7 @@ jobs:
           curl -s -X PATCH \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
-            -d '{"status": "RUNNING"}' \
+            -d '{"status": "RUNNING", "workflowRunId": ${{ github.run_id }}}' \
             ${{ env.APP_URL }}/api/jobs/${{ inputs.job_id }}/status
 
       # --- Checkout target repository at feature branch ---
@@ -147,9 +147,10 @@ jobs:
           git add "$SPEC_DIR"
 
           # Commit with clear rollback message
+          SOURCE_STAGE=$(echo "${{ inputs.stage }}" | tr '[:lower:]' '[:upper:]')
           git commit \
-            -m "rollback(VERIFY→PLAN): preserve spec files for ${{ inputs.ticket_id }}" \
-            -m "Implementation removed due to VERIFY stage rollback. Spec files (spec.md, plan.md, tasks.md) preserved for re-implementation." \
+            -m "rollback(${SOURCE_STAGE}→PLAN): preserve spec files for ${{ inputs.ticket_id }}" \
+            -m "Implementation removed due to ${SOURCE_STAGE} stage rollback. Spec files (spec.md, plan.md, tasks.md) preserved for re-implementation." \
             -m "Triggered by: ai-board rollback workflow"
 
           echo "Spec files committed"
@@ -159,9 +160,10 @@ jobs:
         if: steps.backup.outputs.has_specs != 'true'
         run: |
           # Create an empty commit to mark the rollback
+          SOURCE_STAGE=$(echo "${{ inputs.stage }}" | tr '[:lower:]' '[:upper:]')
           git commit --allow-empty \
-            -m "rollback(VERIFY→PLAN): reset branch for ${{ inputs.ticket_id }}" \
-            -m "Implementation removed due to VERIFY stage rollback. No spec files found to preserve." \
+            -m "rollback(${SOURCE_STAGE}→PLAN): reset branch for ${{ inputs.ticket_id }}" \
+            -m "Implementation removed due to ${SOURCE_STAGE} stage rollback. No spec files found to preserve." \
             -m "Triggered by: ai-board rollback workflow"
 
           echo "Empty rollback commit created"

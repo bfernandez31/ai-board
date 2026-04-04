@@ -71,21 +71,36 @@ export async function POST(
       }
     }
 
-    // Mark as CANCELLED
-    const updatedJob = await prisma.job.update({
-      where: { id: jobId },
+    // Mark as CANCELLED only if still cancellable (race-condition safe)
+    const completedAt = new Date();
+    const updateResult = await prisma.job.updateMany({
+      where: {
+        id: jobId,
+        status: { in: ['PENDING', 'RUNNING'] },
+      },
       data: {
         status: 'CANCELLED',
-        completedAt: new Date(),
+        completedAt,
       },
     });
+
+    if (updateResult.count === 0) {
+      // Job transitioned to terminal state concurrently — return current state
+      const currentJob = await prisma.job.findUnique({ where: { id: jobId } });
+      return NextResponse.json({
+        id: currentJob!.id,
+        status: currentJob!.status,
+        completedAt: currentJob!.completedAt?.toISOString() || null,
+        alreadyTerminal: true,
+      });
+    }
 
     console.log('[Cancel Job] Success:', { jobId, previousStatus: job.status });
 
     return NextResponse.json({
-      id: updatedJob.id,
-      status: updatedJob.status,
-      completedAt: updatedJob.completedAt?.toISOString() || null,
+      id: jobId,
+      status: 'CANCELLED',
+      completedAt: completedAt.toISOString(),
     });
   } catch (error) {
     console.error('[Cancel Job] Unexpected error:', error);
