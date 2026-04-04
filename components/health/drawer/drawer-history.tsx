@@ -147,18 +147,36 @@ function HistoryEntry({ scan }: { scan: ScanHistoryItem }) {
             )}
           </div>
         </TooltipProvider>
-        {scan.status === 'SKIPPED' ? (
-          <span className="text-xs font-medium text-muted-foreground bg-muted rounded-md px-2 py-0.5">
-            Skipped
-          </span>
-        ) : scan.score !== null && scoreColors ? (
-          <span className={`text-xs font-medium ${scoreColors.text} ${scoreColors.bg} rounded-md px-2 py-0.5`}>
-            {scan.score}
-          </span>
-        ) : (
-          <span className="text-xs text-muted-foreground">—</span>
-        )}
+        <ScanBadge status={scan.status} score={scan.score} scoreColors={scoreColors} />
       </div>
     </div>
   );
+}
+
+function ScanBadge({
+  status,
+  score,
+  scoreColors,
+}: {
+  status: string;
+  score: number | null;
+  scoreColors: ReturnType<typeof getScoreColor> | null;
+}) {
+  if (status === 'SKIPPED') {
+    return (
+      <span className="text-xs font-medium text-muted-foreground bg-muted rounded-md px-2 py-0.5">
+        Skipped
+      </span>
+    );
+  }
+
+  if (score !== null && scoreColors) {
+    return (
+      <span className={`text-xs font-medium ${scoreColors.text} ${scoreColors.bg} rounded-md px-2 py-0.5`}>
+        {score}
+      </span>
+    );
+  }
+
+  return <span className="text-xs text-muted-foreground">—</span>;
 }

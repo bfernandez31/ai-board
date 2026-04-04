@@ -205,10 +205,11 @@ function ScoreBadge({
   }
 
   if (state === 'skipped') {
+    const colors = score !== null ? getScoreColor(score) : null;
     return (
       <div className="flex items-center gap-1.5">
-        {score !== null && (
-          <span className={`text-xs font-medium ${getScoreColor(score).text} ${getScoreColor(score).bg} rounded-md px-2 py-0.5`}>
+        {score !== null && colors && (
+          <span className={`text-xs font-medium ${colors.text} ${colors.bg} rounded-md px-2 py-0.5`}>
             {score}
           </span>
         )}

@@ -123,7 +123,7 @@ export async function PATCH(
       updateData.startedAt = now;
     }
 
-    if (data.status === 'COMPLETED' || data.status === 'FAILED' || data.status === 'SKIPPED') {
+    if (data.status !== 'RUNNING') {
       updateData.completedAt = now;
     }
 
