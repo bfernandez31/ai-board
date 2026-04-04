@@ -70,7 +70,7 @@ describe('Workflow Credential Retrieval API', () => {
       `/api/internal/credentials?projectId=${ctx.projectId}`
     );
     expect(response.status).toBe(404);
-    expect(response.data.error).toContain('No AI credential configured');
+    expect(response.data.error).toContain('credential configured');
   });
 
   it('should return decrypted API_KEY credential with correct envVar', async () => {
@@ -105,6 +105,80 @@ describe('Workflow Credential Retrieval API', () => {
     expect(response.data.encoding).toBe('base64');
     expect(Buffer.from(response.data.value, 'base64').toString()).toBe(testKey);
     expect(response.data.credentialType).toBe('API_KEY');
+  });
+
+  it('should return OPENAI_API_KEY when provider=OPENAI', async () => {
+    const prisma = getPrismaClient();
+    const testKey = 'sk-proj-' + 'a'.repeat(40);
+    const { encryptedValue, iv, authTag } = encryptCredential(testKey);
+
+    await prisma.userCredential.create({
+      data: {
+        userId: 'test-user-id',
+        provider: 'OPENAI',
+        credentialType: 'API_KEY',
+        label: '[e2e] OpenAI Workflow Key',
+        encryptedValue,
+        iv,
+        authTag,
+        preview: testKey.slice(-4),
+        readinessStatus: 'READY',
+      },
+    });
+
+    const client = createWorkflowClient();
+    const response = await client.get<{
+      envVar: string;
+      value: string;
+      encoding: string;
+      credentialType: string;
+    }>(`/api/internal/credentials?projectId=${ctx.projectId}&provider=OPENAI`);
+
+    expect(response.status).toBe(200);
+    expect(response.data.envVar).toBe('OPENAI_API_KEY');
+    expect(response.data.encoding).toBe('base64');
+    expect(Buffer.from(response.data.value, 'base64').toString()).toBe(testKey);
+    expect(response.data.credentialType).toBe('API_KEY');
+  });
+
+  it('should default to ANTHROPIC when no provider param is given (backward compat)', async () => {
+    const prisma = getPrismaClient();
+    const testKey = 'sk-ant-api03-' + 'a'.repeat(80);
+    const { encryptedValue, iv, authTag } = encryptCredential(testKey);
+
+    await prisma.userCredential.create({
+      data: {
+        userId: 'test-user-id',
+        provider: 'ANTHROPIC',
+        credentialType: 'API_KEY',
+        label: '[e2e] Anthropic Default Key',
+        encryptedValue,
+        iv,
+        authTag,
+        preview: testKey.slice(-4),
+        readinessStatus: 'READY',
+      },
+    });
+
+    const client = createWorkflowClient();
+    const response = await client.get<{
+      envVar: string;
+      credentialType: string;
+    }>(`/api/internal/credentials?projectId=${ctx.projectId}`);
+
+    expect(response.status).toBe(200);
+    expect(response.data.envVar).toBe('ANTHROPIC_API_KEY');
+  });
+
+  it('should return provider-specific 404 error message', async () => {
+    const client = createWorkflowClient();
+    const response = await client.get<{ error: string }>(
+      `/api/internal/credentials?projectId=${ctx.projectId}&provider=OPENAI`
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.data.error).toContain('OpenAI');
+    expect(response.data.error).toContain('credential configured');
   });
 
   it('should return decrypted OAUTH_TOKEN credential with correct envVar', async () => {

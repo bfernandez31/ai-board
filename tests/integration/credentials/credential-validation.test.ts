@@ -84,4 +84,42 @@ describe('Credential Format Validation', () => {
       expect(response.data.error).toContain('Invalid OAuth token format');
     });
   });
+
+  describe('OPENAI API_KEY format', () => {
+    it('should reject OpenAI key without sk- prefix', async () => {
+      const response = await ctx.api.post<{ error: string }>('/api/credentials', {
+        provider: 'OPENAI',
+        credentialType: 'API_KEY',
+        label: '[e2e] No Prefix OpenAI',
+        value: 'invalid-key-' + 'a'.repeat(40),
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toContain('must start with "sk-"');
+    });
+
+    it('should reject OPENAI + OAUTH_TOKEN combination', async () => {
+      const response = await ctx.api.post<{ error: string }>('/api/credentials', {
+        provider: 'OPENAI',
+        credentialType: 'OAUTH_TOKEN',
+        label: '[e2e] OpenAI OAuth',
+        value: 'a'.repeat(40),
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toContain('only supports API_KEY');
+    });
+
+    it('should reject OpenAI key that is too short', async () => {
+      const response = await ctx.api.post<{ error: string }>('/api/credentials', {
+        provider: 'OPENAI',
+        credentialType: 'API_KEY',
+        label: '[e2e] Short OpenAI Key',
+        value: 'sk-short',
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toContain('too short');
+    });
+  });
 });

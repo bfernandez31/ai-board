@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z, ZodError } from 'zod';
 import { getCurrentUserOrToken } from '@/lib/db/users';
 import { createOrReplaceCredential, listCredentials } from '@/lib/ai-credentials/service';
-import { validateFormat, verifyWithProvider } from '@/lib/ai-credentials/providers/anthropic';
-import type { CredentialListItem } from '@/lib/ai-credentials/types';
+import { getProviderModule } from '@/lib/ai-credentials/providers';
+import { PROVIDER_ALLOWED_TYPES, type CredentialListItem } from '@/lib/ai-credentials/types';
 
 const createCredentialSchema = z.object({
-  provider: z.enum(['ANTHROPIC']),
+  provider: z.enum(['ANTHROPIC', 'OPENAI']),
   credentialType: z.enum(['API_KEY', 'OAUTH_TOKEN']),
   label: z.string().min(1, 'Label is required').max(100, 'Label must be 100 characters or less').transform(v => v.trim()),
   value: z.string().min(1, 'Credential value is required'),
@@ -52,7 +52,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = createCredentialSchema.parse(body);
 
-    const formatResult = validateFormat(validated.credentialType, validated.value);
+    // Validate provider-type constraint
+    const allowedTypes = PROVIDER_ALLOWED_TYPES[validated.provider];
+    if (!allowedTypes.includes(validated.credentialType)) {
+      return NextResponse.json(
+        { error: `${validated.provider} provider only supports ${allowedTypes.join(', ')} credential type` },
+        { status: 400 }
+      );
+    }
+
+    const providerModule = getProviderModule(validated.provider);
+    const formatResult = providerModule.validateFormat(validated.credentialType, validated.value);
     if (!formatResult.valid) {
       return NextResponse.json(
         { error: formatResult.error },
@@ -60,9 +70,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const verificationResult = validated.credentialType === 'OAUTH_TOKEN'
+    // OAuth tokens skip live verification (Anthropic-only feature)
+    const verificationResult = validated.provider === 'ANTHROPIC' && validated.credentialType === 'OAUTH_TOKEN'
       ? { readinessStatus: 'READY' as const, verificationCode: 'SKIPPED' as const, verificationMessage: null }
-      : await verifyWithProvider(validated.credentialType, validated.value);
+      : await providerModule.verifyWithProvider(validated.credentialType, validated.value);
 
     if (verificationResult.readinessStatus === 'ACTION_REQUIRED') {
       if (verificationResult.verificationCode === 'UNREACHABLE') {

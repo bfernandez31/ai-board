@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import { isWorkflowTestMode } from './test-mode';
-import { getOwnerCredential, MISSING_CREDENTIAL_ERROR } from '@/lib/ai-credentials/workflow';
+import { getOwnerCredential, getMissingCredentialError } from '@/lib/ai-credentials/workflow';
 import { getProjectServiceInputs } from '@/lib/workflows/service-inputs';
 import type { Project } from '@prisma/client';
 
@@ -31,12 +31,12 @@ export async function dispatchAIBoardWorkflow(
     return;
   }
 
-  // Check that the project owner has an AI credential configured
+  // AI-Board assist always uses Claude → always resolve ANTHROPIC credential
   const projectId = parseInt(inputs.project_id, 10);
   if (!isNaN(projectId)) {
-    const credential = await getOwnerCredential(projectId);
+    const credential = await getOwnerCredential(projectId, 'ANTHROPIC');
     if (!credential) {
-      throw new Error(MISSING_CREDENTIAL_ERROR);
+      throw new Error(getMissingCredentialError('ANTHROPIC'));
     }
   }
 

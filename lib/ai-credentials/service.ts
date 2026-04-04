@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db/client';
 import type { CredentialProvider, CredentialReadiness } from '@prisma/client';
 import { encryptCredential, decryptCredential } from './crypto';
-import { validateFormat, verifyWithProvider } from './providers/anthropic';
+import { getProviderModule } from './providers';
 import type { CreateCredentialInput, CredentialListItem, VerificationResult } from './types';
 
 const CREDENTIAL_SELECT = {
@@ -110,8 +110,8 @@ export async function testCredential(
 
   const credentialType = credential.credentialType as 'API_KEY' | 'OAUTH_TOKEN';
 
-  // OAuth tokens skip provider verification
-  if (credentialType === 'OAUTH_TOKEN') {
+  // OAuth tokens skip provider verification (Anthropic-only feature)
+  if (credential.provider === 'ANTHROPIC' && credentialType === 'OAUTH_TOKEN') {
     const result: VerificationResult = {
       readinessStatus: 'READY',
       verificationCode: 'SKIPPED',
@@ -129,10 +129,11 @@ export async function testCredential(
     return result;
   }
 
-  const formatResult = validateFormat(credentialType, decrypted);
+  const providerModule = getProviderModule(credential.provider);
+  const formatResult = providerModule.validateFormat(credentialType, decrypted);
 
   const result: VerificationResult = formatResult.valid
-    ? await verifyWithProvider(credentialType, decrypted)
+    ? await providerModule.verifyWithProvider(credentialType, decrypted)
     : {
         readinessStatus: 'ACTION_REQUIRED',
         verificationCode: 'INVALID_KEY',

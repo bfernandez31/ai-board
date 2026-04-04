@@ -305,6 +305,7 @@ enum Agent {
 
 enum CredentialProvider {
   ANTHROPIC
+  OPENAI
 }
 
 enum CredentialType {

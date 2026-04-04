@@ -138,7 +138,7 @@ describe('User Credentials API', () => {
 
     it('should return 400 for invalid provider', async () => {
       const response = await ctx.api.post('/api/credentials', {
-        provider: 'OPENAI',
+        provider: 'GOOGLE',
         credentialType: 'API_KEY',
         label: '[e2e] Wrong Provider',
         value: 'sk-ant-api03-' + 'a'.repeat(80),
@@ -318,6 +318,131 @@ describe('User Credentials API', () => {
       expect(response.status).toBe(200);
       expect(response.data.readinessStatus).toBe('READY');
       expect(response.data.verificationCode).toBe('SKIPPED');
+    });
+  });
+
+  describe('OPENAI credential lifecycle', () => {
+    it('should create an OPENAI API_KEY credential', async () => {
+      const response = await ctx.api.post<{
+        id: number;
+        provider: string;
+        credentialType: string;
+        readinessStatus: string;
+      }>('/api/credentials', {
+        provider: 'OPENAI',
+        credentialType: 'API_KEY',
+        label: '[e2e] OpenAI Key',
+        value: 'sk-proj-' + 'a'.repeat(40),
+      });
+
+      // 201 (new) or 422 (rejected by OpenAI, key is fake)
+      expect([201, 422]).toContain(response.status);
+      if (response.status === 201) {
+        expect(response.data.provider).toBe('OPENAI');
+        expect(response.data.credentialType).toBe('API_KEY');
+      }
+    });
+
+    it('should allow user to have both ANTHROPIC and OPENAI credentials simultaneously', async () => {
+      const prisma = getPrismaClient();
+
+      // Create ANTHROPIC credential directly
+      const { encryptedValue: ev1, iv: iv1, authTag: at1 } = encryptCredential('sk-ant-api03-' + 'a'.repeat(80));
+      await prisma.userCredential.create({
+        data: {
+          userId: 'test-user-id',
+          provider: 'ANTHROPIC',
+          credentialType: 'API_KEY',
+          label: '[e2e] Anthropic Key',
+          encryptedValue: ev1, iv: iv1, authTag: at1,
+          preview: 'aaaa',
+          readinessStatus: 'READY',
+        },
+      });
+
+      // Create OPENAI credential directly
+      const { encryptedValue: ev2, iv: iv2, authTag: at2 } = encryptCredential('sk-proj-' + 'b'.repeat(40));
+      await prisma.userCredential.create({
+        data: {
+          userId: 'test-user-id',
+          provider: 'OPENAI',
+          credentialType: 'API_KEY',
+          label: '[e2e] OpenAI Key',
+          encryptedValue: ev2, iv: iv2, authTag: at2,
+          preview: 'bbbb',
+          readinessStatus: 'READY',
+        },
+      });
+
+      // List both
+      const response = await ctx.api.get<{
+        credentials: Array<{ provider: string }>;
+      }>('/api/credentials');
+
+      expect(response.status).toBe(200);
+      expect(response.data.credentials).toHaveLength(2);
+      const providers = response.data.credentials.map(c => c.provider).sort();
+      expect(providers).toEqual(['ANTHROPIC', 'OPENAI']);
+    });
+
+    it('should upsert (replace) OPENAI credential', async () => {
+      const prisma = getPrismaClient();
+
+      // Create initial OPENAI credential
+      const { encryptedValue, iv, authTag } = encryptCredential('sk-proj-' + 'c'.repeat(40));
+      await prisma.userCredential.create({
+        data: {
+          userId: 'test-user-id',
+          provider: 'OPENAI',
+          credentialType: 'API_KEY',
+          label: '[e2e] Old OpenAI Key',
+          encryptedValue, iv, authTag,
+          preview: 'cccc',
+          readinessStatus: 'READY',
+        },
+      });
+
+      // Attempt to create another OPENAI credential (should upsert)
+      const response = await ctx.api.post<{
+        id: number;
+        provider: string;
+        label: string;
+      }>('/api/credentials', {
+        provider: 'OPENAI',
+        credentialType: 'API_KEY',
+        label: '[e2e] New OpenAI Key',
+        value: 'sk-proj-' + 'd'.repeat(40),
+      });
+
+      // 200 (replaced) or 422 (rejected by OpenAI, key is fake)
+      expect([200, 422]).toContain(response.status);
+
+      // Only one OPENAI credential should exist
+      const listResponse = await ctx.api.get<{
+        credentials: Array<{ provider: string }>;
+      }>('/api/credentials');
+      const openaiCreds = listResponse.data.credentials.filter(c => c.provider === 'OPENAI');
+      expect(openaiCreds.length).toBeLessThanOrEqual(1);
+    });
+
+    it('should delete OPENAI credential', async () => {
+      const prisma = getPrismaClient();
+
+      const { encryptedValue, iv, authTag } = encryptCredential('sk-proj-' + 'e'.repeat(40));
+      const cred = await prisma.userCredential.create({
+        data: {
+          userId: 'test-user-id',
+          provider: 'OPENAI',
+          credentialType: 'API_KEY',
+          label: '[e2e] Delete OpenAI',
+          encryptedValue, iv, authTag,
+          preview: 'eeee',
+          readinessStatus: 'READY',
+        },
+      });
+
+      const response = await ctx.api.delete(`/api/credentials/${cred.id}`);
+      expect(response.status).toBe(204);
     });
   });
 });
