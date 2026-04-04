@@ -4,25 +4,34 @@ import { prisma } from '@/lib/db/client';
 import { calculateGlobalScore, getScoreLabel, getScoreColorConfig } from '@/lib/health/score-calculator';
 import { getQualityGateData } from '@/lib/health/quality-gate';
 import type { HealthResponse, HealthModuleStatus } from '@/lib/health/types';
-
-function getScoreDisplayLabel(score: number): string {
-  if (score >= 90) return 'Excellent';
-  if (score >= 70) return 'Good';
-  if (score >= 50) return 'Fair';
-  return 'Poor';
-}
+import type { HealthScanType } from '@prisma/client';
 
 function buildModuleStatus(
   score: number | null,
   lastScanDate: Date | null,
   scanStatus: string | null,
   issuesFound: number | null,
+  skipReason?: string | null,
 ): HealthModuleStatus {
   let label: string | null = null;
   let summary: string;
 
+  if (scanStatus === 'SKIPPED') {
+    label = score !== null ? getScoreLabel(score) : null;
+    summary = skipReason ? `Skipped: ${skipReason}` : 'Skipped';
+    return {
+      score,
+      label,
+      lastScanDate: lastScanDate?.toISOString() ?? null,
+      scanStatus,
+      issuesFound: null,
+      summary,
+      skipReason: skipReason ?? null,
+    };
+  }
+
   if (score !== null) {
-    label = getScoreDisplayLabel(score);
+    label = getScoreLabel(score);
     summary = issuesFound !== null && issuesFound > 0 ? `${issuesFound} issues found` : 'All clear';
   } else {
     summary = 'No scan yet';
@@ -87,8 +96,8 @@ export async function GET(
       },
     });
 
-    // Get latest scan status per active module type
-    const latestScans = await prisma.healthScan.findMany({
+    // Get latest completed scan status per module type
+    const latestCompletedScans = await prisma.healthScan.findMany({
       where: {
         projectId,
         status: 'COMPLETED',
@@ -103,7 +112,26 @@ export async function GET(
     });
 
     const scanStatusMap = new Map(
-      latestScans.map(s => [s.scanType, s])
+      latestCompletedScans.map(s => [s.scanType, s])
+    );
+
+    // Get latest terminal scan per module type (COMPLETED or SKIPPED) to detect SKIPPED
+    const latestTerminalScans = await prisma.healthScan.findMany({
+      where: {
+        projectId,
+        status: { in: ['COMPLETED', 'SKIPPED'] },
+      },
+      orderBy: { createdAt: 'desc' },
+      distinct: ['scanType'],
+      select: {
+        scanType: true,
+        status: true,
+        report: true,
+      },
+    });
+
+    const latestTerminalMap = new Map(
+      latestTerminalScans.map(s => [s.scanType, s])
     );
 
     // Active scan status map (for modules currently scanning)
@@ -119,6 +147,28 @@ export async function GET(
       ? new Date(firstTicket.completedAt)
       : null;
 
+    // Helper to extract skip reason from a terminal scan's report JSON
+    function getSkipReason(scanType: string): string | null {
+      const terminal = latestTerminalMap.get(scanType as HealthScanType);
+      if (!terminal || terminal.status !== 'SKIPPED') return null;
+      if (terminal.report) {
+        try {
+          const parsed = JSON.parse(terminal.report);
+          return parsed.skipReason ?? null;
+        } catch { /* ignore parse errors */ }
+      }
+      return null;
+    }
+
+    // Determine effective scan status: active scan overrides, then latest terminal scan
+    function getEffectiveScanStatus(scanType: string): string | null {
+      const active = activeScanMap.get(scanType as HealthScanType);
+      if (active) return active;
+      const terminal = latestTerminalMap.get(scanType as HealthScanType);
+      if (terminal) return terminal.status;
+      return null;
+    }
+
     // Build module statuses
     const securityScan = scanStatusMap.get('SECURITY');
     const complianceScan = scanStatusMap.get('COMPLIANCE');
@@ -130,34 +180,38 @@ export async function GET(
       security: buildModuleStatus(
         healthScore?.securityScore ?? null,
         healthScore?.lastSecurityScan ?? null,
-        activeScanMap.get('SECURITY') ?? securityScan?.status ?? null,
+        getEffectiveScanStatus('SECURITY'),
         securityScan?.issuesFound ?? null,
+        getSkipReason('SECURITY'),
       ),
       compliance: buildModuleStatus(
         healthScore?.complianceScore ?? null,
         healthScore?.lastComplianceScan ?? null,
-        activeScanMap.get('COMPLIANCE') ?? complianceScan?.status ?? null,
+        getEffectiveScanStatus('COMPLIANCE'),
         complianceScan?.issuesFound ?? null,
+        getSkipReason('COMPLIANCE'),
       ),
       tests: buildModuleStatus(
         healthScore?.testsScore ?? null,
         healthScore?.lastTestsScan ?? null,
-        activeScanMap.get('TESTS') ?? testsScan?.status ?? null,
+        getEffectiveScanStatus('TESTS'),
         testsScan?.issuesFound ?? null,
+        getSkipReason('TESTS'),
       ),
       specSync: buildModuleStatus(
         healthScore?.specSyncScore ?? null,
         healthScore?.lastSpecSyncScan ?? null,
-        activeScanMap.get('SPEC_SYNC') ?? specSyncScan?.status ?? null,
+        getEffectiveScanStatus('SPEC_SYNC'),
         specSyncScan?.issuesFound ?? null,
+        getSkipReason('SPEC_SYNC'),
       ),
       qualityGate: {
         score: qualityGateScore,
-        label: qualityGateScore !== null ? getScoreDisplayLabel(qualityGateScore) : null,
+        label: qualityGateScore !== null ? getScoreLabel(qualityGateScore) : null,
         lastScanDate: qualityGateDate?.toISOString() ?? null,
         passive: true,
         summary: qualityGateData.ticketCount > 0
-          ? `${qualityGateData.ticketCount} ticket${qualityGateData.ticketCount !== 1 ? 's' : ''} — ${getScoreDisplayLabel(qualityGateScore!)}`
+          ? `${qualityGateData.ticketCount} ticket${qualityGateData.ticketCount !== 1 ? 's' : ''} — ${getScoreLabel(qualityGateScore!)}`
           : 'No verify jobs yet',
         ticketCount: qualityGateData.ticketCount,
         trend: qualityGateData.trend,
@@ -167,8 +221,9 @@ export async function GET(
       reviewQuality: buildModuleStatus(
         healthScore?.reviewQualityScore ?? null,
         healthScore?.lastReviewQualityScan ?? null,
-        activeScanMap.get('REVIEW_QUALITY') ?? reviewQualityScan?.status ?? null,
+        getEffectiveScanStatus('REVIEW_QUALITY'),
         reviewQualityScan?.issuesFound ?? null,
+        getSkipReason('REVIEW_QUALITY'),
       ),
     };
 

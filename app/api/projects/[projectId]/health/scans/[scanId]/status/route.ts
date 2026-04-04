@@ -6,8 +6,8 @@ import { calculateGlobalScore } from '@/lib/health/score-calculator';
 import type { HealthScanStatus, HealthScanType } from '@prisma/client';
 
 const statusUpdateSchema = z.object({
-  status: z.enum(['RUNNING', 'COMPLETED', 'FAILED']),
-  score: z.number().int().min(0).max(100).optional(),
+  status: z.enum(['RUNNING', 'COMPLETED', 'FAILED', 'SKIPPED']),
+  score: z.number().int().min(0).max(100).optional().nullable(),
   report: z.string().optional(),
   issuesFound: z.number().int().min(0).optional(),
   issuesFixed: z.number().int().min(0).optional(),
@@ -16,13 +16,15 @@ const statusUpdateSchema = z.object({
   tokensUsed: z.number().int().min(0).optional(),
   costUsd: z.number().min(0).optional(),
   errorMessage: z.string().max(2000).optional(),
+  skipReason: z.string().max(500).optional(),
 });
 
 const VALID_TRANSITIONS: Record<string, HealthScanStatus[]> = {
   PENDING: ['RUNNING', 'FAILED'],
-  RUNNING: ['COMPLETED', 'FAILED'],
+  RUNNING: ['COMPLETED', 'FAILED', 'SKIPPED'],
   COMPLETED: [],
   FAILED: [],
+  SKIPPED: [],
 };
 
 const SCAN_TYPE_TO_SCORE_FIELD: Record<HealthScanType, string> = {
@@ -72,14 +74,14 @@ export async function PATCH(
     const data = parsed.data;
 
     // Require score for COMPLETED
-    if (data.status === 'COMPLETED' && data.score === undefined) {
+    if (data.status === 'COMPLETED' && data.score == null) {
       return NextResponse.json(
         { error: 'Score required for completed scans' },
         { status: 400 }
       );
     }
 
-    // Find the scan
+    // Find the scan (needed for scanType-based guards)
     const scan = await prisma.healthScan.findFirst({
       where: { id: scanId, projectId },
     });
@@ -88,8 +90,28 @@ export async function PATCH(
       return NextResponse.json({ error: 'Scan not found' }, { status: 404 });
     }
 
+    // Defensive guard: COMPLIANCE and TESTS scans cannot be SKIPPED — coerce to COMPLETED
+    let effectiveStatus: HealthScanStatus = data.status as HealthScanStatus;
+    if (data.status === 'SKIPPED' && (scan.scanType === 'COMPLIANCE' || scan.scanType === 'TESTS')) {
+      if (data.score == null) {
+        return NextResponse.json(
+          { error: 'Score required — COMPLIANCE and TESTS scans cannot be skipped' },
+          { status: 400 }
+        );
+      }
+      effectiveStatus = 'COMPLETED';
+    }
+
+    // SKIPPED must NOT have a score (checked after coercion guard)
+    if (effectiveStatus === 'SKIPPED' && data.score != null) {
+      return NextResponse.json(
+        { error: 'Score must not be provided for skipped scans' },
+        { status: 400 }
+      );
+    }
+
     // Idempotent: same status returns current state
-    if (scan.status === data.status) {
+    if (scan.status === effectiveStatus) {
       return NextResponse.json({
         scan: { id: scan.id, status: scan.status, score: scan.score },
       });
@@ -97,7 +119,7 @@ export async function PATCH(
 
     // Validate state transition
     const allowed = VALID_TRANSITIONS[scan.status] || [];
-    if (!allowed.includes(data.status)) {
+    if (!allowed.includes(effectiveStatus)) {
       return NextResponse.json(
         { error: 'Invalid status transition' },
         { status: 409 }
@@ -107,14 +129,14 @@ export async function PATCH(
     // Build update data
     const now = new Date();
     const updateData: Record<string, unknown> = {
-      status: data.status,
+      status: effectiveStatus,
     };
 
-    if (data.status === 'RUNNING') {
+    if (effectiveStatus === 'RUNNING') {
       updateData.startedAt = now;
     }
 
-    if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+    if (effectiveStatus === 'COMPLETED' || effectiveStatus === 'FAILED' || effectiveStatus === 'SKIPPED') {
       updateData.completedAt = now;
     }
 
@@ -126,6 +148,20 @@ export async function PATCH(
       if (data[field] !== undefined) updateData[field] = data[field];
     }
 
+    // Persist skipReason inside the report JSON for SKIPPED scans
+    if (effectiveStatus === 'SKIPPED' && data.skipReason) {
+      let reportPayload: Record<string, unknown> = {};
+      if (typeof updateData.report === 'string') {
+        try {
+          const parsed = JSON.parse(updateData.report);
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            reportPayload = parsed as Record<string, unknown>;
+          }
+        } catch { /* ignore parse errors */ }
+      }
+      updateData.report = JSON.stringify({ ...reportPayload, skipReason: data.skipReason });
+    }
+
     // Update scan and HealthScore aggregate in a single transaction
     const updatedScan = await prisma.$transaction(async (tx) => {
       const scanResult = await tx.healthScan.update({
@@ -134,7 +170,7 @@ export async function PATCH(
       });
 
       // On COMPLETED: update HealthScore aggregate
-      if (data.status === 'COMPLETED' && data.score !== undefined) {
+      if (effectiveStatus === 'COMPLETED' && data.score !== undefined) {
         const scoreField = SCAN_TYPE_TO_SCORE_FIELD[scan.scanType];
         const dateField = SCAN_TYPE_TO_DATE_FIELD[scan.scanType];
 

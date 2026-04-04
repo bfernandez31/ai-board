@@ -79,6 +79,26 @@ describe('HealthHero', () => {
     expect(screen.getByText('Review Quality')).toBeInTheDocument();
   });
 
+  it('sub-score badge shows preserved score for SKIPPED module', () => {
+    const modules = makeModules({
+      security: {
+        score: 80,
+        label: 'Good',
+        lastScanDate: '2026-03-27T14:30:00Z',
+        scanStatus: 'SKIPPED',
+        issuesFound: null,
+        summary: 'Skipped: No changed files to scan',
+        skipReason: 'No changed files to scan',
+      },
+    });
+    renderWithProviders(
+      <HealthHero globalScore={80} modules={modules} lastFullScanDate={null} />
+    );
+    // Sub-score badge should show the preserved score of 80 (also shown in global score)
+    expect(screen.getAllByText('80').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Security')).toBeInTheDocument();
+  });
+
   it('shows last full scan date', () => {
     const yesterday = new Date(Date.now() - 86400000).toISOString();
     renderWithProviders(

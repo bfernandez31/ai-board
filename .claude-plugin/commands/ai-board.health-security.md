@@ -18,8 +18,24 @@ When `--base-commit` is provided, only analyze files changed since that commit:
 
 1. Get the list of changed files: `git diff --name-only <base-commit>..<head-commit>`
    - If `--head-commit` is not provided, use `HEAD` as the target
-2. Only analyze files from this list (skip deleted files)
-3. If `--base-commit` refers to a commit that doesn't exist, report an error issue and fall back to full scan
+2. **Early Exit Check (SKIPPED detection)**: If the list of changed files is empty (0 changed files in incremental mode), write a SKIPPED result and exit early:
+   ```json
+   {
+     "score": null,
+     "skipped": true,
+     "skipReason": "No changed files to scan",
+     "issuesFound": 0,
+     "issuesFixed": 0,
+     "report": {
+       "type": "SECURITY",
+       "issues": [],
+       "generatedTickets": []
+     }
+   }
+   ```
+   Write this to `/tmp/health-scan-result.json` and stop — do NOT proceed to the analysis phases.
+3. Only analyze files from this list (skip deleted files)
+4. If `--base-commit` refers to a commit that doesn't exist, report an error issue and fall back to full scan
 
 ## Analysis Methodology
 

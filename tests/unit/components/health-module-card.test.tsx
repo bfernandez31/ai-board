@@ -87,6 +87,24 @@ describe('HealthModuleCard', () => {
     expect(buttons).toHaveLength(0);
   });
 
+  it('renders "N/A" badge for SKIPPED state', () => {
+    const skipped: HealthModuleStatus = {
+      score: 80,
+      label: 'Good',
+      lastScanDate: '2026-03-27T14:30:00Z',
+      scanStatus: 'SKIPPED',
+      issuesFound: null,
+      summary: 'Skipped: No qualifying PRs since last scan',
+      skipReason: 'No qualifying PRs since last scan',
+    };
+    renderWithProviders(
+      <HealthModuleCard moduleType="REVIEW_QUALITY" module={skipped} />
+    );
+    expect(screen.getByText('N/A')).toBeInTheDocument();
+    expect(screen.getByText('Skipped: No qualifying PRs since last scan')).toBeInTheDocument();
+    expect(screen.getByText('Re-run')).toBeInTheDocument();
+  });
+
   it('calls onTriggerScan when action button is clicked', async () => {
     const onTriggerScan = vi.fn();
     const { container } = renderWithProviders(

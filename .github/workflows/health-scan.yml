@@ -325,6 +325,22 @@ jobs:
 
             RESULT_FILE="/tmp/health-scan-result.json"
             if [ -f "$RESULT_FILE" ] && jq empty "$RESULT_FILE" 2>/dev/null; then
+              # Check for SKIPPED indicator
+              SKIPPED=$(jq -r '.skipped // false' "$RESULT_FILE")
+              # Defensive guard: TESTS scans cannot be SKIPPED
+              if [ "$SKIPPED" = "true" ]; then
+                echo "⚠️ TESTS scan emitted skipped=true — ignoring (TESTS never skip)"
+                SKIPPED="false"
+              fi
+              echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+              if [ "$SKIPPED" = "true" ]; then
+                {
+                  echo "skip_reason<<EOF_SKIP_REASON"
+                  jq -r '.skipReason // "No reason provided"' "$RESULT_FILE"
+                  echo "EOF_SKIP_REASON"
+                } >> $GITHUB_OUTPUT
+              fi
+
               echo "scan_success=true" >> $GITHUB_OUTPUT
               echo "score=$(jq -r '.score // 0' "$RESULT_FILE")" >> $GITHUB_OUTPUT
               echo "issues_found=$(jq -r '.issuesFound // 0' "$RESULT_FILE")" >> $GITHUB_OUTPUT
@@ -381,6 +397,22 @@ jobs:
 
             RESULT_FILE="/tmp/health-scan-result.json"
             if [ -f "$RESULT_FILE" ] && jq empty "$RESULT_FILE" 2>/dev/null; then
+              # Check for SKIPPED indicator
+              SKIPPED=$(jq -r '.skipped // false' "$RESULT_FILE")
+              # Defensive guard: COMPLIANCE scans cannot be SKIPPED
+              if [ "$SKIPPED" = "true" ] && [ "$INPUT_SCAN_TYPE" = "COMPLIANCE" ]; then
+                echo "⚠️ COMPLIANCE scan emitted skipped=true — ignoring (COMPLIANCE never skips)"
+                SKIPPED="false"
+              fi
+              echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+              if [ "$SKIPPED" = "true" ]; then
+                {
+                  echo "skip_reason<<EOF_SKIP_REASON"
+                  jq -r '.skipReason // "No reason provided"' "$RESULT_FILE"
+                  echo "EOF_SKIP_REASON"
+                } >> $GITHUB_OUTPUT
+              fi
+
               echo "scan_success=true" >> $GITHUB_OUTPUT
               echo "score=$(jq -r '.score // 0' "$RESULT_FILE")" >> $GITHUB_OUTPUT
               echo "issues_found=$(jq -r '.issuesFound // 0' "$RESULT_FILE")" >> $GITHUB_OUTPUT
@@ -420,11 +452,13 @@ jobs:
           echo "duration_ms=${{ steps.scan-exec.outputs.duration_ms || steps.scan-exec-agent.outputs.duration_ms }}" >> $GITHUB_OUTPUT
           echo "tokens_used=${{ steps.scan-exec.outputs.tokens_used || steps.scan-exec-agent.outputs.tokens_used }}" >> $GITHUB_OUTPUT
           echo "cost_usd=${{ steps.scan-exec.outputs.cost_usd || steps.scan-exec-agent.outputs.cost_usd }}" >> $GITHUB_OUTPUT
+          echo "skipped=${{ steps.scan-exec.outputs.skipped || steps.scan-exec-agent.outputs.skipped }}" >> $GITHUB_OUTPUT
+          echo "skip_reason=${{ steps.scan-exec.outputs.skip_reason || steps.scan-exec-agent.outputs.skip_reason }}" >> $GITHUB_OUTPUT
 
       # Step 5: Create remediation tickets from scan results (US2 T013)
       # NOTE: Tickets are created BEFORE marking COMPLETED per spec (integrations.md)
       - name: Create Remediation Tickets
-        if: ${{ steps.scan.outputs.scan_success == 'true' && (steps.scan.outputs.issues_found > 0 || inputs.scan_type == 'REVIEW_QUALITY') }}
+        if: ${{ steps.scan.outputs.scan_success == 'true' && steps.scan.outputs.skipped != 'true' && (steps.scan.outputs.issues_found > 0 || inputs.scan_type == 'REVIEW_QUALITY') }}
         run: |
           SCAN_TYPE="$INPUT_SCAN_TYPE"
           REPORT_FILE="/tmp/scan_report.json"
@@ -542,10 +576,37 @@ jobs:
 
           echo "✅ Remediation tickets created"
 
+      # Step 5b: Update status to SKIPPED when scan detected nothing to evaluate
+      - name: Update Scan Status - SKIPPED
+        if: ${{ steps.scan.outputs.scan_success == 'true' && steps.scan.outputs.skipped == 'true' }}
+        env:
+          SCAN_DURATION_MS: ${{ steps.scan.outputs.duration_ms }}
+          SCAN_SKIP_REASON: ${{ steps.scan.outputs.skip_reason }}
+        run: |
+          DURATION_MS="$SCAN_DURATION_MS"
+          DURATION_MS="${DURATION_MS:-0}"
+
+          PAYLOAD=$(jq -n \
+            --arg status "SKIPPED" \
+            --arg skipReason "$SCAN_SKIP_REASON" \
+            --argjson durationMs "$DURATION_MS" \
+            '{status: $status, skipReason: $skipReason, durationMs: $durationMs}')
+
+          # Write payload to file for consistency
+          printf '%s' "$PAYLOAD" > /tmp/scan_payload.json
+
+          curl -X PATCH "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/health/scans/${INPUT_SCAN_ID}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d @/tmp/scan_payload.json \
+            -f -s -S
+
+          echo "✅ Scan status updated to SKIPPED (reason: $SCAN_SKIP_REASON)"
+
       # Step 6: Update status to COMPLETED with results (US1 T010, US4 T017, US6 T021)
       # NOTE: Runs AFTER ticket creation per spec (integrations.md)
       - name: Update Scan Status - COMPLETED
-        if: ${{ steps.scan.outputs.scan_success == 'true' }}
+        if: ${{ steps.scan.outputs.scan_success == 'true' && steps.scan.outputs.skipped != 'true' }}
         working-directory: target
         env:
           SCAN_SCORE: ${{ steps.scan.outputs.score }}

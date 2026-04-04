@@ -494,6 +494,7 @@ enum HealthScanStatus {
   RUNNING
   COMPLETED
   FAILED
+  SKIPPED
 }
 
 model HealthScan {

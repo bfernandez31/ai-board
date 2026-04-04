@@ -956,7 +956,7 @@ Per-principle constitution compliance evaluation for a participant.
 
 ### HealthScan
 
-An individual scan execution record linked to a project and identified by scan type. Tracks the full lifecycle from PENDING through COMPLETED or FAILED. Stores the commit range analyzed (enabling incremental scanning), scan results, and operational telemetry.
+An individual scan execution record linked to a project and identified by scan type. Tracks the full lifecycle from PENDING through COMPLETED, FAILED, or SKIPPED. Stores the commit range analyzed (enabling incremental scanning), scan results, and operational telemetry.
 
 ```prisma
 model HealthScan {
@@ -965,7 +965,7 @@ model HealthScan {
   scanType     HealthScanType
   status       HealthScanStatus @default(PENDING)
 
-  score        Int?             // 0-100, null until COMPLETED
+  score        Int?             // 0-100, null until COMPLETED; always null for SKIPPED
   report       String?          // JSON report data
   issuesFound  Int?
   issuesFixed  Int?
@@ -996,7 +996,9 @@ model HealthScan {
 
 **Concurrent scan constraint**: Only one PENDING or RUNNING scan per `(projectId, scanType)` is allowed. Enforced at application level (409 on conflict).
 
-**Validation**: `score` is set only when `status = COMPLETED`; `scanType` is limited to the 5 active types (SECURITY, COMPLIANCE, TESTS, SPEC_SYNC, REVIEW_QUALITY).
+**Validation**: `score` is set only when `status = COMPLETED`; `score` must be null when `status = SKIPPED`; `scanType` is limited to the 5 active types (SECURITY, COMPLIANCE, TESTS, SPEC_SYNC, REVIEW_QUALITY).
+
+**SKIPPED behavior**: When a scan agent detects nothing to evaluate, it writes `skipped: true` and `skipReason` in the result file. The workflow maps this to SKIPPED status. COMPLIANCE and TESTS scans are never SKIPPED regardless of agent output. SKIPPED is a terminal state — no further transitions allowed.
 
 ---
 
@@ -1039,7 +1041,7 @@ availableModules = [security, compliance, tests, specSync, qualityGate, reviewQu
 globalScore = sum(availableModules.map(m => m.score)) / availableModules.length
 ```
 
-Equal weighting with proportional redistribution when modules are unscanned.
+Equal weighting with proportional redistribution when modules are unscanned or SKIPPED. The `HealthScore` aggregate is NOT updated when a scan reaches SKIPPED status — the previous COMPLETED sub-score (if any) is preserved.
 
 **Derived fields**:
 - `qualityGate`: Latest COMPLETED verify job's `qualityScore` for the project
@@ -1113,15 +1115,17 @@ enum HealthScanStatus {
   RUNNING
   COMPLETED
   FAILED
+  SKIPPED
 }
 ```
 
 | Value | Description | Transitions To |
 |-------|-------------|----------------|
 | PENDING | Scan created, workflow dispatched | RUNNING, FAILED |
-| RUNNING | Workflow executing scan | COMPLETED, FAILED |
+| RUNNING | Workflow executing scan | COMPLETED, FAILED, SKIPPED |
 | COMPLETED | Scan finished with results | Terminal |
 | FAILED | Scan encountered an error | Terminal |
+| SKIPPED | Agent detected nothing to evaluate; null score | Terminal |
 
 ---
 

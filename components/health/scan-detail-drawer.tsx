@@ -13,6 +13,7 @@ import { DrawerTickets } from './drawer/drawer-tickets';
 import { DrawerHistory } from './drawer/drawer-history';
 import { DrawerStates } from './drawer/drawer-states';
 import { ScoreTrendChart } from './drawer/score-trend-chart';
+import { Button } from '@/components/ui/button';
 import { useScanReport } from '@/app/lib/hooks/useScanReport';
 import { MODULE_METADATA } from '@/lib/health/types';
 import type { HealthModuleType, HealthModuleStatus, TrendDataPoint } from '@/lib/health/types';
@@ -44,9 +45,10 @@ export function ScanDetailDrawer({
   // Determine if we have a completed scan with report data
   const hasCompletedScan = !isLoading && data?.scan?.status === 'COMPLETED';
   const hasReport = hasCompletedScan && data?.report !== null;
+  const isSkipped = !isLoading && data?.scan?.status === 'SKIPPED';
 
   // Determine if we should show non-standard states
-  const showStates = !isLoading && !hasCompletedScan && (
+  const showStates = !isLoading && !hasCompletedScan && !isSkipped && (
     isScanning ||
     moduleStatus?.scanStatus === 'FAILED' ||
     !data?.scan
@@ -87,6 +89,21 @@ export function ScanDetailDrawer({
                 errorMessage={data?.scan?.errorMessage}
                 onTriggerScan={onTriggerScan}
               />
+            )}
+
+            {isSkipped && (
+              <div className="rounded-lg border border-border bg-muted/50 p-4 text-center space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Skipped</p>
+                <p className="text-xs text-muted-foreground">
+                  {moduleStatus?.skipReason || 'No reason provided'}
+                </p>
+                <p className="text-2xl font-bold text-muted-foreground">N/A</p>
+                {onTriggerScan && moduleMeta && !moduleMeta.passive && (
+                  <Button size="sm" variant="outline" onClick={onTriggerScan}>
+                    Re-run scan
+                  </Button>
+                )}
+              </div>
             )}
 
             {trendData && trendData.length > 0 && (

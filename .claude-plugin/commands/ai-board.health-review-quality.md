@@ -14,6 +14,35 @@ Environment variables (set by the workflow):
 
 ## Execution Steps
 
+### Step 0 — Early Exit Check (SKIPPED detection)
+
+Before doing any analysis, check if there is anything to evaluate:
+
+1. Follow Step 1 below to discover qualifying PRs
+2. **If 0 qualifying PRs are found**, write a SKIPPED result and exit early:
+   ```json
+   {
+     "score": null,
+     "skipped": true,
+     "skipReason": "No qualifying PRs since last scan",
+     "issuesFound": 0,
+     "issuesFixed": 0,
+     "report": {
+       "type": "REVIEW_QUALITY",
+       "summary": {
+         "prsAnalyzed": 0,
+         "totalMissedFindings": 0,
+         "coverageScore": 0,
+         "scoreBreakdown": { "base": 100, "highPenalty": 0, "mediumPenalty": 0, "lowPenalty": 0 }
+       },
+       "missedFindings": [],
+       "cumulativeAnalysis": { "windowDays": 30, "reportsAnalyzed": 0, "recurringPatterns": [] },
+       "generatedTickets": []
+     }
+   }
+   ```
+   Write this to `/tmp/health-scan-result.json` and stop — do NOT proceed to Step 2 or beyond.
+
 ### Step 1 — PR Discovery
 
 1. Determine the last REVIEW_QUALITY scan timestamp by querying:

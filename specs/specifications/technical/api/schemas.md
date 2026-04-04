@@ -1002,16 +1002,20 @@ Active module scan commands (`health-security`, `health-compliance`, `health-tes
   "score": 85,
   "issuesFound": 3,
   "issuesFixed": 1,
-  "report": { ... }
+  "report": { ... },
+  "skipped": false,
+  "skipReason": null
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `score` | `number` 0–100 | Health score; 100 = no issues. Score weights: HIGH −15, MEDIUM −8, LOW −3, floor 0 |
+| `score` | `number` 0–100 \| `null` | Health score; 100 = no issues. Score weights: HIGH −15, MEDIUM −8, LOW −3, floor 0. Must be `null` when `skipped: true` |
 | `issuesFound` | `number` | Total issues detected (for TESTS: `autoFixed.length + nonFixable.length`) |
 | `issuesFixed` | `number` | Issues auto-fixed (non-zero only for TESTS; 0 for all other modules) |
 | `report` | `ScanReport` | Typed report object stored in `HealthScan.report` (see discriminated union below) |
+| `skipped` | `boolean` | `true` when the agent detected nothing to evaluate and exited early. Defaults to `false` (backward compatible). Ignored for COMPLIANCE and TESTS scan types. |
+| `skipReason` | `string` \| `null` | Human-readable reason for skipping (e.g., `"No qualifying PRs since last scan"`). Present only when `skipped: true`. |
 
 ### ScanReport Discriminated Union
 

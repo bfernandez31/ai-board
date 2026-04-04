@@ -156,6 +156,75 @@ describe('Health Score GET Endpoint', () => {
     expect(data.activeScans[0].status).toBe('RUNNING');
   });
 
+  it('global score excludes modules whose most recent scan is SKIPPED', async () => {
+    // Seed HealthScore with two modules — compliance completed, security completed
+    await prisma.healthScore.create({
+      data: {
+        projectId: ctx.projectId,
+        securityScore: 80,
+        complianceScore: 70,
+        lastSecurityScan: new Date('2026-03-26T10:00:00Z'),
+        lastComplianceScan: new Date('2026-03-26T10:00:00Z'),
+        globalScore: 75,
+      },
+    });
+
+    const response = await makeRequest(ctx.projectId);
+    const data = await response.json();
+
+    // Global score = (80 + 70) / 2 = 75 — HealthScore aggregate is unchanged by SKIPPED
+    expect(data.globalScore).toBe(75);
+  });
+
+  it('when all scans SKIPPED except COMPLIANCE, only COMPLIANCE contributes to global score', async () => {
+    // Only compliance has a score
+    await prisma.healthScore.create({
+      data: {
+        projectId: ctx.projectId,
+        complianceScore: 90,
+        lastComplianceScan: new Date(),
+        globalScore: 90,
+      },
+    });
+
+    const response = await makeRequest(ctx.projectId);
+    const data = await response.json();
+    expect(data.globalScore).toBe(90);
+  });
+
+  it('shows SKIPPED status with skipReason and preserves previous COMPLETED score', async () => {
+    // Seed a HealthScore from a previous COMPLETED scan
+    await prisma.healthScore.create({
+      data: {
+        projectId: ctx.projectId,
+        securityScore: 80,
+        lastSecurityScan: new Date('2026-03-27T14:30:00Z'),
+        globalScore: 80,
+      },
+    });
+
+    // Create a SKIPPED scan (most recent)
+    await prisma.healthScan.create({
+      data: {
+        projectId: ctx.projectId,
+        scanType: 'SECURITY',
+        status: 'SKIPPED',
+        score: null,
+        completedAt: new Date('2026-03-28T14:30:00Z'),
+      },
+    });
+
+    const response = await makeRequest(ctx.projectId);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    // Score should be preserved from HealthScore aggregate (last COMPLETED)
+    expect(data.modules.security.score).toBe(80);
+    // scanStatus should show SKIPPED
+    expect(data.modules.security.scanStatus).toBe('SKIPPED');
+    expect(data.modules.security.skipReason).toBeDefined();
+  });
+
   it('returns 400 for invalid project ID', async () => {
     const response = await GET(
       new NextRequest('http://localhost/api/projects/invalid/health'),
