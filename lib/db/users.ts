@@ -12,6 +12,18 @@ import { headers } from "next/headers"
 import { extractBearerToken, validateToken } from "@/lib/tokens/validate"
 import type { NextRequest } from "next/server"
 
+/**
+ * Thrown when Stripe subscription cancellation fails during account deletion.
+ * The user account is still deleted (GDPR right-to-erasure), but the caller
+ * is informed so it can handle billing cleanup (e.g., retry or alert).
+ */
+export class StripeCleanupError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options)
+    this.name = "StripeCleanupError"
+  }
+}
+
 export interface AuthenticatedUser {
   id: string
   email: string
@@ -280,6 +292,7 @@ export async function deleteUserAccount(userId: string): Promise<void> {
   }
 
   // Cancel Stripe subscription before deleting account
+  let stripeError: unknown = null
   if (
     user.subscription?.stripeSubscriptionId &&
     (user.subscription.status === "ACTIVE" || user.subscription.status === "TRIALING")
@@ -288,10 +301,18 @@ export async function deleteUserAccount(userId: string): Promise<void> {
       await stripe.subscriptions.cancel(user.subscription.stripeSubscriptionId)
     } catch (error) {
       console.error("Failed to cancel Stripe subscription during account deletion:", error)
-      // GDPR: right-to-erasure takes priority over billing cleanup
+      stripeError = error
     }
   }
 
-  // Prisma cascade will handle Subscription record deletion
+  // GDPR: right-to-erasure — always delete user even if Stripe call failed
   await prisma.user.delete({ where: { id: userId } })
+
+  // Propagate Stripe failure to caller after GDPR-required deletion completes
+  if (stripeError) {
+    throw new StripeCleanupError(
+      "Stripe subscription cancellation failed during account deletion",
+      { cause: stripeError },
+    )
+  }
 }
