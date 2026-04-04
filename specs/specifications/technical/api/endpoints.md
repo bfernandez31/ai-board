@@ -4426,7 +4426,8 @@ Create or replace a credential for the given provider. If a credential already e
 - `provider`: Required, valid `CredentialProvider` enum value
 - `credentialType`: Required, valid `CredentialType` enum value
 - `label`: Required, 1–100 characters
-- `value`: Required, format validated per provider and type (e.g., `/^sk-ant-api\d{2}-[A-Za-z0-9_-]{80,}$/` for Anthropic API keys)
+- `value`: Required, format validated per provider and type (e.g., `/^sk-ant-api\d{2}-[A-Za-z0-9_-]{80,}$/` for Anthropic API keys; `sk-` prefix + minimum 20 characters for OpenAI API keys)
+- `credentialType`: Must be `API_KEY` when `provider` is `OPENAI` — `OAUTH_TOKEN` is not supported for OpenAI
 
 **Server-side behavior**:
 1. Validate input format (Zod)
@@ -4454,7 +4455,7 @@ Create or replace a credential for the given provider. If a credential already e
 ```
 
 **Errors**:
-- `400`: Invalid credential format (`{ "error": "Invalid Anthropic API key format" }`)
+- `400`: Invalid credential format (`{ "error": "Invalid <Provider> API key format" }`) or unsupported credential type for provider (`{ "error": "OPENAI provider only supports API_KEY credentials" }`)
 - `401`: Not authenticated
 - `422`: Provider validation failed — `{ "error": "...", "code": "INVALID_KEY" }` or `{ "error": "...", "code": "PROVIDER_UNREACHABLE" }`
 
@@ -4506,12 +4507,13 @@ Internal endpoint called by GitHub Actions workflows to retrieve the decrypted c
 
 **Query Parameters**:
 - `projectId` (positive integer, required): Project ID to resolve owner credential
+- `provider` (string, optional): Credential provider to resolve — `ANTHROPIC` or `OPENAI` (defaults to `ANTHROPIC` for backward compatibility)
 
 **Server-side behavior**:
 1. Verify workflow token
 2. Validate `projectId` is a positive integer (Zod schema)
 3. Look up project → get owner `userId`
-4. Find `UserCredential` for owner with `provider = ANTHROPIC`
+4. Find `UserCredential` for owner matching the requested `provider`
 5. Decrypt credential with AES-256-GCM
 6. Base64-encode the decrypted secret value
 7. Return env var name and encoded value with no-cache headers
@@ -4526,14 +4528,12 @@ Internal endpoint called by GitHub Actions workflows to retrieve the decrypted c
 }
 ```
 
-The `value` field is always base64-encoded. Callers must decode it before use (e.g., `echo "$VALUE" | base64 -d`). The response includes `Cache-Control: no-store, no-cache, must-revalidate` and `Pragma: no-cache` headers to prevent credential caching.
-
-For OAuth tokens: `envVar` is `CLAUDE_CODE_OAUTH_TOKEN`.
+The `envVar` field reflects the resolved provider and type: `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, or `OPENAI_API_KEY`. The `value` field is always base64-encoded. Callers must decode it before use (e.g., `echo "$VALUE" | base64 -d`). The response includes `Cache-Control: no-store, no-cache, must-revalidate` and `Pragma: no-cache` headers to prevent credential caching.
 
 **Errors**:
 - `400`: `{ "error": "projectId is required and must be a positive integer" }`
 - `401`: Missing or invalid workflow token
-- `404`: `{ "error": "No AI credential configured for project owner. Please add your Anthropic key in Settings." }`
+- `404`: `{ "error": "No <Provider> credential configured for project owner. Please add your <Provider> key in Settings → AI Credentials." }`
 
 ---
 

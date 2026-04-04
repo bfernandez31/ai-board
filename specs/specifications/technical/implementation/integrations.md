@@ -260,6 +260,31 @@ export function resolveEffectiveAgent(ticket: TicketWithProject): Agent {
 
 The mixed strategy (embed in JSON payloads vs. discrete input) respects the GitHub Actions 10-input limit — `speckit.yml` remains at 10 inputs and `ai-board-assist.yml` is at exactly 10 inputs.
 
+### Credential Resolution
+
+After resolving the effective agent, each dispatch path resolves the correct owner credential using a centralized agent-to-provider mapping:
+
+```typescript
+// lib/ai-credentials/types.ts
+export const AGENT_PROVIDER_MAP: Record<Agent, CredentialProvider> = {
+  CLAUDE: 'ANTHROPIC',
+  CODEX:  'OPENAI',
+};
+```
+
+`getOwnerCredential(projectId, provider)` looks up the project owner's `UserCredential` for the specified provider and returns the decrypted env var name and value. The workflow payload includes the resolved env var (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, or `OPENAI_API_KEY`).
+
+**Dispatch path behavior**:
+
+| Path | Credential Source |
+|------|-----------------|
+| `lib/workflows/transition.ts` | `AGENT_PROVIDER_MAP[resolveEffectiveAgent(ticket)]` |
+| `app/lib/workflows/dispatch-rollback-reset.ts` | `AGENT_PROVIDER_MAP[resolveEffectiveAgent(ticket)]` |
+| `app/lib/workflows/dispatch-ai-board.ts` | Always `ANTHROPIC` (ai-board-assist always runs Claude Code) |
+| `lib/health/scan-dispatch.ts` | Always `ANTHROPIC` (health scans always run Claude) |
+
+**Dispatch blocking**: If the project owner has no credential for the required provider, or the credential's `readinessStatus` is not `READY`, the dispatch is blocked with a provider-specific error: `"No <Provider> credential configured. Please add your <Provider> key in Settings → AI Credentials."`
+
 ### Claude Commands
 
 **Implementation Command** (`commands/ai-board.implement.md`):
