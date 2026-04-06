@@ -1287,6 +1287,18 @@ Transition ticket to target stage with workflow dispatch.
 }
 ```
 
+**Error Response** (Dispatch Failed After DB Mutation — rollback paths only):
+```json
+{
+  "error": "Rollback-reset workflow dispatch failed after stage transition to PLAN",
+  "code": "DISPATCH_FAILED_AFTER_MUTATION",
+  "stage": "PLAN",
+  "ticketId": 123
+}
+```
+
+This 500 is returned when the DB stage transition succeeded but the subsequent rollback-reset workflow dispatch failed. The ticket is now in PLAN stage in the database; the client should surface this as an error requiring manual intervention.
+
 ## Comment Endpoints
 
 ### GET /api/projects/:projectId/tickets/:id/comments
@@ -3289,6 +3301,7 @@ All error responses follow a consistent structure:
 | `JOB_NOT_COMPLETED` | Job status blocks transition |
 | `MISSING_JOB` | Expected job not found (data integrity issue) |
 | `ROLLBACK_NOT_ALLOWED` | Rollback conditions not met (wrong workflow type or job status) |
+| `DISPATCH_FAILED_AFTER_MUTATION` | Rollback-reset dispatch failed after DB stage transition succeeded (500) |
 | `VERSION_CONFLICT` | Optimistic concurrency control conflict |
 | `INVALID_TOKEN` | Workflow authentication failed |
 | `VALIDATION_ERROR` | Zod schema validation failed |

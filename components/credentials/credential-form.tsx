@@ -64,6 +64,13 @@ export function CredentialForm() {
     setFormatError(validateFormat(provider, newType, value));
   }
 
+  function getPlaceholder(prov: Provider, type: string): string {
+    if (type === "OAUTH_TOKEN") {
+      return prov === "OPENAI" ? "Paste your Codex token" : "Paste your OAuth token";
+    }
+    return prov === "OPENAI" ? "sk-proj-..." : "sk-ant-api03-...";
+  }
+
   function handleProviderChange(newProvider: Provider) {
     setProvider(newProvider);
     setFormatError(validateFormat(newProvider, credentialType, value));
