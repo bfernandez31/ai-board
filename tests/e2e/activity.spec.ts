@@ -22,14 +22,14 @@ test.describe('Activity Feed Navigation', () => {
   });
 
   test('should navigate to activity page from header icon', async ({ page, projectId }) => {
-    // Wait for the activity link — requires projectInfo to load (async fetch in header)
-    // projectInfo only sets when API returns githubOwner + githubRepo
+    // Wait for the activity link in the icon rail sidebar
     const activityLink = page.locator('a[aria-label="Activity"]').first();
     await activityLink.waitFor({ state: 'visible', timeout: 15000 });
-    await activityLink.click();
 
-    // Verify we're on the activity page
-    await expect(page).toHaveURL(`/projects/${projectId}/activity`);
+    // The link is wrapped in a TooltipTrigger which can intercept clicks in CI.
+    // Use force click to bypass any overlay, then wait for navigation explicitly.
+    await activityLink.click({ force: true });
+    await page.waitForURL(`**/projects/${projectId}/activity`, { timeout: 15000 });
 
     // Verify page title is present
     await expect(page.locator('h1')).toContainText('Activity');

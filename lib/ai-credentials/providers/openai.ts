@@ -10,7 +10,7 @@ export function validateFormat(
   value: string
 ): FormatValidationResult {
   if (credentialType === 'OAUTH_TOKEN') {
-    if (!value || value.length < 1) {
+    if (!value) {
       return { valid: false, error: 'Token value is required' };
     }
     return { valid: true };

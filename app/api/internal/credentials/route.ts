@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 import { getOwnerCredential, buildWorkflowPayload, getMissingCredentialError } from '@/lib/ai-credentials/workflow';
-import type { CredentialProvider } from '@prisma/client';
 
 const querySchema = z.object({
   projectId: z.coerce.number().int().positive(),
+  provider: z.enum(['ANTHROPIC', 'OPENAI']).default('ANTHROPIC'),
 });
 
 export async function GET(request: NextRequest) {
@@ -16,17 +16,17 @@ export async function GET(request: NextRequest) {
 
   const parsed = querySchema.safeParse({
     projectId: request.nextUrl.searchParams.get('projectId'),
+    provider: request.nextUrl.searchParams.get('provider') ?? undefined,
   });
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: 'projectId is required and must be a positive integer' },
+      { error: 'Invalid query parameters', details: parsed.error.flatten().fieldErrors },
       { status: 400 }
     );
   }
 
-  const { projectId } = parsed.data;
-  const provider = (request.nextUrl.searchParams.get('provider') || 'ANTHROPIC') as CredentialProvider;
+  const { projectId, provider } = parsed.data;
 
   try {
     const credential = await getOwnerCredential(projectId, provider);

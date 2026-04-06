@@ -186,6 +186,15 @@ export async function POST(
           resetJobId = dispatchResult.jobId;
         } catch (dispatchError) {
           console.error('[Transition] Failed to dispatch rollback-reset workflow:', dispatchError);
+          return NextResponse.json(
+            {
+              error: 'Rollback-reset workflow dispatch failed after stage transition to PLAN',
+              code: 'DISPATCH_FAILED_AFTER_MUTATION',
+              stage: updatedTicket.stage,
+              ticketId: updatedTicket.id,
+            },
+            { status: 500 }
+          );
         }
       }
 
@@ -289,6 +298,15 @@ export async function POST(
           resetJobId = dispatchResult.jobId;
         } catch (dispatchError) {
           console.error('[Transition] Failed to dispatch rollback-reset for BUILD→PLAN:', dispatchError);
+          return NextResponse.json(
+            {
+              error: 'Rollback-reset workflow dispatch failed after stage transition to PLAN',
+              code: 'DISPATCH_FAILED_AFTER_MUTATION',
+              stage: updatedTicket.stage,
+              ticketId: updatedTicket.id,
+            },
+            { status: 500 }
+          );
         }
       }
 
