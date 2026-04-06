@@ -64,6 +64,14 @@ describe('Workflow Credential Retrieval API', () => {
     expect(response.status).toBe(400);
   });
 
+  it('should return 400 when provider is invalid', async () => {
+    const client = createWorkflowClient();
+    const response = await client.get<{ error: string }>(
+      `/api/internal/credentials?projectId=${ctx.projectId}&provider=INVALID`
+    );
+    expect(response.status).toBe(400);
+  });
+
   it('should return 404 when owner has no credential', async () => {
     const client = createWorkflowClient();
     const response = await client.get<{ error: string }>(
