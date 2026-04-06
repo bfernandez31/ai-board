@@ -51,7 +51,6 @@ export async function GET(
       await verifyProjectAccess(projectId);
     }
 
-    // Get query param
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q')?.trim() ?? '';
     const parsedLimit = parseInt(searchParams.get('limit') ?? '20', 10);
