@@ -333,7 +333,9 @@ export async function handleTicketTransition(
             message: githubError.message,
           });
 
-          await prisma.job.delete({ where: { id: job.id } }).catch(() => {});
+          await prisma.job.delete({ where: { id: job.id } }).catch((deleteError) => {
+            console.warn('Failed to delete job after GitHub dispatch failure:', { jobId: job.id, error: deleteError });
+          });
 
           let errorMessage = 'GitHub workflow dispatch failed';
           if (githubError.status === 401) {
@@ -363,9 +365,10 @@ export async function handleTicketTransition(
     };
   } catch (error) {
     console.error('Error in handleTicketTransition:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,
-      error: 'Internal server error during transition',
+      error: `Transition failed: ${message}`,
     };
   }
 }

@@ -155,7 +155,9 @@ export async function GET(
         try {
           const parsed = JSON.parse(terminal.report);
           return parsed.skipReason ?? null;
-        } catch { /* ignore parse errors */ }
+        } catch (parseError) {
+          console.warn('Failed to parse scan report JSON for skip reason:', { scanType, error: parseError });
+        }
       }
       return null;
     }
