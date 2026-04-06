@@ -1287,6 +1287,13 @@ Transition ticket to target stage with workflow dispatch.
 }
 ```
 
+**Error Response** (Unexpected server error):
+```json
+{
+  "error": "Transition failed: <original error message>"
+}
+```
+
 ## Comment Endpoints
 
 ### GET /api/projects/:projectId/tickets/:id/comments
