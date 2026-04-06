@@ -1287,10 +1287,10 @@ Transition ticket to target stage with workflow dispatch.
 }
 ```
 
-**Error Response** (Unexpected server error):
+**Error Response** (500 — Unexpected server error):
 ```json
 {
-  "error": "Transition failed: <original error message>"
+  "error": "Internal server error"
 }
 ```
 

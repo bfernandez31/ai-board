@@ -365,10 +365,9 @@ export async function handleTicketTransition(
     };
   } catch (error) {
     console.error('Error in handleTicketTransition:', error);
-    const message = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,
-      error: `Transition failed: ${message}`,
+      error: 'Internal server error during transition',
     };
   }
 }
