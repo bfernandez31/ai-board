@@ -93,6 +93,13 @@ export function CredentialForm() {
     }
   }
 
+  function getPlaceholder(prov: Provider, type: string): string {
+    if (type === "OAUTH_TOKEN") {
+      return prov === "OPENAI" ? "Paste your Codex token" : "Paste your OAuth token";
+    }
+    return prov === "OPENAI" ? "sk-proj-..." : "sk-ant-api03-...";
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -142,12 +149,7 @@ export function CredentialForm() {
         <Input
           id="value"
           type="password"
-          placeholder={
-            provider === "OPENAI"
-              ? credentialType === "OAUTH_TOKEN" ? "Paste your Codex token" : "sk-proj-..."
-              : credentialType === "OAUTH_TOKEN" ? "Paste your OAuth token"
-              : "sk-ant-api03-..."
-          }
+          placeholder={getPlaceholder(provider, credentialType)}
           value={value}
           onChange={(e) => handleValueChange(e.target.value)}
           required
