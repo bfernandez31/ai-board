@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // OAuth tokens skip live verification (Anthropic-only feature)
-    const verificationResult = validated.provider === 'ANTHROPIC' && validated.credentialType === 'OAUTH_TOKEN'
+    // OAuth tokens skip live verification (format-only validation)
+    const verificationResult = validated.credentialType === 'OAUTH_TOKEN'
       ? { readinessStatus: 'READY' as const, verificationCode: 'SKIPPED' as const, verificationMessage: null }
       : await providerModule.verifyWithProvider(validated.credentialType, validated.value);
 

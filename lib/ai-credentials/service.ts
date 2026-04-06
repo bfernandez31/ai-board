@@ -110,8 +110,8 @@ export async function testCredential(
 
   const credentialType = credential.credentialType as 'API_KEY' | 'OAUTH_TOKEN';
 
-  // OAuth tokens skip provider verification (Anthropic-only feature)
-  if (credential.provider === 'ANTHROPIC' && credentialType === 'OAUTH_TOKEN') {
+  // OAuth tokens skip provider verification (format-only validation)
+  if (credentialType === 'OAUTH_TOKEN') {
     const result: VerificationResult = {
       readinessStatus: 'READY',
       verificationCode: 'SKIPPED',

@@ -4438,7 +4438,7 @@ Create or replace a credential for the given provider. If a credential already e
 - `credentialType`: Required, valid `CredentialType` enum value
 - `label`: Required, 1–100 characters
 - `value`: Required, format validated per provider and type (e.g., `/^sk-ant-api\d{2}-[A-Za-z0-9_-]{80,}$/` for Anthropic API keys; `sk-` prefix + minimum 20 characters for OpenAI API keys)
-- `credentialType`: Must be `API_KEY` when `provider` is `OPENAI` — `OAUTH_TOKEN` is not supported for OpenAI
+- `credentialType`: Both `API_KEY` and `OAUTH_TOKEN` are supported for all providers. `OAUTH_TOKEN` credentials skip live provider verification (format-only validation)
 
 **Server-side behavior**:
 1. Validate input format (Zod)
@@ -4466,7 +4466,7 @@ Create or replace a credential for the given provider. If a credential already e
 ```
 
 **Errors**:
-- `400`: Invalid credential format (`{ "error": "Invalid <Provider> API key format" }`) or unsupported credential type for provider (`{ "error": "OPENAI provider only supports API_KEY credentials" }`)
+- `400`: Invalid credential format (`{ "error": "Invalid <Provider> API key format" }`)
 - `401`: Not authenticated
 - `422`: Provider validation failed — `{ "error": "...", "code": "INVALID_KEY" }` or `{ "error": "...", "code": "PROVIDER_UNREACHABLE" }`
 

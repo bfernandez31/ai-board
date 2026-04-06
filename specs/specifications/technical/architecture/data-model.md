@@ -1068,7 +1068,7 @@ Extensible enumeration — new providers can be added without structural schema 
 ```prisma
 enum CredentialType {
   API_KEY      // Provider API key (e.g., sk-ant-api03-... for Anthropic, sk-... for OpenAI)
-  OAUTH_TOKEN  // OAuth bearer token (Anthropic only)
+  OAUTH_TOKEN  // OAuth bearer token (e.g., Claude Code OAuth, Codex license token)
 }
 ```
 
@@ -1076,10 +1076,11 @@ enum CredentialType {
 - `ANTHROPIC:API_KEY` → `ANTHROPIC_API_KEY`
 - `ANTHROPIC:OAUTH_TOKEN` → `CLAUDE_CODE_OAUTH_TOKEN`
 - `OPENAI:API_KEY` → `OPENAI_API_KEY`
+- `OPENAI:OAUTH_TOKEN` → `OPENAI_API_KEY`
 
 **Provider constraints**:
 - `ANTHROPIC`: supports `API_KEY` and `OAUTH_TOKEN`
-- `OPENAI`: supports `API_KEY` only
+- `OPENAI`: supports `API_KEY` and `OAUTH_TOKEN`
 
 ### CredentialReadiness
 

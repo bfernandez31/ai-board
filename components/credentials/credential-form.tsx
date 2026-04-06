@@ -35,6 +35,7 @@ export function CredentialForm() {
           return "API key appears too short";
         }
       }
+      // OAUTH_TOKEN: no format constraint
       return null;
     }
     // ANTHROPIC
@@ -65,12 +66,7 @@ export function CredentialForm() {
 
   function handleProviderChange(newProvider: Provider) {
     setProvider(newProvider);
-    if (newProvider === "OPENAI") {
-      setCredentialType("API_KEY");
-      setFormatError(validateFormat(newProvider, "API_KEY", value));
-    } else {
-      setFormatError(validateFormat(newProvider, credentialType, value));
-    }
+    setFormatError(validateFormat(newProvider, credentialType, value));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -97,8 +93,6 @@ export function CredentialForm() {
     }
   }
 
-  const isOpenAI = provider === "OPENAI";
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -117,15 +111,13 @@ export function CredentialForm() {
 
         <div className="space-y-2">
           <Label htmlFor="credentialType">Credential Type</Label>
-          <Select value={credentialType} onValueChange={handleTypeChange} disabled={isOpenAI}>
+          <Select value={credentialType} onValueChange={handleTypeChange}>
             <SelectTrigger id="credentialType">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="API_KEY">API Key</SelectItem>
-              {!isOpenAI && (
-                <SelectItem value="OAUTH_TOKEN">OAuth Token</SelectItem>
-              )}
+              <SelectItem value="OAUTH_TOKEN">OAuth Token</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -151,7 +143,8 @@ export function CredentialForm() {
           id="value"
           type="password"
           placeholder={
-            isOpenAI ? "sk-proj-..."
+            provider === "OPENAI"
+              ? credentialType === "OAUTH_TOKEN" ? "Paste your Codex token" : "sk-proj-..."
               : credentialType === "OAUTH_TOKEN" ? "Paste your OAuth token"
               : "sk-ant-api03-..."
           }

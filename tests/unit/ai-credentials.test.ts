@@ -171,11 +171,15 @@ describe('ai-credentials/providers/openai - validateFormat', () => {
     });
   });
 
-  describe('OAUTH_TOKEN rejection', () => {
-    it('should reject OAUTH_TOKEN for OpenAI', () => {
+  describe('OAUTH_TOKEN format', () => {
+    it('should accept OAUTH_TOKEN for OpenAI', () => {
       const result = validateOpenAIFormat('OAUTH_TOKEN', 'a'.repeat(40));
+      expect(result.valid).toBe(true);
+    });
+
+    it('should reject empty OAUTH_TOKEN for OpenAI', () => {
+      const result = validateOpenAIFormat('OAUTH_TOKEN', '');
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('does not support OAuth');
     });
   });
 });

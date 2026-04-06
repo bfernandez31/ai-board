@@ -10,7 +10,10 @@ export function validateFormat(
   value: string
 ): FormatValidationResult {
   if (credentialType === 'OAUTH_TOKEN') {
-    return { valid: false, error: 'OpenAI does not support OAuth tokens. Use API_KEY instead.' };
+    if (!value || value.length < 1) {
+      return { valid: false, error: 'Token value is required' };
+    }
+    return { valid: true };
   }
 
   if (credentialType === 'API_KEY') {

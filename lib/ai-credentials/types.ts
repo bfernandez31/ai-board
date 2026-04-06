@@ -59,13 +59,14 @@ export const AGENT_PROVIDER_MAP: Record<Agent, CredentialProvider> = {
 
 export const PROVIDER_ALLOWED_TYPES: Record<CredentialProvider, CredentialType[]> = {
   ANTHROPIC: ['API_KEY', 'OAUTH_TOKEN'],
-  OPENAI: ['API_KEY'],
+  OPENAI: ['API_KEY', 'OAUTH_TOKEN'],
 };
 
 export const ENV_VAR_MAP: Record<string, string> = {
   'ANTHROPIC:API_KEY': 'ANTHROPIC_API_KEY',
   'ANTHROPIC:OAUTH_TOKEN': 'CLAUDE_CODE_OAUTH_TOKEN',
   'OPENAI:API_KEY': 'OPENAI_API_KEY',
+  'OPENAI:OAUTH_TOKEN': 'OPENAI_API_KEY',
 };
 
 export function getEnvVar(provider: CredentialProvider, credentialType: CredentialType): string {

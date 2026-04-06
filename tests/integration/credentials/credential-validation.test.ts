@@ -98,16 +98,24 @@ describe('Credential Format Validation', () => {
       expect(response.data.error).toContain('must start with "sk-"');
     });
 
-    it('should reject OPENAI + OAUTH_TOKEN combination', async () => {
-      const response = await ctx.api.post<{ error: string }>('/api/credentials', {
+    it('should accept OPENAI + OAUTH_TOKEN combination with SKIPPED verification', async () => {
+      const response = await ctx.api.post<{
+        provider: string;
+        credentialType: string;
+        readinessStatus: string;
+        verificationCode: string;
+      }>('/api/credentials', {
         provider: 'OPENAI',
         credentialType: 'OAUTH_TOKEN',
         label: '[e2e] OpenAI OAuth',
         value: 'a'.repeat(40),
       });
 
-      expect(response.status).toBe(400);
-      expect(response.data.error).toContain('only supports API_KEY');
+      expect(response.status).toBe(201);
+      expect(response.data.provider).toBe('OPENAI');
+      expect(response.data.credentialType).toBe('OAUTH_TOKEN');
+      expect(response.data.readinessStatus).toBe('READY');
+      expect(response.data.verificationCode).toBe('SKIPPED');
     });
 
     it('should reject OpenAI key that is too short', async () => {
