@@ -76,6 +76,17 @@ describe('Ticket Search Autocomplete', () => {
       expect(response.data.results.length).toBeLessThanOrEqual(2);
     });
 
+    it('should fallback to default limit when limit is non-numeric', async () => {
+      await ctx.createTicket({ title: '[e2e] NaN Limit Test' });
+
+      const response = await ctx.api.get<SearchResponse>(
+        `/api/projects/${ctx.projectId}/tickets/search?q=NaN Limit&limit=abc`
+      );
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.data.results)).toBe(true);
+    });
+
     it('should return 400 for query less than 2 characters', async () => {
       const response = await ctx.api.get<{ error: string }>(
         `/api/projects/${ctx.projectId}/tickets/search?q=A`

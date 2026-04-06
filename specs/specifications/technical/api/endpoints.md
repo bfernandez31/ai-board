@@ -4535,7 +4535,7 @@ Internal endpoint called by GitHub Actions workflows to retrieve the decrypted c
 
 **Server-side behavior**:
 1. Verify workflow token
-2. Validate `projectId` is a positive integer (Zod schema)
+2. Validate `projectId` (positive integer) and `provider` (enum: `ANTHROPIC` | `OPENAI`) via Zod schema; reject unknown providers with 400
 3. Look up project → get owner `userId`
 4. Find `UserCredential` for owner matching the requested `provider`
 5. Decrypt credential with AES-256-GCM
@@ -4555,7 +4555,7 @@ Internal endpoint called by GitHub Actions workflows to retrieve the decrypted c
 The `envVar` field reflects the resolved provider and type: `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, or `OPENAI_API_KEY`. The `value` field is always base64-encoded. Callers must decode it before use (e.g., `echo "$VALUE" | base64 -d`). The response includes `Cache-Control: no-store, no-cache, must-revalidate` and `Pragma: no-cache` headers to prevent credential caching.
 
 **Errors**:
-- `400`: `{ "error": "projectId is required and must be a positive integer" }`
+- `400`: `{ "error": "Invalid query parameters", "details": { ... } }` — invalid `projectId` or unrecognized `provider` value
 - `401`: Missing or invalid workflow token
 - `404`: `{ "error": "No <Provider> credential configured for project owner. Please add your <Provider> key in Settings → AI Credentials." }`
 
