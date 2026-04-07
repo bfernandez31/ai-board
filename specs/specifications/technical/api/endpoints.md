@@ -67,6 +67,15 @@ Fetch all projects for the authenticated user with shipping status.
         "ticketKey": "ABC-5",
         "title": "Add user authentication",
         "updatedAt": "2025-01-14T16:20:00.000Z"
+      },
+      "healthScore": {
+        "globalScore": 82,
+        "securityScore": 90,
+        "complianceScore": 78,
+        "testsScore": null,
+        "specSyncScore": 65,
+        "qualityGate": 88,
+        "reviewQualityScore": 75
       }
     },
     {
@@ -82,7 +91,8 @@ Fetch all projects for the authenticated user with shipping status.
       "createdAt": "2025-01-05T00:00:00.000Z",
       "updatedAt": "2025-01-10T08:15:00.000Z",
       "ticketCount": 5,
-      "lastShippedTicket": null
+      "lastShippedTicket": null,
+      "healthScore": null
     }
   ]
 }
@@ -95,6 +105,9 @@ Fetch all projects for the authenticated user with shipping status.
   - `ticketKey`: Unique ticket identifier (e.g., "ABC-5")
   - `title`: Ticket title
   - `updatedAt`: When ticket was moved to SHIP stage (used for relative time display)
+- `healthScore`: Cached aggregate health score (null if no scan has ever completed)
+  - `globalScore`: Overall score 0–100, or null if no modules have been scanned
+  - `securityScore`, `complianceScore`, `testsScore`, `specSyncScore`, `qualityGate`, `reviewQualityScore`: Individual module scores 0–100, or null if that module has never been scanned
 
 **Frontend Display**:
 - Project cards display ticketKey (bold) followed by title
