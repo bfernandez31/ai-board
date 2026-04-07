@@ -91,12 +91,7 @@ export async function GET(
       return scoreB - scoreA;
     });
 
-    const results: SearchResult[] = sortedTickets.map(({ id, ticketKey, title, stage }) => ({
-      id,
-      ticketKey,
-      title,
-      stage,
-    }));
+    const results: SearchResult[] = sortedTickets;
 
     const response: SearchResponse = {
       results,
