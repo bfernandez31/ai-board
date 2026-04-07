@@ -166,8 +166,13 @@ export async function PATCH(
     // Compute Quality Gate score before the transaction (read-only query)
     let qualityGateScore: number | null = null;
     if (effectiveStatus === 'COMPLETED' && data.score !== undefined) {
-      const qgData = await getQualityGateData(projectId);
-      qualityGateScore = qgData.averageScore;
+      try {
+        const qgData = await getQualityGateData(projectId);
+        qualityGateScore = qgData.averageScore;
+      } catch (qualityGateError) {
+        console.error('[Health Scan Status] Failed to compute Quality Gate score:', qualityGateError);
+        qualityGateScore = null;
+      }
     }
 
     // Update scan and HealthScore aggregate in a single transaction
@@ -185,7 +190,7 @@ export async function PATCH(
         const scoreUpdate: Record<string, unknown> = {
           [scoreField]: data.score,
           [dateField]: now,
-          qualityGate: qualityGateScore,
+          ...(qualityGateScore !== null ? { qualityGate: qualityGateScore } : {}),
         };
 
         const healthScore = await tx.healthScore.upsert({
