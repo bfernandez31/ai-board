@@ -16,7 +16,7 @@
 
 **Purpose**: Establish the shared typed contract that all list, API, and UI work will consume.
 
-- [ ] T001 Define `ProjectHealthSummary`, `ProjectHealthSubScores`, and the extended `ProjectWithCount` response shape in /home/runner/work/ai-board/ai-board/target/app/lib/types/project.ts
+- [X] T001 Define `ProjectHealthSummary`, `ProjectHealthSubScores`, and the extended `ProjectWithCount` response shape in /home/runner/work/ai-board/ai-board/target/app/lib/types/project.ts
 
 ---
 
@@ -26,8 +26,8 @@
 
 **⚠️ CRITICAL**: No user story work should begin until these tasks are done.
 
-- [ ] T002 [P] Extend `getUserProjects()` to select the persisted `healthScore` fields needed by project cards in /home/runner/work/ai-board/ai-board/target/lib/db/projects.ts
-- [ ] T003 [P] Add a batched project-list Quality Gate aggregation helper that returns current averages by project ID in /home/runner/work/ai-board/ai-board/target/lib/health/quality-gate.ts
+- [X] T002 [P] Extend `getUserProjects()` to select the persisted `healthScore` fields needed by project cards in /home/runner/work/ai-board/ai-board/target/lib/db/projects.ts
+- [X] T003 [P] Add a batched project-list Quality Gate aggregation helper that returns current averages by project ID in /home/runner/work/ai-board/ai-board/target/lib/health/quality-gate.ts
 
 **Checkpoint**: The projects list can now obtain every raw health input in one server-side load.
 
@@ -41,14 +41,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T004 [US1] Extend scored and no-data `GET /api/projects` health summary coverage in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/crud.test.ts
+- [X] T004 [US1] Extend scored and no-data `GET /api/projects` health summary coverage in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/crud.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T005 [P] [US1] Map selected health inputs into `healthSummary` for the server-rendered Projects page in /home/runner/work/ai-board/ai-board/target/app/projects/page.tsx
-- [ ] T006 [P] [US1] Map selected health inputs into the `GET /api/projects` response using the contract in /home/runner/work/ai-board/ai-board/target/app/api/projects/route.ts
-- [ ] T007 [P] [US1] Create the scored and no-data heart indicator UI with accessible overall-score labeling in /home/runner/work/ai-board/ai-board/target/components/projects/project-health-indicator.tsx
-- [ ] T008 [US1] Render the health indicator in the project-card header without displacing the existing menu or card content in /home/runner/work/ai-board/ai-board/target/components/projects/project-card.tsx
+- [X] T005 [P] [US1] Map selected health inputs into `healthSummary` for the server-rendered Projects page in /home/runner/work/ai-board/ai-board/target/app/projects/page.tsx
+- [X] T006 [P] [US1] Map selected health inputs into the `GET /api/projects` response using the contract in /home/runner/work/ai-board/ai-board/target/app/api/projects/route.ts
+- [X] T007 [P] [US1] Create the scored and no-data heart indicator UI with accessible overall-score labeling in /home/runner/work/ai-board/ai-board/target/components/projects/project-health-indicator.tsx
+- [X] T008 [US1] Render the health indicator in the project-card header without displacing the existing menu or card content in /home/runner/work/ai-board/ai-board/target/components/projects/project-card.tsx
 
 **Checkpoint**: User Story 1 is complete when project cards show correct overall health at first render and the integration test passes.
 
@@ -62,11 +62,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T009 [US2] Create project-card popover coverage for six sub-score rows and null-value rendering in /home/runner/work/ai-board/ai-board/target/tests/unit/components/projects/project-card.test.tsx
+- [X] T009 [US2] Create project-card popover coverage for six sub-score rows and null-value rendering in /home/runner/work/ai-board/ai-board/target/tests/unit/components/projects/project-card.test.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Extend the indicator into a read-only popover that renders the six canonical sub-scores with score-band styling in /home/runner/work/ai-board/ai-board/target/components/projects/project-health-indicator.tsx
+- [X] T010 [US2] Extend the indicator into a read-only popover that renders the six canonical sub-scores with score-band styling in /home/runner/work/ai-board/ai-board/target/components/projects/project-health-indicator.tsx
 
 **Checkpoint**: User Story 2 is complete when the popover explains every score driver without introducing links, buttons, or workflow actions.
 
@@ -80,12 +80,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T011 [US3] Extend project-card interaction regression coverage for card navigation isolation and indicator click behavior in /home/runner/work/ai-board/ai-board/target/tests/unit/components/projects/project-card.test.tsx
+- [X] T011 [US3] Extend project-card interaction regression coverage for card navigation isolation and indicator click behavior in /home/runner/work/ai-board/ai-board/target/tests/unit/components/projects/project-card.test.tsx
 
 ### Implementation for User Story 3
 
-- [ ] T012 [US3] Update project-card interaction guards so the health indicator and its popover do not trigger card navigation while normal card clicks still route to the board in /home/runner/work/ai-board/ai-board/target/components/projects/project-card.tsx
-- [ ] T013 [US3] Refine the indicator trigger and popover behavior for keyboard focus, non-visual labels, and compact card-header placement in /home/runner/work/ai-board/ai-board/target/components/projects/project-health-indicator.tsx
+- [X] T012 [US3] Update project-card interaction guards so the health indicator and its popover do not trigger card navigation while normal card clicks still route to the board in /home/runner/work/ai-board/ai-board/target/components/projects/project-card.tsx
+- [X] T013 [US3] Refine the indicator trigger and popover behavior for keyboard focus, non-visual labels, and compact card-header placement in /home/runner/work/ai-board/ai-board/target/components/projects/project-health-indicator.tsx
 
 **Checkpoint**: User Story 3 is complete when the new indicator adds information without changing existing project-card behavior.
 
@@ -95,8 +95,8 @@
 
 **Purpose**: Final validation across all stories and shared quality gates.
 
-- [ ] T014 Run the targeted validation commands from /home/runner/work/ai-board/ai-board/target/specs/AIB-548-display-health-score/quickstart.md against /home/runner/work/ai-board/ai-board/target/tests/unit/components/projects/project-card.test.tsx and /home/runner/work/ai-board/ai-board/target/tests/integration/projects/crud.test.ts
-- [ ] T015 Run repository-wide verification for the changed surface with `bun run type-check` and `bun run lint` from /home/runner/work/ai-board/ai-board/target
+- [X] T014 Run the targeted validation commands from /home/runner/work/ai-board/ai-board/target/specs/AIB-548-display-health-score/quickstart.md against /home/runner/work/ai-board/ai-board/target/tests/unit/components/projects/project-card.test.tsx and /home/runner/work/ai-board/ai-board/target/tests/integration/projects/crud.test.ts
+- [X] T015 Run repository-wide verification for the changed surface with `bun run type-check` and `bun run lint` from /home/runner/work/ai-board/ai-board/target
 
 ---
 

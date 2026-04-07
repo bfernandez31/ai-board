@@ -33,6 +33,64 @@ export interface QualityGateDetails {
   trendData: QualityGateTrendPoint[];
 }
 
+export async function getQualityGateAveragesByProjectId(
+  projectIds: number[],
+): Promise<Map<number, number | null>> {
+  const uniqueProjectIds = [...new Set(projectIds)];
+  const averages = new Map<number, number | null>(
+    uniqueProjectIds.map((projectId) => [projectId, null]),
+  );
+
+  if (uniqueProjectIds.length === 0) {
+    return averages;
+  }
+
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const jobs = await prisma.job.findMany({
+    where: {
+      command: 'verify',
+      status: 'COMPLETED',
+      qualityScore: { not: null },
+      completedAt: { gte: thirtyDaysAgo },
+      ticket: {
+        is: {
+          projectId: { in: uniqueProjectIds },
+          workflowType: 'FULL' as WorkflowType,
+          stage: 'SHIP' as Stage,
+        },
+      },
+    },
+    select: {
+      qualityScore: true,
+      ticket: {
+        select: {
+          projectId: true,
+        },
+      },
+    },
+  });
+
+  const totals = new Map<number, { total: number; count: number }>();
+
+  for (const job of jobs) {
+    if (job.qualityScore === null) {
+      continue;
+    }
+
+    const current = totals.get(job.ticket.projectId) ?? { total: 0, count: 0 };
+    current.total += job.qualityScore;
+    current.count += 1;
+    totals.set(job.ticket.projectId, current);
+  }
+
+  for (const [projectId, { total, count }] of totals) {
+    averages.set(projectId, Math.round(total / count));
+  }
+
+  return averages;
+}
+
 /**
  * Compute the threshold distribution for a set of scores.
  */

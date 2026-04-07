@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
-import { getUserProjects, createProject } from '@/lib/db/projects';
+import {
+  createProject,
+  getUserProjects,
+  mapProjectToProjectWithCount,
+} from '@/lib/db/projects';
 import type { ProjectsListResponse } from '@/app/lib/types/project';
 import { generateProjectKey, isValidProjectKey, isProjectKeyAvailable } from '@/app/lib/utils/generate-project-key';
 import { z } from 'zod';
@@ -9,6 +13,7 @@ import { getUserSubscription } from '@/lib/billing/subscription';
 import { prisma } from '@/lib/db/client';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
 import { syncProjectConfig } from '@/lib/config-sync';
+import { getQualityGateAveragesByProjectId } from '@/lib/health/quality-gate';
 
 // Validation schema for project creation
 const createProjectSchema = z.object({
@@ -24,25 +29,16 @@ export async function GET(request: NextRequest) {
     // Fetch user's projects with ticket counts (userId filtering applied)
     // Pass request for PAT authentication support
     const projects = await getUserProjects(request);
+    const qualityGateAverages = await getQualityGateAveragesByProjectId(
+      projects.map((project) => project.id),
+    );
 
-    // Transform to API response shape
-    const response: ProjectsListResponse = projects.map((project) => ({
-      id: project.id,
-      key: project.key,
-      name: project.name,
-      description: project.description,
-      githubOwner: project.githubOwner,
-      githubRepo: project.githubRepo,
-      deploymentUrl: project.deploymentUrl,
-      updatedAt: project.updatedAt.toISOString(),
-      ticketCount: project._count.tickets,
-      lastShippedTicket: project.tickets[0] ? {
-        id: project.tickets[0].id,
-        ticketKey: project.tickets[0].ticketKey,
-        title: project.tickets[0].title,
-        updatedAt: project.tickets[0].updatedAt.toISOString(),
-      } : null,
-    }));
+    const response: ProjectsListResponse = projects.map((project) =>
+      mapProjectToProjectWithCount(
+        project,
+        qualityGateAverages.get(project.id) ?? null,
+      ),
+    );
 
     return NextResponse.json(response);
   } catch (error) {

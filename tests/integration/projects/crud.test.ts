@@ -7,9 +7,11 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
+import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 
 describe('Projects CRUD', () => {
   let ctx: TestContext;
+  const prisma = getPrismaClient();
 
   beforeEach(async () => {
     ctx = await getTestContext();
@@ -94,6 +96,115 @@ describe('Projects CRUD', () => {
       expect(response.status).toBe(200);
       const projectIds = response.data.map((p) => p.id);
       expect(projectIds).toContain(ctx.projectId);
+    });
+
+    it('should include scored and no-data health summaries', async () => {
+      const noDataProject = await ctx.createProject('[e2e] No Health Project');
+
+      await prisma.healthScore.create({
+        data: {
+          projectId: ctx.projectId,
+          globalScore: 10,
+          securityScore: 88,
+          complianceScore: 91,
+          testsScore: 74,
+          specSyncScore: 70,
+          reviewQualityScore: 82,
+          lastSecurityScan: new Date('2026-04-01T12:00:00.000Z'),
+          lastComplianceScan: new Date('2026-04-01T12:00:00.000Z'),
+          lastTestsScan: new Date('2026-04-01T12:00:00.000Z'),
+          lastSpecSyncScan: new Date('2026-04-01T12:00:00.000Z'),
+          lastReviewQualityScan: new Date('2026-04-01T12:00:00.000Z'),
+        },
+      });
+
+      const shipTicket = await prisma.ticket.create({
+        data: {
+          projectId: ctx.projectId,
+          ticketNumber: 5481,
+          ticketKey: 'E2E-5481',
+          title: '[e2e] Health Summary Ticket',
+          description: '[e2e] Health summary coverage',
+          workflowType: 'FULL',
+          stage: 'SHIP',
+        },
+      });
+
+      await prisma.job.create({
+        data: {
+          ticketId: shipTicket.id,
+          projectId: ctx.projectId,
+          command: 'verify',
+          status: 'COMPLETED',
+          qualityScore: 79,
+          updatedAt: new Date('2026-04-01T13:00:00.000Z'),
+          completedAt: new Date('2026-04-01T13:00:00.000Z'),
+        },
+      });
+
+      const response = await ctx.api.get<Array<{
+        id: number;
+        healthSummary: {
+          globalScore: number | null;
+          label: string;
+          color: { text: string; bg: string; fill: string };
+          subScores: {
+            security: number | null;
+            compliance: number | null;
+            tests: number | null;
+            specSync: number | null;
+            qualityGate: number | null;
+            reviewQuality: number | null;
+          };
+        };
+      }>>('/api/projects');
+
+      expect(response.status).toBe(200);
+
+      const scoredProject = response.data.find((project) => project.id === ctx.projectId);
+      const emptyProject = response.data.find((project) => project.id === noDataProject.id);
+
+      expect(scoredProject).toMatchObject({
+        id: ctx.projectId,
+        healthSummary: {
+          globalScore: 81,
+          label: 'Good',
+          color: {
+            text: 'text-ctp-blue',
+            bg: 'bg-ctp-blue/10',
+            fill: 'bg-ctp-blue',
+          },
+          subScores: {
+            security: 88,
+            compliance: 91,
+            tests: 74,
+            specSync: 70,
+            qualityGate: 79,
+            reviewQuality: 82,
+          },
+        },
+      });
+
+      expect(emptyProject).toMatchObject({
+        id: noDataProject.id,
+        healthSummary: {
+          globalScore: null,
+          label: 'No data yet',
+          color: {
+            text: 'text-muted-foreground',
+            bg: 'bg-muted',
+            fill: 'bg-muted',
+          },
+          subScores: {
+            security: null,
+            compliance: null,
+            tests: null,
+            specSync: null,
+            qualityGate: null,
+            reviewQuality: null,
+          },
+        },
+      });
     });
   });
 

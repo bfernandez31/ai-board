@@ -3,6 +3,101 @@ import type { Project, ClarificationPolicy, Agent } from '@prisma/client';
 import type { NextRequest } from 'next/server';
 import { requireAuth } from './users';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
+import type {
+  ProjectHealthLabel,
+  ProjectHealthSummary,
+  ProjectWithCount,
+} from '@/app/lib/types/project';
+import {
+  calculateGlobalScore,
+  getScoreColorConfig,
+  getScoreLabel,
+} from '@/lib/health/score-calculator';
+
+interface ProjectListHealthScore {
+  securityScore: number | null;
+  complianceScore: number | null;
+  testsScore: number | null;
+  specSyncScore: number | null;
+  reviewQualityScore: number | null;
+}
+
+interface ProjectListRecord {
+  id: number;
+  key: string;
+  name: string;
+  description: string;
+  githubOwner: string;
+  githubRepo: string;
+  deploymentUrl: string | null;
+  updatedAt: Date;
+  _count: {
+    tickets: number;
+  };
+  tickets: Array<{
+    id: number;
+    ticketKey: string;
+    title: string;
+    updatedAt: Date;
+  }>;
+  healthScore: ProjectListHealthScore | null;
+}
+
+export function buildProjectHealthSummary(
+  healthScore: ProjectListHealthScore | null,
+  qualityGateScore: number | null,
+): ProjectHealthSummary {
+  const subScores = {
+    security: healthScore?.securityScore ?? null,
+    compliance: healthScore?.complianceScore ?? null,
+    tests: healthScore?.testsScore ?? null,
+    specSync: healthScore?.specSyncScore ?? null,
+    qualityGate: qualityGateScore,
+    reviewQuality: healthScore?.reviewQualityScore ?? null,
+  };
+
+  const globalScore = calculateGlobalScore({
+    securityScore: subScores.security,
+    complianceScore: subScores.compliance,
+    testsScore: subScores.tests,
+    specSyncScore: subScores.specSync,
+    qualityGate: subScores.qualityGate,
+    reviewQualityScore: subScores.reviewQuality,
+  });
+
+  return {
+    globalScore,
+    label: getScoreLabel(globalScore) as ProjectHealthLabel,
+    color: getScoreColorConfig(globalScore),
+    subScores,
+  };
+}
+
+export function mapProjectToProjectWithCount(
+  project: ProjectListRecord,
+  qualityGateScore: number | null,
+): ProjectWithCount {
+  return {
+    id: project.id,
+    key: project.key,
+    name: project.name,
+    description: project.description,
+    githubOwner: project.githubOwner,
+    githubRepo: project.githubRepo,
+    deploymentUrl: project.deploymentUrl,
+    updatedAt: project.updatedAt.toISOString(),
+    ticketCount: project._count.tickets,
+    lastShippedTicket: project.tickets[0]
+      ? {
+          id: project.tickets[0].id,
+          ticketKey: project.tickets[0].ticketKey,
+          title: project.tickets[0].title,
+          updatedAt: project.tickets[0].updatedAt.toISOString(),
+        }
+      : null,
+    healthSummary: buildProjectHealthSummary(project.healthScore, qualityGateScore),
+  };
+}
 
 /**
  * Retrieve a project by its ID
@@ -60,6 +155,15 @@ export async function getUserProjects(request?: NextRequest) {
           title: true,
           updatedAt: true,
         }
+      },
+      healthScore: {
+        select: {
+          securityScore: true,
+          complianceScore: true,
+          testsScore: true,
+          specSyncScore: true,
+          reviewQualityScore: true,
+        },
       }
     },
     orderBy: { updatedAt: 'desc' },
