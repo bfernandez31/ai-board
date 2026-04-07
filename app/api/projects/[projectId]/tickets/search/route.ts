@@ -91,9 +91,11 @@ export async function GET(
       return scoreB - scoreA;
     });
 
+    const results: SearchResult[] = sortedTickets;
+
     const response: SearchResponse = {
-      results: sortedTickets as SearchResult[],
-      totalCount: sortedTickets.length,
+      results,
+      totalCount: results.length,
     };
 
     return NextResponse.json(response);

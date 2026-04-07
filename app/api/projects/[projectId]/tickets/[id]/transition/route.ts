@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Stage, type Job, type WorkflowType } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
+import type { Prisma } from '@prisma/client';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
 import {
@@ -39,7 +40,7 @@ function validateRollback(
 /** Common transaction: update ticket and delete most recent job. */
 async function rollbackTransaction(
   ticketId: number,
-  updateData: Record<string, unknown>,
+  updateData: Prisma.TicketUpdateInput,
   mostRecentJob: Job | null
 ) {
   return prisma.$transaction(async (tx) => {
