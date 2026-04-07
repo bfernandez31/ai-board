@@ -226,11 +226,10 @@ describe('Scan Status PATCH Endpoint', () => {
       where: { id: ticketId },
       data: { workflowType: 'FULL' },
     });
-    const ticket = { id: ticketId };
 
     await prisma.job.create({
       data: {
-        ticketId: ticket.id,
+        ticketId,
         projectId: ctx.projectId,
         command: 'verify',
         status: 'COMPLETED',
