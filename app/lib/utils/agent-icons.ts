@@ -1,25 +1,53 @@
 import { Agent } from '@prisma/client';
 
+const AGENT_METADATA: Record<
+  Agent,
+  {
+    description: string;
+    iconPath: string;
+    label: string;
+  }
+> = {
+  [Agent.CLAUDE]: {
+    description: 'Anthropic Claude Code',
+    iconPath: '/agents/claude.svg',
+    label: 'Claude',
+  },
+  [Agent.CODEX]: {
+    description: 'OpenAI Codex',
+    iconPath: '/agents/codex.svg',
+    label: 'Codex',
+  },
+};
+
 export function getAgentIconPath(agent: Agent): string {
-  const paths: Record<Agent, string> = {
-    [Agent.CLAUDE]: '/agents/claude.svg',
-    [Agent.CODEX]: '/agents/codex.svg',
-  };
-  return paths[agent];
+  return AGENT_METADATA[agent].iconPath;
 }
 
 export function getAgentLabel(agent: Agent): string {
-  const labels: Record<Agent, string> = {
-    [Agent.CLAUDE]: 'Claude',
-    [Agent.CODEX]: 'Codex',
-  };
-  return labels[agent];
+  return AGENT_METADATA[agent].label;
 }
 
 export function getAgentDescription(agent: Agent): string {
-  const descriptions: Record<Agent, string> = {
-    [Agent.CLAUDE]: 'Anthropic Claude Code',
-    [Agent.CODEX]: 'OpenAI Codex',
-  };
-  return descriptions[agent];
+  return AGENT_METADATA[agent].description;
+}
+
+export function inferAgentFromIdentifier(agentIdentifier: string | null | undefined): Agent | null {
+  if (!agentIdentifier) return null;
+
+  const normalizedIdentifier = agentIdentifier.trim().toLowerCase();
+  const isCodexIdentifier =
+    normalizedIdentifier.includes('codex') ||
+    normalizedIdentifier.includes('openai') ||
+    normalizedIdentifier.includes('gpt-');
+
+  if (normalizedIdentifier.includes('claude')) {
+    return Agent.CLAUDE;
+  }
+
+  if (isCodexIdentifier) {
+    return Agent.CODEX;
+  }
+
+  return null;
 }

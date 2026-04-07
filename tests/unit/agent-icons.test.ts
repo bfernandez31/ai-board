@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Agent } from '@prisma/client';
-import { getAgentIconPath, getAgentLabel, getAgentDescription } from '@/app/lib/utils/agent-icons';
+import { getAgentDescription, getAgentIconPath, getAgentLabel, inferAgentFromIdentifier } from '@/app/lib/utils/agent-icons';
 
 describe('agent-icons utility', () => {
   describe('getAgentIconPath', () => {
@@ -41,6 +41,20 @@ describe('agent-icons utility', () => {
         expect(getAgentLabel(agent)).toBeDefined();
         expect(getAgentDescription(agent)).toBeDefined();
       }
+    });
+  });
+
+  describe('inferAgentFromIdentifier', () => {
+    it('resolves Claude-flavored identifiers', () => {
+      expect(inferAgentFromIdentifier('claude-sonnet-4-6')).toBe(Agent.CLAUDE);
+    });
+
+    it('resolves Codex-flavored identifiers', () => {
+      expect(inferAgentFromIdentifier('codex-mini-latest')).toBe(Agent.CODEX);
+    });
+
+    it('returns null for unknown identifiers', () => {
+      expect(inferAgentFromIdentifier('custom-runner')).toBeNull();
     });
   });
 });
