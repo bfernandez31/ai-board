@@ -26,7 +26,7 @@ ai-board/
 
 The `video/` directory is **fully isolated** from the Next.js build:
 - Own `package.json` with Remotion-only dependencies
-- Own `tsconfig.json` — not referenced by the root TypeScript config
+- Own `tsconfig.json` — excluded from root TypeScript config via `tsconfig.json` exclude array
 - Next.js ignores `video/` entirely during build
 - `video/out/` and `video/node_modules/` are in `.gitignore`
 

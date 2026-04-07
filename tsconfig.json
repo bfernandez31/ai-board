@@ -46,6 +46,7 @@
     "node_modules",
     "specs",
     "tests",
-    "mcp-server"
+    "mcp-server",
+    "video"
   ]
 }
