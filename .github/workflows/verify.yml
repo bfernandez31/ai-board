@@ -143,7 +143,6 @@ jobs:
 
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
       SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
       SKIP_TESTS: ${{ inputs.workflowType == 'QUICK' || true}}
       APP_URL: ${{ vars.APP_URL }}
@@ -217,7 +216,11 @@ jobs:
             echo "::add-mask::${CRED_VALUE_B64}"
             CRED_VALUE=$(echo "$CRED_VALUE_B64" | base64 -d)
             echo "::add-mask::${CRED_VALUE}"
-            echo "${ENV_VAR}=${CRED_VALUE}" >> "$GITHUB_ENV"
+            {
+              echo "${ENV_VAR}<<CREDENTIAL_EOF"
+              echo "${CRED_VALUE}"
+              echo "CREDENTIAL_EOF"
+            } >> "$GITHUB_ENV"
             echo "✅ Owner credential loaded (type: ${CRED_TYPE}, envVar: ${ENV_VAR})"
           fi
           echo "PROJECT_ID=${{ inputs.project_id }}" >> "$GITHUB_ENV"

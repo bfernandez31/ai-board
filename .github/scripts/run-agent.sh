@@ -53,8 +53,8 @@ validate_auth() {
       fi
       ;;
     CODEX)
-      if [[ -z "${OPENAI_API_KEY:-}" ]] && [[ -z "${CODEX_AUTH_JSON:-}" ]] && [[ -z "${CODEX_OAUTH_JSON:-}" ]]; then
-        log_error "OPENAI_API_KEY, CODEX_OAUTH_JSON, or CODEX_AUTH_JSON is required for agent type CODEX"
+      if [[ -z "${OPENAI_API_KEY:-}" ]] && [[ -z "${CODEX_OAUTH_JSON:-}" ]]; then
+        log_error "OPENAI_API_KEY or CODEX_OAUTH_JSON is required for agent type CODEX"
         exit 1
       fi
       ;;
@@ -111,11 +111,6 @@ auth_codex() {
     echo "$CODEX_OAUTH_JSON" > ~/.codex/auth.json
     chmod 600 ~/.codex/auth.json
     log_info "Codex authenticated via OAuth token (BYOK credential)"
-  elif [[ -n "${CODEX_AUTH_JSON:-}" ]]; then
-    # Legacy fallback: base64-encoded auth.json from GitHub secrets
-    echo "$CODEX_AUTH_JSON" | base64 -d > ~/.codex/auth.json
-    chmod 600 ~/.codex/auth.json
-    log_info "Codex authenticated via OAuth token (auth.json reset from secret)"
   else
     codex login --api-key "$OPENAI_API_KEY" >&2
     log_info "Codex authenticated via API key"

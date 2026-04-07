@@ -210,8 +210,12 @@ jobs:
             # Mask the credential value in logs
             echo "::add-mask::${CRED_VALUE}"
 
-            # Export to GITHUB_ENV for subsequent steps
-            echo "${ENV_VAR}=${CRED_VALUE}" >> "$GITHUB_ENV"
+            # Export to GITHUB_ENV (heredoc for multi-line values like auth.json)
+            {
+              echo "${ENV_VAR}<<CREDENTIAL_EOF"
+              echo "${CRED_VALUE}"
+              echo "CREDENTIAL_EOF"
+            } >> "$GITHUB_ENV"
             echo "✅ Owner credential loaded (type: ${CRED_TYPE}, envVar: ${ENV_VAR})"
           fi
           echo "PROJECT_ID=${{ inputs.project_id }}" >> "$GITHUB_ENV"
