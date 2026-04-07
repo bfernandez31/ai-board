@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The Health Dashboard provides project owners and members with an at-a-glance view of their project's technical health. It aggregates results from up to 5 health modules into a single global score, allows users to trigger on-demand scans, and tracks scan history over time.
+The Health Dashboard provides project owners and members with an at-a-glance view of their project's technical health. It aggregates results from up to 6 health modules into a single global score, allows users to trigger on-demand scans, and tracks scan history over time.
 
 ## At-a-Glance Health on Project Cards
 
