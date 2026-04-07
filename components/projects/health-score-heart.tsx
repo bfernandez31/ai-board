@@ -130,13 +130,13 @@ export function HealthScoreHeart({ healthScore }: HealthScoreHeartProps) {
             </defs>
             <text
               x="18"
-              y="19"
+              y="17"
               textAnchor="middle"
               dominantBaseline="central"
-              fill="white"
-              fontWeight="700"
+              fill="hsl(var(--background))"
+              fontWeight="800"
               fontSize={hasData && globalScore >= 100 ? '9' : '11'}
-              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}
+              style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
             >
               {displayText}
             </text>
