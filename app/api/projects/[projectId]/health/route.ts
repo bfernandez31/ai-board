@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
-import { calculateGlobalScore, getScoreLabel, getScoreColorConfig } from '@/lib/health/score-calculator';
+import { getScoreLabel, getScoreColorConfig } from '@/lib/health/score-calculator';
 import { getQualityGateData } from '@/lib/health/quality-gate';
 import type { HealthResponse, HealthModuleStatus } from '@/lib/health/types';
 import type { HealthScanType } from '@prisma/client';
@@ -229,15 +229,8 @@ export async function GET(
       ),
     };
 
-    // Calculate global score
-    const globalScore = calculateGlobalScore({
-      securityScore: healthScore?.securityScore ?? null,
-      complianceScore: healthScore?.complianceScore ?? null,
-      testsScore: healthScore?.testsScore ?? null,
-      specSyncScore: healthScore?.specSyncScore ?? null,
-      qualityGate: qualityGateScore,
-      reviewQualityScore: healthScore?.reviewQualityScore ?? null,
-    });
+    // Use persisted global score (includes Quality Gate when available)
+    const globalScore = healthScore?.globalScore ?? null;
 
     // Find last full scan date (most recent completed scan of any type)
     const lastScanDates = [

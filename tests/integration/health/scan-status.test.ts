@@ -214,4 +214,70 @@ describe('Scan Status PATCH Endpoint', () => {
     expect(healthScore!.complianceScore).toBe(70);
     expect(healthScore!.globalScore).toBe(80); // (90 + 70) / 2
   });
+
+  it('persists Quality Gate score and includes it in globalScore on scan completion', async () => {
+    // Create a FULL-workflow ticket in SHIP stage with a completed verify job
+    const { id: ticketId } = await ctx.createTicket({
+      title: '[e2e] Quality Gate test ticket',
+      description: 'Test ticket for Quality Gate persistence',
+      stage: 'SHIP',
+    });
+    await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { workflowType: 'FULL' },
+    });
+    const ticket = { id: ticketId };
+
+    await prisma.job.create({
+      data: {
+        ticketId: ticket.id,
+        projectId: ctx.projectId,
+        command: 'verify',
+        status: 'COMPLETED',
+        qualityScore: 72,
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Seed existing HealthScore with one module
+    await prisma.healthScore.create({
+      data: {
+        projectId: ctx.projectId,
+        complianceScore: 80,
+        globalScore: 80,
+      },
+    });
+
+    // Complete a security scan — should also compute and persist Quality Gate
+    const scan = await createScan('RUNNING');
+    await makeRequest(ctx.projectId, scan.id, {
+      status: 'COMPLETED',
+      score: 90,
+    });
+
+    const healthScore = await prisma.healthScore.findUnique({
+      where: { projectId: ctx.projectId },
+    });
+    expect(healthScore!.securityScore).toBe(90);
+    expect(healthScore!.complianceScore).toBe(80);
+    expect(healthScore!.qualityGate).toBe(72);
+    // globalScore = (90 + 80 + 72) / 3 = 80.67 → 81
+    expect(healthScore!.globalScore).toBe(81);
+  });
+
+  it('sets qualityGate to null when no verify jobs exist', async () => {
+    const scan = await createScan('RUNNING');
+    await makeRequest(ctx.projectId, scan.id, {
+      status: 'COMPLETED',
+      score: 85,
+    });
+
+    const healthScore = await prisma.healthScore.findUnique({
+      where: { projectId: ctx.projectId },
+    });
+    expect(healthScore!.securityScore).toBe(85);
+    expect(healthScore!.qualityGate).toBeNull();
+    expect(healthScore!.globalScore).toBe(85); // Only security module
+  });
 });

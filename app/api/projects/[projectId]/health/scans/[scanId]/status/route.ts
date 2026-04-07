@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 import { calculateGlobalScore } from '@/lib/health/score-calculator';
+import { getQualityGateData } from '@/lib/health/quality-gate';
 import type { HealthScanStatus, HealthScanType } from '@prisma/client';
 
 const statusUpdateSchema = z.object({
@@ -162,6 +163,13 @@ export async function PATCH(
       updateData.report = JSON.stringify({ ...reportPayload, skipReason: data.skipReason });
     }
 
+    // Compute Quality Gate score before the transaction (read-only query)
+    let qualityGateScore: number | null = null;
+    if (effectiveStatus === 'COMPLETED' && data.score !== undefined) {
+      const qgData = await getQualityGateData(projectId);
+      qualityGateScore = qgData.averageScore;
+    }
+
     // Update scan and HealthScore aggregate in a single transaction
     const updatedScan = await prisma.$transaction(async (tx) => {
       const scanResult = await tx.healthScan.update({
@@ -177,6 +185,7 @@ export async function PATCH(
         const scoreUpdate: Record<string, unknown> = {
           [scoreField]: data.score,
           [dateField]: now,
+          qualityGate: qualityGateScore,
         };
 
         const healthScore = await tx.healthScore.upsert({
@@ -185,13 +194,13 @@ export async function PATCH(
           create: { projectId, ...scoreUpdate },
         });
 
-        // Recalculate global score
+        // Recalculate global score including Quality Gate
         const globalScore = calculateGlobalScore({
           securityScore: healthScore.securityScore,
           complianceScore: healthScore.complianceScore,
           testsScore: healthScore.testsScore,
           specSyncScore: healthScore.specSyncScore,
-          qualityGate: healthScore.qualityGate,
+          qualityGate: qualityGateScore,
           reviewQualityScore: healthScore.reviewQualityScore,
         });
 
