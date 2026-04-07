@@ -100,13 +100,6 @@ export function CredentialForm() {
     }
   }
 
-  function getPlaceholder(prov: Provider, type: string): string {
-    if (type === "OAUTH_TOKEN") {
-      return prov === "OPENAI" ? "Paste your Codex token" : "Paste your OAuth token";
-    }
-    return prov === "OPENAI" ? "sk-proj-..." : "sk-ant-api03-...";
-  }
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
