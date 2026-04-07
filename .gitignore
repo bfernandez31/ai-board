@@ -83,3 +83,7 @@ mcp-server/node_modules/
 
 # local Claude Code settings and symlinks
 .claude/
+
+# Remotion video output
+video/out/
+video/node_modules/
