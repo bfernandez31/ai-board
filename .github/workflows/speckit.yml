@@ -245,6 +245,7 @@ jobs:
             echo "${ENV_VAR}=${CRED_VALUE}" >> "$GITHUB_ENV"
             echo "✅ Owner credential loaded (type: ${CRED_TYPE}, envVar: ${ENV_VAR})"
           fi
+          echo "PROJECT_ID=${{ inputs.project_id }}" >> "$GITHUB_ENV"
 
       - name: Checkout ai-board (sparse - plugin only)
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}

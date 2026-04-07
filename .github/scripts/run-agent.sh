@@ -122,6 +122,35 @@ auth_codex() {
   fi
 }
 
+persist_codex_token() {
+  # Only persist if we used OAuth (BYOK) and the API is reachable
+  if [[ -z "${CODEX_OAUTH_JSON:-}" ]] || [[ -z "${APP_URL:-}" ]] || [[ -z "${WORKFLOW_API_TOKEN:-}" ]]; then
+    return 0
+  fi
+
+  if [[ ! -f ~/.codex/auth.json ]]; then
+    log_info "No auth.json found after Codex run — skipping token persist"
+    return 0
+  fi
+
+  # Base64-encode the refreshed token (never log the raw value)
+  local UPDATED_TOKEN_B64
+  UPDATED_TOKEN_B64=$(base64 < ~/.codex/auth.json | tr -d '\n')
+
+  local HTTP_CODE
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X PUT "${APP_URL}/api/internal/credentials" \
+    -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+    -H "Content-Type: application/json" \
+    --data-raw "{\"projectId\":${PROJECT_ID},\"provider\":\"OPENAI\",\"value\":\"${UPDATED_TOKEN_B64}\",\"encoding\":\"base64\"}")
+
+  if [ "$HTTP_CODE" = "200" ]; then
+    log_info "Codex OAuth token persisted back to credential store"
+  else
+    log_info "Failed to persist Codex OAuth token (HTTP $HTTP_CODE) — next run may need re-auth"
+  fi
+}
+
 setup_codex_telemetry() {
   if [[ -z "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]]; then
     log_info "No OTEL_EXPORTER_OTLP_ENDPOINT set — skipping Codex telemetry config"
@@ -199,6 +228,7 @@ case "$AGENT_TYPE" in
     auth_codex
     setup_codex_telemetry
     invoke_codex
+    persist_codex_token
     ;;
   *)
     log_error "Unsupported agent type '$AGENT_TYPE'. Supported: CLAUDE, CODEX"
