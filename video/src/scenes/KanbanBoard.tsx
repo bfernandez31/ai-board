@@ -48,19 +48,19 @@ export const KanbanBoard: React.FC = () => {
 
   const dragProgress = interpolate(frame, [90, 130], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const isDragging = frame >= 90 && frame <= 130;
-  const dragX = interpolate(dragProgress, [0, 1], [0, 280]);
+  const dragX = interpolate(dragProgress, [0, 1], [0, 310]);
   const dragY = interpolate(dragProgress, [0, 0.5, 1], [0, -20, 0]);
   const dragRotate = interpolate(dragProgress, [0, 0.3, 0.7, 1], [0, -3, 2, 0]);
 
   return (
     <AbsoluteFill>
       <AbsoluteFill style={{ backgroundColor: '#000' }} />
-      <AbsoluteFill style={{ padding: '40px 50px', opacity: zoom.opacity, transform: `scale(${zoom.scale})` }}>
+      <AbsoluteFill style={{ padding: '40px 50px', opacity: zoom.opacity, transform: `scale(${zoom.scale})`, display: 'flex', flexDirection: 'column' }}>
         <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 20, fontWeight: 700, color: colors.text, fontFamily: fonts.display }}>ai-board</span>
           <span style={{ fontSize: 13, color: colors.subtext0 }}>Board</span>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 12, flex: 1 }}>
           {STAGES.map((stage, colIdx) => (
             <StageColumnWrapper
               key={stage.key}
@@ -96,7 +96,7 @@ const StageColumnWrapper: React.FC<{
   const tickets = SAMPLE_TICKETS[stage.key] || [];
 
   return (
-    <div style={colStagger}>
+    <div style={{ ...colStagger, flex: 1, display: 'flex', flexDirection: 'column' as const }}>
       <MockColumn label={stage.label} color={stage.color} count={stage.key === 'INBOX' && frame >= 50 ? stage.count + 1 : stage.count}>
         {stage.key === 'INBOX' && frame >= 40 && (
           <div style={{ opacity: isDragging ? 0 : newTicketOpacity, transform: `scale(${interpolate(newTicketScale, [0, 1], [0.8, 1])})` }}>
