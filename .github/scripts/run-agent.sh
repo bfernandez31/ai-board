@@ -192,8 +192,12 @@ invoke_codex() {
   local command_file
   command_file=$(resolve_command_file "$COMMAND") || exit 1
 
-  # Reduce OTLP batch export frequency (default 5s is too aggressive for Vercel)
+  # Reduce OTLP batch export frequency for Vercel cost control.
+  # schedule_delay alone isn't enough — the batch processor exports early
+  # when max_export_batch_size is reached, so we raise it too.
   export OTEL_BLRP_SCHEDULE_DELAY=60000
+  export OTEL_BLRP_MAX_EXPORT_BATCH_SIZE=2048
+  export OTEL_BLRP_MAX_QUEUE_SIZE=4096
   log_info "Invoking Codex with command file: $command_file"
 
   local model="${CODEX_MODEL:-gpt-5.4}"
