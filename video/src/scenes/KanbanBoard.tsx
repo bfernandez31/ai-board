@@ -48,6 +48,7 @@ export const KanbanBoard: React.FC = () => {
 
   const dragProgress = interpolate(frame, [90, 130], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const isDragging = frame >= 90 && frame <= 130;
+  const dragDone = frame > 130;
   const dragX = interpolate(dragProgress, [0, 1], [0, 310]);
   const dragY = interpolate(dragProgress, [0, 0.5, 1], [0, -20, 0]);
   const dragRotate = interpolate(dragProgress, [0, 0.3, 0.7, 1], [0, -3, 2, 0]);
@@ -68,6 +69,7 @@ export const KanbanBoard: React.FC = () => {
               colIdx={colIdx}
               frame={frame}
               isDragging={isDragging}
+              dragDone={dragDone}
               newTicketOpacity={newTicketOpacity}
               newTicketScale={newTicketScale}
             />
@@ -89,19 +91,27 @@ const StageColumnWrapper: React.FC<{
   colIdx: number;
   frame: number;
   isDragging: boolean;
+  dragDone: boolean;
   newTicketOpacity: number;
   newTicketScale: number;
-}> = ({ stage, colIdx, frame, isDragging, newTicketOpacity, newTicketScale }) => {
+}> = ({ stage, colIdx, frame, isDragging, dragDone, newTicketOpacity, newTicketScale }) => {
   const colStagger = useStagger(colIdx, 0, 3);
   const tickets = SAMPLE_TICKETS[stage.key] || [];
 
+  // After drag: ticket moves from INBOX to SPECIFY
+  const showNewTicketInInbox = stage.key === 'INBOX' && frame >= 40 && !dragDone;
+  const showNewTicketInSpecify = stage.key === 'SPECIFY' && dragDone;
+
   return (
     <div style={{ ...colStagger, flex: 1, display: 'flex', flexDirection: 'column' as const }}>
-      <MockColumn label={stage.label} color={stage.color} count={stage.key === 'INBOX' && frame >= 50 ? stage.count + 1 : stage.count}>
-        {stage.key === 'INBOX' && frame >= 40 && (
+      <MockColumn label={stage.label} color={stage.color} count={stage.key === 'INBOX' && frame >= 50 && !dragDone ? stage.count + 1 : stage.key === 'SPECIFY' && dragDone ? stage.count + 1 : stage.count}>
+        {showNewTicketInInbox && (
           <div style={{ opacity: isDragging ? 0 : newTicketOpacity, transform: `scale(${interpolate(newTicketScale, [0, 1], [0.8, 1])})` }}>
             <MockTicket ticketKey="AIB-146" title="Add landing page video" style={{ border: `1px solid ${colors.mauve}50`, boxShadow: `0 0 16px ${colors.mauve}30` }} />
           </div>
+        )}
+        {showNewTicketInSpecify && (
+          <MockTicket ticketKey="AIB-146" title="Add landing page video" style={{ border: `1px solid ${colors.lavender}50`, boxShadow: `0 0 16px ${colors.lavender}30` }} />
         )}
         {tickets.map((ticket) => (
           <MockTicket key={ticket.key} ticketKey={ticket.key} title={ticket.title} />

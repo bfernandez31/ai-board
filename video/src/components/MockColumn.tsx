@@ -8,7 +8,7 @@ export const MockColumn: React.FC<{ label: string; color: string; count: number;
         <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.28em', color, fontFamily: fonts.body }}>{label}</span>
         <span style={{ background: `${color}40`, color, fontSize: 10, fontWeight: 700, width: 20, height: 20, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>
       </div>
-      <div style={{ background: `${color}08`, flex: 1, padding: 10, display: 'flex', flexDirection: 'column', gap: 8, borderRadius: '0 0 12px 12px', minHeight: 500 }}>
+      <div style={{ background: `${color}18`, flex: 1, padding: 10, display: 'flex', flexDirection: 'column', gap: 8, borderRadius: '0 0 12px 12px', minHeight: 500 }}>
         {children}
       </div>
     </div>
