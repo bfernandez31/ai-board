@@ -2,6 +2,16 @@
  * Project with computed ticket count
  * Matches GET /api/projects response schema
  */
+export interface ProjectHealthScore {
+  globalScore: number | null;
+  securityScore: number | null;
+  complianceScore: number | null;
+  testsScore: number | null;
+  specSyncScore: number | null;
+  qualityGate: number | null;
+  reviewQualityScore: number | null;
+}
+
 export interface ProjectWithCount {
   id: number;
   key: string;
@@ -18,6 +28,7 @@ export interface ProjectWithCount {
     title: string;
     updatedAt: string; // ISO 8601 timestamp
   } | null;
+  healthScore: ProjectHealthScore | null;
 }
 
 /**

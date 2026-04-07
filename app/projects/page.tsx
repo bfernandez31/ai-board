@@ -36,6 +36,15 @@ async function getProjects(): Promise<ProjectsListResponse> {
         title: project.tickets[0].title,
         updatedAt: project.tickets[0].updatedAt.toISOString(),
       } : null,
+      healthScore: project.healthScore ? {
+        globalScore: project.healthScore.globalScore,
+        securityScore: project.healthScore.securityScore,
+        complianceScore: project.healthScore.complianceScore,
+        testsScore: project.healthScore.testsScore,
+        specSyncScore: project.healthScore.specSyncScore,
+        qualityGate: project.healthScore.qualityGate,
+        reviewQualityScore: project.healthScore.reviewQualityScore,
+      } : null,
     }));
   } catch (error) {
     console.error('Failed to fetch projects:', error);
