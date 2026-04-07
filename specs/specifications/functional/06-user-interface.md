@@ -131,21 +131,52 @@ When preview login is enabled for a deployment, the sign-in page shows an additi
 
 ### Landing Page Structure
 
-The landing page is a server-rendered page displayed to unauthenticated visitors only. It is composed of five sequential sections:
+The landing page is a server-rendered page displayed to unauthenticated visitors only. It is composed of seven sequential sections:
 
 1. **HeroSection** — animated hero with background ticket cards
-2. **FeaturesGrid** — product feature highlights
-3. **WorkflowSection** — workflow stage showcase (visible on all viewports)
-4. **PricingSection** — pricing cards and FAQ (`#pricing`)
-5. **CTASection** — final call-to-action
+2. **VideoSection** — cinematic product demo video (autoplay, muted, looping)
+3. **SocialProofSection** — metrics counters and testimonials
+4. **FeaturesGrid** — product feature highlights
+5. **WorkflowSection** — workflow stage showcase (visible on all viewports)
+6. **PricingSection** — pricing cards and FAQ (`#pricing`)
+7. **CTASection** — final call-to-action
 
-All sections are server components except where client interactivity is required (e.g., PricingFAQ uses `'use client'` for the Collapsible accordion).
+All sections are server components except where client interactivity is required (e.g., VideoSection uses `'use client'` for IntersectionObserver autoplay, PricingFAQ uses `'use client'` for the Collapsible accordion).
 
 **Skip Navigation**: A skip-to-content link is rendered at the top of the landing page (`<a href="#main-content">`) for keyboard users. It becomes visible on focus and bypasses header navigation, jumping directly to the main content area.
 
 **Scroll Animations**: Sections use scroll-triggered fade-in animations via IntersectionObserver. All animations respect `prefers-reduced-motion` — when enabled, content is visible immediately with no motion. Content is always readable even if animations are disabled or fail to load.
 
 **Color Token Compliance**: All landing page components use semantic Tailwind tokens exclusively. No hardcoded hex or rgb color values are used anywhere in landing page components.
+
+### Video Section
+
+The video section (`components/landing/video-section.tsx`) displays a cinematic 50-second product demo between the hero and social proof sections.
+
+**Video Source**: Pre-rendered MP4 via Remotion (`video/` directory), served from `public/videos/ai-board-demo.mp4`. The Remotion project is isolated from the Next.js build with its own `package.json`.
+
+**Content**: 9 scenes covering the full product — Intro, Dashboard, Kanban Board, Ticket Detail (with cost/token metrics), Workflow Flow, Analytics, Health Dashboard, Comparisons, and Outro. Uses the Catppuccin Mocha palette and aurora gradients matching the landing page theme.
+
+**Playback Behavior**:
+- Autoplay (muted) when ≥40% of the section enters the viewport (IntersectionObserver)
+- Pauses when section scrolls out of view
+- Infinite loop
+- `playsInline` for mobile compatibility
+
+**Controls**:
+- Minimal overlay controls: play/pause + mute/unmute buttons
+- Visible only on hover (`group-hover:opacity-100`)
+- Styled with `bg-ctp-surface0/80 backdrop-blur-sm`
+
+**Layout**:
+- `max-w-5xl` container, full-width video with `rounded-2xl` corners
+- Aurora glow border: `shadow-[0_0_40px_hsl(var(--ctp-mauve)/0.12)]`
+- Section heading: "See it in action" with subtitle
+- 16:9 aspect ratio (1920x1080 source)
+
+**Mobile**: Video autoplays muted. No poster image fallback currently — video loads with `preload="metadata"`.
+
+**Middleware**: `.mp4` and `.webm` extensions are excluded from the auth middleware matcher in `proxy.ts` to allow unauthenticated access to video assets.
 
 ### Workflow Section
 
