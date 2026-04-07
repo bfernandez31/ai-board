@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { getScoreColorConfig } from '@/lib/health/score-calculator';
 import type { ProjectWithCount } from '@/app/lib/types/project';
 import {
@@ -22,10 +22,6 @@ const SUB_SCORE_LABELS: Array<{ key: keyof NonNullable<ProjectWithCount['healthS
   { key: 'reviewQualityScore', label: 'Review Quality' },
 ];
 
-/**
- * Heart-shaped SVG path for the health indicator.
- * Standard heart shape scaled to fit a 36x36 viewBox.
- */
 const HEART_PATH = 'M18 32 C8 24 2 18 2 12 2 6 6 2 12 2 15 2 18 5 18 5 18 5 21 2 24 2 30 2 34 6 34 12 34 18 28 24 18 32Z';
 
 function getHeartFillColor(score: number | null): string {
@@ -36,12 +32,6 @@ function getHeartFillColor(score: number | null): string {
   return 'hsl(var(--ctp-red))';
 }
 
-function getHeartGlowStyle(score: number | null): React.CSSProperties {
-  if (score === null) return {};
-  const color = getHeartFillColor(score);
-  return { filter: `drop-shadow(0 0 6px ${color})` };
-}
-
 export function HealthScoreHeart({ healthScore }: HealthScoreHeartProps) {
   const [open, setOpen] = useState(false);
 
@@ -49,10 +39,9 @@ export function HealthScoreHeart({ healthScore }: HealthScoreHeartProps) {
   const hasData = globalScore !== null;
   const displayText = hasData ? globalScore.toString() : '—';
   const fillColor = getHeartFillColor(globalScore);
-
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-  }, []);
+  const glowStyle: React.CSSProperties = hasData
+    ? { filter: `drop-shadow(0 0 6px ${fillColor})` }
+    : {};
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -60,7 +49,7 @@ export function HealthScoreHeart({ healthScore }: HealthScoreHeartProps) {
         <button
           type="button"
           data-testid="health-heart"
-          onClick={handleClick}
+          onClick={(e) => e.stopPropagation()}
           onMouseEnter={() => setOpen(true)}
           onMouseLeave={() => setOpen(false)}
           className="relative inline-flex items-center justify-center focus:outline-none"
@@ -70,7 +59,7 @@ export function HealthScoreHeart({ healthScore }: HealthScoreHeartProps) {
             width="36"
             height="36"
             viewBox="0 0 36 36"
-            style={getHeartGlowStyle(globalScore)}
+            style={glowStyle}
             className="transition-all duration-200"
           >
             <path d={HEART_PATH} fill={fillColor} />
