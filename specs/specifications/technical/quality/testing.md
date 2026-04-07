@@ -1229,7 +1229,7 @@ Tests must pass with these requirements:
 ### Target Coverage
 
 - **Unit Tests**: 80% line coverage
-- **API Tests**: 100% endpoint coverage
+- **API Tests**: 100% endpoint coverage (happy path + primary error path per endpoint)
 - **E2E Tests**: Critical user paths
 
 ### Measuring Coverage
@@ -1249,6 +1249,7 @@ npx playwright test --coverage
 - ✅ Use component tests (RTL) for interactive React components
 - ✅ Use unit tests for pure functions and utilities
 - ✅ Reserve E2E tests for browser-required scenarios only
+- ✅ PRs that add new endpoints or modify business logic MUST include integration tests covering the happy path and the primary error path
 - ❌ Don't use Playwright for API testing (use Vitest integration tests)
 - ❌ Don't use E2E tests for component behavior (use RTL component tests)
 
