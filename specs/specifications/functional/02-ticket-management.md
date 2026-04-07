@@ -367,14 +367,16 @@ The viewer is a modal dialog with two sections:
 **Ranking and Recommendation**:
 - Overall recommendation text and executive summary
 - Key differentiators shown as badges
+- A prominent hero card displays the winner (rank 1) with score gauge, recommendation text, key differentiators, and cost/duration/quality stat pills
 - Participant cards ordered by rank showing:
   - Rank number, ticket key, title
   - Score percentage badge
   - "Winner" badge on rank 1
   - Rank rationale text
-  - Workflow type badge (FULL / QUICK)
-  - Agent badge when agent information is available
+  - Workflow type badge in top-right corner: ⚡ Quick (amber), ✨ Clean (purple with sparkle icon), or Full (default outline)
+  - Agent icon with tooltip showing the agent label, positioned top-right beside the workflow badge, when agent information is available
   - Quality score badge with threshold label (e.g., "87 Good") when a score exists
+- Both the hero card and participant cards display agent icon and workflow type badge in their top-right corner
 
 **Implementation Metrics**:
 - Table comparing code metrics across participants
