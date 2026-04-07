@@ -133,10 +133,9 @@ export function HealthScoreHeart({ healthScore }: HealthScoreHeartProps) {
               y="17"
               textAnchor="middle"
               dominantBaseline="central"
-              fill="hsl(var(--background))"
+              fill="hsl(var(--ctp-crust))"
               fontWeight="800"
               fontSize={hasData && globalScore >= 100 ? '9' : '11'}
-              style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
             >
               {displayText}
             </text>
