@@ -7,6 +7,9 @@ import { KanbanBoard } from './scenes/KanbanBoard';
 import { TicketDetail } from './scenes/TicketDetail';
 import { WorkflowFlow } from './scenes/WorkflowFlow';
 import { Analytics } from './scenes/Analytics';
+import { HealthDashboard } from './scenes/HealthDashboard';
+import { Comparisons } from './scenes/Comparisons';
+import { Outro } from './scenes/Outro';
 
 export const Video: React.FC = () => {
   return (
@@ -28,6 +31,15 @@ export const Video: React.FC = () => {
       </Sequence>
       <Sequence from={SCENES.ANALYTICS.from} durationInFrames={SCENES.ANALYTICS.duration}>
         <Analytics />
+      </Sequence>
+      <Sequence from={SCENES.HEALTH.from} durationInFrames={SCENES.HEALTH.duration}>
+        <HealthDashboard />
+      </Sequence>
+      <Sequence from={SCENES.COMPARISONS.from} durationInFrames={SCENES.COMPARISONS.duration}>
+        <Comparisons />
+      </Sequence>
+      <Sequence from={SCENES.OUTRO.from} durationInFrames={SCENES.OUTRO.duration}>
+        <Outro />
       </Sequence>
     </AbsoluteFill>
   );
