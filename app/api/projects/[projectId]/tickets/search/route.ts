@@ -91,9 +91,16 @@ export async function GET(
       return scoreB - scoreA;
     });
 
+    const results: SearchResult[] = sortedTickets.map(({ id, ticketKey, title, stage }) => ({
+      id,
+      ticketKey,
+      title,
+      stage,
+    }));
+
     const response: SearchResponse = {
-      results: sortedTickets as SearchResult[],
-      totalCount: sortedTickets.length,
+      results,
+      totalCount: results.length,
     };
 
     return NextResponse.json(response);
