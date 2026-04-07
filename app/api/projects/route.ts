@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
         title: project.tickets[0].title,
         updatedAt: project.tickets[0].updatedAt.toISOString(),
       } : null,
+      healthScore: project.healthScore ?? null,
     }));
 
     return NextResponse.json(response);

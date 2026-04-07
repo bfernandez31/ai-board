@@ -18,6 +18,15 @@ export interface ProjectWithCount {
     title: string;
     updatedAt: string; // ISO 8601 timestamp
   } | null;
+  healthScore: {
+    globalScore: number | null;
+    securityScore: number | null;
+    complianceScore: number | null;
+    testsScore: number | null;
+    specSyncScore: number | null;
+    qualityGate: number | null;
+    reviewQualityScore: number | null;
+  } | null;
 }
 
 /**

@@ -36,6 +36,7 @@ async function getProjects(): Promise<ProjectsListResponse> {
         title: project.tickets[0].title,
         updatedAt: project.tickets[0].updatedAt.toISOString(),
       } : null,
+      healthScore: project.healthScore ?? null,
     }));
   } catch (error) {
     console.error('Failed to fetch projects:', error);

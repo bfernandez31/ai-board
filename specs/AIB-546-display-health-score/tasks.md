@@ -28,10 +28,10 @@ _(No setup tasks — all infrastructure already exists)_
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T001 Extend Prisma query to include `healthScore` relation in `getUserProjects()` in `lib/db/projects.ts`
-- [ ] T002 Add `healthScore` field to `ProjectWithCount` interface in `app/lib/types/project.ts`
-- [ ] T003 Map `healthScore` from Prisma result to response shape in server component `app/projects/page.tsx`
-- [ ] T004 Map `healthScore` from Prisma result to response shape in API route `app/api/projects/route.ts`
+- [x] T001 Extend Prisma query to include `healthScore` relation in `getUserProjects()` in `lib/db/projects.ts`
+- [x] T002 Add `healthScore` field to `ProjectWithCount` interface in `app/lib/types/project.ts`
+- [x] T003 Map `healthScore` from Prisma result to response shape in server component `app/projects/page.tsx`
+- [x] T004 Map `healthScore` from Prisma result to response shape in API route `app/api/projects/route.ts`
 
 **Checkpoint**: Foundation ready — health score data is available in the project list response. User story implementation can now begin.
 
@@ -47,13 +47,13 @@ _(No setup tasks — all infrastructure already exists)_
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 **RULE (constitution): No existing test file covers project card health display. New test files are justified (confirmed via research.md Existing Test Files inventory).**
 
-- [ ] T005 [P] [US1] Create unit tests for HealthScoreHeart component in `tests/unit/components/health-score-heart.test.tsx` — test cases: green heart (score 95), blue heart (score 75), yellow heart (score 55), red heart (score 30), red heart (score 0 — edge case, not no-data), greyed-out heart with dash (null healthScore), greyed-out heart with dash (healthScore with null globalScore), click stopPropagation
-- [ ] T006 [P] [US1] Create integration test for projects API with health score in `tests/integration/projects/projects-with-health.test.ts` — test cases: GET `/api/projects` includes `healthScore` for projects with health data, returns `healthScore: null` for projects without, all 7 score fields correctly serialized
+- [x] T005 [P] [US1] Create unit tests for HealthScoreHeart component in `tests/unit/components/health-score-heart.test.tsx` — test cases: green heart (score 95), blue heart (score 75), yellow heart (score 55), red heart (score 30), red heart (score 0 — edge case, not no-data), greyed-out heart with dash (null healthScore), greyed-out heart with dash (healthScore with null globalScore), click stopPropagation
+- [x] T006 [P] [US1] Create integration test for projects API with health score in `tests/integration/projects/projects-with-health.test.ts` — test cases: GET `/api/projects` includes `healthScore` for projects with health data, returns `healthScore: null` for projects without, all 7 score fields correctly serialized
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Create `HealthScoreHeart` component in `components/projects/health-score-heart.tsx` — SVG heart shape, score text centered inside, color based on thresholds from `getScoreColorConfig()` in `lib/health/score-calculator.ts`, colored drop-shadow glow, no-data state (muted fill, em-dash, no glow), `onClick` calls `stopPropagation()` (FR-009, FR-012)
-- [ ] T008 [US1] Integrate `HealthScoreHeart` into project card header in `components/projects/project-card.tsx` — position between project title and project menu in CardHeader flex container
+- [x] T007 [US1] Create `HealthScoreHeart` component in `components/projects/health-score-heart.tsx` — SVG heart shape, score text centered inside, color based on thresholds from `getScoreColorConfig()` in `lib/health/score-calculator.ts`, colored drop-shadow glow, no-data state (muted fill, em-dash, no glow), `onClick` calls `stopPropagation()` (FR-009, FR-012)
+- [x] T008 [US1] Integrate `HealthScoreHeart` into project card header in `components/projects/project-card.tsx` — position between project title and project menu in CardHeader flex container
 
 **Checkpoint**: User Story 1 complete — all project cards show colored heart indicators with correct scores and glow effects.
 
@@ -68,11 +68,11 @@ _(No setup tasks — all infrastructure already exists)_
 ### Tests for User Story 2
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T009 [US2] Extend unit tests in `tests/unit/components/health-score-heart.test.tsx` — add test cases: popover displays all 6 sub-scores with correct colors on hover (userEvent.hover), popover shows dashes for null sub-scores, popover dismisses on mouse leave, popover is informational only (no links or buttons)
+- [x] T009 [US2] Extend unit tests in `tests/unit/components/health-score-heart.test.tsx` — add test cases: popover displays all 6 sub-scores with correct colors on hover (userEvent.hover), popover shows dashes for null sub-scores, popover dismisses on mouse leave, popover is informational only (no links or buttons)
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Add hover popover to `HealthScoreHeart` component in `components/projects/health-score-heart.tsx` — use `Popover`/`PopoverTrigger`/`PopoverContent` from `components/ui/popover.tsx`, trigger on hover via mouse event handlers, display "Health Breakdown" title and 6 rows (Security, Compliance, Tests, Spec Sync, Quality Gate, Review Quality) each with label, score value or dash, and threshold color via `getScoreColorConfig()`, no links or buttons (FR-008)
+- [x] T010 [US2] Add hover popover to `HealthScoreHeart` component in `components/projects/health-score-heart.tsx` — use `Popover`/`PopoverTrigger`/`PopoverContent` from `components/ui/popover.tsx`, trigger on hover via mouse event handlers, display "Health Breakdown" title and 6 rows (Security, Compliance, Tests, Spec Sync, Quality Gate, Review Quality) each with label, score value or dash, and threshold color via `getScoreColorConfig()`, no links or buttons (FR-008)
 
 **Checkpoint**: User Story 2 complete — hovering any heart shows the 6-score breakdown popover.
 
@@ -86,7 +86,7 @@ _(No setup tasks — all infrastructure already exists)_
 
 ### Tests for User Story 3
 
-- [ ] T011 [US3] Extend integration tests in `tests/integration/projects/projects-with-health.test.ts` — add test case: single GET `/api/projects` request returns health scores for all projects (verify response shape includes healthScore for every project in list, no separate health endpoint called)
+- [x] T011 [US3] Extend integration tests in `tests/integration/projects/projects-with-health.test.ts` — add test case: single GET `/api/projects` request returns health scores for all projects (verify response shape includes healthScore for every project in list, no separate health endpoint called)
 
 ### Implementation for User Story 3
 
@@ -100,8 +100,8 @@ _(No additional implementation — this story is satisfied by the data layer wor
 
 **Purpose**: Edge cases and responsive behavior validation
 
-- [ ] T012 Verify responsive behavior of heart indicator in `components/projects/health-score-heart.tsx` — ensure heart is visible and properly positioned on mobile (320px), tablet, and desktop viewports without overlapping card content (FR-011)
-- [ ] T013 Run full test suite (`bun run test:unit` and `bun run test:integration`) to confirm no regressions
+- [x] T012 Verify responsive behavior of heart indicator in `components/projects/health-score-heart.tsx` — ensure heart is visible and properly positioned on mobile (320px), tablet, and desktop viewports without overlapping card content (FR-011)
+- [x] T013 Run full test suite (`bun run test:unit` and `bun run test:integration`) to confirm no regressions
 
 ---
 
