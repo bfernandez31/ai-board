@@ -43,6 +43,12 @@ Users access projects through a dedicated projects list page:
 
 **Display Information**:
 - Project name
+- Health heart indicator (top-right of card header, next to project menu):
+  - A heart icon with the project's global health score overlaid as a number
+  - Color-coded by score range: green (≥90), blue (≥70), yellow (≥50), red (<50), muted (no data)
+  - Displays "—" when no health data is available
+  - Clicking opens a popover showing sub-scores: Security, Compliance, Tests, Spec Sync, Quality Gate, Review Quality
+  - Each sub-score is color-coded using the same threshold scheme
 - Deployment URL (if configured, with copy-to-clipboard functionality)
 - GitHub repository link (if configured, displayed as "owner/repo")
 - Latest shipped ticket information:

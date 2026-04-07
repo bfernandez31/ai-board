@@ -67,6 +67,15 @@ Fetch all projects for the authenticated user with shipping status.
         "ticketKey": "ABC-5",
         "title": "Add user authentication",
         "updatedAt": "2025-01-14T16:20:00.000Z"
+      },
+      "healthScore": {
+        "globalScore": 84,
+        "securityScore": 90,
+        "complianceScore": 75,
+        "testsScore": 88,
+        "specSyncScore": 70,
+        "qualityGate": 92,
+        "reviewQualityScore": 80
       }
     },
     {
@@ -82,7 +91,8 @@ Fetch all projects for the authenticated user with shipping status.
       "createdAt": "2025-01-05T00:00:00.000Z",
       "updatedAt": "2025-01-10T08:15:00.000Z",
       "ticketCount": 5,
-      "lastShippedTicket": null
+      "lastShippedTicket": null,
+      "healthScore": null
     }
   ]
 }
@@ -95,8 +105,14 @@ Fetch all projects for the authenticated user with shipping status.
   - `ticketKey`: Unique ticket identifier (e.g., "ABC-5")
   - `title`: Ticket title
   - `updatedAt`: When ticket was moved to SHIP stage (used for relative time display)
+- `healthScore`: Project health data from the most recent scans (null when no scans have run)
+  - `globalScore`: Weighted aggregate score 0–100 (null if no modules scanned)
+  - `securityScore`, `complianceScore`, `testsScore`, `specSyncScore`, `qualityGate`, `reviewQualityScore`: Per-module scores 0–100 (null if the module has never completed a scan)
 
 **Frontend Display**:
+- Project cards display a health heart indicator (top-right, beside the project menu) using `healthScore.globalScore`
+- Heart color thresholds: green ≥90, blue ≥70, yellow ≥50, red <50, muted when null
+- Clicking the heart opens a popover with all six sub-scores
 - Project cards display ticketKey (bold) followed by title
 - Full text "ticketKey + title" truncated with ellipsis if too long
 - Tooltip on hover shows complete "ticketKey + title" text
