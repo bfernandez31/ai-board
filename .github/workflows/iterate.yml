@@ -95,8 +95,9 @@ jobs:
         if: ${{ inputs.project_id }}
         run: |
           echo "🔑 Fetching owner AI credential for project ${{ inputs.project_id }}..."
+          PROVIDER=$( [[ "${{ inputs.agent }}" == "CODEX" ]] && echo "OPENAI" || echo "ANTHROPIC" )
           RESPONSE=$(curl -s -w "\n%{http_code}" \
-            "${APP_URL}/api/internal/credentials?projectId=${{ inputs.project_id }}" \
+            "${APP_URL}/api/internal/credentials?projectId=${{ inputs.project_id }}&provider=${PROVIDER}" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}")
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
           BODY=$(echo "$RESPONSE" | head -n -1)

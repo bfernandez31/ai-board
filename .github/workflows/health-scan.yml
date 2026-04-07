@@ -192,8 +192,9 @@ jobs:
       - name: Fetch Owner AI Credential
         run: |
           echo "🔑 Fetching owner AI credential for project $INPUT_PROJECT_ID..."
+          PROVIDER=$( [[ "${INPUT_AGENT}" == "CODEX" ]] && echo "OPENAI" || echo "ANTHROPIC" )
           RESPONSE=$(curl -s -w "\n%{http_code}" \
-            "${APP_URL}/api/internal/credentials?projectId=${INPUT_PROJECT_ID}" \
+            "${APP_URL}/api/internal/credentials?projectId=${INPUT_PROJECT_ID}&provider=${PROVIDER}" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}")
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
           BODY=$(echo "$RESPONSE" | head -n -1)
