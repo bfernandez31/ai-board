@@ -31,6 +31,7 @@ Tests verify behavior from specs. Testing Trophy architecture prioritizes fast i
 - Search existing tests FIRST — extend, don't duplicate. Create a new test file only when no existing file covers the domain, or when adding would mix unrelated concerns.
 - Mocks MUST target the same module instance the code under test imports — verify mock path matches the actual import chain
 - Test assertions MUST NOT be inside conditional blocks (if, ternary) that can silently pass without executing
+- PRs adding new endpoints or modifying business logic MUST include integration tests covering the happy path and the primary error path
 
 **Test Selection Decision Tree**:
 1. Is it a pure function with no side effects? → **Vitest unit test**
@@ -130,4 +131,4 @@ Auto-resolved specification decisions MUST preserve quality while avoiding unnec
 - Agent instruction files MUST NOT contradict constitution principles
 - Agent instruction files provide tactical guidance; constitution provides strategic rules
 
-**Version**: 1.7.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2026-04-03
+**Version**: 1.8.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2026-04-07
