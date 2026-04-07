@@ -82,15 +82,34 @@ describe('ComparisonParticipantGrid', () => {
     expect(secondScoreCircle.getAttribute('stroke')).toContain('url(#');
   });
 
-  it('renders workflow type and agent badges', () => {
+  it('renders styled workflow type badge', () => {
     const participants = [
-      makeParticipant({ ticketId: 2, workflowType: 'QUICK' as const, agent: 'claude-opus' }),
+      makeParticipant({ ticketId: 2, workflowType: 'QUICK' as const }),
     ];
 
     renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
 
-    expect(screen.getByText('QUICK')).toBeInTheDocument();
-    expect(screen.getByText('claude-opus')).toBeInTheDocument();
+    expect(screen.getByText('⚡ Quick')).toBeInTheDocument();
+  });
+
+  it('renders agent icon with tooltip for valid agent', () => {
+    const participants = [
+      makeParticipant({ ticketId: 2, agent: 'CLAUDE' }),
+    ];
+
+    const { container } = renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
+
+    expect(container.querySelector('[data-testid="comparison-agent-icon"]')).toBeInTheDocument();
+  });
+
+  it('omits agent icon when agent is null', () => {
+    const participants = [
+      makeParticipant({ ticketId: 2, agent: null }),
+    ];
+
+    const { container } = renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
+
+    expect(container.querySelector('[data-testid="comparison-agent-icon"]')).not.toBeInTheDocument();
   });
 
   it('renders rationale text', () => {

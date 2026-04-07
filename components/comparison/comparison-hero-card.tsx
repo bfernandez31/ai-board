@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { formatDurationMs } from '@/lib/comparison/format-duration';
 import { getAccentColorByRank } from '@/lib/comparison/accent-colors';
 import { ScoreGauge } from './score-gauge';
+import { WorkflowTypeBadge, AgentTooltipIcon } from './workflow-agent-badges';
 import type { ComparisonHeroCardProps } from './types';
 
 function getEnrichmentDisplay(
@@ -88,6 +89,12 @@ export function ComparisonHeroCard({
     <Card
       className="relative overflow-hidden border-ctp-mauve/20 aurora-bg-section"
     >
+      {/* Agent + workflow badges */}
+      <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+        <AgentTooltipIcon agent={winner.agent} size={20} />
+        <WorkflowTypeBadge workflowType={winner.workflowType} />
+      </div>
+
       {/* Aurora ambient glow */}
       <div
         data-testid="glow-orb"

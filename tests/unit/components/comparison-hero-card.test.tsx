@@ -209,6 +209,48 @@ describe('ComparisonHeroCard', () => {
     expect(glowOrb).not.toBeNull();
   });
 
+  it('renders workflow type badge in top-right corner', () => {
+    renderWithProviders(
+      <ComparisonHeroCard
+        winner={makeWinner({ workflowType: 'QUICK' as const })}
+        recommendation="Recommendation"
+        keyDifferentiators={[]}
+        generatedAt="2026-03-26T10:00:00Z"
+        sourceTicketKey="AIB-100"
+      />
+    );
+
+    expect(screen.getByText('⚡ Quick')).toBeInTheDocument();
+  });
+
+  it('renders agent icon when agent is a valid Agent enum value', () => {
+    const { container } = renderWithProviders(
+      <ComparisonHeroCard
+        winner={makeWinner({ agent: 'CLAUDE' })}
+        recommendation="Recommendation"
+        keyDifferentiators={[]}
+        generatedAt="2026-03-26T10:00:00Z"
+        sourceTicketKey="AIB-100"
+      />
+    );
+
+    expect(container.querySelector('[data-testid="comparison-agent-icon"]')).toBeInTheDocument();
+  });
+
+  it('omits agent icon when agent is not a valid enum value', () => {
+    const { container } = renderWithProviders(
+      <ComparisonHeroCard
+        winner={makeWinner({ agent: 'claude-sonnet' })}
+        recommendation="Recommendation"
+        keyDifferentiators={[]}
+        generatedAt="2026-03-26T10:00:00Z"
+        sourceTicketKey="AIB-100"
+      />
+    );
+
+    expect(container.querySelector('[data-testid="comparison-agent-icon"]')).not.toBeInTheDocument();
+  });
+
   it('renders bordered recommendation container', () => {
     const { container } = renderWithProviders(
       <ComparisonHeroCard

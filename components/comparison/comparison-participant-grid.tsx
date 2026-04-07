@@ -3,6 +3,7 @@
 import { Badge } from '@/components/ui/badge';
 import { getAccentColorByRank } from '@/lib/comparison/accent-colors';
 import { ScoreGauge } from './score-gauge';
+import { WorkflowTypeBadge, AgentTooltipIcon } from './workflow-agent-badges';
 import type { ComparisonParticipantGridProps } from './types';
 
 export function ComparisonParticipantGrid({
@@ -17,8 +18,14 @@ export function ComparisonParticipantGrid({
         return (
           <div
             key={participant.ticketId}
-            className="flex min-w-[200px] flex-1 items-start gap-3 rounded-lg border border-ctp-mauve/18 p-4 aurora-bg-participant"
+            className="relative flex min-w-[200px] flex-1 items-start gap-3 rounded-lg border border-ctp-mauve/18 p-4 aurora-bg-participant"
           >
+            {/* Agent + workflow badges in top-right */}
+            <div className="absolute right-2 top-2 flex items-center gap-1.5">
+              <AgentTooltipIcon agent={participant.agent} size={16} />
+              <WorkflowTypeBadge workflowType={participant.workflowType} />
+            </div>
+
             <ScoreGauge score={participant.score} size={40} strokeWidth={3} animated={false} accentColor={accent.hsl} />
 
             <div className="min-w-0 flex-1">
@@ -30,21 +37,13 @@ export function ComparisonParticipantGrid({
               </div>
               <div className="mt-0.5 text-sm text-muted-foreground">{participant.title}</div>
 
-              <div className="mt-2 flex flex-wrap gap-1">
-                <Badge variant="outline" className="text-xs">
-                  {participant.workflowType}
-                </Badge>
-                {participant.agent && (
-                  <Badge variant="outline" className="text-xs">
-                    {participant.agent}
-                  </Badge>
-                )}
-                {participant.quality.state === 'available' && participant.quality.value != null && (
+              {participant.quality.state === 'available' && participant.quality.value != null && (
+                <div className="mt-2 flex flex-wrap gap-1">
                   <Badge variant="secondary" className="text-xs">
                     {participant.quality.value}
                   </Badge>
-                )}
-              </div>
+                </div>
+              )}
 
               {participant.rankRationale && (
                 <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
