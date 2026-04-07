@@ -333,7 +333,9 @@ export async function handleTicketTransition(
             message: githubError.message,
           });
 
-          await prisma.job.delete({ where: { id: job.id } }).catch(() => {});
+          await prisma.job.delete({ where: { id: job.id } }).catch((deleteError) => {
+            console.warn('Failed to delete job after GitHub dispatch failure:', { jobId: job.id, error: deleteError });
+          });
 
           let errorMessage = 'GitHub workflow dispatch failed';
           if (githubError.status === 401) {

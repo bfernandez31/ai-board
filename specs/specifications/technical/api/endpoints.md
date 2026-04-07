@@ -1287,17 +1287,12 @@ Transition ticket to target stage with workflow dispatch.
 }
 ```
 
-**Error Response** (Dispatch Failed After DB Mutation — rollback paths only):
+**Error Response** (500 — Unexpected server error):
 ```json
 {
-  "error": "Rollback-reset workflow dispatch failed after stage transition to PLAN",
-  "code": "DISPATCH_FAILED_AFTER_MUTATION",
-  "stage": "PLAN",
-  "ticketId": 123
+  "error": "Internal server error"
 }
 ```
-
-This 500 is returned when the DB stage transition succeeded but the subsequent rollback-reset workflow dispatch failed. The ticket is now in PLAN stage in the database; the client should surface this as an error requiring manual intervention.
 
 ## Comment Endpoints
 
