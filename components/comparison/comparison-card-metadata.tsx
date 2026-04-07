@@ -15,41 +15,44 @@ interface ComparisonCardMetadataProps {
   className?: string;
 }
 
-function WorkflowTypeBadge({ workflowType }: { workflowType: WorkflowType }) {
-  if (workflowType === 'QUICK') {
-    return (
-      <Badge
-        variant="outline"
-        data-testid="comparison-workflow-badge"
-        className="shrink-0 bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900 dark:text-amber-200"
-      >
-        ⚡ Quick
-      </Badge>
-    );
-  }
+function WorkflowTypeBadge({ workflowType }: { workflowType: WorkflowType }): JSX.Element {
+  const baseClassName = 'shrink-0 px-1.5 py-0.5 text-xs font-semibold';
 
-  if (workflowType === 'CLEAN') {
-    return (
-      <Badge
-        variant="outline"
-        data-testid="comparison-workflow-badge"
-        className="flex shrink-0 items-center gap-1 bg-purple-100 px-1.5 py-0.5 text-xs font-semibold text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-      >
-        <Sparkles className="h-3 w-3" />
-        Clean
-      </Badge>
-    );
-  }
+  switch (workflowType) {
+    case 'QUICK':
+      return (
+        <Badge
+          variant="outline"
+          data-testid="comparison-workflow-badge"
+          className={`${baseClassName} bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200`}
+        >
+          ⚡ Quick
+        </Badge>
+      );
 
-  return (
-    <Badge
-      variant="outline"
-      data-testid="comparison-workflow-badge"
-      className="shrink-0 px-1.5 py-0.5 text-xs font-semibold"
-    >
-      FULL
-    </Badge>
-  );
+    case 'CLEAN':
+      return (
+        <Badge
+          variant="outline"
+          data-testid="comparison-workflow-badge"
+          className={`flex items-center gap-1 ${baseClassName} bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200`}
+        >
+          <Sparkles className="h-3 w-3" />
+          Clean
+        </Badge>
+      );
+
+    default:
+      return (
+        <Badge
+          variant="outline"
+          data-testid="comparison-workflow-badge"
+          className={baseClassName}
+        >
+          FULL
+        </Badge>
+      );
+  }
 }
 
 export function ComparisonCardMetadata({
@@ -57,7 +60,7 @@ export function ComparisonCardMetadata({
   agent,
   iconSize,
   className,
-}: ComparisonCardMetadataProps) {
+}: ComparisonCardMetadataProps): JSX.Element {
   const resolvedAgent = inferAgentFromIdentifier(agent);
 
   return (

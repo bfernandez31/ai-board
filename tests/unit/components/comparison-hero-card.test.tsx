@@ -3,6 +3,10 @@ import { ComparisonHeroCard } from '@/components/comparison/comparison-hero-card
 import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
 import type { ComparisonParticipantDetail } from '@/lib/types/comparison';
 
+const DEFAULT_RECOMMENDATION = 'Use AIB-101 for best results.';
+const DEFAULT_SOURCE_TICKET_KEY = 'AIB-100';
+const DEFAULT_GENERATED_AT = '2026-03-26T10:00:00Z';
+
 function makeWinner(overrides?: Partial<ComparisonParticipantDetail>): ComparisonParticipantDetail {
   return {
     ticketId: 1,
@@ -38,74 +42,49 @@ function makeWinner(overrides?: Partial<ComparisonParticipantDetail>): Compariso
   };
 }
 
+function renderComparisonHeroCard(
+  overrides?: Partial<ComparisonParticipantDetail>,
+  keyDifferentiators: string[] = []
+) {
+  return renderWithProviders(
+    <ComparisonHeroCard
+      winner={makeWinner(overrides)}
+      recommendation={DEFAULT_RECOMMENDATION}
+      keyDifferentiators={keyDifferentiators}
+      generatedAt={DEFAULT_GENERATED_AT}
+      sourceTicketKey={DEFAULT_SOURCE_TICKET_KEY}
+    />
+  );
+}
+
 describe('ComparisonHeroCard', () => {
   it('renders winner ticket key prominently', () => {
-    renderWithProviders(
-      <ComparisonHeroCard
-        winner={makeWinner()}
-        recommendation="Use AIB-101 for best results."
-        keyDifferentiators={['coverage', 'performance']}
-        generatedAt="2026-03-26T10:00:00Z"
-        sourceTicketKey="AIB-100"
-      />
-    );
+    renderComparisonHeroCard(undefined, ['coverage', 'performance']);
 
     expect(screen.getByText('AIB-101')).toBeInTheDocument();
   });
 
   it('renders recommendation text', () => {
-    renderWithProviders(
-      <ComparisonHeroCard
-        winner={makeWinner()}
-        recommendation="Use AIB-101 for best results."
-        keyDifferentiators={[]}
-        generatedAt="2026-03-26T10:00:00Z"
-        sourceTicketKey="AIB-100"
-      />
-    );
+    renderComparisonHeroCard();
 
-    expect(screen.getByText('Use AIB-101 for best results.')).toBeInTheDocument();
+    expect(screen.getByText(DEFAULT_RECOMMENDATION)).toBeInTheDocument();
   });
 
   it('renders key differentiator badges', () => {
-    renderWithProviders(
-      <ComparisonHeroCard
-        winner={makeWinner()}
-        recommendation="Recommendation"
-        keyDifferentiators={['coverage', 'performance']}
-        generatedAt="2026-03-26T10:00:00Z"
-        sourceTicketKey="AIB-100"
-      />
-    );
+    renderComparisonHeroCard(undefined, ['coverage', 'performance']);
 
     expect(screen.getByText('coverage')).toBeInTheDocument();
     expect(screen.getByText('performance')).toBeInTheDocument();
   });
 
   it('displays metadata with source ticket key', () => {
-    renderWithProviders(
-      <ComparisonHeroCard
-        winner={makeWinner()}
-        recommendation="Recommendation"
-        keyDifferentiators={[]}
-        generatedAt="2026-03-26T10:00:00Z"
-        sourceTicketKey="AIB-100"
-      />
-    );
+    renderComparisonHeroCard();
 
     expect(screen.getByText(/AIB-100/)).toBeInTheDocument();
   });
 
   it('renders stat pills with available values', () => {
-    renderWithProviders(
-      <ComparisonHeroCard
-        winner={makeWinner()}
-        recommendation="Recommendation"
-        keyDifferentiators={[]}
-        generatedAt="2026-03-26T10:00:00Z"
-        sourceTicketKey="AIB-100"
-      />
-    );
+    renderComparisonHeroCard();
 
     expect(screen.getByText('$1.25')).toBeInTheDocument();
     expect(screen.getByText('2m 34s')).toBeInTheDocument();
@@ -126,15 +105,7 @@ describe('ComparisonHeroCard', () => {
       quality: { state: 'pending', value: null },
     });
 
-    renderWithProviders(
-      <ComparisonHeroCard
-        winner={winner}
-        recommendation="Recommendation"
-        keyDifferentiators={[]}
-        generatedAt="2026-03-26T10:00:00Z"
-        sourceTicketKey="AIB-100"
-      />
-    );
+    renderComparisonHeroCard(winner);
 
     expect(screen.getAllByText('Pending').length).toBeGreaterThanOrEqual(3);
   });
@@ -153,87 +124,39 @@ describe('ComparisonHeroCard', () => {
       quality: { state: 'unavailable', value: null },
     });
 
-    renderWithProviders(
-      <ComparisonHeroCard
-        winner={winner}
-        recommendation="Recommendation"
-        keyDifferentiators={[]}
-        generatedAt="2026-03-26T10:00:00Z"
-        sourceTicketKey="AIB-100"
-      />
-    );
+    renderComparisonHeroCard(winner);
 
     expect(screen.getAllByText('N/A').length).toBeGreaterThanOrEqual(3);
   });
 
   it('renders score gauge with winner score', () => {
-    renderWithProviders(
-      <ComparisonHeroCard
-        winner={makeWinner({ score: 92 })}
-        recommendation="Recommendation"
-        keyDifferentiators={[]}
-        generatedAt="2026-03-26T10:00:00Z"
-        sourceTicketKey="AIB-100"
-      />
-    );
+    renderComparisonHeroCard({ score: 92 });
 
     expect(screen.getByRole('img', { name: 'Score: 92' })).toBeInTheDocument();
   });
 
   it('renders gradient winner badge', () => {
-    renderWithProviders(
-      <ComparisonHeroCard
-        winner={makeWinner()}
-        recommendation="Recommendation"
-        keyDifferentiators={[]}
-        generatedAt="2026-03-26T10:00:00Z"
-        sourceTicketKey="AIB-100"
-      />
-    );
+    renderComparisonHeroCard();
 
     expect(screen.getByText('WINNER')).toBeInTheDocument();
   });
 
   it('renders glow orb element', () => {
-    const { container } = renderWithProviders(
-      <ComparisonHeroCard
-        winner={makeWinner()}
-        recommendation="Recommendation"
-        keyDifferentiators={[]}
-        generatedAt="2026-03-26T10:00:00Z"
-        sourceTicketKey="AIB-100"
-      />
-    );
+    const { container } = renderComparisonHeroCard();
 
     const glowOrb = container.querySelector('[data-testid="glow-orb"]');
     expect(glowOrb).not.toBeNull();
   });
 
   it('renders bordered recommendation container', () => {
-    const { container } = renderWithProviders(
-      <ComparisonHeroCard
-        winner={makeWinner()}
-        recommendation="Use AIB-101 for best results."
-        keyDifferentiators={[]}
-        generatedAt="2026-03-26T10:00:00Z"
-        sourceTicketKey="AIB-100"
-      />
-    );
+    const { container } = renderComparisonHeroCard();
 
     const recContainer = container.querySelector('[data-testid="recommendation-container"]');
     expect(recContainer).not.toBeNull();
   });
 
   it('renders colored differentiator pills with accent backgrounds', () => {
-    const { container } = renderWithProviders(
-      <ComparisonHeroCard
-        winner={makeWinner()}
-        recommendation="Recommendation"
-        keyDifferentiators={['coverage', 'performance']}
-        generatedAt="2026-03-26T10:00:00Z"
-        sourceTicketKey="AIB-100"
-      />
-    );
+    const { container } = renderComparisonHeroCard(undefined, ['coverage', 'performance']);
 
     const pills = container.querySelectorAll('[data-testid="differentiator-pill"]');
     expect(pills.length).toBe(2);
@@ -242,15 +165,7 @@ describe('ComparisonHeroCard', () => {
   it('renders winner metadata with full workflow badge and Claude tooltip', async () => {
     const user = userEvent.setup();
 
-    renderWithProviders(
-      <ComparisonHeroCard
-        winner={makeWinner()}
-        recommendation="Recommendation"
-        keyDifferentiators={[]}
-        generatedAt="2026-03-26T10:00:00Z"
-        sourceTicketKey="AIB-100"
-      />
-    );
+    renderComparisonHeroCard();
 
     expect(screen.getByTestId('comparison-workflow-badge')).toHaveTextContent('FULL');
 

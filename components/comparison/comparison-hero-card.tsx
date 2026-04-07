@@ -7,8 +7,24 @@ import { ComparisonCardMetadata } from './comparison-card-metadata';
 import { ScoreGauge } from './score-gauge';
 import type { ComparisonHeroCardProps } from './types';
 
+interface EnrichmentValue {
+  state: string;
+  value: number | null;
+}
+
+interface GradientTheme {
+  from: string;
+  to: string;
+  text: string;
+}
+
+interface StatPillTheme extends GradientTheme {
+  border: string;
+  label: string;
+}
+
 function getEnrichmentDisplay(
-  enrichment: { state: string; value: number | null },
+  enrichment: EnrichmentValue,
   format: (v: number) => string
 ): string {
   if (enrichment.state === 'available' && enrichment.value != null) {
@@ -29,7 +45,7 @@ function formatDate(dateString: string): string {
 }
 
 /** Gradient color pairs for differentiator pills, cycling through aurora palette */
-const PILL_GRADIENTS = [
+const PILL_GRADIENTS: GradientTheme[] = [
   { from: '--ctp-sapphire', to: '--ctp-mauve', text: '--ctp-sapphire' },
   { from: '--ctp-mauve', to: '--ctp-pink', text: '--ctp-mauve' },
   { from: '--ctp-pink', to: '--ctp-peach', text: '--ctp-pink' },
@@ -39,7 +55,7 @@ const PILL_GRADIENTS = [
 ];
 
 /** Gradient styles for the 3 hero stat pills */
-const STAT_PILL_STYLES: { label: string; from: string; to: string; text: string; border: string }[] = [
+const STAT_PILL_STYLES: StatPillTheme[] = [
   { label: 'Cost', from: '--ctp-yellow', to: '--ctp-peach', text: '--ctp-yellow', border: '--ctp-yellow' },
   { label: 'Duration', from: '--ctp-sapphire', to: '--ctp-mauve', text: '--ctp-sapphire', border: '--ctp-sapphire' },
   { label: 'Quality Score', from: '--ctp-mauve', to: '--ctp-pink', text: '--ctp-mauve', border: '--ctp-mauve' },
@@ -48,11 +64,10 @@ const STAT_PILL_STYLES: { label: string; from: string; to: string; text: string;
 interface StatPillProps {
   label: string;
   value: string;
-  index: number;
+  theme: StatPillTheme;
 }
 
-function StatPill({ label, value, index }: StatPillProps) {
-  const theme = (STAT_PILL_STYLES[index] ?? STAT_PILL_STYLES[0])!;
+function StatPill({ label, value, theme }: StatPillProps): JSX.Element {
   return (
     <div
       className="flex flex-col items-center rounded-lg border px-4 py-2"
@@ -73,17 +88,32 @@ function StatPill({ label, value, index }: StatPillProps) {
   );
 }
 
+function getDifferentiatorStyle(index: number): React.CSSProperties {
+  const gradient = PILL_GRADIENTS[index % PILL_GRADIENTS.length] ?? PILL_GRADIENTS[0]!;
+
+  return {
+    background: `linear-gradient(135deg, hsl(var(${gradient.from}) / 0.1), hsl(var(${gradient.to}) / 0.1))`,
+    border: `1px solid hsl(var(${gradient.from}) / 0.2)`,
+    color: `hsl(var(${gradient.text}))`,
+  };
+}
+
 export function ComparisonHeroCard({
   winner,
   recommendation,
   keyDifferentiators,
   generatedAt,
   sourceTicketKey,
-}: ComparisonHeroCardProps) {
+}: ComparisonHeroCardProps): JSX.Element {
   const costValue = getEnrichmentDisplay(winner.telemetry.costUsd, (v) => `$${v.toFixed(2)}`);
   const durationValue = getEnrichmentDisplay(winner.telemetry.durationMs, formatDurationMs);
   const qualityValue = getEnrichmentDisplay(winner.quality, String);
   const accent = getAccentColorByRank(winner.rank);
+  const statPills = [
+    { label: 'Cost', theme: STAT_PILL_STYLES[0]!, value: costValue },
+    { label: 'Duration', theme: STAT_PILL_STYLES[1]!, value: durationValue },
+    { label: 'Quality Score', theme: STAT_PILL_STYLES[2]!, value: qualityValue },
+  ];
 
   return (
     <Card
@@ -133,17 +163,12 @@ export function ComparisonHeroCard({
             {keyDifferentiators.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {keyDifferentiators.map((diff, i) => {
-                  const gradient = PILL_GRADIENTS[i % PILL_GRADIENTS.length]!;
                   return (
                     <span
                       key={diff}
                       data-testid="differentiator-pill"
                       className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
-                      style={{
-                        background: `linear-gradient(135deg, hsl(var(${gradient.from}) / 0.1), hsl(var(${gradient.to}) / 0.1))`,
-                        color: `hsl(var(${gradient.text}))`,
-                        border: `1px solid hsl(var(${gradient.from}) / 0.2)`,
-                      }}
+                      style={getDifferentiatorStyle(i)}
                     >
                       {diff}
                     </span>
@@ -159,9 +184,9 @@ export function ComparisonHeroCard({
         </div>
 
         <div className="mt-4 flex flex-wrap justify-center gap-3 sm:justify-start">
-          <StatPill label="Cost" value={costValue} index={0} />
-          <StatPill label="Duration" value={durationValue} index={1} />
-          <StatPill label="Quality Score" value={qualityValue} index={2} />
+          {statPills.map((pill) => (
+            <StatPill key={pill.label} label={pill.label} value={pill.value} theme={pill.theme} />
+          ))}
         </div>
       </CardContent>
     </Card>

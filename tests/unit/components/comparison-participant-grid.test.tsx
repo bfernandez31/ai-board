@@ -38,25 +38,32 @@ function makeParticipant(overrides?: Partial<ComparisonParticipantDetail>): Comp
   };
 }
 
+function renderComparisonParticipantGrid(overrides: Partial<ComparisonParticipantDetail>[] = []) {
+  const participants = overrides.map((participantOverrides, index) =>
+    makeParticipant({
+      rank: index + 2,
+      ticketId: index + 2,
+      ticketKey: `AIB-10${index + 2}`,
+      ...participantOverrides,
+    })
+  );
+
+  return renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
+}
+
 describe('ComparisonParticipantGrid', () => {
   it('renders correct number of participant cards', () => {
-    const participants = [
-      makeParticipant({ ticketId: 2, ticketKey: 'AIB-102', rank: 2 }),
-      makeParticipant({ ticketId: 3, ticketKey: 'AIB-103', rank: 3 }),
-    ];
-
-    renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
+    renderComparisonParticipantGrid([
+      { ticketId: 2, ticketKey: 'AIB-102', rank: 2 },
+      { ticketId: 3, ticketKey: 'AIB-103', rank: 3 },
+    ]);
 
     expect(screen.getByText('AIB-102')).toBeInTheDocument();
     expect(screen.getByText('AIB-103')).toBeInTheDocument();
   });
 
   it('shows rank, ticket key, and title for each card', () => {
-    const participants = [
-      makeParticipant({ ticketId: 2, ticketKey: 'AIB-102', rank: 2, title: 'Second place' }),
-    ];
-
-    renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
+    renderComparisonParticipantGrid([{ ticketId: 2, ticketKey: 'AIB-102', rank: 2, title: 'Second place' }]);
 
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('AIB-102')).toBeInTheDocument();
@@ -64,12 +71,10 @@ describe('ComparisonParticipantGrid', () => {
   });
 
   it('renders score rings with correct colors per threshold', () => {
-    const participants = [
-      makeParticipant({ ticketId: 2, score: 90 }), // green
-      makeParticipant({ ticketId: 3, ticketKey: 'AIB-103', score: 45 }), // red
-    ];
-
-    const { container } = renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
+    const { container } = renderComparisonParticipantGrid([
+      { ticketId: 2, score: 90 },
+      { ticketId: 3, ticketKey: 'AIB-103', score: 45 },
+    ]);
 
     const svgs = container.querySelectorAll('svg');
     expect(svgs.length).toBe(2);
@@ -84,11 +89,7 @@ describe('ComparisonParticipantGrid', () => {
 
   it('renders quick workflow badge and Claude tooltip', async () => {
     const user = userEvent.setup();
-    const participants = [
-      makeParticipant({ ticketId: 2, workflowType: 'QUICK' as const, agent: 'claude-opus' }),
-    ];
-
-    renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
+    renderComparisonParticipantGrid([{ ticketId: 2, workflowType: 'QUICK' as const, agent: 'claude-opus' }]);
 
     expect(screen.getByTestId('comparison-workflow-badge')).toHaveTextContent('Quick');
 
@@ -99,22 +100,14 @@ describe('ComparisonParticipantGrid', () => {
   });
 
   it('renders clean workflow badge and omits unknown agent identifiers', () => {
-    const participants = [
-      makeParticipant({ ticketId: 2, workflowType: 'CLEAN' as const, agent: 'custom-runner' }),
-    ];
-
-    renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
+    renderComparisonParticipantGrid([{ ticketId: 2, workflowType: 'CLEAN' as const, agent: 'custom-runner' }]);
 
     expect(screen.getByTestId('comparison-workflow-badge')).toHaveTextContent('Clean');
     expect(screen.queryByTestId('comparison-agent-badge')).not.toBeInTheDocument();
   });
 
   it('renders rationale text', () => {
-    const participants = [
-      makeParticipant({ ticketId: 2, rankRationale: 'Solid but costly' }),
-    ];
-
-    renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
+    renderComparisonParticipantGrid([{ ticketId: 2, rankRationale: 'Solid but costly' }]);
 
     expect(screen.getByText('Solid but costly')).toBeInTheDocument();
   });

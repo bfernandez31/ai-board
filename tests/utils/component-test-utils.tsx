@@ -19,33 +19,11 @@ interface RenderWithProvidersResult extends RenderResult {
   queryClient: ReturnType<typeof createTestQueryClient>;
 }
 
-/**
- * Render a React component with all necessary providers for testing
- *
- * Features:
- * - QueryClientProvider with test-optimized client
- * - Returns queryClient for direct manipulation in tests
- *
- * Usage:
- * ```typescript
- * import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
- *
- * it('should handle form submission', async () => {
- *   const user = userEvent.setup();
- *   renderWithProviders(<MyComponent />);
- *
- *   await user.type(screen.getByLabelText(/email/i), 'test@example.com');
- *   await user.click(screen.getByRole('button', { name: /submit/i }));
- *
- *   expect(screen.getByText(/success/i)).toBeInTheDocument();
- * });
- * ```
- */
 export function renderWithProviders(
   ui: ReactElement,
   { queryClient = createTestQueryClient(), ...renderOptions }: RenderWithProvidersOptions = {}
 ): RenderWithProvidersResult {
-  function Wrapper({ children }: { children: ReactNode }) {
+  function Wrapper({ children }: { children: ReactNode }): ReactElement {
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
