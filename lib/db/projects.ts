@@ -60,6 +60,17 @@ export async function getUserProjects(request?: NextRequest) {
           title: true,
           updatedAt: true,
         }
+      },
+      healthScore: {
+        select: {
+          globalScore: true,
+          securityScore: true,
+          complianceScore: true,
+          testsScore: true,
+          specSyncScore: true,
+          qualityGate: true,
+          reviewQualityScore: true,
+        }
       }
     },
     orderBy: { updatedAt: 'desc' },

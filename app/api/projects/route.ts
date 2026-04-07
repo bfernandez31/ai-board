@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { getUserProjects, createProject } from '@/lib/db/projects';
-import type { ProjectsListResponse } from '@/app/lib/types/project';
+import { toProjectWithCount } from '@/app/lib/types/project';
 import { generateProjectKey, isValidProjectKey, isProjectKeyAvailable } from '@/app/lib/utils/generate-project-key';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/db/users';
@@ -25,24 +25,7 @@ export async function GET(request: NextRequest) {
     // Pass request for PAT authentication support
     const projects = await getUserProjects(request);
 
-    // Transform to API response shape
-    const response: ProjectsListResponse = projects.map((project) => ({
-      id: project.id,
-      key: project.key,
-      name: project.name,
-      description: project.description,
-      githubOwner: project.githubOwner,
-      githubRepo: project.githubRepo,
-      deploymentUrl: project.deploymentUrl,
-      updatedAt: project.updatedAt.toISOString(),
-      ticketCount: project._count.tickets,
-      lastShippedTicket: project.tickets[0] ? {
-        id: project.tickets[0].id,
-        ticketKey: project.tickets[0].ticketKey,
-        title: project.tickets[0].title,
-        updatedAt: project.tickets[0].updatedAt.toISOString(),
-      } : null,
-    }));
+    const response = projects.map(toProjectWithCount);
 
     return NextResponse.json(response);
   } catch (error) {

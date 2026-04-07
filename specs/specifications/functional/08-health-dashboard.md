@@ -4,6 +4,10 @@
 
 The Health Dashboard provides project owners and members with an at-a-glance view of their project's technical health. It aggregates results from up to 5 health modules into a single global score, allows users to trigger on-demand scans, and tracks scan history over time.
 
+## At-a-Glance Health on Project Cards
+
+The project list page surfaces each project's global health score directly on the project card via a colored heart indicator in the card's top-right corner. The heart displays the numeric global score (0–100) with threshold-based color coding (green/blue/yellow/red) and a matching glow. Projects with no completed scan show a greyed-out heart with a dash. Hovering the heart reveals a compact popover with all 6 sub-scores. This provides at-a-glance health awareness across all projects without navigating to the Health Dashboard.
+
 ## Accessing the Health Dashboard
 
 The Health Dashboard is accessible at `/projects/{projectId}/health`. Users reach it by clicking the **Health** entry (HeartPulse icon) in the project sidebar under the Views group, positioned after Comparisons.
