@@ -5,6 +5,7 @@ import { UsageBanner } from '@/components/billing/usage-banner';
 import { ProjectsHeaderActions } from '@/components/projects/projects-header-actions';
 import type { ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
+import { toProjectResponse } from '@/app/lib/transforms/project';
 
 // Force dynamic rendering - this page uses headers() for auth
 export const dynamic = 'force-dynamic';
@@ -16,36 +17,8 @@ export const metadata: Metadata = {
 
 async function getProjects(): Promise<ProjectsListResponse> {
   try {
-    // Use data access layer directly instead of fetch
     const projects = await getUserProjects();
-
-    // Transform to API response shape
-    return projects.map((project) => ({
-      id: project.id,
-      key: project.key,
-      name: project.name,
-      description: project.description,
-      githubOwner: project.githubOwner,
-      githubRepo: project.githubRepo,
-      deploymentUrl: project.deploymentUrl,
-      updatedAt: project.updatedAt.toISOString(),
-      ticketCount: project._count.tickets,
-      lastShippedTicket: project.tickets[0] ? {
-        id: project.tickets[0].id,
-        ticketKey: project.tickets[0].ticketKey,
-        title: project.tickets[0].title,
-        updatedAt: project.tickets[0].updatedAt.toISOString(),
-      } : null,
-      healthScore: project.healthScore ? {
-        globalScore: project.healthScore.globalScore,
-        securityScore: project.healthScore.securityScore,
-        complianceScore: project.healthScore.complianceScore,
-        testsScore: project.healthScore.testsScore,
-        specSyncScore: project.healthScore.specSyncScore,
-        qualityGate: project.healthScore.qualityGate,
-        reviewQualityScore: project.healthScore.reviewQualityScore,
-      } : null,
-    }));
+    return projects.map(toProjectResponse);
   } catch (error) {
     console.error('Failed to fetch projects:', error);
     return []; // Return empty array on error (graceful degradation)

@@ -21,26 +21,22 @@ const SUB_SCORES: { key: keyof Omit<ProjectHealthScore, 'globalScore'>; label: s
   { key: 'reviewQualityScore', label: 'Review Quality' },
 ];
 
-function getHeartFillColor(score: number | null): string {
-  if (score === null) return 'fill-muted-foreground';
-  if (score >= 90) return 'fill-ctp-green';
-  if (score >= 70) return 'fill-ctp-blue';
-  if (score >= 50) return 'fill-ctp-yellow';
-  return 'fill-ctp-red';
-}
+const HEART_STYLES = [
+  { min: 90, fill: 'fill-ctp-green', glow: 'drop-shadow-[0_0_6px_rgba(166,227,161,0.5)]' },
+  { min: 70, fill: 'fill-ctp-blue', glow: 'drop-shadow-[0_0_6px_rgba(137,180,250,0.5)]' },
+  { min: 50, fill: 'fill-ctp-yellow', glow: 'drop-shadow-[0_0_6px_rgba(249,226,175,0.5)]' },
+  { min: 0, fill: 'fill-ctp-red', glow: 'drop-shadow-[0_0_6px_rgba(243,139,168,0.5)]' },
+] as const;
 
-function getHeartGlowClass(score: number | null): string {
-  if (score === null) return '';
-  if (score >= 90) return 'drop-shadow-[0_0_6px_rgba(166,227,161,0.5)]';
-  if (score >= 70) return 'drop-shadow-[0_0_6px_rgba(137,180,250,0.5)]';
-  if (score >= 50) return 'drop-shadow-[0_0_6px_rgba(249,226,175,0.5)]';
-  return 'drop-shadow-[0_0_6px_rgba(243,139,168,0.5)]';
+function getHeartStyle(score: number | null): { fill: string; glow: string } {
+  if (score === null) return { fill: 'fill-muted-foreground', glow: '' };
+  const style = HEART_STYLES.find((s) => score >= s.min)!;
+  return { fill: style.fill, glow: style.glow };
 }
 
 export function HealthHeartIndicator({ healthScore }: HealthHeartIndicatorProps) {
   const globalScore = healthScore?.globalScore ?? null;
-  const fillColor = getHeartFillColor(globalScore);
-  const glowClass = getHeartGlowClass(globalScore);
+  const { fill: fillColor, glow: glowClass } = getHeartStyle(globalScore);
   const displayValue = globalScore !== null ? globalScore.toString() : '—';
 
   return (
