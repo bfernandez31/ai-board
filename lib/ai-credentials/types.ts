@@ -66,7 +66,7 @@ export const ENV_VAR_MAP: Record<string, string> = {
   'ANTHROPIC:API_KEY': 'ANTHROPIC_API_KEY',
   'ANTHROPIC:OAUTH_TOKEN': 'CLAUDE_CODE_OAUTH_TOKEN',
   'OPENAI:API_KEY': 'OPENAI_API_KEY',
-  'OPENAI:OAUTH_TOKEN': 'OPENAI_API_KEY',
+  'OPENAI:OAUTH_TOKEN': 'CODEX_OAUTH_JSON',
 };
 
 export function getEnvVar(provider: CredentialProvider, credentialType: CredentialType): string {

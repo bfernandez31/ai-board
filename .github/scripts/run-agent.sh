@@ -53,8 +53,8 @@ validate_auth() {
       fi
       ;;
     CODEX)
-      if [[ -z "${OPENAI_API_KEY:-}" ]] && [[ -z "${CODEX_AUTH_JSON:-}" ]]; then
-        log_error "OPENAI_API_KEY or CODEX_AUTH_JSON is required for agent type CODEX"
+      if [[ -z "${OPENAI_API_KEY:-}" ]] && [[ -z "${CODEX_AUTH_JSON:-}" ]] && [[ -z "${CODEX_OAUTH_JSON:-}" ]]; then
+        log_error "OPENAI_API_KEY, CODEX_OAUTH_JSON, or CODEX_AUTH_JSON is required for agent type CODEX"
         exit 1
       fi
       ;;
@@ -105,11 +105,14 @@ install_codex() {
 }
 
 auth_codex() {
-  # Reset auth from secret on every call to avoid refresh token expiry
-  # Codex consumes the refresh token on each invocation, so the auth.json
-  # written by a previous call may contain an already-used refresh token.
-  if [[ -n "${CODEX_AUTH_JSON:-}" ]]; then
-    mkdir -p ~/.codex
+  mkdir -p ~/.codex
+  if [[ -n "${CODEX_OAUTH_JSON:-}" ]]; then
+    # BYOK credential: raw auth.json content from the credential system
+    echo "$CODEX_OAUTH_JSON" > ~/.codex/auth.json
+    chmod 600 ~/.codex/auth.json
+    log_info "Codex authenticated via OAuth token (BYOK credential)"
+  elif [[ -n "${CODEX_AUTH_JSON:-}" ]]; then
+    # Legacy fallback: base64-encoded auth.json from GitHub secrets
     echo "$CODEX_AUTH_JSON" | base64 -d > ~/.codex/auth.json
     chmod 600 ~/.codex/auth.json
     log_info "Codex authenticated via OAuth token (auth.json reset from secret)"
