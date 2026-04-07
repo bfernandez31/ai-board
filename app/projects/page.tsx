@@ -1,14 +1,10 @@
 import type { Metadata } from 'next';
+import type { ProjectsListResponse } from '@/app/lib/types/project';
 import { ProjectsContainer } from '@/components/projects/projects-container';
 import { ProjectQuotaGate } from '@/components/projects/project-quota-gate';
 import { UsageBanner } from '@/components/billing/usage-banner';
 import { ProjectsHeaderActions } from '@/components/projects/projects-header-actions';
-import type { ProjectsListResponse } from '@/app/lib/types/project';
-import {
-  getUserProjects,
-  mapProjectToProjectWithCount,
-} from '@/lib/db/projects';
-import { getQualityGateAveragesByProjectId } from '@/lib/health/quality-gate';
+import { getUserProjectsWithHealthSummary } from '@/lib/db/projects';
 
 // Force dynamic rendering - this page uses headers() for auth
 export const dynamic = 'force-dynamic';
@@ -20,18 +16,7 @@ export const metadata: Metadata = {
 
 async function getProjects(): Promise<ProjectsListResponse> {
   try {
-    // Use data access layer directly instead of fetch
-    const projects = await getUserProjects();
-    const qualityGateAverages = await getQualityGateAveragesByProjectId(
-      projects.map((project) => project.id),
-    );
-
-    return projects.map((project) =>
-      mapProjectToProjectWithCount(
-        project,
-        qualityGateAverages.get(project.id) ?? null,
-      ),
-    );
+    return await getUserProjectsWithHealthSummary();
   } catch (error) {
     console.error('Failed to fetch projects:', error);
     return []; // Return empty array on error (graceful degradation)

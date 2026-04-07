@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { ProjectsListResponse } from '@/app/lib/types/project';
 import { ZodError } from 'zod';
 import {
   createProject,
-  getUserProjects,
-  mapProjectToProjectWithCount,
+  getUserProjectsWithHealthSummary,
 } from '@/lib/db/projects';
-import type { ProjectsListResponse } from '@/app/lib/types/project';
 import { generateProjectKey, isValidProjectKey, isProjectKeyAvailable } from '@/app/lib/utils/generate-project-key';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/db/users';
@@ -13,7 +12,6 @@ import { getUserSubscription } from '@/lib/billing/subscription';
 import { prisma } from '@/lib/db/client';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
 import { syncProjectConfig } from '@/lib/config-sync';
-import { getQualityGateAveragesByProjectId } from '@/lib/health/quality-gate';
 
 // Validation schema for project creation
 const createProjectSchema = z.object({
@@ -26,19 +24,8 @@ const createProjectSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    // Fetch user's projects with ticket counts (userId filtering applied)
-    // Pass request for PAT authentication support
-    const projects = await getUserProjects(request);
-    const qualityGateAverages = await getQualityGateAveragesByProjectId(
-      projects.map((project) => project.id),
-    );
-
-    const response: ProjectsListResponse = projects.map((project) =>
-      mapProjectToProjectWithCount(
-        project,
-        qualityGateAverages.get(project.id) ?? null,
-      ),
-    );
+    const response: ProjectsListResponse =
+      await getUserProjectsWithHealthSummary(request);
 
     return NextResponse.json(response);
   } catch (error) {

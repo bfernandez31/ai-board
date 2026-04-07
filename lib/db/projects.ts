@@ -13,6 +13,8 @@ import {
   getScoreColorConfig,
   getScoreLabel,
 } from '@/lib/health/score-calculator';
+import { getQualityGateAveragesByProjectId } from '@/lib/health/quality-gate';
+import type { ProjectsListResponse } from '@/app/lib/types/project';
 
 interface ProjectListHealthScore {
   securityScore: number | null;
@@ -77,6 +79,8 @@ export function mapProjectToProjectWithCount(
   project: ProjectListRecord,
   qualityGateScore: number | null,
 ): ProjectWithCount {
+  const lastShippedTicket = project.tickets[0];
+
   return {
     id: project.id,
     key: project.key,
@@ -87,16 +91,32 @@ export function mapProjectToProjectWithCount(
     deploymentUrl: project.deploymentUrl,
     updatedAt: project.updatedAt.toISOString(),
     ticketCount: project._count.tickets,
-    lastShippedTicket: project.tickets[0]
+    lastShippedTicket: lastShippedTicket
       ? {
-          id: project.tickets[0].id,
-          ticketKey: project.tickets[0].ticketKey,
-          title: project.tickets[0].title,
-          updatedAt: project.tickets[0].updatedAt.toISOString(),
+          id: lastShippedTicket.id,
+          ticketKey: lastShippedTicket.ticketKey,
+          title: lastShippedTicket.title,
+          updatedAt: lastShippedTicket.updatedAt.toISOString(),
         }
       : null,
     healthSummary: buildProjectHealthSummary(project.healthScore, qualityGateScore),
   };
+}
+
+export async function getUserProjectsWithHealthSummary(
+  request?: NextRequest,
+): Promise<ProjectsListResponse> {
+  const projects = await getUserProjects(request);
+  const qualityGateAverages = await getQualityGateAveragesByProjectId(
+    projects.map((project) => project.id),
+  );
+
+  return projects.map((project) =>
+    mapProjectToProjectWithCount(
+      project,
+      qualityGateAverages.get(project.id) ?? null,
+    ),
+  );
 }
 
 /**

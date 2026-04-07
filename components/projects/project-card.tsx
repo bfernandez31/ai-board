@@ -20,25 +20,34 @@ interface ProjectCardProps {
   project: ProjectWithCount;
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+function getNoShippedTicketsLabel(ticketCount: number): string {
+  if (ticketCount === 0) {
+    return 'No tickets yet';
+  }
+
+  return `No tickets shipped yet · ${ticketCount} total`;
+}
+
+export function ProjectCard({ project }: ProjectCardProps): React.JSX.Element {
   const router = useRouter();
   const { copy, isCopied } = useCopyToClipboard();
   const mounted = useHasMounted();
 
-  const handleClick = () => {
+  function handleClick(): void {
     router.push(`/projects/${project.id}/board`);
-  };
+  }
 
-  const handleCopyUrl = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card navigation
+  function handleCopyUrl(event: React.MouseEvent<HTMLButtonElement>): void {
+    event.stopPropagation();
+
     if (project.deploymentUrl) {
       copy(project.deploymentUrl);
     }
-  };
+  }
 
-  const handleGitHubClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card navigation
-  };
+  function stopCardNavigation(event: React.SyntheticEvent): void {
+    event.stopPropagation();
+  }
 
   return (
     <Card
@@ -52,7 +61,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <CardTitle className="min-w-0 text-foreground" data-testid="project-name">
             {project.name}
           </CardTitle>
-          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-2" onClick={stopCardNavigation}>
             <ProjectHealthIndicator healthSummary={project.healthSummary} />
             <ProjectMenu projectId={project.id} />
           </div>
@@ -63,7 +72,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           href={`https://github.com/${project.githubOwner}/${project.githubRepo}`}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={handleGitHubClick}
+          onClick={stopCardNavigation}
           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
           data-testid="github-link"
         >
@@ -78,7 +87,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
               href={project.deploymentUrl}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
+              onClick={stopCardNavigation}
               className="text-sm text-ctp-blue hover:text-ctp-lavender transition-colors truncate"
               data-testid="deployment-url"
             >
@@ -132,9 +141,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </div>
         ) : (
           <span className="text-sm text-ctp-overlay0" data-testid="no-shipped-tickets">
-            {project.ticketCount === 0
-              ? 'No tickets yet'
-              : `No tickets shipped yet · ${project.ticketCount} total`}
+            {getNoShippedTicketsLabel(project.ticketCount)}
           </span>
         )}
       </CardContent>
