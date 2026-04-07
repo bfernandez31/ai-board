@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ComparisonParticipantGrid } from '@/components/comparison/comparison-participant-grid';
-import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
+import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
 import type { ComparisonParticipantDetail } from '@/lib/types/comparison';
 
 function makeParticipant(overrides?: Partial<ComparisonParticipantDetail>): ComparisonParticipantDetail {
@@ -82,15 +82,31 @@ describe('ComparisonParticipantGrid', () => {
     expect(secondScoreCircle.getAttribute('stroke')).toContain('url(#');
   });
 
-  it('renders workflow type and agent badges', () => {
+  it('renders quick workflow badge and Claude tooltip', async () => {
+    const user = userEvent.setup();
     const participants = [
       makeParticipant({ ticketId: 2, workflowType: 'QUICK' as const, agent: 'claude-opus' }),
     ];
 
     renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
 
-    expect(screen.getByText('QUICK')).toBeInTheDocument();
-    expect(screen.getByText('claude-opus')).toBeInTheDocument();
+    expect(screen.getByTestId('comparison-workflow-badge')).toHaveTextContent('Quick');
+
+    await user.hover(screen.getByTestId('comparison-agent-badge'));
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Claude');
+    expect(screen.getByAltText('CLAUDE')).toHaveAttribute('width', '16');
+  });
+
+  it('renders clean workflow badge and omits unknown agent identifiers', () => {
+    const participants = [
+      makeParticipant({ ticketId: 2, workflowType: 'CLEAN' as const, agent: 'custom-runner' }),
+    ];
+
+    renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
+
+    expect(screen.getByTestId('comparison-workflow-badge')).toHaveTextContent('Clean');
+    expect(screen.queryByTestId('comparison-agent-badge')).not.toBeInTheDocument();
   });
 
   it('renders rationale text', () => {

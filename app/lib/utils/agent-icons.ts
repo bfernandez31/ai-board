@@ -23,3 +23,23 @@ export function getAgentDescription(agent: Agent): string {
   };
   return descriptions[agent];
 }
+
+export function inferAgentFromIdentifier(agentIdentifier: string | null | undefined): Agent | null {
+  if (!agentIdentifier) return null;
+
+  const normalizedIdentifier = agentIdentifier.trim().toLowerCase();
+
+  if (normalizedIdentifier.includes('claude')) {
+    return Agent.CLAUDE;
+  }
+
+  if (
+    normalizedIdentifier.includes('codex') ||
+    normalizedIdentifier.includes('openai') ||
+    normalizedIdentifier.includes('gpt-')
+  ) {
+    return Agent.CODEX;
+  }
+
+  return null;
+}

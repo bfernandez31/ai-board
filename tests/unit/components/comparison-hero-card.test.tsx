@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ComparisonHeroCard } from '@/components/comparison/comparison-hero-card';
-import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
+import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
 import type { ComparisonParticipantDetail } from '@/lib/types/comparison';
 
 function makeWinner(overrides?: Partial<ComparisonParticipantDetail>): ComparisonParticipantDetail {
@@ -237,5 +237,41 @@ describe('ComparisonHeroCard', () => {
 
     const pills = container.querySelectorAll('[data-testid="differentiator-pill"]');
     expect(pills.length).toBe(2);
+  });
+
+  it('renders winner metadata with full workflow badge and Claude tooltip', async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(
+      <ComparisonHeroCard
+        winner={makeWinner()}
+        recommendation="Recommendation"
+        keyDifferentiators={[]}
+        generatedAt="2026-03-26T10:00:00Z"
+        sourceTicketKey="AIB-100"
+      />
+    );
+
+    expect(screen.getByTestId('comparison-workflow-badge')).toHaveTextContent('FULL');
+
+    await user.hover(screen.getByTestId('comparison-agent-badge'));
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Claude');
+    expect(screen.getByAltText('CLAUDE')).toHaveAttribute('width', '20');
+  });
+
+  it('omits the winner agent icon when agent data is missing', () => {
+    renderWithProviders(
+      <ComparisonHeroCard
+        winner={makeWinner({ agent: null })}
+        recommendation="Recommendation"
+        keyDifferentiators={[]}
+        generatedAt="2026-03-26T10:00:00Z"
+        sourceTicketKey="AIB-100"
+      />
+    );
+
+    expect(screen.queryByTestId('comparison-agent-badge')).not.toBeInTheDocument();
+    expect(screen.getByTestId('comparison-workflow-badge')).toBeInTheDocument();
   });
 });

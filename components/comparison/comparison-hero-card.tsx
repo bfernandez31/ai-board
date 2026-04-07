@@ -3,6 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDurationMs } from '@/lib/comparison/format-duration';
 import { getAccentColorByRank } from '@/lib/comparison/accent-colors';
+import { ComparisonCardMetadata } from './comparison-card-metadata';
 import { ScoreGauge } from './score-gauge';
 import type { ComparisonHeroCardProps } from './types';
 
@@ -98,6 +99,13 @@ export function ComparisonHeroCard({
       />
 
       <CardContent className="relative pt-6">
+        <ComparisonCardMetadata
+          workflowType={winner.workflowType}
+          agent={winner.agent}
+          iconSize={20}
+          className="absolute right-6 top-6"
+        />
+
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
           <div
             className="rounded-full aurora-glow-score"
@@ -105,7 +113,7 @@ export function ComparisonHeroCard({
             <ScoreGauge score={winner.score} size={120} strokeWidth={8} accentColor={accent.hsl} />
           </div>
 
-          <div className="flex-1 space-y-3">
+          <div className="flex-1 space-y-3 pr-24 sm:pr-36">
             <div className="flex items-center gap-3">
               <h3 className="text-2xl font-bold text-foreground">{winner.ticketKey}</h3>
               <span
