@@ -102,7 +102,7 @@ export function Header() {
         isScrolled ? 'shadow-[0_1px_12px_rgba(139,92,246,0.15)]' : 'border-border/50'
       }`}
     >
-      <div className={`flex h-16 items-center px-6 ${isProjectPage ? 'lg:px-0' : ''}`}>
+      <div className={`flex h-16 items-center px-6 ${isProjectPage ? 'lg:pl-0' : ''}`}>
         {/* Left: Logo + Title */}
         {/* On project pages (lg+), logo sits in a 48px column aligned with sidebar */}
         {isProjectPage && (
