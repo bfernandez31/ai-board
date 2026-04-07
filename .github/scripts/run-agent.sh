@@ -192,6 +192,8 @@ invoke_codex() {
   local command_file
   command_file=$(resolve_command_file "$COMMAND") || exit 1
 
+  # Reduce OTLP batch export frequency (default 5s is too aggressive for Vercel)
+  export OTEL_BLRP_SCHEDULE_DELAY=60000
   log_info "Invoking Codex with command file: $command_file"
 
   local model="${CODEX_MODEL:-gpt-5.4}"
