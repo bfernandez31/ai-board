@@ -530,7 +530,7 @@ Each setup attempt creates a `ProjectSetupJob` record that tracks:
 - Selected agent, current status, workflow run identifier
 - Start and completion timestamps
 - Error details (on failure)
-- Artifact summary (files created — empty for stub workflow, populated by future workflow)
+- Artifact summary: lists files created, preserved (e.g., existing `CLAUDE.md`), and missing, along with commit SHA and optional error code
 
 When the workflow fails, the setup page displays the error message and offers a "Retry" button. Retrying creates a fresh job and dispatches a new workflow run, preserving the history of previous attempts.
 
@@ -547,7 +547,10 @@ When the workflow fails, the setup page displays the error message and offers a 
 | Missing credential for selected agent | Initialize button disabled; guidance shown |
 | Active job already running | Duplicate dispatch blocked (409 response) |
 | Project already configured | Dispatch blocked; page redirects to board |
-| Workflow failure | Error displayed with retry option |
+| Target repo clone fails (`DISPATCH_FAILED`) | Job fails; error displayed with retry option |
+| Stack detection fails (`CONFIG_GENERATION_FAILED`) | Job fails; error displayed with retry option |
+| LLM generation fails (`GUIDANCE_GENERATION_FAILED`) | Partial success: config committed, guidance missing; setup page shows which files were created vs missing |
+| Git push fails (`COMMIT_FAILED`) | Job fails with message; error displayed with retry option |
 | Config sync failure after COMPLETED | Project stays on setup page; retry resolves |
 
 ## External Repository Support

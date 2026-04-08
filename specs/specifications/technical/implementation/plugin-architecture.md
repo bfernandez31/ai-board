@@ -15,7 +15,7 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 ```
 .claude-plugin/
 ├── plugin.json                          # Plugin metadata (name, version, description)
-├── commands/                            # 22 slash commands (ai-board.*.md)
+├── commands/                            # 23 slash commands (ai-board.*.md)
 │   ├── ai-board.specify.md              # Generate feature specification
 │   ├── ai-board.clarify.md              # Ask clarification questions on spec
 │   ├── ai-board.plan.md                 # Generate implementation plan
@@ -38,7 +38,8 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 │   ├── ai-board.health-compliance.md    # Health scan: constitution compliance analysis
 │   ├── ai-board.health-tests.md         # Health scan: test execution + auto-fix
 │   ├── ai-board.health-spec-sync.md     # Health scan: spec/code drift detection
-│   └── ai-board.health-review-quality.md # Health scan: PR review quality analysis
+│   ├── ai-board.health-review-quality.md # Health scan: PR review quality analysis
+│   └── ai-board.onboard.md              # Project onboarding: generate CLAUDE.md, constitution.md, AGENTS.md
 ├── templates/                           # Document templates used by commands
 │   ├── spec-template.md                 # Specification template
 │   ├── plan-template.md                 # Implementation plan template
@@ -101,6 +102,7 @@ Each command is designed to run at a specific workflow stage. Commands are invok
 | `ai-board.health-compliance` | Health scan | `health-scan.yml` | Constitution principle compliance analysis; outputs `ComplianceReport` JSON |
 | `ai-board.health-tests` | Health scan | `health-scan.yml` | Full test-suite execution with auto-fix workflow; outputs `TestsReport` JSON |
 | `ai-board.health-spec-sync` | Health scan | `health-scan.yml` | Bidirectional spec/code drift detection; outputs `SpecSyncReport` JSON |
+| `ai-board.onboard` | Project setup | `onboard.yml` | Generate project-specific CLAUDE.md, constitution.md, and AGENTS.md from codebase analysis |
 
 ### Workflow Type → Command Sequence
 
