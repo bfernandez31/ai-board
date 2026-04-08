@@ -26,6 +26,10 @@ export const queryKeys = {
       ['projects', projectId, 'tickets', ticketId, 'jobs'] as const,
     ticketByKey: (projectId: number, ticketKey: string) =>
       ['projects', projectId, 'tickets', 'by-key', ticketKey] as const,
+    setupJob: (projectId: number) =>
+      ['projects', projectId, 'setup', 'job'] as const,
+    credentialCheck: (projectId: number, agent: string) =>
+      ['projects', projectId, 'setup', 'credential', agent] as const,
     activity: (projectId: number, cursor?: string | null) =>
       cursor
         ? (['projects', projectId, 'activity', cursor] as const)
