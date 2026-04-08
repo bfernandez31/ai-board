@@ -30,6 +30,8 @@ export const queryKeys = {
       cursor
         ? (['projects', projectId, 'activity', cursor] as const)
         : (['projects', projectId, 'activity'] as const),
+    setupStatus: (projectId: number) =>
+      ['projects', projectId, 'setup', 'status'] as const,
   },
 
   comments: {

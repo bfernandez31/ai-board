@@ -18,9 +18,9 @@
 
 **Purpose**: Data model, migration, and shared utilities needed by all user stories
 
-- [ ] T001 Add `ProjectSetupJob` model to `prisma/schema.prisma` with fields per data-model.md (id, projectId, agent, status, workflowRunId, logs, artifactSummary, startedAt, completedAt, createdAt, updatedAt) and add `setupJobs ProjectSetupJob[]` relation to `Project` model
-- [ ] T002 Run Prisma migration (`bunx prisma migrate dev --name add_project_setup_job`) and regenerate client (`bunx prisma generate`)
-- [ ] T003 Add setup query keys to `app/lib/query-keys.ts`: `setupStatus: (projectId: number) => ['projects', projectId, 'setup', 'status']`
+- [x] T001 Add `ProjectSetupJob` model to `prisma/schema.prisma` with fields per data-model.md (id, projectId, agent, status, workflowRunId, logs, artifactSummary, startedAt, completedAt, createdAt, updatedAt) and add `setupJobs ProjectSetupJob[]` relation to `Project` model
+- [x] T002 Run Prisma migration (`bunx prisma migrate dev --name add_project_setup_job`) and regenerate client (`bunx prisma generate`)
+- [x] T003 Add setup query keys to `app/lib/query-keys.ts`: `setupStatus: (projectId: number) => ['projects', projectId, 'setup', 'status']`
 
 ---
 
