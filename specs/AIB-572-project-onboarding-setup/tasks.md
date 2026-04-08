@@ -80,11 +80,11 @@
 
 ### Tests for User Story 4
 
-- [ ] T023 [P] [US4] Create unit tests for stack detection (TypeScript/Next.js/Bun, Rust/Actix/Cargo, Python/FastAPI, Ruby/Rails/Bundler, PHP/Laravel/Composer, Go, Java/Kotlin, unknown/minimal fallback) in tests/unit/setup/detect-stack.test.ts
+- [x] T023 [P] [US4] Create unit tests for stack detection (TypeScript/Next.js/Bun, Rust/Actix/Cargo, Python/FastAPI, Ruby/Rails/Bundler, PHP/Laravel/Composer, Go, Java/Kotlin, unknown/minimal fallback) in tests/unit/setup/detect-stack.test.ts ✅ DONE
 
 ### Implementation for User Story 4
 
-- [ ] T024 [US4] Create deterministic stack detection script (scan for package.json, Cargo.toml, pyproject.toml, Gemfile, composer.json, go.mod, pom.xml/build.gradle; detect language, framework, package manager, services, test framework; output config.yml + analysis.json) in .specify/scripts/bash/detect-stack.sh
+- [x] T024 [US4] Create deterministic stack detection script (scan for package.json, Cargo.toml, pyproject.toml, Gemfile, composer.json, go.mod, pom.xml/build.gradle; detect language, framework, package manager, services, test framework; output config.yml + analysis.json) in .specify/scripts/bash/detect-stack.sh ✅ DONE
 
 **Checkpoint**: Stack detection script produces valid, schema-compliant config.yml for all 7+ language ecosystems
 
