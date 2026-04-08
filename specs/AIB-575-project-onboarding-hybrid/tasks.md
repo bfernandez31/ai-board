@@ -107,11 +107,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T010 [P] [US2] Extend `tests/unit/detect-stack.test.ts` with test case: verify detection script succeeds independently (exit code 0, valid outputs) even when called in isolation — confirms Phase 1 can succeed regardless of Phase 2
+- [x] T010 [P] [US2] Extend `tests/unit/detect-stack.test.ts` with test case: verify detection script succeeds independently (exit code 0, valid outputs) even when called in isolation — confirms Phase 1 can succeed regardless of Phase 2
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Add partial success handling to `.github/workflows/onboard.yml`:
+- [x] T011 [US2] Add partial success handling to `.github/workflows/onboard.yml`:
   - If Phase 2 (`run-agent.sh`) exits non-zero: continue execution (do not fail workflow)
   - Commit only Phase 1 outputs (`.ai-board/config.yml`) on Phase 2 failure
   - Build artifact summary with `partial: true`, `errorCode: "GUIDANCE_GENERATION_FAILED"`, created files vs missing files
@@ -130,7 +130,7 @@
 
 ### Tests for User Story 3
 
-- [ ] T012 [P] [US3] Extend `tests/unit/detect-stack.test.ts` with multi-language fixture tests:
+- [x] T012 [P] [US3] Extend `tests/unit/detect-stack.test.ts` with multi-language fixture tests:
   - Python fixture: `pyproject.toml` with poetry + FastAPI deps → language: python, packageManager: poetry, framework: fastapi
   - Rust fixture: `Cargo.toml` with actix-web dep → language: rust, packageManager: cargo, framework: actix
   - Go fixture: `go.mod` with gin dep → language: go, framework: gin
@@ -141,7 +141,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] Extend `.github/scripts/detect-stack.sh` to fully support all 7 language ecosystems:
+- [x] T013 [US3] Extend `.github/scripts/detect-stack.sh` to fully support all 7 language ecosystems:
   - Python: parse `pyproject.toml` for dependencies (django, fastapi, flask); detect `poetry.lock`, `Pipfile.lock`, `requirements.txt` for package manager
   - Rust: parse `Cargo.toml` `[dependencies]` for frameworks (actix-web, rocket, axum); package manager always `cargo`
   - Go: parse `go.mod` `require` block for frameworks (gin, echo, fiber); detect `go.sum`
@@ -162,13 +162,13 @@
 
 ### Tests for User Story 4
 
-- [ ] T014 [P] [US4] Extend `tests/unit/detect-stack.test.ts` with idempotency test:
+- [x] T014 [P] [US4] Extend `tests/unit/detect-stack.test.ts` with idempotency test:
   - Fixture with existing `.ai-board/config.yml` → detection script overwrites it with fresh detection results
   - Fixture with existing `CLAUDE.md` → verify script does NOT touch `CLAUDE.md` (it's Phase 2's responsibility, not Phase 1)
 
 ### Implementation for User Story 4
 
-- [ ] T015 [US4] Add idempotency logic to `.github/workflows/onboard.yml`:
+- [x] T015 [US4] Add idempotency logic to `.github/workflows/onboard.yml`:
   - Before Phase 2: check if `CLAUDE.md` exists in target repo, set `SKIP_CLAUDE_MD` flag
   - Pass `--skip-claude-md` to `run-agent.sh` if `CLAUDE.md` exists (FR-010)
   - In artifact summary: add preserved `CLAUDE.md` to `preserved` array (not `created`)
@@ -187,14 +187,14 @@
 
 ### Tests for User Story 5
 
-- [ ] T016 [P] [US5] Extend `tests/unit/detect-stack.test.ts` with error condition tests:
+- [x] T016 [P] [US5] Extend `tests/unit/detect-stack.test.ts` with error condition tests:
   - Non-existent repo path → exit code 1
   - Directory with no read permissions → exit code 1
   - Verify script produces clean error output (no partial `config.yml` or `analysis.json` on failure)
 
 ### Implementation for User Story 5
 
-- [ ] T017 [US5] Add structured error reporting to `.github/workflows/onboard.yml`:
+- [x] T017 [US5] Add structured error reporting to `.github/workflows/onboard.yml`:
   - `DISPATCH_FAILED`: report when target repo clone fails (Step 3)
   - `CONFIG_GENERATION_FAILED`: report when `detect-stack.sh` exits non-zero (Step 4)
   - `GUIDANCE_GENERATION_FAILED`: report when `run-agent.sh` exits non-zero (Step 6) — already partially handled in US2
@@ -210,10 +210,10 @@
 
 **Purpose**: Final validation and cleanup across all phases.
 
-- [ ] T018 [P] Verify `detect-stack.sh` is executable (`chmod +x`) and has correct shebang (`#!/usr/bin/env bash`)
-- [ ] T019 [P] Validate `onboard.yml` workflow syntax with act or manual review — ensure all `${{ }}` expressions, secrets, and vars are correctly referenced
-- [ ] T020 Run all tests (`bun run test:unit tests/unit/detect-stack.test.ts` and `bun run test:unit tests/unit/config-schema.test.ts`) and verify they pass
-- [ ] T021 Run `bun run type-check` and `bun run lint` — fix any errors
+- [x] T018 [P] Verify `detect-stack.sh` is executable (`chmod +x`) and has correct shebang (`#!/usr/bin/env bash`)
+- [x] T019 [P] Validate `onboard.yml` workflow syntax with act or manual review — ensure all `${{ }}` expressions, secrets, and vars are correctly referenced
+- [x] T020 Run all tests (`bun run test:unit tests/unit/detect-stack.test.ts` and `bun run test:unit tests/unit/config-schema.test.ts`) and verify they pass
+- [x] T021 Run `bun run type-check` and `bun run lint` — fix any errors
 
 ---
 
