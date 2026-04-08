@@ -33,7 +33,7 @@ export function useSetupPolling(
   projectId: number,
   pollingInterval: number = 2000
 ): UseSetupPollingReturn {
-  const { data, isFetching } = useQuery({
+  const { data } = useQuery({
     queryKey: queryKeys.projects.setupStatus(projectId),
     queryFn: async (): Promise<SetupStatusResponse> => {
       const response = await fetch(`/api/projects/${projectId}/setup`, {
@@ -59,11 +59,10 @@ export function useSetupPolling(
   });
 
   const setupState = data?.setupState ?? null;
-  const isTerminal = setupState !== null && TERMINAL_SETUP_STATES.has(setupState);
 
   return {
     setupState,
     latestJob: data?.latestJob ?? null,
-    isPolling: isFetching || !isTerminal,
+    isPolling: setupState === null || setupState === 'IN_PROGRESS',
   };
 }
