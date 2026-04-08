@@ -52,7 +52,7 @@
 ### Tests for User Story 1
 **RULE (constitution): Create `tests/unit/detect-stack.test.ts` as NEW file — no existing test covers bash script output validation via Node subprocess.**
 
-- [ ] T006 [P] [US1] Create `tests/unit/detect-stack.test.ts` — test detection script output by running it against fixture directories using `child_process.execSync`:
+- [x] T006 [P] [US1] Create `tests/unit/detect-stack.test.ts` — test detection script output by running it against fixture directories using `child_process.execSync`:
   - Fixture: TypeScript/Next.js repo with `package.json` (next, prisma deps), `bun.lockb`, `vitest.config.ts`, `docker-compose.yml` with postgres service
   - Assert `config.yml` contains: language: typescript, framework: nextjs, packageManager: bun, testFramework: vitest, services includes postgres
   - Assert `analysis.json` structure matches data-model.md Analysis Result entity (language, framework, packageManager, testFramework, services, commands, manifests, lockfiles, configFiles, projectName, runtimeVersions, secondaryLanguages)
@@ -60,7 +60,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Create `.github/scripts/detect-stack.sh` — Phase 1 deterministic detection script:
+- [x] T007 [US1] Create `.github/scripts/detect-stack.sh` — Phase 1 deterministic detection script:
   - Input: `$1` = path to target repository root
   - Use `set -euo pipefail` per `.claude-plugin/scripts/bash/common.sh` patterns
   - Scan manifest files to determine primary language (priority: `package.json` > `Cargo.toml` > `go.mod` > `pyproject.toml` > `pom.xml`/`build.gradle` > `Gemfile` > `composer.json`)
@@ -73,7 +73,7 @@
   - Generate `analysis.json` using `jq` with full Analysis Result structure from data-model.md
   - Exit 0 on success, 1 on detection failure
 
-- [ ] T008 [US1] Create `.claude-plugin/commands/ai-board.onboard.md` — Phase 2 LLM agent command per `specs/AIB-575-project-onboarding-hybrid/workflows/onboard-command.md`:
+- [x] T008 [US1] Create `.claude-plugin/commands/ai-board.onboard.md` — Phase 2 LLM agent command per `specs/AIB-575-project-onboarding-hybrid/workflows/onboard-command.md`:
   - Accept `--analysis-json=<path>` and optional `--skip-claude-md` arguments
   - Read `analysis.json` for stack context
   - Generate `CLAUDE.md` with project-specific content (FR-017): tech stack, commands, data models, architecture, testing patterns, conventions
@@ -82,7 +82,7 @@
   - Remove `analysis.json` after generation
   - Skip `CLAUDE.md` generation if `--skip-claude-md` flag is present
 
-- [ ] T009 [US1] Replace stub in `.github/workflows/onboard.yml` with real two-phase workflow per `specs/AIB-575-project-onboarding-hybrid/workflows/onboard-workflow.md`:
+- [x] T009 [US1] Replace stub in `.github/workflows/onboard.yml` with real two-phase workflow per `specs/AIB-575-project-onboarding-hybrid/workflows/onboard-workflow.md`:
   - Inputs: `project_id`, `job_id`, `githubRepository`, `agent`
   - Step 1: Report RUNNING via callback (handle HTTP 409 for cancelled jobs)
   - Step 2: Fetch owner AI credential using speckit.yml credential pattern (curl + base64 decode + `::add-mask::`)

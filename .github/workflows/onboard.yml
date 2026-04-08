@@ -22,35 +22,295 @@ on:
 
 env:
   API_BASE_URL: ${{ vars.API_BASE_URL || 'https://ai-board.vercel.app' }}
+  APP_URL: ${{ vars.APP_URL }}
+  WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+  CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+  ANTHROPIC_MODEL: "claude-opus-4-6"
+  # Claude Code telemetry
+  CLAUDE_CODE_ENABLE_TELEMETRY: "1"
+  OTEL_LOGS_EXPORTER: "otlp"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/json"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
+  OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
+  OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
+  OTEL_LOGS_EXPORT_INTERVAL: "60000"
+  OTEL_BLRP_SCHEDULE_DELAY: "60000"
 
 jobs:
   onboard:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: write
+
     steps:
+      # ── Step 1: Report RUNNING ──────────────────────────────────────
       - name: Report RUNNING
+        id: report-running
         run: |
-          curl -sf -X PATCH \
+          HTTP_CODE=$(curl -X PATCH \
             "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
-            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"status":"RUNNING","workflowRunId":${{ github.run_id }}}'
+            -d '{"status":"RUNNING","workflowRunId":${{ github.run_id }}}' \
+            -s -o /dev/null -w "%{http_code}") || true
+          if [ "$HTTP_CODE" = "409" ]; then
+            echo "Job already CANCELLED — aborting workflow"
+            exit 1
+          elif [ "$HTTP_CODE" != "200" ]; then
+            echo "Failed to update job status to RUNNING (HTTP $HTTP_CODE)"
+          fi
 
-      - name: Simulate onboard work
-        run: sleep 5
+      # ── Step 2: Fetch Owner AI Credential ───────────────────────────
+      - name: Fetch Owner AI Credential
+        id: fetch-credential
+        run: |
+          PROVIDER=$( [[ "${{ inputs.agent }}" == "CODEX" ]] && echo "OPENAI" || echo "ANTHROPIC" )
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "${APP_URL}/api/internal/credentials?projectId=${{ inputs.project_id }}&provider=${PROVIDER}" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
 
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "No owner credential found (HTTP $HTTP_CODE) — using repository secrets as fallback"
+          else
+            CRED_TYPE=$(echo "$BODY" | jq -r '.credentialType')
+            ENV_VAR=$(echo "$BODY" | jq -r '.envVar')
+            CRED_VALUE_B64=$(echo "$BODY" | jq -r '.value')
+            echo "::add-mask::${CRED_VALUE_B64}"
+            CRED_VALUE=$(echo "$CRED_VALUE_B64" | base64 -d)
+            echo "::add-mask::${CRED_VALUE}"
+
+            {
+              echo "${ENV_VAR}<<CREDENTIAL_EOF"
+              echo "${CRED_VALUE}"
+              echo "CREDENTIAL_EOF"
+            } >> "$GITHUB_ENV"
+            echo "Owner credential loaded (type: ${CRED_TYPE}, envVar: ${ENV_VAR})"
+          fi
+          echo "PROJECT_ID=${{ inputs.project_id }}" >> "$GITHUB_ENV"
+
+      # ── Step 3: Checkout repos ──────────────────────────────────────
+      - name: Checkout ai-board (sparse)
+        uses: actions/checkout@v4
+        with:
+          path: ai-board
+          sparse-checkout: |
+            .claude-plugin
+            .github/scripts
+          sparse-checkout-cone-mode: true
+
+      - name: Clone target repository
+        id: clone-target
+        run: |
+          if ! git clone "https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ inputs.githubRepository }}.git" target-repo 2>&1; then
+            echo "CLONE_FAILED=true" >> "$GITHUB_ENV"
+            echo "Failed to clone target repository: ${{ inputs.githubRepository }}"
+            exit 1
+          fi
+          cd target-repo
+          DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+          echo "DEFAULT_BRANCH=${DEFAULT_BRANCH}" >> "$GITHUB_ENV"
+
+      # ── Step 4: Phase 1 — Stack Detection ───────────────────────────
+      - name: Phase 1 — Detect stack
+        id: detect-stack
+        run: |
+          if ! bash ai-board/.github/scripts/detect-stack.sh target-repo; then
+            echo "DETECTION_FAILED=true" >> "$GITHUB_ENV"
+            exit 1
+          fi
+
+      # ── Step 5: Configure Git ───────────────────────────────────────
+      - name: Configure Git
+        working-directory: target-repo
+        run: |
+          git config user.email "ai-board[bot]@users.noreply.github.com"
+          git config user.name "ai-board[bot]"
+
+      # ── Step 6: Setup tools for Phase 2 ─────────────────────────────
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 1.3.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.20.0'
+
+      # ── Step 7: Phase 2 — LLM Content Generation ───────────────────
+      - name: Phase 2 — Generate guidance files
+        id: generate-guidance
+        continue-on-error: true
+        working-directory: target-repo
+        run: |
+          SKIP_CLAUDE_MD=""
+          if [ -f "CLAUDE.md" ]; then
+            SKIP_CLAUDE_MD="--skip-claude-md"
+            echo "SKIP_CLAUDE_MD=true" >> "$GITHUB_ENV"
+          fi
+
+          bash ../ai-board/.github/scripts/run-agent.sh \
+            "${{ inputs.agent }}" \
+            "ai-board.onboard" \
+            "--analysis-json=analysis.json ${SKIP_CLAUDE_MD}"
+
+      - name: Check Phase 2 result
+        run: |
+          if [ "${{ steps.generate-guidance.outcome }}" = "failure" ]; then
+            echo "PHASE2_FAILED=true" >> "$GITHUB_ENV"
+            echo "Phase 2 (LLM generation) failed — proceeding with partial commit"
+          fi
+
+      # ── Step 8: Commit and Push ─────────────────────────────────────
+      - name: Stage and commit files
+        id: commit
+        working-directory: target-repo
+        run: |
+          # Always stage Phase 1 outputs
+          git add .ai-board/config.yml
+
+          # Stage Phase 2 outputs if they exist
+          git add .ai-board/memory/constitution.md 2>/dev/null || true
+          git add CLAUDE.md 2>/dev/null || true
+          git add AGENTS.md 2>/dev/null || true
+
+          # Remove analysis.json if it exists (working artifact)
+          rm -f analysis.json
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "NO_CHANGES=true" >> "$GITHUB_ENV"
+          else
+            git commit -m "chore: initialize ai-board configuration"
+            if ! git push origin "${DEFAULT_BRANCH}"; then
+              echo "PUSH_FAILED=true" >> "$GITHUB_ENV"
+              exit 1
+            fi
+            COMMIT_SHA=$(git rev-parse HEAD)
+            echo "COMMIT_SHA=${COMMIT_SHA}" >> "$GITHUB_ENV"
+          fi
+
+      # ── Step 9: Build Artifact Summary and Report ───────────────────
       - name: Report COMPLETED
+        if: success() || (failure() && env.PUSH_FAILED != 'true' && env.DETECTION_FAILED != 'true' && env.CLONE_FAILED != 'true')
+        working-directory: target-repo
         run: |
-          curl -sf -X PATCH \
-            "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
-            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{"status":"COMPLETED"}'
+          CREATED=()
+          MISSING=()
+          PRESERVED=()
+          ERROR_CODE=""
 
-      - name: Report FAILED on error
-        if: failure()
+          # Check config.yml
+          if [ -f ".ai-board/config.yml" ]; then
+            CREATED+=(".ai-board/config.yml")
+          else
+            MISSING+=(".ai-board/config.yml")
+          fi
+
+          # Check constitution.md
+          if [ -f ".ai-board/memory/constitution.md" ]; then
+            CREATED+=(".ai-board/memory/constitution.md")
+          else
+            MISSING+=(".ai-board/memory/constitution.md")
+          fi
+
+          # Check CLAUDE.md — created, preserved, or missing
+          if [ "${SKIP_CLAUDE_MD:-}" = "true" ]; then
+            PRESERVED+=("CLAUDE.md")
+          elif [ -f "CLAUDE.md" ]; then
+            CREATED+=("CLAUDE.md")
+          else
+            MISSING+=("CLAUDE.md")
+          fi
+
+          # Check AGENTS.md
+          if [ -L "AGENTS.md" ] || [ -f "AGENTS.md" ]; then
+            CREATED+=("AGENTS.md")
+          else
+            MISSING+=("AGENTS.md")
+          fi
+
+          # Determine partial status
+          PARTIAL="false"
+          if [ ${#MISSING[@]} -gt 0 ] && [ ${#CREATED[@]} -gt 0 ]; then
+            PARTIAL="true"
+            if [ "${PHASE2_FAILED:-}" = "true" ]; then
+              ERROR_CODE="GUIDANCE_GENERATION_FAILED"
+            fi
+          fi
+
+          # Build JSON arrays
+          CREATED_JSON=$(printf '%s\n' "${CREATED[@]+"${CREATED[@]}"}" | jq -R . | jq -s .)
+          MISSING_JSON=$(printf '%s\n' "${MISSING[@]+"${MISSING[@]}"}" | jq -R . | jq -s .)
+          PRESERVED_JSON=$(printf '%s\n' "${PRESERVED[@]+"${PRESERVED[@]}"}" | jq -R . | jq -s .)
+
+          # Remove empty string from arrays if no items
+          if [ ${#CREATED[@]} -eq 0 ]; then CREATED_JSON="[]"; fi
+          if [ ${#MISSING[@]} -eq 0 ]; then MISSING_JSON="[]"; fi
+          if [ ${#PRESERVED[@]} -eq 0 ]; then PRESERVED_JSON="[]"; fi
+
+          # Build artifact summary
+          ARTIFACT_SUMMARY=$(jq -n \
+            --argjson partial "$PARTIAL" \
+            --arg commitSha "${COMMIT_SHA:-}" \
+            --argjson created "$CREATED_JSON" \
+            --argjson missing "$MISSING_JSON" \
+            --argjson preserved "$PRESERVED_JSON" \
+            --arg errorCode "$ERROR_CODE" \
+            '{
+              partial: $partial,
+              created: $created,
+              missing: $missing,
+              preserved: $preserved
+            }
+            + (if $commitSha != "" then {commitSha: $commitSha} else {} end)
+            + (if $errorCode != "" then {errorCode: $errorCode} else {} end)')
+
+          # Report COMPLETED
+          curl -sf -X PATCH \
+            "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --argjson summary "$ARTIFACT_SUMMARY" '{"status":"COMPLETED","artifactSummary":$summary}')" || true
+
+      # ── Error Handlers ──────────────────────────────────────────────
+      - name: Report FAILED — Clone failed
+        if: failure() && env.CLONE_FAILED == 'true'
         run: |
           curl -sf -X PATCH \
             "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
-            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"status":"FAILED","errorMessage":"Onboard workflow failed at step: ${{ github.action }}"}'
+            -d '{"status":"FAILED","errorMessage":"Failed to clone target repository: ${{ inputs.githubRepository }}","artifactSummary":{"errorCode":"DISPATCH_FAILED","created":[],"missing":[".ai-board/config.yml","CLAUDE.md",".ai-board/memory/constitution.md","AGENTS.md"]}}' || true
+
+      - name: Report FAILED — Detection failed
+        if: failure() && env.DETECTION_FAILED == 'true'
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"Stack detection failed","artifactSummary":{"errorCode":"CONFIG_GENERATION_FAILED","created":[],"missing":[".ai-board/config.yml","CLAUDE.md",".ai-board/memory/constitution.md","AGENTS.md"]}}' || true
+
+      - name: Report FAILED — Push failed
+        if: failure() && env.PUSH_FAILED == 'true'
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"Failed to push commit to target repository","artifactSummary":{"errorCode":"COMMIT_FAILED","created":[],"missing":[".ai-board/config.yml","CLAUDE.md",".ai-board/memory/constitution.md","AGENTS.md"]}}' || true
+
+      - name: Report FAILED — Catch-all
+        if: failure() && env.CLONE_FAILED != 'true' && env.DETECTION_FAILED != 'true' && env.PUSH_FAILED != 'true'
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"Onboard workflow failed unexpectedly"}' || true
