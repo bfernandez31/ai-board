@@ -1,12 +1,15 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getProject } from '@/lib/db/projects';
+import { requireAuth } from '@/lib/db/users';
 import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
 import { DefaultAgentCard } from '@/components/settings/default-agent-card';
 import { Button } from '@/components/ui/button';
 import { ConstitutionCard } from '@/components/settings/constitution-card';
 import { ConfigCard } from '@/components/settings/config-card';
+import { resolveProjectSetupAccess } from '@/lib/onboarding/access';
+import { OnboardingArtifactsCard } from '@/components/settings/onboarding-artifacts-card';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -32,6 +35,15 @@ export default async function ProjectSettingsPage({
   // Return 404 if projectId is not a valid number
   if (isNaN(projectId) || projectId <= 0) {
     notFound();
+  }
+
+  const userId = await requireAuth();
+  const access = await resolveProjectSetupAccess(projectId, userId);
+  if (!access) {
+    notFound();
+  }
+  if (access.requiresSetup && access.redirectTo) {
+    redirect(access.redirectTo);
   }
 
   // Fetch project (with authentication check)
@@ -92,6 +104,10 @@ export default async function ProjectSettingsPage({
               configSyncedAt: project.configSyncedAt?.toISOString() ?? null,
             }}
           />
+
+          {project.userId === userId ? (
+            <OnboardingArtifactsCard projectId={project.id} />
+          ) : null}
         </div>
       </div>
     </main>

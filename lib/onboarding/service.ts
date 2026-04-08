@@ -1,0 +1,290 @@
+import { randomUUID } from 'node:crypto';
+import type {
+  Agent,
+  CredentialProvider,
+  CredentialReadiness,
+  CredentialType,
+  Prisma,
+  Project,
+  ProjectSetupJob,
+  ProjectSetupJobStatus,
+} from '@prisma/client';
+import { prisma } from '@/lib/db/client';
+import { getGitHubAccessToken } from '@/lib/github/user-client';
+import { getOwnerCredential } from '@/lib/ai-credentials/workflow';
+import {
+  type ProjectSetupStateDto,
+  type ProjectSetupStatusDto,
+  type SetupAgentReadiness,
+  mapSetupJobToStatusDto,
+} from './types';
+import { syncProjectConfig } from '@/lib/config-sync';
+import { dispatchProjectOnboardingWorkflow } from '@/lib/onboarding/workflow';
+
+const AGENT_PROVIDER_MAP: Record<Agent, CredentialProvider> = {
+  CLAUDE: 'ANTHROPIC',
+  CODEX: 'OPENAI',
+};
+
+function isTerminalStatus(status: ProjectSetupJobStatus): boolean {
+  return status === 'COMPLETED' || status === 'FAILED' || status === 'CANCELLED';
+}
+
+export async function getSetupAgentReadiness(projectId: number): Promise<SetupAgentReadiness[]> {
+  const agents = (['CLAUDE', 'CODEX'] as const) satisfies readonly Agent[];
+
+  const readinessEntries = await Promise.all(
+    agents.map(async (agent) => {
+      const provider = AGENT_PROVIDER_MAP[agent];
+      const credential = await getOwnerCredential(projectId, provider);
+
+      return {
+        agent,
+        provider,
+        ready: credential?.readinessStatus === 'READY',
+        credentialType: (credential?.credentialType as CredentialType | undefined) ?? null,
+        readinessStatus:
+          (credential?.readinessStatus as CredentialReadiness | undefined) ?? null,
+        verificationCode: credential?.verificationCode ?? null,
+        verificationMessage: credential?.verificationMessage ?? null,
+      };
+    })
+  );
+
+  return readinessEntries;
+}
+
+async function getSetupProject(projectId: number, userId: string) {
+  return prisma.project.findFirst({
+    where: {
+      id: projectId,
+      OR: [{ userId }, { members: { some: { userId } } }],
+    },
+    select: {
+      id: true,
+      userId: true,
+      defaultAgent: true,
+      config: true,
+      configSyncedAt: true,
+      githubOwner: true,
+      githubRepo: true,
+      setupJobs: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
+    },
+  });
+}
+
+export async function getProjectSetupState(
+  projectId: number,
+  userId: string
+): Promise<ProjectSetupStateDto> {
+  const project = await getSetupProject(projectId, userId);
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  const latestJob = project.setupJobs[0] ?? null;
+  const requiresSetup = project.config == null || project.configSyncedAt == null;
+
+  return {
+    projectId: project.id,
+    requiresSetup,
+    selectedAgentDefault: project.defaultAgent,
+    eligibleAgents: project.userId === userId ? await getSetupAgentReadiness(project.id) : [],
+    latestSetupJob: latestJob ? mapSetupJobToStatusDto(latestJob) : null,
+    redirectTo: requiresSetup ? null : `/projects/${project.id}/board`,
+  };
+}
+
+export async function getLatestProjectSetupJob(
+  projectId: number,
+  userId: string
+): Promise<ProjectSetupStatusDto | null> {
+  const project = await getSetupProject(projectId, userId);
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  const latestJob = project.setupJobs[0] ?? null;
+  return latestJob ? mapSetupJobToStatusDto(latestJob) : null;
+}
+
+export async function startProjectSetup(
+  projectId: number,
+  userId: string,
+  selectedAgent: Agent
+): Promise<{ created: boolean; duplicate: boolean; job: ProjectSetupStatusDto }> {
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, userId },
+    select: {
+      id: true,
+      userId: true,
+      githubOwner: true,
+      githubRepo: true,
+      defaultAgent: true,
+      config: true,
+      configSyncedAt: true,
+    },
+  });
+
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  const readiness = await getSetupAgentReadiness(projectId);
+  const selectedReadiness = readiness.find((entry) => entry.agent === selectedAgent);
+  if (!selectedReadiness?.ready) {
+    const error = new Error(selectedReadiness?.verificationMessage || 'Selected agent credential is not ready');
+    error.name = 'CredentialNotReady';
+    throw error;
+  }
+
+  const activeJob = await prisma.projectSetupJob.findFirst({
+    where: {
+      projectId,
+      status: { in: ['PENDING', 'RUNNING'] },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (activeJob) {
+    return {
+      created: false,
+      duplicate: true,
+      job: mapSetupJobToStatusDto(activeJob),
+    };
+  }
+
+  const dispatchKey = randomUUID();
+  const job = await prisma.projectSetupJob.create({
+    data: {
+      projectId,
+      selectedAgent,
+      status: 'PENDING',
+      dispatchKey,
+    },
+  });
+
+  try {
+    await dispatchProjectOnboardingWorkflow({
+      projectId,
+      jobId: job.id,
+      githubRepository: `${project.githubOwner}/${project.githubRepo}`,
+      agent: selectedAgent,
+    });
+  } catch (error) {
+    const failedJob = await prisma.projectSetupJob.update({
+      where: { id: job.id },
+      data: {
+        status: 'FAILED',
+        errorCode: 'DISPATCH_FAILED',
+        errorMessage: error instanceof Error ? error.message : 'Failed to dispatch project onboarding workflow',
+        completedAt: new Date(),
+      },
+    });
+
+    return {
+      created: true,
+      duplicate: false,
+      job: mapSetupJobToStatusDto(failedJob),
+    };
+  }
+
+  return {
+    created: true,
+    duplicate: false,
+    job: mapSetupJobToStatusDto(job),
+  };
+}
+
+export async function updateProjectSetupStatus(params: {
+  projectId: number;
+  jobId: number;
+  status: ProjectSetupJobStatus;
+  workflowRunId?: bigint;
+  defaultBranch?: string;
+  commitSha?: string;
+  analysisSummary?: Record<string, unknown>;
+  artifactManifest?: unknown[];
+  configPreview?: Record<string, unknown>;
+  errorCode?: string;
+  errorMessage?: string;
+}): Promise<ProjectSetupStatusDto> {
+  const job = await prisma.projectSetupJob.findFirst({
+    where: {
+      id: params.jobId,
+      projectId: params.projectId,
+    },
+    include: {
+      project: {
+        select: {
+          id: true,
+          userId: true,
+          githubOwner: true,
+          githubRepo: true,
+          configSyncedAt: true,
+        },
+      },
+    },
+  });
+
+  if (!job) {
+    throw new Error('Setup job not found');
+  }
+
+  const updateData: Prisma.ProjectSetupJobUpdateInput = {
+    status: params.status,
+  };
+
+  if (params.status === 'RUNNING' && !job.startedAt) {
+    updateData.startedAt = new Date();
+  }
+  if (params.workflowRunId && !job.workflowRunId) {
+    updateData.workflowRunId = params.workflowRunId;
+  }
+  if (params.defaultBranch) updateData.defaultBranch = params.defaultBranch;
+  if (params.commitSha) updateData.commitSha = params.commitSha;
+  if (params.analysisSummary) {
+    updateData.analysisSummary = params.analysisSummary as Prisma.InputJsonValue;
+  }
+  if (params.artifactManifest) {
+    updateData.artifactManifest = params.artifactManifest as Prisma.InputJsonValue;
+  }
+  if (params.configPreview) {
+    updateData.configPreview = params.configPreview as Prisma.InputJsonValue;
+  }
+  if (params.errorCode) updateData.errorCode = params.errorCode;
+  if (params.errorMessage) updateData.errorMessage = params.errorMessage;
+  if (isTerminalStatus(params.status)) {
+    updateData.completedAt = new Date();
+  }
+
+  const updated = await prisma.projectSetupJob.update({
+    where: { id: job.id },
+    data: updateData,
+  });
+
+  if (params.status === 'COMPLETED' && params.commitSha) {
+    const token = await getGitHubAccessToken(job.project.userId);
+    await syncProjectConfig(
+      {
+        id: job.project.id,
+        githubOwner: job.project.githubOwner,
+        githubRepo: job.project.githubRepo,
+        configSyncedAt: job.project.configSyncedAt,
+      },
+      token ?? undefined
+    );
+  }
+
+  return mapSetupJobToStatusDto(updated);
+}
+
+export type SetupProjectRef = Pick<
+  Project,
+  'id' | 'userId' | 'defaultAgent' | 'config' | 'configSyncedAt' | 'githubOwner' | 'githubRepo'
+>;
+
+export type SetupJobRecord = ProjectSetupJob;

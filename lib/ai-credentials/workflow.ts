@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db/client';
 import { decryptCredential, encryptCredential } from './crypto';
-import { getEnvVar, type WorkflowResolvedCredential } from './types';
-import type { CredentialProvider, UserCredential } from '@prisma/client';
+import { AGENT_PROVIDER_MAP, getEnvVar, type WorkflowResolvedCredential } from './types';
+import type { Agent, CredentialProvider, UserCredential } from '@prisma/client';
 
 export function getMissingCredentialError(provider: CredentialProvider = 'ANTHROPIC'): string {
   const providerName = provider === 'OPENAI' ? 'OpenAI' : 'Anthropic';
@@ -27,6 +27,13 @@ export async function getOwnerCredential(
       provider,
     },
   });
+}
+
+export async function getOwnerCredentialForAgent(
+  projectId: number,
+  agent: Agent
+): Promise<UserCredential | null> {
+  return getOwnerCredential(projectId, AGENT_PROVIDER_MAP[agent]);
 }
 
 export async function updateOwnerCredential(

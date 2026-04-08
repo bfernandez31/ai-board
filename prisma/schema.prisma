@@ -84,6 +84,7 @@ model Project {
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
   members             ProjectMember[]
+  setupJobs           ProjectSetupJob[]
   comparisonRecords   ComparisonRecord[]
   healthScans         HealthScan[]
   healthScore         HealthScore?
@@ -282,6 +283,14 @@ enum JobStatus {
   CANCELLED
 }
 
+enum ProjectSetupJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
 enum Stage {
   INBOX
   SPECIFY
@@ -388,6 +397,32 @@ model UserCredential {
 
   @@unique([userId, provider])
   @@index([userId])
+}
+
+model ProjectSetupJob {
+  id               Int                   @id @default(autoincrement())
+  projectId        Int
+  selectedAgent    Agent
+  status           ProjectSetupJobStatus @default(PENDING)
+  dispatchKey      String?               @db.VarChar(100)
+  workflowRunId    BigInt?
+  defaultBranch    String?               @db.VarChar(255)
+  commitSha        String?               @db.VarChar(40)
+  analysisSummary  Json?
+  artifactManifest Json?
+  configPreview    Json?
+  errorCode        String?               @db.VarChar(100)
+  errorMessage     String?               @db.VarChar(2000)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  project          Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([projectId, status, createdAt(sort: Desc)])
+  @@index([workflowRunId])
+  @@index([dispatchKey])
 }
 
 model ComparisonRecord {

@@ -26,7 +26,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const mounted = useHasMounted();
 
   const handleClick = () => {
-    router.push(`/projects/${project.id}/board`);
+    router.push(`/projects/${project.id}`);
   };
 
   const handleCopyUrl = (e: React.MouseEvent) => {

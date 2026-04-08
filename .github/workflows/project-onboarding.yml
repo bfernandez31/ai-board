@@ -1,0 +1,71 @@
+name: Project Onboarding Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: Setup job ID
+        required: true
+        type: string
+      project_id:
+        description: Project ID
+        required: true
+        type: string
+      githubRepository:
+        description: Target repository in owner/repo format
+        required: true
+        type: string
+      agent:
+        description: Selected setup agent
+        required: true
+        type: string
+
+jobs:
+  onboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    env:
+      APP_URL: ${{ vars.APP_URL }}
+      WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+
+    steps:
+      - name: Mark job running
+        run: |
+          curl -X PATCH "${APP_URL}/api/projects/${{ inputs.project_id }}/setup/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d "{\"jobId\": ${{ inputs.job_id }}, \"status\": \"RUNNING\", \"workflowRunId\": ${{ github.run_id }}}" \
+            -f -s -S
+
+      - name: Checkout ai-board
+        uses: actions/checkout@v4
+
+      - name: Run onboarding helper
+        id: onboarding
+        env:
+          GITHUB_REPOSITORY_TARGET: ${{ inputs.githubRepository }}
+          SELECTED_AGENT: ${{ inputs.agent }}
+        run: |
+          bash .github/scripts/run-project-onboarding.sh
+
+      - name: Mark job completed
+        if: ${{ success() }}
+        run: |
+          curl -X PATCH "${APP_URL}/api/projects/${{ inputs.project_id }}/setup/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d "{\"jobId\": ${{ inputs.job_id }}, \"status\": \"COMPLETED\", \"commitSha\": \"${{ steps.onboarding.outputs.commit_sha }}\", \"defaultBranch\": \"${{ steps.onboarding.outputs.default_branch }}\", \"artifactManifest\": [{\"path\": \".ai-board/config.yml\", \"kind\": \"config\", \"status\": \"generated\", \"editable\": true}]}" \
+            -f -s -S
+
+      - name: Mark job failed
+        if: ${{ failure() }}
+        run: |
+          curl -X PATCH "${APP_URL}/api/projects/${{ inputs.project_id }}/setup/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d "{\"jobId\": ${{ inputs.job_id }}, \"status\": \"FAILED\", \"errorCode\": \"ONBOARDING_FAILED\", \"errorMessage\": \"Project onboarding workflow failed\"}" \
+            -f -s -S || true

@@ -11,9 +11,9 @@
 
 **Purpose**: Establish shared setup DTOs, validation, and query key scaffolding used across the feature.
 
-- [ ] T001 Create setup request/response validation schemas in `/home/runner/work/ai-board/ai-board/target/app/lib/schemas/project-setup.ts`
-- [ ] T002 [P] Create onboarding DTO and artifact manifest types in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/types.ts`
-- [ ] T003 [P] Extend setup, status, and artifact review query keys in `/home/runner/work/ai-board/ai-board/target/app/lib/query-keys.ts`
+- [x] T001 Create setup request/response validation schemas in `/home/runner/work/ai-board/ai-board/target/app/lib/schemas/project-setup.ts` ✅ DONE
+- [x] T002 [P] Create onboarding DTO and artifact manifest types in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/types.ts` ✅ DONE
+- [x] T003 [P] Extend setup, status, and artifact review query keys in `/home/runner/work/ai-board/ai-board/target/app/lib/query-keys.ts` ✅ DONE
 
 ---
 
@@ -23,11 +23,11 @@
 
 **⚠️ CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T004 Add `ProjectSetupJob` schema, status enum, and `Project.setupJobs` relation in `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`
-- [ ] T005 Generate the Prisma migration for `ProjectSetupJob` in `/home/runner/work/ai-board/ai-board/target/prisma/migrations/` and regenerate the client from `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`
-- [ ] T006 [P] Create setup-required access resolution helpers in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/access.ts`
-- [ ] T007 [P] Create authoritative setup job lifecycle orchestration in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/service.ts`
-- [ ] T008 [P] Create repository-backed onboarding artifact helpers in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/artifacts.ts`
+- [x] T004 Add `ProjectSetupJob` schema, status enum, and `Project.setupJobs` relation in `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` ✅ DONE
+- [x] T005 Generate the Prisma migration for `ProjectSetupJob` in `/home/runner/work/ai-board/ai-board/target/prisma/migrations/` and regenerate the client from `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` ✅ DONE
+- [x] T006 [P] Create setup-required access resolution helpers in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/access.ts` ✅ DONE
+- [x] T007 [P] Create authoritative setup job lifecycle orchestration in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/service.ts` ✅ DONE
+- [x] T008 [P] Create repository-backed onboarding artifact helpers in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/artifacts.ts` ✅ DONE
 - [ ] T009 [P] Extend provider credential lookup and workflow secret mapping in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/workflow.ts` and `/home/runner/work/ai-board/ai-board/target/app/api/internal/credentials/route.ts`
 
 **Checkpoint**: Persistence, access gating, credential resolution, and artifact helpers are ready for story implementation.
@@ -43,21 +43,21 @@
 ### Tests for User Story 1
 
 - [ ] T010 [P] [US1] Extend missing-config import redirect coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/import.test.ts`
-- [ ] T011 [P] [US1] Create setup state, dispatch, polling, and callback API coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup.test.ts`
+- [x] T011 [P] [US1] Create setup state, dispatch, polling, and callback API coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup.test.ts` ✅ DONE
 - [ ] T012 [P] [US1] Extend import modal board-to-setup handoff coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/projects/import-project-modal.test.tsx`
 - [ ] T013 [P] [US1] Extend post-onboarding config sync and setup-bypass coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/config-sync.test.ts`
 
 ### Implementation for User Story 1
 
 - [ ] T014 [US1] Extend project-level setup gating in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/layout.tsx`
-- [ ] T015 [P] [US1] Extend setup-aware project entry navigation in `/home/runner/work/ai-board/ai-board/target/components/projects/project-card.tsx` and `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/board/page.tsx`
-- [ ] T016 [US1] Create the owner-only setup route in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/setup/page.tsx`
-- [ ] T017 [P] [US1] Create setup page client components for agent selection, running progress, and completion summary in `/home/runner/work/ai-board/ai-board/target/components/projects/setup/`
-- [ ] T018 [US1] Implement setup state and onboarding dispatch handlers in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/route.ts`
-- [ ] T019 [US1] Implement setup polling and workflow callback handling in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/status/route.ts`
-- [ ] T020 [US1] Create the hybrid onboarding workflow in `/home/runner/work/ai-board/ai-board/target/.github/workflows/project-onboarding.yml`
-- [ ] T021 [P] [US1] Add onboarding command and workflow helper scripts in `/home/runner/work/ai-board/ai-board/target/.github/scripts/` and `/home/runner/work/ai-board/ai-board/target/.claude/commands/`
-- [ ] T022 [US1] Reuse config synchronization after successful onboarding in `/home/runner/work/ai-board/ai-board/target/lib/config-sync.ts` and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/status/route.ts`
+- [x] T015 [P] [US1] Extend setup-aware project entry navigation in `/home/runner/work/ai-board/ai-board/target/components/projects/project-card.tsx` and `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/board/page.tsx` ✅ DONE
+- [x] T016 [US1] Create the owner-only setup route in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/setup/page.tsx` ✅ DONE
+- [x] T017 [P] [US1] Create setup page client components for agent selection, running progress, and completion summary in `/home/runner/work/ai-board/ai-board/target/components/projects/setup/` ✅ DONE
+- [x] T018 [US1] Implement setup state and onboarding dispatch handlers in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/route.ts` ✅ DONE
+- [x] T019 [US1] Implement setup polling and workflow callback handling in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/status/route.ts` ✅ DONE
+- [x] T020 [US1] Create the hybrid onboarding workflow in `/home/runner/work/ai-board/ai-board/target/.github/workflows/project-onboarding.yml` ✅ DONE
+- [x] T021 [P] [US1] Add onboarding command and workflow helper scripts in `/home/runner/work/ai-board/ai-board/target/.github/scripts/` and `/home/runner/work/ai-board/ai-board/target/.claude/commands/` ✅ DONE
+- [x] T022 [US1] Reuse config synchronization after successful onboarding in `/home/runner/work/ai-board/ai-board/target/lib/config-sync.ts` and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/status/route.ts` ✅ DONE
 
 **Checkpoint**: Imported projects that need onboarding can be initialized end-to-end and reach the board after a successful run.
 
@@ -96,16 +96,16 @@
 ### Tests for User Story 3
 
 - [ ] T031 [P] [US3] Extend failed callback, terminal error, and fresh-retry coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup.test.ts`
-- [ ] T032 [P] [US3] Extend onboarding artifact review and update API coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/settings.test.ts`
+- [x] T032 [P] [US3] Extend onboarding artifact review and update API coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/settings.test.ts` ✅ DONE
 - [ ] T033 [P] [US3] Extend settings UI coverage for onboarding artifact review and editing in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/config-card.test.tsx`
 
 ### Implementation for User Story 3
 
 - [ ] T034 [US3] Persist terminal failure details, completion summaries, and fresh-retry semantics in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/status/route.ts` and `/home/runner/work/ai-board/ai-board/target/lib/onboarding/service.ts`
-- [ ] T035 [US3] Create onboarding artifact review and update handlers in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/settings/onboarding-artifacts/route.ts`
-- [ ] T036 [P] [US3] Create the onboarding artifact review card in `/home/runner/work/ai-board/ai-board/target/components/settings/onboarding-artifacts-card.tsx`
-- [ ] T037 [US3] Extend the settings surface to mount onboarding artifact review alongside config in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/settings/page.tsx` and `/home/runner/work/ai-board/ai-board/target/components/settings/config-card.tsx`
-- [ ] T038 [US3] Implement repository-backed artifact fetch, edit, and commit helpers in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/artifacts.ts`
+- [x] T035 [US3] Create onboarding artifact review and update handlers in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/settings/onboarding-artifacts/route.ts` ✅ DONE
+- [x] T036 [P] [US3] Create the onboarding artifact review card in `/home/runner/work/ai-board/ai-board/target/components/settings/onboarding-artifacts-card.tsx` ✅ DONE
+- [x] T037 [US3] Extend the settings surface to mount onboarding artifact review alongside config in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/settings/page.tsx` and `/home/runner/work/ai-board/ai-board/target/components/settings/config-card.tsx` ✅ DONE
+- [x] T038 [US3] Implement repository-backed artifact fetch, edit, and commit helpers in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/artifacts.ts` ✅ DONE
 
 **Checkpoint**: Failed runs can be retried safely, and successful runs expose editable onboarding artifacts from project settings.
 

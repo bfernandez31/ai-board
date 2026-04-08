@@ -1,7 +1,9 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Board } from '@/components/board/board';
 import { getTicketsWithJobs } from '@/lib/db/tickets';
 import { getProject } from '@/lib/db/projects';
+import { requireAuth } from '@/lib/db/users';
+import { resolveProjectSetupAccess } from '@/lib/onboarding/access';
 
 // Force dynamic rendering to ensure fresh data on router.refresh()
 export const dynamic = 'force-dynamic';
@@ -28,6 +30,15 @@ export default async function ProjectBoardPage({
   // Return 404 if projectId is not a valid number
   if (isNaN(projectId) || projectId <= 0) {
     notFound();
+  }
+
+  const userId = await requireAuth();
+  const access = await resolveProjectSetupAccess(projectId, userId);
+  if (!access) {
+    notFound();
+  }
+  if (access.requiresSetup && access.redirectTo) {
+    redirect(access.redirectTo);
   }
 
   // Fetch project and tickets+jobs in parallel (validation + data)

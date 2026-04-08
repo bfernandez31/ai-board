@@ -292,4 +292,34 @@ describe('Project Settings - clarificationPolicy', () => {
       expect(response.data).toHaveProperty('updatedAt');
     });
   });
+
+  describe('onboarding artifact review API', () => {
+    it('returns repository-backed onboarding artifacts for owners', async () => {
+      const response = await ctx.api.get<{
+        artifacts: Array<{ path: string; status: string; editable: boolean }>;
+      }>(`/api/projects/${ctx.projectId}/settings/onboarding-artifacts`);
+
+      expect(response.status).toBe(200);
+      expect(response.data.artifacts.length).toBeGreaterThan(0);
+      expect(response.data.artifacts[0]).toHaveProperty('path');
+    });
+
+    it('updates editable onboarding artifacts', async () => {
+      const response = await ctx.api.patch<{
+        commitSha: string;
+        updatedPaths: string[];
+      }>(`/api/projects/${ctx.projectId}/settings/onboarding-artifacts`, {
+        artifacts: [
+          {
+            path: '.ai-board/config.yml',
+            content: 'version: 1\nproject:\n  name: updated\n',
+          },
+        ],
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.data.commitSha).toContain('mock-commit-');
+      expect(response.data.updatedPaths).toContain('.ai-board/config.yml');
+    });
+  });
 });

@@ -7,6 +7,10 @@ export const queryKeys = {
       ['projects', projectId, 'tickets', ticketId] as const,
     jobsStatus: (id: number) => ['projects', id, 'jobs', 'status'] as const,
     settings: (id: number) => ['projects', id, 'settings'] as const,
+    setup: (id: number) => ['projects', id, 'setup'] as const,
+    setupStatus: (id: number) => ['projects', id, 'setup', 'status'] as const,
+    onboardingArtifacts: (id: number) =>
+      ['projects', id, 'settings', 'onboarding-artifacts'] as const,
     documentation: (projectId: number, ticketId: number, docType: 'spec' | 'plan' | 'tasks' | 'summary') =>
       ['projects', projectId, 'tickets', ticketId, 'documentation', docType] as const,
     documentationHistory: (projectId: number, ticketId: number, docType: 'spec' | 'plan' | 'tasks' | 'summary') =>

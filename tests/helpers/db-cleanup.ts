@@ -201,6 +201,16 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
             projectId: {
               in: [1, 2, 4, 5, 6, 7],
             },
+        },
+    });
+
+    await client.projectSetupJob.deleteMany({
+      where: projectId
+        ? { projectId }
+        : {
+            projectId: {
+              in: [1, 2, 4, 5, 6, 7],
+            },
           },
     });
 
