@@ -54,12 +54,12 @@ export async function POST(
     const { agent } = parsed.data;
 
     // Pre-flight: check if already configured
-    const fullProject = await prisma.project.findUnique({
+    const projectConfig = await prisma.project.findUnique({
       where: { id: projectId },
-      select: { configSyncedAt: true, githubOwner: true, githubRepo: true },
+      select: { configSyncedAt: true },
     });
 
-    if (fullProject?.configSyncedAt) {
+    if (projectConfig?.configSyncedAt) {
       return NextResponse.json(
         { error: 'Project is already configured' },
         { status: 409 }
@@ -105,7 +105,7 @@ export async function POST(
       await dispatchOnboardWorkflow({
         project_id: String(projectId),
         job_id: String(job.id),
-        githubRepository: `${fullProject?.githubOwner ?? project.githubOwner}/${fullProject?.githubRepo ?? project.githubRepo}`,
+        githubRepository: `${project.githubOwner}/${project.githubRepo}`,
         agent,
       });
     } catch (dispatchError) {

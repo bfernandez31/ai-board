@@ -2,7 +2,6 @@ import { notFound, redirect } from 'next/navigation';
 import { Board } from '@/components/board/board';
 import { getTicketsWithJobs } from '@/lib/db/tickets';
 import { getProject } from '@/lib/db/projects';
-import { prisma } from '@/lib/db/client';
 
 // Force dynamic rendering to ensure fresh data on router.refresh()
 export const dynamic = 'force-dynamic';
@@ -47,14 +46,8 @@ export default async function ProjectBoardPage({
   ]);
 
   // Redirect to setup page if project is not yet configured
-  if (project) {
-    const fullProject = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { configSyncedAt: true },
-    });
-    if (fullProject && !fullProject.configSyncedAt) {
-      redirect(`/projects/${projectId}/setup`);
-    }
+  if (project && !project.configSyncedAt) {
+    redirect(`/projects/${projectId}/setup`);
   }
 
   // Transform tickets with jobs into initialJobs map

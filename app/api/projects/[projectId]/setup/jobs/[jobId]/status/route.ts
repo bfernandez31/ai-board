@@ -88,13 +88,8 @@ export async function PATCH(
       status: newStatus,
     };
 
-    if (newStatus === 'RUNNING') {
-      if (!job.startedAt) {
-        updateData.startedAt = now;
-      }
-      if (!job.workflowRunId && data.workflowRunId) {
-        updateData.workflowRunId = BigInt(data.workflowRunId);
-      }
+    if (newStatus === 'RUNNING' && !job.startedAt) {
+      updateData.startedAt = now;
     }
 
     if (isTerminal(newStatus)) {
