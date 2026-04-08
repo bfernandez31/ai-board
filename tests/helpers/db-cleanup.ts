@@ -184,6 +184,17 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
     });
 
     // Delete health data (foreign key to projects)
+    // Delete setup jobs (foreign key to projects)
+    await client.setupJob.deleteMany({
+      where: projectId
+        ? { projectId }
+        : {
+            projectId: {
+              in: [1, 2, 4, 5, 6, 7],
+            },
+          },
+    });
+
     await client.healthScan.deleteMany({
       where: projectId
         ? { projectId }
