@@ -51,22 +51,22 @@
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 **RULE (constitution): No existing test files cover the "setup" domain — all test files below are new.**
 
-- [ ] T010 [P] [US1] Create SetupJob service unit tests (CRUD, duplicate guard logic, status transitions, config sync trigger) in tests/unit/setup/service.test.ts
-- [ ] T011 [P] [US1] Create setup dispatch integration tests (POST /api/projects/[projectId]/setup — valid dispatch, owner-only guard, config-exists rejection, duplicate rejection, missing credential rejection) in tests/integration/setup/dispatch.test.ts
-- [ ] T012 [P] [US1] Create setup status polling integration tests (GET /api/projects/[projectId]/setup — latest job retrieval, null when no jobs, hasConfig flag) in tests/integration/setup/status.test.ts
+- [x] T010 [P] [US1] Create SetupJob service unit tests (CRUD, duplicate guard logic, status transitions, config sync trigger) in tests/unit/setup/service.test.ts ✅ DONE
+- [x] T011 [P] [US1] Create setup dispatch integration tests (POST /api/projects/[projectId]/setup — valid dispatch, owner-only guard, config-exists rejection, duplicate rejection, missing credential rejection) in tests/integration/setup/dispatch.test.ts ✅ DONE
+- [x] T012 [P] [US1] Create setup status polling integration tests (GET /api/projects/[projectId]/setup — latest job retrieval, null when no jobs, hasConfig flag) in tests/integration/setup/status.test.ts ✅ DONE
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Create setup page server component with ownership guard and config-exists redirect in app/projects/[projectId]/setup/page.tsx
-- [ ] T014 [P] [US1] Create agent-selector radio group component (Claude Code / Codex options, shadcn/ui RadioGroup) in components/setup/agent-selector.tsx
-- [ ] T015 [P] [US1] Create credential-status indicator component (loading, available, unavailable states) in components/setup/credential-status.tsx
-- [ ] T016 [P] [US1] Create setup-progress state display component (pending, running with elapsed time, completed, failed states) in components/setup/setup-progress.tsx
-- [ ] T017 [P] [US1] Create setup-file-list component (displays list of committed files on success) in components/setup/setup-file-list.tsx
-- [ ] T018 [US1] Create setup-wizard orchestrator client component (state machine: initial → checking-credential → ready/no-credential → dispatching → polling → completed/failed) in components/setup/setup-wizard.tsx
-- [ ] T019 [US1] Create onboard workflow definition (two-phase: repo clone + agent setup → Phase 1 detection + Phase 2 LLM → commit + callback) in .github/workflows/onboard.yml
-- [ ] T020 [US1] Add config sync trigger on setup job completion (call syncProjectConfig after COMPLETED status) in lib/setup/service.ts
-- [ ] T021 [P] [US1] Create setup-wizard component tests (state transitions, dispatch flow, polling lifecycle, success/redirect) in tests/unit/components/setup/setup-wizard.test.tsx
-- [ ] T022 [P] [US1] Create agent-selector component tests (selection change events, default selection, radio group behavior) in tests/unit/components/setup/agent-selector.test.tsx
+- [x] T013 [US1] Create setup page server component with ownership guard and config-exists redirect in app/projects/[projectId]/setup/page.tsx ✅ DONE
+- [x] T014 [P] [US1] Create agent-selector radio group component (Claude Code / Codex options, shadcn/ui RadioGroup) in components/setup/agent-selector.tsx ✅ DONE
+- [x] T015 [P] [US1] Create credential-status indicator component (loading, available, unavailable states) in components/setup/credential-status.tsx ✅ DONE
+- [x] T016 [P] [US1] Create setup-progress state display component (pending, running with elapsed time, completed, failed states) in components/setup/setup-progress.tsx ✅ DONE
+- [x] T017 [P] [US1] Create setup-file-list component (displays list of committed files on success) in components/setup/setup-file-list.tsx ✅ DONE
+- [x] T018 [US1] Create setup-wizard orchestrator client component (state machine: initial → checking-credential → ready/no-credential → dispatching → polling → completed/failed) in components/setup/setup-wizard.tsx ✅ DONE
+- [x] T019 [US1] Create onboard workflow definition (two-phase: repo clone + agent setup → Phase 1 detection + Phase 2 LLM → commit + callback) in .github/workflows/onboard.yml ✅ DONE
+- [x] T020 [US1] Add config sync trigger on setup job completion (call syncProjectConfig after COMPLETED status) in lib/setup/service.ts ✅ DONE
+- [x] T021 [P] [US1] Create setup-wizard component tests (state transitions, dispatch flow, polling lifecycle, success/redirect) in tests/unit/components/setup/setup-wizard.test.tsx ✅ DONE
+- [x] T022 [P] [US1] Create agent-selector component tests (selection change events, default selection, radio group behavior) in tests/unit/components/setup/agent-selector.test.tsx ✅ DONE
 
 **Checkpoint**: At this point, the complete happy-path onboarding flow should be functional and testable independently
 

@@ -1,0 +1,239 @@
+name: Project Onboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      setup_job_id:
+        description: 'SetupJob record ID'
+        required: true
+        type: string
+      project_id:
+        description: 'Project ID'
+        required: true
+        type: string
+      selected_agent:
+        description: 'Agent type (CLAUDE or CODEX)'
+        required: true
+        type: string
+      githubRepository:
+        description: 'Target repository in format owner/repo'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  INPUT_SETUP_JOB_ID: ${{ inputs.setup_job_id }}
+  INPUT_PROJECT_ID: ${{ inputs.project_id }}
+  INPUT_SELECTED_AGENT: ${{ inputs.selected_agent }}
+  INPUT_GITHUB_REPOSITORY: ${{ inputs.githubRepository }}
+
+jobs:
+  onboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Validate inputs
+        run: |
+          if [ -z "$INPUT_SETUP_JOB_ID" ] || [ -z "$INPUT_PROJECT_ID" ] || [ -z "$INPUT_SELECTED_AGENT" ] || [ -z "$INPUT_GITHUB_REPOSITORY" ]; then
+            echo "::error::Missing required inputs"
+            exit 1
+          fi
+          echo "Setup Job ID: $INPUT_SETUP_JOB_ID"
+          echo "Project ID: $INPUT_PROJECT_ID"
+          echo "Agent: $INPUT_SELECTED_AGENT"
+          echo "Repository: $INPUT_GITHUB_REPOSITORY"
+
+      - name: Update status to RUNNING
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL || 'https://ai-board.dev' }}
+          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+        run: |
+          curl -sf -X PATCH \
+            "$API_BASE_URL/api/jobs/0/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $WORKFLOW_API_TOKEN" \
+            -d "{\"status\": \"RUNNING\", \"setupJobId\": $INPUT_SETUP_JOB_ID, \"workflowRunId\": ${{ github.run_id }}}" \
+            || echo "Warning: Failed to update status to RUNNING"
+
+      - name: Sparse checkout ai-board (scripts only)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .specify/scripts/bash/
+            .claude/commands/
+          path: ai-board
+
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.githubRepository }}
+          token: ${{ secrets.GH_PAT }}
+          path: target-repo
+
+      # ── Phase 1: Deterministic Stack Detection ──
+      - name: "Phase 1: Detect tech stack"
+        id: detect
+        working-directory: target-repo
+        run: |
+          chmod +x ../ai-board/.specify/scripts/bash/detect-stack.sh
+          ../ai-board/.specify/scripts/bash/detect-stack.sh
+          echo "phase1_success=true" >> "$GITHUB_OUTPUT"
+
+          # Track committed files
+          COMMITTED_FILES=""
+          if [ -f .ai-board/config.yml ]; then
+            COMMITTED_FILES=".ai-board/config.yml"
+          fi
+          if [ -f .ai-board/analysis.json ]; then
+            COMMITTED_FILES="$COMMITTED_FILES,.ai-board/analysis.json"
+          fi
+          echo "committed_files=$COMMITTED_FILES" >> "$GITHUB_OUTPUT"
+
+      # ── Phase 2: LLM Content Generation ──
+      - name: "Phase 2: Install agent CLI"
+        id: install_agent
+        if: steps.detect.outputs.phase1_success == 'true'
+        run: |
+          if [ "$INPUT_SELECTED_AGENT" = "CLAUDE" ]; then
+            npm install -g @anthropic-ai/claude-code@latest 2>/dev/null || true
+            echo "agent_installed=true" >> "$GITHUB_OUTPUT"
+          elif [ "$INPUT_SELECTED_AGENT" = "CODEX" ]; then
+            npm install -g @openai/codex@latest 2>/dev/null || true
+            echo "agent_installed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Phase 2: Fetch owner credential"
+        id: credential
+        if: steps.install_agent.outputs.agent_installed == 'true'
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL || 'https://ai-board.dev' }}
+          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+        run: |
+          PROVIDER="ANTHROPIC"
+          if [ "$INPUT_SELECTED_AGENT" = "CODEX" ]; then
+            PROVIDER="OPENAI"
+          fi
+
+          CRED_RESPONSE=$(curl -sf \
+            "$API_BASE_URL/api/projects/$INPUT_PROJECT_ID/credentials?provider=$PROVIDER" \
+            -H "Authorization: Bearer $WORKFLOW_API_TOKEN" \
+            2>/dev/null) || true
+
+          if [ -n "$CRED_RESPONSE" ]; then
+            CRED_VALUE=$(echo "$CRED_RESPONSE" | jq -r '.secret // empty' 2>/dev/null)
+            if [ -n "$CRED_VALUE" ]; then
+              echo "::add-mask::$CRED_VALUE"
+              if [ "$INPUT_SELECTED_AGENT" = "CLAUDE" ]; then
+                echo "ANTHROPIC_API_KEY=$CRED_VALUE" >> "$GITHUB_ENV"
+              else
+                echo "OPENAI_API_KEY=$CRED_VALUE" >> "$GITHUB_ENV"
+              fi
+              echo "has_credential=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: "Phase 2: Run agent onboard command"
+        id: llm_generate
+        if: steps.credential.outputs.has_credential == 'true'
+        working-directory: target-repo
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ "$INPUT_SELECTED_AGENT" = "CLAUDE" ]; then
+            # Run Claude Code with the onboard command
+            claude --print --dangerously-skip-permissions \
+              "$(cat ../ai-board/.claude/commands/onboard.md)" \
+              2>/dev/null || {
+                echo "Phase 2 failed — marking as partial"
+                echo "phase2_failed=true" >> "$GITHUB_OUTPUT"
+              }
+          fi
+
+          # Collect all generated files
+          PHASE2_FILES=""
+          for f in CLAUDE.md .ai-board/constitution.md AGENTS.md; do
+            if [ -f "$f" ]; then
+              PHASE2_FILES="$PHASE2_FILES,$f"
+            fi
+          done
+          echo "phase2_files=${PHASE2_FILES#,}" >> "$GITHUB_OUTPUT"
+
+      # ── Commit & Push ──
+      - name: Commit and push changes
+        id: commit
+        working-directory: target-repo
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          git config user.name "ai-board[bot]"
+          git config user.email "ai-board[bot]@users.noreply.github.com"
+
+          # Add .ai-board/ to .gitignore if not present
+          if ! grep -q "^\.ai-board/$" .gitignore 2>/dev/null; then
+            echo "" >> .gitignore
+            echo "# AI Board internal files" >> .gitignore
+          fi
+
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore: initialize ai-board project configuration
+
+          Generated by ai-board onboard workflow.
+          Setup Job ID: $INPUT_SETUP_JOB_ID"
+            git push
+            echo "committed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Build final file list
+          ALL_FILES="${{ steps.detect.outputs.committed_files }}"
+          if [ -n "${{ steps.llm_generate.outputs.phase2_files }}" ]; then
+            ALL_FILES="$ALL_FILES,${{ steps.llm_generate.outputs.phase2_files }}"
+          fi
+          # Convert comma-separated to JSON array
+          FILE_JSON=$(echo "$ALL_FILES" | tr ',' '\n' | grep -v '^$' | jq -R . | jq -s .)
+          echo "file_list=$FILE_JSON" >> "$GITHUB_OUTPUT"
+
+      # ── Report Status ──
+      - name: Report success
+        if: always() && steps.detect.outputs.phase1_success == 'true'
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL || 'https://ai-board.dev' }}
+          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+        run: |
+          IS_PARTIAL="false"
+          STATUS="COMPLETED"
+
+          if [ "${{ steps.llm_generate.outputs.phase2_failed }}" = "true" ]; then
+            IS_PARTIAL="true"
+          fi
+
+          FILE_LIST='${{ steps.commit.outputs.file_list }}'
+          if [ -z "$FILE_LIST" ] || [ "$FILE_LIST" = "null" ]; then
+            FILE_LIST="[]"
+          fi
+
+          curl -sf -X PATCH \
+            "$API_BASE_URL/api/jobs/0/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $WORKFLOW_API_TOKEN" \
+            -d "{\"status\": \"$STATUS\", \"setupJobId\": $INPUT_SETUP_JOB_ID, \"isPartial\": $IS_PARTIAL, \"completedFiles\": $FILE_LIST}" \
+            || echo "Warning: Failed to report success"
+
+      - name: Report failure
+        if: failure() && steps.detect.outputs.phase1_success != 'true'
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL || 'https://ai-board.dev' }}
+          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+        run: |
+          curl -sf -X PATCH \
+            "$API_BASE_URL/api/jobs/0/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $WORKFLOW_API_TOKEN" \
+            -d "{\"status\": \"FAILED\", \"setupJobId\": $INPUT_SETUP_JOB_ID, \"errorMessage\": \"Onboard workflow failed during stack detection\"}" \
+            || echo "Warning: Failed to report failure"
