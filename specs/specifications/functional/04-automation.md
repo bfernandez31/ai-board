@@ -717,6 +717,12 @@ All AI workflow dispatches (speckit, quick-impl, ai-board-assist, rollback-reset
 - The value is masked in CI logs via `::add-mask::` before being exported to `$GITHUB_ENV`
 - The credential is never passed as a workflow dispatch input
 
+**Runtime credential update** (within GitHub Actions):
+- Workflows call `PUT /api/internal/credentials` (authenticated by `WORKFLOW_API_TOKEN`) to re-encrypt an existing credential for a project's owner
+- The request body includes `projectId`, `provider`, `value`, and an optional `encoding` field (`base64` or `plain`, defaults to `base64`)
+- The endpoint re-encrypts the provided value with AES-256-GCM and updates the stored `UserCredential` record
+- Returns `400` if required fields are missing or invalid, `404` if no matching credential exists
+
 **Env var mapping**:
 - `API_KEY` credential type → `ANTHROPIC_API_KEY`
 - `OAUTH_TOKEN` credential type → `CLAUDE_CODE_OAUTH_TOKEN`
