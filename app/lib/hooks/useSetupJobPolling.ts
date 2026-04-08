@@ -56,8 +56,8 @@ export function useSetupJobPolling(
       // Stop polling when configSyncedAt is set (setup complete)
       if (result.configSyncedAt) return false;
 
-      // Stop polling when job is in terminal state
-      if (result.job && TERMINAL_STATUSES.has(result.job.status)) return false;
+      // Only stop polling on FAILED — COMPLETED must keep polling until configSyncedAt is set
+      if (result.job?.status === 'FAILED') return false;
 
       return pollingInterval;
     },

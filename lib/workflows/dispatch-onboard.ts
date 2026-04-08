@@ -1,7 +1,8 @@
 import { Octokit } from '@octokit/rest';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
 import { getOwnerCredential, getMissingCredentialError } from '@/lib/ai-credentials/workflow';
-import type { Agent, CredentialProvider } from '@prisma/client';
+import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
+import type { Agent } from '@prisma/client';
 
 export interface OnboardDispatchInputs {
   project_id: string;
@@ -9,11 +10,6 @@ export interface OnboardDispatchInputs {
   githubRepository: string;
   agent: Agent;
 }
-
-const AGENT_TO_PROVIDER: Record<Agent, CredentialProvider> = {
-  CLAUDE: 'ANTHROPIC',
-  CODEX: 'OPENAI',
-};
 
 export async function dispatchOnboardWorkflow(
   inputs: OnboardDispatchInputs
@@ -35,7 +31,7 @@ export async function dispatchOnboardWorkflow(
 
   const projectId = parseInt(inputs.project_id, 10);
   if (!isNaN(projectId)) {
-    const provider = AGENT_TO_PROVIDER[inputs.agent];
+    const provider = AGENT_PROVIDER_MAP[inputs.agent];
     const credential = await getOwnerCredential(projectId, provider);
     if (!credential) {
       throw new Error(getMissingCredentialError(provider));

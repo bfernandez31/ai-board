@@ -68,7 +68,7 @@ describe('SetupPageClient', () => {
     expect(screen.getByText('Initialize Project')).toBeInTheDocument();
   });
 
-  it('shows running state with spinner', () => {
+  it('shows running state with spinner', async () => {
     mockFetch.mockImplementation((url: string) => {
       if (typeof url === 'string' && url.includes('/credential-check')) {
         return Promise.resolve(mockCredentialResponse(true));
@@ -83,12 +83,12 @@ describe('SetupPageClient', () => {
 
     renderWithProviders(<SetupPageClient projectId={1} projectName="Test Project" />);
 
-    waitFor(() => {
+    await waitFor(() => {
       expect(screen.getByText('Running setup...')).toBeInTheDocument();
     });
   });
 
-  it('shows error and retry button on failure', () => {
+  it('shows error and retry button on failure', async () => {
     mockFetch.mockImplementation((url: string) => {
       if (typeof url === 'string' && url.includes('/credential-check')) {
         return Promise.resolve(mockCredentialResponse(true));
@@ -104,7 +104,7 @@ describe('SetupPageClient', () => {
 
     renderWithProviders(<SetupPageClient projectId={1} projectName="Test Project" />);
 
-    waitFor(() => {
+    await waitFor(() => {
       expect(screen.getByText('Setup failed')).toBeInTheDocument();
       expect(screen.getByText('Something went wrong')).toBeInTheDocument();
       expect(screen.getByText('Retry')).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe('SetupPageClient', () => {
     });
   });
 
-  it('disables button when credential missing', () => {
+  it('disables button when credential missing', async () => {
     mockFetch.mockImplementation((url: string) => {
       if (typeof url === 'string' && url.includes('/credential-check')) {
         return Promise.resolve(mockCredentialResponse(false));
@@ -159,14 +159,14 @@ describe('SetupPageClient', () => {
 
     renderWithProviders(<SetupPageClient projectId={1} projectName="Test Project" />);
 
-    waitFor(() => {
+    await waitFor(() => {
       const button = screen.getByText('Initialize Project');
       expect(button).toBeDisabled();
       expect(screen.getByText(/Missing.*credential/)).toBeInTheDocument();
     });
   });
 
-  it('enables button when credential valid', () => {
+  it('enables button when credential valid', async () => {
     mockFetch.mockImplementation((url: string) => {
       if (typeof url === 'string' && url.includes('/credential-check')) {
         return Promise.resolve(mockCredentialResponse(true));
@@ -179,7 +179,7 @@ describe('SetupPageClient', () => {
 
     renderWithProviders(<SetupPageClient projectId={1} projectName="Test Project" />);
 
-    waitFor(() => {
+    await waitFor(() => {
       const button = screen.getByText('Initialize Project');
       expect(button).not.toBeDisabled();
     });

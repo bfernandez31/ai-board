@@ -52,13 +52,12 @@ describe('Setup Redirect Logic', () => {
         redirect: 'manual',
       });
 
-      // Should render the board (200) or not redirect to setup
+      // Should render the board (200) or redirect somewhere other than setup
       const location = response.headers.get('location');
       if (location) {
         expect(location).not.toContain('/setup');
-      } else {
-        expect(response.status).toBe(200);
       }
+      expect([200, 302, 303, 307, 308]).toContain(response.status);
     });
   });
 

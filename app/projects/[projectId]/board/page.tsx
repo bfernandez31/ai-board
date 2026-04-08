@@ -46,7 +46,7 @@ export default async function ProjectBoardPage({
   ]);
 
   // Redirect to setup page if project is not yet configured
-  if (project && !project.configSyncedAt) {
+  if (!project.configSyncedAt) {
     redirect(`/projects/${projectId}/setup`);
   }
 

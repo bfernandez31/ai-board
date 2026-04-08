@@ -4,16 +4,12 @@ import { prisma } from '@/lib/db/client';
 import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { getOwnerCredential } from '@/lib/ai-credentials/workflow';
 import { dispatchOnboardWorkflow } from '@/lib/workflows/dispatch-onboard';
-import type { CredentialProvider } from '@prisma/client';
+import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
+import type { Agent } from '@prisma/client';
 
 const createSetupJobSchema = z.object({
   agent: z.enum(['CLAUDE', 'CODEX']),
 });
-
-const AGENT_TO_PROVIDER: Record<string, CredentialProvider> = {
-  CLAUDE: 'ANTHROPIC',
-  CODEX: 'OPENAI',
-};
 
 export async function POST(
   request: NextRequest,
@@ -24,7 +20,7 @@ export async function POST(
     const projectId = parseInt(projectIdStr, 10);
 
     if (isNaN(projectId) || projectId <= 0) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid project ID', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
     // Auth: owner-only
@@ -33,12 +29,12 @@ export async function POST(
       project = await verifyProjectOwnership(projectId, request);
     } catch (error) {
       if (error instanceof Error && error.message === 'Project not found') {
-        return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Project not found', code: 'NOT_FOUND' }, { status: 404 });
       }
       if (error instanceof Error && error.message === 'Unauthorized') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
       }
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
     }
 
     // Parse and validate body
@@ -46,59 +42,63 @@ export async function POST(
     const parsed = createSetupJobSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Validation error', details: parsed.error.issues },
+        { error: 'Validation error', code: 'VALIDATION_ERROR', details: parsed.error.issues },
         { status: 400 }
       );
     }
 
     const { agent } = parsed.data;
 
-    // Pre-flight: check if already configured
-    const projectConfig = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { configSyncedAt: true },
-    });
-
-    if (projectConfig?.configSyncedAt) {
-      return NextResponse.json(
-        { error: 'Project is already configured' },
-        { status: 409 }
-      );
-    }
-
-    // Pre-flight: check for active job
-    const activeJob = await prisma.projectSetupJob.findFirst({
-      where: {
-        projectId,
-        status: { in: ['PENDING', 'RUNNING'] },
-      },
-    });
-
-    if (activeJob) {
-      return NextResponse.json(
-        { error: 'A setup job is already active' },
-        { status: 409 }
-      );
-    }
-
     // Pre-flight: check credential
-    const provider = AGENT_TO_PROVIDER[agent];
+    const provider = AGENT_PROVIDER_MAP[agent as Agent];
     const credential = await getOwnerCredential(projectId, provider);
     if (!credential) {
       return NextResponse.json(
-        { error: `Missing ${provider} credential for ${agent}` },
+        { error: `Missing ${provider} credential for ${agent}`, code: 'CREDENTIAL_MISSING' },
         { status: 409 }
       );
     }
 
-    // Create job
-    const job = await prisma.projectSetupJob.create({
-      data: {
-        projectId,
-        agent,
-        status: 'PENDING',
-      },
+    // Atomic check-and-create: verify not already configured and no active job, then create
+    const job = await prisma.$transaction(async (tx: typeof prisma) => {
+      const projectConfig = await tx.project.findUnique({
+        where: { id: projectId },
+        select: { configSyncedAt: true },
+      });
+
+      if (projectConfig?.configSyncedAt) {
+        return { error: 'ALREADY_CONFIGURED' as const };
+      }
+
+      const activeJob = await tx.projectSetupJob.findFirst({
+        where: {
+          projectId,
+          status: { in: ['PENDING', 'RUNNING'] },
+        },
+      });
+
+      if (activeJob) {
+        return { error: 'JOB_ACTIVE' as const };
+      }
+
+      return tx.projectSetupJob.create({
+        data: {
+          projectId,
+          agent,
+          status: 'PENDING',
+        },
+      });
     });
+
+    if ('error' in job) {
+      const message = job.error === 'ALREADY_CONFIGURED'
+        ? 'Project is already configured'
+        : 'A setup job is already active';
+      return NextResponse.json(
+        { error: message, code: job.error },
+        { status: 409 }
+      );
+    }
 
     // Dispatch workflow
     try {
@@ -120,7 +120,7 @@ export async function POST(
       });
       console.error('[setup-jobs] Dispatch failed:', dispatchError);
       return NextResponse.json(
-        { error: 'Failed to dispatch onboard workflow' },
+        { error: 'Failed to dispatch onboard workflow', code: 'DISPATCH_FAILED' },
         { status: 500 }
       );
     }
@@ -137,7 +137,7 @@ export async function POST(
     );
   } catch (error) {
     console.error('[setup-jobs] POST error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', code: 'INTERNAL_ERROR' }, { status: 500 });
   }
 }
 
@@ -150,7 +150,7 @@ export async function GET(
     const projectId = parseInt(projectIdStr, 10);
 
     if (isNaN(projectId) || projectId <= 0) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid project ID', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
     // Auth: owner-only
@@ -158,12 +158,12 @@ export async function GET(
       await verifyProjectOwnership(projectId, request);
     } catch (error) {
       if (error instanceof Error && error.message === 'Project not found') {
-        return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Project not found', code: 'NOT_FOUND' }, { status: 404 });
       }
       if (error instanceof Error && error.message === 'Unauthorized') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
       }
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
     }
 
     // Get latest setup job
@@ -197,6 +197,6 @@ export async function GET(
     });
   } catch (error) {
     console.error('[setup-jobs] GET error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', code: 'INTERNAL_ERROR' }, { status: 500 });
   }
 }

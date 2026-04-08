@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, AlertCircle, CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react';
@@ -52,7 +52,7 @@ export function SetupPageClient({ projectId, projectName }: SetupPageClientProps
     },
   });
 
-  const hasCredential = credentialData?.hasCredential ?? true;
+  const hasCredential = credentialData?.hasCredential ?? false;
 
   const isJobActive = job?.status === 'PENDING' || job?.status === 'RUNNING';
   const isJobFailed = job?.status === 'FAILED';
@@ -80,8 +80,15 @@ export function SetupPageClient({ projectId, projectName }: SetupPageClientProps
   const initButtonDisabled = isDispatching || isJobActive || !hasCredential;
 
   // Redirect to board when config is synced
+  const [redirecting, setRedirecting] = useState(false);
+  useEffect(() => {
+    if (configSyncedAt && !redirecting) {
+      setRedirecting(true);
+      router.push(`/projects/${projectId}/board`);
+    }
+  }, [configSyncedAt, redirecting, router, projectId]);
+
   if (configSyncedAt) {
-    router.push(`/projects/${projectId}/board`);
     return (
       <div className="aurora-bg-section rounded-lg border border-border p-8 text-center">
         <CheckCircle2 className="h-8 w-8 text-ctp-green mx-auto mb-3" />
