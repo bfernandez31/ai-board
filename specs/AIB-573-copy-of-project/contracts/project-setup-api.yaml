@@ -1,0 +1,472 @@
+openapi: 3.1.0
+info:
+  title: Project Setup and Onboarding API
+  version: 1.0.0
+  description: >
+    Owner-only API contracts for imported-project setup, onboarding status polling,
+    workflow callbacks, and post-setup artifact review.
+servers:
+  - url: https://app.example.invalid
+paths:
+  /api/projects/{projectId}/setup:
+    get:
+      summary: Get setup page state
+      description: Returns whether setup is still required, which agents are selectable, and the latest authoritative setup job.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Setup state for the owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectSetupState'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Start project onboarding
+      description: Creates a new project-scoped setup job unless an active authoritative job already exists.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - selectedAgent
+              properties:
+                selectedAgent:
+                  type: string
+                  enum: [CLAUDE, CODEX]
+      responses:
+        '202':
+          description: Setup dispatch accepted or existing active job reused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectSetupDispatchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Not owner or selected agent credential not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Duplicate active setup job exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectSetupDispatchResponse'
+
+  /api/projects/{projectId}/setup/status:
+    get:
+      summary: Poll latest setup job
+      description: Returns the authoritative current or latest setup job so the page can resume after refresh.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Setup status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectSetupStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Workflow callback to update setup job status
+      description: Workflow-token authenticated status callback used by GitHub Actions.
+      security:
+        - WorkflowToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectSetupStatusUpdate'
+      responses:
+        '200':
+          description: Status persisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectSetupStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Callback rejected because job is no longer authoritative
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/projects/{projectId}/settings/onboarding-artifacts:
+    get:
+      summary: Read onboarding artifacts for settings review
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Current committed onboarding artifacts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - artifacts
+                properties:
+                  artifacts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OnboardingArtifactDocument'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update onboarding artifacts from project settings
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - artifacts
+              properties:
+                artifacts:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - path
+                      - content
+                    properties:
+                      path:
+                        type: string
+                      content:
+                        type: string
+      responses:
+        '200':
+          description: Repository update committed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - commitSha
+                  - updatedPaths
+                properties:
+                  commitSha:
+                    type: string
+                  updatedPaths:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    WorkflowToken:
+      type: http
+      scheme: bearer
+
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+
+  responses:
+    BadRequest:
+      description: Invalid request payload or unsupported state transition
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Owner-only setup or settings access denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Project or setup job not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    AgentReadiness:
+      type: object
+      required:
+        - agent
+        - provider
+        - ready
+      properties:
+        agent:
+          type: string
+          enum: [CLAUDE, CODEX]
+        provider:
+          type: string
+          enum: [ANTHROPIC, OPENAI]
+        ready:
+          type: boolean
+        readinessStatus:
+          type: string
+        verificationCode:
+          type: string
+          nullable: true
+        verificationMessage:
+          type: string
+          nullable: true
+        guidance:
+          type: string
+          nullable: true
+
+    ProjectSetupState:
+      type: object
+      required:
+        - projectId
+        - requiresSetup
+        - defaultAgent
+        - eligibleAgents
+      properties:
+        projectId:
+          type: integer
+        requiresSetup:
+          type: boolean
+        defaultAgent:
+          type: string
+          enum: [CLAUDE, CODEX]
+        redirectTo:
+          type: string
+          nullable: true
+        eligibleAgents:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentReadiness'
+        latestJob:
+          allOf:
+            - $ref: '#/components/schemas/ProjectSetupJob'
+          nullable: true
+
+    ProjectSetupDispatchResponse:
+      type: object
+      required:
+        - job
+        - reusedActiveJob
+      properties:
+        reusedActiveJob:
+          type: boolean
+        job:
+          $ref: '#/components/schemas/ProjectSetupJob'
+
+    ProjectSetupStatusUpdate:
+      type: object
+      required:
+        - jobId
+        - status
+      properties:
+        jobId:
+          type: integer
+        status:
+          type: string
+          enum: [RUNNING, COMPLETED, FAILED, CANCELLED]
+        workflowRunId:
+          type: integer
+          nullable: true
+        commitSha:
+          type: string
+          nullable: true
+        defaultBranch:
+          type: string
+          nullable: true
+        analysisSummary:
+          type: object
+          nullable: true
+          additionalProperties: true
+        artifactManifest:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/ArtifactSummary'
+        configPreview:
+          type: object
+          nullable: true
+          additionalProperties: true
+        errorCode:
+          type: string
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+
+    ProjectSetupStatusResponse:
+      type: object
+      required:
+        - job
+      properties:
+        job:
+          $ref: '#/components/schemas/ProjectSetupJob'
+
+    ProjectSetupJob:
+      type: object
+      required:
+        - id
+        - projectId
+        - selectedAgent
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        selectedAgent:
+          type: string
+          enum: [CLAUDE, CODEX]
+        status:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED, CANCELLED]
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        workflowRunId:
+          type: integer
+          nullable: true
+        defaultBranch:
+          type: string
+          nullable: true
+        commitSha:
+          type: string
+          nullable: true
+        analysisSummary:
+          type: object
+          nullable: true
+          additionalProperties: true
+        artifactManifest:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/ArtifactSummary'
+        configPreview:
+          type: object
+          nullable: true
+          additionalProperties: true
+        error:
+          type: object
+          nullable: true
+          properties:
+            code:
+              type: string
+              nullable: true
+            message:
+              type: string
+              nullable: true
+
+    ArtifactSummary:
+      type: object
+      required:
+        - path
+        - kind
+        - status
+      properties:
+        path:
+          type: string
+        kind:
+          type: string
+        status:
+          type: string
+          enum: [generated, updated, preserved]
+        notes:
+          type: string
+          nullable: true
+
+    OnboardingArtifactDocument:
+      type: object
+      required:
+        - path
+        - kind
+        - content
+        - editable
+      properties:
+        path:
+          type: string
+        kind:
+          type: string
+        content:
+          type: string
+        editable:
+          type: boolean
+        source:
+          type: string
+          enum: [repository, generated]
