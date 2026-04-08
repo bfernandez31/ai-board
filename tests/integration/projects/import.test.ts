@@ -11,30 +11,49 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 
+const TEST_USER_ID = 'test-user-id';
+const GITHUB_PROVIDER = 'github';
+const GITHUB_PROVIDER_ACCOUNT_ID = 'test-user-id-github';
+const GITHUB_ACCESS_TOKEN = 'gho_test_repo_token';
+
+interface ImportProjectResponse {
+  project: {
+    id: number;
+    hasConfig: boolean;
+    githubOwner: string;
+    githubRepo: string;
+  };
+  redirectTo: string;
+}
+
+function createMissingConfigRepoName(): string {
+  return `missing-config-import-${Date.now()}`;
+}
+
 describe('POST /api/projects/import', () => {
   let ctx: TestContext;
   const prisma = getPrismaClient();
 
-  async function seedGitHubAccount(scope: string) {
+  async function seedGitHubAccount(scope: string): Promise<void> {
     await prisma.account.upsert({
       where: {
         provider_providerAccountId: {
-          provider: 'github',
-          providerAccountId: 'test-user-id-github',
+          provider: GITHUB_PROVIDER,
+          providerAccountId: GITHUB_PROVIDER_ACCOUNT_ID,
         },
       },
       update: {
-        userId: 'test-user-id',
-        access_token: 'gho_test_repo_token',
+        userId: TEST_USER_ID,
+        access_token: GITHUB_ACCESS_TOKEN,
         scope,
       },
       create: {
         id: `acct-${Date.now()}`,
-        userId: 'test-user-id',
+        userId: TEST_USER_ID,
         type: 'oauth',
-        provider: 'github',
-        providerAccountId: 'test-user-id-github',
-        access_token: 'gho_test_repo_token',
+        provider: GITHUB_PROVIDER,
+        providerAccountId: GITHUB_PROVIDER_ACCOUNT_ID,
+        access_token: GITHUB_ACCESS_TOKEN,
         scope,
       },
     });
@@ -44,7 +63,7 @@ describe('POST /api/projects/import', () => {
     ctx = await getTestContext();
     await ctx.cleanup();
     await prisma.account.deleteMany({
-      where: { userId: 'test-user-id', provider: 'github' },
+      where: { userId: TEST_USER_ID, provider: GITHUB_PROVIDER },
     });
   });
 
@@ -129,17 +148,9 @@ describe('POST /api/projects/import', () => {
     it('redirects imported repos without synced config to the setup flow', async () => {
       await seedGitHubAccount('read:user user:email repo');
 
-      const response = await ctx.api.post<{
-        project: {
-          id: number;
-          hasConfig: boolean;
-          githubOwner: string;
-          githubRepo: string;
-        };
-        redirectTo: string;
-      }>('/api/projects/import', {
+      const response = await ctx.api.post<ImportProjectResponse>('/api/projects/import', {
         githubOwner: 'octocat',
-        githubRepo: `missing-config-import-${Date.now()}`,
+        githubRepo: createMissingConfigRepoName(),
         name: '[e2e] Missing Config Import',
       });
 

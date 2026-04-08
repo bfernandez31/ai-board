@@ -14,7 +14,43 @@ import { syncProjectConfig } from '@/lib/config-sync';
 import { prisma } from '@/lib/db/client';
 import { Prisma } from '@prisma/client';
 
-export async function POST(request: NextRequest) {
+type ImportedProjectRecord = {
+  id: number;
+  name: string;
+  key: string;
+  githubOwner: string;
+  githubRepo: string;
+};
+
+type RepositoryImportMetadata = {
+  description: string | null;
+};
+
+async function getRepositoryImportMetadata(
+  userId: string,
+  githubOwner: string,
+  githubRepo: string
+): Promise<RepositoryImportMetadata> {
+  if (process.env.TEST_MODE === 'true') {
+    return { description: null };
+  }
+
+  const octokit = await createUserGitHubClient(userId);
+  const { data } = await octokit.repos.get({
+    owner: githubOwner,
+    repo: githubRepo,
+  });
+
+  if (!data.permissions?.admin) {
+    const error = new Error('INSUFFICIENT_PERMISSIONS');
+    (error as Error & { code?: string }).code = 'INSUFFICIENT_PERMISSIONS';
+    throw error;
+  }
+
+  return { description: data.description };
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const userId = await requireAuth();
     await requireRepoScope(userId);
@@ -23,41 +59,35 @@ export async function POST(request: NextRequest) {
     const validated = importProjectSchema.parse(body);
 
     // Verify admin rights on the repo
-    let repoData: { description: string | null };
-    if (process.env.TEST_MODE === 'true') {
-      repoData = { description: null };
-    } else {
-      const octokit = await createUserGitHubClient(userId);
-
-      try {
-        const { data } = await octokit.repos.get({
-          owner: validated.githubOwner,
-          repo: validated.githubRepo,
-        });
-
-        if (!data.permissions?.admin) {
-          return NextResponse.json(
-            {
-              error: 'You need admin access to this repository to import it.',
-              code: 'INSUFFICIENT_PERMISSIONS',
-            },
-            { status: 403 }
-          );
-        }
-
-        repoData = { description: data.description };
-      } catch (error) {
-        if ((error as { status?: number }).status === 404) {
-          return NextResponse.json(
-            {
-              error: 'Repository not found or you do not have access.',
-              code: 'REPO_NOT_FOUND',
-            },
-            { status: 404 }
-          );
-        }
-        throw error;
+    let repoData: RepositoryImportMetadata;
+    try {
+      repoData = await getRepositoryImportMetadata(
+        userId,
+        validated.githubOwner,
+        validated.githubRepo
+      );
+    } catch (error) {
+      if ((error as { status?: number }).status === 404) {
+        return NextResponse.json(
+          {
+            error: 'Repository not found or you do not have access.',
+            code: 'REPO_NOT_FOUND',
+          },
+          { status: 404 }
+        );
       }
+
+      if (error instanceof Error && (error as Error & { code?: string }).code === 'INSUFFICIENT_PERMISSIONS') {
+        return NextResponse.json(
+          {
+            error: 'You need admin access to this repository to import it.',
+            code: 'INSUFFICIENT_PERMISSIONS',
+          },
+          { status: 403 }
+        );
+      }
+
+      throw error;
     }
 
     // Determine project name and description
@@ -72,7 +102,7 @@ export async function POST(request: NextRequest) {
     const maxProjects = subscription.limits.maxProjects;
     const aiBoardUserId = await getAIBoardUserId();
 
-    let newProject: { id: number; name: string; key: string; githubOwner: string; githubRepo: string };
+    let newProject: ImportedProjectRecord;
 
     const projectData = {
       name: projectName,

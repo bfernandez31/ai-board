@@ -30,6 +30,44 @@ export interface ConfigSyncError {
 
 export type ConfigSyncOutcome = ConfigSyncResult | ConfigSyncError;
 
+const TEST_MODE_MOCK_CONFIG = {
+  version: 1,
+  project: { name: 'test-project', language: 'typescript', framework: 'nextjs' },
+  runtime: { manager: 'bun' },
+  services: [{ type: 'postgres', version: '16' }],
+  commands: { install: 'bun install' },
+  agent: { cli: 'claude-code' },
+} as const;
+
+function createConfigNotFoundError(): ConfigSyncError {
+  return {
+    success: false,
+    code: 'CONFIG_NOT_FOUND',
+    error: `No ${CONFIG_FILE_PATH} found in repository`,
+  };
+}
+
+async function syncProjectConfigInTestMode(
+  project: Pick<Project, 'id' | 'githubRepo'>
+): Promise<ConfigSyncOutcome> {
+  if (project.githubRepo.includes('missing-config')) {
+    return createConfigNotFoundError();
+  }
+
+  const now = new Date();
+  await prisma.project.update({
+    where: { id: project.id },
+    data: { config: TEST_MODE_MOCK_CONFIG, configSyncedAt: now },
+  });
+
+  return {
+    success: true,
+    config: TEST_MODE_MOCK_CONFIG as Record<string, unknown>,
+    syncedAt: now,
+    warnings: [],
+  };
+}
+
 /**
  * Check whether a project's config is stale (null or older than 1 hour).
  */
@@ -48,28 +86,7 @@ export async function syncProjectConfig(
 ): Promise<ConfigSyncOutcome> {
   // In test mode, return mock data
   if (process.env.TEST_MODE === 'true') {
-    if (project.githubRepo.includes('missing-config')) {
-      return {
-        success: false,
-        code: 'CONFIG_NOT_FOUND',
-        error: `No ${CONFIG_FILE_PATH} found in repository`,
-      };
-    }
-
-    const now = new Date();
-    const mockConfig = {
-      version: 1,
-      project: { name: 'test-project', language: 'typescript', framework: 'nextjs' },
-      runtime: { manager: 'bun' },
-      services: [{ type: 'postgres', version: '16' }],
-      commands: { install: 'bun install' },
-      agent: { cli: 'claude-code' },
-    };
-    await prisma.project.update({
-      where: { id: project.id },
-      data: { config: mockConfig, configSyncedAt: now },
-    });
-    return { success: true, config: mockConfig, syncedAt: now, warnings: [] };
+    return syncProjectConfigInTestMode(project);
   }
 
   const token = accessToken ?? process.env.GITHUB_TOKEN;
@@ -90,21 +107,13 @@ export async function syncProjectConfig(
     });
 
     if (!('content' in response.data) || !response.data.content) {
-      return {
-        success: false,
-        code: 'CONFIG_NOT_FOUND',
-        error: `No ${CONFIG_FILE_PATH} found in repository`,
-      };
+      return createConfigNotFoundError();
     }
 
     rawContent = Buffer.from(response.data.content, 'base64').toString('utf-8');
   } catch (error) {
     if (error instanceof Error && error.message.includes('Not Found')) {
-      return {
-        success: false,
-        code: 'CONFIG_NOT_FOUND',
-        error: `No ${CONFIG_FILE_PATH} found in repository`,
-      };
+      return createConfigNotFoundError();
     }
     return {
       success: false,
