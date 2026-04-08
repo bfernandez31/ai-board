@@ -71,13 +71,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T016 [P] [US2] Extend integration tests in `tests/integration/projects/setup-job.test.ts` with guard scenarios (POST rejects non-owner 403, POST rejects already-configured 409, POST rejects active job 409)
-- [ ] T017 [P] [US2] Extend integration tests in `tests/integration/projects/setup-redirect.test.ts` with access control scenarios (non-owner access denied)
+- [X] T016 [P] [US2] Extend integration tests in `tests/integration/projects/setup-job.test.ts` with guard scenarios (POST rejects non-owner 403, POST rejects already-configured 409, POST rejects active job 409)
+- [X] T017 [P] [US2] Extend integration tests in `tests/integration/projects/setup-redirect.test.ts` with access control scenarios (non-owner access denied)
 
 ### Implementation for User Story 2
 
-- [ ] T018 [US2] Add owner-only access guard to setup page server component in `app/projects/[projectId]/setup/page.tsx` (verify ownership, return error for non-owners)
-- [ ] T019 [US2] Add duplicate dispatch prevention UI in `components/setup/setup-page-client.tsx` (disable initialize button when job is PENDING/RUNNING, show current job status)
+- [X] T018 [US2] Add owner-only access guard to setup page server component in `app/projects/[projectId]/setup/page.tsx` (verify ownership, return error for non-owners)
+- [X] T019 [US2] Add duplicate dispatch prevention UI in `components/setup/setup-page-client.tsx` (disable initialize button when job is PENDING/RUNNING, show current job status)
 
 **Checkpoint**: All access control and guard rails enforced
 
@@ -91,12 +91,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T020 [P] [US3] Extend integration tests in `tests/integration/projects/setup-job.test.ts` with credential guard (POST rejects when credential missing 409)
-- [ ] T021 [P] [US3] Extend component tests in `tests/unit/components/setup/setup-page.test.tsx` with credential scenarios (button disabled when credential missing, button enabled when valid, guidance displayed)
+- [X] T020 [P] [US3] Extend integration tests in `tests/integration/projects/setup-job.test.ts` with credential guard (POST rejects when credential missing 409)
+- [X] T021 [P] [US3] Extend component tests in `tests/unit/components/setup/setup-page.test.tsx` with credential scenarios (button disabled when credential missing, button enabled when valid, guidance displayed)
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Add credential check integration in `components/setup/setup-page-client.tsx` (query credential-check endpoint on agent change, disable button + show guidance when hasCredential is false, link to settingsUrl)
+- [X] T022 [US3] Add credential check integration in `components/setup/setup-page-client.tsx` (query credential-check endpoint on agent change, disable button + show guidance when hasCredential is false, link to settingsUrl)
 
 **Checkpoint**: Credential validation fully integrated into setup flow
 
@@ -110,12 +110,12 @@
 
 ### Tests for User Story 4
 
-- [ ] T023 [P] [US4] Extend integration tests in `tests/integration/projects/setup-job.test.ts` with retry scenario (retry after failure creates new job)
-- [ ] T024 [P] [US4] Extend component tests in `tests/unit/components/setup/setup-page.test.tsx` with failure/retry scenarios (shows error and retry button on failure)
+- [X] T023 [P] [US4] Extend integration tests in `tests/integration/projects/setup-job.test.ts` with retry scenario (retry after failure creates new job)
+- [X] T024 [P] [US4] Extend component tests in `tests/unit/components/setup/setup-page.test.tsx` with failure/retry scenarios (shows error and retry button on failure)
 
 ### Implementation for User Story 4
 
-- [ ] T025 [US4] Add failure state display and retry logic in `components/setup/setup-page-client.tsx` (show errorMessage from failed job, retry button dispatches POST to create new job, reset polling on retry)
+- [X] T025 [US4] Add failure state display and retry logic in `components/setup/setup-page-client.tsx` (show errorMessage from failed job, retry button dispatches POST to create new job, reset polling on retry)
 
 **Checkpoint**: Error recovery and retry flow fully functional
 
@@ -129,11 +129,11 @@
 
 ### Tests for User Story 5
 
-- [ ] T026 [P] [US5] Extend integration tests in `tests/integration/projects/setup-job.test.ts` with callback scenarios (PATCH PENDING→RUNNING, PATCH RUNNING→COMPLETED triggers config sync, PATCH RUNNING→FAILED with errorMessage, PATCH invalid transition 400, PATCH unauthenticated 401, PATCH idempotent same status 200)
+- [X] T026 [P] [US5] Extend integration tests in `tests/integration/projects/setup-job.test.ts` with callback scenarios (PATCH PENDING→RUNNING, PATCH RUNNING→COMPLETED triggers config sync, PATCH RUNNING→FAILED with errorMessage, PATCH invalid transition 400, PATCH unauthenticated 401, PATCH idempotent same status 200)
 
 ### Implementation for User Story 5
 
-- [ ] T027 [US5] Verify and refine PATCH handler state machine logic in `app/api/projects/[projectId]/setup/jobs/[jobId]/status/route.ts` (ensure all transitions match contract, config sync fires non-blocking on COMPLETED, errorMessage persisted on FAILED)
+- [X] T027 [US5] Verify and refine PATCH handler state machine logic in `app/api/projects/[projectId]/setup/jobs/[jobId]/status/route.ts` (ensure all transitions match contract, config sync fires non-blocking on COMPLETED, errorMessage persisted on FAILED)
 
 **Checkpoint**: Full dispatch-callback-sync pipeline validated end-to-end
 
@@ -143,7 +143,7 @@
 
 **Purpose**: GitHub Actions workflow to validate the full dispatch-callback pipeline
 
-- [ ] T028 Create stub onboard workflow in `.github/workflows/onboard.yml` (workflow_dispatch with inputs: project_id, job_id, githubRepository, agent; steps: PATCH RUNNING, sleep 5, PATCH COMPLETED; error handler: PATCH FAILED)
+- [X] T028 Create stub onboard workflow in `.github/workflows/onboard.yml` (workflow_dispatch with inputs: project_id, job_id, githubRepository, agent; steps: PATCH RUNNING, sleep 5, PATCH COMPLETED; error handler: PATCH FAILED)
 
 ---
 
@@ -151,9 +151,9 @@
 
 **Purpose**: Final cleanup and validation across all stories
 
-- [ ] T029 Verify all setup page surfaces use aurora theme classes per `globals.css` aurora utilities
-- [ ] T030 Run `bun run type-check && bun run lint` and fix any errors across all new files
-- [ ] T031 Run full test suite (`bun run test:unit` and `bun run test:integration`) and fix any failures
+- [X] T029 Verify all setup page surfaces use aurora theme classes per `globals.css` aurora utilities
+- [X] T030 Run `bun run type-check && bun run lint` and fix any errors across all new files
+- [X] T031 Run full test suite (`bun run test:unit` and `bun run test:integration`) and fix any failures
 
 ---
 

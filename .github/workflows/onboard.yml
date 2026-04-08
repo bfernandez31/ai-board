@@ -1,0 +1,56 @@
+name: Project Onboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: 'Project ID'
+        required: true
+        type: string
+      job_id:
+        description: 'Setup job ID'
+        required: true
+        type: string
+      githubRepository:
+        description: 'Target repository in format owner/repo'
+        required: true
+        type: string
+      agent:
+        description: 'Agent type (CLAUDE or CODEX)'
+        required: true
+        type: string
+
+env:
+  API_BASE_URL: ${{ vars.API_BASE_URL || 'https://ai-board.vercel.app' }}
+
+jobs:
+  onboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report RUNNING
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"RUNNING","workflowRunId":${{ github.run_id }}}'
+
+      - name: Simulate onboard work
+        run: sleep 5
+
+      - name: Report COMPLETED
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"COMPLETED"}'
+
+      - name: Report FAILED on error
+        if: failure()
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"Onboard workflow failed at step: ${{ github.action }}"}'
