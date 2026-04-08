@@ -60,7 +60,7 @@ export async function POST(
     }
 
     // Atomic check-and-create: verify not already configured and no active job, then create
-    const job = await prisma.$transaction(async (tx: typeof prisma) => {
+    const job = await prisma.$transaction(async (tx) => {
       const projectConfig = await tx.project.findUnique({
         where: { id: projectId },
         select: { configSyncedAt: true },
