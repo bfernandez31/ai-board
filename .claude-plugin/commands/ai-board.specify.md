@@ -103,6 +103,7 @@ Given that feature description, do this:
        - Generate **Functional Requirements** that are testable and align with chosen policies; document assumptions separately.
        - Define **Success Criteria** that are measurable, technology-agnostic, and balanced across quantitative/qualitative outcomes.
        - Identify **Key Entities** when the feature manipulates data.
+       - If the feature involves **autonomous processes** (workflows dispatched, agent commands executed, background jobs, scheduled tasks, data pipelines), populate the **Internal Processes** section describing each process's trigger, inputs, functional phases, outputs, and error behavior. Signs to look for: workflow dispatch, job creation, agent/CLI execution, cron/scheduled operations, async processing not directly tied to a user action.
     8. Return: SUCCESS (spec ready for planning).
 
 5. Write the specification to SPEC_FILE using the template structure, replacing placeholders with concrete details derived from `FEATURE_DESCRIPTION` while preserving section order and headings. The `Auto-Resolved Decisions` section MUST be populated (or explicitly set to `- None`) before saving.

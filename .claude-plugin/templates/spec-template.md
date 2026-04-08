@@ -117,6 +117,28 @@
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
 
+### Internal Processes *(include if feature involves background jobs, workflows, or agent commands)*
+
+<!--
+  Include this section when the feature involves autonomous processing that
+  is not directly user-facing: CI/CD workflows, agent commands, background
+  jobs, data pipelines, scheduled tasks, etc.
+
+  Focus on BEHAVIOR, not implementation:
+  - What triggers the process
+  - What inputs it receives
+  - What phases/steps it goes through (functional, not code-level)
+  - What outputs/artifacts it produces
+  - How it reports success or failure
+  - Idempotency and error recovery behavior
+-->
+
+- **[Process Name]**: [What triggers it, what it does functionally, what it produces]
+  - **Input**: [What data/context the process receives]
+  - **Phases**: [Ordered list of functional steps — what happens, not how]
+  - **Output**: [Artifacts produced, state changes, side effects]
+  - **Error behavior**: [What happens on failure, is it retryable, partial results?]
+
 ## Success Criteria *(mandatory)*
 
 <!--

@@ -84,14 +84,22 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Examples: public APIs for libraries, command schemas for CLI tools, endpoints for web services, grammars for parsers, UI contracts for applications
    - Skip if project is purely internal (build scripts, one-off tools, etc.)
 
-3. **Agent context update**:
+3. **Define workflow/agent artifacts** (if spec includes Internal Processes):
+   - For each internal process described in the spec, design:
+     - Workflow definition (inputs, steps, environment requirements)
+     - Agent command specification (arguments, functional phases, output format)
+     - Callback/reporting contract (how the process reports status back to the app)
+   - Output to `SPECS_DIR/workflows/` subdirectory
+   - Each artifact should be a separate markdown file (e.g., `workflows/onboard-workflow.md`, `workflows/onboard-command.md`)
+
+4. **Agent context update**:
    - Run `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/scripts/bash/update-agent-context.sh claude`
    - These scripts detect which AI agent is in use
    - Update the appropriate agent-specific context file
    - Add only new technology from current plan
    - Preserve manual additions between markers
 
-**Output**: data-model.md, /contracts/*, quickstart.md, agent-specific file
+**Output**: data-model.md, /contracts/*, /workflows/* (if applicable), quickstart.md, agent-specific file
 
 ## Testing Strategy (include in plan)
 
