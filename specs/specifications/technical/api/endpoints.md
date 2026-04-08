@@ -309,6 +309,128 @@ Import a GitHub repository as a new ai-board project.
 - `409` (other conflict): `{ "error": "A conflict occurred while creating the project. Please try again.", "code": "CONFLICT" }`
 - `502`: GitHub API error
 
+### GET /api/projects/:projectId/setup
+
+Return the current setup state for a project, derived from the latest `ProjectSetupJob` and `configSyncedAt`.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Response** (200 OK):
+```json
+{
+  "setupState": "NEEDS_SETUP",
+  "latestJob": {
+    "id": 12,
+    "agent": "CLAUDE",
+    "status": "RUNNING",
+    "logs": null,
+    "artifactSummary": null,
+    "startedAt": "2026-04-08T10:00:00.000Z",
+    "completedAt": null
+  },
+  "configSyncedAt": null
+}
+```
+
+`setupState` values:
+- `NEEDS_SETUP` — no jobs exist and config is not synced
+- `IN_PROGRESS` — latest job is PENDING or RUNNING
+- `SYNC_FAILED` — latest job COMPLETED but `configSyncedAt` is still null
+- `FAILED` — latest job FAILED or CANCELLED (retryable)
+- `CONFIGURED` — `configSyncedAt` is non-null (setup bypass applies)
+
+`latestJob` is `null` when no setup jobs exist.
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+
+---
+
+### POST /api/projects/:projectId/setup
+
+Dispatch the onboarding workflow for a project. Creates a `ProjectSetupJob` record and triggers the `onboard.yml` workflow.
+
+**Authentication**: Required (session)
+**Authorization**: Project owner only
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{ "agent": "CLAUDE" }
+```
+
+**Response** (201 Created):
+```json
+{
+  "jobId": 12,
+  "status": "PENDING",
+  "agent": "CLAUDE"
+}
+```
+
+**Errors**:
+- `400`: Validation error (invalid agent value)
+- `401`: Not authenticated
+- `403`: `{ "error": "Only the project owner can dispatch setup" }`
+- `409` (already configured): `{ "error": "Project is already configured", "code": "ALREADY_CONFIGURED" }`
+- `409` (job in progress): `{ "error": "A setup job is already in progress", "code": "JOB_IN_PROGRESS" }`
+- `422` (missing credential): `{ "error": "No {provider} credential configured. Please add your key in Settings → AI Credentials.", "code": "MISSING_CREDENTIAL" }`
+
+---
+
+### PATCH /api/projects/:projectId/setup/status
+
+Workflow callback to update setup job status. Called by `onboard.yml` at each phase transition.
+
+**Authentication**: Bearer token (`WORKFLOW_API_TOKEN`)
+**Authorization**: Workflow token only (not session-based)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "jobId": 12,
+  "status": "COMPLETED",
+  "logs": null,
+  "artifactSummary": []
+}
+```
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `jobId` | Yes | ID of the setup job to update |
+| `status` | Yes | `RUNNING`, `COMPLETED`, `FAILED`, or `CANCELLED` |
+| `logs` | No | Error details (persisted on FAILED for UI display) |
+| `artifactSummary` | No | JSON array of file paths created (stub: empty array) |
+
+**Response** (200 OK):
+```json
+{
+  "id": 12,
+  "status": "COMPLETED",
+  "completedAt": "2026-04-08T10:00:30.000Z",
+  "configSynced": true
+}
+```
+
+`configSynced` is `true` when `status = COMPLETED` and config sync succeeded. It is `false` if config sync failed after completion.
+
+**Errors**:
+- `400`: `{ "error": "Invalid status transition from {from} to {to}" }`
+- `401`: `{ "error": "Unauthorized" }` — missing or invalid workflow token
+- `404`: `{ "error": "Setup job not found" }`
+
+---
+
 ## GitHub Endpoints
 
 ### GET /api/github/auth-status

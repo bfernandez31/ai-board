@@ -503,6 +503,70 @@ The repo picker lists the user's GitHub repositories (personal and organizationa
 - Admin rights on the target repository are required at import time
 - Subscription-based project quota applies to imported projects equally
 
+## Project Setup Wizard
+
+### Overview
+
+When a project is imported without a valid `.ai-board/config.yml`, the owner is redirected to a setup wizard at `/projects/{id}/setup`. The wizard guides the owner through agent selection, credential verification, and onboarding workflow dispatch. Once the workflow completes and config sync succeeds, users are redirected to the project board and the setup page is no longer accessible.
+
+### Access Control
+
+- **Project owners**: Full access — can view status and dispatch the onboarding workflow
+- **Project members**: View-only access — can see current setup status but cannot dispatch
+- **Unauthenticated or non-members**: Access denied (redirect or 403)
+- **Configured projects**: Any visit to the setup URL redirects immediately to the project board — the setup wizard is bypassed entirely once `configSyncedAt` is populated
+
+### Agent Selection
+
+The owner selects which AI agent CLI will be used during onboarding:
+
+- **Claude Code** — powered by Anthropic Claude
+- **Codex** — powered by OpenAI
+
+The selection determines which provider credential is checked before dispatch. The owner can switch selection freely before launching.
+
+### Credential Verification
+
+Before dispatch is allowed, the system verifies the owner has a credential configured for the selected agent's provider:
+
+- Credential status is checked inline when agent selection changes
+- If the credential is missing, the "Initialize Project" button is disabled and guidance explains how to add the credential in Settings → AI Credentials
+- Switching to an agent with a valid credential re-enables the button immediately
+- The dispatch endpoint independently re-verifies the credential at submission time — the inline check is a UX convenience only
+
+### Setup Job Lifecycle
+
+Clicking "Initialize Project" dispatches the onboarding workflow and creates a setup job:
+
+1. **PENDING** — job record created, workflow dispatch in progress
+2. **RUNNING** — workflow has started execution (callback from workflow)
+3. **COMPLETED** — workflow finished; config sync triggered automatically
+4. **FAILED** — workflow encountered an error; error details visible on page
+
+The page polls for status every 2 seconds and updates in real time. Elapsed time is displayed while the job is PENDING or RUNNING.
+
+### Completion and Redirect
+
+When the workflow reports COMPLETED:
+- Config sync runs automatically using the owner's GitHub token
+- On successful sync: the setup page displays a success message and a "Go to Board" link; subsequent visits to the setup URL redirect to the board
+- On sync failure: the job shows as completed but the project remains in setup state — the owner sees guidance to retry sync
+
+### Failure and Retry
+
+When the workflow reports FAILED:
+- Error details from the workflow logs are displayed on the page
+- A "Retry" button creates a fresh setup job and dispatches a new workflow run
+- The failed job is retained for audit purposes; retry does not modify it
+
+### Duplicate Dispatch Prevention
+
+While a setup job is PENDING or RUNNING, additional dispatch attempts are blocked with a conflict response. The owner must wait for the current run to complete or fail before retrying.
+
+### Page Refresh Behavior
+
+The setup page restores the correct state on page load by reading the latest job from the database. An owner who refreshes mid-run sees the running state immediately; returning after a completed run sees the success state.
+
 ## External Repository Support
 
 ### Multi-Repository Architecture

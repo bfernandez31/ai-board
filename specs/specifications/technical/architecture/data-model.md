@@ -89,6 +89,7 @@ model Project {
   comparisonRecords    ComparisonRecord[]
   healthScans          HealthScan[]
   healthScore          HealthScore?
+  setupJobs            ProjectSetupJob[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -121,7 +122,7 @@ model Project {
 
 **Relationships**:
 - Belongs to User (required, cascade delete)
-- One-to-many: Tickets, ProjectMembers, ComparisonRecords, HealthScans
+- One-to-many: Tickets, ProjectMembers, ComparisonRecords, HealthScans, SetupJobs
 - One-to-one (optional): HealthScore
 
 **Constraints**:
@@ -146,6 +147,7 @@ model Project {
 - `config` stores the parsed config without the `env` section (secrets excluded from DB)
 - `configSyncedAt` drives staleness checks: config older than 1 hour is auto-refreshed before workflow dispatch
 - Config sync fails explicitly rather than silently using stale data — dispatch is blocked if auto-refresh fails
+- `configSyncedAt` non-null means the project is fully configured — the setup wizard is bypassed entirely for such projects
 
 ### Ticket
 
@@ -1045,6 +1047,74 @@ Equal weighting with proportional redistribution when modules are unscanned or S
 
 **Derived fields**:
 - `qualityGate`: Latest COMPLETED verify job's `qualityScore` for the project
+
+---
+
+## Setup Models
+
+### ProjectSetupJob
+
+A single onboarding attempt for a project. Each time an owner dispatches the setup wizard, a new record is created. The most recent job determines the project's setup state. Projects can have multiple setup jobs (retry history).
+
+```prisma
+model ProjectSetupJob {
+  id              Int       @id @default(autoincrement())
+  projectId       Int
+  agent           Agent
+  status          JobStatus @default(PENDING)
+  workflowRunId   BigInt?
+  logs            String?
+  artifactSummary Json?
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+```
+
+**Purpose**: Track onboarding workflow runs for projects that lack `.ai-board/config.yml`
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `projectId`: Parent project (required, cascade delete)
+- `agent`: Selected agent CLI for this setup run (`CLAUDE` or `CODEX`)
+- `status`: Current job status (reuses `JobStatus` enum: PENDING → RUNNING → COMPLETED/FAILED/CANCELLED)
+- `workflowRunId`: GitHub Actions workflow run ID (nullable, set when workflow dispatches)
+- `logs`: Error details persisted on failure — displayed on the setup page retry UI (nullable)
+- `artifactSummary`: JSON list of files created by the workflow (stub: empty array; populated by real workflow in future)
+- `startedAt`: When the job was created (used for elapsed-time display on the setup page)
+- `completedAt`: When the job reached a terminal state (nullable)
+- `createdAt`: Record creation timestamp
+- `updatedAt`: Last modification timestamp
+
+**Relationships**:
+- Belongs to Project (required, cascade delete)
+
+**State machine**: Reuses `JobStatus` with the same transitions as `Job`:
+```
+PENDING → RUNNING → COMPLETED
+                  → FAILED
+                  → CANCELLED
+```
+
+**Derived project setup state** (application logic, not stored in DB):
+
+| Condition | Derived State |
+|-----------|--------------|
+| `project.configSyncedAt` is not null | CONFIGURED — setup wizard bypassed |
+| No `ProjectSetupJob` exists | NEEDS_SETUP |
+| Latest job is PENDING or RUNNING | IN_PROGRESS |
+| Latest job is COMPLETED but `configSyncedAt` is null | SYNC_FAILED |
+| Latest job is FAILED or CANCELLED | FAILED — retryable |
+
+**Business Rules**:
+- Only project owners can create setup jobs
+- Cannot create a new job while one is PENDING or RUNNING (409 Conflict)
+- Cannot create a job if `project.configSyncedAt` is not null (409 Conflict — already configured)
+- Status transitions validated by `canTransition()` in `app/lib/job-state-machine.ts` before persistence
+- On COMPLETED: config sync is triggered automatically using the owner's GitHub token
+- Config sync failure after COMPLETED does not revert the job — job stays COMPLETED but project remains in setup state
 
 ---
 
