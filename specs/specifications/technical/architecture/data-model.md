@@ -89,6 +89,7 @@ model Project {
   comparisonRecords    ComparisonRecord[]
   healthScans          HealthScan[]
   healthScore          HealthScore?
+  setupJobs            SetupJob[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -121,7 +122,7 @@ model Project {
 
 **Relationships**:
 - Belongs to User (required, cascade delete)
-- One-to-many: Tickets, ProjectMembers, ComparisonRecords, HealthScans
+- One-to-many: Tickets, ProjectMembers, ComparisonRecords, HealthScans, SetupJobs
 - One-to-one (optional): HealthScore
 
 **Constraints**:
@@ -408,6 +409,63 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - When multiple verify jobs exist (rollback-reset cycles), the UI scans completed verify jobs and displays the score from the latest job by `startedAt`
 - The Stats tab always renders the summary score first; dimension rows are shown only when `qualityScoreDetails` contains one or more parsed dimensions and the user expands the disclosure
 - If `qualityScore` exists but `qualityScoreDetails` is absent or cannot be parsed, the UI still shows the overall score and threshold label without the expandable breakdown
+
+### SetupJob
+
+Tracks the onboarding workflow for an imported project that lacks `.ai-board/config.yml`. One active setup job per project at a time.
+
+```prisma
+model SetupJob {
+  id              Int            @id @default(autoincrement())
+  projectId       Int
+  selectedAgent   Agent
+  status          SetupJobStatus @default(PENDING)
+  isPartial       Boolean        @default(false)
+  completedFiles  String[]       @default([])
+  errorMessage    String?        @db.VarChar(2000)
+  workflowRunId   BigInt?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([projectId, createdAt(sort: Desc)])
+}
+```
+
+**Purpose**: Onboarding workflow state tracking for newly imported projects
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `projectId`: Parent project (required foreign key, cascade delete)
+- `selectedAgent`: Which agent CLI the owner chose for onboarding (CLAUDE or CODEX)
+- `status`: Current execution state (enum: PENDING, RUNNING, COMPLETED, FAILED)
+- `isPartial`: True when Phase 1 succeeded but Phase 2 (LLM generation) failed; project has `config.yml` but may lack `CLAUDE.md`/`constitution.md`
+- `completedFiles`: Array of file paths committed during onboarding (populated on COMPLETED)
+- `errorMessage`: Human-readable failure description (nullable, set on FAILED)
+- `workflowRunId`: GitHub Actions workflow run ID (nullable, populated on first RUNNING callback)
+- `startedAt`: When the workflow began executing (nullable)
+- `completedAt`: When the workflow reached a terminal state (nullable)
+- `createdAt`: Record creation timestamp
+- `updatedAt`: Last modification timestamp
+
+**Relationships**:
+- Belongs to Project (required, cascade delete)
+
+**Constraints**:
+- Composite index (projectId, status) for active-job queries
+- Composite index (projectId, createdAt DESC) for latest-job lookup
+
+**Business Rules**:
+- Only one PENDING or RUNNING setup job allowed per project; duplicate dispatch returns 409
+- Created atomically with workflow dispatch; rolled back if dispatch fails
+- COMPLETED triggers config sync: `project.config` and `project.configSyncedAt` are updated from the committed `config.yml`
+- On partial completion (`isPartial = true`), Phase 1 files are committed and the project becomes operational; Phase 2 files can be regenerated via retry
+- Each retry creates a new SetupJob record; historical records are retained
+- Retry resets to a fresh workflow run — existing Phase 1 files in the repo are not overwritten (idempotent)
 
 ### Comment
 
@@ -1182,6 +1240,25 @@ enum JobStatus {
 - RUNNING → COMPLETED | FAILED | CANCELLED
 - Terminal states: COMPLETED, FAILED, CANCELLED
 
+### SetupJobStatus
+
+Onboarding workflow execution states.
+
+```prisma
+enum SetupJobStatus {
+  PENDING    // Created, dispatch in progress
+  RUNNING    // Workflow executing
+  COMPLETED  // Onboarding finished (full or partial)
+  FAILED     // Workflow failed; retry available
+}
+```
+
+**State Machine**:
+- PENDING → RUNNING
+- RUNNING → COMPLETED | FAILED
+- Terminal states: COMPLETED, FAILED
+- COMPLETED with `isPartial = true` indicates Phase 1 succeeded, Phase 2 failed
+
 ### WorkflowType
 
 Workflow path tracking.
@@ -1299,6 +1376,7 @@ User
 │   │   │   └── complianceAssessments (one-to-many) → ComplianceAssessment
 │   │   └── decisionPoints (one-to-many) → DecisionPointEvaluation
 │   ├── jobs (one-to-many) → Job
+│   ├── setupJobs (one-to-many) → SetupJob
 │   └── projectMembers (one-to-many) → ProjectMember
 ├── comments (one-to-many) → Comment
 ├── projectMembers (one-to-many) → ProjectMember
@@ -1328,6 +1406,10 @@ User
 - `Job(projectId)` - Project job polling
 - `Job(ticketId)` - Job history per ticket
 - `Job(status)` - Running jobs query
+
+**SetupJob Queries**:
+- `SetupJob(projectId, status)` - Active onboarding job check (duplicate guard)
+- `SetupJob(projectId, createdAt DESC)` - Latest setup job per project
 
 **Comment Queries**:
 - `Comment(ticketId, createdAt)` - Chronological sorting

@@ -503,6 +503,68 @@ The repo picker lists the user's GitHub repositories (personal and organizationa
 - Admin rights on the target repository are required at import time
 - Subscription-based project quota applies to imported projects equally
 
+## Project Setup / Onboarding
+
+When a repository is imported without `.ai-board/config.yml`, the owner is redirected to `/projects/{id}/setup` instead of the project board. The setup page guides them through a two-phase onboarding workflow that generates the necessary configuration files directly in the target repository.
+
+### Setup Wizard
+
+The setup page presents a wizard with the following steps:
+
+**Agent Selection**:
+- The owner selects their preferred agent CLI: **Claude Code** (Anthropic) or **Codex** (OpenAI)
+- The selection determines which agent executes the LLM content generation phase
+
+**Credential Verification**:
+- After selection, the system performs a real-time credential check for the chosen agent's provider
+- If a valid credential exists: the "Initialize Project" button becomes enabled
+- If no credential exists: the button is disabled and inline guidance explains how to add a credential in Settings → Credentials
+- The check re-runs each time the agent selection changes
+
+**Dispatch**:
+- Clicking "Initialize Project" creates a setup job record and dispatches the onboarding workflow
+- Duplicate dispatch is blocked when a job is already PENDING or RUNNING
+- Access is restricted to project owners only; non-owners see an access-denied message
+
+**Progress Tracking**:
+- The page polls for setup job status every 2 seconds while the workflow runs
+- The running state persists across page refreshes (polling resumes from the current job state)
+- Elapsed time is displayed during the running phase
+
+**Completion**:
+- On success: the committed files are listed and a button navigates to the project board
+- The project's `config` field is populated from the committed `config.yml` automatically
+- On partial completion (Phase 1 only): the committed files are listed with a notice that `CLAUDE.md` and `constitution.md` were not generated; the project is operational but the owner may retry to generate them
+- On failure: an error message is shown with a "Retry" button that dispatches a fresh workflow run
+
+### Onboarding Workflow Phases
+
+The onboarding workflow (`onboard.yml`) runs two sequential phases:
+
+**Phase 1 — Deterministic Stack Detection**:
+- Scans the target repository for manifest files, lockfiles, and configuration patterns
+- Supported ecosystems: TypeScript/JavaScript, Python, Rust, Go, Java/Kotlin, Ruby, PHP
+- Detects: language, framework, package manager, services (e.g., PostgreSQL), test framework, and build commands
+- Produces `config.yml` (structured project configuration) and `analysis.json` (detection summary for Phase 2)
+- If Phase 1 fails, no files are committed and the entire job is marked FAILED
+
+**Phase 2 — LLM Content Generation**:
+- Uses the selected agent CLI with `analysis.json` as context
+- Browses the target repository to produce project-specific content
+- Generates `CLAUDE.md` (development guidelines), `constitution.md` (governance principles), and `AGENTS.md` (symlink to `CLAUDE.md`)
+- Skips `CLAUDE.md` generation if the file already exists in the repository
+- If Phase 2 fails, Phase 1 outputs are committed and the job completes as partial (isPartial = true)
+
+**Commit and Sync**:
+- All generated files plus a `.gitignore` entry for `.ai-board/` are committed atomically to the repository's default branch
+- The workflow notifies the application upon completion, triggering database config sync
+
+### Guards and Recovery
+
+- Projects with a synced `config` are automatically redirected from `/setup` to the project board
+- Non-owners navigating to `/setup` see an access-denied message
+- Each retry creates a new setup job; existing files in the repository are not overwritten (idempotent)
+
 ## External Repository Support
 
 ### Multi-Repository Architecture

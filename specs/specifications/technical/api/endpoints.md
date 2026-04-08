@@ -309,6 +309,127 @@ Import a GitHub repository as a new ai-board project.
 - `409` (other conflict): `{ "error": "A conflict occurred while creating the project. Please try again.", "code": "CONFLICT" }`
 - `502`: GitHub API error
 
+## Setup Endpoints
+
+### POST /api/projects/:projectId/setup
+
+Create a setup job and dispatch the onboarding workflow. Only available for projects without synced configuration.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner (`verifyProjectOwnership`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "selectedAgent": "CLAUDE"
+}
+```
+
+**Validation**:
+- `selectedAgent`: Required, enum (CLAUDE|CODEX)
+- Project must have no existing PENDING or RUNNING setup job (409 on conflict)
+- Project must have no synced config (400 if already onboarded)
+
+**Response** (201 Created):
+```json
+{
+  "setupJobId": 42,
+  "status": "PENDING"
+}
+```
+
+**Errors**:
+- `400`: Project already has synced configuration
+- `400`: Validation error
+- `401`: Not authenticated
+- `403`: Not project owner
+- `404`: Project not found
+- `409`: Setup already in progress (`{ "error": "Setup already in progress", "code": "DUPLICATE_SETUP" }`)
+- `502`: Workflow dispatch failed
+
+### GET /api/projects/:projectId/setup
+
+Fetch the latest setup job status for a project.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner (`verifyProjectOwnership`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Response** (200 OK — job exists):
+```json
+{
+  "setupJob": {
+    "id": 42,
+    "status": "COMPLETED",
+    "selectedAgent": "CLAUDE",
+    "isPartial": false,
+    "completedFiles": [
+      ".ai-board/config.yml",
+      "CLAUDE.md",
+      "AGENTS.md",
+      ".ai-board/memory/constitution.md"
+    ],
+    "errorMessage": null,
+    "startedAt": "2026-04-08T10:00:00.000Z",
+    "completedAt": "2026-04-08T10:03:45.000Z",
+    "createdAt": "2026-04-08T09:59:58.000Z"
+  }
+}
+```
+
+**Response** (200 OK — no job):
+```json
+{
+  "setupJob": null
+}
+```
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: Not project owner
+- `404`: Project not found
+
+### GET /api/projects/:projectId/setup/credential-check
+
+Check whether the project owner has a credential configured for the specified agent's provider. Called in real time when the owner changes agent selection on the setup page.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner (`verifyProjectOwnership`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters**:
+- `agent` (string, required): Agent identifier — `CLAUDE` or `CODEX`
+
+**Response** (200 OK — credential available):
+```json
+{
+  "available": true,
+  "provider": "ANTHROPIC"
+}
+```
+
+**Response** (200 OK — credential missing):
+```json
+{
+  "available": false,
+  "provider": "OPENAI",
+  "guidance": "Add an OpenAI API key in Settings → Credentials to use Codex."
+}
+```
+
+**Errors**:
+- `400`: Invalid or missing `agent` query parameter
+- `401`: Not authenticated
+- `403`: Not project owner
+- `404`: Project not found
+
 ## GitHub Endpoints
 
 ### GET /api/github/auth-status
@@ -2852,7 +2973,8 @@ Update job status (workflow-only endpoint).
   "status": "RUNNING",
   "workflowRunId": 12345678901,
   "qualityScore": 83,
-  "qualityScoreDetails": "{\"dimensions\":{\"bugDetection\":{\"score\":90,\"weight\":0.30},\"compliance\":{\"score\":80,\"weight\":0.40},\"codeComments\":{\"score\":70,\"weight\":0.20},\"historicalContext\":{\"score\":85,\"weight\":0.10},\"specSync\":{\"score\":95,\"weight\":0.00}},\"finalScore\":83}"
+  "qualityScoreDetails": "{\"dimensions\":{\"bugDetection\":{\"score\":90,\"weight\":0.30},\"compliance\":{\"score\":80,\"weight\":0.40},\"codeComments\":{\"score\":70,\"weight\":0.20},\"historicalContext\":{\"score\":85,\"weight\":0.10},\"specSync\":{\"score\":95,\"weight\":0.00}},\"finalScore\":83}",
+  "setupJobId": 42
 }
 ```
 
@@ -2861,6 +2983,7 @@ Update job status (workflow-only endpoint).
 - `workflowRunId`: Optional BigInt, positive integer; only accepted when `status = "RUNNING"`; written once (first-write-wins — ignored if `workflowRunId` already populated)
 - `qualityScore`: Optional, integer 0-100 inclusive; only accepted when `status = "COMPLETED"` for verify jobs; ignored otherwise
 - `qualityScoreDetails`: Optional, JSON string with dimension sub-scores; stored alongside `qualityScore`
+- `setupJobId`: Optional integer; when present, the endpoint updates the SetupJob record status instead of a Job record, and triggers config sync on COMPLETED
 - State machine transitions enforced
 
 **Response** (200 OK):

@@ -64,6 +64,7 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 - Usage: `GET /api/billing/usage` returns current counts vs limits; `useUsage` hook (15s polling) powers dashboard `UsageBanner` and ticket/project creation quota gates
 - StripeEvent: Idempotency log for webhook events (keyed on Stripe event ID)
 - UserCredential: One per provider per user; encrypted with AES-256-GCM; master key in `CREDENTIAL_ENCRYPTION_KEY` env var (must be provisioned in all environments); workflow dispatch blocked when owner has no credential
+- SetupJob: One active job per project; tracks two-phase onboarding workflow (stack detection + LLM generation); `isPartial=true` means Phase 1 committed but Phase 2 failed; COMPLETED triggers config sync; setup page at `/projects/{id}/setup`
 
 ## API Patterns
 
@@ -120,6 +121,7 @@ See `.github/workflows/` for implementation. Key workflows:
 5. **rollback-reset.yml**: Git reset for VERIFY→PLAN rollback (preserves spec files)
 6. **ai-board-assist.yml**: `@ai-board` mention triggers AI assistance (SPECIFY/PLAN/BUILD/VERIFY)
 7. **iterate.yml**: Minor fixes during VERIFY stage
+8. **onboard.yml**: Two-phase project onboarding — Phase 1 detects stack and generates `config.yml`; Phase 2 uses LLM to generate `CLAUDE.md`, `constitution.md`, `AGENTS.md`; commits all files atomically to the default branch
 
 ## Testing
 
