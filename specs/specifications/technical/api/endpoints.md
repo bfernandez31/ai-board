@@ -4567,6 +4567,41 @@ The `envVar` field reflects the resolved provider and type: `ANTHROPIC_API_KEY`,
 - `401`: Missing or invalid workflow token
 - `404`: `{ "error": "No <Provider> credential configured for project owner. Please add your <Provider> key in Settings → AI Credentials." }`
 
+### PUT /api/internal/credentials
+
+Internal endpoint called by GitHub Actions workflows to update (re-encrypt) an existing credential for a project's owner. Not accessible to regular users.
+
+**Authentication**: Workflow token only (`Authorization: Bearer ${WORKFLOW_API_TOKEN}`)
+
+**Request Body** (JSON):
+- `projectId` (positive integer, required): Project ID to resolve owner credential
+- `provider` (string, required): Credential provider — `ANTHROPIC` or `OPENAI`
+- `value` (string, required): New credential value
+- `encoding` (string, optional): Encoding of the `value` field — `base64` or `plain` (defaults to `base64`)
+
+**Server-side behavior**:
+1. Verify workflow token
+2. Validate request body via Zod schema (`projectId`, `provider`, `value`, `encoding`)
+3. Decode value if base64-encoded
+4. Look up project → get owner `userId`
+5. Find existing `UserCredential` for owner matching the requested `provider`
+6. Re-encrypt plaintext with AES-256-GCM and update the credential record
+7. Return success with no-cache headers
+
+**Response** (200 OK):
+```json
+{
+  "ok": true
+}
+```
+
+The response includes `Cache-Control: no-store, no-cache, must-revalidate` and `Pragma: no-cache` headers.
+
+**Errors**:
+- `400`: `{ "error": "Invalid request body", "details": { ... } }` — missing or invalid fields
+- `401`: Missing or invalid workflow token
+- `404`: `{ "error": "No existing credential found to update" }` — no matching project or credential
+
 ---
 
 ## Pagination
