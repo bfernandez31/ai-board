@@ -118,7 +118,6 @@ After writing files, you MUST use Read tool to verify the changes were actually 
 - `spec.md` - Feature specification (requirements, acceptance criteria, NFRs)
 - `plan.md` - Implementation plan (architecture, strategy, risks)
 - `tasks.md` - Task breakdown (phases, dependencies, estimates)
-- `quickstart.md` - Quick reference guide
 - `research.md` - Research notes and findings
 - `data-model.md` - Data model documentation
 - `contracts/` - API contracts and schemas (yaml, json, md)
