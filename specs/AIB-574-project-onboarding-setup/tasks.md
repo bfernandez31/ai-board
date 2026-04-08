@@ -84,12 +84,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T015 [P] [US3] Add integration tests for failure flow in `tests/integration/projects/setup.test.ts`: PATCH callback FAILED persists logs, POST dispatch succeeds after previous job FAILED
-- [ ] T016 [P] [US3] Add component tests for error/retry UI in `tests/unit/components/setup-page.test.tsx`: shows error details and retry button on FAILED state
+- [x] T015 [P] [US3] Add integration tests for failure flow in `tests/integration/projects/setup.test.ts`: PATCH callback FAILED persists logs, POST dispatch succeeds after previous job FAILED
+- [x] T016 [P] [US3] Add component tests for error/retry UI in `tests/unit/components/setup-page.test.tsx`: shows error details and retry button on FAILED state
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Add error and retry states to `components/setup/setup-page-client.tsx`: display error details from `latestJob.logs` on FAILED, add "Retry" button that dispatches a new POST (creates fresh job, FR-014), show loading state during retry dispatch
+- [x] T017 [US3] Add error and retry states to `components/setup/setup-page-client.tsx`: display error details from `latestJob.logs` on FAILED, add "Retry" button that dispatches a new POST (creates fresh job, FR-014), show loading state during retry dispatch
 
 **Checkpoint**: Full failure recovery flow works — error display + retry creates new job
 
@@ -103,11 +103,11 @@
 
 ### Tests for User Story 4
 
-- [ ] T018 [P] [US4] Add integration tests for already-configured guard in `tests/integration/projects/setup.test.ts`: POST rejects with 409 when already configured, GET returns CONFIGURED state when `configSyncedAt` is set
+- [x] T018 [P] [US4] Add integration tests for already-configured guard in `tests/integration/projects/setup.test.ts`: POST rejects with 409 when already configured, GET returns CONFIGURED state when `configSyncedAt` is set
 
 ### Implementation for User Story 4
 
-- [ ] T019 [US4] Verify redirect logic in `app/projects/[projectId]/setup/page.tsx` handles `configSyncedAt` check (already implemented in T011), and POST guard rejects dispatch for configured projects (already implemented in T005) — add any missing edge case handling
+- [x] T019 [US4] Verify redirect logic in `app/projects/[projectId]/setup/page.tsx` handles `configSyncedAt` check (already implemented in T011), and POST guard rejects dispatch for configured projects (already implemented in T005) — add any missing edge case handling
 
 **Checkpoint**: Configured projects are fully bypassed
 
@@ -121,11 +121,11 @@
 
 ### Tests for User Story 5
 
-- [ ] T020 [P] [US5] Add integration tests for concurrent dispatch guard in `tests/integration/projects/setup.test.ts`: POST rejects with 409 when job is PENDING, POST rejects with 409 when job is RUNNING, POST succeeds after previous job COMPLETED or FAILED
+- [x] T020 [P] [US5] Add integration tests for concurrent dispatch guard in `tests/integration/projects/setup.test.ts`: POST rejects with 409 when job is PENDING, POST rejects with 409 when job is RUNNING, POST succeeds after previous job COMPLETED or FAILED
 
 ### Implementation for User Story 5
 
-- [ ] T021 [US5] Verify concurrent dispatch prevention in `app/api/projects/[projectId]/setup/route.ts` POST handler (already implemented in T005 — active job check), and add disabled state to "Initialize Project" button in `components/setup/setup-page-client.tsx` when `setupState` is `IN_PROGRESS`
+- [x] T021 [US5] Verify concurrent dispatch prevention in `app/api/projects/[projectId]/setup/route.ts` POST handler (already implemented in T005 — active job check), and add disabled state to "Initialize Project" button in `components/setup/setup-page-client.tsx` when `setupState` is `IN_PROGRESS`
 
 **Checkpoint**: No duplicate workflow runs possible
 
@@ -139,11 +139,11 @@
 
 ### Tests for User Story 6
 
-- [ ] T022 [P] [US6] Add component tests for state restoration in `tests/unit/components/setup-page.test.tsx`: shows running state with elapsed time on initial load when job is RUNNING, shows success state when job COMPLETED while page was closed
+- [x] T022 [P] [US6] Add component tests for state restoration in `tests/unit/components/setup-page.test.tsx`: shows running state with elapsed time on initial load when job is RUNNING, shows success state when job COMPLETED while page was closed
 
 ### Implementation for User Story 6
 
-- [ ] T023 [US6] Verify state restoration in `components/setup/setup-page-client.tsx`: initial render reads `latestJob` from `useSetupPolling()` and displays correct state (progress/success/error) based on current status — ensure elapsed time is calculated from `latestJob.startedAt` relative to now, not from page load
+- [x] T023 [US6] Verify state restoration in `components/setup/setup-page-client.tsx`: initial render reads `latestJob` from `useSetupPolling()` and displays correct state (progress/success/error) based on current status — ensure elapsed time is calculated from `latestJob.startedAt` relative to now, not from page load
 
 **Checkpoint**: Page refresh always shows correct state
 

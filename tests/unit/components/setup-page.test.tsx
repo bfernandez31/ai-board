@@ -231,6 +231,46 @@ describe('SetupPageClient', () => {
       });
     });
 
+    it('updates on agent selection change', async () => {
+      const user = userEvent.setup();
+      mockFetch.mockImplementation((url: string) => {
+        if (url === '/api/credentials') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              // Only ANTHROPIC credential, no OPENAI
+              credentials: [{ provider: 'ANTHROPIC', credentialType: 'API_KEY' }],
+            }),
+          });
+        }
+        if (url.includes('/setup')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              setupState: 'NEEDS_SETUP',
+              latestJob: null,
+              configSyncedAt: null,
+            }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+
+      renderWithProviders(<SetupPageClient {...defaultProps} />);
+
+      // Wait for button to be enabled (ANTHROPIC credential exists)
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /initialize project/i })).not.toBeDisabled();
+      });
+
+      // Switch to Codex — no OPENAI credential
+      await user.click(screen.getByText('Codex'));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /initialize project/i })).toBeDisabled();
+      });
+    });
+
     it('shows credential warning when missing', async () => {
       mockFetch.mockImplementation((url: string) => {
         if (url === '/api/credentials') {
@@ -257,6 +297,49 @@ describe('SetupPageClient', () => {
       await waitFor(() => {
         expect(screen.getByText(/no anthropic credential configured/i)).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('state restoration on page refresh', () => {
+    it('shows running state with elapsed time on initial load when job is RUNNING', () => {
+      mockUseSetupPolling.mockReturnValue({
+        setupState: 'IN_PROGRESS',
+        latestJob: {
+          id: 1,
+          agent: 'CLAUDE',
+          status: 'RUNNING',
+          logs: null,
+          artifactSummary: null,
+          startedAt: new Date(Date.now() - 30000).toISOString(), // 30 seconds ago
+          completedAt: null,
+        },
+        isPolling: true,
+      });
+
+      renderWithProviders(<SetupPageClient {...defaultProps} />);
+
+      expect(screen.getByText(/setting up/i)).toBeInTheDocument();
+      expect(screen.getByText(/elapsed/i)).toBeInTheDocument();
+    });
+
+    it('shows success state when job COMPLETED while page was closed', () => {
+      mockUseSetupPolling.mockReturnValue({
+        setupState: 'CONFIGURED',
+        latestJob: {
+          id: 1,
+          agent: 'CLAUDE',
+          status: 'COMPLETED',
+          logs: null,
+          artifactSummary: null,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+        },
+        isPolling: false,
+      });
+
+      renderWithProviders(<SetupPageClient {...defaultProps} />);
+
+      expect(screen.getByText(/setup complete/i)).toBeInTheDocument();
     });
   });
 });
