@@ -30,12 +30,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create SetupJob service with CRUD operations, duplicate guard (reject when PENDING/RUNNING exists), and status update methods in lib/setup/service.ts
-- [ ] T005 [P] Create onboard workflow dispatch logic following lib/health/scan-dispatch.ts pattern (credential validation, Octokit dispatch, rollback on failure) in lib/setup/dispatch.ts
-- [ ] T006 Create setup API route with POST (dispatch workflow) and GET (latest job status) handlers using verifyProjectOwnership guard in app/api/projects/[projectId]/setup/route.ts
-- [ ] T007 [P] Create credential-check API route (GET with ?agent= query param, maps agent to provider via AGENT_PROVIDER_MAP, returns availability + guidance) in app/api/projects/[projectId]/setup/credential-check/route.ts
-- [ ] T008 [P] Create TanStack Query polling hook with 2s refetchInterval for setup job status in hooks/use-setup-job.ts
-- [ ] T009 Extend PATCH /api/jobs/[id]/status to handle SetupJob status callbacks (accept setupJobId field, update SetupJob record, trigger config sync on COMPLETED) in app/api/jobs/[id]/status/route.ts
+- [x] T004 Create SetupJob service with CRUD operations, duplicate guard (reject when PENDING/RUNNING exists), and status update methods in lib/setup/service.ts ✅ DONE
+- [x] T005 [P] Create onboard workflow dispatch logic following lib/health/scan-dispatch.ts pattern (credential validation, Octokit dispatch, rollback on failure) in lib/setup/dispatch.ts ✅ DONE
+- [x] T006 Create setup API route with POST (dispatch workflow) and GET (latest job status) handlers using verifyProjectOwnership guard in app/api/projects/[projectId]/setup/route.ts ✅ DONE
+- [x] T007 [P] Create credential-check API route (GET with ?agent= query param, maps agent to provider via AGENT_PROVIDER_MAP, returns availability + guidance) in app/api/projects/[projectId]/setup/credential-check/route.ts ✅ DONE
+- [x] T008 [P] Create TanStack Query polling hook with 2s refetchInterval for setup job status in hooks/use-setup-job.ts ✅ DONE
+- [x] T009 Extend PATCH /api/jobs/[id]/status to handle SetupJob status callbacks (accept setupJobId field, update SetupJob record, trigger config sync on COMPLETED) in app/api/jobs/[id]/status/route.ts ✅ DONE
 
 **Checkpoint**: Foundation ready — user story implementation can now begin in parallel
 

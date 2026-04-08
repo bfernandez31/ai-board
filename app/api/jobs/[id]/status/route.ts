@@ -8,6 +8,7 @@ import {
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 import { sendJobCompletionNotification } from '@/app/lib/push/send-notification';
+import { updateSetupJobStatus } from '@/lib/setup/service';
 
 /**
  * PATCH /api/jobs/[id]/status
@@ -109,6 +110,43 @@ export async function PATCH(
     }
 
     requestedStatus = validationResult.data.status as JobStatus;
+
+    // Handle SetupJob callbacks (when setupJobId is present in body)
+    if (body.setupJobId) {
+      const setupJobId = parseInt(String(body.setupJobId), 10);
+      if (isNaN(setupJobId)) {
+        return NextResponse.json({ error: 'Invalid setupJobId' }, { status: 400 });
+      }
+
+      try {
+        const setupUpdate: Parameters<typeof updateSetupJobStatus>[1] = {
+          status: requestedStatus as 'RUNNING' | 'COMPLETED' | 'FAILED',
+        };
+        if (body.isPartial !== undefined) setupUpdate.isPartial = body.isPartial;
+        if (body.completedFiles !== undefined) setupUpdate.completedFiles = body.completedFiles;
+        if (body.errorMessage !== undefined) setupUpdate.errorMessage = body.errorMessage;
+        if (body.workflowRunId) setupUpdate.workflowRunId = BigInt(body.workflowRunId);
+
+        const updatedSetupJob = await updateSetupJobStatus(setupJobId, setupUpdate);
+
+        console.log('[Job Status Update] SetupJob updated:', {
+          setupJobId,
+          status: updatedSetupJob.status,
+        });
+
+        return NextResponse.json({
+          id: updatedSetupJob.id,
+          status: updatedSetupJob.status,
+          completedAt: updatedSetupJob.completedAt?.toISOString() ?? null,
+        });
+      } catch (error) {
+        console.error('[Job Status Update] SetupJob update failed:', error);
+        return NextResponse.json(
+          { error: 'Failed to update setup job' },
+          { status: 500 }
+        );
+      }
+    }
 
     // Fetch current job from database
     const job = await prisma.job.findUnique({
