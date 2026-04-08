@@ -16,6 +16,8 @@ export const ProjectLanguageSchema = z.enum([
   'rust',
   'java',
   'kotlin',
+  'ruby',
+  'php',
 ]);
 
 export const ProjectFrameworkSchema = z.enum([
@@ -28,6 +30,12 @@ export const ProjectFrameworkSchema = z.enum([
   'spring-boot',
   'quarkus',
   'micronaut',
+  'rails',
+  'laravel',
+  'rspec',
+  'phpunit',
+  'actix',
+  'rocket',
   'none',
 ]);
 
@@ -41,6 +49,8 @@ export const PackageManagerSchema = z.enum([
   'cargo',
   'maven',
   'gradle',
+  'bundler',
+  'composer',
 ]);
 
 export const ServiceTypeSchema = z.enum([
@@ -249,10 +259,10 @@ function getFieldGuidance(path: string): string {
     project: "Add a 'project' section with 'name' and 'language'.",
     'project.name': 'Set project.name to your project name (e.g., "my-app").',
     'project.language':
-      'Set project.language to one of: typescript, javascript, python, go, rust, java, kotlin.',
+      'Set project.language to one of: typescript, javascript, python, go, rust, java, kotlin, ruby, php.',
     runtime: "Add a 'runtime' section with 'manager'.",
     'runtime.manager':
-      'Set runtime.manager to one of: bun, npm, yarn, pnpm, pip, poetry, cargo, maven, gradle.',
+      'Set runtime.manager to one of: bun, npm, yarn, pnpm, pip, poetry, cargo, maven, gradle, bundler, composer.',
     commands: "Add a 'commands' section with 'install'.",
     'commands.install':
       'Set commands.install to your install command (e.g., "bun install").',

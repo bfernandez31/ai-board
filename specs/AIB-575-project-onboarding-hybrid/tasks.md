@@ -18,8 +18,8 @@
 
 **Purpose**: No new project structure needed — this feature modifies existing workflow infrastructure, schema layer, and agent command system. Setup ensures foundational scripts directory exists.
 
-- [ ] T001 Verify `.github/scripts/` directory exists and contains `run-agent.sh`
-- [ ] T002 Verify `.claude-plugin/commands/` directory exists for new agent command
+- [x] T001 Verify `.github/scripts/` directory exists and contains `run-agent.sh`
+- [x] T002 Verify `.claude-plugin/commands/` directory exists for new agent command
 
 ---
 
@@ -32,12 +32,12 @@
 ### Tests for Foundational Phase
 **RULE (constitution): Extend existing test file — `tests/unit/config-schema.test.ts` already covers config schema validation (50+ tests).**
 
-- [ ] T003 [P] Extend `tests/unit/config-schema.test.ts` with validation tests for new enum values: `ruby`, `php` languages; `bundler`, `composer` package managers; `rails`, `laravel`, `rspec`, `phpunit`, `actix`, `rocket` frameworks; and rejection of invalid values like `language: fortran`
+- [x] T003 [P] Extend `tests/unit/config-schema.test.ts` with validation tests for new enum values: `ruby`, `php` languages; `bundler`, `composer` package managers; `rails`, `laravel`, `rspec`, `phpunit`, `actix`, `rocket` frameworks; and rejection of invalid values like `language: fortran`
 
 ### Implementation for Foundational Phase
 
-- [ ] T004 [P] Extend `ProjectLanguageSchema`, `PackageManagerSchema`, and `ProjectFrameworkSchema` enums in `lib/validations/config.ts` — add `ruby`, `php` languages; `bundler`, `composer` package managers; `rails`, `laravel`, `rspec`, `phpunit`, `actix`, `rocket` frameworks
-- [ ] T005 [P] Extend TypeScript type unions in `specs/AIB-449-define-ai-board/contracts/config-schema.ts` to match the new Zod enum values added in T004
+- [x] T004 [P] Extend `ProjectLanguageSchema`, `PackageManagerSchema`, and `ProjectFrameworkSchema` enums in `lib/validations/config.ts` — add `ruby`, `php` languages; `bundler`, `composer` package managers; `rails`, `laravel`, `rspec`, `phpunit`, `actix`, `rocket` frameworks
+- [x] T005 [P] Extend TypeScript type unions in `specs/AIB-449-define-ai-board/contracts/config-schema.ts` to match the new Zod enum values added in T004
 
 **Checkpoint**: Config schema accepts all 7 language ecosystems. Tests pass.
 
