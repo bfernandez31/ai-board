@@ -386,6 +386,7 @@ export const AGENT_PROVIDER_MAP: Record<Agent, CredentialProvider> = {
   - Obvious bugs in changed code
   - Historical git context issues
   - Code comment guidance adherence
+  - Security: auth tokens, secrets, and credentials must not be exposed in client bundles or logs; all protected endpoints must enforce authorization
 - **Confidence Scoring**: Issues scored 0-100, only 80+ reported
 - **Output**: Review findings posted as PR comment via `gh` CLI
 
