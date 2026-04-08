@@ -53,7 +53,12 @@ vi.mock('@/lib/stage-transitions', () => ({
   Stage: {},
 }));
 
-import { getOwnerCredential, MISSING_CREDENTIAL_ERROR, getMissingCredentialError } from '@/lib/ai-credentials/workflow';
+import {
+  getCredentialProviderForAgent,
+  getOwnerCredential,
+  MISSING_CREDENTIAL_ERROR,
+  getMissingCredentialError,
+} from '@/lib/ai-credentials/workflow';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
 
 const mockedGetOwnerCredential = vi.mocked(getOwnerCredential);
@@ -249,6 +254,11 @@ describe('BYOK Credential Dispatch Guards', () => {
   });
 
   describe('provider-aware credential dispatch', () => {
+    it('should map onboarding agent selection to the correct provider', () => {
+      expect(getCredentialProviderForAgent('CLAUDE')).toBe('ANTHROPIC');
+      expect(getCredentialProviderForAgent('CODEX')).toBe('OPENAI');
+    });
+
     it('should resolve OPENAI provider for Codex-agent ticket', async () => {
       mockedGetOwnerCredential.mockResolvedValue(null);
 

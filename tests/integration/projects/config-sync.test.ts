@@ -96,6 +96,32 @@ describe('Config Sync - Staleness and Auto-Refresh', () => {
     });
   });
 
+  describe('Setup bypass after sync (T013)', () => {
+    it('returns redirectTo board when setup state is no longer required', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: {
+          config: {
+            version: 1,
+            project: { name: 'synced-app', language: 'typescript', framework: 'nextjs' },
+            runtime: { manager: 'bun' },
+            commands: { install: 'bun install' },
+            agent: { cli: 'claude-code' },
+          },
+          configSyncedAt: new Date(),
+        },
+      });
+
+      const response = await ctx.api.get(`/api/projects/${ctx.projectId}/setup`);
+
+      expect(response.status).toBe(200);
+      expect(response.data).toMatchObject({
+        requiresSetup: false,
+        redirectTo: `/projects/${ctx.projectId}/board`,
+      });
+    });
+  });
+
   describe('Service credential stripping', () => {
     it('stored config does not contain username or password in services', async () => {
       const configWithCredentials = {

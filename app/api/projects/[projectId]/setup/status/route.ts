@@ -30,7 +30,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     if (error instanceof Error && error.message === 'Project not found') {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Project not found' }, { status: 403 });
     }
 
     console.error('Failed to fetch setup status:', error);
@@ -79,6 +79,13 @@ export async function PATCH(
 
     const updated = await updateProjectSetupStatus(updateParams);
 
+    console.info('Project setup status updated', {
+      projectId,
+      jobId: payload.jobId,
+      status: payload.status,
+      workflowRunId: payload.workflowRunId ? String(payload.workflowRunId) : null,
+    });
+
     return NextResponse.json(projectSetupStatusSchema.parse(updated));
   } catch (error) {
     if (error instanceof Error && error.name === 'ZodError') {
@@ -86,6 +93,12 @@ export async function PATCH(
     }
     if (error instanceof Error && error.message === 'Setup job not found') {
       return NextResponse.json({ error: 'Setup job not found' }, { status: 404 });
+    }
+    if (error instanceof Error && error.name === 'InvalidSetupStatusTransition') {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    if (error instanceof Error && error.name === 'StaleSetupJob') {
+      return NextResponse.json({ error: error.message }, { status: 409 });
     }
 
     console.error('Failed to update setup status:', error);

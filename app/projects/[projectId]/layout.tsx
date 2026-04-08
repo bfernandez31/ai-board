@@ -1,28 +1,36 @@
-'use client';
+import { notFound, redirect } from 'next/navigation';
+import { requireAuth } from '@/lib/db/users';
+import { resolveProjectSetupAccess } from '@/lib/onboarding/access';
+import { ProjectLayoutShell } from '@/components/projects/project-layout-shell';
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
-import { IconRailSidebar } from '@/components/navigation/icon-rail-sidebar';
-import { CommandPalette } from '@/components/navigation/command-palette';
-
-export default function ProjectLayout({
+export default async function ProjectLayout({
+  params,
   children,
 }: {
+  params: Promise<{ projectId: string }>;
   children: React.ReactNode;
 }) {
-  const params = useParams();
-  const projectId = Number(params.projectId);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const userId = await requireAuth();
+  const { projectId: projectIdValue } = await params;
+  const projectId = Number(projectIdValue);
 
-  return (
-    <div className="lg:grid lg:grid-cols-[48px_1fr]">
-      <IconRailSidebar projectId={projectId} />
-      <main className="min-w-0">{children}</main>
-      <CommandPalette
-        projectId={projectId}
-        open={commandPaletteOpen}
-        onOpenChange={setCommandPaletteOpen}
-      />
-    </div>
-  );
+  if (!Number.isInteger(projectId) || projectId <= 0) {
+    notFound();
+  }
+
+  const access = await resolveProjectSetupAccess(projectId, userId);
+  if (!access) {
+    notFound();
+  }
+
+  if (access.requiresSetup) {
+    if (!access.isOwner) {
+      notFound();
+    }
+    if (access.redirectTo && access.redirectTo !== `/projects/${projectId}/setup`) {
+      redirect(access.redirectTo);
+    }
+  }
+
+  return <ProjectLayoutShell projectId={projectId}>{children}</ProjectLayoutShell>;
 }

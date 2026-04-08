@@ -5,13 +5,16 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ImportProjectModal } from '@/components/projects/import-project-modal';
+
+const routerPush = vi.fn();
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: vi.fn(),
+    push: routerPush,
     replace: vi.fn(),
     back: vi.fn(),
     forward: vi.fn(),
@@ -44,6 +47,7 @@ function createWrapper() {
 describe('ImportProjectModal', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    routerPush.mockReset();
   });
 
   it('shows loading state when opened (T020)', () => {
@@ -140,6 +144,95 @@ describe('ImportProjectModal', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Additional GitHub Access Required')).toBeInTheDocument();
+    });
+  });
+
+  it('navigates to the setup route returned by import when config is missing (T012)', async () => {
+    vi.spyOn(global, 'fetch').mockImplementation((input, init) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+
+      if (url.includes('/api/github/auth-status')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ hasGitHubAccount: true, hasRepoScope: true }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        );
+      }
+
+      if (url.includes('/api/github/orgs')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ orgs: [] }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        );
+      }
+
+      if (url.includes('/api/github/repos')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              repos: [
+                {
+                  id: 1,
+                  name: 'repo',
+                  fullName: 'acme/repo',
+                  owner: 'acme',
+                  ownerAvatar: 'https://example.com/avatar.png',
+                  description: 'Imported repo',
+                  isPrivate: true,
+                  pushedAt: '2026-04-01T00:00:00.000Z',
+                  hasAdminAccess: true,
+                  isAlreadyImported: false,
+                },
+              ],
+              totalCount: 1,
+              page: 1,
+              perPage: 30,
+              hasNextPage: false,
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        );
+      }
+
+      if (url.includes('/api/projects/import') && init?.method === 'POST') {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              project: {
+                id: 42,
+                name: 'repo',
+                key: 'REP',
+                githubOwner: 'acme',
+                githubRepo: 'repo',
+                hasConfig: false,
+              },
+              redirectTo: '/projects/42/setup',
+            }),
+            { status: 201, headers: { 'Content-Type': 'application/json' } }
+          )
+        );
+      }
+
+      return Promise.resolve(
+        new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })
+      );
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ImportProjectModal open={true} onOpenChange={vi.fn()} />,
+      { wrapper: createWrapper() }
+    );
+
+    const repoLabel = await screen.findByText('acme/repo');
+    await user.click(repoLabel.closest('button')!);
+    await user.click(screen.getByRole('button', { name: 'Import Project' }));
+
+    await waitFor(() => {
+      expect(routerPush).toHaveBeenCalledWith('/projects/42/setup');
     });
   });
 });

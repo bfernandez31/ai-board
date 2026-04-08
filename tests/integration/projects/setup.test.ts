@@ -153,4 +153,98 @@ describe('Project setup API', () => {
     expect(project?.config).not.toBeNull();
     expect(project?.configSyncedAt).not.toBeNull();
   });
+
+  it('returns the authoritative running job from setup status polling', async () => {
+    await createReadyCredential('ANTHROPIC');
+
+    const startResponse = await ctx.api.post(`/api/projects/${ctx.projectId}/setup`, {
+      selectedAgent: 'CLAUDE',
+    });
+
+    const workflowClient = createWorkflowClient();
+    const runningResponse = await workflowClient.patch(
+      `/api/projects/${ctx.projectId}/setup/status`,
+      {
+        jobId: startResponse.data.job.jobId,
+        status: 'RUNNING',
+      }
+    );
+
+    expect(runningResponse.status).toBe(200);
+
+    const statusResponse = await ctx.api.get(`/api/projects/${ctx.projectId}/setup/status`);
+    expect(statusResponse.status).toBe(200);
+    expect(statusResponse.data).toMatchObject({
+      jobId: startResponse.data.job.jobId,
+      status: 'RUNNING',
+      selectedAgent: 'CLAUDE',
+    });
+  });
+
+  it('persists terminal failure details and allows a fresh retry run', async () => {
+    await createReadyCredential('ANTHROPIC');
+
+    const firstStart = await ctx.api.post(`/api/projects/${ctx.projectId}/setup`, {
+      selectedAgent: 'CLAUDE',
+    });
+    const workflowClient = createWorkflowClient();
+
+    const failedResponse = await workflowClient.patch(
+      `/api/projects/${ctx.projectId}/setup/status`,
+      {
+        jobId: firstStart.data.job.jobId,
+        status: 'FAILED',
+        errorCode: 'ANALYSIS_FAILED',
+        errorMessage: 'Repository analysis failed',
+      }
+    );
+
+    expect(failedResponse.status).toBe(200);
+    expect(failedResponse.data.error).toEqual({
+      code: 'ANALYSIS_FAILED',
+      message: 'Repository analysis failed',
+    });
+
+    const retried = await ctx.api.post(`/api/projects/${ctx.projectId}/setup`, {
+      selectedAgent: 'CLAUDE',
+    });
+
+    expect(retried.status).toBe(202);
+    expect(retried.data.created).toBe(true);
+    expect(retried.data.duplicate).toBe(false);
+    expect(retried.data.job.jobId).not.toBe(firstStart.data.job.jobId);
+  });
+
+  it('rejects stale callback updates once a newer setup job exists', async () => {
+    await createReadyCredential('ANTHROPIC');
+
+    const firstStart = await ctx.api.post(`/api/projects/${ctx.projectId}/setup`, {
+      selectedAgent: 'CLAUDE',
+    });
+    const workflowClient = createWorkflowClient();
+
+    await workflowClient.patch(`/api/projects/${ctx.projectId}/setup/status`, {
+      jobId: firstStart.data.job.jobId,
+      status: 'FAILED',
+      errorCode: 'DISPATCH_FAILED',
+      errorMessage: 'Initial run failed',
+    });
+
+    const retryResponse = await ctx.api.post(`/api/projects/${ctx.projectId}/setup`, {
+      selectedAgent: 'CLAUDE',
+    });
+
+    const staleResponse = await workflowClient.patch(
+      `/api/projects/${ctx.projectId}/setup/status`,
+      {
+        jobId: firstStart.data.job.jobId,
+        status: 'COMPLETED',
+        commitSha: '1234567abcdef',
+      }
+    );
+
+    expect(retryResponse.status).toBe(202);
+    expect(staleResponse.status).toBe(409);
+    expect(staleResponse.data.error).toContain('authoritative');
+  });
 });

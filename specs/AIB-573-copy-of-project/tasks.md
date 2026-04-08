@@ -28,7 +28,7 @@
 - [x] T006 [P] Create setup-required access resolution helpers in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/access.ts` ✅ DONE
 - [x] T007 [P] Create authoritative setup job lifecycle orchestration in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/service.ts` ✅ DONE
 - [x] T008 [P] Create repository-backed onboarding artifact helpers in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/artifacts.ts` ✅ DONE
-- [ ] T009 [P] Extend provider credential lookup and workflow secret mapping in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/workflow.ts` and `/home/runner/work/ai-board/ai-board/target/app/api/internal/credentials/route.ts`
+- [x] T009 [P] Extend provider credential lookup and workflow secret mapping in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/workflow.ts` and `/home/runner/work/ai-board/ai-board/target/app/api/internal/credentials/route.ts` ✅ DONE
 
 **Checkpoint**: Persistence, access gating, credential resolution, and artifact helpers are ready for story implementation.
 
@@ -42,14 +42,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T010 [P] [US1] Extend missing-config import redirect coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/import.test.ts`
+- [x] T010 [P] [US1] Extend missing-config import redirect coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/import.test.ts` ✅ DONE
 - [x] T011 [P] [US1] Create setup state, dispatch, polling, and callback API coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup.test.ts` ✅ DONE
-- [ ] T012 [P] [US1] Extend import modal board-to-setup handoff coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/projects/import-project-modal.test.tsx`
-- [ ] T013 [P] [US1] Extend post-onboarding config sync and setup-bypass coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/config-sync.test.ts`
+- [x] T012 [P] [US1] Extend import modal board-to-setup handoff coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/projects/import-project-modal.test.tsx` ✅ DONE
+- [x] T013 [P] [US1] Extend post-onboarding config sync and setup-bypass coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/config-sync.test.ts` ✅ DONE
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Extend project-level setup gating in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/layout.tsx`
+- [x] T014 [US1] Extend project-level setup gating in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/layout.tsx` ✅ DONE
 - [x] T015 [P] [US1] Extend setup-aware project entry navigation in `/home/runner/work/ai-board/ai-board/target/components/projects/project-card.tsx` and `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/board/page.tsx` ✅ DONE
 - [x] T016 [US1] Create the owner-only setup route in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/setup/page.tsx` ✅ DONE
 - [x] T017 [P] [US1] Create setup page client components for agent selection, running progress, and completion summary in `/home/runner/work/ai-board/ai-board/target/components/projects/setup/` ✅ DONE
@@ -71,17 +71,17 @@
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Extend setup credential-readiness response coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/credentials/credentials-api.test.ts`
-- [ ] T024 [P] [US2] Extend onboarding workflow credential handoff coverage for `CLAUDE` and `CODEX` in `/home/runner/work/ai-board/ai-board/target/tests/integration/credentials/workflow-credential.test.ts`
-- [ ] T025 [P] [US2] Extend provider-aware dispatch guard coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/credential-dispatch-guard.test.ts`
-- [ ] T026 [P] [US2] Extend duplicate active setup job rejection and resume coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup.test.ts`
+- [x] T023 [P] [US2] Extend setup credential-readiness response coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/credentials/credentials-api.test.ts` ✅ DONE
+- [x] T024 [P] [US2] Extend onboarding workflow credential handoff coverage for `CLAUDE` and `CODEX` in `/home/runner/work/ai-board/ai-board/target/tests/integration/credentials/workflow-credential.test.ts` ✅ DONE
+- [x] T025 [P] [US2] Extend provider-aware dispatch guard coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/credential-dispatch-guard.test.ts` ✅ DONE
+- [x] T026 [P] [US2] Extend duplicate active setup job rejection and resume coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup.test.ts` ✅ DONE
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Extend setup validation and selected-agent readiness parsing in `/home/runner/work/ai-board/ai-board/target/app/lib/schemas/project-setup.ts` and `/home/runner/work/ai-board/ai-board/target/app/lib/schemas/agent.ts`
-- [ ] T028 [US2] Extend duplicate-run prevention and authoritative active-job reuse in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/service.ts`
-- [ ] T029 [US2] Enforce owner-only credential readiness and duplicate dispatch rejection in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/route.ts`
-- [ ] T030 [US2] Surface resumable running and blocked states in `/home/runner/work/ai-board/ai-board/target/components/projects/setup/` and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/status/route.ts`
+- [x] T027 [US2] Extend setup validation and selected-agent readiness parsing in `/home/runner/work/ai-board/ai-board/target/app/lib/schemas/project-setup.ts` and `/home/runner/work/ai-board/ai-board/target/app/lib/schemas/agent.ts` ✅ DONE
+- [x] T028 [US2] Extend duplicate-run prevention and authoritative active-job reuse in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/service.ts` ✅ DONE
+- [x] T029 [US2] Enforce owner-only credential readiness and duplicate dispatch rejection in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/route.ts` ✅ DONE
+- [x] T030 [US2] Surface resumable running and blocked states in `/home/runner/work/ai-board/ai-board/target/components/projects/setup/` and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/status/route.ts` ✅ DONE
 
 **Checkpoint**: Setup cannot be started in invalid states, and active runs resume cleanly after reloads or revisits.
 
@@ -95,13 +95,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T031 [P] [US3] Extend failed callback, terminal error, and fresh-retry coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup.test.ts`
+- [x] T031 [P] [US3] Extend failed callback, terminal error, and fresh-retry coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup.test.ts` ✅ DONE
 - [x] T032 [P] [US3] Extend onboarding artifact review and update API coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/settings.test.ts` ✅ DONE
-- [ ] T033 [P] [US3] Extend settings UI coverage for onboarding artifact review and editing in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/config-card.test.tsx`
+- [x] T033 [P] [US3] Extend settings UI coverage for onboarding artifact review and editing in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/config-card.test.tsx` ✅ DONE
 
 ### Implementation for User Story 3
 
-- [ ] T034 [US3] Persist terminal failure details, completion summaries, and fresh-retry semantics in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/status/route.ts` and `/home/runner/work/ai-board/ai-board/target/lib/onboarding/service.ts`
+- [x] T034 [US3] Persist terminal failure details, completion summaries, and fresh-retry semantics in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/status/route.ts` and `/home/runner/work/ai-board/ai-board/target/lib/onboarding/service.ts` ✅ DONE
 - [x] T035 [US3] Create onboarding artifact review and update handlers in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/settings/onboarding-artifacts/route.ts` ✅ DONE
 - [x] T036 [P] [US3] Create the onboarding artifact review card in `/home/runner/work/ai-board/ai-board/target/components/settings/onboarding-artifacts-card.tsx` ✅ DONE
 - [x] T037 [US3] Extend the settings surface to mount onboarding artifact review alongside config in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/settings/page.tsx` and `/home/runner/work/ai-board/ai-board/target/components/settings/config-card.tsx` ✅ DONE
@@ -115,9 +115,9 @@
 
 **Purpose**: Close remaining browser-only validation, telemetry, and cache coherence gaps across the completed stories.
 
-- [ ] T039 [P] Add selective browser-only setup journey coverage in `/home/runner/work/ai-board/ai-board/target/tests/e2e/project-setup-onboarding.spec.ts`
-- [ ] T040 [P] Harden workflow callback telemetry and authoritative transition logging in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/status/route.ts` and `/home/runner/work/ai-board/ai-board/target/.github/workflows/project-onboarding.yml`
-- [ ] T041 [P] Finalize setup success invalidation and navigation cache behavior in `/home/runner/work/ai-board/ai-board/target/app/lib/query-keys.ts` and `/home/runner/work/ai-board/ai-board/target/components/projects/setup/`
+- [x] T039 [P] Add selective browser-only setup journey coverage in `/home/runner/work/ai-board/ai-board/target/tests/e2e/project-setup-onboarding.spec.ts` ✅ DONE
+- [x] T040 [P] Harden workflow callback telemetry and authoritative transition logging in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/status/route.ts` and `/home/runner/work/ai-board/ai-board/target/.github/workflows/project-onboarding.yml` ✅ DONE
+- [x] T041 [P] Finalize setup success invalidation and navigation cache behavior in `/home/runner/work/ai-board/ai-board/target/app/lib/query-keys.ts` and `/home/runner/work/ai-board/ai-board/target/components/projects/setup/` ✅ DONE
 
 ---
 

@@ -96,4 +96,25 @@ describe('POST /api/projects/import', () => {
       expect(response.status).toBe(403);
     });
   });
+
+  describe('Setup redirect handoff (T010)', () => {
+    it('surfaces setup-required state for imported projects with missing config', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: {
+          config: null,
+          configSyncedAt: null,
+        },
+      });
+
+      const response = await ctx.api.get(`/api/projects/${ctx.projectId}/setup`);
+
+      expect(response.status).toBe(200);
+      expect(response.data).toMatchObject({
+        projectId: ctx.projectId,
+        requiresSetup: true,
+        redirectTo: null,
+      });
+    });
+  });
 });

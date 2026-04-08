@@ -131,6 +131,16 @@ export function ProjectSetupPageClient({
     }
   }, [router, stateQuery.data?.redirectTo]);
 
+  const latestJob = statusQuery.data ?? stateQuery.data?.latestSetupJob ?? null;
+
+  useEffect(() => {
+    if (latestJob?.status === 'COMPLETED') {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects.settings(projectId) });
+      router.refresh();
+    }
+  }, [latestJob?.status, projectId, queryClient, router]);
+
   const selectedAgent =
     selectedAgentOverride ?? stateQuery.data?.selectedAgentDefault ?? 'CLAUDE';
 
@@ -172,9 +182,9 @@ export function ProjectSetupPageClient({
   }
 
   const state = stateQuery.data;
-  const latestJob = statusQuery.data ?? state.latestSetupJob;
   const readiness = state.eligibleAgents.find((entry) => entry.agent === selectedAgent);
-  const canStart = !startMutation.isPending && !!readiness?.ready;
+  const hasActiveJob = latestJob?.status === 'PENDING' || latestJob?.status === 'RUNNING';
+  const canStart = !startMutation.isPending && !!readiness?.ready && !hasActiveJob;
 
   return (
     <div className="space-y-6">
@@ -214,6 +224,15 @@ export function ProjectSetupPageClient({
             </Alert>
           ) : null}
 
+          {hasActiveJob ? (
+            <Alert>
+              <AlertTitle>Onboarding already running</AlertTitle>
+              <AlertDescription>
+                The latest setup job is still active. This page will keep polling until it reaches a terminal state.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           <Button onClick={() => startMutation.mutate()} disabled={!canStart}>
             {startMutation.isPending ? (
               <>
@@ -223,7 +242,9 @@ export function ProjectSetupPageClient({
             ) : (
               <>
                 <Rocket className="mr-2 h-4 w-4" />
-                Start onboarding
+                {latestJob?.status === 'FAILED' || latestJob?.status === 'CANCELLED'
+                  ? 'Retry onboarding'
+                  : 'Start onboarding'}
               </>
             )}
           </Button>

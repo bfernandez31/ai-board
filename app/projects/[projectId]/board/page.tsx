@@ -37,6 +37,9 @@ export default async function ProjectBoardPage({
   if (!access) {
     notFound();
   }
+  if (access.requiresSetup && !access.isOwner) {
+    notFound();
+  }
   if (access.requiresSetup && access.redirectTo) {
     redirect(access.redirectTo);
   }

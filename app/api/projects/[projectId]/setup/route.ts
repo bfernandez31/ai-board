@@ -27,7 +27,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     if (error instanceof Error && error.message === 'Project not found') {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Project not found' }, { status: 403 });
     }
 
     console.error('Failed to fetch project setup state:', error);
@@ -60,13 +60,16 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     if (error instanceof Error && error.message === 'Project not found') {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Project not found' }, { status: 403 });
     }
     if (error instanceof Error && error.name === 'ZodError') {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
     if (error instanceof Error && error.name === 'CredentialNotReady') {
       return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    if (error instanceof Error && error.name === 'SetupNotRequired') {
+      return NextResponse.json({ error: error.message }, { status: 409 });
     }
 
     console.error('Failed to start project setup:', error);

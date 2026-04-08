@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderWithProviders, screen, userEvent, waitFor } from '@/tests/utils/component-test-utils';
 import { ConfigCard } from '@/components/settings/config-card';
+import { OnboardingArtifactsCard } from '@/components/settings/onboarding-artifacts-card';
 
 // Mock fetch
 const mockFetch = vi.fn();
@@ -115,6 +116,63 @@ describe('ConfigCard', () => {
 
       await waitFor(() => {
         expect(screen.getByText('No .ai-board/config.yml found in repository')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('onboarding artifacts review (T033)', () => {
+    it('renders editable onboarding artifacts and saves updates', async () => {
+      mockFetch.mockImplementation((input, init) => {
+        const url = typeof input === 'string' ? input : (input as Request).url;
+
+        if (url.includes('/settings/onboarding-artifacts') && (!init?.method || init.method === 'GET')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              artifacts: [
+                {
+                  path: '.ai-board/config.yml',
+                  kind: 'config',
+                  status: 'generated',
+                  content: 'version: 1\n',
+                  editable: true,
+                  sha: 'abc123',
+                },
+              ],
+            }),
+          });
+        }
+
+        if (url.includes('/settings/onboarding-artifacts') && init?.method === 'PATCH') {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ commitSha: 'def456', updatedPaths: ['.ai-board/config.yml'] }),
+          });
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({}),
+        });
+      });
+
+      const user = userEvent.setup();
+      renderWithProviders(<OnboardingArtifactsCard projectId={1} />);
+
+      expect(await screen.findByText('.ai-board/config.yml')).toBeInTheDocument();
+
+      const editor = screen.getByRole('textbox');
+      await user.clear(editor);
+      await user.type(editor, 'version: 2');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith(
+          '/api/projects/1/settings/onboarding-artifacts',
+          expect.objectContaining({
+            method: 'PATCH',
+          })
+        );
       });
     });
   });

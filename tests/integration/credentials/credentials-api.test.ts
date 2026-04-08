@@ -445,4 +445,64 @@ describe('User Credentials API', () => {
       expect(response.status).toBe(204);
     });
   });
+
+  describe('Setup readiness response (T023)', () => {
+    it('surfaces provider-aware readiness metadata for setup agent selection', async () => {
+      const prisma = getPrismaClient();
+      const anthropic = encryptCredential('sk-ant-api03-' + 'a'.repeat(80));
+      const openai = encryptCredential('sk-proj-' + 'b'.repeat(40));
+
+      await prisma.userCredential.create({
+        data: {
+          userId: 'test-user-id',
+          provider: 'ANTHROPIC',
+          credentialType: 'API_KEY',
+          label: '[e2e] Setup Anthropic',
+          encryptedValue: anthropic.encryptedValue,
+          iv: anthropic.iv,
+          authTag: anthropic.authTag,
+          preview: anthropic.preview,
+          readinessStatus: 'READY',
+          verificationCode: 'VALID',
+        },
+      });
+
+      await prisma.userCredential.create({
+        data: {
+          userId: 'test-user-id',
+          provider: 'OPENAI',
+          credentialType: 'API_KEY',
+          label: '[e2e] Setup OpenAI',
+          encryptedValue: openai.encryptedValue,
+          iv: openai.iv,
+          authTag: openai.authTag,
+          preview: openai.preview,
+          readinessStatus: 'ACTION_REQUIRED',
+          verificationCode: 'INVALID',
+          verificationMessage: 'OpenAI key failed verification',
+        },
+      });
+
+      const response = await ctx.api.get(`/api/projects/${ctx.projectId}/setup`);
+
+      expect(response.status).toBe(200);
+      expect(response.data.eligibleAgents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            agent: 'CLAUDE',
+            provider: 'ANTHROPIC',
+            ready: true,
+            readinessStatus: 'READY',
+          }),
+          expect.objectContaining({
+            agent: 'CODEX',
+            provider: 'OPENAI',
+            ready: false,
+            readinessStatus: 'ACTION_REQUIRED',
+            verificationMessage: 'OpenAI key failed verification',
+          }),
+        ])
+      );
+    });
+  });
 });

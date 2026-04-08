@@ -189,6 +189,62 @@ describe('Workflow Credential Retrieval API', () => {
     expect(response.data.error).toContain('credential configured');
   });
 
+  it('should resolve provider from agent=CLAUDE for onboarding workflows', async () => {
+    const prisma = getPrismaClient();
+    const testKey = 'sk-ant-api03-' + 'a'.repeat(80);
+    const { encryptedValue, iv, authTag } = encryptCredential(testKey);
+
+    await prisma.userCredential.create({
+      data: {
+        userId: 'test-user-id',
+        provider: 'ANTHROPIC',
+        credentialType: 'API_KEY',
+        label: '[e2e] Claude Agent Key',
+        encryptedValue,
+        iv,
+        authTag,
+        preview: testKey.slice(-4),
+        readinessStatus: 'READY',
+      },
+    });
+
+    const client = createWorkflowClient();
+    const response = await client.get<{ envVar: string }>(
+      `/api/internal/credentials?projectId=${ctx.projectId}&agent=CLAUDE`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.data.envVar).toBe('ANTHROPIC_API_KEY');
+  });
+
+  it('should resolve provider from agent=CODEX for onboarding workflows', async () => {
+    const prisma = getPrismaClient();
+    const testKey = 'sk-proj-' + 'a'.repeat(40);
+    const { encryptedValue, iv, authTag } = encryptCredential(testKey);
+
+    await prisma.userCredential.create({
+      data: {
+        userId: 'test-user-id',
+        provider: 'OPENAI',
+        credentialType: 'API_KEY',
+        label: '[e2e] Codex Agent Key',
+        encryptedValue,
+        iv,
+        authTag,
+        preview: testKey.slice(-4),
+        readinessStatus: 'READY',
+      },
+    });
+
+    const client = createWorkflowClient();
+    const response = await client.get<{ envVar: string }>(
+      `/api/internal/credentials?projectId=${ctx.projectId}&agent=CODEX`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.data.envVar).toBe('OPENAI_API_KEY');
+  });
+
   it('should return decrypted OAUTH_TOKEN credential with correct envVar', async () => {
     const prisma = getPrismaClient();
     const testToken = 'oauth-token-value-' + 'b'.repeat(40);

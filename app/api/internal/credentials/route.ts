@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Agent } from '@prisma/client';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
-import { getOwnerCredential, buildWorkflowPayload, getMissingCredentialError, updateOwnerCredential } from '@/lib/ai-credentials/workflow';
+import {
+  buildWorkflowPayload,
+  getCredentialProviderForAgent,
+  getMissingCredentialError,
+  getOwnerCredential,
+  updateOwnerCredential,
+} from '@/lib/ai-credentials/workflow';
 
 const putSchema = z.object({
   projectId: z.coerce.number().int().positive(),
@@ -12,7 +19,16 @@ const putSchema = z.object({
 
 const querySchema = z.object({
   projectId: z.coerce.number().int().positive(),
-  provider: z.enum(['ANTHROPIC', 'OPENAI']).default('ANTHROPIC'),
+  provider: z.enum(['ANTHROPIC', 'OPENAI']).optional(),
+  agent: z.nativeEnum(Agent).optional(),
+}).superRefine((value, ctx) => {
+  if (value.provider && value.agent) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['agent'],
+      message: 'Provide either provider or agent, not both',
+    });
+  }
 });
 
 export async function GET(request: NextRequest) {
@@ -24,6 +40,7 @@ export async function GET(request: NextRequest) {
   const parsed = querySchema.safeParse({
     projectId: request.nextUrl.searchParams.get('projectId'),
     provider: request.nextUrl.searchParams.get('provider') ?? undefined,
+    agent: request.nextUrl.searchParams.get('agent') ?? undefined,
   });
 
   if (!parsed.success) {
@@ -33,7 +50,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { projectId, provider } = parsed.data;
+  const { projectId, provider: providerInput, agent } = parsed.data;
+  const provider = providerInput ?? (agent ? getCredentialProviderForAgent(agent) : 'ANTHROPIC');
 
   try {
     const credential = await getOwnerCredential(projectId, provider);

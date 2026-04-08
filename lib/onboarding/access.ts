@@ -53,7 +53,7 @@ export async function resolveProjectSetupAccess(
       projectId: project.id,
       requiresSetup: true,
       isOwner,
-      redirectTo: `/projects/${project.id}/setup`,
+      redirectTo: null,
     };
   }
 

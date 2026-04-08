@@ -21,5 +21,9 @@ export default async function ProjectEntryPage({
     notFound();
   }
 
+  if (resolution.requiresSetup && !resolution.isOwner) {
+    notFound();
+  }
+
   redirect(resolution.redirectTo ?? `/projects/${projectId}/board`);
 }

@@ -67,6 +67,8 @@ export function OnboardingArtifactsCard({ projectId }: { projectId: number }) {
     },
   });
 
+  const artifacts = artifactsQuery.data?.artifacts ?? [];
+
   return (
     <Card className="aurora-bg-subtle">
       <CardHeader>
@@ -98,7 +100,7 @@ export function OnboardingArtifactsCard({ projectId }: { projectId: number }) {
           </div>
         ) : null}
 
-        {artifactsQuery.data?.artifacts.map((artifact) => (
+        {artifacts.map((artifact) => (
           <div key={artifact.path} className="space-y-2 rounded-lg border border-border/70 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>

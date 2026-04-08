@@ -100,6 +100,7 @@ export const projectSetupStartSchema = z.object({
 export const projectSetupDispatchResponseSchema = z.object({
   created: z.boolean(),
   duplicate: z.boolean().default(false),
+  blocked: z.boolean().default(false),
   job: projectSetupStatusSchema,
 });
 

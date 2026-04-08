@@ -31,6 +31,13 @@ export async function dispatchProjectOnboardingWorkflow(
 
   const octokit = new Octokit({ auth: githubToken });
 
+  console.info('Dispatching project onboarding workflow', {
+    projectId: inputs.projectId,
+    jobId: inputs.jobId,
+    githubRepository: inputs.githubRepository,
+    agent: inputs.agent,
+  });
+
   await octokit.actions.createWorkflowDispatch({
     owner,
     repo,

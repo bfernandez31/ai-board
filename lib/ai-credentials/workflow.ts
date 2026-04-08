@@ -36,6 +36,10 @@ export async function getOwnerCredentialForAgent(
   return getOwnerCredential(projectId, AGENT_PROVIDER_MAP[agent]);
 }
 
+export function getCredentialProviderForAgent(agent: Agent): CredentialProvider {
+  return AGENT_PROVIDER_MAP[agent];
+}
+
 export async function updateOwnerCredential(
   projectId: number,
   provider: CredentialProvider,
