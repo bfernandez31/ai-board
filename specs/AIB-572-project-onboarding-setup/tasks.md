@@ -18,9 +18,9 @@
 
 **Purpose**: Database schema changes and config enum extensions required by all subsequent phases
 
-- [ ] T001 Add SetupJob model, SetupJobStatus enum, and Project.setupJobs relation to prisma/schema.prisma
-- [ ] T002 Run Prisma migration to create SetupJob table with indexes on (projectId, status) and (projectId, createdAt DESC)
-- [ ] T003 [P] Extend language, framework, and package manager enums (add ruby, php, rails, laravel, bundler, composer) in lib/validations/config.ts
+- [x] T001 Add SetupJob model, SetupJobStatus enum, and Project.setupJobs relation to prisma/schema.prisma ✅ DONE
+- [x] T002 Run Prisma migration to create SetupJob table with indexes on (projectId, status) and (projectId, createdAt DESC) ✅ DONE
+- [x] T003 [P] Extend language, framework, and package manager enums (add ruby, php, rails, laravel, bundler, composer) in lib/validations/config.ts ✅ DONE
 
 ---
 
