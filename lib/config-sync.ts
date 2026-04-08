@@ -48,6 +48,14 @@ export async function syncProjectConfig(
 ): Promise<ConfigSyncOutcome> {
   // In test mode, return mock data
   if (process.env.TEST_MODE === 'true') {
+    if (project.githubRepo.includes('missing-config')) {
+      return {
+        success: false,
+        code: 'CONFIG_NOT_FOUND',
+        error: `No ${CONFIG_FILE_PATH} found in repository`,
+      };
+    }
+
     const now = new Date();
     const mockConfig = {
       version: 1,

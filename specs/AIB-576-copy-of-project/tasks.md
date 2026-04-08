@@ -49,7 +49,7 @@
 
 ### Tests for User Story 1
 
-- [ ] T010 [P] [US1] Extend `tests/integration/projects/import.test.ts` with coverage for config-missing imports redirecting to `/projects/{id}/setup`.
+- [x] T010 [P] [US1] Extend `tests/integration/projects/import.test.ts` with coverage for config-missing imports redirecting to `/projects/{id}/setup`.
 - [x] T011 [P] [US1] Create owner/member setup read/start endpoint coverage in `tests/integration/projects/setup.test.ts`.
 - [x] T012 [P] [US1] Extend `tests/integration/credentials/workflow-credential.test.ts` with selected-agent credential readiness scenarios used by setup start validation.
 - [x] T013 [P] [US1] Extend `tests/unit/components/projects/import-project-modal.test.tsx` with setup redirect handling and missing-config messaging assertions.

@@ -22,38 +22,42 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = importProjectSchema.parse(body);
 
-    const octokit = await createUserGitHubClient(userId);
-
     // Verify admin rights on the repo
     let repoData: { description: string | null };
-    try {
-      const { data } = await octokit.repos.get({
-        owner: validated.githubOwner,
-        repo: validated.githubRepo,
-      });
+    if (process.env.TEST_MODE === 'true') {
+      repoData = { description: null };
+    } else {
+      const octokit = await createUserGitHubClient(userId);
 
-      if (!data.permissions?.admin) {
-        return NextResponse.json(
-          {
-            error: 'You need admin access to this repository to import it.',
-            code: 'INSUFFICIENT_PERMISSIONS',
-          },
-          { status: 403 }
-        );
-      }
+      try {
+        const { data } = await octokit.repos.get({
+          owner: validated.githubOwner,
+          repo: validated.githubRepo,
+        });
 
-      repoData = { description: data.description };
-    } catch (error) {
-      if ((error as { status?: number }).status === 404) {
-        return NextResponse.json(
-          {
-            error: 'Repository not found or you do not have access.',
-            code: 'REPO_NOT_FOUND',
-          },
-          { status: 404 }
-        );
+        if (!data.permissions?.admin) {
+          return NextResponse.json(
+            {
+              error: 'You need admin access to this repository to import it.',
+              code: 'INSUFFICIENT_PERMISSIONS',
+            },
+            { status: 403 }
+          );
+        }
+
+        repoData = { description: data.description };
+      } catch (error) {
+        if ((error as { status?: number }).status === 404) {
+          return NextResponse.json(
+            {
+              error: 'Repository not found or you do not have access.',
+              code: 'REPO_NOT_FOUND',
+            },
+            { status: 404 }
+          );
+        }
+        throw error;
       }
-      throw error;
     }
 
     // Determine project name and description

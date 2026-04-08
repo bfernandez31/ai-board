@@ -15,9 +15,37 @@ describe('POST /api/projects/import', () => {
   let ctx: TestContext;
   const prisma = getPrismaClient();
 
+  async function seedGitHubAccount(scope: string) {
+    await prisma.account.upsert({
+      where: {
+        provider_providerAccountId: {
+          provider: 'github',
+          providerAccountId: 'test-user-id-github',
+        },
+      },
+      update: {
+        userId: 'test-user-id',
+        access_token: 'gho_test_repo_token',
+        scope,
+      },
+      create: {
+        id: `acct-${Date.now()}`,
+        userId: 'test-user-id',
+        type: 'oauth',
+        provider: 'github',
+        providerAccountId: 'test-user-id-github',
+        access_token: 'gho_test_repo_token',
+        scope,
+      },
+    });
+  }
+
   beforeEach(async () => {
     ctx = await getTestContext();
     await ctx.cleanup();
+    await prisma.account.deleteMany({
+      where: { userId: 'test-user-id', provider: 'github' },
+    });
   });
 
   describe('Validation (T015)', () => {
@@ -94,6 +122,40 @@ describe('POST /api/projects/import', () => {
 
       // Should fail at scope check since test user lacks GitHub account
       expect(response.status).toBe(403);
+    });
+  });
+
+  describe('Setup redirect coverage (T010)', () => {
+    it('redirects imported repos without synced config to the setup flow', async () => {
+      await seedGitHubAccount('read:user user:email repo');
+
+      const response = await ctx.api.post<{
+        project: {
+          id: number;
+          hasConfig: boolean;
+          githubOwner: string;
+          githubRepo: string;
+        };
+        redirectTo: string;
+      }>('/api/projects/import', {
+        githubOwner: 'octocat',
+        githubRepo: `missing-config-import-${Date.now()}`,
+        name: '[e2e] Missing Config Import',
+      });
+
+      expect(response.status).toBe(201);
+      expect(response.data.project.hasConfig).toBe(false);
+      expect(response.data.redirectTo).toBe(
+        `/projects/${response.data.project.id}/setup`
+      );
+
+      const project = await prisma.project.findUnique({
+        where: { id: response.data.project.id },
+        select: { config: true, configSyncedAt: true },
+      });
+
+      expect(project?.config).toBeNull();
+      expect(project?.configSyncedAt).toBeNull();
     });
   });
 });
