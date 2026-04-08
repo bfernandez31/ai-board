@@ -32,6 +32,18 @@ describe('SetupPageClient', () => {
       latestJob: null,
       isPolling: false,
     });
+    // Default: credentials available for ANTHROPIC
+    mockFetch.mockImplementation((url: string) => {
+      if (url === '/api/credentials') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            credentials: [{ provider: 'ANTHROPIC', credentialType: 'API_KEY' }],
+          }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
   });
 
   it('renders agent selection options', () => {
@@ -49,12 +61,30 @@ describe('SetupPageClient', () => {
 
   it('dispatches POST on button click', async () => {
     const user = userEvent.setup();
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ jobId: 1, status: 'PENDING', agent: 'CLAUDE' }),
+    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
+      if (url === '/api/credentials') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            credentials: [{ provider: 'ANTHROPIC', credentialType: 'API_KEY' }],
+          }),
+        });
+      }
+      if (url === '/api/projects/1/setup' && init?.method === 'POST') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ jobId: 1, status: 'PENDING', agent: 'CLAUDE' }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
 
     renderWithProviders(<SetupPageClient {...defaultProps} />);
+
+    // Wait for credentials to load so button is enabled
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /initialize project/i })).not.toBeDisabled();
+    });
 
     await user.click(screen.getByRole('button', { name: /initialize project/i }));
 
@@ -137,5 +167,96 @@ describe('SetupPageClient', () => {
 
     const button = screen.getByRole('button', { name: /initialize project/i });
     expect(button).toBeDisabled();
+  });
+
+  describe('credential validation', () => {
+    it('disables button when credential is missing', async () => {
+      // Mock fetch to return empty credentials
+      mockFetch.mockImplementation((url: string) => {
+        if (url === '/api/credentials') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ credentials: [] }),
+          });
+        }
+        if (url.includes('/setup')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              setupState: 'NEEDS_SETUP',
+              latestJob: null,
+              configSyncedAt: null,
+            }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+
+      renderWithProviders(<SetupPageClient {...defaultProps} />);
+
+      await waitFor(() => {
+        const button = screen.getByRole('button', { name: /initialize project/i });
+        expect(button).toBeDisabled();
+      });
+    });
+
+    it('enables button when credential is present', async () => {
+      mockFetch.mockImplementation((url: string) => {
+        if (url === '/api/credentials') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              credentials: [{ provider: 'ANTHROPIC', credentialType: 'API_KEY' }],
+            }),
+          });
+        }
+        if (url.includes('/setup')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              setupState: 'NEEDS_SETUP',
+              latestJob: null,
+              configSyncedAt: null,
+            }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+
+      renderWithProviders(<SetupPageClient {...defaultProps} />);
+
+      await waitFor(() => {
+        const button = screen.getByRole('button', { name: /initialize project/i });
+        expect(button).not.toBeDisabled();
+      });
+    });
+
+    it('shows credential warning when missing', async () => {
+      mockFetch.mockImplementation((url: string) => {
+        if (url === '/api/credentials') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ credentials: [] }),
+          });
+        }
+        if (url.includes('/setup')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              setupState: 'NEEDS_SETUP',
+              latestJob: null,
+              configSyncedAt: null,
+            }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+
+      renderWithProviders(<SetupPageClient {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/no anthropic credential configured/i)).toBeInTheDocument();
+      });
+    });
   });
 });

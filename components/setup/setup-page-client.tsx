@@ -1,14 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import { Agent } from '@prisma/client';
-import { Loader2, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, ArrowRight, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { AgentIcon } from '@/components/ui/agent-icon';
 import { getAgentLabel, getAgentDescription } from '@/app/lib/utils/agent-icons';
 import { useSetupPolling } from '@/app/lib/hooks/useSetupPolling';
+import { queryKeys } from '@/app/lib/query-keys';
+
+const AGENT_PROVIDER_MAP: Record<string, string> = {
+  CLAUDE: 'ANTHROPIC',
+  CODEX: 'OPENAI',
+};
 
 interface SetupPageClientProps {
   projectId: number;
@@ -22,6 +29,25 @@ export function SetupPageClient({ projectId, projectName, isOwner }: SetupPageCl
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const { setupState, latestJob, isPolling } = useSetupPolling(projectId);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // Fetch credentials to check if selected agent's provider has a credential
+  const { data: credentialsData } = useQuery({
+    queryKey: queryKeys.credentials.all,
+    queryFn: async () => {
+      const response = await fetch('/api/credentials');
+      if (!response.ok) return { credentials: [] };
+      return response.json();
+    },
+    staleTime: 30_000,
+  });
+
+  const hasCredential = useMemo(() => {
+    if (!credentialsData?.credentials) return false;
+    const requiredProvider = AGENT_PROVIDER_MAP[selectedAgent];
+    return credentialsData.credentials.some(
+      (c: { provider: string }) => c.provider === requiredProvider
+    );
+  }, [credentialsData, selectedAgent]);
 
   // Elapsed time counter during IN_PROGRESS
   useEffect(() => {
@@ -191,13 +217,26 @@ export function SetupPageClient({ projectId, projectName, isOwner }: SetupPageCl
               ))}
             </div>
 
+            {!hasCredential && credentialsData && (
+              <div className="flex items-start gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/10 p-3">
+                <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  No {AGENT_PROVIDER_MAP[selectedAgent] === 'ANTHROPIC' ? 'Anthropic' : 'OpenAI'} credential configured.
+                  Add your key in{' '}
+                  <Link href={`/projects/${projectId}/settings`} className="underline text-foreground">
+                    Settings → AI Credentials
+                  </Link>.
+                </p>
+              </div>
+            )}
+
             {dispatchError && (
               <p className="text-sm text-destructive">{dispatchError}</p>
             )}
 
             <Button
               onClick={handleDispatch}
-              disabled={isDispatching || !isOwner || isPolling}
+              disabled={isDispatching || !isOwner || isPolling || !hasCredential}
               className="w-full"
             >
               {isDispatching ? (

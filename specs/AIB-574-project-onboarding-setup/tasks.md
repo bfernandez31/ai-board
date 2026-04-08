@@ -66,11 +66,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T013 [P] [US2] Add component tests for credential validation in `tests/unit/components/setup-page.test.tsx`: disables button when credential missing, enables button when credential present, updates on agent selection change
+- [x] T013 [P] [US2] Add component tests for credential validation in `tests/unit/components/setup-page.test.tsx`: disables button when credential missing, enables button when credential present, updates on agent selection change
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Add credential status indicator to `components/setup/setup-page-client.tsx`: fetch credential status via `GET /api/credentials` filtered by agent's provider (using `AGENT_PROVIDER_MAP`), show inline credential status with guidance when missing, disable "Initialize Project" button when no valid credential
+- [x] T014 [US2] Add credential status indicator to `components/setup/setup-page-client.tsx`: fetch credential status via `GET /api/credentials` filtered by agent's provider (using `AGENT_PROVIDER_MAP`), show inline credential status with guidance when missing, disable "Initialize Project" button when no valid credential
 
 **Checkpoint**: Setup page now validates credentials before allowing dispatch
 
