@@ -45,14 +45,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Create integration tests for setup dispatch API in `tests/integration/projects/setup.test.ts`: POST dispatch creates job (201), GET returns NEEDS_SETUP for new project, GET returns IN_PROGRESS for active job, PATCH callback RUNNING updates status, PATCH callback COMPLETED triggers config sync
-- [ ] T009 [P] [US1] Create component tests for setup page happy path in `tests/unit/components/setup-page.test.tsx`: renders agent selection options, shows progress state during RUNNING, shows success state on COMPLETED
-- [ ] T010 [P] [US1] Create unit tests for polling hook in `tests/unit/useSetupPolling.test.ts`: polls at 2s interval, stops polling on terminal state, returns correct setup state derivation
+- [x] T008 [P] [US1] Create integration tests for setup dispatch API in `tests/integration/projects/setup.test.ts`: POST dispatch creates job (201), GET returns NEEDS_SETUP for new project, GET returns IN_PROGRESS for active job, PATCH callback RUNNING updates status, PATCH callback COMPLETED triggers config sync
+- [x] T009 [P] [US1] Create component tests for setup page happy path in `tests/unit/components/setup-page.test.tsx`: renders agent selection options, shows progress state during RUNNING, shows success state on COMPLETED
+- [x] T010 [P] [US1] Create unit tests for polling hook in `tests/unit/useSetupPolling.test.ts`: polls at 2s interval, stops polling on terminal state, returns correct setup state derivation
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Create server page at `app/projects/[projectId]/setup/page.tsx`: auth check (redirect unauthenticated), fetch project with `configSyncedAt` and membership, redirect to board if already configured, check owner/member access, render `SetupPageClient` with project data and `isOwner` flag
-- [ ] T012 [US1] Create client component at `components/setup/setup-page-client.tsx`: agent selection (CLAUDE/CODEX radio using shadcn/ui), "Initialize Project" button dispatching POST to setup API, progress state with elapsed time counter and loading spinner using `useSetupPolling()`, success state with "Go to Board" link
+- [x] T011 [US1] Create server page at `app/projects/[projectId]/setup/page.tsx`: auth check (redirect unauthenticated), fetch project with `configSyncedAt` and membership, redirect to board if already configured, check owner/member access, render `SetupPageClient` with project data and `isOwner` flag
+- [x] T012 [US1] Create client component at `components/setup/setup-page-client.tsx`: agent selection (CLAUDE/CODEX radio using shadcn/ui), "Initialize Project" button dispatching POST to setup API, progress state with elapsed time counter and loading spinner using `useSetupPolling()`, success state with "Go to Board" link
 
 **Checkpoint**: At this point, the core happy path (select agent -> dispatch -> poll -> success -> redirect) should be fully functional
 
