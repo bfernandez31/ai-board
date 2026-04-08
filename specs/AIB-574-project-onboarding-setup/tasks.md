@@ -153,8 +153,8 @@
 
 **Purpose**: Workflow file and integration with project import flow
 
-- [ ] T024 [P] Create `.github/workflows/onboard.yml` workflow stub: `workflow_dispatch` trigger with inputs (projectId, setupJobId, githubRepository, agent, callbackUrl, workflowToken), runs on ubuntu-latest, steps: callback RUNNING → sleep 5s → callback COMPLETED (or FAILED on error) per workflows/onboard-workflow.md
-- [ ] T025 Add post-import redirect: in the project import success flow (check `app/api/projects/import/route.ts` and `components/projects/import-project-modal.tsx`), redirect to `/projects/{id}/setup` when `configSyncedAt` is null after project creation
+- [x] T024 [P] Create `.github/workflows/onboard.yml` workflow stub: `workflow_dispatch` trigger with inputs (projectId, setupJobId, githubRepository, agent, callbackUrl, workflowToken), runs on ubuntu-latest, steps: callback RUNNING → sleep 5s → callback COMPLETED (or FAILED on error) per workflows/onboard-workflow.md
+- [x] T025 Add post-import redirect: in the project import success flow (check `app/api/projects/import/route.ts` and `components/projects/import-project-modal.tsx`), redirect to `/projects/{id}/setup` when `configSyncedAt` is null after project creation
 
 ---
 

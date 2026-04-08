@@ -1,0 +1,65 @@
+name: Project Onboarding (Stub)
+# Stub workflow: dispatched when a project owner initializes setup.
+# Calls back RUNNING → sleeps → calls back COMPLETED (or FAILED on error).
+# A follow-up ticket will implement real onboarding logic.
+
+on:
+  workflow_dispatch:
+    inputs:
+      projectId:
+        description: 'Target project ID'
+        required: true
+        type: string
+      setupJobId:
+        description: 'Setup job ID for status callbacks'
+        required: true
+        type: string
+      githubRepository:
+        description: 'Target repo in owner/repo format'
+        required: true
+        type: string
+      agent:
+        description: 'Selected agent CLI (claude or codex)'
+        required: true
+        type: string
+      callbackUrl:
+        description: 'Base URL for status callbacks'
+        required: true
+        type: string
+      workflowToken:
+        description: 'Auth token for callback API'
+        required: true
+        type: string
+
+jobs:
+  onboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Callback RUNNING
+        run: |
+          curl -sf -X PATCH \
+            "${{ inputs.callbackUrl }}/api/projects/${{ inputs.projectId }}/setup/status" \
+            -H "Authorization: Bearer ${{ inputs.workflowToken }}" \
+            -H "Content-Type: application/json" \
+            -d '{"jobId": ${{ inputs.setupJobId }}, "status": "RUNNING"}'
+
+      - name: Simulate onboarding work
+        run: sleep 5
+
+      - name: Callback COMPLETED
+        id: complete
+        run: |
+          curl -sf -X PATCH \
+            "${{ inputs.callbackUrl }}/api/projects/${{ inputs.projectId }}/setup/status" \
+            -H "Authorization: Bearer ${{ inputs.workflowToken }}" \
+            -H "Content-Type: application/json" \
+            -d '{"jobId": ${{ inputs.setupJobId }}, "status": "COMPLETED", "artifactSummary": []}'
+
+      - name: Callback FAILED on error
+        if: failure()
+        run: |
+          curl -sf -X PATCH \
+            "${{ inputs.callbackUrl }}/api/projects/${{ inputs.projectId }}/setup/status" \
+            -H "Authorization: Bearer ${{ inputs.workflowToken }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"jobId\": ${{ inputs.setupJobId }}, \"status\": \"FAILED\", \"logs\": \"Workflow step failed. Check GitHub Actions logs for details.\"}"
