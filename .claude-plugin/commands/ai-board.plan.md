@@ -62,12 +62,20 @@ You **MUST** consider the user input before proceeding (if not empty).
    - This inventory is REQUIRED before the Implementation Phases and Testing Strategy sections can be written
    - The plan MUST reference real file paths from this discovery — never invent file names. If a file needs to be modified, use its actual path. If a new file is needed, verify no existing file already covers that responsibility.
 
-4. **Consolidate findings** in `research.md` using format:
+4. **Extract patterns from reference files** (MANDATORY when the feature creates new code that parallels existing code):
+   - For each file marked as "Pattern reference" or "Reuse as-is", READ the actual implementation and extract:
+     - **Error handling patterns**: How does the existing code handle failures? (try/catch, rollback, cleanup on error, retry logic). New code performing similar operations MUST follow the same error recovery strategy.
+     - **Security patterns**: How are secrets, tokens, and credentials handled? (environment variables vs inputs, encryption, auth headers). New code MUST NOT introduce weaker security patterns than the reference.
+     - **State management patterns**: How does the existing code handle state transitions? (atomic updates, ordering of operations, race condition guards). New code MUST follow the same defensive patterns.
+   - Record findings in `research.md` under a **"Patterns to Follow"** section with concrete examples from the reference code (include file path and line numbers).
+   - The implementation phases and tasks MUST explicitly reference these patterns where applicable — not just "follow existing patterns" but "follow the dispatch-then-rollback pattern from transition.ts:336".
+
+5. **Consolidate findings** in `research.md` using format:
    - Decision: [what was chosen]
    - Rationale: [why chosen]
    - Alternatives considered: [what else evaluated]
 
-**Output**: research.md (with Existing Test Files section) with all NEEDS CLARIFICATION resolved
+**Output**: research.md (with Existing Files, Patterns to Follow sections) with all NEEDS CLARIFICATION resolved
 
 ### Phase 1: Design & Contracts
 
