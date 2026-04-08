@@ -87,6 +87,7 @@ model Project {
   comparisonRecords   ComparisonRecord[]
   healthScans         HealthScan[]
   healthScore         HealthScore?
+  setupJobs           ProjectSetupJob[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -567,4 +568,39 @@ model HealthScore {
   project            Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+}
+
+enum SetupJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model ProjectSetupJob {
+  id              Int             @id @default(autoincrement())
+  projectId       Int
+  agent           Agent
+  status          SetupJobStatus  @default(PENDING)
+
+  // Workflow tracking
+  workflowRunId   BigInt?
+
+  // Error tracking
+  errorMessage    String?         @db.VarChar(2000)
+
+  // Artifacts produced by workflow
+  artifactSummary Json?
+
+  // Timestamps
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([projectId, createdAt(sort: Desc)])
 }

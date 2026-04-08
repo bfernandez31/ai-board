@@ -1,7 +1,8 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Board } from '@/components/board/board';
 import { getTicketsWithJobs } from '@/lib/db/tickets';
 import { getProject } from '@/lib/db/projects';
+import { prisma } from '@/lib/db/client';
 
 // Force dynamic rendering to ensure fresh data on router.refresh()
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,7 @@ export default async function ProjectBoardPage({
 
   // Fetch project and tickets+jobs in parallel (validation + data)
   // Single optimized query for tickets with jobs included
-  const [, { ticketsByStage, ticketsWithJobs }] = await Promise.all([
+  const [project, { ticketsByStage, ticketsWithJobs }] = await Promise.all([
     getProject(projectId).catch((error) => {
       if (
         error instanceof Error &&
@@ -44,6 +45,17 @@ export default async function ProjectBoardPage({
     }),
     getTicketsWithJobs(projectId),
   ]);
+
+  // Redirect to setup page if project is not yet configured
+  if (project) {
+    const fullProject = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { configSyncedAt: true },
+    });
+    if (fullProject && !fullProject.configSyncedAt) {
+      redirect(`/projects/${projectId}/setup`);
+    }
+  }
 
   // Transform tickets with jobs into initialJobs map
   // Jobs are already included in the tickets query (no N+1 problem)

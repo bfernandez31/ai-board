@@ -18,10 +18,10 @@
 
 **Purpose**: Data model and shared dispatch infrastructure needed by all user stories
 
-- [ ] T001 Add `SetupJobStatus` enum and `ProjectSetupJob` model to `prisma/schema.prisma` per data-model.md (includes indexes, cascade delete, relation on Project)
-- [ ] T002 Run Prisma migration and generate client (`bunx prisma migrate dev --name add-project-setup-job && bunx prisma generate`)
-- [ ] T003 Create onboard workflow dispatch function in `lib/workflows/dispatch-onboard.ts` following `lib/health/scan-dispatch.ts` pattern (test mode bypass, credential resolution, Octokit dispatch)
-- [ ] T004 [P] Add setup job query keys to `app/lib/query-keys.ts` (`setupJob(projectId)`, `credentialCheck(projectId, agent)`)
+- [X] T001 Add `SetupJobStatus` enum and `ProjectSetupJob` model to `prisma/schema.prisma` per data-model.md (includes indexes, cascade delete, relation on Project)
+- [X] T002 Run Prisma migration and generate client (`bunx prisma migrate dev --name add-project-setup-job && bunx prisma generate`)
+- [X] T003 Create onboard workflow dispatch function in `lib/workflows/dispatch-onboard.ts` following `lib/health/scan-dispatch.ts` pattern (test mode bypass, credential resolution, Octokit dispatch)
+- [X] T004 [P] Add setup job query keys to `app/lib/query-keys.ts` (`setupJob(projectId)`, `credentialCheck(projectId, agent)`)
 
 ---
 
@@ -31,11 +31,11 @@
 
 **CRITICAL**: No user story UI/integration work can begin until these endpoints exist
 
-- [ ] T005 Implement POST handler in `app/api/projects/[projectId]/setup/jobs/route.ts` (create setup job + dispatch workflow, Zod validation, pre-flight checks per contracts/setup-jobs-api.md)
-- [ ] T006 Implement GET handler in `app/api/projects/[projectId]/setup/jobs/route.ts` (latest setup job + configSyncedAt)
-- [ ] T007 Implement PATCH handler in `app/api/projects/[projectId]/setup/jobs/[jobId]/status/route.ts` (workflow callback, state transitions, config sync on COMPLETED, error persistence on FAILED)
-- [ ] T008 [P] Implement GET handler in `app/api/projects/[projectId]/setup/credential-check/route.ts` (agent-to-provider mapping, credential existence check)
-- [ ] T009 [P] Create setup job polling hook in `app/lib/hooks/useSetupJobPolling.ts` following `app/lib/hooks/useJobPolling.ts` pattern (2s interval, terminal state detection, staleTime: 0)
+- [X] T005 Implement POST handler in `app/api/projects/[projectId]/setup/jobs/route.ts` (create setup job + dispatch workflow, Zod validation, pre-flight checks per contracts/setup-jobs-api.md)
+- [X] T006 Implement GET handler in `app/api/projects/[projectId]/setup/jobs/route.ts` (latest setup job + configSyncedAt)
+- [X] T007 Implement PATCH handler in `app/api/projects/[projectId]/setup/jobs/[jobId]/status/route.ts` (workflow callback, state transitions, config sync on COMPLETED, error persistence on FAILED)
+- [X] T008 [P] Implement GET handler in `app/api/projects/[projectId]/setup/credential-check/route.ts` (agent-to-provider mapping, credential existence check)
+- [X] T009 [P] Create setup job polling hook in `app/lib/hooks/useSetupJobPolling.ts` following `app/lib/hooks/useJobPolling.ts` pattern (2s interval, terminal state detection, staleTime: 0)
 
 **Checkpoint**: All API endpoints and polling infrastructure ready
 
@@ -49,15 +49,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T010 [P] [US1] Create integration tests for setup job POST/GET happy path in `tests/integration/projects/setup-job.test.ts` (POST creates job 201, GET returns latest job, GET returns null when none exists)
-- [ ] T011 [P] [US1] Create integration tests for setup redirect in `tests/integration/projects/setup-redirect.test.ts` (board redirects to setup when unconfigured, setup redirects to board when configured)
-- [ ] T012 [P] [US1] Create component tests for setup page in `tests/unit/components/setup/setup-page.test.tsx` (renders agent selection, shows running state with spinner, calls dispatch API on initialize)
+- [X] T010 [P] [US1] Create integration tests for setup job POST/GET happy path in `tests/integration/projects/setup-job.test.ts` (POST creates job 201, GET returns latest job, GET returns null when none exists)
+- [X] T011 [P] [US1] Create integration tests for setup redirect in `tests/integration/projects/setup-redirect.test.ts` (board redirects to setup when unconfigured, setup redirects to board when configured)
+- [X] T012 [P] [US1] Create component tests for setup page in `tests/unit/components/setup/setup-page.test.tsx` (renders agent selection, shows running state with spinner, calls dispatch API on initialize)
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Create setup page server component in `app/projects/[projectId]/setup/page.tsx` (force-dynamic, verify project exists, redirect to board if configSyncedAt set, pass props to client)
-- [ ] T014 [US1] Create setup page client component in `components/setup/setup-page-client.tsx` (agent selection radio/cards with shadcn/ui, credential check query on agent change, initialize button, status display with polling via useSetupJobPolling, redirect to board on configSyncedAt, aurora theme classes)
-- [ ] T015 [US1] Add board redirect for unconfigured projects in `app/projects/[projectId]/board/page.tsx` (check configSyncedAt null, redirect to setup page)
+- [X] T013 [US1] Create setup page server component in `app/projects/[projectId]/setup/page.tsx` (force-dynamic, verify project exists, redirect to board if configSyncedAt set, pass props to client)
+- [X] T014 [US1] Create setup page client component in `components/setup/setup-page-client.tsx` (agent selection radio/cards with shadcn/ui, credential check query on agent change, initialize button, status display with polling via useSetupJobPolling, redirect to board on configSyncedAt, aurora theme classes)
+- [X] T015 [US1] Add board redirect for unconfigured projects in `app/projects/[projectId]/board/page.tsx` (check configSyncedAt null, redirect to setup page)
 
 **Checkpoint**: Core happy path works — owner can complete setup and reach the board
 
