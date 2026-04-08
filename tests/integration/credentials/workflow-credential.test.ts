@@ -12,6 +12,8 @@ import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup'
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { createAPIClient } from '@/tests/fixtures/vitest/api-client';
 import { encryptCredential } from '@/lib/ai-credentials/crypto';
+import { Agent } from '@prisma/client';
+import { getOwnerCredentialReadiness } from '@/lib/ai-credentials/workflow';
 
 describe('Workflow Credential Retrieval API', () => {
   let ctx: TestContext;
@@ -221,5 +223,40 @@ describe('Workflow Credential Retrieval API', () => {
     expect(response.data.encoding).toBe('base64');
     expect(Buffer.from(response.data.value, 'base64').toString()).toBe(testToken);
     expect(response.data.credentialType).toBe('OAUTH_TOKEN');
+  });
+
+  it('should map CODEX to OPENAI readiness for setup validation', async () => {
+    const prisma = getPrismaClient();
+    const testKey = 'sk-proj-' + 'z'.repeat(40);
+    const { encryptedValue, iv, authTag } = encryptCredential(testKey);
+
+    await prisma.userCredential.create({
+      data: {
+        userId: 'test-user-id',
+        provider: 'OPENAI',
+        credentialType: 'API_KEY',
+        label: '[e2e] Setup OpenAI Key',
+        encryptedValue,
+        iv,
+        authTag,
+        preview: testKey.slice(-4),
+        readinessStatus: 'READY',
+      },
+    });
+
+    const readiness = await getOwnerCredentialReadiness(ctx.projectId, Agent.CODEX);
+
+    expect(readiness.provider).toBe('OPENAI');
+    expect(readiness.ready).toBe(true);
+    expect(readiness.readinessStatus).toBe('READY');
+  });
+
+  it('should report missing Claude readiness when no Anthropic credential exists', async () => {
+    const readiness = await getOwnerCredentialReadiness(ctx.projectId, Agent.CLAUDE);
+
+    expect(readiness.provider).toBe('ANTHROPIC');
+    expect(readiness.ready).toBe(false);
+    expect(readiness.readinessStatus).toBe('MISSING');
+    expect(readiness.message).toContain('Anthropic');
   });
 });

@@ -11,9 +11,10 @@ import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { createAPIClient, type APIClient } from '@/tests/fixtures/vitest/api-client';
 import { createToken } from '@/lib/db/tokens';
 import { generatePersonalAccessToken } from '@/lib/tokens/generate';
+import { encryptCredential } from '@/lib/ai-credentials/crypto';
 
 // Workflow token for PATCH /api/jobs/:id/status endpoint
-const WORKFLOW_TOKEN = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+const WORKFLOW_TOKEN = 'test-workflow-token-for-e2e-tests-only';
 
 /**
  * Create an API client with workflow token authentication
@@ -210,6 +211,67 @@ describe('Jobs Status', () => {
 
       expect(response.status).toBe(200);
       expect(response.data.status).toBe('CANCELLED');
+    });
+
+    it('should accept workflow auth for project setup callbacks', async () => {
+      const setupKey = 'sk-ant-api03-' + 'c'.repeat(80);
+      const encrypted = encryptCredential(setupKey);
+
+      await prisma.userCredential.upsert({
+        where: {
+          userId_provider: {
+            userId: 'test-user-id',
+            provider: 'ANTHROPIC',
+          },
+        },
+        update: {
+          credentialType: 'API_KEY',
+          label: '[e2e] Setup callback credential',
+          encryptedValue: encrypted.encryptedValue,
+          iv: encrypted.iv,
+          authTag: encrypted.authTag,
+          preview: setupKey.slice(-4),
+          readinessStatus: 'READY',
+        },
+        create: {
+          userId: 'test-user-id',
+          provider: 'ANTHROPIC',
+          credentialType: 'API_KEY',
+          label: '[e2e] Setup callback credential',
+          encryptedValue: encrypted.encryptedValue,
+          iv: encrypted.iv,
+          authTag: encrypted.authTag,
+          preview: setupKey.slice(-4),
+          readinessStatus: 'READY',
+        },
+      });
+
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: {
+          config: null,
+          configSyncedAt: null,
+        },
+      });
+
+      const startResponse = await ctx.api.post<{ attempt: { id: number } }>(
+        `/api/projects/${ctx.projectId}/setup/attempts`,
+        { selectedAgent: 'CLAUDE' }
+      );
+
+      expect(startResponse.status).toBe(201);
+
+      const callbackResponse = await workflowApi.patch<{ status: string }>(
+        `/api/projects/${ctx.projectId}/setup/attempts/${startResponse.data.attempt.id}/status`,
+        {
+          status: 'RUNNING',
+          message: 'Project setup callback authenticated',
+          workflowRunId: 4567,
+        }
+      );
+
+      expect(callbackResponse.status).toBe(200);
+      expect(callbackResponse.data.status).toBe('RUNNING');
     });
   });
 

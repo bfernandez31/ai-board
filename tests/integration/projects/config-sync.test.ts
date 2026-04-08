@@ -7,7 +7,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
-import { isConfigStale } from '@/lib/config-sync';
+import {
+  isConfigStale,
+  syncProjectConfigAfterSetupCompletion,
+} from '@/lib/config-sync';
 
 describe('Config Sync - Staleness and Auto-Refresh', () => {
   let ctx: TestContext;
@@ -93,6 +96,26 @@ describe('Config Sync - Staleness and Auto-Refresh', () => {
     it('returns 404 for non-existent project', async () => {
       const response = await ctx.api.post('/api/projects/999999/config/sync', {});
       expect(response.status).toBe(404);
+    });
+
+    it('syncs config after setup completion in test mode', async () => {
+      const result = await syncProjectConfigAfterSetupCompletion({
+        id: ctx.projectId,
+        githubOwner: 'test',
+        githubRepo: 'test',
+        configSyncedAt: null,
+      });
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+
+      const project = await prisma.project.findUnique({
+        where: { id: ctx.projectId },
+        select: { config: true, configSyncedAt: true },
+      });
+
+      expect(project?.config).not.toBeNull();
+      expect(project?.configSyncedAt).not.toBeNull();
     });
   });
 

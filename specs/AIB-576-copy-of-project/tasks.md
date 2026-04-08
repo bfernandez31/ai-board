@@ -16,11 +16,11 @@
 
 **Purpose**: Introduce the shared schema and setup-domain module scaffolding that every story depends on.
 
-- [ ] T001 Extend `prisma/schema.prisma` with the `ProjectSetupStatus` enum, `ProjectSetupAttempt` model, and `Project.setupAttempts` relation.
-- [ ] T002 [P] Create shared setup DTOs and derived-state types in `lib/project-setup/types.ts`.
-- [ ] T003 [P] Create setup lifecycle transition helpers in `lib/project-setup/state.ts`.
-- [ ] T004 Create setup workflow dispatch helpers in `lib/project-setup/workflow-dispatch.ts`.
-- [ ] T005 Create the core setup orchestration service in `lib/project-setup/service.ts`.
+- [x] T001 Extend `prisma/schema.prisma` with the `ProjectSetupStatus` enum, `ProjectSetupAttempt` model, and `Project.setupAttempts` relation.
+- [x] T002 [P] Create shared setup DTOs and derived-state types in `lib/project-setup/types.ts`.
+- [x] T003 [P] Create setup lifecycle transition helpers in `lib/project-setup/state.ts`.
+- [x] T004 Create setup workflow dispatch helpers in `lib/project-setup/workflow-dispatch.ts`.
+- [x] T005 Create the core setup orchestration service in `lib/project-setup/service.ts`.
 
 **Checkpoint**: The schema and setup domain module exist, but no user-facing flow is exposed yet.
 
@@ -32,10 +32,10 @@
 
 **⚠️ CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T006 Extend `lib/db/projects.ts` with project loaders that join the latest setup attempt and authoritative config-sync state.
-- [ ] T007 [P] Extend `app/api/projects/[projectId]/route.ts` to include setup-related project metadata used by project navigation and status surfaces.
-- [ ] T008 [P] Extend `tests/integration/projects/crud.test.ts` with coverage for the project detail response fields added in `app/api/projects/[projectId]/route.ts`.
-- [ ] T009 Create the project onboarding workflow in `.github/workflows/project-onboarding.yml` with dispatch inputs and workflow-auth callback steps.
+- [x] T006 Extend `lib/db/projects.ts` with project loaders that join the latest setup attempt and authoritative config-sync state.
+- [x] T007 [P] Extend `app/api/projects/[projectId]/route.ts` to include setup-related project metadata used by project navigation and status surfaces.
+- [x] T008 [P] Extend `tests/integration/projects/crud.test.ts` with coverage for the project detail response fields added in `app/api/projects/[projectId]/route.ts`.
+- [x] T009 Create the project onboarding workflow in `.github/workflows/project-onboarding.yml` with dispatch inputs and workflow-auth callback steps.
 
 **Checkpoint**: Shared persistence, loading, and workflow plumbing are ready for story-specific API and UI work.
 
@@ -50,23 +50,23 @@
 ### Tests for User Story 1
 
 - [ ] T010 [P] [US1] Extend `tests/integration/projects/import.test.ts` with coverage for config-missing imports redirecting to `/projects/{id}/setup`.
-- [ ] T011 [P] [US1] Create owner/member setup read/start endpoint coverage in `tests/integration/projects/setup.test.ts`.
-- [ ] T012 [P] [US1] Extend `tests/integration/credentials/workflow-credential.test.ts` with selected-agent credential readiness scenarios used by setup start validation.
-- [ ] T013 [P] [US1] Extend `tests/unit/components/projects/import-project-modal.test.tsx` with setup redirect handling and missing-config messaging assertions.
+- [x] T011 [P] [US1] Create owner/member setup read/start endpoint coverage in `tests/integration/projects/setup.test.ts`.
+- [x] T012 [P] [US1] Extend `tests/integration/credentials/workflow-credential.test.ts` with selected-agent credential readiness scenarios used by setup start validation.
+- [x] T013 [P] [US1] Extend `tests/unit/components/projects/import-project-modal.test.tsx` with setup redirect handling and missing-config messaging assertions.
 
 ### Implementation for User Story 1
 
-- [ ] T014 [P] [US1] Create the canonical project entry redirect page in `app/projects/[projectId]/page.tsx`.
-- [ ] T015 [P] [US1] Create the setup status read endpoint in `app/api/projects/[projectId]/setup/route.ts`.
-- [ ] T016 [P] [US1] Create the owner-only setup start endpoint in `app/api/projects/[projectId]/setup/attempts/route.ts`.
-- [ ] T017 [P] [US1] Create the setup route page shell in `app/projects/[projectId]/setup/page.tsx`.
-- [ ] T018 [P] [US1] Create the setup page container in `components/projects/project-setup-page.tsx`.
-- [ ] T019 [P] [US1] Create the owner start/retry form in `components/projects/project-setup-start-form.tsx`.
-- [ ] T020 [P] [US1] Create the initial setup state renderer in `components/projects/project-setup-status.tsx`.
-- [ ] T021 [US1] Extend `lib/ai-credentials/workflow.ts` with the setup agent-to-provider readiness lookup used by the setup endpoints.
-- [ ] T022 [US1] Extend `components/projects/import-project-modal.tsx` to preserve the setup redirect path and owner guidance copy after import.
-- [ ] T023 [US1] Extend `components/projects/project-card.tsx` so project entry routes through `/projects/[projectId]` instead of hardcoding `/board`.
-- [ ] T024 [US1] Extend `app/projects/[projectId]/board/page.tsx` to redirect unconfigured projects to `/projects/[projectId]/setup`.
+- [x] T014 [P] [US1] Create the canonical project entry redirect page in `app/projects/[projectId]/page.tsx`.
+- [x] T015 [P] [US1] Create the setup status read endpoint in `app/api/projects/[projectId]/setup/route.ts`.
+- [x] T016 [P] [US1] Create the owner-only setup start endpoint in `app/api/projects/[projectId]/setup/attempts/route.ts`.
+- [x] T017 [P] [US1] Create the setup route page shell in `app/projects/[projectId]/setup/page.tsx`.
+- [x] T018 [P] [US1] Create the setup page container in `components/projects/project-setup-page.tsx`.
+- [x] T019 [P] [US1] Create the owner start/retry form in `components/projects/project-setup-start-form.tsx`.
+- [x] T020 [P] [US1] Create the initial setup state renderer in `components/projects/project-setup-status.tsx`.
+- [x] T021 [US1] Extend `lib/ai-credentials/workflow.ts` with the setup agent-to-provider readiness lookup used by the setup endpoints.
+- [x] T022 [US1] Extend `components/projects/import-project-modal.tsx` to preserve the setup redirect path and owner guidance copy after import.
+- [x] T023 [US1] Extend `components/projects/project-card.tsx` so project entry routes through `/projects/[projectId]` instead of hardcoding `/board`.
+- [x] T024 [US1] Extend `app/projects/[projectId]/board/page.tsx` to redirect unconfigured projects to `/projects/[projectId]/setup`.
 
 **Checkpoint**: Owners can start setup from a real setup page, while members can only view status and all entry paths respect setup gating.
 
@@ -80,19 +80,19 @@
 
 ### Tests for User Story 2
 
-- [ ] T025 [P] [US2] Extend `tests/integration/projects/setup.test.ts` with duplicate-start rejection, refresh/resume, failure display, and retry-history scenarios.
-- [ ] T026 [P] [US2] Extend `tests/integration/jobs/status.test.ts` with workflow-auth callback assertions reused by the setup status callback contract.
-- [ ] T027 [P] [US2] Create component coverage for polling, failure, and retry UI states in `tests/unit/components/projects/project-setup-page.test.tsx`.
+- [x] T025 [P] [US2] Extend `tests/integration/projects/setup.test.ts` with duplicate-start rejection, refresh/resume, failure display, and retry-history scenarios.
+- [x] T026 [P] [US2] Extend `tests/integration/jobs/status.test.ts` with workflow-auth callback assertions reused by the setup status callback contract.
+- [x] T027 [P] [US2] Create component coverage for polling, failure, and retry UI states in `tests/unit/components/projects/project-setup-page.test.tsx`.
 
 ### Implementation for User Story 2
 
-- [ ] T028 [P] [US2] Create the workflow-authenticated setup callback route in `app/api/projects/[projectId]/setup/attempts/[attemptId]/status/route.ts`.
-- [ ] T029 [P] [US2] Extend `lib/project-setup/service.ts` with duplicate-attempt prevention, retry creation, and callback update orchestration.
-- [ ] T030 [P] [US2] Extend `lib/project-setup/state.ts` with stale-callback handling, elapsed-time derivation, and latest-attempt-wins logic.
-- [ ] T031 [P] [US2] Extend `.github/workflows/project-onboarding.yml` to post `RUNNING` and `FAILED` status updates with human-readable messages.
-- [ ] T032 [US2] Extend `app/api/projects/[projectId]/setup/route.ts` to return persisted latest-attempt progress, elapsed time, and member-visible status details.
-- [ ] T033 [US2] Extend `components/projects/project-setup-page.tsx` with polling, refresh-safe state restoration, and retry mutation wiring.
-- [ ] T034 [US2] Extend `components/projects/project-setup-status.tsx` to render in-progress progress text, elapsed time, failure details, and retry affordances.
+- [x] T028 [P] [US2] Create the workflow-authenticated setup callback route in `app/api/projects/[projectId]/setup/attempts/[attemptId]/status/route.ts`.
+- [x] T029 [P] [US2] Extend `lib/project-setup/service.ts` with duplicate-attempt prevention, retry creation, and callback update orchestration.
+- [x] T030 [P] [US2] Extend `lib/project-setup/state.ts` with stale-callback handling, elapsed-time derivation, and latest-attempt-wins logic.
+- [x] T031 [P] [US2] Extend `.github/workflows/project-onboarding.yml` to post `RUNNING` and `FAILED` status updates with human-readable messages.
+- [x] T032 [US2] Extend `app/api/projects/[projectId]/setup/route.ts` to return persisted latest-attempt progress, elapsed time, and member-visible status details.
+- [x] T033 [US2] Extend `components/projects/project-setup-page.tsx` with polling, refresh-safe state restoration, and retry mutation wiring.
+- [x] T034 [US2] Extend `components/projects/project-setup-status.tsx` to render in-progress progress text, elapsed time, failure details, and retry affordances.
 
 **Checkpoint**: Setup state survives refreshes, old failures remain visible, and each retry becomes a new authoritative attempt without allowing duplicate active runs.
 
@@ -106,19 +106,19 @@
 
 ### Tests for User Story 3
 
-- [ ] T035 [P] [US3] Extend `tests/integration/projects/config-sync.test.ts` with setup-completion sync success and sync-failure persistence scenarios.
-- [ ] T036 [P] [US3] Extend `tests/integration/projects/setup.test.ts` with completion, artifact-summary rendering, and post-completion redirect coverage.
-- [ ] T037 [P] [US3] Extend `tests/integration/projects/crud.test.ts` with canonical `/projects/{id}` redirect behavior after setup completion.
+- [x] T035 [P] [US3] Extend `tests/integration/projects/config-sync.test.ts` with setup-completion sync success and sync-failure persistence scenarios.
+- [x] T036 [P] [US3] Extend `tests/integration/projects/setup.test.ts` with completion, artifact-summary rendering, and post-completion redirect coverage.
+- [x] T037 [P] [US3] Extend `tests/integration/projects/crud.test.ts` with canonical `/projects/{id}` redirect behavior after setup completion.
 
 ### Implementation for User Story 3
 
-- [ ] T038 [P] [US3] Extend `lib/config-sync.ts` with the setup-completion sync entry point required by the setup callback flow.
-- [ ] T039 [P] [US3] Extend `lib/project-setup/service.ts` so `COMPLETED` callbacks run config sync before persisting terminal success and preserve artifact summaries on sync failure.
-- [ ] T040 [P] [US3] Extend `.github/workflows/project-onboarding.yml` to post `COMPLETED` callbacks with artifact summary payloads.
-- [ ] T041 [US3] Extend `app/api/projects/[projectId]/setup/attempts/[attemptId]/status/route.ts` to finalize completion responses only after config sync succeeds.
-- [ ] T042 [US3] Extend `app/projects/[projectId]/page.tsx` so completed projects redirect straight to `/projects/[projectId]/board`.
-- [ ] T043 [US3] Extend `app/projects/[projectId]/board/page.tsx` so completed projects bypass setup while incomplete projects still redirect to `/projects/[projectId]/setup`.
-- [ ] T044 [US3] Extend `components/projects/project-setup-status.tsx` to render the completed artifact summary and board-entry CTA before redirecting away from setup.
+- [x] T038 [P] [US3] Extend `lib/config-sync.ts` with the setup-completion sync entry point required by the setup callback flow.
+- [x] T039 [P] [US3] Extend `lib/project-setup/service.ts` so `COMPLETED` callbacks run config sync before persisting terminal success and preserve artifact summaries on sync failure.
+- [x] T040 [P] [US3] Extend `.github/workflows/project-onboarding.yml` to post `COMPLETED` callbacks with artifact summary payloads.
+- [x] T041 [US3] Extend `app/api/projects/[projectId]/setup/attempts/[attemptId]/status/route.ts` to finalize completion responses only after config sync succeeds.
+- [x] T042 [US3] Extend `app/projects/[projectId]/page.tsx` so completed projects redirect straight to `/projects/[projectId]/board`.
+- [x] T043 [US3] Extend `app/projects/[projectId]/board/page.tsx` so completed projects bypass setup while incomplete projects still redirect to `/projects/[projectId]/setup`.
+- [x] T044 [US3] Extend `components/projects/project-setup-status.tsx` to render the completed artifact summary and board-entry CTA before redirecting away from setup.
 
 **Checkpoint**: A successful onboarding run makes the project board-accessible on the next visit, while sync failures remain visible and retryable.
 
@@ -128,12 +128,12 @@
 
 **Purpose**: Tighten the end-to-end setup experience across stories and lock in regression coverage.
 
-- [ ] T045 [P] Harden shared setup serialization and response typing in `lib/project-setup/types.ts`.
-- [ ] T046 [P] Harden setup response typing in `app/api/projects/[projectId]/setup/route.ts`.
-- [ ] T047 [P] Add cross-story regression assertions for the full onboarding lifecycle in `tests/integration/projects/setup.test.ts`.
-- [ ] T048 Validate import-to-setup guidance copy in `components/projects/import-project-modal.tsx`.
-- [ ] T049 Validate setup page instructional copy in `components/projects/project-setup-page.tsx`.
-- [ ] T050 Validate status, failure, and completion copy consistency in `components/projects/project-setup-status.tsx`.
+- [x] T045 [P] Harden shared setup serialization and response typing in `lib/project-setup/types.ts`.
+- [x] T046 [P] Harden setup response typing in `app/api/projects/[projectId]/setup/route.ts`.
+- [x] T047 [P] Add cross-story regression assertions for the full onboarding lifecycle in `tests/integration/projects/setup.test.ts`.
+- [x] T048 Validate import-to-setup guidance copy in `components/projects/import-project-modal.tsx`.
+- [x] T049 Validate setup page instructional copy in `components/projects/project-setup-page.tsx`.
+- [x] T050 Validate status, failure, and completion copy consistency in `components/projects/project-setup-status.tsx`.
 
 ---
 

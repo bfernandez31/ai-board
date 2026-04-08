@@ -1,8 +1,52 @@
 import { prisma } from './client';
-import type { Project, ClarificationPolicy, Agent } from '@prisma/client';
+import type {
+  Project,
+  ClarificationPolicy,
+  Agent,
+  Prisma,
+} from '@prisma/client';
 import type { NextRequest } from 'next/server';
 import { requireAuth } from './users';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
+
+export const latestProjectSetupAttemptSelect = {
+  id: true,
+  projectId: true,
+  selectedAgent: true,
+  status: true,
+  workflowRunId: true,
+  attemptNumber: true,
+  statusMessage: true,
+  failureCode: true,
+  failureMessage: true,
+  artifactSummary: true,
+  startedAt: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.ProjectSetupAttemptSelect;
+
+export type LatestProjectSetupAttempt = Prisma.ProjectSetupAttemptGetPayload<{
+  select: typeof latestProjectSetupAttemptSelect;
+}>;
+
+export type ProjectSetupContext = Prisma.ProjectGetPayload<{
+  select: {
+    id: true;
+    name: true;
+    githubOwner: true;
+    githubRepo: true;
+    userId: true;
+    defaultAgent: true;
+    config: true;
+    configSyncedAt: true;
+    setupAttempts: {
+      orderBy: { attemptNumber: 'desc' };
+      take: 1;
+      select: typeof latestProjectSetupAttemptSelect;
+    };
+  };
+}>;
 
 /**
  * Retrieve a project by its ID
@@ -105,6 +149,64 @@ export async function getProject(projectId: number, request?: NextRequest) {
 
   if (!project) {
     throw new Error('Project not found'); // Returns 404
+  }
+
+  return project;
+}
+
+export async function getProjectSetupContext(
+  projectId: number
+): Promise<ProjectSetupContext | null> {
+  return prisma.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      name: true,
+      githubOwner: true,
+      githubRepo: true,
+      userId: true,
+      defaultAgent: true,
+      config: true,
+      configSyncedAt: true,
+      setupAttempts: {
+        orderBy: { attemptNumber: 'desc' },
+        take: 1,
+        select: latestProjectSetupAttemptSelect,
+      },
+    },
+  });
+}
+
+export async function getProjectWithSetupAccess(
+  projectId: number,
+  request?: NextRequest
+): Promise<ProjectSetupContext> {
+  const userId = await requireAuth(request);
+
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      OR: [{ userId }, { members: { some: { userId } } }],
+    },
+    select: {
+      id: true,
+      name: true,
+      githubOwner: true,
+      githubRepo: true,
+      userId: true,
+      defaultAgent: true,
+      config: true,
+      configSyncedAt: true,
+      setupAttempts: {
+        orderBy: { attemptNumber: 'desc' },
+        take: 1,
+        select: latestProjectSetupAttemptSelect,
+      },
+    },
+  });
+
+  if (!project) {
+    throw new Error('Project not found');
   }
 
   return project;

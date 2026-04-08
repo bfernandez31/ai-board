@@ -7,9 +7,11 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
+import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 
 describe('Projects CRUD', () => {
   let ctx: TestContext;
+  const prisma = getPrismaClient();
 
   beforeEach(async () => {
     ctx = await getTestContext();
@@ -63,6 +65,8 @@ describe('Projects CRUD', () => {
         clarificationPolicy: string;
         createdAt: string;
         updatedAt: string;
+        setupRequired: boolean;
+        latestSetupAttempt: Record<string, unknown> | null;
       }>(`/api/projects/${ctx.projectId}`);
 
       expect(response.status).toBe(200);
@@ -76,6 +80,51 @@ describe('Projects CRUD', () => {
       expect(response.data).toHaveProperty('clarificationPolicy');
       expect(response.data).toHaveProperty('createdAt');
       expect(response.data).toHaveProperty('updatedAt');
+      expect(response.data).toHaveProperty('setupRequired');
+      expect(response.data).toHaveProperty('latestSetupAttempt');
+      expect(typeof response.data.setupRequired).toBe('boolean');
+      if (response.data.latestSetupAttempt) {
+        expect(response.data.latestSetupAttempt).toHaveProperty('id');
+        expect(response.data.latestSetupAttempt).toHaveProperty('status');
+      }
+    });
+
+    it('should redirect canonical project entry to setup when config is missing', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { config: null, configSyncedAt: null },
+      });
+
+      const response = await ctx.api.fetch(`/projects/${ctx.projectId}`, {
+        redirect: 'manual',
+      });
+
+      expect(response.status).toBeGreaterThanOrEqual(300);
+      expect(response.headers.get('location')).toContain(
+        `/projects/${ctx.projectId}/setup`
+      );
+    });
+
+    it('should redirect canonical project entry to board when config is synced', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: {
+          config: {
+            version: 1,
+            project: { name: 'test-project' },
+          },
+          configSyncedAt: new Date(),
+        },
+      });
+
+      const response = await ctx.api.fetch(`/projects/${ctx.projectId}`, {
+        redirect: 'manual',
+      });
+
+      expect(response.status).toBeGreaterThanOrEqual(300);
+      expect(response.headers.get('location')).toContain(
+        `/projects/${ctx.projectId}/board`
+      );
     });
   });
 

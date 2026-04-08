@@ -192,6 +192,13 @@ export function ImportProjectModal({ open, onOpenChange }: ImportProjectModalPro
             </div>
 
             <div className="space-y-3">
+              <div className="rounded-lg border border-border bg-background/70 p-3">
+                <p className="text-sm text-foreground">
+                  If this repository does not already contain a synced AI Board config,
+                  the import will continue to a project setup screen before the board opens.
+                </p>
+              </div>
+
               <div className="space-y-1">
                 <Label htmlFor="project-name">Project Name</Label>
                 <Input

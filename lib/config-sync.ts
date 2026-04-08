@@ -174,6 +174,13 @@ export async function syncProjectConfig(
   };
 }
 
+export async function syncProjectConfigAfterSetupCompletion(
+  project: Pick<Project, 'id' | 'githubOwner' | 'githubRepo' | 'configSyncedAt'>,
+  accessToken?: string
+): Promise<ConfigSyncOutcome> {
+  return syncProjectConfig(project, accessToken);
+}
+
 /**
  * Ensure config is fresh before dispatch. If stale, sync inline.
  * Returns the project with fresh config, or throws on sync failure.

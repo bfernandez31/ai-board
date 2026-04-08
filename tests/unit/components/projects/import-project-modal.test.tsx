@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import userEvent from '@testing-library/user-event';
 import { ImportProjectModal } from '@/components/projects/import-project-modal';
 
 // Mock next/navigation
@@ -140,6 +141,85 @@ describe('ImportProjectModal', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Additional GitHub Access Required')).toBeInTheDocument();
+    });
+  });
+
+  it('shows setup guidance copy on the confirm step', async () => {
+    vi.spyOn(global, 'fetch').mockImplementation((input) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+
+      if (url.includes('/api/github/auth-status')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ hasGitHubAccount: true, hasRepoScope: true }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        );
+      }
+
+      if (url.includes('/api/github/orgs')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ orgs: [] }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        );
+      }
+
+      if (url.includes('/api/github/repos')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              repos: [
+                {
+                  id: 1,
+                  name: 'repo-alpha',
+                  fullName: 'octocat/repo-alpha',
+                  owner: 'octocat',
+                  ownerAvatar: 'https://avatars.githubusercontent.com/u/1?v=4',
+                  description: 'Alpha repo',
+                  isPrivate: false,
+                  pushedAt: '2026-03-28T12:00:00Z',
+                  hasAdminAccess: true,
+                  isAlreadyImported: false,
+                  existingProjectId: null,
+                },
+              ],
+              totalCount: 1,
+              page: 1,
+              perPage: 30,
+              hasNextPage: false,
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        );
+      }
+
+      return Promise.resolve(
+        new Response('{}', {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    });
+
+    const user = userEvent.setup();
+
+    render(
+      <ImportProjectModal open={true} onOpenChange={vi.fn()} />,
+      { wrapper: createWrapper() }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('octocat/repo-alpha')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText('octocat/repo-alpha'));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/the import will continue to a project setup screen/i)
+      ).toBeInTheDocument();
     });
   });
 });

@@ -1,0 +1,77 @@
+name: Project Onboarding
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: Project ID in AI Board
+        required: true
+        type: string
+      attempt_id:
+        description: Project setup attempt ID
+        required: true
+        type: string
+      githubRepository:
+        description: Target repository in owner/repo format
+        required: true
+        type: string
+      agent:
+        description: Selected setup agent
+        required: true
+        type: string
+
+jobs:
+  onboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post running status
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$WORKFLOW_API_TOKEN" ]; then
+            echo "APP_URL and WORKFLOW_API_TOKEN secrets are required"
+            exit 1
+          fi
+
+          curl --fail --silent --show-error \
+            -X PATCH \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "${APP_URL}/api/projects/${{ inputs.project_id }}/setup/attempts/${{ inputs.attempt_id }}/status" \
+            -d "{\"status\":\"RUNNING\",\"message\":\"Preparing onboarding files\",\"workflowRunId\":${{ github.run_id }}}"
+
+      - name: Checkout AI Board repository
+        uses: actions/checkout@v4
+
+      - name: Simulate onboarding artifacts
+        run: |
+          mkdir -p .artifacts
+          printf '%s\n' '.ai-board/config.yml' > .artifacts/created.txt
+          printf '%s\n' "${{ inputs.githubRepository }}" > .artifacts/repository.txt
+
+      - name: Post completion status
+        if: ${{ success() }}
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+        run: |
+          curl --fail --silent --show-error \
+            -X PATCH \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "${APP_URL}/api/projects/${{ inputs.project_id }}/setup/attempts/${{ inputs.attempt_id }}/status" \
+            -d "{\"status\":\"COMPLETED\",\"message\":\"Created AI Board setup files\",\"workflowRunId\":${{ github.run_id }},\"artifactSummary\":{\"created\":[\".ai-board/config.yml\"],\"notes\":[\"Initial onboarding workflow completed with ${{ inputs.agent }}\"]}}"
+
+      - name: Post failure status
+        if: ${{ failure() }}
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+        run: |
+          curl --fail --silent --show-error \
+            -X PATCH \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "${APP_URL}/api/projects/${{ inputs.project_id }}/setup/attempts/${{ inputs.attempt_id }}/status" \
+            -d "{\"status\":\"FAILED\",\"message\":\"Project onboarding workflow failed\",\"failureCode\":\"WORKFLOW_FAILED\",\"failureMessage\":\"Project onboarding workflow failed before completion.\",\"workflowRunId\":${{ github.run_id }}}"

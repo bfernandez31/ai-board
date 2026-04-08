@@ -1,7 +1,12 @@
 import { prisma } from '@/lib/db/client';
 import { decryptCredential, encryptCredential } from './crypto';
 import { getEnvVar, type WorkflowResolvedCredential } from './types';
-import type { CredentialProvider, UserCredential } from '@prisma/client';
+import type {
+  Agent,
+  CredentialProvider,
+  CredentialReadiness,
+  UserCredential,
+} from '@prisma/client';
 
 export function getMissingCredentialError(provider: CredentialProvider = 'ANTHROPIC'): string {
   const providerName = provider === 'OPENAI' ? 'OpenAI' : 'Anthropic';
@@ -9,6 +14,24 @@ export function getMissingCredentialError(provider: CredentialProvider = 'ANTHRO
 }
 
 export const MISSING_CREDENTIAL_ERROR = getMissingCredentialError('ANTHROPIC');
+
+export const AGENT_PROVIDER_MAP: Record<Agent, CredentialProvider> = {
+  CLAUDE: 'ANTHROPIC',
+  CODEX: 'OPENAI',
+};
+
+export type CredentialReadinessStatus = CredentialReadiness | 'MISSING';
+
+export interface CredentialReadinessResult {
+  provider: CredentialProvider;
+  ready: boolean;
+  readinessStatus: CredentialReadinessStatus;
+  message: string;
+}
+
+export function getProviderForAgent(agent: Agent): CredentialProvider {
+  return AGENT_PROVIDER_MAP[agent];
+}
 
 export async function getOwnerCredential(
   projectId: number,
@@ -27,6 +50,34 @@ export async function getOwnerCredential(
       provider,
     },
   });
+}
+
+export async function getOwnerCredentialReadiness(
+  projectId: number,
+  agent: Agent
+): Promise<CredentialReadinessResult> {
+  const provider = getProviderForAgent(agent);
+  const credential = await getOwnerCredential(projectId, provider);
+
+  if (!credential) {
+    return {
+      provider,
+      ready: false,
+      readinessStatus: 'MISSING',
+      message: getMissingCredentialError(provider),
+    };
+  }
+
+  return {
+    provider,
+    ready: credential.readinessStatus === 'READY',
+    readinessStatus: credential.readinessStatus,
+    message:
+      credential.readinessStatus === 'READY'
+        ? `${provider === 'OPENAI' ? 'OpenAI' : 'Anthropic'} credential is ready.`
+        : credential.verificationMessage ||
+          `The ${provider === 'OPENAI' ? 'OpenAI' : 'Anthropic'} credential needs attention before setup can start.`,
+  };
 }
 
 export async function updateOwnerCredential(

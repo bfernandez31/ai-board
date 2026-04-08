@@ -6,8 +6,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
-import { getProject, updateProject } from '@/lib/db/projects';
+import {
+  getProject,
+  getProjectWithSetupAccess,
+  updateProject,
+} from '@/lib/db/projects';
 import { projectUpdateSchema } from '@/app/lib/schemas/clarification-policy';
+import { serializeSetupAttempt } from '@/lib/project-setup/service';
+import { isSetupRequired } from '@/lib/project-setup/state';
 
 export async function GET(
   request: NextRequest,
@@ -26,9 +32,18 @@ export async function GET(
 
     // getProject now verifies userId ownership
     // Pass request for PAT authentication support
-    const project = await getProject(projectId, request);
+    const [project, projectWithSetup] = await Promise.all([
+      getProject(projectId, request),
+      getProjectWithSetupAccess(projectId, request),
+    ]);
 
-    return NextResponse.json(project);
+    const latestAttempt = projectWithSetup.setupAttempts[0] ?? null;
+
+    return NextResponse.json({
+      ...project,
+      setupRequired: isSetupRequired(projectWithSetup),
+      latestSetupAttempt: serializeSetupAttempt(latestAttempt),
+    });
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
