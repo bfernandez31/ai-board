@@ -259,4 +259,72 @@ describe('Project Setup API', () => {
       expect(response.status).toBe(201);
     });
   });
+
+  describe('Auth edge cases', () => {
+    it('POST rejects non-owner with 403', async () => {
+      // Create a member user who is not the owner
+      const memberEmail = `member-setup@project${ctx.projectId}.e2e.test`;
+      const member = await prisma.user.upsert({
+        where: { email: memberEmail },
+        update: {},
+        create: {
+          id: `member-setup-${ctx.projectId}`,
+          email: memberEmail,
+          name: 'Setup Member',
+          updatedAt: new Date(),
+        },
+      });
+
+      await prisma.projectMember.upsert({
+        where: { projectId_userId: { projectId: ctx.projectId, userId: member.id } },
+        update: {},
+        create: { projectId: ctx.projectId, userId: member.id, role: 'member' },
+      });
+
+      const memberClient = createAPIClient({ testUserId: member.id });
+      const response = await memberClient.post(`/api/projects/${ctx.projectId}/setup`, {
+        agent: 'CLAUDE',
+      });
+
+      expect(response.status).toBe(403);
+    });
+
+    it('PATCH rejects unauthorized callback with 401', async () => {
+      const job = await prisma.projectSetupJob.create({
+        data: { projectId: ctx.projectId, agent: 'CLAUDE', status: 'PENDING' },
+      });
+
+      // No auth header at all
+      const noAuthClient = createAPIClient({
+        includeTestUserHeader: false,
+        enableTestAuthOverride: false,
+      });
+      const response = await noAuthClient.patch(
+        `/api/projects/${ctx.projectId}/setup/status`,
+        { jobId: job.id, status: 'RUNNING' }
+      );
+
+      expect(response.status).toBe(401);
+    });
+
+    it('GET returns 403 for non-member', async () => {
+      // Create a user who exists but is NOT a member of this project
+      const strangerEmail = `stranger-setup@project${ctx.projectId}.e2e.test`;
+      const stranger = await prisma.user.upsert({
+        where: { email: strangerEmail },
+        update: {},
+        create: {
+          id: `stranger-setup-${ctx.projectId}`,
+          email: strangerEmail,
+          name: 'Stranger',
+          updatedAt: new Date(),
+        },
+      });
+
+      const strangerClient = createAPIClient({ testUserId: stranger.id });
+      const response = await strangerClient.get(`/api/projects/${ctx.projectId}/setup`);
+
+      expect(response.status).toBe(403);
+    });
+  });
 });

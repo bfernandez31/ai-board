@@ -162,8 +162,8 @@
 
 **Purpose**: Auth edge cases, validation hardening, and status callback security
 
-- [ ] T026 [P] Add integration tests for auth edge cases in `tests/integration/projects/setup.test.ts`: POST rejects non-owner with 403, PATCH rejects unauthorized callback (401), PATCH rejects invalid status transition (400), GET returns 403 for non-member
-- [ ] T027 Add Zod validation schemas to both setup route handlers for request body validation (POST: `{ agent: z.enum(['CLAUDE', 'CODEX']) }`, PATCH: `{ jobId: z.number(), status: z.enum([...]), logs: z.string().optional(), artifactSummary: z.unknown().optional() }`)
+- [x] T026 [P] Add integration tests for auth edge cases in `tests/integration/projects/setup.test.ts`: POST rejects non-owner with 403, PATCH rejects unauthorized callback (401), PATCH rejects invalid status transition (400), GET returns 403 for non-member
+- [x] T027 Add Zod validation schemas to both setup route handlers for request body validation (POST: `{ agent: z.enum(['CLAUDE', 'CODEX']) }`, PATCH: `{ jobId: z.number(), status: z.enum([...]), logs: z.string().optional(), artifactSummary: z.unknown().optional() }`)
 
 ---
 
