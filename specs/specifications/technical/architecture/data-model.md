@@ -89,6 +89,7 @@ model Project {
   comparisonRecords    ComparisonRecord[]
   healthScans          HealthScan[]
   healthScore          HealthScore?
+  setupJobs            ProjectSetupJob[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -121,7 +122,7 @@ model Project {
 
 **Relationships**:
 - Belongs to User (required, cascade delete)
-- One-to-many: Tickets, ProjectMembers, ComparisonRecords, HealthScans
+- One-to-many: Tickets, ProjectMembers, ComparisonRecords, HealthScans, ProjectSetupJobs
 - One-to-one (optional): HealthScore
 
 **Constraints**:
@@ -1048,6 +1049,60 @@ Equal weighting with proportional redistribution when modules are unscanned or S
 
 ---
 
+### ProjectSetupJob
+
+Represents a single onboarding attempt for a project. Multiple records per project form a retry history; the most recent active job determines the project's setup state.
+
+```prisma
+model ProjectSetupJob {
+  id              Int             @id @default(autoincrement())
+  projectId       Int
+  agent           Agent
+  status          SetupJobStatus  @default(PENDING)
+  workflowRunId   BigInt?
+  errorMessage    String?         @db.VarChar(2000)
+  artifactSummary Json?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([projectId, createdAt(sort: Desc)])
+}
+```
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `projectId`: Parent project (required, cascade delete)
+- `agent`: Selected agent CLI for this onboarding attempt (`CLAUDE` or `CODEX`)
+- `status`: Current job state (default: `PENDING`)
+- `workflowRunId`: GitHub Actions workflow run ID (set on first RUNNING callback)
+- `errorMessage`: Error details persisted on failure (max 2000 chars)
+- `artifactSummary`: JSON summary of files created by workflow (empty for stub; populated by real workflow)
+- `startedAt`: Set when status transitions to `RUNNING`
+- `completedAt`: Set when status transitions to any terminal state
+- `createdAt`: Record creation time
+- `updatedAt`: Last modification time
+
+**Relationships**:
+- Belongs to Project (required, cascade delete)
+
+**Constraints**:
+- Composite index on `(projectId, status)` for fast active-job lookups
+- Composite index on `(projectId, createdAt DESC)` for fast latest-job queries
+
+**Business Rules**:
+- Only one job with PENDING or RUNNING status is permitted per project at a time
+- Projects with `configSyncedAt` set cannot have new setup jobs created
+- `agent` determines which credential provider is required (`CLAUDE` → `ANTHROPIC`, `CODEX` → `OPENAI`)
+- On COMPLETED, `syncProjectConfig()` runs automatically (non-blocking) to set `configSyncedAt`
+- If config sync fails after COMPLETED, the job remains COMPLETED but `configSyncedAt` stays null — the setup page remains visible and the user can retry
+
+---
+
 ## Enums
 
 ### CredentialProvider
@@ -1133,6 +1188,30 @@ enum HealthScanStatus {
 | COMPLETED | Scan finished with results | Terminal |
 | FAILED | Scan encountered an error | Terminal |
 | SKIPPED | Agent detected nothing to evaluate; null score | Terminal |
+
+---
+
+### SetupJobStatus
+
+Lifecycle states for a `ProjectSetupJob`.
+
+```prisma
+enum SetupJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+```
+
+| Value | Description | Terminal? | Transitions To |
+|-------|-------------|-----------|----------------|
+| PENDING | Job created, workflow dispatch initiated | No | RUNNING |
+| RUNNING | Workflow reported start | No | COMPLETED, FAILED |
+| COMPLETED | Workflow reported success; config sync triggered | Yes | COMPLETED (idempotent) |
+| FAILED | Workflow reported failure; error persisted | Yes | FAILED (idempotent) |
+
+`CANCELLED` is omitted — setup jobs have no cancellation UX; a stalled job can be resolved by retrying (creating a new job).
 
 ---
 

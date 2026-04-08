@@ -503,6 +503,53 @@ The repo picker lists the user's GitHub repositories (personal and organizationa
 - Admin rights on the target repository are required at import time
 - Subscription-based project quota applies to imported projects equally
 
+## Project Onboarding Setup
+
+### Overview
+
+When a project is imported without a `.ai-board/config.yml` file, the system directs the project owner through an onboarding setup flow before the project board becomes accessible. The setup flow configures the project's agent and creates the necessary configuration files via a one-time onboarding workflow.
+
+### Setup Page Access
+
+- The setup page is accessible only to the project owner at `/projects/{projectId}/setup`
+- Non-owners attempting to access the setup page receive an access denied error
+- Projects with `configSyncedAt` already set bypass setup entirely — the setup URL redirects to the project board
+- The board page redirects unconfigured projects (null `configSyncedAt`) to the setup page
+
+### Setup Flow
+
+1. **Agent Selection**: The owner selects which AI agent CLI to use — Claude Code (Anthropic) or Codex (OpenAI)
+2. **Credential Check**: The system verifies the owner has a valid stored credential for the selected agent's provider. If the credential is missing, the initialize button is disabled and actionable guidance is displayed linking to the credentials settings page
+3. **Initialize**: The owner clicks "Initialize Project" to create a setup job and dispatch the onboarding workflow
+4. **Progress Tracking**: The page polls every 2 seconds and displays the current job state (pending spinner, running progress, or failed error with retry)
+5. **Completion**: When the workflow completes, config sync runs automatically. Once `configSyncedAt` is set, the page redirects to the project board
+
+### Job State and Retry
+
+Each setup attempt creates a `ProjectSetupJob` record that tracks:
+- Selected agent, current status, workflow run identifier
+- Start and completion timestamps
+- Error details (on failure)
+- Artifact summary (files created — empty for stub workflow, populated by future workflow)
+
+When the workflow fails, the setup page displays the error message and offers a "Retry" button. Retrying creates a fresh job and dispatches a new workflow run, preserving the history of previous attempts.
+
+### Guards and Constraints
+
+- Only one setup job can be active (PENDING or RUNNING) per project at a time — duplicate dispatches are rejected
+- Projects already configured (non-null `configSyncedAt`) cannot dispatch new setup jobs
+- Page refreshes during a running job correctly resume showing the active state via polling
+
+### Error States
+
+| Scenario | Behavior |
+|----------|----------|
+| Missing credential for selected agent | Initialize button disabled; guidance shown |
+| Active job already running | Duplicate dispatch blocked (409 response) |
+| Project already configured | Dispatch blocked; page redirects to board |
+| Workflow failure | Error displayed with retry option |
+| Config sync failure after COMPLETED | Project stays on setup page; retry resolves |
+
 ## External Repository Support
 
 ### Multi-Repository Architecture

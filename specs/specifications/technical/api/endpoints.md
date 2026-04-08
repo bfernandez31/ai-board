@@ -309,6 +309,158 @@ Import a GitHub repository as a new ai-board project.
 - `409` (other conflict): `{ "error": "A conflict occurred while creating the project. Please try again.", "code": "CONFLICT" }`
 - `502`: GitHub API error
 
+## Project Setup Endpoints
+
+Endpoints for the project onboarding setup flow. All session-authenticated endpoints require project ownership (not just membership). The status callback endpoint uses workflow Bearer token authentication.
+
+### POST /api/projects/:projectId/setup/jobs
+
+Create a setup job and dispatch the onboarding workflow.
+
+**Authentication**: Session (owner-only)
+**Authorization**: `verifyProjectOwnership`
+
+**Request Body**:
+```json
+{ "agent": "CLAUDE" }
+```
+
+| Field | Type | Required |
+|-------|------|----------|
+| `agent` | `"CLAUDE"` \| `"CODEX"` | Yes |
+
+**Pre-flight checks** (in order): project ownership, not already configured (`configSyncedAt` null), no active job (PENDING/RUNNING), credential exists for selected agent's provider.
+
+**Response** (201 Created):
+```json
+{
+  "id": 1,
+  "projectId": 5,
+  "agent": "CLAUDE",
+  "status": "PENDING",
+  "createdAt": "2026-04-08T12:00:00.000Z"
+}
+```
+
+**Errors**:
+- `400`: `VALIDATION_ERROR` — invalid body
+- `401`: Not authenticated
+- `403`: `FORBIDDEN` — not project owner
+- `404`: `PROJECT_NOT_FOUND`
+- `409`: `ALREADY_CONFIGURED` — `configSyncedAt` is set
+- `409`: `JOB_ACTIVE` — a job is PENDING or RUNNING
+- `409`: `CREDENTIAL_MISSING` — owner lacks credential for the agent's provider
+- `500`: `DISPATCH_FAILED` — workflow dispatch failed (job marked FAILED)
+
+---
+
+### GET /api/projects/:projectId/setup/jobs
+
+Fetch the latest setup job for polling and page load.
+
+**Authentication**: Session (owner-only)
+**Authorization**: `verifyProjectOwnership`
+
+**Response** (200 OK):
+```json
+{
+  "job": {
+    "id": 1,
+    "projectId": 5,
+    "agent": "CLAUDE",
+    "status": "RUNNING",
+    "workflowRunId": 12345678,
+    "errorMessage": null,
+    "artifactSummary": null,
+    "startedAt": "2026-04-08T12:00:05.000Z",
+    "completedAt": null,
+    "createdAt": "2026-04-08T12:00:00.000Z"
+  },
+  "configSyncedAt": null
+}
+```
+
+When no job exists: `{ "job": null, "configSyncedAt": null }`.
+
+**Errors**: `401`, `403` (not owner), `404` (project not found)
+
+---
+
+### PATCH /api/projects/:projectId/setup/jobs/:jobId/status
+
+Update setup job status from the onboarding workflow.
+
+**Authentication**: Workflow Bearer token (`Authorization: Bearer <WORKFLOW_API_TOKEN>`)
+
+**Request Body**:
+```json
+{
+  "status": "RUNNING",
+  "workflowRunId": 12345678,
+  "errorMessage": null,
+  "artifactSummary": null
+}
+```
+
+| Field | Type | Required |
+|-------|------|----------|
+| `status` | `"RUNNING"` \| `"COMPLETED"` \| `"FAILED"` | Yes |
+| `workflowRunId` | integer | No |
+| `errorMessage` | string (max 2000) | No |
+| `artifactSummary` | object | No |
+
+**State transitions**:
+
+| From | Allowed To |
+|------|-----------|
+| PENDING | RUNNING |
+| RUNNING | COMPLETED, FAILED |
+| COMPLETED | COMPLETED (idempotent) |
+| FAILED | FAILED (idempotent) |
+
+**Side effects**:
+- `RUNNING`: sets `startedAt` and `workflowRunId` (first-write-wins)
+- `COMPLETED`: sets `completedAt`, triggers `syncProjectConfig()` (non-blocking)
+- `FAILED`: sets `completedAt`, persists `errorMessage`
+
+**Response** (200 OK):
+```json
+{ "id": 1, "status": "COMPLETED", "completedAt": "2026-04-08T12:01:30.000Z" }
+```
+
+**Errors**: `400` (`VALIDATION_ERROR` or `INVALID_TRANSITION`), `401` (invalid token), `404` (job/project not found)
+
+---
+
+### GET /api/projects/:projectId/setup/credential-check
+
+Check whether the project owner has a valid credential for a given agent's provider.
+
+**Authentication**: Session (owner-only)
+**Authorization**: `verifyProjectOwnership`
+
+**Query Parameters**:
+
+| Param | Type | Required |
+|-------|------|----------|
+| `agent` | `"CLAUDE"` \| `"CODEX"` | Yes |
+
+**Agent-to-provider mapping**: `CLAUDE` → `ANTHROPIC`, `CODEX` → `OPENAI`
+
+**Response** (200 OK — credential present):
+```json
+{ "hasCredential": true, "provider": "ANTHROPIC" }
+```
+
+**Response** (200 OK — credential missing):
+```json
+{ "hasCredential": false, "provider": "ANTHROPIC", "settingsUrl": "/settings/credentials" }
+```
+
+**Errors**: `400` (`VALIDATION_ERROR` — missing/invalid `agent`), `401`, `403` (not owner)
+
+---
+
 ## GitHub Endpoints
 
 ### GET /api/github/auth-status
