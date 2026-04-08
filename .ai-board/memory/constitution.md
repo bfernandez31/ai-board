@@ -56,6 +56,7 @@ Security is not an afterthought. Input validation, secure database queries, and 
 - All secrets in environment variables, never committed to git
 - `.env` and `.env.local` files in `.gitignore` at all times
 - Authentication middleware on protected routes (NextAuth.js when implemented)
+- Code review MUST verify that auth tokens, secrets, and credentials are never exposed in client bundles or logged, and that all protected endpoints enforce authorization
 
 ### V. Database Integrity
 All database changes go through Prisma migrations. Transactions protect multi-step operations. Soft deletes preserve audit trails.
@@ -130,4 +131,4 @@ Auto-resolved specification decisions MUST preserve quality while avoiding unnec
 - Agent instruction files MUST NOT contradict constitution principles
 - Agent instruction files provide tactical guidance; constitution provides strategic rules
 
-**Version**: 1.7.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2026-04-03
+**Version**: 1.8.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2026-04-08
