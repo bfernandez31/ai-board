@@ -301,8 +301,11 @@ detect_framework() {
       fi
       if [[ -f "$REPO_DIR/build.gradle" ]] || [[ -f "$REPO_DIR/build.gradle.kts" ]]; then
         local gradle_file=""
-        [[ -f "$REPO_DIR/build.gradle.kts" ]] && gradle_file="$REPO_DIR/build.gradle.kts"
-        [[ -f "$REPO_DIR/build.gradle" ]] && gradle_file="$REPO_DIR/build.gradle"
+        if [[ -f "$REPO_DIR/build.gradle.kts" ]]; then
+          gradle_file="$REPO_DIR/build.gradle.kts"
+        elif [[ -f "$REPO_DIR/build.gradle" ]]; then
+          gradle_file="$REPO_DIR/build.gradle"
+        fi
         if [[ -n "$gradle_file" ]]; then
           if grep -q "spring-boot" "$gradle_file" 2>/dev/null; then
             FRAMEWORK="spring-boot"
@@ -467,10 +470,10 @@ detect_commands() {
 
   # package.json scripts
   if [[ -f "$REPO_DIR/package.json" ]]; then
-    local scripts
-    scripts=$(jq -r '.scripts // {} | to_entries[] | "\(.key)=\(.value)"' "$REPO_DIR/package.json" 2>/dev/null || true)
-    if [[ -n "$scripts" ]]; then
-      cmds=$(jq -r '.scripts // {}' "$REPO_DIR/package.json" 2>/dev/null || echo "{}")
+    local pkg_scripts
+    pkg_scripts=$(jq -r '.scripts // {}' "$REPO_DIR/package.json" 2>/dev/null || echo "{}")
+    if [[ "$pkg_scripts" != "{}" ]]; then
+      cmds="$pkg_scripts"
     fi
   fi
 

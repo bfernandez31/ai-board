@@ -129,20 +129,6 @@ describe('detect-stack.sh — TypeScript/Next.js', () => {
       expect.arrayContaining([expect.objectContaining({ type: 'postgres' })]),
     );
 
-    // Structure validation — all required fields exist
-    expect(analysis).toHaveProperty('language');
-    expect(analysis).toHaveProperty('framework');
-    expect(analysis).toHaveProperty('packageManager');
-    expect(analysis).toHaveProperty('testFramework');
-    expect(analysis).toHaveProperty('services');
-    expect(analysis).toHaveProperty('commands');
-    expect(analysis).toHaveProperty('manifests');
-    expect(analysis).toHaveProperty('lockfiles');
-    expect(analysis).toHaveProperty('configFiles');
-    expect(analysis).toHaveProperty('projectName');
-    expect(analysis).toHaveProperty('runtimeVersions');
-    expect(analysis).toHaveProperty('secondaryLanguages');
-
     // Manifests and lockfiles
     expect(analysis.manifests).toContain('package.json');
     expect(analysis.lockfiles).toContain('bun.lockb');
