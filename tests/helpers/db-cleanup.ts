@@ -166,76 +166,26 @@ export async function ensureTestFixtures(): Promise<string> {
 export async function cleanupDatabase(projectId?: number): Promise<void> {
   const client = getPrismaClient();
 
-  try {
-    // If projectId specified, only clean that project (worker-specific cleanup)
-    // Otherwise clean all worker test projects (1, 2, 4, 5, 6, 7) - SKIP project 3 (dev)
+  // Worker project filter: targets a single project or all worker projects (skip project 3 = dev)
+  const workerProjectIds = [1, 2, 4, 5, 6, 7];
+  const projectFilter = projectId
+    ? { projectId }
+    : { projectId: { in: workerProjectIds } };
 
+  try {
     // Delete notifications first (foreign key to tickets)
     await client.notification.deleteMany({
       where: projectId
         ? { ticket: { projectId } }
-        : {
-            ticket: {
-              projectId: {
-                in: [1, 2, 4, 5, 6, 7],
-              },
-            },
-          },
+        : { ticket: { projectId: { in: workerProjectIds } } },
     });
 
-    // Delete health data (foreign key to projects)
-    // Delete setup jobs (foreign key to projects)
-    await client.setupJob.deleteMany({
-      where: projectId
-        ? { projectId }
-        : {
-            projectId: {
-              in: [1, 2, 4, 5, 6, 7],
-            },
-          },
-    });
-
-    await client.healthScan.deleteMany({
-      where: projectId
-        ? { projectId }
-        : {
-            projectId: {
-              in: [1, 2, 4, 5, 6, 7],
-            },
-          },
-    });
-
-    await client.healthScore.deleteMany({
-      where: projectId
-        ? { projectId }
-        : {
-            projectId: {
-              in: [1, 2, 4, 5, 6, 7],
-            },
-          },
-    });
-
-    await client.ticket.deleteMany({
-      where: projectId
-        ? { projectId }
-        : {
-            projectId: {
-              in: [1, 2, 4, 5, 6, 7],
-            },
-          },
-    });
-
-    // Delete all ProjectMembers from worker test projects (or specific project if provided)
-    // Will be recreated in test beforeEach hooks
-    await client.projectMember.deleteMany({
-      where: projectId
-        ? { projectId }
-        : {
-            projectId: {
-              in: [1, 2, 4, 5, 6, 7],
-            },
-          },
-    });
+    // Delete setup jobs, health data, tickets, and project members
+    await client.setupJob.deleteMany({ where: projectFilter });
+    await client.healthScan.deleteMany({ where: projectFilter });
+    await client.healthScore.deleteMany({ where: projectFilter });
+    await client.ticket.deleteMany({ where: projectFilter });
+    await client.projectMember.deleteMany({ where: projectFilter });
 
     // Delete all accounts before deleting users (foreign key constraint)
     // Only delete accounts for users that will be deleted (safer deletion strategy)
@@ -326,25 +276,10 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
 
     // Delete project-specific test users (pattern: @project{N}.e2e.test)
     // Only delete for the specific project being cleaned to avoid race conditions
-    if (projectId) {
+    for (const pid of (projectId ? [projectId] : workerProjectIds)) {
       await client.user.deleteMany({
-        where: {
-          email: {
-            endsWith: `@project${projectId}.e2e.test`,
-          },
-        },
+        where: { email: { endsWith: `@project${pid}.e2e.test` } },
       });
-    } else {
-      // Clean all worker project users when no specific project
-      for (const pid of [1, 2, 4, 5, 6, 7]) {
-        await client.user.deleteMany({
-          where: {
-            email: {
-              endsWith: `@project${pid}.e2e.test`,
-            },
-          },
-        });
-      }
     }
 
     // Delete [e2e] tickets from projects 8+ (non-worker test projects)
@@ -390,21 +325,13 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
 
     // Reset test project policies to AUTO for test isolation
     await client.project.updateMany({
-      where: projectId
-        ? { id: projectId }
-        : {
-            id: {
-              in: [1, 2, 4, 5, 6, 7],
-            },
-          },
-      data: {
-        clarificationPolicy: 'AUTO',
-      },
+      where: projectId ? { id: projectId } : { id: { in: workerProjectIds } },
+      data: { clarificationPolicy: 'AUTO' },
     });
 
     // Reset ticket number sequences for worker projects (or specific project if provided)
     // This prevents unique constraint violations on (projectId, ticketNumber)
-    const projectsToReset = projectId ? [projectId] : [1, 2, 4, 5, 6, 7];
+    const projectsToReset = projectId ? [projectId] : workerProjectIds;
     for (const pid of projectsToReset) {
       await client.$executeRawUnsafe(`
         DROP SEQUENCE IF EXISTS project_${pid}_ticket_seq CASCADE;

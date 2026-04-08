@@ -73,14 +73,13 @@ export function SetupWizard({ projectId }: SetupWizardProps) {
       return;
     }
 
+    setSelectedAgent(job.selectedAgent as AgentOption);
+
     if (job.status === 'PENDING' || job.status === 'RUNNING') {
-      setSelectedAgent(job.selectedAgent as AgentOption);
       setWizardState('polling');
     } else if (job.status === 'COMPLETED') {
-      setSelectedAgent(job.selectedAgent as AgentOption);
       setWizardState('completed');
     } else if (job.status === 'FAILED') {
-      setSelectedAgent(job.selectedAgent as AgentOption);
       setWizardState('failed');
     }
   }, [wizardState, statusData, checkCredential]);
@@ -103,7 +102,7 @@ export function SetupWizard({ projectId }: SetupWizardProps) {
     checkCredential(agent);
   }, [checkCredential]);
 
-  const handleDispatch = useCallback(async () => {
+  const dispatchSetup = useCallback(async (fallbackState: WizardState) => {
     setWizardState('dispatching');
     setDispatchError(undefined);
 
@@ -117,41 +116,19 @@ export function SetupWizard({ projectId }: SetupWizardProps) {
       if (!res.ok) {
         const data = await res.json();
         setDispatchError(data.error || 'Failed to start setup');
-        setWizardState('ready');
+        setWizardState(fallbackState);
         return;
       }
 
       setWizardState('polling');
     } catch {
       setDispatchError('Network error. Please try again.');
-      setWizardState('ready');
+      setWizardState(fallbackState);
     }
   }, [projectId, selectedAgent]);
 
-  const handleRetry = useCallback(async () => {
-    setWizardState('dispatching');
-    setDispatchError(undefined);
-
-    try {
-      const res = await fetch(`/api/projects/${projectId}/setup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent: selectedAgent }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setDispatchError(data.error || 'Failed to retry setup');
-        setWizardState('failed');
-        return;
-      }
-
-      setWizardState('polling');
-    } catch {
-      setDispatchError('Network error. Please try again.');
-      setWizardState('failed');
-    }
-  }, [projectId, selectedAgent]);
+  const handleDispatch = useCallback(() => dispatchSetup('ready'), [dispatchSetup]);
+  const handleRetry = useCallback(() => dispatchSetup('failed'), [dispatchSetup]);
 
   const handleGoToBoard = useCallback(() => {
     router.push(`/projects/${projectId}/board`);

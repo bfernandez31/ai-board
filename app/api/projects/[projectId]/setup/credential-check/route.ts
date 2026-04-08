@@ -35,7 +35,7 @@ export async function GET(
     const provider = AGENT_PROVIDER_MAP[agent];
     const credential = await getOwnerCredential(projectId, provider);
 
-    if (credential && credential.readinessStatus === 'READY') {
+    if (credential?.readinessStatus === 'READY') {
       return NextResponse.json({
         available: true,
         provider,
