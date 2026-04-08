@@ -30,10 +30,10 @@
 
 **CRITICAL**: No user story UI work can begin until this phase is complete
 
-- [ ] T004 Create `app/api/projects/[projectId]/setup/route.ts` with GET handler: derive setup state from latest `ProjectSetupJob` + `configSyncedAt`, return response per contracts/api-endpoints.md, auth via `verifyProjectAccess()`
-- [ ] T005 Add POST handler in `app/api/projects/[projectId]/setup/route.ts`: validate owner-only via `verifyProjectOwnership()`, check no active job (409), check not already configured (409), verify credential via `getOwnerCredential()`, create `ProjectSetupJob`, dispatch workflow via Octokit (skip in test mode via `isWorkflowTestMode()`), return 201
-- [ ] T006 Create `app/api/projects/[projectId]/setup/status/route.ts` with PATCH handler: authenticate via `validateWorkflowAuth()`, validate status transition via `canTransition()` from `app/lib/job-state-machine.ts`, update job record, set `completedAt` on terminal states, call `syncProjectConfig()` on COMPLETED, persist `logs` on FAILED
-- [ ] T007 Create `app/lib/hooks/useSetupPolling.ts`: TanStack Query hook that polls GET `/api/projects/{projectId}/setup` at 2s interval, auto-stops on CONFIGURED or terminal job state, returns `{ setupState, latestJob, isPolling }`
+- [x] T004 Create `app/api/projects/[projectId]/setup/route.ts` with GET handler: derive setup state from latest `ProjectSetupJob` + `configSyncedAt`, return response per contracts/api-endpoints.md, auth via `verifyProjectAccess()`
+- [x] T005 Add POST handler in `app/api/projects/[projectId]/setup/route.ts`: validate owner-only via `verifyProjectOwnership()`, check no active job (409), check not already configured (409), verify credential via `getOwnerCredential()`, create `ProjectSetupJob`, dispatch workflow via Octokit (skip in test mode via `isWorkflowTestMode()`), return 201
+- [x] T006 Create `app/api/projects/[projectId]/setup/status/route.ts` with PATCH handler: authenticate via `validateWorkflowAuth()`, validate status transition via `canTransition()` from `app/lib/job-state-machine.ts`, update job record, set `completedAt` on terminal states, call `syncProjectConfig()` on COMPLETED, persist `logs` on FAILED
+- [x] T007 Create `app/lib/hooks/useSetupPolling.ts`: TanStack Query hook that polls GET `/api/projects/{projectId}/setup` at 2s interval, auto-stops on CONFIGURED or terminal job state, returns `{ setupState, latestJob, isPolling }`
 
 ---
 
