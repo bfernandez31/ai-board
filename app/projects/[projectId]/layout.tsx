@@ -1,15 +1,18 @@
+import type { ReactNode } from 'react';
 import { notFound, redirect } from 'next/navigation';
+import { ProjectLayoutShell } from '@/components/projects/project-layout-shell';
 import { requireAuth } from '@/lib/db/users';
 import { resolveProjectSetupAccess } from '@/lib/onboarding/access';
-import { ProjectLayoutShell } from '@/components/projects/project-layout-shell';
+
+type ProjectLayoutProps = {
+  params: Promise<{ projectId: string }>;
+  children: ReactNode;
+};
 
 export default async function ProjectLayout({
   params,
   children,
-}: {
-  params: Promise<{ projectId: string }>;
-  children: React.ReactNode;
-}) {
+}: ProjectLayoutProps): Promise<React.JSX.Element> {
   const userId = await requireAuth();
   const { projectId: projectIdValue } = await params;
   const projectId = Number(projectIdValue);

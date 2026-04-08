@@ -8,35 +8,45 @@ import type {
   ProjectSetupJob,
   ProjectSetupJobStatus,
 } from '@prisma/client';
+import { syncProjectConfig } from '@/lib/config-sync';
 import { prisma } from '@/lib/db/client';
 import { getGitHubAccessToken } from '@/lib/github/user-client';
 import { getCredentialProviderForAgent, getOwnerCredential } from '@/lib/ai-credentials/workflow';
+import { dispatchProjectOnboardingWorkflow } from '@/lib/onboarding/workflow';
 import {
   type ProjectSetupStateDto,
   type ProjectSetupStatusDto,
   type SetupAgentReadiness,
   mapSetupJobToStatusDto,
 } from './types';
-import { syncProjectConfig } from '@/lib/config-sync';
-import { dispatchProjectOnboardingWorkflow } from '@/lib/onboarding/workflow';
+
+const SETUP_AGENTS = ['CLAUDE', 'CODEX'] as const satisfies readonly Agent[];
+const ACTIVE_SETUP_JOB_STATUSES = ['PENDING', 'RUNNING'] as const satisfies readonly ProjectSetupJobStatus[];
+const ALLOWED_SETUP_JOB_TRANSITIONS: Record<ProjectSetupJobStatus, ProjectSetupJobStatus[]> = {
+  PENDING: ['PENDING', 'RUNNING', 'FAILED', 'CANCELLED'],
+  RUNNING: ['RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED'],
+  COMPLETED: ['COMPLETED'],
+  FAILED: ['FAILED'],
+  CANCELLED: ['CANCELLED'],
+};
 
 function isTerminalStatus(status: ProjectSetupJobStatus): boolean {
   return status === 'COMPLETED' || status === 'FAILED' || status === 'CANCELLED';
 }
 
+function isSetupRequired(project: Pick<SetupProjectRef, 'config' | 'configSyncedAt'>): boolean {
+  return project.config == null || project.configSyncedAt == null;
+}
+
+function getProviderDisplayName(agent: Agent): string {
+  return getCredentialProviderForAgent(agent) === 'OPENAI' ? 'OpenAI' : 'Anthropic';
+}
+
 function assertAllowedTransition(
   currentStatus: ProjectSetupJobStatus,
   nextStatus: ProjectSetupJobStatus
-) {
-  const allowed: Record<ProjectSetupJobStatus, ProjectSetupJobStatus[]> = {
-    PENDING: ['PENDING', 'RUNNING', 'FAILED', 'CANCELLED'],
-    RUNNING: ['RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED'],
-    COMPLETED: ['COMPLETED'],
-    FAILED: ['FAILED'],
-    CANCELLED: ['CANCELLED'],
-  };
-
-  if (!allowed[currentStatus].includes(nextStatus)) {
+): void {
+  if (!ALLOWED_SETUP_JOB_TRANSITIONS[currentStatus].includes(nextStatus)) {
     const error = new Error(
       `Invalid setup job transition from ${currentStatus} to ${nextStatus}`
     );
@@ -46,10 +56,8 @@ function assertAllowedTransition(
 }
 
 export async function getSetupAgentReadiness(projectId: number): Promise<SetupAgentReadiness[]> {
-  const agents = (['CLAUDE', 'CODEX'] as const) satisfies readonly Agent[];
-
   const readinessEntries = await Promise.all(
-    agents.map(async (agent) => {
+    SETUP_AGENTS.map(async (agent) => {
       const provider = getCredentialProviderForAgent(agent);
       const credential = await getOwnerCredential(projectId, provider);
 
@@ -98,7 +106,7 @@ export async function getProjectSetupState(
   }
 
   const latestJob = project.setupJobs[0] ?? null;
-  const requiresSetup = project.config == null || project.configSyncedAt == null;
+  const requiresSetup = isSetupRequired(project);
 
   return {
     projectId: project.id,
@@ -134,7 +142,7 @@ export async function startProjectSetup(
     throw new Error('Project not found');
   }
 
-  if (project.config != null && project.configSyncedAt != null) {
+  if (!isSetupRequired(project)) {
     const error = new Error('Project setup is no longer required');
     error.name = 'SetupNotRequired';
     throw error;
@@ -143,10 +151,9 @@ export async function startProjectSetup(
   const readiness = await getSetupAgentReadiness(projectId);
   const selectedReadiness = readiness.find((entry) => entry.agent === selectedAgent);
   if (!selectedReadiness?.ready) {
-    const providerLabel = selectedReadiness?.provider === 'OPENAI' ? 'OpenAI' : 'Anthropic';
     const error = new Error(
-      selectedReadiness?.verificationMessage ||
-        `${providerLabel} credential is not ready for ${selectedAgent} onboarding`
+      selectedReadiness?.verificationMessage
+        ?? `${getProviderDisplayName(selectedAgent)} credential is not ready for ${selectedAgent} onboarding`
     );
     error.name = 'CredentialNotReady';
     throw error;
@@ -155,7 +162,7 @@ export async function startProjectSetup(
   const activeJob = await prisma.projectSetupJob.findFirst({
     where: {
       projectId,
-      status: { in: ['PENDING', 'RUNNING'] },
+      status: { in: [...ACTIVE_SETUP_JOB_STATUSES] },
     },
     orderBy: { createdAt: 'desc' },
   });

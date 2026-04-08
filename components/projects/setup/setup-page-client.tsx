@@ -5,15 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, CheckCircle2, Loader2, Rocket } from 'lucide-react';
 import { queryKeys } from '@/app/lib/query-keys';
-import type {
-  OnboardingArtifactManifestEntry,
-  ProjectSetupStateDto,
-  ProjectSetupStatusDto,
-} from '@/lib/onboarding/types';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import type { OnboardingArtifactManifestEntry, ProjectSetupStateDto, ProjectSetupStatusDto } from '@/lib/onboarding/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -22,7 +18,83 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-function SetupArtifactList({ artifacts }: { artifacts: OnboardingArtifactManifestEntry[] }) {
+type SetupAgent = 'CLAUDE' | 'CODEX';
+
+type SetupArtifactListProps = {
+  artifacts: OnboardingArtifactManifestEntry[];
+};
+
+type SetupStatusCardProps = {
+  job: ProjectSetupStatusDto;
+};
+
+type ProjectSetupPageClientProps = {
+  projectId: number;
+  projectName: string;
+  repository: string;
+};
+
+function isActiveSetupJobStatus(status: ProjectSetupStatusDto['status']): boolean {
+  return status === 'PENDING' || status === 'RUNNING';
+}
+
+function isFailedSetupJobStatus(status: ProjectSetupStatusDto['status']): boolean {
+  return status === 'FAILED' || status === 'CANCELLED';
+}
+
+function getStartButtonLabel(job: ProjectSetupStatusDto | null): string {
+  if (!job) {
+    return 'Start onboarding';
+  }
+
+  if (isFailedSetupJobStatus(job.status)) {
+    return 'Retry onboarding';
+  }
+
+  return 'Start onboarding';
+}
+
+async function fetchSetupState(projectId: number): Promise<ProjectSetupStateDto> {
+  const response = await fetch(`/api/projects/${projectId}/setup`, {
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to load setup state');
+  }
+
+  return response.json();
+}
+
+async function fetchSetupStatus(projectId: number): Promise<ProjectSetupStatusDto | null> {
+  const response = await fetch(`/api/projects/${projectId}/setup/status`, {
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to load setup status');
+  }
+
+  const payload = await response.json();
+  return 'jobId' in payload ? payload : null;
+}
+
+async function startProjectSetup(projectId: number, selectedAgent: SetupAgent): Promise<unknown> {
+  const response = await fetch(`/api/projects/${projectId}/setup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ selectedAgent }),
+  });
+
+  const payload = await response.json();
+  if (!response.ok && response.status !== 409) {
+    throw new Error(payload.error || 'Failed to start setup');
+  }
+
+  return payload;
+}
+
+function SetupArtifactList({ artifacts }: SetupArtifactListProps): React.JSX.Element | null {
   if (artifacts.length === 0) return null;
 
   return (
@@ -40,9 +112,9 @@ function SetupArtifactList({ artifacts }: { artifacts: OnboardingArtifactManifes
   );
 }
 
-function SetupStatusCard({ job }: { job: ProjectSetupStatusDto }) {
-  const isActive = job.status === 'PENDING' || job.status === 'RUNNING';
-  const isFailure = job.status === 'FAILED' || job.status === 'CANCELLED';
+function SetupStatusCard({ job }: SetupStatusCardProps): React.JSX.Element {
+  const isActive = isActiveSetupJobStatus(job.status);
+  const isFailure = isFailedSetupJobStatus(job.status);
 
   return (
     <Card className="aurora-bg-subtle">
@@ -82,46 +154,25 @@ export function ProjectSetupPageClient({
   projectId,
   projectName,
   repository,
-}: {
-  projectId: number;
-  projectName: string;
-  repository: string;
-}) {
+}: ProjectSetupPageClientProps): React.JSX.Element {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [selectedAgentOverride, setSelectedAgentOverride] = useState<'CLAUDE' | 'CODEX' | null>(null);
+  const [selectedAgentOverride, setSelectedAgentOverride] = useState<SetupAgent | null>(null);
 
   const stateQuery = useQuery<ProjectSetupStateDto>({
     queryKey: queryKeys.projects.setup(projectId),
-    queryFn: async () => {
-      const response = await fetch(`/api/projects/${projectId}/setup`, {
-        cache: 'no-store',
-      });
-      if (!response.ok) {
-        throw new Error('Failed to load setup state');
-      }
-      return response.json();
-    },
+    queryFn: () => fetchSetupState(projectId),
     refetchOnWindowFocus: true,
   });
 
   const statusQuery = useQuery<ProjectSetupStatusDto | null>({
     queryKey: queryKeys.projects.setupStatus(projectId),
-    queryFn: async () => {
-      const response = await fetch(`/api/projects/${projectId}/setup/status`, {
-        cache: 'no-store',
-      });
-      if (!response.ok) {
-        throw new Error('Failed to load setup status');
-      }
-      const payload = await response.json();
-      return 'jobId' in payload ? payload : null;
-    },
-    enabled: !!stateQuery.data?.latestSetupJob,
+    queryFn: () => fetchSetupStatus(projectId),
+    enabled: Boolean(stateQuery.data?.latestSetupJob),
     refetchInterval: (query) => {
       const data = query.state.data;
       if (!data) return false;
-      return data.status === 'PENDING' || data.status === 'RUNNING' ? 2000 : false;
+      return isActiveSetupJobStatus(data.status) ? 2000 : false;
     },
   });
 
@@ -145,19 +196,7 @@ export function ProjectSetupPageClient({
     selectedAgentOverride ?? stateQuery.data?.selectedAgentDefault ?? 'CLAUDE';
 
   const startMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(`/api/projects/${projectId}/setup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selectedAgent }),
-      });
-
-      const payload = await response.json();
-      if (!response.ok && response.status !== 409) {
-        throw new Error(payload.error || 'Failed to start setup');
-      }
-      return payload;
-    },
+    mutationFn: () => startProjectSetup(projectId, selectedAgent),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.setup(projectId) });
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.setupStatus(projectId) });
@@ -183,7 +222,7 @@ export function ProjectSetupPageClient({
 
   const state = stateQuery.data;
   const readiness = state.eligibleAgents.find((entry) => entry.agent === selectedAgent);
-  const hasActiveJob = latestJob?.status === 'PENDING' || latestJob?.status === 'RUNNING';
+  const hasActiveJob = latestJob ? isActiveSetupJobStatus(latestJob.status) : false;
   const canStart = !startMutation.isPending && !!readiness?.ready && !hasActiveJob;
 
   return (
@@ -201,9 +240,7 @@ export function ProjectSetupPageClient({
             <label className="text-sm font-medium text-foreground">Agent</label>
             <Select
               value={selectedAgent}
-              onValueChange={(value) =>
-                setSelectedAgentOverride(value as 'CLAUDE' | 'CODEX')
-              }
+              onValueChange={(value) => setSelectedAgentOverride(value as SetupAgent)}
             >
               <SelectTrigger className="w-full sm:w-[220px]">
                 <SelectValue placeholder="Select agent" />
@@ -242,9 +279,7 @@ export function ProjectSetupPageClient({
             ) : (
               <>
                 <Rocket className="mr-2 h-4 w-4" />
-                {latestJob?.status === 'FAILED' || latestJob?.status === 'CANCELLED'
-                  ? 'Retry onboarding'
-                  : 'Start onboarding'}
+                {getStartButtonLabel(latestJob)}
               </>
             )}
           </Button>

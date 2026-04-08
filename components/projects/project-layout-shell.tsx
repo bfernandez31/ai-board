@@ -1,16 +1,19 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { IconRailSidebar } from '@/components/navigation/icon-rail-sidebar';
 import { CommandPalette } from '@/components/navigation/command-palette';
+import { IconRailSidebar } from '@/components/navigation/icon-rail-sidebar';
+
+type ProjectLayoutShellProps = {
+  projectId: number;
+  children: ReactNode;
+};
 
 export function ProjectLayoutShell({
   projectId,
   children,
-}: {
-  projectId: number;
-  children: React.ReactNode;
-}) {
+}: ProjectLayoutShellProps): React.JSX.Element {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   return (
