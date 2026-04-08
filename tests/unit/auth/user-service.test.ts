@@ -449,6 +449,7 @@ describe('UserService', () => {
       expect(capturedAccountUpdate.access_token).toBe('gho_newtoken999');
       expect(capturedAccountUpdate.refresh_token).toBe('ghr_newrefresh111');
       expect(capturedAccountUpdate.expires_at).toBe(9876543210);
+      expect(capturedAccountUpdate.scope).toBe('read:user user:email repo');
     });
   });
 });

@@ -73,6 +73,7 @@ export async function createOrUpdateUser(
         access_token: account.access_token ?? null,
         refresh_token: account.refresh_token ?? null,
         expires_at: account.expires_at ?? null,
+        scope: account.scope ?? null,
       },
       create: {
         id: crypto.randomUUID(),

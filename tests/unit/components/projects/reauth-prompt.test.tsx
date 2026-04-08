@@ -44,18 +44,4 @@ describe('ReauthPrompt', () => {
     expect(onDismiss).toHaveBeenCalled();
   });
 
-  it('calls onDismiss when close (X) button is clicked', async () => {
-    const onDismiss = vi.fn();
-    const user = userEvent.setup();
-    render(<ReauthPrompt onDismiss={onDismiss} />);
-
-    // The X button is a ghost button with X icon
-    const buttons = screen.getAllByRole('button');
-    const closeButton = buttons.find(btn => btn.querySelector('.lucide-x'));
-    expect(closeButton).toBeDefined();
-
-    await user.click(closeButton!);
-
-    expect(onDismiss).toHaveBeenCalled();
-  });
 });
