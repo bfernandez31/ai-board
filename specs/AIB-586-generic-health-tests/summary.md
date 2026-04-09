@@ -5,21 +5,22 @@
 
 ## Changes Summary
 
-Implemented generic TESTS health scan that works on any project via config.yml. Stack detection now auto-generates testing section (framework, e2e, type_check, lint commands). Generic runner supports 8 framework parsers (vitest, jest, pytest, cargo-test, go-test, rspec, phpunit, exit-code fallback). Orchestrator supports SKIPPED result for unconfigured projects, weighted scoring (granular and single-command modes), and fix loop with degradation guard. 27 new tests across 6 test files all passing.
+Replaced hardcoded vitest/Playwright TESTS health scan with config-driven generic system. Created generic test runner and orchestrator in `.claude-plugin/scripts/bash/` supporting 8 frameworks (vitest, jest, pytest, cargo-test, go-test, rspec, phpunit, exit-code fallback). Extended detect-stack.sh with test command, E2E, lint, and type-check auto-detection. Added SKIPPED support for unconfigured projects. Updated health-scan.yml workflow to use plugin scripts with config-driven Playwright install.
 
 ## Key Decisions
 
-Used bash -c subshell for test command isolation to prevent eval/exit leakage. Kept old scripts in scripts/ for backward compat during transition. Tests written as vitest TypeScript files (matching existing pattern in tests/unit/scripts/) rather than pure bash test scripts. Workflow file (.github/workflows/health-scan.yml) changes committed locally but require workflow token scope to push.
+Used `yq` for YAML parsing (available in CI). Placed scripts in `.claude-plugin/scripts/bash/` for cross-repo sparse checkout. Made `MAX_ITERATIONS` env-configurable for testing without LLM agent. Used exit-code fallback for unknown frameworks. Granular mode: weighted scoring (-1/-3/-5). Single-command: flat -2.
 
 ## Files Modified
 
-- `.github/scripts/detect-stack.sh` — added detect_test_commands(), detect_e2e_framework(), detect_lint_typecheck(), updated config/analysis output
-- `.claude-plugin/scripts/bash/run-tests-with-reports.sh` — new generic test runner
-- `.claude-plugin/scripts/bash/run-health-tests.sh` — new generic orchestrator
-- `.claude-plugin/commands/ai-board.health-tests-fix.md` — framework-aware report parsing
-- `.ai-board/config.yml` — added testing section
-- `tests/unit/scripts/*.test.ts` — 6 new test files (27 tests)
+- `.claude-plugin/scripts/bash/run-tests-with-reports.sh` (NEW — generic test runner, 535 lines)
+- `.claude-plugin/scripts/bash/run-health-tests.sh` (NEW — generic orchestrator, 430 lines)
+- `.github/scripts/detect-stack.sh` (3 new detection functions + config/analysis output)
+- `.github/workflows/health-scan.yml` (TESTS path, Playwright condition, SKIPPED support)
+- `.claude-plugin/commands/ai-board.health-tests-fix.md` (framework-aware parsing)
+- `.ai-board/config.yml` (added testing section + test/dev_server commands)
+- 8 new test files in `tests/unit/scripts/` (66 tests)
 
-## ⚠️ Manual Requirements
+## Manual Requirements
 
-Push .github/workflows/health-scan.yml changes with a token that has `workflow` scope (OAuth App token lacks this scope). The commit exists locally (4dc30da6).
+None
