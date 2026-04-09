@@ -144,6 +144,9 @@ export function Board({
   // AIB-585: Retro-spec polling for banner/badge state
   const { isGenerating: isRetroSpecGenerating, isCompleted: isRetroSpecCompleted } = useRetroSpecPolling(projectId);
   const [isRetroSpecModalOpen, setIsRetroSpecModalOpen] = useState(false);
+  const handleRetroSpecSuccess = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.projects.retroSpecJob(projectId) });
+  }, [queryClient, projectId]);
 
   const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(
     null
@@ -1225,7 +1228,7 @@ export function Board({
         projectId={projectId}
         hasSpecs={hasSpecs || isRetroSpecCompleted}
         isGenerating={isRetroSpecGenerating}
-        onGenerateSuccess={() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.retroSpecJob(projectId) })}
+        onGenerateSuccess={handleRetroSpecSuccess}
       />
       <RetroSpecBadge projectId={projectId} />
 
@@ -1380,7 +1383,7 @@ export function Board({
             open={isRetroSpecModalOpen}
             onOpenChange={setIsRetroSpecModalOpen}
             projectId={projectId}
-            onSuccess={() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.retroSpecJob(projectId) })}
+            onSuccess={handleRetroSpecSuccess}
           />
         </>
       )}

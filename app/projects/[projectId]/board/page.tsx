@@ -31,9 +31,8 @@ export default async function ProjectBoardPage({
     notFound();
   }
 
-  // Fetch project and tickets+jobs in parallel (validation + data)
-  // Single optimized query for tickets with jobs included
-  const [project, { ticketsByStage, ticketsWithJobs }] = await Promise.all([
+  // Fetch project, tickets+jobs, and retro-spec status in parallel
+  const [project, { ticketsByStage, ticketsWithJobs }, completedRetroSpec] = await Promise.all([
     getProject(projectId).catch((error) => {
       if (
         error instanceof Error &&
@@ -44,6 +43,10 @@ export default async function ProjectBoardPage({
       throw error;
     }),
     getTicketsWithJobs(projectId),
+    prisma.projectSetupJob.findFirst({
+      where: { projectId, command: 'RETRO_SPEC', status: 'COMPLETED' },
+      select: { id: true },
+    }),
   ]);
 
   // Redirect to setup page if project is not yet configured
@@ -51,11 +54,6 @@ export default async function ProjectBoardPage({
     redirect(`/projects/${projectId}/setup`);
   }
 
-  // Check if retro-spec has been completed for this project
-  const completedRetroSpec = await prisma.projectSetupJob.findFirst({
-    where: { projectId, command: 'RETRO_SPEC', status: 'COMPLETED' },
-    select: { id: true },
-  });
   const hasSpecs = !!completedRetroSpec;
 
   // Transform tickets with jobs into initialJobs map
