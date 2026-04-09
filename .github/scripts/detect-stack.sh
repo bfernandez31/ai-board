@@ -307,20 +307,14 @@ detect_framework() {
         fi
       fi
       if [[ -f "$REPO_DIR/build.gradle" ]] || [[ -f "$REPO_DIR/build.gradle.kts" ]]; then
-        local gradle_file=""
-        if [[ -f "$REPO_DIR/build.gradle.kts" ]]; then
-          gradle_file="$REPO_DIR/build.gradle.kts"
-        elif [[ -f "$REPO_DIR/build.gradle" ]]; then
-          gradle_file="$REPO_DIR/build.gradle"
-        fi
-        if [[ -n "$gradle_file" ]]; then
-          if grep -q "spring-boot" "$gradle_file" 2>/dev/null; then
-            FRAMEWORK="spring-boot"
-          elif grep -q "quarkus" "$gradle_file" 2>/dev/null; then
-            FRAMEWORK="quarkus"
-          elif grep -q "micronaut" "$gradle_file" 2>/dev/null; then
-            FRAMEWORK="micronaut"
-          fi
+        local gradle_file="$REPO_DIR/build.gradle"
+        [[ -f "$REPO_DIR/build.gradle.kts" ]] && gradle_file="$REPO_DIR/build.gradle.kts"
+        if grep -q "spring-boot" "$gradle_file" 2>/dev/null; then
+          FRAMEWORK="spring-boot"
+        elif grep -q "quarkus" "$gradle_file" 2>/dev/null; then
+          FRAMEWORK="quarkus"
+        elif grep -q "micronaut" "$gradle_file" 2>/dev/null; then
+          FRAMEWORK="micronaut"
         fi
       fi
       ;;
