@@ -5,25 +5,16 @@
 
 ## Changes Summary
 
-Implemented full retro-spec feature: database schema (SpecGenerationJob model, SpecDepth enum, specsGeneratedAt on Project), POST/GET/PATCH API endpoints for spec generation jobs, workflow dispatch utility, setup page Step 2 with depth picker and Generate/Skip flow, board SpecGenBadge (progress indicator), SpecGenBanner (dismissable prompt for skipped specs), SpecGenModal, and retro-spec GitHub Actions workflow with agent command.
+Full implementation of retro-spec feature across 8 phases (31 tasks): SpecGenerationJob model with SpecDepth enum, POST/GET/PATCH API endpoints with Zod validation and state machine transitions, workflow dispatch utility, TanStack Query polling hook, setup page Step 2 with depth picker and generate/skip flow, board spec-gen badge (real-time status with 30s fade), board banner (session-dismissible) with generate modal, retro-spec GitHub Actions workflow, and ai-board.retro-spec agent command.
 
 ## Key Decisions
 
-Separate SpecGenerationJob model from ProjectSetupJob to keep lifecycles independent. Reused SetupJobStatus enum for consistent state machine. Setup page redirect only when both configSyncedAt AND specsGeneratedAt are set. Banner uses sessionStorage for dismiss scope. Badge auto-fades after 30s on completion.
+Separate SpecGenerationJob model (not extending ProjectSetupJob) for clean lifecycle separation. specsGeneratedAt cached on Project to avoid GitHub API calls. Setup page redirect only when BOTH configSyncedAt AND specsGeneratedAt set. Banner uses sessionStorage for dismiss (reappears next session per spec). PATCH tests share pre-existing workflow-token auth env issue with setup-job tests.
 
 ## Files Modified
 
-- `prisma/schema.prisma` — SpecDepth enum, SpecGenerationJob model, specsGeneratedAt field
-- `app/api/projects/[projectId]/spec-generation/jobs/route.ts` — POST + GET
-- `app/api/projects/[projectId]/spec-generation/jobs/[jobId]/status/route.ts` — PATCH
-- `lib/workflows/dispatch-spec-generation.ts` — Workflow dispatch
-- `app/lib/hooks/useSpecGenPolling.ts` — Polling hook
-- `app/projects/[projectId]/setup/page.tsx` — Step 2 redirect logic
-- `components/setup/setup-page-client.tsx` — Step 2 UI
-- `components/board/{spec-gen-badge,spec-gen-banner,spec-gen-modal,board}.tsx`
-- `.github/workflows/retro-spec.yml` — GitHub Actions workflow
-- `.claude-plugin/commands/ai-board.retro-spec.md` — Agent command
+prisma/schema.prisma, app/api/projects/[projectId]/spec-generation/jobs/route.ts, app/api/projects/[projectId]/spec-generation/jobs/[jobId]/status/route.ts, lib/workflows/dispatch-spec-generation.ts, app/lib/query-keys.ts, app/lib/hooks/useSpecGenPolling.ts, app/projects/[projectId]/setup/page.tsx, components/setup/setup-page-client.tsx, app/projects/[projectId]/board/page.tsx, components/board/board.tsx, components/board/spec-gen-badge.tsx, components/board/spec-gen-banner.tsx, components/board/spec-gen-modal.tsx, .github/workflows/retro-spec.yml, .claude-plugin/commands/ai-board.retro-spec.md
 
 ## ⚠️ Manual Requirements
 
-The `.github/workflows/retro-spec.yml` file requires a push with `workflow` scope OAuth token. PATCH integration tests have pre-existing WORKFLOW_API_TOKEN env mismatch (affects all workflow auth tests, not specific to this feature).
+None
