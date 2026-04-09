@@ -80,6 +80,7 @@ model Project {
   defaultAgent         Agent                @default(CLAUDE)
   config               Json?
   configSyncedAt       DateTime?
+  specsGeneratedAt     DateTime?
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
 
@@ -90,6 +91,7 @@ model Project {
   healthScans          HealthScan[]
   healthScore          HealthScore?
   setupJobs            ProjectSetupJob[]
+  specGenerationJobs   SpecGenerationJob[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -117,12 +119,13 @@ model Project {
 - `defaultAgent`: Default AI agent for all tickets in the project (enum, default: CLAUDE)
 - `config`: Parsed `.ai-board/config.yml` content stored as JSON (nullable — null means no config synced)
 - `configSyncedAt`: Timestamp of the last successful config fetch from GitHub (nullable)
+- `specsGeneratedAt`: Timestamp when a `SpecGenerationJob` last completed successfully (nullable — null means specs have never been generated)
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
 
 **Relationships**:
 - Belongs to User (required, cascade delete)
-- One-to-many: Tickets, ProjectMembers, ComparisonRecords, HealthScans, ProjectSetupJobs
+- One-to-many: Tickets, ProjectMembers, ComparisonRecords, HealthScans, ProjectSetupJobs, SpecGenerationJobs
 - One-to-one (optional): HealthScore
 
 **Constraints**:
@@ -147,6 +150,7 @@ model Project {
 - `config` stores the parsed config without the `env` section (secrets excluded from DB)
 - `configSyncedAt` drives staleness checks: config older than 1 hour is auto-refreshed before workflow dispatch
 - Config sync fails explicitly rather than silently using stale data — dispatch is blocked if auto-refresh fails
+- `specsGeneratedAt` is set when a `SpecGenerationJob` transitions to COMPLETED; used by the board banner and setup page to determine spec availability
 
 ### Ticket
 
@@ -1103,7 +1107,97 @@ model ProjectSetupJob {
 
 ---
 
+### SpecGenerationJob
+
+Represents a spec generation run for an existing project. Tracks selected depth, optional inputs, status, and generated artifacts. Multiple records per project form a history; only one PENDING or RUNNING job is permitted at a time.
+
+```prisma
+model SpecGenerationJob {
+  id                Int             @id @default(autoincrement())
+  projectId         Int
+  agent             Agent
+  depth             SpecDepth
+  status            SetupJobStatus  @default(PENDING)
+  documentationUrl  String?         @db.VarChar(2000)
+  additionalContext String?         @db.VarChar(5000)
+  workflowRunId     BigInt?
+  errorMessage      String?         @db.VarChar(2000)
+  artifactSummary   Json?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  project           Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([projectId, createdAt(sort: Desc)])
+}
+```
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `projectId`: Parent project (required, cascade delete)
+- `agent`: AI agent used for generation (`CLAUDE` or `CODEX`)
+- `depth`: Scope of generated specifications (`QUICK`, `STANDARD`, or `COMPREHENSIVE`)
+- `status`: Current job state (default: `PENDING`); reuses `SetupJobStatus` enum
+- `documentationUrl`: Optional external documentation URL fetched and included as generation context (max 2000 chars)
+- `additionalContext`: Optional free-text context passed to the agent (max 5000 chars)
+- `workflowRunId`: GitHub Actions workflow run ID (set on first RUNNING callback)
+- `errorMessage`: Error details on failure (max 2000 chars)
+- `artifactSummary`: JSON summary of generated output — `{ created: string[], depth: string, commitSha?: string }`
+- `startedAt`: Set when status transitions to `RUNNING`
+- `completedAt`: Set when status transitions to any terminal state
+- `createdAt`: Record creation time
+- `updatedAt`: Last modification time
+
+**Relationships**:
+- Belongs to Project (required, cascade delete)
+
+**Constraints**:
+- Composite index on `(projectId, status)` for conflict guard queries
+- Composite index on `(projectId, createdAt DESC)` for latest-job polling
+
+**State Machine**:
+```
+PENDING → RUNNING    (workflow starts)
+PENDING → FAILED     (dispatch failure)
+RUNNING → COMPLETED  (specs committed successfully)
+RUNNING → FAILED     (generation or push error)
+COMPLETED → COMPLETED (idempotent)
+FAILED → FAILED      (idempotent)
+```
+
+**Business Rules**:
+- Only one job with PENDING or RUNNING status is permitted per project at a time (conflict guard returns 409 `JOB_ACTIVE`)
+- Spec generation is blocked when `configSyncedAt` is null (project not yet onboarded)
+- On COMPLETED, `project.specsGeneratedAt` is set to the current timestamp in the same status callback
+- `agent` determines which credential provider is required (`CLAUDE` → `ANTHROPIC`, `CODEX` → `OPENAI`)
+- Partial results are not committed — if the workflow fails mid-generation, no files are pushed
+
+---
+
 ## Enums
+
+### SpecDepth
+
+Controls the scope of generated project specifications.
+
+```prisma
+enum SpecDepth {
+  QUICK
+  STANDARD
+  COMPREHENSIVE
+}
+```
+
+| Value | Output Scope |
+|-------|-------------|
+| `QUICK` | Single overview document covering project purpose and high-level structure |
+| `STANDARD` | Architecture, API endpoints, and data model documents |
+| `COMPREHENSIVE` | Full functional specs, technical specs, and cross-referenced documentation |
+
+---
 
 ### CredentialProvider
 
@@ -1193,7 +1287,7 @@ enum HealthScanStatus {
 
 ### SetupJobStatus
 
-Lifecycle states for a `ProjectSetupJob`.
+Lifecycle states shared by `ProjectSetupJob` and `SpecGenerationJob`.
 
 ```prisma
 enum SetupJobStatus {

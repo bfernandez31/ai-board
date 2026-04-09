@@ -507,22 +507,40 @@ The repo picker lists the user's GitHub repositories (personal and organizationa
 
 ### Overview
 
-When a project is imported without a `.ai-board/config.yml` file, the system directs the project owner through an onboarding setup flow before the project board becomes accessible. The setup flow configures the project's agent and creates the necessary configuration files via a one-time onboarding workflow.
+When a project is imported without a `.ai-board/config.yml` file, the system directs the project owner through a two-step onboarding setup flow before the project board becomes accessible.
+
+- **Step 1 — Initialize**: Configures the project's agent and creates the necessary configuration files via a one-time onboarding workflow.
+- **Step 2 — Generate Specs**: Optionally generates `specs/specifications/` documentation for the existing codebase using the retro-spec workflow.
 
 ### Setup Page Access
 
 - The setup page is accessible only to the project owner at `/projects/{projectId}/setup`
 - Non-owners attempting to access the setup page receive an access denied error
-- Projects with `configSyncedAt` already set bypass setup entirely — the setup URL redirects to the project board
+- Projects with both `configSyncedAt` and `specsGeneratedAt` set, or that have already acted on Step 2, redirect to the board
 - The board page redirects unconfigured projects (null `configSyncedAt`) to the setup page
 
-### Setup Flow
+### Step 1 — Initialize Project
 
 1. **Agent Selection**: The owner selects which AI agent CLI to use — Claude Code (Anthropic) or Codex (OpenAI)
 2. **Credential Check**: The system verifies the owner has a valid stored credential for the selected agent's provider. If the credential is missing, the initialize button is disabled and actionable guidance is displayed linking to the credentials settings page
 3. **Initialize**: The owner clicks "Initialize Project" to create a setup job and dispatch the onboarding workflow
 4. **Progress Tracking**: The page polls every 2 seconds and displays the current job state (pending spinner, running progress, or failed error with retry)
-5. **Completion**: When the workflow completes, config sync runs automatically. Once `configSyncedAt` is set, the page redirects to the project board
+5. **Completion**: When the workflow completes, config sync runs automatically. Once `configSyncedAt` is set, the page transitions to Step 2
+
+### Step 2 — Generate Specifications
+
+After `configSyncedAt` is set, the setup page presents Step 2 with spec generation options:
+
+1. **Depth Selection**: The owner chooses one of three depth levels:
+   - **Quick** (~5 min): Single overview document covering project purpose and structure
+   - **Standard** (~10 min): Architecture, API endpoints, and data model documents
+   - **Comprehensive** (~20 min): Full functional specs, technical specs, and cross-referenced documentation
+2. **Optional Documentation URL**: An external documentation URL that the workflow fetches and uses as additional generation context
+3. **Optional Additional Context**: Free-text instructions or context for the AI agent
+4. **Generate Specs**: Creates a `SpecGenerationJob`, dispatches the retro-spec workflow, and redirects to the board
+5. **Skip for now**: Redirects to the board immediately without creating a job
+
+The selected agent is inherited from Step 1 (uses the project's `defaultAgent`).
 
 ### Job State and Retry
 
@@ -536,8 +554,9 @@ When the workflow fails, the setup page displays the error message and offers a 
 
 ### Guards and Constraints
 
-- Only one setup job can be active (PENDING or RUNNING) per project at a time — duplicate dispatches are rejected
-- Projects already configured (non-null `configSyncedAt`) cannot dispatch new setup jobs
+- Only one setup job (Step 1) can be active (PENDING or RUNNING) per project at a time — duplicate dispatches are rejected
+- Only one spec generation job (Step 2) can be active per project at a time — duplicate dispatches are rejected
+- Projects already configured (non-null `configSyncedAt`) cannot dispatch new Step 1 setup jobs
 - Page refreshes during a running job correctly resume showing the active state via polling
 
 ### Error States
@@ -554,6 +573,30 @@ When the workflow fails, the setup page displays the error message and offers a 
 | LLM generation fails (`GUIDANCE_GENERATION_FAILED`) | Partial success: config committed, guidance missing; setup page shows which files were created vs missing |
 | Git push fails (`COMMIT_FAILED`) | Job fails with message; error displayed with retry option |
 | Config sync failure after COMPLETED | Project stays on setup page; retry resolves |
+| Documentation URL unreachable (Step 2) | Workflow proceeds without external docs; inaccessibility noted in job output |
+
+## Board Spec Generation Indicators
+
+### Spec Generation Progress Badge
+
+While a `SpecGenerationJob` is in progress, a badge in the board area displays the generation status:
+
+- **PENDING / RUNNING**: "Generating specs..." with a pulse animation
+- **COMPLETED**: "Specs ready" with a check icon, then fades out after 30 seconds via a client-side timer
+- **FAILED**: Error badge with a retry option that opens the generate modal
+
+The badge uses 2-second polling via `useSpecGenPolling`. Users who navigate away and return see the current status restored from polling.
+
+### "No Specs" Banner
+
+When a project has completed onboarding (`configSyncedAt` set) but has never generated specs (`specsGeneratedAt` null) and no spec generation job is active, the board displays a dismissable banner:
+
+> **Project specs not generated** — Specs improve health scans, ticket workflows, and code review quality — **[Generate]** **[Dismiss]**
+
+- **Generate**: Opens a modal with the same depth picker, documentation URL, and additional context fields as Setup Step 2. On submit, creates a `SpecGenerationJob` and the badge appears automatically via polling.
+- **Dismiss**: Hides the banner for the current browser session (`sessionStorage`). The banner reappears on new sessions if specs still don't exist.
+
+The banner is shown only to the project owner.
 
 ## External Repository Support
 

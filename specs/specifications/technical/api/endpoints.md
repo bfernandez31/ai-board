@@ -461,6 +461,143 @@ Check whether the project owner has a valid credential for a given agent's provi
 
 ---
 
+## Spec Generation Endpoints
+
+Endpoints for generating project specifications from an existing codebase. All session-authenticated endpoints require project ownership. The status callback endpoint uses workflow Bearer token authentication.
+
+### POST /api/projects/:projectId/spec-generation/jobs
+
+Create a spec generation job and dispatch the retro-spec workflow.
+
+**Authentication**: Session (owner-only)
+**Authorization**: `verifyProjectOwnership`
+
+**Request Body**:
+```json
+{
+  "agent": "CLAUDE",
+  "depth": "STANDARD",
+  "documentationUrl": "https://docs.example.com",
+  "additionalContext": "Focus on the API layer"
+}
+```
+
+| Field | Type | Required |
+|-------|------|----------|
+| `agent` | `"CLAUDE"` \| `"CODEX"` | Yes |
+| `depth` | `"QUICK"` \| `"STANDARD"` \| `"COMPREHENSIVE"` | Yes |
+| `documentationUrl` | string (valid URL, max 2000 chars) | No |
+| `additionalContext` | string (max 5000 chars) | No |
+
+**Pre-flight checks** (in order): project ownership, project configured (`configSyncedAt` set), no active job (PENDING/RUNNING), credential exists for selected agent's provider.
+
+**Response** (201 Created):
+```json
+{
+  "id": 1,
+  "projectId": 5,
+  "agent": "CLAUDE",
+  "depth": "STANDARD",
+  "status": "PENDING",
+  "documentationUrl": "https://docs.example.com",
+  "additionalContext": null,
+  "createdAt": "2026-04-09T12:00:00.000Z"
+}
+```
+
+**Errors**:
+- `400`: `VALIDATION_ERROR` — invalid body
+- `401`: Not authenticated
+- `403`: `FORBIDDEN` — not project owner
+- `404`: `PROJECT_NOT_FOUND`
+- `409`: `JOB_ACTIVE` — a job is PENDING or RUNNING
+- `409`: `NOT_CONFIGURED` — `configSyncedAt` is null
+- `422`: `CREDENTIAL_MISSING` — owner lacks credential for the agent's provider
+- `500`: `DISPATCH_FAILED` — workflow dispatch failed (job marked FAILED)
+
+---
+
+### GET /api/projects/:projectId/spec-generation/jobs
+
+Fetch the latest spec generation job for polling and page load.
+
+**Authentication**: Session (owner or member)
+**Authorization**: `verifyProjectAccess`
+
+**Response** (200 OK):
+```json
+{
+  "job": {
+    "id": 1,
+    "projectId": 5,
+    "agent": "CLAUDE",
+    "depth": "STANDARD",
+    "status": "RUNNING",
+    "workflowRunId": 12345678,
+    "errorMessage": null,
+    "artifactSummary": null,
+    "documentationUrl": null,
+    "additionalContext": null,
+    "startedAt": "2026-04-09T12:00:05.000Z",
+    "completedAt": null,
+    "createdAt": "2026-04-09T12:00:00.000Z"
+  },
+  "specsGeneratedAt": null
+}
+```
+
+When no job exists: `{ "job": null, "specsGeneratedAt": null }`.
+
+**Errors**: `401`, `403` (not owner or member), `404` (project not found)
+
+---
+
+### PATCH /api/projects/:projectId/spec-generation/jobs/:jobId/status
+
+Update spec generation job status from the retro-spec workflow.
+
+**Authentication**: Workflow Bearer token (`Authorization: Bearer <WORKFLOW_API_TOKEN>`)
+
+**Request Body**:
+```json
+{
+  "status": "RUNNING",
+  "workflowRunId": 12345678,
+  "errorMessage": null,
+  "artifactSummary": null
+}
+```
+
+| Field | Type | Required |
+|-------|------|----------|
+| `status` | `"RUNNING"` \| `"COMPLETED"` \| `"FAILED"` | Yes |
+| `workflowRunId` | integer | No |
+| `errorMessage` | string (max 2000) | No |
+| `artifactSummary` | object | No |
+
+**State transitions**:
+
+| From | Allowed To |
+|------|-----------|
+| PENDING | RUNNING, FAILED |
+| RUNNING | COMPLETED, FAILED |
+| COMPLETED | COMPLETED (idempotent) |
+| FAILED | FAILED (idempotent) |
+
+**Side effects**:
+- `RUNNING`: sets `startedAt` if not already set
+- `COMPLETED`: sets `completedAt`, sets `project.specsGeneratedAt = now()`
+- `FAILED`: sets `completedAt`, persists `errorMessage`
+
+**Response** (200 OK):
+```json
+{ "id": 1, "status": "COMPLETED", "startedAt": "2026-04-09T12:00:05.000Z", "completedAt": "2026-04-09T12:10:30.000Z" }
+```
+
+**Errors**: `400` (`VALIDATION_ERROR` or `INVALID_TRANSITION`), `401` (invalid token), `404` (job/project not found)
+
+---
+
 ## GitHub Endpoints
 
 ### GET /api/github/auth-status
