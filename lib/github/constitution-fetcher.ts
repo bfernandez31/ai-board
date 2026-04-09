@@ -57,7 +57,6 @@ export async function fetchConstitutionContent(
   const token = getValidatedToken();
   const octokit = new Octokit({ auth: token });
 
-  // Resolve branch: use provided value or fetch the repo's default branch
   const resolvedBranch = branch ?? await getDefaultBranch(octokit, owner, repo);
 
   try {
@@ -108,7 +107,6 @@ export async function updateConstitutionContent(params: {
   const octokit = new Octokit({ auth: token });
   const message = commitMessage || 'docs(constitution): Update project constitution';
 
-  // Resolve branch: use provided value or fetch the repo's default branch
   const resolvedBranch = branch ?? await getDefaultBranch(octokit, owner, repo);
 
   try {

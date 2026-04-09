@@ -1,11 +1,3 @@
-/**
- * Unit Tests: Constitution Fetcher — default branch resolution
- *
- * Verifies that fetchConstitutionContent and updateConstitutionContent
- * resolve the repository's default branch via the GitHub API when no
- * explicit branch is provided, instead of hardcoding 'main'.
- */
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const { mockGetContent, mockCreateOrUpdateFileContents } = vi.hoisted(() => ({
@@ -13,12 +5,10 @@ const { mockGetContent, mockCreateOrUpdateFileContents } = vi.hoisted(() => ({
   mockCreateOrUpdateFileContents: vi.fn(),
 }));
 
-// Mock getDefaultBranch before importing the module under test
 vi.mock('@/lib/github/default-branch', () => ({
   getDefaultBranch: vi.fn().mockResolvedValue('master'),
 }));
 
-// Mock Octokit as a class so `new Octokit(...)` works
 vi.mock('@octokit/rest', () => ({
   Octokit: class MockOctokit {
     repos = {

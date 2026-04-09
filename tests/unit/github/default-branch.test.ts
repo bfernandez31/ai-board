@@ -1,9 +1,3 @@
-/**
- * Unit Tests: getDefaultBranch
- *
- * Tests the shared utility for resolving a repository's default branch.
- */
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getDefaultBranch } from '@/lib/github/default-branch';
 import type { Octokit } from '@octokit/rest';
