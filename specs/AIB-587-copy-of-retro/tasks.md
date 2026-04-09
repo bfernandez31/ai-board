@@ -96,13 +96,13 @@
 
 ### Tests for User Story 2
 
-- [x] T018 [US2] Create `tests/unit/components/board/spec-gen-badge.test.tsx`: shows "Generating specs..." with pulse when job is PENDING/RUNNING, shows "Specs ready" when COMPLETED, shows error state with retry when FAILED, badge unmounts after 30s fade on COMPLETED
+- [X] T018 [US2] Create `tests/unit/components/board/spec-gen-badge.test.tsx`: shows "Generating specs..." with pulse when job is PENDING/RUNNING, shows "Specs ready" when COMPLETED, shows error state with retry when FAILED, badge unmounts after 30s fade on COMPLETED
 
 ### Implementation for User Story 2
 
-- [x] T019 [US2] Update `app/projects/[projectId]/board/page.tsx` server component: fetch `project.specsGeneratedAt` and `project.userId`, pass `specsGeneratedAt` and `isOwner` props to Board component
-- [x] T020 [US2] Create `components/board/spec-gen-badge.tsx`: uses `useSpecGenPolling`, renders PENDING/RUNNING state with pulse animation ("Generating specs..."), COMPLETED state with check icon ("Specs ready") that fades after 30s via CSS animation + `setTimeout` to unmount, FAILED state with error and retry option (POST to spec-gen jobs API)
-- [x] T021 [US2] Update `components/board/board.tsx`: add `specsGeneratedAt` and `isOwner` to `BoardProps`, render `<SpecGenBadge>` above the columns area
+- [X] T019 [US2] Update `app/projects/[projectId]/board/page.tsx` server component: fetch `project.specsGeneratedAt` and `project.userId`, pass `specsGeneratedAt` and `isOwner` props to Board component
+- [X] T020 [US2] Create `components/board/spec-gen-badge.tsx`: uses `useSpecGenPolling`, renders PENDING/RUNNING state with pulse animation ("Generating specs..."), COMPLETED state with check icon ("Specs ready") that fades after 30s via CSS animation + `setTimeout` to unmount, FAILED state with error and retry option (POST to spec-gen jobs API)
+- [X] T021 [US2] Update `components/board/board.tsx`: add `specsGeneratedAt` and `isOwner` to `BoardProps`, render `<SpecGenBadge>` above the columns area
 
 **Checkpoint**: Board progress indicator works for all job states
 
@@ -116,13 +116,13 @@
 
 ### Tests for User Story 3
 
-- [x] T022 [US3] Create `tests/unit/components/board/spec-gen-banner.test.tsx`: banner renders when `specsGeneratedAt` is null and `configSyncedAt` is set, banner hidden when `specsGeneratedAt` is set, dismiss hides banner for session (sessionStorage), Generate button opens spec-gen modal, banner reappears in new session if specs still don't exist
+- [X] T022 [US3] Create `tests/unit/components/board/spec-gen-banner.test.tsx`: banner renders when `specsGeneratedAt` is null and `configSyncedAt` is set, banner hidden when `specsGeneratedAt` is set, dismiss hides banner for session (sessionStorage), Generate button opens spec-gen modal, banner reappears in new session if specs still don't exist
 
 ### Implementation for User Story 3
 
-- [x] T023 [US3] Create `components/board/spec-gen-banner.tsx`: shown when `specsGeneratedAt === null && configSyncedAt !== null` and no active spec gen job and not dismissed in session. Dismissible via `sessionStorage` key `spec-banner-dismissed-${projectId}`. Content: "Project specs not generated — Specs improve health scans, ticket workflows, and code review quality". Buttons: "Generate" (opens modal), "Dismiss" (hides for session). Uses `role="banner"` and accessible dismiss button
-- [x] T024 [US3] Create `components/board/spec-gen-modal.tsx`: Radix Dialog with depth picker, documentation URL input, additional context textarea. On submit: POST to `/api/projects/:projectId/spec-generation/jobs`. On success: close modal (badge appears via polling). Follow pattern from `components/board/new-ticket-modal.tsx` (Dialog + Zod + loading states). Use aurora-* CSS utility classes for modal styling
-- [x] T025 [US3] Update `components/board/board.tsx`: render `<SpecGenBanner>` above the DndContext (only for owners when `specsGeneratedAt` is null)
+- [X] T023 [US3] Create `components/board/spec-gen-banner.tsx`: shown when `specsGeneratedAt === null && configSyncedAt !== null` and no active spec gen job and not dismissed in session. Dismissible via `sessionStorage` key `spec-banner-dismissed-${projectId}`. Content: "Project specs not generated — Specs improve health scans, ticket workflows, and code review quality". Buttons: "Generate" (opens modal), "Dismiss" (hides for session). Uses `role="banner"` and accessible dismiss button
+- [X] T024 [US3] Create `components/board/spec-gen-modal.tsx`: Radix Dialog with depth picker, documentation URL input, additional context textarea. On submit: POST to `/api/projects/:projectId/spec-generation/jobs`. On success: close modal (badge appears via polling). Follow pattern from `components/board/new-ticket-modal.tsx` (Dialog + Zod + loading states). Use aurora-* CSS utility classes for modal styling
+- [X] T025 [US3] Update `components/board/board.tsx`: render `<SpecGenBanner>` above the DndContext (only for owners when `specsGeneratedAt` is null)
 
 **Checkpoint**: Board banner and modal flow works correctly
 

@@ -57,6 +57,8 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { NewTicketModal } from './new-ticket-modal';
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog';
 import { ShortcutsHelpButton } from './shortcuts-help-button';
+import { SpecGenBadge } from './spec-gen-badge';
+import { SpecGenBanner } from './spec-gen-banner';
 
 /**
  * Convert TicketWithVersion to TicketDetailModal-compatible format
@@ -84,6 +86,8 @@ interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
   projectId: number;
   initialJobs?: Map<number, Job[]>; // Array of jobs per ticket for dual job display
+  specsGeneratedAt?: string | null;
+  isOwner?: boolean;
 }
 
 /** Default merge: apply server response fields to optimistic ticket */
@@ -103,6 +107,8 @@ export function Board({
   ticketsByStage: initialTicketsByStage,
   projectId,
   initialJobs = new Map(),
+  specsGeneratedAt,
+  isOwner = false,
 }: BoardProps) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -1210,6 +1216,14 @@ export function Board({
   return (
     <div className="w-full h-full bg-background">
       <OfflineIndicator />
+
+      {/* Spec Generation Badge & Banner */}
+      <div className="px-4 pt-2 flex flex-col gap-2">
+        <SpecGenBadge projectId={projectId} />
+        {isOwner && !specsGeneratedAt && (
+          <SpecGenBanner projectId={projectId} />
+        )}
+      </div>
 
       <DndContext
         sensors={sensors}

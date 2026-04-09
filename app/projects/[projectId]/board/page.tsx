@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { Board } from '@/components/board/board';
 import { getTicketsWithJobs } from '@/lib/db/tickets';
 import { getProject } from '@/lib/db/projects';
+import { requireAuth } from '@/lib/db/users';
 
 // Force dynamic rendering to ensure fresh data on router.refresh()
 export const dynamic = 'force-dynamic';
@@ -30,9 +31,8 @@ export default async function ProjectBoardPage({
     notFound();
   }
 
-  // Fetch project and tickets+jobs in parallel (validation + data)
-  // Single optimized query for tickets with jobs included
-  const [project, { ticketsByStage, ticketsWithJobs }] = await Promise.all([
+  // Fetch project, tickets+jobs, and current user in parallel
+  const [project, { ticketsByStage, ticketsWithJobs }, userId] = await Promise.all([
     getProject(projectId).catch((error) => {
       if (
         error instanceof Error &&
@@ -43,6 +43,7 @@ export default async function ProjectBoardPage({
       throw error;
     }),
     getTicketsWithJobs(projectId),
+    requireAuth(),
   ]);
 
   // Redirect to setup page if project is not yet configured
@@ -63,6 +64,8 @@ export default async function ProjectBoardPage({
         ticketsByStage={ticketsByStage}
         projectId={projectId}
         initialJobs={initialJobs}
+        specsGeneratedAt={project.specsGeneratedAt?.toISOString() ?? null}
+        isOwner={project.userId === userId}
       />
     </main>
   );
