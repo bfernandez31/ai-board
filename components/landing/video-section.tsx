@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 // TODO: Update after Cloudinary upload
 const VIDEO_URL = '/videos/ai-board-demo';
@@ -86,20 +87,24 @@ export function VideoSection() {
 
           {/* Minimal controls overlay */}
           <div className="absolute bottom-4 right-4 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={togglePlay}
-              className="rounded-lg bg-ctp-surface0/80 px-3 py-1.5 text-xs font-medium text-foreground backdrop-blur-sm hover:bg-ctp-surface1/80"
+              className="rounded-lg bg-ctp-surface0/80 text-xs text-foreground backdrop-blur-sm hover:bg-ctp-surface1/80"
               aria-label={isPlaying ? 'Pause video' : 'Play video'}
             >
               {isPlaying ? '⏸' : '▶'}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={toggleMute}
-              className="rounded-lg bg-ctp-surface0/80 px-3 py-1.5 text-xs font-medium text-foreground backdrop-blur-sm hover:bg-ctp-surface1/80"
+              className="rounded-lg bg-ctp-surface0/80 text-xs text-foreground backdrop-blur-sm hover:bg-ctp-surface1/80"
               aria-label={isMuted ? 'Unmute video' : 'Mute video'}
             >
               {isMuted ? '🔇' : '🔊'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

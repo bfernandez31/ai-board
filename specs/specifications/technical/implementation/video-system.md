@@ -122,7 +122,7 @@ cp video/out/ai-board-demo.mp4 public/videos/
 
 **Autoplay**: Uses `IntersectionObserver` with `threshold: 0.4`. Video plays when visible, pauses when scrolled away. Muted by default (browser autoplay policy requires muted).
 
-**Controls**: Play/pause and mute/unmute buttons, visible on hover only.
+**Controls**: Play/pause and mute/unmute `Button` (shadcn/ui, `variant="ghost"`, `size="sm"`) elements, visible on hover only.
 
 **Middleware**: `proxy.ts` matcher excludes `.mp4` and `.webm` extensions to allow unauthenticated access to video assets in `public/`.
 
