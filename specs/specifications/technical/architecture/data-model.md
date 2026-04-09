@@ -1062,7 +1062,7 @@ model ProjectSetupJob {
   command         SetupJobCommand @default(ONBOARD)
 
   // Retro-spec specific inputs (nullable, only for RETRO_SPEC jobs)
-  depth           String?         @db.VarChar(20)
+  depth           SetupJobDepth?
   docUrl          String?         @db.VarChar(2000)
   context         String?         @db.Text
 
@@ -1088,7 +1088,7 @@ model ProjectSetupJob {
 - `agent`: Selected agent CLI (`CLAUDE` or `CODEX`)
 - `status`: Current job state (default: `PENDING`)
 - `command`: Job type discriminator (default: `ONBOARD`). `RETRO_SPEC` identifies spec generation jobs.
-- `depth`: Spec generation depth level — `QUICK`, `STANDARD`, or `COMPREHENSIVE` (RETRO_SPEC only; null for ONBOARD)
+- `depth`: Spec generation depth level — `SetupJobDepth` enum: `QUICK`, `STANDARD`, or `COMPREHENSIVE` (RETRO_SPEC only; null for ONBOARD)
 - `docUrl`: Optional URL of external documentation to incorporate (RETRO_SPEC only; max 2000 chars)
 - `context`: Optional additional context for spec generation (RETRO_SPEC only)
 - `workflowRunId`: GitHub Actions workflow run ID (set on first RUNNING callback)
@@ -1202,6 +1202,26 @@ enum HealthScanStatus {
 | COMPLETED | Scan finished with results | Terminal |
 | FAILED | Scan encountered an error | Terminal |
 | SKIPPED | Agent detected nothing to evaluate; null score | Terminal |
+
+---
+
+### SetupJobDepth
+
+Enum constraining the depth level for retro-spec generation jobs.
+
+```prisma
+enum SetupJobDepth {
+  QUICK
+  STANDARD
+  COMPREHENSIVE
+}
+```
+
+| Value | Description |
+|-------|-------------|
+| `QUICK` | Project overview and high-level architecture |
+| `STANDARD` | Architecture, APIs, data model, and workflows |
+| `COMPREHENSIVE` | Full functional and technical specifications |
 
 ---
 

@@ -582,6 +582,12 @@ enum SetupJobStatus {
   FAILED
 }
 
+enum SetupJobDepth {
+  QUICK
+  STANDARD
+  COMPREHENSIVE
+}
+
 model ProjectSetupJob {
   id              Int             @id @default(autoincrement())
   projectId       Int
@@ -590,7 +596,7 @@ model ProjectSetupJob {
   command         SetupJobCommand @default(ONBOARD)
 
   // Retro-spec specific inputs (nullable, only for RETRO_SPEC jobs)
-  depth           String?         @db.VarChar(20)
+  depth           SetupJobDepth?
   docUrl          String?         @db.VarChar(2000)
   context         String?         @db.Text
 

@@ -89,6 +89,7 @@ interface BoardProps {
   projectId: number;
   initialJobs?: Map<number, Job[]>; // Array of jobs per ticket for dual job display
   hasSpecs?: boolean;
+  defaultAgent?: 'CLAUDE' | 'CODEX';
 }
 
 /** Default merge: apply server response fields to optimistic ticket */
@@ -109,6 +110,7 @@ export function Board({
   projectId,
   initialJobs = new Map(),
   hasSpecs = false,
+  defaultAgent = 'CLAUDE',
 }: BoardProps) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -142,8 +144,9 @@ export function Board({
   const { jobs: polledJobs } = useJobPolling(projectId, 2000);
 
   // AIB-585: Retro-spec polling for banner/badge state
-  const { isGenerating: isRetroSpecGenerating, isCompleted: isRetroSpecCompleted } = useRetroSpecPolling(projectId);
+  const { isGenerating: isRetroSpecGenerating, isCompleted: isRetroSpecCompleted, isFailed: isRetroSpecFailed } = useRetroSpecPolling(projectId);
   const [isRetroSpecModalOpen, setIsRetroSpecModalOpen] = useState(false);
+  const isBannerDismissed = typeof window !== 'undefined' && (() => { try { return localStorage.getItem(`retro-spec-banner-dismissed-${projectId}`) === 'true'; } catch { return false; } })();
   const handleRetroSpecSuccess = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: queryKeys.projects.retroSpecJob(projectId) });
   }, [queryClient, projectId]);
@@ -212,7 +215,7 @@ export function Board({
   });
   const hasHover = useHoverCapability();
 
-  const isAnyModalOpen = isModalOpen || isNewTicketModalOpen || isShortcutsHelpOpen || deleteModalOpen || !!pendingTransition || !!pendingVerifyRollback || !!pendingRollback || !!pendingCloseTransition;
+  const isAnyModalOpen = isModalOpen || isNewTicketModalOpen || isShortcutsHelpOpen || deleteModalOpen || !!pendingTransition || !!pendingVerifyRollback || !!pendingRollback || !!pendingCloseTransition || isRetroSpecModalOpen;
 
   const handleShortcutsHelpChange = useCallback((open: boolean) => {
     setIsShortcutsHelpOpen(open);
@@ -1229,8 +1232,9 @@ export function Board({
         hasSpecs={hasSpecs || isRetroSpecCompleted}
         isGenerating={isRetroSpecGenerating}
         onGenerateSuccess={handleRetroSpecSuccess}
+        defaultAgent={defaultAgent}
       />
-      <RetroSpecBadge projectId={projectId} />
+      <RetroSpecBadge projectId={projectId} defaultAgent={defaultAgent} />
 
       <DndContext
         sensors={sensors}
@@ -1368,8 +1372,8 @@ export function Board({
       />
       <ShortcutsHelpButton onClick={() => handleShortcutsHelpChange(!isShortcutsHelpOpen)} />
 
-      {/* AIB-585: Generate Specs trigger (FR-013) — accessible after banner is dismissed */}
-      {!hasSpecs && !isRetroSpecCompleted && !isRetroSpecGenerating && (
+      {/* AIB-585: Generate Specs trigger (FR-013) — only after banner is dismissed, hidden during failure (badge shows retry) */}
+      {!hasSpecs && !isRetroSpecCompleted && !isRetroSpecGenerating && !isRetroSpecFailed && isBannerDismissed && (
         <>
           <button
             onClick={() => setIsRetroSpecModalOpen(true)}
@@ -1383,6 +1387,7 @@ export function Board({
             open={isRetroSpecModalOpen}
             onOpenChange={setIsRetroSpecModalOpen}
             projectId={projectId}
+            defaultAgent={defaultAgent}
             onSuccess={handleRetroSpecSuccess}
           />
         </>

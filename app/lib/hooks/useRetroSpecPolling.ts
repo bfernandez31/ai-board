@@ -46,6 +46,10 @@ export function useRetroSpecPolling(
         { cache: 'no-store' }
       );
 
+      if (response.status === 403 || response.status === 401) {
+        // Non-owner or unauthenticated — return empty result to stop polling
+        return { job: null, configSyncedAt: null };
+      }
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -56,10 +60,11 @@ export function useRetroSpecPolling(
     gcTime: 5 * 60 * 1000,
     refetchInterval: (query) => {
       const result = query.state.data;
-      if (!result?.job) return pollingInterval;
+      // No job exists — stop polling (no active retro-spec run)
+      if (result && !result.job) return false;
 
       // Stop polling on terminal statuses
-      if (TERMINAL_STATUSES.has(result.job.status)) return false;
+      if (result?.job && TERMINAL_STATUSES.has(result.job.status)) return false;
 
       return pollingInterval;
     },

@@ -10,9 +10,10 @@ import { RetroSpecModal } from './retro-spec-modal';
 
 interface RetroSpecBadgeProps {
   projectId: number;
+  defaultAgent?: 'CLAUDE' | 'CODEX';
 }
 
-export function RetroSpecBadge({ projectId }: RetroSpecBadgeProps) {
+export function RetroSpecBadge({ projectId, defaultAgent }: RetroSpecBadgeProps) {
   const { isGenerating, isCompleted, isFailed } = useRetroSpecPolling(projectId);
   const queryClient = useQueryClient();
   const [showCompleted, setShowCompleted] = useState(false);
@@ -81,6 +82,7 @@ export function RetroSpecBadge({ projectId }: RetroSpecBadgeProps) {
           open={isRetryModalOpen}
           onOpenChange={setIsRetryModalOpen}
           projectId={projectId}
+          defaultAgent={defaultAgent}
           onSuccess={() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.retroSpecJob(projectId) })}
         />
       </>

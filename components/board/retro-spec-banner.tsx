@@ -9,6 +9,7 @@ interface RetroSpecBannerProps {
   projectId: number;
   hasSpecs: boolean;
   isGenerating: boolean;
+  defaultAgent?: 'CLAUDE' | 'CODEX';
   onGenerateSuccess?: (() => void) | undefined;
 }
 
@@ -27,7 +28,7 @@ function getIsDismissed(projectId: number): boolean {
 // No-op subscribe — localStorage changes don't fire events on same page
 const subscribeNoop = () => () => {};
 
-export function RetroSpecBanner({ projectId, hasSpecs, isGenerating, onGenerateSuccess }: RetroSpecBannerProps) {
+export function RetroSpecBanner({ projectId, hasSpecs, isGenerating, defaultAgent, onGenerateSuccess }: RetroSpecBannerProps) {
   const isDismissedFromStorage = useSyncExternalStore(
     subscribeNoop,
     () => getIsDismissed(projectId),
@@ -92,6 +93,7 @@ export function RetroSpecBanner({ projectId, hasSpecs, isGenerating, onGenerateS
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         projectId={projectId}
+        defaultAgent={defaultAgent}
         onSuccess={onGenerateSuccess}
       />
     </>

@@ -68,11 +68,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"status":"RUNNING","workflowRunId":${{ github.run_id }}}' \
             -s -o /dev/null -w "%{http_code}") || true
-          if [ "$HTTP_CODE" = "409" ]; then
-            echo "Job already CANCELLED — aborting workflow"
-            echo "CANCELLED=true" >> "$GITHUB_ENV"
-            exit 1
-          elif [ "$HTTP_CODE" != "200" ]; then
+          if [ "$HTTP_CODE" != "200" ]; then
             echo "Failed to update job status to RUNNING (HTTP $HTTP_CODE)"
           fi
 
@@ -203,13 +199,16 @@ jobs:
         id: generate-specs
         continue-on-error: true
         working-directory: target-repo
+        env:
+          INPUT_CONTEXT: ${{ inputs.context }}
+          INPUT_DEPTH: ${{ inputs.depth }}
         run: |
-          ARGS="--depth=${{ inputs.depth }}"
+          ARGS="--depth=${INPUT_DEPTH}"
           if [ -f /tmp/external-docs.txt ]; then
             ARGS="${ARGS} --external-docs=/tmp/external-docs.txt"
           fi
-          if [ -n "${{ inputs.context }}" ]; then
-            ARGS="${ARGS} --context=\"${{ inputs.context }}\""
+          if [ -n "${INPUT_CONTEXT}" ]; then
+            ARGS="${ARGS} --context=\"${INPUT_CONTEXT}\""
           fi
 
           bash ../ai-board/.github/scripts/run-agent.sh \
@@ -324,8 +323,17 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"status":"FAILED","errorMessage":"Failed to push specs to target repository"}' || true
 
+      - name: Report FAILED — No specs generated
+        if: failure() && env.NO_SPECS == 'true'
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.APP_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"No specs/specifications/ directory was generated"}' || true
+
       - name: Report FAILED — Catch-all
-        if: failure() && env.CLONE_FAILED != 'true' && env.CREDENTIAL_FAILED != 'true' && env.GENERATION_FAILED != 'true' && env.PUSH_FAILED != 'true' && env.CANCELLED != 'true'
+        if: failure() && env.CLONE_FAILED != 'true' && env.CREDENTIAL_FAILED != 'true' && env.GENERATION_FAILED != 'true' && env.PUSH_FAILED != 'true' && env.NO_SPECS != 'true'
         run: |
           curl -sf -X PATCH \
             "${{ env.APP_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \

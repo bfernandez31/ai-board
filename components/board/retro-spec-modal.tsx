@@ -27,10 +27,11 @@ interface RetroSpecModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: number;
+  defaultAgent?: 'CLAUDE' | 'CODEX' | undefined;
   onSuccess?: (() => void) | undefined;
 }
 
-export function RetroSpecModal({ open, onOpenChange, projectId, onSuccess }: RetroSpecModalProps) {
+export function RetroSpecModal({ open, onOpenChange, projectId, defaultAgent = 'CLAUDE', onSuccess }: RetroSpecModalProps) {
   const [depth, setDepth] = useState<Depth>('STANDARD');
   const [docUrl, setDocUrl] = useState('');
   const [context, setContext] = useState('');
@@ -64,7 +65,7 @@ export function RetroSpecModal({ open, onOpenChange, projectId, onSuccess }: Ret
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          agent: 'CLAUDE',
+          agent: defaultAgent,
           command: 'RETRO_SPEC',
           depth,
           ...(docUrl && { docUrl }),

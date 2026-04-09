@@ -70,6 +70,7 @@ export default async function ProjectBoardPage({
         projectId={projectId}
         initialJobs={initialJobs}
         hasSpecs={hasSpecs}
+        defaultAgent={project.defaultAgent}
       />
     </main>
   );
