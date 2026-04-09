@@ -201,6 +201,21 @@ export async function dispatchWorkflow(params: {
 - **Action**: Transitions VERIFY → SHIP for tickets with merged branches
 - **Method**: Git ancestry check (`git merge-base --is-ancestor`)
 
+**Onboard Workflow** (`.github/workflows/onboard.yml`):
+- **Trigger**: `workflow_dispatch`
+- **Inputs**: `project_id`, `job_id`, `githubRepository` (owner/repo), `agent`
+- **Steps**: Report RUNNING → clone target repo → fetch AI credential → detect runtime stack → generate `.ai-board/config.yml` and `CLAUDE.md` → commit → report COMPLETED/FAILED
+- **Side effect**: On COMPLETED, `syncProjectConfig()` runs (sets `configSyncedAt`)
+- **Timeout**: 30 minutes
+
+**Retro-Spec Workflow** (`.github/workflows/retro-spec.yml`):
+- **Trigger**: `workflow_dispatch`
+- **Inputs**: `project_id`, `job_id`, `githubRepository` (owner/repo), `agent`, `depth` (QUICK/STANDARD/COMPREHENSIVE), `docUrl` (optional), `context` (optional)
+- **Steps**: Report RUNNING → fetch AI credential → clone target repo → fetch external docs (if `docUrl`) → run `ai-board.retro-spec` agent command → commit `specs/specifications/` to default branch → report COMPLETED/FAILED
+- **Output**: `specs/specifications/` directory committed to the target repository with spec depth matching the selected level
+- **Error behavior**: Reports FAILED with error message; partial results not committed; unreachable `docUrl` logs a warning and continues
+- **Timeout**: 30 minutes
+
 ### Dynamic Service Inputs
 
 Before dispatching any workflow, the system maps the project's stored config to GitHub Actions service container inputs via `getProjectServiceInputs(project)` in `lib/workflows/service-inputs.ts`.
