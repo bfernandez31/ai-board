@@ -62,11 +62,17 @@ jobs:
 
           if [ "$HTTP_CODE" = "200" ]; then
             TOKEN_B64=$(echo "$BODY" | jq -r '.token')
+            HAS_WORKFLOW=$(echo "$BODY" | jq -r '.hasWorkflowScope // false')
             echo "::add-mask::${TOKEN_B64}"
             OWNER_GH_TOKEN=$(echo "$TOKEN_B64" | base64 -d)
             echo "::add-mask::${OWNER_GH_TOKEN}"
-            echo "repo_token=${OWNER_GH_TOKEN}" >> "$GITHUB_OUTPUT"
-            echo "Owner GitHub token loaded"
+            if [ "$HAS_WORKFLOW" = "true" ]; then
+              echo "repo_token=${OWNER_GH_TOKEN}" >> "$GITHUB_OUTPUT"
+              echo "Owner GitHub token loaded (repo + workflow scopes)"
+            else
+              echo "Owner GitHub token lacks workflow scope — falling back to GH_PAT"
+              echo "repo_token=${{ secrets.GH_PAT }}" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "Owner GitHub token not available (HTTP $HTTP_CODE) — falling back to GH_PAT"
             echo "repo_token=${{ secrets.GH_PAT }}" >> "$GITHUB_OUTPUT"

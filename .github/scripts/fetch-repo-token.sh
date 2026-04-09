@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fetch the project owner's GitHub OAuth token for repo operations.
-# Falls back to GH_PAT if the owner token is unavailable.
+# Falls back to GH_PAT if the owner token is unavailable or lacks workflow scope.
 #
 # Required env vars:
 #   APP_URL            - Base URL of the ai-board API
@@ -24,11 +24,18 @@ BODY=$(echo "$RESPONSE" | head -n -1)
 
 if [ "$HTTP_CODE" = "200" ]; then
   TOKEN_B64=$(echo "$BODY" | jq -r '.token')
+  HAS_WORKFLOW=$(echo "$BODY" | jq -r '.hasWorkflowScope // false')
   echo "::add-mask::${TOKEN_B64}" >&2
   TOKEN=$(echo "$TOKEN_B64" | base64 -d)
   echo "::add-mask::${TOKEN}" >&2
-  echo "Owner GitHub token loaded" >&2
-  echo "$TOKEN"
+
+  if [ "$HAS_WORKFLOW" = "true" ]; then
+    echo "Owner GitHub token loaded (repo + workflow scopes)" >&2
+    echo "$TOKEN"
+  else
+    echo "Owner GitHub token lacks workflow scope — falling back to GH_PAT" >&2
+    echo "${GH_PAT_FALLBACK}"
+  fi
 else
   echo "Owner GitHub token not available (HTTP $HTTP_CODE) — falling back to GH_PAT" >&2
   echo "${GH_PAT_FALLBACK}"

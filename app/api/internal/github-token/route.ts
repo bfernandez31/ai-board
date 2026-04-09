@@ -64,9 +64,10 @@ export async function GET(request: NextRequest) {
 
     // Base64-encode to avoid accidental plaintext leaks in logs
     const encodedToken = Buffer.from(account.access_token).toString('base64');
+    const hasWorkflowScope = scopes.includes('workflow');
 
     return NextResponse.json(
-      { token: encodedToken, encoding: 'base64' },
+      { token: encodedToken, encoding: 'base64', hasWorkflowScope },
       {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate',
