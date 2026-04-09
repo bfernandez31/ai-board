@@ -5,7 +5,16 @@ import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { getOwnerCredential } from '@/lib/ai-credentials/workflow';
 import { dispatchOnboardWorkflow } from '@/lib/workflows/dispatch-onboard';
 import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
-import type { Agent } from '@prisma/client';
+
+function handleOwnershipError(error: unknown): NextResponse {
+  if (error instanceof Error && error.message === 'Project not found') {
+    return NextResponse.json({ error: 'Project not found', code: 'NOT_FOUND' }, { status: 404 });
+  }
+  if (error instanceof Error && error.message === 'Unauthorized') {
+    return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
+  }
+  return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
+}
 
 const createSetupJobSchema = z.object({
   agent: z.enum(['CLAUDE', 'CODEX']),
@@ -28,13 +37,7 @@ export async function POST(
     try {
       project = await verifyProjectOwnership(projectId, request);
     } catch (error) {
-      if (error instanceof Error && error.message === 'Project not found') {
-        return NextResponse.json({ error: 'Project not found', code: 'NOT_FOUND' }, { status: 404 });
-      }
-      if (error instanceof Error && error.message === 'Unauthorized') {
-        return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
-      }
-      return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
+      return handleOwnershipError(error);
     }
 
     // Parse and validate body
@@ -50,7 +53,8 @@ export async function POST(
     const { agent } = parsed.data;
 
     // Pre-flight: check credential
-    const provider = AGENT_PROVIDER_MAP[agent as Agent];
+    // Zod validates agent is 'CLAUDE' | 'CODEX', matching the Agent enum exactly
+    const provider = AGENT_PROVIDER_MAP[agent];
     const credential = await getOwnerCredential(projectId, provider);
     if (!credential) {
       return NextResponse.json(
@@ -157,26 +161,20 @@ export async function GET(
     try {
       await verifyProjectOwnership(projectId, request);
     } catch (error) {
-      if (error instanceof Error && error.message === 'Project not found') {
-        return NextResponse.json({ error: 'Project not found', code: 'NOT_FOUND' }, { status: 404 });
-      }
-      if (error instanceof Error && error.message === 'Unauthorized') {
-        return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
-      }
-      return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
+      return handleOwnershipError(error);
     }
 
-    // Get latest setup job
-    const job = await prisma.projectSetupJob.findFirst({
-      where: { projectId },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    // Get configSyncedAt
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { configSyncedAt: true },
-    });
+    // Get latest setup job and project config in parallel
+    const [job, projectData] = await Promise.all([
+      prisma.projectSetupJob.findFirst({
+        where: { projectId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.project.findUnique({
+        where: { id: projectId },
+        select: { configSyncedAt: true },
+      }),
+    ]);
 
     return NextResponse.json({
       job: job
@@ -193,7 +191,7 @@ export async function GET(
             createdAt: job.createdAt,
           }
         : null,
-      configSyncedAt: project?.configSyncedAt ?? null,
+      configSyncedAt: projectData?.configSyncedAt ?? null,
     });
   } catch (error) {
     console.error('[setup-jobs] GET error:', error);
