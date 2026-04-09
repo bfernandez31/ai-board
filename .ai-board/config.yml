@@ -14,14 +14,21 @@ services:
   - type: postgres
     version: "14"
 
+testing:
+  framework: vitest
+  e2e: true
+  e2e_framework: playwright
+
 commands:
   install: bun install --frozen-lockfile
   build: bun run build
   lint: bun run lint
   type_check: bun run type-check
+  test: "bun run test"
   test_unit: bun run test:unit
   test_integration: bun run test:integration
   test_e2e: bun run test:e2e
+  dev_server: "TEST_MODE=true bun run dev"
   db_setup: bunx prisma generate && if [ -n "${DATABASE_URL:-}" ]; then bunx prisma migrate deploy; fi
   db_seed: npx tsx tests/global-setup.ts
 

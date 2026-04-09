@@ -59,7 +59,9 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 │   │   ├── create-pr-and-transition.sh  # Create PR + transition to VERIFY
 │   │   ├── create-pr-only.sh            # Create PR without transition
 │   │   ├── update-agent-context.sh      # Update agent context files
-│   │   └── auto-ship-tickets.sh         # Auto-ship on production deploy
+│   │   ├── auto-ship-tickets.sh         # Auto-ship on production deploy
+│   │   ├── run-health-tests.sh          # Generic test orchestrator for health scans
+│   │   └── run-tests-with-reports.sh    # Config-driven test runner with framework parsers
 │   └── generate-test-report.js          # Generate test execution report
 └── skills/                              # Claude Code skills
     └── testing/
@@ -307,6 +309,7 @@ Low-level scripts invoked directly by GitHub Actions workflow YAML. Not part of 
 | `run-agent.sh` | All workflows | Agent CLI abstraction: invokes Claude Code or Codex depending on the `agent` input. |
 | `setup-test-env.sh` | `verify.yml` | Configure test environment variables and database for verification runs. |
 | `fetch-telemetry.sh` | Various | Collect and report workflow telemetry to the API. |
+| `fetch-repo-token.sh` | Various | Fetch the project owner's GitHub OAuth token via `GET /api/internal/github-token`; falls back to `GH_PAT` secret if the owner token is unavailable. Outputs the token to stdout and masks it in GitHub Actions logs. |
 
 ### Bash Scripts (`scripts/bash/`)
 
@@ -325,6 +328,8 @@ Support scripts called by workflows and commands. All scripts source `common.sh`
 | `create-pr-only.sh` | `verify.yml` | Create GitHub PR without transition |
 | `update-agent-context.sh` | Workflows | Update agent context files during execution |
 | `auto-ship-tickets.sh` | `auto-ship.yml` | Auto-ship merged tickets on production deploy |
+| `run-health-tests.sh` | `health-scan.yml` | Generic test orchestrator for health scans: reads `config.yml` for test commands and framework, calls `run-tests-with-reports.sh`, manages the fix loop (max 3 iterations with LLM agent + degradation guard), writes `/tmp/health-scan-result.json`; returns SKIPPED when no test command is configured |
+| `run-tests-with-reports.sh` | `run-health-tests.sh` | Config-driven test runner: reads `testing.framework` and `commands.test*` from `config.yml`, runs commands with framework-specific JSON reporter flags, parses results using framework-appropriate parsers (vitest, jest, pytest, cargo-test, go-test, rspec, phpunit, exit-code fallback), writes `/tmp/test-report-summary.json`; always exits 0 |
 
 ### Test Scripts
 
@@ -392,11 +397,16 @@ External projects declare their environment via `.ai-board/config.yml` (schema v
 | `runtime.node` | string | — | Node.js version override |
 | `runtime.python` | string | — | Python version override |
 | `commands.build` | string | — | Build command (skipped if absent) |
-| `commands.lint` | string | — | Lint command (skipped if absent) |
-| `commands.type_check` | string | — | Type-check command (skipped if absent) |
+| `commands.lint` | string | — | Lint command (auto-detected by `detect-stack.sh`; skipped if absent) |
+| `commands.type_check` | string | — | Type-check command (auto-detected; skipped if absent) |
+| `commands.test` | string | — | Primary test command (auto-detected; used when granular commands are not set) |
 | `commands.test_unit` | string | — | Unit test command (skipped if absent) |
 | `commands.test_integration` | string | — | Integration test command (skipped if absent) |
 | `commands.test_e2e` | string | — | E2E test command (skipped if absent) |
+| `commands.dev_server` | string | — | Dev server startup command for integration/E2E tests (e.g., `TEST_MODE=true bun run dev`) |
+| `testing.framework` | string | — | Test framework identifier (auto-detected): `vitest` \| `jest` \| `pytest` \| `cargo-test` \| `go-test` \| `rspec` \| `phpunit` |
+| `testing.e2e` | boolean | `false` | Whether an E2E testing framework (Playwright, Cypress, Selenium) is detected |
+| `testing.e2e_framework` | string | — | E2E framework identifier: `playwright` \| `cypress` \| `selenium` |
 | `services` | array | `[]` | Sidecar services (postgres, redis, mysql, mongo) |
 | `env` | object | `{}` | Flat key-value map of CI environment variables |
 | `agent.cli` | enum | `claude-code` | `claude-code` \| `codex` |

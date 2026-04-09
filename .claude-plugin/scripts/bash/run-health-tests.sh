@@ -50,7 +50,7 @@
 #   CONFIG_YML_PATH: Path to the project's .ai-board/config.yml
 #   TARGET_DIR:      Path to the target project directory (working directory for tests and git)
 #
-# Outputs: /tmp/health-scan-result.json (same schema as other health scans)
+# Outputs: $HEALTH_RESULT_FILE (same schema as other health scans)
 
 set -uo pipefail
 
@@ -58,6 +58,8 @@ AGENT_TYPE="${1:-CLAUDE}"
 CONFIG_YML="${2:-}"
 TARGET_DIR="${3:-}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-3}"
+HEALTH_RESULT_DIR="${HEALTH_RESULT_DIR:-/tmp}"
+HEALTH_RESULT_FILE="$HEALTH_RESULT_DIR/health-scan-result.json"
 
 # ── Resolve script locations ───────────────────────────────────────
 
@@ -105,13 +107,15 @@ read_config() {
 }
 
 # ── SKIPPED detection (T028) ──────────────────────────────────────
-# If no commands.test AND no commands.test_unit in config.yml, this project
-# has no test commands configured. Write SKIPPED result and exit cleanly.
+# If no test commands at all in config.yml, this project has no test
+# commands configured. Write SKIPPED result and exit cleanly.
 
 CMD_TEST=$(read_config ".commands.test")
 CMD_TEST_UNIT=$(read_config ".commands.test_unit")
+CMD_TEST_INTEGRATION=$(read_config ".commands.test_integration")
+CMD_TEST_E2E=$(read_config ".commands.test_e2e")
 
-if [[ -z "$CMD_TEST" && -z "$CMD_TEST_UNIT" ]]; then
+if [[ -z "$CMD_TEST" && -z "$CMD_TEST_UNIT" && -z "$CMD_TEST_INTEGRATION" && -z "$CMD_TEST_E2E" ]]; then
   echo "========================================"
   echo "  Health Test Scan — SKIPPED"
   echo "========================================"
@@ -119,8 +123,10 @@ if [[ -z "$CMD_TEST" && -z "$CMD_TEST_UNIT" ]]; then
   echo "No test command configured in config.yml"
   echo "  commands.test: (not set)"
   echo "  commands.test_unit: (not set)"
+  echo "  commands.test_integration: (not set)"
+  echo "  commands.test_e2e: (not set)"
   echo ""
-  echo "Writing SKIPPED result to /tmp/health-scan-result.json"
+  echo "Writing SKIPPED result to $HEALTH_RESULT_FILE"
 
   jq -n '{
     score: 0,
@@ -136,9 +142,9 @@ if [[ -z "$CMD_TEST" && -z "$CMD_TEST_UNIT" ]]; then
     },
     tokensUsed: 0,
     costUsd: 0
-  }' > /tmp/health-scan-result.json
+  }' > $HEALTH_RESULT_FILE
 
-  echo "Result written to /tmp/health-scan-result.json (SKIPPED)"
+  echo "Result written to $HEALTH_RESULT_FILE (SKIPPED)"
   exit 0
 fi
 
@@ -162,17 +168,19 @@ fi
 # The fix agent reads this file to know which report format to parse.
 
 FRAMEWORK=$(read_config ".testing.framework" "unknown")
-echo "$FRAMEWORK" > /tmp/test-framework.txt
-echo "Test framework: $FRAMEWORK (written to /tmp/test-framework.txt)"
+echo "$FRAMEWORK" > "$HEALTH_RESULT_DIR/test-framework.txt"
+echo "Test framework: $FRAMEWORK (written to $HEALTH_RESULT_DIR/test-framework.txt)"
 
 # ── Helpers ─────────────────────────────────────────────────────────
 
+SUMMARY_REPORT="${TEST_REPORT_DIR:-/tmp}/test-report-summary.json"
+
 read_summary() {
-  cat /tmp/test-report-summary.json
+  cat "$SUMMARY_REPORT"
 }
 
 has_errors() {
-  jq -r '.hasErrors' /tmp/test-report-summary.json
+  jq -r '.hasErrors' "$SUMMARY_REPORT"
 }
 
 # compute_score: Calculate health score from test summary.
@@ -199,7 +207,7 @@ compute_score() {
   fi
 }
 
-# write_result: Write /tmp/health-scan-result.json with the standard schema.
+# write_result: Write $HEALTH_RESULT_FILE with the standard schema.
 write_result() {
   local score="$1"
   local auto_fixed="$2"
@@ -230,9 +238,9 @@ write_result() {
       },
       tokensUsed: 0,
       costUsd: 0
-    }' > /tmp/health-scan-result.json
+    }' > $HEALTH_RESULT_FILE
 
-  echo "Result written to /tmp/health-scan-result.json (score: $score, found: $issues_found, fixed: $issues_fixed)"
+  echo "Result written to $HEALTH_RESULT_FILE (score: $score, found: $issues_found, fixed: $issues_fixed)"
 }
 
 # merge_arrays: Merge two JSON arrays into one.
@@ -254,7 +262,7 @@ echo "========================================"
 # and report it in the result JSON without crashing the workflow.
 if [[ ! -x "$TEST_RUNNER" ]]; then
   echo "Test runner not found or not executable: $TEST_RUNNER"
-  echo "Writing error result to /tmp/health-scan-result.json"
+  echo "Writing error result to $HEALTH_RESULT_FILE"
 
   jq -n \
     --arg reason "Test runner script not found: $TEST_RUNNER" \
@@ -270,7 +278,7 @@ if [[ ! -x "$TEST_RUNNER" ]]; then
       },
       tokensUsed: 0,
       costUsd: 0
-    }' > /tmp/health-scan-result.json
+    }' > $HEALTH_RESULT_FILE
 
   exit 0
 fi
@@ -281,9 +289,9 @@ RUNNER_EXIT=$?
 
 # T030: If the runner itself crashed (non-zero exit that is NOT a test failure),
 # check that the summary report was produced. If not, write an error result.
-if [[ $RUNNER_EXIT -ne 0 ]] && [[ ! -f /tmp/test-report-summary.json ]]; then
+if [[ $RUNNER_EXIT -ne 0 ]] && [[ ! -f "$SUMMARY_REPORT" ]]; then
   echo "Test runner failed to produce summary report (exit: $RUNNER_EXIT)"
-  echo "Writing error result to /tmp/health-scan-result.json"
+  echo "Writing error result to $HEALTH_RESULT_FILE"
 
   jq -n \
     --argjson exitCode "$RUNNER_EXIT" \
@@ -299,7 +307,7 @@ if [[ $RUNNER_EXIT -ne 0 ]] && [[ ! -f /tmp/test-report-summary.json ]]; then
       },
       tokensUsed: 0,
       costUsd: 0
-    }' > /tmp/health-scan-result.json
+    }' > $HEALTH_RESULT_FILE
 
   exit 0
 fi

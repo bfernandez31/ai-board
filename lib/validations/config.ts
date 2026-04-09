@@ -90,11 +90,19 @@ export const CommandsSectionSchema = z.object({
   build: z.string().optional(),
   lint: z.string().optional(),
   type_check: z.string().optional(),
+  test: z.string().optional(),
   test_unit: z.string().optional(),
   test_integration: z.string().optional(),
   test_e2e: z.string().optional(),
+  dev_server: z.string().optional(),
   db_setup: z.string().optional(),
   db_seed: z.string().optional(),
+}).strict();
+
+export const TestingSectionSchema = z.object({
+  framework: z.string().optional(),
+  e2e: z.boolean().default(false),
+  e2e_framework: z.string().optional(),
 }).strict();
 
 export const ServiceConfigSchema = z.object({
@@ -118,6 +126,7 @@ export const ProjectConfigSchema = z
     project: ProjectSectionSchema,
     runtime: RuntimeSectionSchema,
     services: z.array(ServiceConfigSchema).default([]),
+    testing: TestingSectionSchema.optional(),
     commands: CommandsSectionSchema,
     env: z.record(z.string(), z.string()).default({}),
     agent: AgentSectionSchema.default({ cli: 'claude-code' }),
@@ -131,6 +140,7 @@ export type ProjectSection = z.infer<typeof ProjectSectionSchema>;
 export type RuntimeSection = z.infer<typeof RuntimeSectionSchema>;
 export type CommandsSection = z.infer<typeof CommandsSectionSchema>;
 export type ServiceConfig = z.infer<typeof ServiceConfigSchema>;
+export type TestingSection = z.infer<typeof TestingSectionSchema>;
 export type AgentSection = z.infer<typeof AgentSectionSchema>;
 
 // ─── Validation Types ───────────────────────────────────────────────

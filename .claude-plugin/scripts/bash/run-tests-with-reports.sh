@@ -41,23 +41,36 @@ set +e
 CONFIG_YML="${1:?ERROR: config.yml path required as first argument}"
 TARGET_DIR="${2:?ERROR: target directory required as second argument}"
 
+# ── JSON-escape a string (backslash, quotes, tabs, newlines) ─────────
+json_escape() {
+  printf '%s' "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/"/\\"/g;s/\t/\\t/g;s/\r/\\r/g;s/\n/\\n/g'
+}
+
 # ── Default summary writer (used on early exit) ─────────────────────
 write_default_summary() {
   local msg="${1:-}"
+  local has_errors="false"
+  local error_json="null"
+
+  if [ -n "$msg" ]; then
+    has_errors="true"
+    error_json="\"$(json_escape "$msg")\""
+  fi
+
   cat > "$SUMMARY_REPORT" <<ENDJSON
 {
   "totalPassed": 0,
   "totalFailed": 0,
   "totalTests": 0,
-  "hasErrors": $(if [ -n "$msg" ]; then echo "true"; else echo "false"; fi),
-  "unit": { "passed": 0, "failed": 0, "total": 0, "ran": false, "error": $(if [ -n "$msg" ]; then echo "\"$msg\""; else echo "null"; fi) },
+  "hasErrors": $has_errors,
+  "unit": { "passed": 0, "failed": 0, "total": 0, "ran": false, "error": $error_json },
   "integration": { "passed": 0, "failed": 0, "total": 0, "ran": false, "error": null },
   "e2e": { "passed": 0, "failed": 0, "total": 0, "ran": false, "error": null }
 }
 ENDJSON
 }
 
-REPORT_DIR="/tmp"
+REPORT_DIR="${TEST_REPORT_DIR:-/tmp}"
 SUMMARY_REPORT="$REPORT_DIR/test-report-summary.json"
 
 # ── Validate inputs ─────────────────────────────────────────────────
@@ -70,6 +83,12 @@ fi
 if ! command -v yq &>/dev/null; then
   echo "WARNING: yq not installed — cannot parse config.yml"
   write_default_summary "yq not installed"
+  exit 0
+fi
+
+if ! command -v jq &>/dev/null; then
+  echo "WARNING: jq not installed — cannot generate test summaries"
+  write_default_summary "jq not installed"
   exit 0
 fi
 
@@ -280,13 +299,19 @@ run_test_cmd() {
   fw=$(get_parser_framework "$test_type")
 
   # Inject reporter flags based on framework
+  # npm requires a -- delimiter to pass flags through to the underlying script
+  local sep=""
+  if [[ "$cmd" == "npm "* ]] && [[ "$cmd" != *" -- "* ]]; then
+    sep=" --"
+  fi
+
   local full_cmd="$cmd"
   case "$fw" in
     vitest)
-      full_cmd="$cmd --reporter=json --outputFile=$report_file"
+      full_cmd="$cmd${sep} --reporter=json --outputFile=$report_file"
       ;;
     jest)
-      full_cmd="$cmd --json --outputFile=$report_file"
+      full_cmd="$cmd${sep} --json --outputFile=$report_file"
       ;;
     pytest)
       full_cmd="$cmd --tb=short -q"
@@ -304,7 +329,7 @@ run_test_cmd() {
       full_cmd="$cmd --log-junit $report_file"
       ;;
     playwright)
-      full_cmd="$cmd --reporter=json"
+      full_cmd="$cmd${sep} --reporter=json"
       ;;
   esac
 
