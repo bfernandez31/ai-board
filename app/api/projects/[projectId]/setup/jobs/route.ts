@@ -4,7 +4,9 @@ import { prisma } from '@/lib/db/client';
 import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { getOwnerCredential } from '@/lib/ai-credentials/workflow';
 import { dispatchOnboardWorkflow } from '@/lib/workflows/dispatch-onboard';
+import { dispatchRetroSpecWorkflow } from '@/lib/workflows/dispatch-retro-spec';
 import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
+import type { SetupJobCommand } from '@prisma/client';
 
 function handleOwnershipError(error: unknown): NextResponse {
   if (error instanceof Error && error.message === 'Project not found') {
@@ -18,7 +20,14 @@ function handleOwnershipError(error: unknown): NextResponse {
 
 const createSetupJobSchema = z.object({
   agent: z.enum(['CLAUDE', 'CODEX']),
-});
+  command: z.enum(['ONBOARD', 'RETRO_SPEC']).default('ONBOARD'),
+  depth: z.enum(['QUICK', 'STANDARD', 'COMPREHENSIVE']).optional(),
+  docUrl: z.string().url().max(2000).optional(),
+  context: z.string().optional(),
+}).refine(
+  (data) => data.command !== 'RETRO_SPEC' || data.depth !== undefined,
+  { message: 'depth is required for RETRO_SPEC command', path: ['depth'] }
+);
 
 export async function POST(
   request: NextRequest,
@@ -50,7 +59,7 @@ export async function POST(
       );
     }
 
-    const { agent } = parsed.data;
+    const { agent, command, depth, docUrl, context } = parsed.data;
 
     // Pre-flight: check credential
     // Zod validates agent is 'CLAUDE' | 'CODEX', matching the Agent enum exactly
@@ -63,20 +72,30 @@ export async function POST(
       );
     }
 
-    // Atomic check-and-create: verify not already configured and no active job, then create
+    // Atomic check-and-create: verify preconditions and no active job, then create
     const job = await prisma.$transaction(async (tx) => {
       const projectConfig = await tx.project.findUnique({
         where: { id: projectId },
         select: { configSyncedAt: true },
       });
 
-      if (projectConfig?.configSyncedAt) {
-        return { error: 'ALREADY_CONFIGURED' as const };
+      if (command === 'ONBOARD') {
+        // ONBOARD: configSyncedAt MUST be null
+        if (projectConfig?.configSyncedAt) {
+          return { error: 'ALREADY_CONFIGURED' as const };
+        }
+      } else {
+        // RETRO_SPEC: configSyncedAt MUST be set (project must be onboarded first)
+        if (!projectConfig?.configSyncedAt) {
+          return { error: 'NOT_CONFIGURED' as const };
+        }
       }
 
+      // Scope active-job check by command type
       const activeJob = await tx.projectSetupJob.findFirst({
         where: {
           projectId,
+          command,
           status: { in: ['PENDING', 'RUNNING'] },
         },
       });
@@ -89,29 +108,49 @@ export async function POST(
         data: {
           projectId,
           agent,
+          command,
           status: 'PENDING',
+          ...(command === 'RETRO_SPEC' && {
+            depth: depth ?? null,
+            docUrl: docUrl ?? null,
+            context: context ?? null,
+          }),
         },
       });
     });
 
     if ('error' in job) {
-      const message = job.error === 'ALREADY_CONFIGURED'
-        ? 'Project is already configured'
-        : 'A setup job is already active';
+      const messages: Record<string, string> = {
+        ALREADY_CONFIGURED: 'Project is already configured',
+        NOT_CONFIGURED: 'Project is not yet configured',
+        JOB_ACTIVE: 'A setup job is already active',
+      };
       return NextResponse.json(
-        { error: message, code: job.error },
+        { error: messages[job.error] ?? job.error, code: job.error },
         { status: 409 }
       );
     }
 
     // Dispatch workflow
     try {
-      await dispatchOnboardWorkflow({
-        project_id: String(projectId),
-        job_id: String(job.id),
-        githubRepository: `${project.githubOwner}/${project.githubRepo}`,
-        agent,
-      });
+      if (command === 'RETRO_SPEC') {
+        await dispatchRetroSpecWorkflow({
+          project_id: String(projectId),
+          job_id: String(job.id),
+          githubRepository: `${project.githubOwner}/${project.githubRepo}`,
+          agent,
+          depth: depth!,
+          docUrl,
+          context,
+        });
+      } else {
+        await dispatchOnboardWorkflow({
+          project_id: String(projectId),
+          job_id: String(job.id),
+          githubRepository: `${project.githubOwner}/${project.githubRepo}`,
+          agent,
+        });
+      }
     } catch (dispatchError) {
       // Mark job as failed on dispatch failure
       await prisma.projectSetupJob.update({
@@ -124,7 +163,7 @@ export async function POST(
       });
       console.error('[setup-jobs] Dispatch failed:', dispatchError);
       return NextResponse.json(
-        { error: 'Failed to dispatch onboard workflow', code: 'DISPATCH_FAILED' },
+        { error: `Failed to dispatch ${command.toLowerCase()} workflow`, code: 'DISPATCH_FAILED' },
         { status: 500 }
       );
     }
@@ -134,7 +173,9 @@ export async function POST(
         id: job.id,
         projectId: job.projectId,
         agent: job.agent,
+        command: job.command,
         status: job.status,
+        ...(command === 'RETRO_SPEC' && { depth: job.depth, docUrl: job.docUrl }),
         createdAt: job.createdAt,
       },
       { status: 201 }
@@ -164,10 +205,17 @@ export async function GET(
       return handleOwnershipError(error);
     }
 
+    // Optional command filter
+    const commandParam = request.nextUrl.searchParams.get('command');
+    const commandFilter: { command?: SetupJobCommand } = {};
+    if (commandParam === 'ONBOARD' || commandParam === 'RETRO_SPEC') {
+      commandFilter.command = commandParam;
+    }
+
     // Get latest setup job and project config in parallel
     const [job, projectData] = await Promise.all([
       prisma.projectSetupJob.findFirst({
-        where: { projectId },
+        where: { projectId, ...commandFilter },
         orderBy: { createdAt: 'desc' },
       }),
       prisma.project.findUnique({
@@ -182,7 +230,10 @@ export async function GET(
             id: job.id,
             projectId: job.projectId,
             agent: job.agent,
+            command: job.command,
             status: job.status,
+            depth: job.depth,
+            docUrl: job.docUrl,
             workflowRunId: job.workflowRunId ? Number(job.workflowRunId) : null,
             errorMessage: job.errorMessage,
             artifactSummary: job.artifactSummary,

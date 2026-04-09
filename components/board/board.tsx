@@ -57,6 +57,10 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { NewTicketModal } from './new-ticket-modal';
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog';
 import { ShortcutsHelpButton } from './shortcuts-help-button';
+import { RetroSpecBanner } from './retro-spec-banner';
+import { RetroSpecBadge } from './retro-spec-badge';
+import { RetroSpecModal } from './retro-spec-modal';
+import { useRetroSpecPolling } from '@/app/lib/hooks/useRetroSpecPolling';
 
 /**
  * Convert TicketWithVersion to TicketDetailModal-compatible format
@@ -84,6 +88,8 @@ interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
   projectId: number;
   initialJobs?: Map<number, Job[]>; // Array of jobs per ticket for dual job display
+  hasSpecs?: boolean;
+  defaultAgent?: 'CLAUDE' | 'CODEX';
 }
 
 /** Default merge: apply server response fields to optimistic ticket */
@@ -103,6 +109,8 @@ export function Board({
   ticketsByStage: initialTicketsByStage,
   projectId,
   initialJobs = new Map(),
+  hasSpecs = false,
+  defaultAgent = 'CLAUDE',
 }: BoardProps) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -134,6 +142,14 @@ export function Board({
 
   // T030: Job polling integration for real-time job status updates
   const { jobs: polledJobs } = useJobPolling(projectId, 2000);
+
+  // AIB-585: Retro-spec polling for banner/badge state
+  const { isGenerating: isRetroSpecGenerating, isCompleted: isRetroSpecCompleted, isFailed: isRetroSpecFailed } = useRetroSpecPolling(projectId);
+  const [isRetroSpecModalOpen, setIsRetroSpecModalOpen] = useState(false);
+  const isBannerDismissed = typeof window !== 'undefined' && (() => { try { return localStorage.getItem(`retro-spec-banner-dismissed-${projectId}`) === 'true'; } catch { return false; } })();
+  const handleRetroSpecSuccess = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.projects.retroSpecJob(projectId) });
+  }, [queryClient, projectId]);
 
   const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(
     null
@@ -199,7 +215,7 @@ export function Board({
   });
   const hasHover = useHoverCapability();
 
-  const isAnyModalOpen = isModalOpen || isNewTicketModalOpen || isShortcutsHelpOpen || deleteModalOpen || !!pendingTransition || !!pendingVerifyRollback || !!pendingRollback || !!pendingCloseTransition;
+  const isAnyModalOpen = isModalOpen || isNewTicketModalOpen || isShortcutsHelpOpen || deleteModalOpen || !!pendingTransition || !!pendingVerifyRollback || !!pendingRollback || !!pendingCloseTransition || isRetroSpecModalOpen;
 
   const handleShortcutsHelpChange = useCallback((open: boolean) => {
     setIsShortcutsHelpOpen(open);
@@ -1211,6 +1227,15 @@ export function Board({
     <div className="w-full h-full bg-background">
       <OfflineIndicator />
 
+      <RetroSpecBanner
+        projectId={projectId}
+        hasSpecs={hasSpecs || isRetroSpecCompleted}
+        isGenerating={isRetroSpecGenerating}
+        onGenerateSuccess={handleRetroSpecSuccess}
+        defaultAgent={defaultAgent}
+      />
+      <RetroSpecBadge projectId={projectId} defaultAgent={defaultAgent} />
+
       <DndContext
         sensors={sensors}
         collisionDetection={collisionDetection}
@@ -1346,6 +1371,27 @@ export function Board({
         onOpenChange={handleShortcutsHelpChange}
       />
       <ShortcutsHelpButton onClick={() => handleShortcutsHelpChange(!isShortcutsHelpOpen)} />
+
+      {/* AIB-585: Generate Specs trigger (FR-013) — only after banner is dismissed, hidden during failure (badge shows retry) */}
+      {!hasSpecs && !isRetroSpecCompleted && !isRetroSpecGenerating && !isRetroSpecFailed && isBannerDismissed && (
+        <>
+          <button
+            onClick={() => setIsRetroSpecModalOpen(true)}
+            className="fixed bottom-4 right-14 z-30 flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground text-xs"
+            aria-label="Generate project specs"
+            data-testid="retro-spec-menu-btn"
+          >
+            Generate Specs
+          </button>
+          <RetroSpecModal
+            open={isRetroSpecModalOpen}
+            onOpenChange={setIsRetroSpecModalOpen}
+            projectId={projectId}
+            defaultAgent={defaultAgent}
+            onSuccess={handleRetroSpecSuccess}
+          />
+        </>
+      )}
     </div>
   );
 }

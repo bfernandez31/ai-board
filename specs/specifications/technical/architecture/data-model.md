@@ -1051,7 +1051,7 @@ Equal weighting with proportional redistribution when modules are unscanned or S
 
 ### ProjectSetupJob
 
-Represents a single onboarding attempt for a project. Multiple records per project form a retry history; the most recent active job determines the project's setup state.
+Represents a single setup attempt for a project — either an initial onboarding run or a retro-spec generation run. Multiple records per project form a retry history; the most recent active job of each command type determines the project's setup state.
 
 ```prisma
 model ProjectSetupJob {
@@ -1059,6 +1059,13 @@ model ProjectSetupJob {
   projectId       Int
   agent           Agent
   status          SetupJobStatus  @default(PENDING)
+  command         SetupJobCommand @default(ONBOARD)
+
+  // Retro-spec specific inputs (nullable, only for RETRO_SPEC jobs)
+  depth           SetupJobDepth?
+  docUrl          String?         @db.VarChar(2000)
+  context         String?         @db.Text
+
   workflowRunId   BigInt?
   errorMessage    String?         @db.VarChar(2000)
   artifactSummary Json?
@@ -1071,17 +1078,22 @@ model ProjectSetupJob {
 
   @@index([projectId, status])
   @@index([projectId, createdAt(sort: Desc)])
+  @@index([projectId, command, status])
 }
 ```
 
 **Fields**:
 - `id`: Auto-incrementing unique identifier
 - `projectId`: Parent project (required, cascade delete)
-- `agent`: Selected agent CLI for this onboarding attempt (`CLAUDE` or `CODEX`)
+- `agent`: Selected agent CLI (`CLAUDE` or `CODEX`)
 - `status`: Current job state (default: `PENDING`)
+- `command`: Job type discriminator (default: `ONBOARD`). `RETRO_SPEC` identifies spec generation jobs.
+- `depth`: Spec generation depth level — `SetupJobDepth` enum: `QUICK`, `STANDARD`, or `COMPREHENSIVE` (RETRO_SPEC only; null for ONBOARD)
+- `docUrl`: Optional URL of external documentation to incorporate (RETRO_SPEC only; max 2000 chars)
+- `context`: Optional additional context for spec generation (RETRO_SPEC only)
 - `workflowRunId`: GitHub Actions workflow run ID (set on first RUNNING callback)
 - `errorMessage`: Error details persisted on failure (max 2000 chars)
-- `artifactSummary`: JSON record of onboarding outputs. Shape: `{ created: string[], preserved: string[], missing: string[], partial: boolean, commitSha?: string, errorCode?: string }`. `preserved` lists files that already existed and were not overwritten (e.g., `CLAUDE.md`). `partial: true` indicates Phase 2 failed and only Phase 1 outputs were committed. `errorCode` is set to `GUIDANCE_GENERATION_FAILED` on partial success, or `CONFIG_GENERATION_FAILED` / `COMMIT_FAILED` on full failure.
+- `artifactSummary`: JSON record of job outputs. Shape: `{ created: string[], preserved: string[], missing: string[], partial: boolean, commitSha?: string, errorCode?: string }`. `preserved` lists files that already existed and were not overwritten (e.g., `CLAUDE.md`). `partial: true` indicates Phase 2 failed and only Phase 1 outputs were committed. `errorCode` is set to `GUIDANCE_GENERATION_FAILED` on partial success, or `CONFIG_GENERATION_FAILED` / `COMMIT_FAILED` on full failure.
 - `startedAt`: Set when status transitions to `RUNNING`
 - `completedAt`: Set when status transitions to any terminal state
 - `createdAt`: Record creation time
@@ -1093,13 +1105,15 @@ model ProjectSetupJob {
 **Constraints**:
 - Composite index on `(projectId, status)` for fast active-job lookups
 - Composite index on `(projectId, createdAt DESC)` for fast latest-job queries
+- Composite index on `(projectId, command, status)` for command-scoped active-job lookups
 
 **Business Rules**:
-- Only one job with PENDING or RUNNING status is permitted per project at a time
-- Projects with `configSyncedAt` set cannot have new setup jobs created
+- Only one job with PENDING or RUNNING status is permitted per project **per command type** at a time — ONBOARD and RETRO_SPEC jobs do not block each other
+- `ONBOARD` jobs require `configSyncedAt` to be null; `RETRO_SPEC` jobs require `configSyncedAt` to be set
 - `agent` determines which credential provider is required (`CLAUDE` → `ANTHROPIC`, `CODEX` → `OPENAI`)
-- On COMPLETED, `syncProjectConfig()` runs automatically (non-blocking) to set `configSyncedAt`
-- If config sync fails after COMPLETED, the job remains COMPLETED but `configSyncedAt` stays null — the setup page remains visible and the user can retry
+- On COMPLETED (ONBOARD), `syncProjectConfig()` runs automatically (non-blocking) to set `configSyncedAt`
+- On COMPLETED (RETRO_SPEC), no config sync — generated specs are committed to the repository by the workflow
+- If config sync fails after an ONBOARD COMPLETED, the job remains COMPLETED but `configSyncedAt` stays null — the setup page remains visible and the user can retry
 
 ---
 
@@ -1188,6 +1202,44 @@ enum HealthScanStatus {
 | COMPLETED | Scan finished with results | Terminal |
 | FAILED | Scan encountered an error | Terminal |
 | SKIPPED | Agent detected nothing to evaluate; null score | Terminal |
+
+---
+
+### SetupJobDepth
+
+Enum constraining the depth level for retro-spec generation jobs.
+
+```prisma
+enum SetupJobDepth {
+  QUICK
+  STANDARD
+  COMPREHENSIVE
+}
+```
+
+| Value | Description |
+|-------|-------------|
+| `QUICK` | Project overview and high-level architecture |
+| `STANDARD` | Architecture, APIs, data model, and workflows |
+| `COMPREHENSIVE` | Full functional and technical specifications |
+
+---
+
+### SetupJobCommand
+
+Discriminator enum that identifies the type of setup job.
+
+```prisma
+enum SetupJobCommand {
+  ONBOARD     // Initial project onboarding — creates config.yml and CLAUDE.md
+  RETRO_SPEC  // Spec generation for existing codebases — creates specs/specifications/
+}
+```
+
+| Value | Description | Requires |
+|-------|-------------|----------|
+| `ONBOARD` | Runs the onboarding workflow to bootstrap a new project | `configSyncedAt` must be null |
+| `RETRO_SPEC` | Runs the retro-spec workflow to generate specifications for an existing codebase | `configSyncedAt` must be set |
 
 ---
 

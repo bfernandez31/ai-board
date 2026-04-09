@@ -555,6 +555,58 @@ When the workflow fails, the setup page displays the error message and offers a 
 | Git push fails (`COMMIT_FAILED`) | Job fails with message; error displayed with retry option |
 | Config sync failure after COMPLETED | Project stays on setup page; retry resolves |
 
+## Spec Generation for Existing Projects
+
+### Overview
+
+After onboarding completes, the project board offers a one-click workflow to generate project specifications for the existing codebase. Generated specs are committed to `specs/specifications/` in the target repository and improve health scan results, AI ticket workflows, and code review quality.
+
+### Spec Generation Banner
+
+When a project has `configSyncedAt` set but no completed spec generation job, a dismissible banner appears on the board:
+
+> "Project specs not generated — Specs improve health scans, ticket workflows, and code review quality — [Generate] [×]"
+
+- Clicking "Generate" opens the spec generation modal
+- Clicking "×" dismisses the banner; dismissal persists across page reloads on the same device (stored in localStorage per project)
+- The banner does not reappear on the same device after dismissal
+- Only the project owner sees the banner
+
+### Spec Generation Modal
+
+The modal provides three configuration options:
+
+**Depth picker** (radio group, required):
+- **Quick** — Project overview and high-level architecture summary (~5 min)
+- **Standard** (default) — Architecture, API endpoints, data model, and key workflows (~10 min)
+- **Comprehensive** — Full functional and technical specs, entity documentation, API schemas, and workflow documentation (~20 min)
+
+**Documentation URL** (optional): URL of existing external documentation (Notion, Confluence, wiki). The workflow fetches the URL and incorporates its content. If the URL is unreachable, spec generation continues using only the codebase.
+
+**Additional context** (optional): Free-text field for business context or guidance for the spec generator.
+
+Clicking "Generate Specs" dispatches the background workflow. The modal closes immediately; the owner is not navigated away from the board.
+
+### Board Status Badge
+
+While a retro-spec job is active, a status badge appears in the board area above the stage columns:
+
+| State | Display |
+|-------|---------|
+| PENDING / RUNNING | "Generating specs..." with pulse animation |
+| COMPLETED | "Specs ready" — fades out after 30 seconds |
+| FAILED | Error indicator with retry button |
+
+The badge is mutually exclusive with the banner: when a job is active, the badge is shown instead of the banner.
+
+### Triggering Spec Generation After Banner Dismissal
+
+After the banner is dismissed, spec generation can be triggered from the board menu ("Generate Specs" option). This opens the same modal.
+
+### Concurrency Constraint
+
+Only one active retro-spec job is permitted per project at a time. A second request while one is active is rejected with a `409 JOB_ACTIVE` error.
+
 ## External Repository Support
 
 ### Multi-Repository Architecture

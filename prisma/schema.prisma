@@ -570,6 +570,11 @@ model HealthScore {
   @@index([projectId])
 }
 
+enum SetupJobCommand {
+  ONBOARD
+  RETRO_SPEC
+}
+
 enum SetupJobStatus {
   PENDING
   RUNNING
@@ -577,11 +582,23 @@ enum SetupJobStatus {
   FAILED
 }
 
+enum SetupJobDepth {
+  QUICK
+  STANDARD
+  COMPREHENSIVE
+}
+
 model ProjectSetupJob {
   id              Int             @id @default(autoincrement())
   projectId       Int
   agent           Agent
   status          SetupJobStatus  @default(PENDING)
+  command         SetupJobCommand @default(ONBOARD)
+
+  // Retro-spec specific inputs (nullable, only for RETRO_SPEC jobs)
+  depth           SetupJobDepth?
+  docUrl          String?         @db.VarChar(2000)
+  context         String?         @db.Text
 
   // Workflow tracking
   workflowRunId   BigInt?
@@ -603,4 +620,5 @@ model ProjectSetupJob {
 
   @@index([projectId, status])
   @@index([projectId, createdAt(sort: Desc)])
+  @@index([projectId, command, status])
 }

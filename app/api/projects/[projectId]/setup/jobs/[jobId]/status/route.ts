@@ -116,8 +116,8 @@ export async function PATCH(
       data: updateData,
     });
 
-    // On COMPLETED: trigger config sync using owner's GitHub token (non-blocking)
-    if (newStatus === 'COMPLETED') {
+    // On COMPLETED: trigger config sync for ONBOARD jobs only (RETRO_SPEC needs no sync)
+    if (newStatus === 'COMPLETED' && job.command !== 'RETRO_SPEC') {
       const project = await prisma.project.findUnique({
         where: { id: projectId },
         select: { id: true, userId: true, githubOwner: true, githubRepo: true, configSyncedAt: true },

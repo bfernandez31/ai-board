@@ -315,21 +315,40 @@ Endpoints for the project onboarding setup flow. All session-authenticated endpo
 
 ### POST /api/projects/:projectId/setup/jobs
 
-Create a setup job and dispatch the onboarding workflow.
+Create a setup job and dispatch the onboarding workflow or the retro-spec workflow. The `command` field selects which workflow is dispatched.
 
 **Authentication**: Session (owner-only)
 **Authorization**: `verifyProjectOwnership`
 
-**Request Body**:
+**Request Body** (onboard):
 ```json
 { "agent": "CLAUDE" }
+```
+
+**Request Body** (retro-spec):
+```json
+{
+  "agent": "CLAUDE",
+  "command": "RETRO_SPEC",
+  "depth": "STANDARD",
+  "docUrl": "https://docs.example.com/api",
+  "context": "Optional business context"
+}
 ```
 
 | Field | Type | Required |
 |-------|------|----------|
 | `agent` | `"CLAUDE"` \| `"CODEX"` | Yes |
+| `command` | `"ONBOARD"` \| `"RETRO_SPEC"` | No (default: `"ONBOARD"`) |
+| `depth` | `"QUICK"` \| `"STANDARD"` \| `"COMPREHENSIVE"` | Required when `command === "RETRO_SPEC"` |
+| `docUrl` | string (max 2000, valid URL) | No |
+| `context` | string | No |
 
-**Pre-flight checks** (in order): project ownership, not already configured (`configSyncedAt` null), no active job (PENDING/RUNNING), credential exists for selected agent's provider.
+**Pre-flight checks by command**:
+- `ONBOARD`: project ownership, `configSyncedAt` is null, no active ONBOARD job, credential exists
+- `RETRO_SPEC`: project ownership, `configSyncedAt` is set, no active RETRO_SPEC job, credential exists
+
+Active-job check is scoped by command type — ONBOARD and RETRO_SPEC jobs do not block each other.
 
 **Response** (201 Created):
 ```json
@@ -337,18 +356,21 @@ Create a setup job and dispatch the onboarding workflow.
   "id": 1,
   "projectId": 5,
   "agent": "CLAUDE",
+  "command": "RETRO_SPEC",
   "status": "PENDING",
+  "depth": "STANDARD",
   "createdAt": "2026-04-08T12:00:00.000Z"
 }
 ```
 
 **Errors**:
-- `400`: `VALIDATION_ERROR` — invalid body
+- `400`: `VALIDATION_ERROR` — invalid body, missing `depth` for RETRO_SPEC, or invalid `docUrl`
 - `401`: Not authenticated
 - `403`: `FORBIDDEN` — not project owner
 - `404`: `PROJECT_NOT_FOUND`
-- `409`: `ALREADY_CONFIGURED` — `configSyncedAt` is set
-- `409`: `JOB_ACTIVE` — a job is PENDING or RUNNING
+- `409`: `ALREADY_CONFIGURED` — `configSyncedAt` is set (ONBOARD only)
+- `409`: `NOT_CONFIGURED` — `configSyncedAt` is null (RETRO_SPEC only)
+- `409`: `JOB_ACTIVE` — a job of the same command type is PENDING or RUNNING
 - `409`: `CREDENTIAL_MISSING` — owner lacks credential for the agent's provider
 - `500`: `DISPATCH_FAILED` — workflow dispatch failed (job marked FAILED)
 
@@ -356,10 +378,16 @@ Create a setup job and dispatch the onboarding workflow.
 
 ### GET /api/projects/:projectId/setup/jobs
 
-Fetch the latest setup job for polling and page load.
+Fetch the latest setup job for polling and page load. Supports optional filtering by command type.
 
 **Authentication**: Session (owner-only)
 **Authorization**: `verifyProjectOwnership`
+
+**Query Parameters**:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `command` | `"ONBOARD"` \| `"RETRO_SPEC"` | Optional — filters by job type. When omitted, returns the latest job of any type. |
 
 **Response** (200 OK):
 ```json
@@ -368,7 +396,10 @@ Fetch the latest setup job for polling and page load.
     "id": 1,
     "projectId": 5,
     "agent": "CLAUDE",
+    "command": "RETRO_SPEC",
     "status": "RUNNING",
+    "depth": "STANDARD",
+    "docUrl": "https://docs.example.com/api",
     "workflowRunId": 12345678,
     "errorMessage": null,
     "artifactSummary": null,
@@ -376,7 +407,7 @@ Fetch the latest setup job for polling and page load.
     "completedAt": null,
     "createdAt": "2026-04-08T12:00:00.000Z"
   },
-  "configSyncedAt": null
+  "configSyncedAt": "2026-04-08T10:00:00.000Z"
 }
 ```
 
@@ -388,7 +419,7 @@ When no job exists: `{ "job": null, "configSyncedAt": null }`.
 
 ### PATCH /api/projects/:projectId/setup/jobs/:jobId/status
 
-Update setup job status from the onboarding workflow.
+Update setup job status from the onboarding or retro-spec workflow.
 
 **Authentication**: Workflow Bearer token (`Authorization: Bearer <WORKFLOW_API_TOKEN>`)
 
@@ -420,7 +451,8 @@ Update setup job status from the onboarding workflow.
 
 **Side effects**:
 - `RUNNING`: sets `startedAt` and `workflowRunId` (first-write-wins)
-- `COMPLETED`: sets `completedAt`, triggers `syncProjectConfig()` (non-blocking)
+- `COMPLETED` (ONBOARD jobs): sets `completedAt`, triggers `syncProjectConfig()` (non-blocking)
+- `COMPLETED` (RETRO_SPEC jobs): sets `completedAt` only — no config sync (specs are committed to the repo by the workflow)
 - `FAILED`: sets `completedAt`, persists `errorMessage`
 
 **Response** (200 OK):
