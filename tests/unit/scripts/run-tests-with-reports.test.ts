@@ -5,14 +5,15 @@ import { join } from 'path';
 
 const SCRIPT_PATH = join(__dirname, '../../../.claude-plugin/scripts/bash/run-tests-with-reports.sh');
 const TMP_DIR = join(__dirname, '../../../tmp-run-tests-reports-test');
-const SUMMARY_REPORT = '/tmp/test-report-summary.json';
+const REPORT_DIR = join(__dirname, '../../../tmp-run-tests-reports-reports');
+const SUMMARY_REPORT = join(REPORT_DIR, 'test-report-summary.json');
 
 function runScript(configPath: string, targetDir: string, env?: Record<string, string>): { stdout: string; exitCode: number } {
   try {
     const result = execSync(`bash "${SCRIPT_PATH}" "${configPath}" "${targetDir}"`, {
       encoding: 'utf-8',
       timeout: 30000,
-      env: { ...process.env, ...env },
+      env: { ...process.env, TEST_REPORT_DIR: REPORT_DIR, ...env },
     });
     return { stdout: result, exitCode: 0 };
   } catch (error: unknown) {
@@ -36,11 +37,18 @@ describe.skipIf(!hasYq)('run-tests-with-reports.sh', () => {
     }
     mkdirSync(TMP_DIR, { recursive: true });
     mkdirSync(join(TMP_DIR, '.ai-board'), { recursive: true });
+    if (existsSync(REPORT_DIR)) {
+      rmSync(REPORT_DIR, { recursive: true, force: true });
+    }
+    mkdirSync(REPORT_DIR, { recursive: true });
   });
 
   afterAll(() => {
     if (existsSync(TMP_DIR)) {
       rmSync(TMP_DIR, { recursive: true, force: true });
+    }
+    if (existsSync(REPORT_DIR)) {
+      rmSync(REPORT_DIR, { recursive: true, force: true });
     }
   });
 
@@ -161,7 +169,7 @@ version: 1
 testing:
   framework: vitest
 commands:
-  test: "cp ${mockReportPath} /tmp/test-report-unit.json && exit 1"
+  test: "cp ${mockReportPath} ${REPORT_DIR}/test-report-unit.json && exit 1"
 `);
     runScript(config, TMP_DIR);
     const summary = readSummary();

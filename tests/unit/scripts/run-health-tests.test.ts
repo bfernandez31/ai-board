@@ -5,7 +5,8 @@ import { join } from 'path';
 
 const SCRIPT_PATH = join(__dirname, '../../../.claude-plugin/scripts/bash/run-health-tests.sh');
 const TMP_DIR = join(__dirname, '../../../tmp-run-health-tests-test');
-const RESULT_FILE = '/tmp/health-scan-result.json';
+const RESULT_DIR = join(__dirname, '../../../tmp-run-health-tests-results');
+const RESULT_FILE = join(RESULT_DIR, 'health-scan-result.json');
 
 function runScript(
   agentType: string,
@@ -18,7 +19,7 @@ function runScript(
       encoding: 'utf-8',
       timeout: 30000,
       // MAX_ITERATIONS=0 disables the fix loop (no LLM agent in unit tests)
-      env: { ...process.env, MAX_ITERATIONS: '0', ...env },
+      env: { ...process.env, MAX_ITERATIONS: '0', HEALTH_RESULT_DIR: RESULT_DIR, TEST_REPORT_DIR: RESULT_DIR, ...env },
     });
     return { stdout: result, exitCode: 0 };
   } catch (error: unknown) {
@@ -42,6 +43,10 @@ describe.skipIf(!hasYq)('run-health-tests.sh', () => {
     }
     mkdirSync(TMP_DIR, { recursive: true });
     mkdirSync(join(TMP_DIR, '.ai-board'), { recursive: true });
+    if (existsSync(RESULT_DIR)) {
+      rmSync(RESULT_DIR, { recursive: true, force: true });
+    }
+    mkdirSync(RESULT_DIR, { recursive: true });
     // Init git repo so the orchestrator's git commands don't fail
     execSync('git init', { cwd: TMP_DIR, encoding: 'utf-8' });
     execSync('git config user.name "test"', { cwd: TMP_DIR, encoding: 'utf-8' });
@@ -53,6 +58,9 @@ describe.skipIf(!hasYq)('run-health-tests.sh', () => {
   afterAll(() => {
     if (existsSync(TMP_DIR)) {
       rmSync(TMP_DIR, { recursive: true, force: true });
+    }
+    if (existsSync(RESULT_DIR)) {
+      rmSync(RESULT_DIR, { recursive: true, force: true });
     }
   });
 
@@ -152,7 +160,7 @@ commands:
   test: "echo ok"
 `);
     runScript('CLAUDE', config, TMP_DIR);
-    const framework = readFileSync('/tmp/test-framework.txt', 'utf-8').trim();
+    const framework = readFileSync(join(RESULT_DIR, 'test-framework.txt'), 'utf-8').trim();
     expect(framework).toBe('vitest');
   });
 

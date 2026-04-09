@@ -5,7 +5,8 @@ import { join } from 'path';
 
 const SCRIPT_PATH = join(__dirname, '../../../.claude-plugin/scripts/bash/run-tests-with-reports.sh');
 const TMP_DIR = join(__dirname, '../../../tmp-test-report-parsers-test');
-const SUMMARY_PATH = '/tmp/test-report-summary.json';
+const REPORT_DIR = join(__dirname, '../../../tmp-test-report-parsers-reports');
+const SUMMARY_PATH = join(REPORT_DIR, 'test-report-summary.json');
 
 interface TestBucket {
   passed: number;
@@ -30,7 +31,7 @@ function runRunner(configPath: string, targetDir: string): TestSummary {
     execSync(`bash "${SCRIPT_PATH}" "${configPath}" "${targetDir}"`, {
       encoding: 'utf-8',
       timeout: 15000,
-      env: { ...process.env, PORT: '0' },
+      env: { ...process.env, PORT: '0', TEST_REPORT_DIR: REPORT_DIR },
     });
   } catch {
     // Script always exits 0 — but if it somehow fails, we still want to read the summary
@@ -64,15 +65,18 @@ describe.skipIf(!hasYq || !hasJq)('run-tests-with-reports.sh — parser tests', 
       rmSync(TMP_DIR, { recursive: true, force: true });
     }
     mkdirSync(TMP_DIR, { recursive: true });
-    // Clean up any stale summary from a previous test
-    if (existsSync(SUMMARY_PATH)) {
-      rmSync(SUMMARY_PATH, { force: true });
+    if (existsSync(REPORT_DIR)) {
+      rmSync(REPORT_DIR, { recursive: true, force: true });
     }
+    mkdirSync(REPORT_DIR, { recursive: true });
   });
 
   afterAll(() => {
     if (existsSync(TMP_DIR)) {
       rmSync(TMP_DIR, { recursive: true, force: true });
+    }
+    if (existsSync(REPORT_DIR)) {
+      rmSync(REPORT_DIR, { recursive: true, force: true });
     }
   });
 

@@ -313,8 +313,12 @@ jobs:
           fi
 
           if [ "$E2E_ENABLED" = "true" ] && [ "$E2E_FW" = "playwright" ]; then
-            if [ -f "package.json" ] && node -p "require('./package.json').devDependencies['@playwright/test']" 2>/dev/null; then
-              echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
+            PLAYWRIGHT_VERSION=""
+            if [ -f "package.json" ]; then
+              PLAYWRIGHT_VERSION=$(node -e "const pkg = require('./package.json'); const v = (pkg.devDependencies || {})['@playwright/test'] || (pkg.dependencies || {})['@playwright/test']; if (v) process.stdout.write(v); else process.exit(1);" 2>/dev/null) || true
+            fi
+            if [ -n "$PLAYWRIGHT_VERSION" ]; then
+              echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
               echo "has_playwright=true" >> $GITHUB_OUTPUT
             else
               echo "has_playwright=false" >> $GITHUB_OUTPUT

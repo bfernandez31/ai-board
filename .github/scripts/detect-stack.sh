@@ -41,6 +41,9 @@ SECONDARY_LANGUAGES=()
 E2E_DETECTED="false"
 E2E_FRAMEWORK=""
 TEST_CMD=""
+TEST_CMD_UNIT=""
+TEST_CMD_INTEGRATION=""
+TEST_CMD_E2E=""
 TYPE_CHECK_CMD=""
 LINT_CMD=""
 
@@ -435,6 +438,17 @@ detect_test_commands() {
         if echo "$scripts" | jq -e '.test' > /dev/null 2>&1; then
           TEST_CMD="${runner} test"
         fi
+
+        # Granular test commands (test:unit, test:integration, test:e2e)
+        if echo "$scripts" | jq -e '."test:unit"' > /dev/null 2>&1; then
+          TEST_CMD_UNIT="${runner} test:unit"
+        fi
+        if echo "$scripts" | jq -e '."test:integration"' > /dev/null 2>&1; then
+          TEST_CMD_INTEGRATION="${runner} test:integration"
+        fi
+        if echo "$scripts" | jq -e '."test:e2e"' > /dev/null 2>&1; then
+          TEST_CMD_E2E="${runner} test:e2e"
+        fi
       fi
       ;;
     python)
@@ -808,6 +822,15 @@ EOF
   if [[ -n "$TEST_CMD" ]]; then
     echo "  test: \"${TEST_CMD}\"" >> "$REPO_DIR/.ai-board/config.yml"
   fi
+  if [[ -n "$TEST_CMD_UNIT" ]]; then
+    echo "  test_unit: \"${TEST_CMD_UNIT}\"" >> "$REPO_DIR/.ai-board/config.yml"
+  fi
+  if [[ -n "$TEST_CMD_INTEGRATION" ]]; then
+    echo "  test_integration: \"${TEST_CMD_INTEGRATION}\"" >> "$REPO_DIR/.ai-board/config.yml"
+  fi
+  if [[ -n "$TEST_CMD_E2E" ]]; then
+    echo "  test_e2e: \"${TEST_CMD_E2E}\"" >> "$REPO_DIR/.ai-board/config.yml"
+  fi
   if [[ -n "$TYPE_CHECK_CMD" ]]; then
     echo "  type_check: \"${TYPE_CHECK_CMD}\"" >> "$REPO_DIR/.ai-board/config.yml"
   fi
@@ -815,16 +838,16 @@ EOF
     echo "  lint: \"${LINT_CMD}\"" >> "$REPO_DIR/.ai-board/config.yml"
   fi
 
-  # Append testing section if framework detected
-  if [[ -n "$TEST_FRAMEWORK" ]]; then
-    cat >> "$REPO_DIR/.ai-board/config.yml" <<EOF
+  # Append testing section — always emit e2e so downstream logic has a stable key
+  cat >> "$REPO_DIR/.ai-board/config.yml" <<EOF
 testing:
-  framework: ${TEST_FRAMEWORK}
   e2e: ${E2E_DETECTED}
 EOF
-    if [[ -n "$E2E_FRAMEWORK" ]]; then
-      echo "  e2e_framework: ${E2E_FRAMEWORK}" >> "$REPO_DIR/.ai-board/config.yml"
-    fi
+  if [[ -n "$TEST_FRAMEWORK" ]]; then
+    echo "  framework: ${TEST_FRAMEWORK}" >> "$REPO_DIR/.ai-board/config.yml"
+  fi
+  if [[ -n "$E2E_FRAMEWORK" ]]; then
+    echo "  e2e_framework: ${E2E_FRAMEWORK}" >> "$REPO_DIR/.ai-board/config.yml"
   fi
 
   # Append agent section
