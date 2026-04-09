@@ -38,6 +38,11 @@ LOCKFILES=()
 CONFIG_FILES=()
 RUNTIME_VERSIONS="{}"
 SECONDARY_LANGUAGES=()
+E2E_DETECTED="false"
+E2E_FRAMEWORK=""
+TEST_CMD=""
+TYPE_CHECK_CMD=""
+LINT_CMD=""
 
 # ─── Project Name ───────────────────────────────────────────────────
 
@@ -414,6 +419,166 @@ detect_test_framework() {
   esac
 }
 
+# ─── Test Commands Detection ───────────────────────────────────────
+
+detect_test_commands() {
+  case "$LANGUAGE" in
+    typescript|javascript)
+      if [[ -f "$REPO_DIR/package.json" ]]; then
+        local scripts
+        scripts=$(jq -r '.scripts // {}' "$REPO_DIR/package.json" 2>/dev/null || echo "{}")
+
+        # Determine runner prefix
+        local runner=""
+        case "${PACKAGE_MANAGER:-}" in
+          bun)  runner="bun run" ;;
+          yarn) runner="yarn" ;;
+          pnpm) runner="pnpm" ;;
+          *)    runner="npm" ;;
+        esac
+
+        # Primary test command
+        if echo "$scripts" | jq -e '.test' > /dev/null 2>&1; then
+          TEST_CMD="${runner} test"
+        fi
+      fi
+      ;;
+    python)
+      if [[ -n "$TEST_FRAMEWORK" && "$TEST_FRAMEWORK" == "pytest" ]]; then
+        TEST_CMD="pytest"
+      else
+        TEST_CMD="python -m unittest"
+      fi
+      ;;
+    rust)
+      TEST_CMD="cargo test"
+      ;;
+    go)
+      TEST_CMD="go test ./..."
+      ;;
+    ruby)
+      if [[ "$TEST_FRAMEWORK" == "rspec" ]]; then
+        TEST_CMD="bundle exec rspec"
+      else
+        TEST_CMD="bundle exec rake test"
+      fi
+      ;;
+    php)
+      if [[ "$TEST_FRAMEWORK" == "phpunit" ]]; then
+        TEST_CMD="./vendor/bin/phpunit"
+      fi
+      ;;
+    java|kotlin)
+      if [[ -f "$REPO_DIR/pom.xml" ]]; then
+        TEST_CMD="mvn test"
+      elif [[ -f "$REPO_DIR/build.gradle" ]] || [[ -f "$REPO_DIR/build.gradle.kts" ]]; then
+        TEST_CMD="gradle test"
+      fi
+      ;;
+  esac
+}
+
+# ─── E2E Framework Detection ──────────────────────────────────────
+
+detect_e2e_framework() {
+  case "$LANGUAGE" in
+    typescript|javascript)
+      if [[ -f "$REPO_DIR/package.json" ]]; then
+        local deps
+        deps=$(jq -r '(.dependencies // {}) + (.devDependencies // {}) | keys[]' "$REPO_DIR/package.json" 2>/dev/null || true)
+
+        if echo "$deps" | grep -q "@playwright/test"; then
+          E2E_DETECTED="true"
+          E2E_FRAMEWORK="playwright"
+        elif echo "$deps" | grep -qx "cypress"; then
+          E2E_DETECTED="true"
+          E2E_FRAMEWORK="cypress"
+        elif echo "$deps" | grep -q "selenium-webdriver"; then
+          E2E_DETECTED="true"
+          E2E_FRAMEWORK="selenium"
+        fi
+      fi
+      ;;
+    python)
+      local py_deps=""
+      if [[ -f "$REPO_DIR/pyproject.toml" ]]; then
+        py_deps=$(cat "$REPO_DIR/pyproject.toml" 2>/dev/null || true)
+      fi
+      if [[ -f "$REPO_DIR/requirements.txt" ]]; then
+        py_deps="$py_deps $(cat "$REPO_DIR/requirements.txt" 2>/dev/null || true)"
+      fi
+      if echo "$py_deps" | grep -qi "playwright"; then
+        E2E_DETECTED="true"
+        E2E_FRAMEWORK="playwright"
+      elif echo "$py_deps" | grep -qi "selenium"; then
+        E2E_DETECTED="true"
+        E2E_FRAMEWORK="selenium"
+      fi
+      ;;
+  esac
+}
+
+# ─── Lint & Type-Check Detection ──────────────────────────────────
+
+detect_lint_typecheck() {
+  case "$LANGUAGE" in
+    typescript|javascript)
+      if [[ -f "$REPO_DIR/package.json" ]]; then
+        local scripts
+        scripts=$(jq -r '.scripts // {}' "$REPO_DIR/package.json" 2>/dev/null || echo "{}")
+
+        local runner=""
+        case "${PACKAGE_MANAGER:-}" in
+          bun)  runner="bun run" ;;
+          yarn) runner="yarn" ;;
+          pnpm) runner="pnpm" ;;
+          *)    runner="npm run" ;;
+        esac
+
+        # Lint command
+        if echo "$scripts" | jq -e '.lint' > /dev/null 2>&1; then
+          LINT_CMD="${runner} lint"
+        fi
+
+        # Type-check command (try multiple common script names)
+        if echo "$scripts" | jq -e '."type-check"' > /dev/null 2>&1; then
+          TYPE_CHECK_CMD="${runner} type-check"
+        elif echo "$scripts" | jq -e '.typecheck' > /dev/null 2>&1; then
+          TYPE_CHECK_CMD="${runner} typecheck"
+        fi
+      fi
+      ;;
+    python)
+      local py_deps=""
+      if [[ -f "$REPO_DIR/pyproject.toml" ]]; then
+        py_deps=$(cat "$REPO_DIR/pyproject.toml" 2>/dev/null || true)
+      fi
+      if [[ -f "$REPO_DIR/requirements.txt" ]]; then
+        py_deps="$py_deps $(cat "$REPO_DIR/requirements.txt" 2>/dev/null || true)"
+      fi
+      # Lint
+      if echo "$py_deps" | grep -qi "ruff"; then
+        LINT_CMD="ruff check ."
+      elif echo "$py_deps" | grep -qi "flake8"; then
+        LINT_CMD="flake8 ."
+      fi
+      # Type-check
+      if echo "$py_deps" | grep -qi "mypy"; then
+        TYPE_CHECK_CMD="mypy ."
+      elif echo "$py_deps" | grep -qi "pyright"; then
+        TYPE_CHECK_CMD="pyright ."
+      fi
+      ;;
+    rust)
+      LINT_CMD="cargo clippy"
+      TYPE_CHECK_CMD="cargo check"
+      ;;
+    go)
+      LINT_CMD="go vet ./..."
+      ;;
+  esac
+}
+
 # ─── Services Detection ─────────────────────────────────────────────
 
 detect_services() {
@@ -632,6 +797,7 @@ generate_config_yml() {
     agent_cli="codex"
   fi
 
+  # Base config (version, project, runtime, commands:install)
   cat > "$REPO_DIR/.ai-board/config.yml" <<EOF
 version: 1
 project:
@@ -642,6 +808,33 @@ runtime:
   manager: ${pm_val}
 commands:
   install: "${install_cmd}"
+EOF
+
+  # Append test/lint/typecheck commands if detected
+  if [[ -n "$TEST_CMD" ]]; then
+    echo "  test: \"${TEST_CMD}\"" >> "$REPO_DIR/.ai-board/config.yml"
+  fi
+  if [[ -n "$TYPE_CHECK_CMD" ]]; then
+    echo "  type_check: \"${TYPE_CHECK_CMD}\"" >> "$REPO_DIR/.ai-board/config.yml"
+  fi
+  if [[ -n "$LINT_CMD" ]]; then
+    echo "  lint: \"${LINT_CMD}\"" >> "$REPO_DIR/.ai-board/config.yml"
+  fi
+
+  # Append testing section if framework detected
+  if [[ -n "$TEST_FRAMEWORK" ]]; then
+    cat >> "$REPO_DIR/.ai-board/config.yml" <<EOF
+testing:
+  framework: ${TEST_FRAMEWORK}
+  e2e: ${E2E_DETECTED}
+EOF
+    if [[ -n "$E2E_FRAMEWORK" ]]; then
+      echo "  e2e_framework: ${E2E_FRAMEWORK}" >> "$REPO_DIR/.ai-board/config.yml"
+    fi
+  fi
+
+  # Append agent section
+  cat >> "$REPO_DIR/.ai-board/config.yml" <<EOF
 agent:
   cli: ${agent_cli}
 EOF
@@ -674,6 +867,11 @@ generate_analysis_json() {
     --arg packageManager "${PACKAGE_MANAGER:-}" \
     --arg testFramework "${TEST_FRAMEWORK:-}" \
     --arg projectName "$PROJECT_NAME" \
+    --arg testCommand "${TEST_CMD:-}" \
+    --arg e2eDetected "$E2E_DETECTED" \
+    --arg e2eFramework "${E2E_FRAMEWORK:-}" \
+    --arg typeCheckCommand "${TYPE_CHECK_CMD:-}" \
+    --arg lintCommand "${LINT_CMD:-}" \
     --argjson services "$SERVICES_JSON" \
     --argjson commands "$COMMANDS_JSON" \
     --argjson manifests "$manifests_json" \
@@ -686,6 +884,11 @@ generate_analysis_json() {
       framework: (if $framework == "" then null else $framework end),
       packageManager: (if $packageManager == "" then null else $packageManager end),
       testFramework: (if $testFramework == "" then null else $testFramework end),
+      testCommand: (if $testCommand == "" then null else $testCommand end),
+      e2eDetected: (if $e2eDetected == "true" then true else false end),
+      e2eFramework: (if $e2eFramework == "" then null else $e2eFramework end),
+      typeCheckCommand: (if $typeCheckCommand == "" then null else $typeCheckCommand end),
+      lintCommand: (if $lintCommand == "" then null else $lintCommand end),
       services: $services,
       commands: $commands,
       manifests: $manifests,
@@ -704,6 +907,9 @@ detect_language
 detect_package_manager
 detect_framework
 detect_test_framework
+detect_test_commands
+detect_e2e_framework
+detect_lint_typecheck
 detect_services
 detect_commands
 detect_runtime_versions

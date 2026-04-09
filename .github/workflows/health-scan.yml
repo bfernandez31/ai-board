@@ -299,14 +299,26 @@ jobs:
       # own global-setup automatically. Running it here too caused double-seeding
       # race conditions that broke integration tests in CI.
 
-      - name: Get Playwright Version
+      - name: Check Playwright Requirement
         if: ${{ inputs.scan_type == 'TESTS' }}
         working-directory: target
         id: playwright-version
         run: |
-          if [ -f "package.json" ] && node -p "require('./package.json').devDependencies['@playwright/test']" 2>/dev/null; then
-            echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
-            echo "has_playwright=true" >> $GITHUB_OUTPUT
+          # Read E2E config from target's config.yml — only install Playwright if configured
+          E2E_ENABLED="false"
+          E2E_FW=""
+          if [ -f ".ai-board/config.yml" ]; then
+            E2E_ENABLED=$(yq -r '.testing.e2e // false' .ai-board/config.yml 2>/dev/null || echo "false")
+            E2E_FW=$(yq -r '.testing.e2e_framework // ""' .ai-board/config.yml 2>/dev/null || echo "")
+          fi
+
+          if [ "$E2E_ENABLED" = "true" ] && [ "$E2E_FW" = "playwright" ]; then
+            if [ -f "package.json" ] && node -p "require('./package.json').devDependencies['@playwright/test']" 2>/dev/null; then
+              echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
+              echo "has_playwright=true" >> $GITHUB_OUTPUT
+            else
+              echo "has_playwright=false" >> $GITHUB_OUTPUT
+            fi
           else
             echo "has_playwright=false" >> $GITHUB_OUTPUT
           fi
@@ -335,19 +347,14 @@ jobs:
           echo "🔍 Running TESTS scan via shell orchestrator"
 
           # The orchestrator handles everything: run tests, score, fix loop, result
-          if ./scripts/run-health-tests.sh "$INPUT_AGENT" 2>&1 | tee /tmp/scan_log.txt; then
+          if ../ai-board/.claude-plugin/scripts/bash/run-health-tests.sh "$INPUT_AGENT" .ai-board/config.yml . 2>&1 | tee /tmp/scan_log.txt; then
             DURATION_MS=$((SECONDS * 1000))
             echo "duration_ms=$DURATION_MS" >> $GITHUB_OUTPUT
 
             RESULT_FILE="/tmp/health-scan-result.json"
             if [ -f "$RESULT_FILE" ] && jq empty "$RESULT_FILE" 2>/dev/null; then
-              # Check for SKIPPED indicator
+              # Check for SKIPPED indicator (projects without test commands)
               SKIPPED=$(jq -r '.skipped // false' "$RESULT_FILE")
-              # Defensive guard: TESTS scans cannot be SKIPPED
-              if [ "$SKIPPED" = "true" ]; then
-                echo "⚠️ TESTS scan emitted skipped=true — ignoring (TESTS never skip)"
-                SKIPPED="false"
-              fi
               echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
               if [ "$SKIPPED" = "true" ]; then
                 {
