@@ -154,9 +154,9 @@
 
 **Purpose**: Final integration verification and cross-story consistency
 
-- [ ] T030 Run `bun run type-check` and `bun run lint` to verify no type or lint errors across all changed files
-- [ ] T031 Run `bun run test:unit` and `bun run test:integration` to verify all new and existing tests pass
-- [ ] T032 Verify backward compatibility: existing onboard job tests in `tests/integration/projects/setup-job.test.ts` pass without modification beyond T010
+- [x] T030 Run `bun run type-check` and `bun run lint` to verify no type or lint errors across all changed files
+- [x] T031 Run `bun run test:unit` and `bun run test:integration` to verify all new and existing tests pass
+- [x] T032 Verify backward compatibility: existing onboard job tests in `tests/integration/projects/setup-job.test.ts` pass without modification beyond T010
 
 ---
 
