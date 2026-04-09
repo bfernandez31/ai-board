@@ -114,7 +114,10 @@ export async function POST(
         where: { id: job.id },
         data: {
           status: 'FAILED',
+          partial: false,
+          errorCode: 'DISPATCH_FAILED',
           errorMessage: dispatchError instanceof Error ? dispatchError.message : 'Dispatch failed',
+          logs: dispatchError instanceof Error ? dispatchError.stack?.slice(0, 10000) ?? dispatchError.message : 'Dispatch failed',
           completedAt: new Date(),
         },
       });
@@ -186,7 +189,11 @@ export async function GET(
             agent: job.agent,
             status: job.status,
             workflowRunId: job.workflowRunId ? Number(job.workflowRunId) : null,
+            partial: job.partial,
+            commitSha: job.commitSha,
+            errorCode: job.errorCode,
             errorMessage: job.errorMessage,
+            logs: job.logs,
             artifactSummary: job.artifactSummary,
             startedAt: job.startedAt,
             completedAt: job.completedAt,

@@ -300,6 +300,42 @@ describe('BYOK Credential Dispatch Guards', () => {
     });
   });
 
+  describe('dispatchOnboardWorkflow', () => {
+    it('throws when the owner has no onboarding credential', async () => {
+      mockedGetOwnerCredential.mockResolvedValue(null);
+
+      const { dispatchOnboardWorkflow } = await import('@/lib/workflows/dispatch-onboard');
+
+      await expect(
+        dispatchOnboardWorkflow({
+          project_id: '1',
+          job_id: '2',
+          githubRepository: 'owner/repo',
+          agent: 'CODEX',
+        }),
+      ).rejects.toThrow('OpenAI');
+
+      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1, 'OPENAI');
+    });
+
+    it('skips onboarding credential checks in workflow test mode', async () => {
+      mockedIsWorkflowTestMode.mockReturnValue(true);
+
+      const { dispatchOnboardWorkflow } = await import('@/lib/workflows/dispatch-onboard');
+
+      await expect(
+        dispatchOnboardWorkflow({
+          project_id: '1',
+          job_id: '2',
+          githubRepository: 'owner/repo',
+          agent: 'CLAUDE',
+        }),
+      ).resolves.not.toThrow();
+
+      expect(mockedGetOwnerCredential).not.toHaveBeenCalled();
+    });
+  });
+
   describe('hardcoded CLAUDE commands', () => {
     it('should always check ANTHROPIC credential for ai-board-assist regardless of ticket agent', async () => {
       mockedGetOwnerCredential.mockResolvedValue(null);

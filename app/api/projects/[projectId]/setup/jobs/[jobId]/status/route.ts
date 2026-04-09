@@ -4,12 +4,68 @@ import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 import { syncProjectConfig } from '@/lib/config-sync';
 import type { SetupJobStatus } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+
+const artifactRecordSchema = z.object({
+  path: z.string().min(1).max(500),
+  kind: z.enum(['config', 'guidance', 'constitution', 'agent-entry', 'command', 'script', 'analysis']),
+  reason: z.string().max(500).optional(),
+});
+
+const artifactSummarySchema = z.object({
+  created: z.array(artifactRecordSchema).default([]),
+  preserved: z.array(artifactRecordSchema).default([]),
+  missing: z.array(artifactRecordSchema).default([]),
+  analysisPath: z.string().max(500).optional(),
+  partialReason: z.string().max(1000).optional(),
+});
 
 const setupJobStatusUpdateSchema = z.object({
   status: z.enum(['RUNNING', 'COMPLETED', 'FAILED']),
   workflowRunId: z.number().int().positive().optional(),
+  partial: z.boolean().optional(),
+  commitSha: z.string().regex(/^[a-f0-9]{7,40}$/i, 'commitSha must be a git SHA').optional(),
+  errorCode: z.enum([
+    'DISPATCH_FAILED',
+    'CONFIGURATION_GENERATION_FAILED',
+    'GUIDANCE_GENERATION_FAILED',
+    'COMMIT_FAILED',
+  ]).optional(),
   errorMessage: z.string().max(2000).optional(),
-  artifactSummary: z.record(z.string(), z.unknown()).optional(),
+  logs: z.string().max(10000).optional(),
+  artifactSummary: artifactSummarySchema.optional(),
+}).superRefine((data, ctx) => {
+  if (data.partial && data.status !== 'COMPLETED') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['partial'],
+      message: 'partial is only valid for COMPLETED status',
+    });
+  }
+
+  if (data.status === 'FAILED' && !data.errorCode) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['errorCode'],
+      message: 'errorCode is required for FAILED status',
+    });
+  }
+
+  if (data.status === 'FAILED' && data.commitSha) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['commitSha'],
+      message: 'commitSha is not valid for FAILED status',
+    });
+  }
+
+  if (data.status === 'RUNNING' && (data.partial !== undefined || data.commitSha || data.errorCode || data.logs)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['status'],
+      message: 'RUNNING updates may only include workflowRunId, errorMessage, and artifactSummary',
+    });
+  }
 });
 
 const VALID_TRANSITIONS: Record<SetupJobStatus, SetupJobStatus[]> = {
@@ -84,7 +140,7 @@ export async function PATCH(
 
     // Build update data
     const now = new Date();
-    const updateData: Record<string, unknown> = {
+    const updateData: Prisma.ProjectSetupJobUpdateInput = {
       status: newStatus,
     };
 
@@ -100,8 +156,26 @@ export async function PATCH(
       updateData.errorMessage = data.errorMessage;
     }
 
+    if (data.partial !== undefined) {
+      updateData.partial = data.partial;
+    } else if (newStatus === 'FAILED') {
+      updateData.partial = false;
+    }
+
+    if (data.commitSha !== undefined) {
+      updateData.commitSha = data.commitSha;
+    }
+
+    if (data.errorCode !== undefined) {
+      updateData.errorCode = data.errorCode;
+    }
+
+    if (data.logs !== undefined) {
+      updateData.logs = data.logs;
+    }
+
     if (data.artifactSummary !== undefined) {
-      updateData.artifactSummary = data.artifactSummary;
+      updateData.artifactSummary = data.artifactSummary as Prisma.InputJsonValue;
     }
 
     if (data.workflowRunId !== undefined && !job.workflowRunId) {

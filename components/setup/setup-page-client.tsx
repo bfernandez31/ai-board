@@ -7,12 +7,13 @@ import { Loader2, AlertCircle, CheckCircle2, ArrowRight, RefreshCw } from 'lucid
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { queryKeys } from '@/app/lib/query-keys';
-import { useSetupJobPolling } from '@/app/lib/hooks/useSetupJobPolling';
+import { useSetupJobPolling, type SetupJobPollResult } from '@/app/lib/hooks/useSetupJobPolling';
 import type { Agent } from '@prisma/client';
 
 interface SetupPageClientProps {
   projectId: number;
   projectName: string;
+  initialSetupState?: SetupJobPollResult;
 }
 
 const AGENTS: { value: Agent; label: string; description: string }[] = [
@@ -28,12 +29,12 @@ const AGENTS: { value: Agent; label: string; description: string }[] = [
   },
 ];
 
-export function SetupPageClient({ projectId, projectName }: SetupPageClientProps) {
+export function SetupPageClient({ projectId, projectName, initialSetupState }: SetupPageClientProps) {
   const router = useRouter();
   const [selectedAgent, setSelectedAgent] = useState<Agent>('CLAUDE');
   const [isDispatching, setIsDispatching] = useState(false);
 
-  const { job, configSyncedAt, isPolling } = useSetupJobPolling(projectId);
+  const { job, configSyncedAt, isPolling } = useSetupJobPolling(projectId, 2000, initialSetupState);
 
   // Credential check query
   const { data: credentialData } = useQuery({
@@ -56,6 +57,12 @@ export function SetupPageClient({ projectId, projectName }: SetupPageClientProps
 
   const isJobActive = job?.status === 'PENDING' || job?.status === 'RUNNING';
   const isJobFailed = job?.status === 'FAILED';
+  const isJobCompleted = job?.status === 'COMPLETED';
+
+  const artifactSummary = job?.artifactSummary;
+  const createdArtifacts = artifactSummary?.created ?? [];
+  const preservedArtifacts = artifactSummary?.preserved ?? [];
+  const missingArtifacts = artifactSummary?.missing ?? [];
 
   const handleDispatch = useCallback(async () => {
     setIsDispatching(true);
@@ -188,8 +195,17 @@ export function SetupPageClient({ projectId, projectName }: SetupPageClientProps
             <AlertCircle className="h-5 w-5 text-ctp-red mt-0.5" />
             <div className="flex-1">
               <p className="text-sm font-medium text-foreground">Setup failed</p>
+              {job.errorCode && (
+                <p className="text-xs text-muted-foreground mt-1">Failure category: {job.errorCode}</p>
+              )}
               {job.errorMessage && (
                 <p className="text-sm text-muted-foreground mt-1">{job.errorMessage}</p>
+              )}
+              {job.logs && (
+                <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">{job.logs}</p>
+              )}
+              {job.commitSha && (
+                <p className="text-xs text-muted-foreground mt-2">Commit: {job.commitSha}</p>
               )}
               <Button
                 variant="outline"
@@ -206,8 +222,67 @@ export function SetupPageClient({ projectId, projectName }: SetupPageClientProps
         </div>
       )}
 
+      {/* Completed / Partial State */}
+      {isJobCompleted && job && !configSyncedAt && (
+        <div className={`rounded-lg border p-4 ${job.partial ? 'border-ctp-yellow/30 bg-ctp-yellow/5' : 'border-ctp-green/30 bg-ctp-green/5'}`}>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className={`h-5 w-5 mt-0.5 ${job.partial ? 'text-ctp-yellow' : 'text-ctp-green'}`} />
+            <div className="flex-1 space-y-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {job.partial ? 'Setup partially completed' : 'Setup completed'}
+                </p>
+                {job.commitSha && (
+                  <p className="text-xs text-muted-foreground mt-1">Commit: {job.commitSha}</p>
+                )}
+                {job.partial && artifactSummary?.partialReason && (
+                  <p className="text-sm text-muted-foreground mt-1">{artifactSummary.partialReason}</p>
+                )}
+              </div>
+
+              {createdArtifacts.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Created</p>
+                  <ul className="mt-1 text-sm text-foreground">
+                    {createdArtifacts.map((artifact) => (
+                      <li key={`created-${artifact.path}`}>{artifact.path}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {preservedArtifacts.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preserved</p>
+                  <ul className="mt-1 text-sm text-foreground">
+                    {preservedArtifacts.map((artifact) => (
+                      <li key={`preserved-${artifact.path}`}>
+                        {artifact.path}{artifact.reason ? ` (${artifact.reason})` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {missingArtifacts.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Missing</p>
+                  <ul className="mt-1 text-sm text-foreground">
+                    {missingArtifacts.map((artifact) => (
+                      <li key={`missing-${artifact.path}`}>
+                        {artifact.path}{artifact.reason ? ` (${artifact.reason})` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Initialize Button */}
-      {!isJobActive && !isJobFailed && (
+      {!isJobActive && !isJobFailed && !isJobCompleted && (
         <Button
           className="w-full aurora-btn-mauve"
           size="lg"

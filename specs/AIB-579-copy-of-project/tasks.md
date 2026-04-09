@@ -20,9 +20,9 @@ description: "Actionable task list for AIB-579 implementation"
 
 **Purpose**: Create the empty onboarding implementation surface that later phases will fill.
 
-- [ ] T001 Create the new onboarding domain files `/home/runner/work/ai-board/ai-board/target/lib/onboarding/detect-stack.ts`, `/home/runner/work/ai-board/ai-board/target/lib/onboarding/generate-config.ts`, and `/home/runner/work/ai-board/ai-board/target/lib/onboarding/artifacts.ts`
-- [ ] T002 [P] Create the workflow helper entrypoints `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/report-status.ts`, `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/detect-stack.ts`, and `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/assemble-artifacts.ts`
-- [ ] T003 [P] Create the onboarding-specific agent command `/home/runner/work/ai-board/ai-board/target/.claude-plugin/commands/ai-board.onboard.md` and the new pure-function test files `/home/runner/work/ai-board/ai-board/target/tests/unit/lib/onboarding/detect-stack.test.ts`, `/home/runner/work/ai-board/ai-board/target/tests/unit/lib/onboarding/generate-config.test.ts`, and `/home/runner/work/ai-board/ai-board/target/tests/unit/lib/onboarding/artifacts.test.ts`
+- [X] T001 Create the new onboarding domain files `/home/runner/work/ai-board/ai-board/target/lib/onboarding/detect-stack.ts`, `/home/runner/work/ai-board/ai-board/target/lib/onboarding/generate-config.ts`, and `/home/runner/work/ai-board/ai-board/target/lib/onboarding/artifacts.ts`
+- [X] T002 [P] Create the workflow helper entrypoints `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/report-status.ts`, `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/detect-stack.ts`, and `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/assemble-artifacts.ts`
+- [X] T003 [P] Create the onboarding-specific agent command `/home/runner/work/ai-board/ai-board/target/.claude-plugin/commands/ai-board.onboard.md` and the new pure-function test files `/home/runner/work/ai-board/ai-board/target/tests/unit/lib/onboarding/detect-stack.test.ts`, `/home/runner/work/ai-board/ai-board/target/tests/unit/lib/onboarding/generate-config.test.ts`, and `/home/runner/work/ai-board/ai-board/target/tests/unit/lib/onboarding/artifacts.test.ts`
 
 ---
 
@@ -32,11 +32,11 @@ description: "Actionable task list for AIB-579 implementation"
 
 **⚠️ CRITICAL**: No user story work should start until these tasks are complete.
 
-- [ ] T004 Extend `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` and generate the corresponding migration under `/home/runner/work/ai-board/ai-board/target/prisma/migrations/` for `ProjectSetupJob.partial`, `commitSha`, `errorCode`, and `logs`
-- [ ] T005 [P] Extend `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/jobs/[jobId]/status/route.ts` to validate and persist additive callback fields, enforce partial/failure field rules, and keep idempotent state transitions
-- [ ] T006 [P] Extend `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/jobs/route.ts` to return `partial`, `commitSha`, `errorCode`, and `logs` in the latest-job payload without changing owner-only authorization or dispatch semantics
-- [ ] T007 [P] Extend `/home/runner/work/ai-board/ai-board/target/lib/validations/config.ts` and `/home/runner/work/ai-board/ai-board/target/lib/config-sync.ts` to admit Ruby and PHP onboarding configs while preserving credential stripping and optimistic sync behavior
-- [ ] T008 [P] Extend `/home/runner/work/ai-board/ai-board/target/lib/workflows/dispatch-onboard.ts` to preserve the stable workflow input contract and onboarding credential guard behavior required by the richer workflow
+- [X] T004 Extend `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` and generate the corresponding migration under `/home/runner/work/ai-board/ai-board/target/prisma/migrations/` for `ProjectSetupJob.partial`, `commitSha`, `errorCode`, and `logs`
+- [X] T005 [P] Extend `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/jobs/[jobId]/status/route.ts` to validate and persist additive callback fields, enforce partial/failure field rules, and keep idempotent state transitions
+- [X] T006 [P] Extend `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/jobs/route.ts` to return `partial`, `commitSha`, `errorCode`, and `logs` in the latest-job payload without changing owner-only authorization or dispatch semantics
+- [X] T007 [P] Extend `/home/runner/work/ai-board/ai-board/target/lib/validations/config.ts` and `/home/runner/work/ai-board/ai-board/target/lib/config-sync.ts` to admit Ruby and PHP onboarding configs while preserving credential stripping and optimistic sync behavior
+- [X] T008 [P] Extend `/home/runner/work/ai-board/ai-board/target/lib/workflows/dispatch-onboard.ts` to preserve the stable workflow input contract and onboarding credential guard behavior required by the richer workflow
 
 **Checkpoint**: Setup-job persistence, callback validation, and config-schema support are ready for story implementation.
 
@@ -50,16 +50,16 @@ description: "Actionable task list for AIB-579 implementation"
 
 ### Tests for User Story 1
 
-- [ ] T009 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup-job.test.ts` with deterministic happy-path callback coverage for `workflowRunId`, `commitSha`, and created artifact summaries returned by `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/jobs/route.ts`
-- [ ] T010 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/config-sync.test.ts` with generated-config compatibility cases for newly supported primary stacks and config-sync stripping behavior
-- [ ] T011 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/lib/onboarding/detect-stack.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/unit/lib/onboarding/generate-config.test.ts` with deterministic precedence, command inference, and config-validation scenarios
+- [X] T009 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup-job.test.ts` with deterministic happy-path callback coverage for `workflowRunId`, `commitSha`, and created artifact summaries returned by `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/jobs/route.ts`
+- [X] T010 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/config-sync.test.ts` with generated-config compatibility cases for newly supported primary stacks and config-sync stripping behavior
+- [X] T011 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/lib/onboarding/detect-stack.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/unit/lib/onboarding/generate-config.test.ts` with deterministic precedence, command inference, and config-validation scenarios
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Implement deterministic repository analysis in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/detect-stack.ts` for manifests, lockfiles, framework signals, commands, services, and conflict resolution
-- [ ] T013 [P] [US1] Implement validated config generation in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/generate-config.ts` so repository analysis produces a schema-valid `.ai-board/config.yml`
-- [ ] T014 [P] [US1] Implement the workflow CLI wrappers in `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/detect-stack.ts` and `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/report-status.ts` for analysis execution and typed setup-job callbacks
-- [ ] T015 [US1] Replace the stub workflow in `/home/runner/work/ai-board/ai-board/target/.github/workflows/onboard.yml` so it checks out the target repository, reports `RUNNING`, runs deterministic analysis, commits deterministic artifacts once, and reports `COMPLETED` with the commit reference
+- [X] T012 [P] [US1] Implement deterministic repository analysis in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/detect-stack.ts` for manifests, lockfiles, framework signals, commands, services, and conflict resolution
+- [X] T013 [P] [US1] Implement validated config generation in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/generate-config.ts` so repository analysis produces a schema-valid `.ai-board/config.yml`
+- [X] T014 [P] [US1] Implement the workflow CLI wrappers in `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/detect-stack.ts` and `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/report-status.ts` for analysis execution and typed setup-job callbacks
+- [X] T015 [US1] Replace the stub workflow in `/home/runner/work/ai-board/ai-board/target/.github/workflows/onboard.yml` so it checks out the target repository, reports `RUNNING`, runs deterministic analysis, commits deterministic artifacts once, and reports `COMPLETED` with the commit reference
 
 **Checkpoint**: User Story 1 should make an imported repository operational even before guidance generation is added.
 
@@ -73,14 +73,14 @@ description: "Actionable task list for AIB-579 implementation"
 
 ### Tests for User Story 2
 
-- [ ] T016 [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup-job.test.ts` with onboarding rerun cases that assert created versus preserved guidance artifacts and preserved protected-file summaries
-- [ ] T017 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/lib/onboarding/artifacts.test.ts` with protected-file preservation, missing-artifact, and artifact-kind classification scenarios
+- [X] T016 [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup-job.test.ts` with onboarding rerun cases that assert created versus preserved guidance artifacts and preserved protected-file summaries
+- [X] T017 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/lib/onboarding/artifacts.test.ts` with protected-file preservation, missing-artifact, and artifact-kind classification scenarios
 
 ### Implementation for User Story 2
 
-- [ ] T018 [US2] Implement deterministic and guidance artifact merging in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/artifacts.ts`, including preservation of `CLAUDE.md`, `AGENTS.md`, and `.ai-board/memory/constitution.md`
-- [ ] T019 [P] [US2] Implement guidance assembly in `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/assemble-artifacts.ts` and author the onboarding prompt contract in `/home/runner/work/ai-board/ai-board/target/.claude-plugin/commands/ai-board.onboard.md`
-- [ ] T020 [US2] Extend `/home/runner/work/ai-board/ai-board/target/.github/workflows/onboard.yml` to fetch the owner credential through `/home/runner/work/ai-board/ai-board/target/app/api/internal/credentials/route.ts`, run `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh`, preserve existing guidance files, and include generated guidance in the single repository update
+- [X] T018 [US2] Implement deterministic and guidance artifact merging in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/artifacts.ts`, including preservation of `CLAUDE.md`, `AGENTS.md`, and `.ai-board/memory/constitution.md`
+- [X] T019 [P] [US2] Implement guidance assembly in `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/assemble-artifacts.ts` and author the onboarding prompt contract in `/home/runner/work/ai-board/ai-board/target/.claude-plugin/commands/ai-board.onboard.md`
+- [X] T020 [US2] Extend `/home/runner/work/ai-board/ai-board/target/.github/workflows/onboard.yml` to fetch the owner credential through `/home/runner/work/ai-board/ai-board/target/app/api/internal/credentials/route.ts`, run `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh`, preserve existing guidance files, and include generated guidance in the single repository update
 
 **Checkpoint**: User Story 2 should produce repository-specific onboarding guidance without overwriting protected user-authored files.
 
@@ -94,15 +94,15 @@ description: "Actionable task list for AIB-579 implementation"
 
 ### Tests for User Story 3
 
-- [ ] T021 [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup-job.test.ts` with partial-success, configuration-failure, and commit-failure callback scenarios plus GET polling assertions for `partial`, `errorCode`, and `logs`
-- [ ] T022 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/setup/setup-page.test.tsx` with full-success, partial-success, missing-guidance, and failure-category rendering states
-- [ ] T023 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/credential-dispatch-guard.test.ts` with onboarding-specific missing-credential and dispatch-failure coverage
+- [X] T021 [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup-job.test.ts` with partial-success, configuration-failure, and commit-failure callback scenarios plus GET polling assertions for `partial`, `errorCode`, and `logs`
+- [X] T022 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/setup/setup-page.test.tsx` with full-success, partial-success, missing-guidance, and failure-category rendering states
+- [X] T023 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/credential-dispatch-guard.test.ts` with onboarding-specific missing-credential and dispatch-failure coverage
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Extend `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/report-status.ts` and `/home/runner/work/ai-board/ai-board/target/.github/workflows/onboard.yml` to emit `CONFIGURATION_GENERATION_FAILED`, `GUIDANCE_GENERATION_FAILED`, and `COMMIT_FAILED` payloads with `partial`, `commitSha`, `errorCode`, `logs`, and missing-artifact summaries
-- [ ] T025 [US3] Extend `/home/runner/work/ai-board/ai-board/target/components/setup/setup-page-client.tsx` to render created, preserved, and missing artifact groups; show commit references; and distinguish partial completion from failure
-- [ ] T026 [US3] Extend `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/setup/page.tsx` to pass the richer setup-job payload into the client while keeping the existing ownership gate and configured-project redirect behavior intact
+- [X] T024 [US3] Extend `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/report-status.ts` and `/home/runner/work/ai-board/ai-board/target/.github/workflows/onboard.yml` to emit `CONFIGURATION_GENERATION_FAILED`, `GUIDANCE_GENERATION_FAILED`, and `COMMIT_FAILED` payloads with `partial`, `commitSha`, `errorCode`, `logs`, and missing-artifact summaries
+- [X] T025 [US3] Extend `/home/runner/work/ai-board/ai-board/target/components/setup/setup-page-client.tsx` to render created, preserved, and missing artifact groups; show commit references; and distinguish partial completion from failure
+- [X] T026 [US3] Extend `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/setup/page.tsx` to pass the richer setup-job payload into the client while keeping the existing ownership gate and configured-project redirect behavior intact
 
 **Checkpoint**: All three user stories should now be independently testable and observable through the existing setup flow.
 
@@ -112,8 +112,8 @@ description: "Actionable task list for AIB-579 implementation"
 
 **Purpose**: Final consistency checks and repo-wide verification across the completed feature.
 
-- [ ] T027 [P] Regenerate Prisma client from `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` and verify the final onboarding behavior against `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup-job.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/config-sync.test.ts` with `bunx prisma generate`, `bun run test:integration`, and `bun run test:unit`
-- [ ] T028 [P] Run `bun run type-check` and `bun run lint`, then resolve any cross-cutting failures surfaced in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/`, `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/`, `/home/runner/work/ai-board/ai-board/target/components/setup/setup-page-client.tsx`, and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/jobs/[jobId]/status/route.ts`
+- [X] T027 [P] Regenerate Prisma client from `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` and verify the final onboarding behavior against `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup-job.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/config-sync.test.ts` with `bunx prisma generate`, `bun run test:integration`, and `bun run test:unit`
+- [X] T028 [P] Run `bun run type-check` and `bun run lint`, then resolve any cross-cutting failures surfaced in `/home/runner/work/ai-board/ai-board/target/lib/onboarding/`, `/home/runner/work/ai-board/ai-board/target/.github/scripts/onboard/`, `/home/runner/work/ai-board/ai-board/target/components/setup/setup-page-client.tsx`, and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/jobs/[jobId]/status/route.ts`
 
 ---
 

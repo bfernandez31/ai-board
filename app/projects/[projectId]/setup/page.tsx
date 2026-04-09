@@ -29,6 +29,26 @@ export default async function SetupPage({
       configSyncedAt: true,
       githubOwner: true,
       githubRepo: true,
+      setupJobs: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: {
+          id: true,
+          projectId: true,
+          agent: true,
+          status: true,
+          workflowRunId: true,
+          partial: true,
+          commitSha: true,
+          errorCode: true,
+          errorMessage: true,
+          logs: true,
+          artifactSummary: true,
+          startedAt: true,
+          completedAt: true,
+          createdAt: true,
+        },
+      },
     },
   });
 
@@ -55,11 +75,32 @@ export default async function SetupPage({
     );
   }
 
+  const configSyncedAt = (project.configSyncedAt as Date | null)?.toISOString() ?? null;
+
   return (
     <main className="container mx-auto py-10 max-w-2xl">
       <SetupPageClient
         projectId={projectId}
         projectName={project.name}
+        initialSetupState={{
+          job: project.setupJobs[0]
+            ? {
+                ...project.setupJobs[0],
+                workflowRunId: project.setupJobs[0].workflowRunId ? Number(project.setupJobs[0].workflowRunId) : null,
+                artifactSummary: project.setupJobs[0].artifactSummary as {
+                  created: Array<{ path: string; kind: string; reason?: string }>;
+                  preserved: Array<{ path: string; kind: string; reason?: string }>;
+                  missing: Array<{ path: string; kind: string; reason?: string }>;
+                  analysisPath?: string;
+                  partialReason?: string;
+                } | null,
+                startedAt: project.setupJobs[0].startedAt?.toISOString() ?? null,
+                completedAt: project.setupJobs[0].completedAt?.toISOString() ?? null,
+                createdAt: project.setupJobs[0].createdAt.toISOString(),
+              }
+            : null,
+          configSyncedAt,
+        }}
       />
     </main>
   );

@@ -138,5 +138,37 @@ describe('Config Sync - Staleness and Auto-Refresh', () => {
       expect(services[0]).toEqual({ type: 'postgres', version: '14', database: 'mydb' });
       expect(services[1]).toEqual({ type: 'redis', version: '7' });
     });
+
+    it('accepts Ruby and PHP onboarding configs and still strips credentials', async () => {
+      const { validateConfig, stripServiceCredentials } = await import('@/lib/validations/config');
+
+      const rubyConfig = validateConfig({
+        version: 1,
+        project: { name: 'rails-app', language: 'ruby', framework: 'rails' },
+        runtime: { manager: 'bundler', ruby: '3.3' },
+        services: [{ type: 'postgres', version: '16', username: 'postgres', password: 'secret' }],
+        commands: { install: 'bundle install', test_unit: 'bundle exec rspec' },
+      });
+      const phpConfig = validateConfig({
+        version: 1,
+        project: { name: 'laravel-app', language: 'php', framework: 'laravel' },
+        runtime: { manager: 'composer', php: '8.3' },
+        services: [{ type: 'mysql', version: '8', username: 'root', password: 'secret' }],
+        commands: { install: 'composer install', test_unit: 'php artisan test' },
+      });
+
+      expect(rubyConfig.success).toBe(true);
+      expect(phpConfig.success).toBe(true);
+      if (!rubyConfig.success || !phpConfig.success) return;
+
+      expect(stripServiceCredentials(rubyConfig.data).services[0]).toEqual({
+        type: 'postgres',
+        version: '16',
+      });
+      expect(stripServiceCredentials(phpConfig.data).services[0]).toEqual({
+        type: 'mysql',
+        version: '8',
+      });
+    });
   });
 });

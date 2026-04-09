@@ -31,7 +31,7 @@ function mockCredentialResponse(hasCredential: boolean, provider = 'ANTHROPIC') 
 }
 
 function mockSetupJobResponse(
-  job: { status: string; errorMessage?: string | null } | null = null,
+  job: Record<string, unknown> | null = null,
   configSyncedAt: string | null = null
 ) {
   return {
@@ -96,7 +96,10 @@ describe('SetupPageClient', () => {
       if (typeof url === 'string' && url.includes('/setup/jobs') && !url.includes('status')) {
         return Promise.resolve(mockSetupJobResponse({
           status: 'FAILED',
+          partial: false,
+          errorCode: 'CONFIGURATION_GENERATION_FAILED',
           errorMessage: 'Something went wrong',
+          logs: 'Check logs',
         }));
       }
       return Promise.resolve({ ok: true, json: async () => ({}) });
@@ -106,8 +109,42 @@ describe('SetupPageClient', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Setup failed')).toBeInTheDocument();
+      expect(screen.getByText(/Failure category: CONFIGURATION_GENERATION_FAILED/)).toBeInTheDocument();
       expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+      expect(screen.getByText('Check logs')).toBeInTheDocument();
       expect(screen.getByText('Retry')).toBeInTheDocument();
+    });
+  });
+
+  it('shows partial-success details with created and missing artifacts', async () => {
+    mockFetch.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('/credential-check')) {
+        return Promise.resolve(mockCredentialResponse(true));
+      }
+      if (typeof url === 'string' && url.includes('/setup/jobs') && !url.includes('status')) {
+        return Promise.resolve(mockSetupJobResponse({
+          status: 'COMPLETED',
+          partial: true,
+          commitSha: 'abc123def456abc123def456abc123def456abcd',
+          artifactSummary: {
+            created: [{ path: '.ai-board/config.yml', kind: 'config' }],
+            preserved: [{ path: 'CLAUDE.md', kind: 'guidance', reason: 'existing file preserved' }],
+            missing: [{ path: 'AGENTS.md', kind: 'agent-entry', reason: 'guidance generation failed' }],
+            partialReason: 'Guidance generation failed after deterministic outputs succeeded',
+          },
+        }));
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    renderWithProviders(<SetupPageClient projectId={1} projectName="Test Project" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Setup partially completed')).toBeInTheDocument();
+      expect(screen.getByText(/Commit:/)).toBeInTheDocument();
+      expect(screen.getByText('.ai-board/config.yml')).toBeInTheDocument();
+      expect(screen.getByText(/CLAUDE.md \(existing file preserved\)/)).toBeInTheDocument();
+      expect(screen.getByText(/AGENTS.md \(guidance generation failed\)/)).toBeInTheDocument();
     });
   });
 

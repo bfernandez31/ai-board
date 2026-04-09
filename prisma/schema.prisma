@@ -582,6 +582,10 @@ model ProjectSetupJob {
   projectId       Int
   agent           Agent
   status          SetupJobStatus  @default(PENDING)
+  partial         Boolean         @default(false)
+  commitSha       String?         @db.VarChar(40)
+  errorCode       String?         @db.VarChar(100)
+  logs            String?
 
   // Workflow tracking
   workflowRunId   BigInt?

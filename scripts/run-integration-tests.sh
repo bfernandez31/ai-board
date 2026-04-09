@@ -33,6 +33,9 @@ trap cleanup EXIT
 
 echo -e "${GREEN}Starting integration tests...${NC}"
 
+echo -e "${GREEN}Syncing Prisma schema for integration tests...${NC}"
+TEST_MODE=true bunx prisma db push --skip-generate > /tmp/prisma-db-push.log 2>&1
+
 # Check if server is already running
 if curl -s "$BASE_URL" > /dev/null 2>&1; then
     echo -e "${YELLOW}Dev server already running at $BASE_URL${NC}"
@@ -82,6 +85,7 @@ echo -e "\n${GREEN}Server ready! (took ${WAITED}s)${NC}"
 
 # Run integration tests
 echo -e "${GREEN}Running integration tests...${NC}"
+WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only \
 VITEST_INTEGRATION=1 bun vitest run "$@"
 
 TEST_EXIT_CODE=$?

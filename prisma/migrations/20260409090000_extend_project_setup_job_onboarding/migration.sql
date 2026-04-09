@@ -1,0 +1,5 @@
+ALTER TABLE "ProjectSetupJob"
+ADD COLUMN "partial" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "commitSha" VARCHAR(40),
+ADD COLUMN "errorCode" VARCHAR(100),
+ADD COLUMN "logs" TEXT;

@@ -9,8 +9,18 @@ export interface SetupJobDto {
   agent: string;
   status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
   workflowRunId: number | null;
+  partial: boolean;
+  commitSha: string | null;
+  errorCode: string | null;
   errorMessage: string | null;
-  artifactSummary: Record<string, unknown> | null;
+  logs: string | null;
+  artifactSummary: {
+    created: Array<{ path: string; kind: string; reason?: string }>;
+    preserved: Array<{ path: string; kind: string; reason?: string }>;
+    missing: Array<{ path: string; kind: string; reason?: string }>;
+    analysisPath?: string;
+    partialReason?: string;
+  } | null;
   startedAt: string | null;
   completedAt: string | null;
   createdAt: string;
@@ -32,7 +42,8 @@ export interface UseSetupJobPollingReturn {
 
 export function useSetupJobPolling(
   projectId: number,
-  pollingInterval: number = 2000
+  pollingInterval: number = 2000,
+  initialData?: SetupJobPollResult
 ): UseSetupJobPollingReturn {
   const { data, error, isFetching } = useQuery({
     queryKey: queryKeys.projects.setupJob(projectId),
@@ -47,6 +58,7 @@ export function useSetupJobPolling(
 
       return response.json();
     },
+    initialData,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
     refetchInterval: (query) => {
