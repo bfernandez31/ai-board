@@ -58,6 +58,8 @@ import { NewTicketModal } from './new-ticket-modal';
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog';
 import { ShortcutsHelpButton } from './shortcuts-help-button';
 import { RetroSpecBanner } from './retro-spec-banner';
+import { RetroSpecBadge } from './retro-spec-badge';
+import { RetroSpecModal } from './retro-spec-modal';
 import { useRetroSpecPolling } from '@/app/lib/hooks/useRetroSpecPolling';
 
 /**
@@ -141,6 +143,7 @@ export function Board({
 
   // AIB-585: Retro-spec polling for banner/badge state
   const { isGenerating: isRetroSpecGenerating, isCompleted: isRetroSpecCompleted } = useRetroSpecPolling(projectId);
+  const [isRetroSpecModalOpen, setIsRetroSpecModalOpen] = useState(false);
 
   const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(
     null
@@ -1224,6 +1227,7 @@ export function Board({
         isGenerating={isRetroSpecGenerating}
         onGenerateSuccess={() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.retroSpecJob(projectId) })}
       />
+      <RetroSpecBadge projectId={projectId} />
 
       <DndContext
         sensors={sensors}
@@ -1360,6 +1364,26 @@ export function Board({
         onOpenChange={handleShortcutsHelpChange}
       />
       <ShortcutsHelpButton onClick={() => handleShortcutsHelpChange(!isShortcutsHelpOpen)} />
+
+      {/* AIB-585: Generate Specs trigger (FR-013) — accessible after banner is dismissed */}
+      {!hasSpecs && !isRetroSpecCompleted && !isRetroSpecGenerating && (
+        <>
+          <button
+            onClick={() => setIsRetroSpecModalOpen(true)}
+            className="fixed bottom-4 right-14 z-30 flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground text-xs"
+            aria-label="Generate project specs"
+            data-testid="retro-spec-menu-btn"
+          >
+            Generate Specs
+          </button>
+          <RetroSpecModal
+            open={isRetroSpecModalOpen}
+            onOpenChange={setIsRetroSpecModalOpen}
+            projectId={projectId}
+            onSuccess={() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.retroSpecJob(projectId) })}
+          />
+        </>
+      )}
     </div>
   );
 }

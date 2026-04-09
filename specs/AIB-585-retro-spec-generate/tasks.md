@@ -73,12 +73,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T018 [P] [US3] Verify existing redirect tests still pass in `tests/integration/projects/setup-redirect.test.ts` and `tests/unit/components/setup/setup-page.test.tsx` — run tests, confirm no regressions from schema changes
+- [x] T018 [P] [US3] Verify existing redirect tests still pass in `tests/integration/projects/setup-redirect.test.ts` and `tests/unit/components/setup/setup-page.test.tsx` — run tests, confirm no regressions from schema changes
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] Verify server-side redirect in `app/projects/[projectId]/setup/page.tsx` — confirm redirect when `configSyncedAt` is set; confirm non-owner blocking; fix if any regressions found
-- [ ] T020 [US3] Verify client-side redirect in `components/setup/setup-page-client.tsx` — confirm redirect when polling detects `configSyncedAt`; confirm no "re-initialize" button for configured projects; fix if any regressions found
+- [x] T019 [US3] Verify server-side redirect in `app/projects/[projectId]/setup/page.tsx` — confirm redirect when `configSyncedAt` is set; confirm non-owner blocking; fix if any regressions found
+- [x] T020 [US3] Verify client-side redirect in `components/setup/setup-page-client.tsx` — confirm redirect when polling detects `configSyncedAt`; confirm no "re-initialize" button for configured projects; fix if any regressions found
 
 **Checkpoint**: US3 complete — setup page correctly redirects to board after onboarding
 
@@ -92,12 +92,12 @@
 
 ### Tests for User Story 5
 
-- [ ] T021 [P] [US5] Create retro-spec badge unit tests in `tests/unit/components/board/retro-spec-badge.test.tsx` — renders "Generating specs..." with pulse when job PENDING/RUNNING; renders "Specs ready" on COMPLETED (fades after 30s); renders error with retry on FAILED; hidden when no active job
+- [x] T021 [P] [US5] Create retro-spec badge unit tests in `tests/unit/components/board/retro-spec-badge.test.tsx` — renders "Generating specs..." with pulse when job PENDING/RUNNING; renders "Specs ready" on COMPLETED (fades after 30s); renders error with retry on FAILED; hidden when no active job
 
 ### Implementation for User Story 5
 
-- [ ] T022 [US5] Create retro-spec badge component in `components/board/retro-spec-badge.tsx` — states: Generating (pulse animation), Completed ("Specs ready" fades after 30s), Failed (error with retry button); uses `useRetroSpecPolling` hook; positioned in board area above stage columns
-- [ ] T023 [US5] Integrate badge into board: extend `components/board/board.tsx` — import and render `RetroSpecBadge`; badge and banner are mutually exclusive (badge shown when job is active)
+- [x] T022 [US5] Create retro-spec badge component in `components/board/retro-spec-badge.tsx` — states: Generating (pulse animation), Completed ("Specs ready" fades after 30s), Failed (error with retry button); uses `useRetroSpecPolling` hook; positioned in board area above stage columns
+- [x] T023 [US5] Integrate badge into board: extend `components/board/board.tsx` — import and render `RetroSpecBadge`; badge and banner are mutually exclusive (badge shown when job is active)
 
 **Checkpoint**: US5 complete — owner sees real-time badge during spec generation
 
@@ -111,11 +111,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T024 [P] [US2] Create retro-spec banner unit tests in `tests/unit/components/board/retro-spec-banner.test.tsx` — renders when specs not generated and not dismissed; hidden when dismissed (localStorage); hidden when specs already generated; dismiss button persists to localStorage; generate button opens modal
+- [x] T024 [P] [US2] Create retro-spec banner unit tests in `tests/unit/components/board/retro-spec-banner.test.tsx` — renders when specs not generated and not dismissed; hidden when dismissed (localStorage); hidden when specs already generated; dismiss button persists to localStorage; generate button opens modal
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Add "Generate Specs" option to board menu in `components/board/board.tsx` — ensure modal can be triggered from alternate location for users who dismissed the banner (FR-013); e.g., board header dropdown or project actions menu
+- [x] T025 [US2] Add "Generate Specs" option to board menu in `components/board/board.tsx` — ensure modal can be triggered from alternate location for users who dismissed the banner (FR-013); e.g., board header dropdown or project actions menu
 
 **Checkpoint**: US2 complete — banner is dismissible and spec generation remains accessible
 
@@ -129,11 +129,11 @@
 
 ### Tests for User Story 4
 
-- [ ] T026 [P] [US4] Extend retro-spec API tests in `tests/integration/projects/retro-spec-job.test.ts` — test POST with docUrl and context fields; verify docUrl and context are stored on the job record; verify invalid URL rejected
+- [x] T026 [P] [US4] Extend retro-spec API tests in `tests/integration/projects/retro-spec-job.test.ts` — test POST with docUrl and context fields; verify docUrl and context are stored on the job record; verify invalid URL rejected
 
 ### Implementation for User Story 4
 
-- [ ] T027 [US4] Verify modal docUrl and context fields work end-to-end in `components/board/retro-spec-modal.tsx` — confirm docUrl validation (valid URL format), context textarea, and both fields included in POST payload (already implemented in T014; this task verifies integration)
+- [x] T027 [US4] Verify modal docUrl and context fields work end-to-end in `components/board/retro-spec-modal.tsx` — confirm docUrl validation (valid URL format), context textarea, and both fields included in POST payload (already implemented in T014; this task verifies integration)
 
 **Checkpoint**: US4 complete — external documentation URL and context flow through the entire pipeline
 
@@ -143,8 +143,8 @@
 
 **Purpose**: The workflow and agent command that execute spec generation in CI
 
-- [ ] T028 [P] Create retro-spec GitHub Actions workflow in `.github/workflows/retro-spec.yml` following `onboard.yml` structure — inputs: project_id, job_id, githubRepository, agent, depth, docUrl, context; steps: report RUNNING, fetch credentials, fetch GitHub token, clone repo, fetch docs (if URL, non-fatal), execute agent command, commit specs to default branch, report COMPLETED/FAILED; timeout 30 minutes
-- [ ] T029 [P] Create retro-spec agent command in `.claude-plugin/commands/ai-board.retro-spec.md` — prompt template for LLM-powered codebase analysis and spec generation; depth-scaled output (Quick: overview; Standard: architecture + API + data model + workflows; Comprehensive: full functional + technical specs); writes to `specs/specifications/` directory
+- [x] T028 [P] Create retro-spec GitHub Actions workflow in `.github/workflows/retro-spec.yml` following `onboard.yml` structure — inputs: project_id, job_id, githubRepository, agent, depth, docUrl, context; steps: report RUNNING, fetch credentials, fetch GitHub token, clone repo, fetch docs (if URL, non-fatal), execute agent command, commit specs to default branch, report COMPLETED/FAILED; timeout 30 minutes
+- [x] T029 [P] Create retro-spec agent command in `.claude-plugin/commands/ai-board.retro-spec.md` — prompt template for LLM-powered codebase analysis and spec generation; depth-scaled output (Quick: overview; Standard: architecture + API + data model + workflows; Comprehensive: full functional + technical specs); writes to `specs/specifications/` directory
 
 **Checkpoint**: Workflow and agent command ready — full end-to-end spec generation functional
 
