@@ -16,6 +16,11 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+const mockToast = vi.fn();
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({ toast: mockToast }),
+}));
+
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
@@ -43,12 +48,13 @@ function mockSetupJobResponse(
 describe('SetupPageClient', () => {
   beforeEach(() => {
     mockFetch.mockReset();
+    mockToast.mockReset();
     // Default: credential check returns hasCredential=true, setup job returns null
     mockFetch.mockImplementation((url: string) => {
-      if (typeof url === 'string' && url.includes('/credential-check')) {
+      if (url.includes('/credential-check')) {
         return Promise.resolve(mockCredentialResponse(true));
       }
-      if (typeof url === 'string' && url.includes('/setup/jobs') && !url.includes('status')) {
+      if (url.includes('/setup/jobs') && !url.includes('status')) {
         return Promise.resolve(mockSetupJobResponse(null));
       }
       return Promise.resolve({ ok: true, json: async () => ({}) });
@@ -70,10 +76,10 @@ describe('SetupPageClient', () => {
 
   it('shows running state with spinner', async () => {
     mockFetch.mockImplementation((url: string) => {
-      if (typeof url === 'string' && url.includes('/credential-check')) {
+      if (url.includes('/credential-check')) {
         return Promise.resolve(mockCredentialResponse(true));
       }
-      if (typeof url === 'string' && url.includes('/setup/jobs') && !url.includes('status')) {
+      if (url.includes('/setup/jobs') && !url.includes('status')) {
         return Promise.resolve(mockSetupJobResponse({
           status: 'RUNNING',
         }));
@@ -90,10 +96,10 @@ describe('SetupPageClient', () => {
 
   it('shows error and retry button on failure', async () => {
     mockFetch.mockImplementation((url: string) => {
-      if (typeof url === 'string' && url.includes('/credential-check')) {
+      if (url.includes('/credential-check')) {
         return Promise.resolve(mockCredentialResponse(true));
       }
-      if (typeof url === 'string' && url.includes('/setup/jobs') && !url.includes('status')) {
+      if (url.includes('/setup/jobs') && !url.includes('status')) {
         return Promise.resolve(mockSetupJobResponse({
           status: 'FAILED',
           errorMessage: 'Something went wrong',
@@ -115,16 +121,16 @@ describe('SetupPageClient', () => {
     const user = userEvent.setup();
 
     mockFetch.mockImplementation((url: string, options?: RequestInit) => {
-      if (typeof url === 'string' && url.includes('/credential-check')) {
+      if (url.includes('/credential-check')) {
         return Promise.resolve(mockCredentialResponse(true));
       }
-      if (typeof url === 'string' && url.includes('/setup/jobs') && options?.method === 'POST') {
+      if (url.includes('/setup/jobs') && options?.method === 'POST') {
         return Promise.resolve({
           ok: true,
           json: async () => ({ id: 1, status: 'PENDING', agent: 'CLAUDE' }),
         });
       }
-      if (typeof url === 'string' && url.includes('/setup/jobs')) {
+      if (url.includes('/setup/jobs')) {
         return Promise.resolve(mockSetupJobResponse(null));
       }
       return Promise.resolve({ ok: true, json: async () => ({}) });
@@ -146,12 +152,77 @@ describe('SetupPageClient', () => {
     });
   });
 
+  it('shows error toast when dispatch API returns error', async () => {
+    const user = userEvent.setup();
+
+    mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+      if (url.includes('/credential-check')) {
+        return Promise.resolve(mockCredentialResponse(true));
+      }
+      if (url.includes('/setup/jobs') && options?.method === 'POST') {
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({ error: 'Workflow dispatch failed' }),
+        });
+      }
+      if (url.includes('/setup/jobs')) {
+        return Promise.resolve(mockSetupJobResponse(null));
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    renderWithProviders(<SetupPageClient projectId={1} projectName="Test Project" />);
+
+    const button = screen.getByText('Initialize Project');
+    await user.click(button);
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Failed to initialize project',
+          variant: 'destructive',
+        })
+      );
+    });
+  });
+
+  it('shows error toast when dispatch throws network error', async () => {
+    const user = userEvent.setup();
+
+    mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+      if (url.includes('/credential-check')) {
+        return Promise.resolve(mockCredentialResponse(true));
+      }
+      if (url.includes('/setup/jobs') && options?.method === 'POST') {
+        return Promise.reject(new Error('Network error'));
+      }
+      if (url.includes('/setup/jobs')) {
+        return Promise.resolve(mockSetupJobResponse(null));
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    renderWithProviders(<SetupPageClient projectId={1} projectName="Test Project" />);
+
+    const button = screen.getByText('Initialize Project');
+    await user.click(button);
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Failed to initialize project',
+          variant: 'destructive',
+        })
+      );
+    });
+  });
+
   it('disables button when credential missing', async () => {
     mockFetch.mockImplementation((url: string) => {
-      if (typeof url === 'string' && url.includes('/credential-check')) {
+      if (url.includes('/credential-check')) {
         return Promise.resolve(mockCredentialResponse(false));
       }
-      if (typeof url === 'string' && url.includes('/setup/jobs')) {
+      if (url.includes('/setup/jobs')) {
         return Promise.resolve(mockSetupJobResponse(null));
       }
       return Promise.resolve({ ok: true, json: async () => ({}) });
@@ -168,10 +239,10 @@ describe('SetupPageClient', () => {
 
   it('enables button when credential valid', async () => {
     mockFetch.mockImplementation((url: string) => {
-      if (typeof url === 'string' && url.includes('/credential-check')) {
+      if (url.includes('/credential-check')) {
         return Promise.resolve(mockCredentialResponse(true));
       }
-      if (typeof url === 'string' && url.includes('/setup/jobs')) {
+      if (url.includes('/setup/jobs')) {
         return Promise.resolve(mockSetupJobResponse(null));
       }
       return Promise.resolve({ ok: true, json: async () => ({}) });

@@ -545,7 +545,9 @@ When the workflow fails, the setup page displays the error message and offers a 
 | Scenario | Behavior |
 |----------|----------|
 | Missing credential for selected agent | Initialize button disabled; guidance shown |
-| Active job already running | Duplicate dispatch blocked (409 response) |
+| Active job already running | Duplicate dispatch blocked (409 response); destructive toast shown with server error message |
+| Dispatch API returns any error (non-2xx) | Destructive toast shown: "Failed to initialize project" with server error message |
+| Network error during dispatch | Destructive toast shown: "Failed to initialize project — Could not connect to the server" |
 | Project already configured | Dispatch blocked; page redirects to board |
 | Target repo clone fails (`DISPATCH_FAILED`) | Job fails; error displayed with retry option |
 | Stack detection fails (`CONFIG_GENERATION_FAILED`) | Job fails; error displayed with retry option |

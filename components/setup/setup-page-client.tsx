@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { queryKeys } from '@/app/lib/query-keys';
 import { useSetupJobPolling } from '@/app/lib/hooks/useSetupJobPolling';
+import { useToast } from '@/hooks/use-toast';
 import type { Agent } from '@prisma/client';
 
 interface SetupPageClientProps {
@@ -30,6 +31,7 @@ const AGENTS: { value: Agent; label: string; description: string }[] = [
 
 export function SetupPageClient({ projectId, projectName }: SetupPageClientProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [selectedAgent, setSelectedAgent] = useState<Agent>('CLAUDE');
   const [isDispatching, setIsDispatching] = useState(false);
 
@@ -68,14 +70,22 @@ export function SetupPageClient({ projectId, projectName }: SetupPageClientProps
 
       if (!response.ok) {
         const data = await response.json();
-        console.error('[setup] Dispatch failed:', data.error);
+        toast({
+          title: 'Failed to initialize project',
+          description: data.error || 'An unexpected error occurred. Please try again.',
+          variant: 'destructive',
+        });
       }
-    } catch (error) {
-      console.error('[setup] Dispatch error:', error);
+    } catch {
+      toast({
+        title: 'Failed to initialize project',
+        description: 'Could not connect to the server. Please check your connection and try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsDispatching(false);
     }
-  }, [projectId, selectedAgent]);
+  }, [projectId, selectedAgent, toast]);
 
   const initButtonDisabled = isDispatching || isJobActive || !hasCredential;
 
