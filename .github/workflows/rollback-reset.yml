@@ -133,18 +133,29 @@ jobs:
           git push origin "$BACKUP_TAG" || echo "Warning: Failed to push backup tag (non-fatal)"
           echo "Backup tag created and pushed"
 
-      # --- Reset branch to main (keeping nothing) ---
-      - name: Reset to main branch
+      # --- Detect default branch ---
+      - name: Detect default branch
+        id: default-branch
+        env:
+          GH_TOKEN: ${{ steps.fetch-github-token.outputs.repo_token }}
+        run: |
+          DEFAULT_BRANCH=$(gh api "repos/${{ inputs.githubRepository }}" --jq '.default_branch')
+          echo "branch=$DEFAULT_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "Default branch: $DEFAULT_BRANCH"
+
+      # --- Reset branch to default branch (keeping nothing) ---
+      - name: Reset to default branch
         run: |
           echo "Current branch state:"
           git log --oneline -5
 
+          DEFAULT_BRANCH="${{ steps.default-branch.outputs.branch }}"
           echo ""
-          echo "Resetting to origin/main..."
+          echo "Resetting to origin/${DEFAULT_BRANCH}..."
 
-          # Get the merge-base (where branch diverged from main)
-          MERGE_BASE=$(git merge-base origin/main HEAD)
-          echo "Merge base with main: $MERGE_BASE"
+          # Get the merge-base (where branch diverged from default branch)
+          MERGE_BASE=$(git merge-base "origin/${DEFAULT_BRANCH}" HEAD)
+          echo "Merge base with ${DEFAULT_BRANCH}: $MERGE_BASE"
 
           # Hard reset to merge-base (removes ALL branch commits)
           git reset --hard "$MERGE_BASE"
