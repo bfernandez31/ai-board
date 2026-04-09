@@ -57,6 +57,8 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { NewTicketModal } from './new-ticket-modal';
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog';
 import { ShortcutsHelpButton } from './shortcuts-help-button';
+import { RetroSpecBanner } from './retro-spec-banner';
+import { useRetroSpecPolling } from '@/app/lib/hooks/useRetroSpecPolling';
 
 /**
  * Convert TicketWithVersion to TicketDetailModal-compatible format
@@ -84,6 +86,7 @@ interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
   projectId: number;
   initialJobs?: Map<number, Job[]>; // Array of jobs per ticket for dual job display
+  hasSpecs?: boolean;
 }
 
 /** Default merge: apply server response fields to optimistic ticket */
@@ -103,6 +106,7 @@ export function Board({
   ticketsByStage: initialTicketsByStage,
   projectId,
   initialJobs = new Map(),
+  hasSpecs = false,
 }: BoardProps) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -134,6 +138,9 @@ export function Board({
 
   // T030: Job polling integration for real-time job status updates
   const { jobs: polledJobs } = useJobPolling(projectId, 2000);
+
+  // AIB-585: Retro-spec polling for banner/badge state
+  const { isGenerating: isRetroSpecGenerating, isCompleted: isRetroSpecCompleted } = useRetroSpecPolling(projectId);
 
   const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(
     null
@@ -1210,6 +1217,13 @@ export function Board({
   return (
     <div className="w-full h-full bg-background">
       <OfflineIndicator />
+
+      <RetroSpecBanner
+        projectId={projectId}
+        hasSpecs={hasSpecs || isRetroSpecCompleted}
+        isGenerating={isRetroSpecGenerating}
+        onGenerateSuccess={() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.retroSpecJob(projectId) })}
+      />
 
       <DndContext
         sensors={sensors}
