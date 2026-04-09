@@ -9,6 +9,7 @@ set -euo pipefail
 # Exit codes: 0 = success, 1 = detection failure
 
 REPO_DIR="${1:?ERROR: Repository path is required as first argument}"
+AGENT_INPUT="${2:-CLAUDE}"
 
 if [[ ! -d "$REPO_DIR" ]]; then
   echo "ERROR: Directory does not exist: $REPO_DIR" >&2
@@ -625,6 +626,12 @@ generate_config_yml() {
     install_cmd="go mod download"
   fi
 
+  # Map agent input to CLI name
+  local agent_cli="claude-code"
+  if [[ "$AGENT_INPUT" == "CODEX" ]]; then
+    agent_cli="codex"
+  fi
+
   cat > "$REPO_DIR/.ai-board/config.yml" <<EOF
 version: 1
 project:
@@ -635,6 +642,8 @@ runtime:
   manager: ${pm_val}
 commands:
   install: "${install_cmd}"
+agent:
+  cli: ${agent_cli}
 EOF
 }
 
