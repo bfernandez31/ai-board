@@ -4754,6 +4754,45 @@ The response includes `Cache-Control: no-store, no-cache, must-revalidate` and `
 - `401`: Missing or invalid workflow token
 - `404`: `{ "error": "No existing credential found to update" }` — no matching project or credential
 
+### GET /api/internal/github-token
+
+Internal endpoint called by GitHub Actions workflows to retrieve the project owner's GitHub OAuth access token. Used for clone/push operations on repos owned by the project owner (especially external repos). Not accessible to regular users.
+
+**Authentication**: Workflow token only (`Authorization: Bearer ${WORKFLOW_API_TOKEN}`)
+
+**Query Parameters**:
+- `projectId` (positive integer, required): Project ID to resolve owner's GitHub token
+
+**Server-side behavior**:
+1. Verify workflow token
+2. Validate `projectId` (positive integer) via Zod schema
+3. Look up project → get owner `userId`
+4. Find `Account` record for owner with `provider: 'github'`
+5. Verify the account's OAuth scope includes `repo`
+6. Base64-encode the access token
+7. Return encoded token with no-cache headers
+
+**Response** (200 OK):
+```json
+{
+  "token": "<base64-encoded-github-token>",
+  "encoding": "base64"
+}
+```
+
+The `token` field is base64-encoded. Callers must decode before use (e.g., `echo "$TOKEN" | base64 -d`). The response includes `Cache-Control: no-store, no-cache, must-revalidate` and `Pragma: no-cache` headers.
+
+**Security considerations**:
+- The token is stored as a **step output** (not `GITHUB_ENV`) in workflows, so it is never exposed as an environment variable to LLM/agent steps
+- After cloning, the authenticated remote URL is stripped from `.git/config` and only re-injected momentarily for push
+- The `repo` scope check ensures only tokens with write access are returned (users must re-authorize with `repo` scope during project import)
+
+**Errors**:
+- `400`: `{ "error": "Invalid query parameters", "details": { ... } }` — invalid `projectId`
+- `401`: Missing or invalid workflow token
+- `403`: `{ "error": "Owner GitHub token lacks repo scope" }` — token exists but missing `repo` scope
+- `404`: `{ "error": "Project not found" }` or `{ "error": "No GitHub access token found for project owner" }`
+
 ---
 
 ## Pagination

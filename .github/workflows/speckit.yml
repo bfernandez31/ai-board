@@ -261,13 +261,23 @@ jobs:
             .github/scripts
           sparse-checkout-cone-mode: true
 
+      - name: Fetch Owner GitHub Token
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        id: fetch-github-token
+        env:
+          GH_PAT_FALLBACK: ${{ secrets.GH_PAT }}
+        run: |
+          TOKEN=$(bash ai-board/.github/scripts/fetch-repo-token.sh "${{ inputs.project_id }}")
+          echo "::add-mask::${TOKEN}"
+          echo "repo_token=${TOKEN}" >> "$GITHUB_OUTPUT"
+
       - name: Checkout target repository
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.githubRepository }}
           ref: ${{ inputs.command == 'specify' && 'main' || inputs.branch || github.ref }}
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ steps.fetch-github-token.outputs.repo_token }}
           fetch-depth: 0
           path: target
 

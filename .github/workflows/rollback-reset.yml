@@ -50,13 +50,35 @@ jobs:
             -d '{"status": "RUNNING", "workflowRunId": ${{ github.run_id }}}' \
             ${{ env.APP_URL }}/api/jobs/${{ inputs.job_id }}/status
 
+      # --- Fetch owner's GitHub token for external repo access ---
+      - name: Fetch Owner GitHub Token
+        id: fetch-github-token
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "${APP_URL}/api/internal/github-token?projectId=${{ inputs.project_id }}" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            TOKEN_B64=$(echo "$BODY" | jq -r '.token')
+            echo "::add-mask::${TOKEN_B64}"
+            OWNER_GH_TOKEN=$(echo "$TOKEN_B64" | base64 -d)
+            echo "::add-mask::${OWNER_GH_TOKEN}"
+            echo "repo_token=${OWNER_GH_TOKEN}" >> "$GITHUB_OUTPUT"
+            echo "Owner GitHub token loaded"
+          else
+            echo "Owner GitHub token not available (HTTP $HTTP_CODE) — falling back to GH_PAT"
+            echo "repo_token=${{ secrets.GH_PAT }}" >> "$GITHUB_OUTPUT"
+          fi
+
       # --- Checkout target repository at feature branch ---
       - name: Checkout target repository
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.githubRepository }}
           ref: ${{ inputs.branch }}
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ steps.fetch-github-token.outputs.repo_token }}
           fetch-depth: 0
 
       # --- Configure git user ---

@@ -236,14 +236,25 @@ jobs:
             .github/scripts
           sparse-checkout-cone-mode: true
 
-      # 2. Full checkout of target repository
+      # 2. Fetch owner's GitHub token for external repo access
+      - name: Fetch Owner GitHub Token
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        id: fetch-github-token
+        env:
+          GH_PAT_FALLBACK: ${{ secrets.GH_PAT }}
+        run: |
+          TOKEN=$(bash ai-board/.github/scripts/fetch-repo-token.sh "${{ inputs.project_id }}")
+          echo "::add-mask::${TOKEN}"
+          echo "repo_token=${TOKEN}" >> "$GITHUB_OUTPUT"
+
+      # 3. Full checkout of target repository
       - name: Checkout target repository
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.githubRepository }}
           ref: ${{ inputs.branch }}
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ steps.fetch-github-token.outputs.repo_token }}
           fetch-depth: 0
           path: target
 
@@ -316,7 +327,7 @@ jobs:
           USER_ID: ${{ inputs.user_id }}
           USER: ${{ inputs.user }}
           PROJECT_ID: ${{ inputs.project_id }}
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.fetch-github-token.outputs.repo_token }}
           COMMENT: ${{ inputs.comment }}
         run: |
           echo "🤖 Executing AI-BOARD assist command..."

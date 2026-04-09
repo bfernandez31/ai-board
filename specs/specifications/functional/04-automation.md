@@ -822,6 +822,8 @@ The `onboard.yml` workflow runs once per project during the initial setup phase.
 - Creates `AGENTS.md` as a symlink to `CLAUDE.md`
 - Skips `CLAUDE.md` generation if the file already exists (preserves user customizations)
 
+**Repository Authentication**: The workflow fetches the project owner's GitHub OAuth token (via `GET /api/internal/github-token`) to clone and push to the target repository. This ensures the workflow can write to repos owned by any user, not just the ai-board service account. The token is stored as a GitHub Actions step output (not an environment variable) so it is never exposed to the LLM agent running in Phase 2. After cloning, credentials are stripped from the git remote URL and only re-injected momentarily for the push operation. Falls back to the `GH_PAT` secret if the owner token is unavailable.
+
 **Commit**: All generated files are committed in a single atomic commit (`chore: initialize ai-board configuration`) to the target repository's default branch.
 
 ### Partial Success

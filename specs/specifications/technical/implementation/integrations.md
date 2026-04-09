@@ -21,7 +21,9 @@ sequenceDiagram
     API-->>UI: 200 OK
 
     GH->>GH: Checkout ai-board repo
-    GH->>Ext: Clone external repo (GH_PAT)
+    GH->>API: GET /api/internal/github-token
+    API-->>GH: Owner OAuth token
+    GH->>Ext: Clone external repo (owner token)
     GH->>CLI: Execute Claude command
 
     CLI->>CLI: Read specs, write code
@@ -397,12 +399,18 @@ export const AGENT_PROVIDER_MAP: Record<Agent, CredentialProvider> = {
 - Scope: Current repository only (ai-board)
 - Used for dispatching workflows in ai-board repository
 
-**GitHub Personal Access Token** (Custom):
+**Owner GitHub OAuth Token** (Per-user):
+- Stored in `Account.access_token` via NextAuth GitHub OAuth
+- **Purpose**: Clone/push to repositories owned by the project owner
+- **Required Scope**: `repo` (enforced during project import via `requireRepoScope`)
+- **Fetched at runtime**: Workflows call `GET /api/internal/github-token?projectId=X` to retrieve the owner's token
+- **Security**: Token is stored as a GitHub Actions step output (NOT `GITHUB_ENV`), so it is never exposed to LLM/agent steps. Credentials are stripped from git remote URLs after clone and only re-injected momentarily for push.
+
+**GitHub Personal Access Token** (Fallback):
 - Stored as `GH_PAT` repository secret
-- **Purpose**: Access external project repositories from workflows
+- **Purpose**: Fallback for repository access when owner OAuth token is unavailable
 - **Required Scope**: `repo` (full control of private repositories)
-- **Usage**: Checkout external repositories in workflow steps
-- **Security**: Centralized in ai-board, shared across all external projects
+- **Usage**: Used only when the owner's GitHub token cannot be fetched
 
 **Workflow API Token** (Custom):
 - Stored as `WORKFLOW_API_TOKEN` repository secret
@@ -437,7 +445,7 @@ await fetch(`${APP_URL}/api/jobs/${job_id}/status`, {
 **GitHub Secrets**:
 - `ANTHROPIC_API_KEY`: Claude API key
 - `WORKFLOW_API_TOKEN`: Workflow authentication token
-- `GH_PAT`: GitHub Personal Access Token with `repo` scope (for external repository access)
+- `GH_PAT`: GitHub Personal Access Token with `repo` scope (fallback for external repository access when owner OAuth token is unavailable)
 - `VERCEL_TOKEN`: Vercel API token (for deploy-preview workflow)
 - `VERCEL_ORG_ID`: Vercel organization/team ID
 - `VERCEL_PROJECT_ID`: Vercel project ID

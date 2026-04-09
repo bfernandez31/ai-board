@@ -170,12 +170,22 @@ jobs:
             .github/scripts
           sparse-checkout-cone-mode: true
 
-      # Step 1: Checkout target repository (US1 T006)
+      # Step 1a: Fetch owner's GitHub token for external repo access
+      - name: Fetch Owner GitHub Token
+        id: fetch-github-token
+        env:
+          GH_PAT_FALLBACK: ${{ secrets.GH_PAT }}
+        run: |
+          TOKEN=$(bash ai-board/.github/scripts/fetch-repo-token.sh "${INPUT_PROJECT_ID}")
+          echo "::add-mask::${TOKEN}"
+          echo "repo_token=${TOKEN}" >> "$GITHUB_OUTPUT"
+
+      # Step 1b: Checkout target repository (US1 T006)
       - name: Checkout Target Repository
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.githubRepository }}
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ steps.fetch-github-token.outputs.repo_token }}
           fetch-depth: 0
           path: target
 

@@ -95,6 +95,30 @@ jobs:
           fi
           echo "PROJECT_ID=${{ inputs.project_id }}" >> "$GITHUB_ENV"
 
+      # ── Step 2b: Fetch Owner GitHub Token ───────────────────────────
+      # Token is stored as a step OUTPUT (not GITHUB_ENV) so it is NOT
+      # available as an environment variable in the Phase 2 LLM step.
+      - name: Fetch Owner GitHub Token
+        id: fetch-github-token
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "${APP_URL}/api/internal/github-token?projectId=${{ inputs.project_id }}" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            TOKEN_B64=$(echo "$BODY" | jq -r '.token')
+            echo "::add-mask::${TOKEN_B64}"
+            OWNER_GH_TOKEN=$(echo "$TOKEN_B64" | base64 -d)
+            echo "::add-mask::${OWNER_GH_TOKEN}"
+            echo "repo_token=${OWNER_GH_TOKEN}" >> "$GITHUB_OUTPUT"
+            echo "Owner GitHub token loaded"
+          else
+            echo "Owner GitHub token not available (HTTP $HTTP_CODE) — falling back to GH_PAT"
+            echo "repo_token=${{ secrets.GH_PAT }}" >> "$GITHUB_OUTPUT"
+          fi
+
       # ── Step 3: Checkout repos ──────────────────────────────────────
       - name: Checkout ai-board (sparse)
         uses: actions/checkout@v4
@@ -107,13 +131,18 @@ jobs:
 
       - name: Clone target repository
         id: clone-target
+        env:
+          REPO_TOKEN: ${{ steps.fetch-github-token.outputs.repo_token }}
         run: |
-          if ! git clone "https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ inputs.githubRepository }}.git" target-repo 2>&1; then
+          echo "::add-mask::${REPO_TOKEN}"
+          if ! git clone "https://x-access-token:${REPO_TOKEN}@github.com/${{ inputs.githubRepository }}.git" target-repo 2>&1; then
             echo "CLONE_FAILED=true" >> "$GITHUB_ENV"
             echo "Failed to clone target repository: ${{ inputs.githubRepository }}"
             exit 1
           fi
           cd target-repo
+          # Strip embedded credentials from the remote URL after clone
+          git remote set-url origin "https://github.com/${{ inputs.githubRepository }}.git"
           DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
           echo "DEFAULT_BRANCH=${DEFAULT_BRANCH}" >> "$GITHUB_ENV"
 
@@ -180,7 +209,12 @@ jobs:
       - name: Stage and commit files
         id: commit
         working-directory: target-repo
+        env:
+          # Re-inject token ONLY for this step (not available in LLM steps)
+          REPO_TOKEN: ${{ steps.fetch-github-token.outputs.repo_token }}
         run: |
+          echo "::add-mask::${REPO_TOKEN}"
+
           # Always stage Phase 1 outputs
           if ! git add .ai-board/config.yml; then
             echo "STAGE_FAILED=true" >> "$GITHUB_ENV"
@@ -202,10 +236,14 @@ jobs:
             echo "NO_CHANGES=true" >> "$GITHUB_ENV"
           else
             git commit -m "chore: initialize ai-board configuration"
+            # Set authenticated remote URL only for push, then strip it
+            git remote set-url origin "https://x-access-token:${REPO_TOKEN}@github.com/${{ inputs.githubRepository }}.git"
             if ! git push origin "${DEFAULT_BRANCH}"; then
+              git remote set-url origin "https://github.com/${{ inputs.githubRepository }}.git"
               echo "PUSH_FAILED=true" >> "$GITHUB_ENV"
               exit 1
             fi
+            git remote set-url origin "https://github.com/${{ inputs.githubRepository }}.git"
             COMMIT_SHA=$(git rev-parse HEAD)
             echo "COMMIT_SHA=${COMMIT_SHA}" >> "$GITHUB_ENV"
           fi

@@ -78,8 +78,8 @@ This gives you access to all `/ai-board.*` commands locally.
 
 ### Quick Setup (for CI/CD workflows)
 1. Configure GitHub repository (owner + repo name) during project creation
-2. Configure `GH_PAT` secret in ai-board repository with `repo` scope for cross-repository access
-3. Start creating tickets - workflows automatically execute against external repository
+2. Ensure the project owner has re-authorized GitHub with `repo` scope (prompted during project import)
+3. Start creating tickets - workflows automatically use the owner's GitHub OAuth token to access their repository
 
 ### Architecture
 - **Sparse Double Checkout**: Workflows checkout ai-board (sparse: only `.claude-plugin/`) and target repository (full)

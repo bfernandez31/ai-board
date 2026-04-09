@@ -236,13 +236,23 @@ jobs:
             .github/scripts
           sparse-checkout-cone-mode: true
 
+      - name: Fetch Owner GitHub Token
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        id: fetch-github-token
+        env:
+          GH_PAT_FALLBACK: ${{ secrets.GH_PAT }}
+        run: |
+          TOKEN=$(bash ai-board/.github/scripts/fetch-repo-token.sh "${{ inputs.project_id }}")
+          echo "::add-mask::${TOKEN}"
+          echo "repo_token=${TOKEN}" >> "$GITHUB_OUTPUT"
+
       - name: Checkout target repository
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.githubRepository }}
           ref: ${{ inputs.branch }}
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ steps.fetch-github-token.outputs.repo_token }}
           fetch-depth: 0
           path: target
 
@@ -576,7 +586,7 @@ jobs:
           TICKET_ID: ${{ inputs.ticket_id }}
           PROJECT_ID: ${{ inputs.project_id }}
           FEATURE_BRANCH: ${{ inputs.branch }}
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.fetch-github-token.outputs.repo_token }}
         run: |
           echo "🚀 All tests passed! Creating PR..."
           echo "   Note: Ticket is already in VERIFY stage, no transition needed"
@@ -592,7 +602,7 @@ jobs:
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
         working-directory: target
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.fetch-github-token.outputs.repo_token }}
           FEATURE_BRANCH: ${{ inputs.branch }}
         run: |
           echo "🔍 Running automated code review on PR..."
