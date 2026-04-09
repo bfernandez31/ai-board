@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import assert from 'node:assert';
 import { validateConfig, stripServiceCredentials } from '@/lib/validations/config';
 import type { ProjectConfig } from '@/lib/validations/config';
 
@@ -209,6 +210,108 @@ describe('validateConfig — multi-language support', () => {
   });
 });
 
+// ─── Extended language/framework/manager support (AIB-575) ───────────
+
+describe('validateConfig — extended enum support (AIB-575)', () => {
+  it('Ruby/Rails/Bundler config validates', () => {
+    const result = validateConfig({
+      version: 1,
+      project: { name: 'my-rails-app', language: 'ruby', framework: 'rails' },
+      runtime: { manager: 'bundler' },
+      commands: { install: 'bundle install' },
+    });
+
+    expect(result.success).toBe(true);
+    assert(result.success);
+
+    expect(result.data.project.language).toBe('ruby');
+    expect(result.data.project.framework).toBe('rails');
+    expect(result.data.runtime.manager).toBe('bundler');
+  });
+
+  it('PHP/Laravel/Composer config validates', () => {
+    const result = validateConfig({
+      version: 1,
+      project: { name: 'my-laravel-app', language: 'php', framework: 'laravel' },
+      runtime: { manager: 'composer' },
+      commands: { install: 'composer install' },
+    });
+
+    expect(result.success).toBe(true);
+    assert(result.success);
+
+    expect(result.data.project.language).toBe('php');
+    expect(result.data.project.framework).toBe('laravel');
+    expect(result.data.runtime.manager).toBe('composer');
+  });
+
+  it('rejects rspec as project.framework (test framework, not app framework)', () => {
+    const result = validateConfig({
+      version: 1,
+      project: { name: 'my-ruby-lib', language: 'ruby', framework: 'rspec' },
+      runtime: { manager: 'bundler' },
+      commands: { install: 'bundle install' },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects phpunit as project.framework (test framework, not app framework)', () => {
+    const result = validateConfig({
+      version: 1,
+      project: { name: 'my-php-lib', language: 'php', framework: 'phpunit' },
+      runtime: { manager: 'composer' },
+      commands: { install: 'composer install' },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('Rust/Actix framework value validates', () => {
+    const result = validateConfig({
+      version: 1,
+      project: { name: 'my-actix-api', language: 'rust', framework: 'actix' },
+      runtime: { manager: 'cargo', rust: '1.78' },
+      commands: { install: 'cargo build' },
+    });
+
+    expect(result.success).toBe(true);
+    assert(result.success);
+
+    expect(result.data.project.framework).toBe('actix');
+  });
+
+  it('Rust/Rocket framework value validates', () => {
+    const result = validateConfig({
+      version: 1,
+      project: { name: 'my-rocket-api', language: 'rust', framework: 'rocket' },
+      runtime: { manager: 'cargo', rust: '1.78' },
+      commands: { install: 'cargo build' },
+    });
+
+    expect(result.success).toBe(true);
+    assert(result.success);
+
+    expect(result.data.project.framework).toBe('rocket');
+  });
+
+  it('invalid language fortran is rejected', () => {
+    const result = validateConfig(
+      validConfig({
+        project: { name: 'my-app', language: 'fortran' },
+      }),
+    );
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+
+    const langError = result.errors.find((e) => e.path === 'project.language');
+    expect(langError).toBeDefined();
+    expect(langError!.type).toBe('invalid_value');
+    expect(langError!.value).toBe('fortran');
+  });
+});
+
 // ─── US2: Invalid Config Errors ─────────────────────────────────────
 
 describe('validateConfig — invalid configs (US2)', () => {
@@ -232,7 +335,7 @@ describe('validateConfig — invalid configs (US2)', () => {
   it('invalid enum values produce invalid_value error listing allowed values', () => {
     const result = validateConfig(
       validConfig({
-        project: { name: 'my-app', language: 'ruby' },
+        project: { name: 'my-app', language: 'fortran' },
       }),
     );
 
@@ -242,7 +345,7 @@ describe('validateConfig — invalid configs (US2)', () => {
     const langError = result.errors.find((e) => e.path === 'project.language');
     expect(langError).toBeDefined();
     expect(langError!.type).toBe('invalid_value');
-    expect(langError!.value).toBe('ruby');
+    expect(langError!.value).toBe('fortran');
     expect(langError!.message).toContain('typescript');
     expect(langError!.message).toContain('python');
   });
@@ -266,7 +369,7 @@ describe('validateConfig — invalid configs (US2)', () => {
   it('config with multiple errors returns all errors together', () => {
     const result = validateConfig({
       version: 2,
-      project: { name: '', language: 'ruby' },
+      project: { name: '', language: 'fortran' },
       runtime: { manager: 'maven' },
       commands: { install: '' },
     });

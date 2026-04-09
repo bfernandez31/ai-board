@@ -1081,7 +1081,7 @@ model ProjectSetupJob {
 - `status`: Current job state (default: `PENDING`)
 - `workflowRunId`: GitHub Actions workflow run ID (set on first RUNNING callback)
 - `errorMessage`: Error details persisted on failure (max 2000 chars)
-- `artifactSummary`: JSON summary of files created by workflow (empty for stub; populated by real workflow)
+- `artifactSummary`: JSON record of onboarding outputs. Shape: `{ created: string[], preserved: string[], missing: string[], partial: boolean, commitSha?: string, errorCode?: string }`. `preserved` lists files that already existed and were not overwritten (e.g., `CLAUDE.md`). `partial: true` indicates Phase 2 failed and only Phase 1 outputs were committed. `errorCode` is set to `GUIDANCE_GENERATION_FAILED` on partial success, or `CONFIG_GENERATION_FAILED` / `COMMIT_FAILED` on full failure.
 - `startedAt`: Set when status transitions to `RUNNING`
 - `completedAt`: Set when status transitions to any terminal state
 - `createdAt`: Record creation time

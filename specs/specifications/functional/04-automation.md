@@ -684,6 +684,7 @@ Workflows execute on GitHub Actions infrastructure:
 - `.github/workflows/quick-impl.yml`: Quick implementation (INBOX → BUILD)
 - `.github/workflows/verify.yml`: Test verification and PR creation (BUILD → VERIFY)
 - `.github/workflows/ai-board-assist.yml`: AI-BOARD comment responses
+- `.github/workflows/onboard.yml`: Project onboarding (stack detection + LLM content generation)
 
 **Inputs**:
 - Ticket ID, title, description
@@ -793,6 +794,59 @@ Test workflows maintain separation:
 - Test tickets identified by [e2e] prefix
 - Production workflows unaffected by test execution
 - API credits not consumed for test tickets
+
+## Project Onboarding Workflow
+
+The `onboard.yml` workflow runs once per project during the initial setup phase. It is dispatched when the project owner clicks "Initialize Project" on the setup page.
+
+### Two-Phase Execution
+
+**Phase 1 — Stack Detection (deterministic)**:
+
+`.github/scripts/detect-stack.sh` scans the target repository and produces validated outputs:
+
+- Detects primary language from manifest files: `package.json` (TypeScript/JavaScript), `Cargo.toml` (Rust), `go.mod` (Go), `pyproject.toml` (Python), `pom.xml`/`build.gradle` (Java/Kotlin), `Gemfile` (Ruby), `composer.json` (PHP)
+- Detects package manager from lockfiles (`bun.lockb`, `yarn.lock`, `pnpm-lock.yaml`, `Cargo.lock`, `poetry.lock`, `Gemfile.lock`, `composer.lock`, etc.)
+- Detects framework and test framework from dependency declarations in the respective manifest files
+- Detects services from `docker-compose.yml` service definitions and ORM configuration (e.g., Prisma schema referencing PostgreSQL)
+- Produces `.ai-board/config.yml` (validated against the project config schema) and `analysis.json` summarizing all detection results
+- Always overwrites an existing `config.yml` — deterministic and reflects current repo state
+
+**Phase 2 — LLM Content Generation**:
+
+`run-agent.sh` invokes the `ai-board.onboard` command with the agent selected by the project owner:
+
+- Reads `analysis.json` and browses the actual codebase to understand architecture, patterns, and conventions
+- Generates `CLAUDE.md` with project-specific tech stack details, commands, data models, testing patterns, and architecture description — content derived from actual code analysis, not generic templates
+- Generates `.ai-board/memory/constitution.md` with principles derived from observed code patterns plus universal governance standards
+- Creates `AGENTS.md` as a symlink to `CLAUDE.md`
+- Skips `CLAUDE.md` generation if the file already exists (preserves user customizations)
+
+**Commit**: All generated files are committed in a single atomic commit (`chore: initialize ai-board configuration`) to the target repository's default branch.
+
+### Partial Success
+
+If Phase 2 fails (LLM timeout, credential issue, model error), the workflow commits only the Phase 1 outputs and reports COMPLETED with `partial: true` in the artifact summary. The project becomes minimally functional (config synced) even if the guidance files were not generated. The setup page displays which files were created and which are missing.
+
+### Error Codes
+
+| Code | Phase | Cause |
+|------|-------|-------|
+| `DISPATCH_FAILED` | Setup | Target repository could not be cloned |
+| `CONFIG_GENERATION_FAILED` | Phase 1 | Detection script exited with an error — no files committed |
+| `GUIDANCE_GENERATION_FAILED` | Phase 2 | LLM agent failed — triggers partial success path |
+| `COMMIT_FAILED` | Commit | Git push failed (e.g., branch protection rules active on the repo) |
+
+### Idempotency
+
+Re-triggering onboarding on an already-onboarded repository behaves predictably:
+
+- `config.yml` is always regenerated from current repo state (deterministic)
+- Existing `CLAUDE.md` is preserved unchanged — Phase 2 is skipped for this file
+- `constitution.md` is always regenerated fresh
+- Artifact summary reflects preserved files separately from created files
+
+---
 
 ## AI-BOARD Assistant
 
