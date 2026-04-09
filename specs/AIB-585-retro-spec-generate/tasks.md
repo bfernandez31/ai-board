@@ -48,18 +48,18 @@
 
 ### Tests for User Story 1
 
-- [x] T009 [P] [US1] Create retro-spec API integration tests in `tests/integration/projects/retro-spec-job.test.ts` — test POST with RETRO_SPEC command: valid creation with depth, missing depth rejection (400), configSyncedAt required (409 NOT_CONFIGURED), concurrent job prevention (409 JOB_ACTIVE), invalid docUrl rejection
-- [x] T010 [P] [US1] Extend existing setup job tests in `tests/integration/projects/setup-job.test.ts` — add backward compatibility tests: ONBOARD jobs still work with new `command` field; command defaults to ONBOARD when omitted; existing response shape preserved
-- [x] T011 [P] [US1] Create retro-spec GET/PATCH integration tests in `tests/integration/projects/retro-spec-job.test.ts` — test GET with `command=RETRO_SPEC` filter; test PATCH status transitions (no config sync on RETRO_SPEC completion)
-- [x] T012 [P] [US1] Create retro-spec modal unit tests in `tests/unit/components/board/retro-spec-modal.test.tsx` — depth selection defaults to Standard; URL validation on docUrl field; submit dispatches POST with correct payload (`command: "RETRO_SPEC"`, `depth`, `docUrl`, `context`); error states displayed
+- [ ] T009 [P] [US1] Create retro-spec API integration tests in `tests/integration/projects/retro-spec-job.test.ts` — test POST with RETRO_SPEC command: valid creation with depth, missing depth rejection (400), configSyncedAt required (409 NOT_CONFIGURED), concurrent job prevention (409 JOB_ACTIVE), invalid docUrl rejection
+- [ ] T010 [P] [US1] Extend existing setup job tests in `tests/integration/projects/setup-job.test.ts` — add backward compatibility tests: ONBOARD jobs still work with new `command` field; command defaults to ONBOARD when omitted; existing response shape preserved
+- [ ] T011 [P] [US1] Create retro-spec GET/PATCH integration tests in `tests/integration/projects/retro-spec-job.test.ts` — test GET with `command=RETRO_SPEC` filter; test PATCH status transitions (no config sync on RETRO_SPEC completion)
+- [ ] T012 [P] [US1] Create retro-spec modal unit tests in `tests/unit/components/board/retro-spec-modal.test.tsx` — depth selection defaults to Standard; URL validation on docUrl field; submit dispatches POST with correct payload (`command: "RETRO_SPEC"`, `depth`, `docUrl`, `context`); error states displayed
 
 ### Implementation for User Story 1
 
-- [x] T013 [P] [US1] Create retro-spec polling hook in `app/lib/hooks/useRetroSpecPolling.ts` following pattern from `app/lib/hooks/useSetupJobPolling.ts` — GET `/api/projects/:projectId/setup/jobs?command=RETRO_SPEC` at 2s interval; stop on COMPLETED/FAILED; return `{ job, isGenerating, isCompleted, isFailed, error }`
-- [x] T014 [P] [US1] Create retro-spec modal component in `components/board/retro-spec-modal.tsx` — shadcn/ui Dialog with aurora styling; depth picker radio group (Quick/Standard default/Comprehensive) with descriptions and time estimates; optional docUrl input with URL validation; optional context textarea; "Generate Specs" button POSTs to `/api/projects/:projectId/setup/jobs` with `command: "RETRO_SPEC"`; on success close modal and start polling; on error show inline error
-- [x] T015 [US1] Create retro-spec banner component in `components/board/retro-spec-banner.tsx` — dismissible banner: "Project specs not generated — Specs improve health scans, ticket workflows, and code review quality — [Generate] [x]"; dismissal persists to `localStorage` key `retro-spec-banner-dismissed-${projectId}`; "Generate" opens modal; conditional render: only when project has `configSyncedAt` set, no completed RETRO_SPEC job, and not dismissed; accessibility: `role="alert"`, `aria-live="polite"`
-- [x] T016 [US1] Integrate banner into board: extend `components/board/board.tsx` — import and render `RetroSpecBanner` above stage columns; pass `projectId` prop; banner renders at same level as OfflineIndicator
-- [x] T017 [US1] Extend board page server component in `app/projects/[projectId]/board/page.tsx` — query for latest completed RETRO_SPEC job to determine if specs exist; pass `hasSpecs: boolean` prop to Board component
+- [ ] T013 [P] [US1] Create retro-spec polling hook in `app/lib/hooks/useRetroSpecPolling.ts` following pattern from `app/lib/hooks/useSetupJobPolling.ts` — GET `/api/projects/:projectId/setup/jobs?command=RETRO_SPEC` at 2s interval; stop on COMPLETED/FAILED; return `{ job, isGenerating, isCompleted, isFailed, error }`
+- [ ] T014 [P] [US1] Create retro-spec modal component in `components/board/retro-spec-modal.tsx` — shadcn/ui Dialog with aurora styling; depth picker radio group (Quick/Standard default/Comprehensive) with descriptions and time estimates; optional docUrl input with URL validation; optional context textarea; "Generate Specs" button POSTs to `/api/projects/:projectId/setup/jobs` with `command: "RETRO_SPEC"`; on success close modal and start polling; on error show inline error
+- [ ] T015 [US1] Create retro-spec banner component in `components/board/retro-spec-banner.tsx` — dismissible banner: "Project specs not generated — Specs improve health scans, ticket workflows, and code review quality — [Generate] [x]"; dismissal persists to `localStorage` key `retro-spec-banner-dismissed-${projectId}`; "Generate" opens modal; conditional render: only when project has `configSyncedAt` set, no completed RETRO_SPEC job, and not dismissed; accessibility: `role="alert"`, `aria-live="polite"`
+- [ ] T016 [US1] Integrate banner into board: extend `components/board/board.tsx` — import and render `RetroSpecBanner` above stage columns; pass `projectId` prop; banner renders at same level as OfflineIndicator
+- [ ] T017 [US1] Extend board page server component in `app/projects/[projectId]/board/page.tsx` — query for latest completed RETRO_SPEC job to determine if specs exist; pass `hasSpecs: boolean` prop to Board component
 
 **Checkpoint**: US1 complete — owner can trigger spec generation from board, job is created and dispatched
 
@@ -73,12 +73,12 @@
 
 ### Tests for User Story 3
 
-- [x] T018 [P] [US3] Verify existing redirect tests still pass in `tests/integration/projects/setup-redirect.test.ts` and `tests/unit/components/setup/setup-page.test.tsx` — run tests, confirm no regressions from schema changes
+- [ ] T018 [P] [US3] Verify existing redirect tests still pass in `tests/integration/projects/setup-redirect.test.ts` and `tests/unit/components/setup/setup-page.test.tsx` — run tests, confirm no regressions from schema changes
 
 ### Implementation for User Story 3
 
-- [x] T019 [US3] Verify server-side redirect in `app/projects/[projectId]/setup/page.tsx` — confirm redirect when `configSyncedAt` is set; confirm non-owner blocking; fix if any regressions found
-- [x] T020 [US3] Verify client-side redirect in `components/setup/setup-page-client.tsx` — confirm redirect when polling detects `configSyncedAt`; confirm no "re-initialize" button for configured projects; fix if any regressions found
+- [ ] T019 [US3] Verify server-side redirect in `app/projects/[projectId]/setup/page.tsx` — confirm redirect when `configSyncedAt` is set; confirm non-owner blocking; fix if any regressions found
+- [ ] T020 [US3] Verify client-side redirect in `components/setup/setup-page-client.tsx` — confirm redirect when polling detects `configSyncedAt`; confirm no "re-initialize" button for configured projects; fix if any regressions found
 
 **Checkpoint**: US3 complete — setup page correctly redirects to board after onboarding
 
@@ -92,12 +92,12 @@
 
 ### Tests for User Story 5
 
-- [x] T021 [P] [US5] Create retro-spec badge unit tests in `tests/unit/components/board/retro-spec-badge.test.tsx` — renders "Generating specs..." with pulse when job PENDING/RUNNING; renders "Specs ready" on COMPLETED (fades after 30s); renders error with retry on FAILED; hidden when no active job
+- [ ] T021 [P] [US5] Create retro-spec badge unit tests in `tests/unit/components/board/retro-spec-badge.test.tsx` — renders "Generating specs..." with pulse when job PENDING/RUNNING; renders "Specs ready" on COMPLETED (fades after 30s); renders error with retry on FAILED; hidden when no active job
 
 ### Implementation for User Story 5
 
-- [x] T022 [US5] Create retro-spec badge component in `components/board/retro-spec-badge.tsx` — states: Generating (pulse animation), Completed ("Specs ready" fades after 30s), Failed (error with retry button); uses `useRetroSpecPolling` hook; positioned in board area above stage columns
-- [x] T023 [US5] Integrate badge into board: extend `components/board/board.tsx` — import and render `RetroSpecBadge`; badge and banner are mutually exclusive (badge shown when job is active)
+- [ ] T022 [US5] Create retro-spec badge component in `components/board/retro-spec-badge.tsx` — states: Generating (pulse animation), Completed ("Specs ready" fades after 30s), Failed (error with retry button); uses `useRetroSpecPolling` hook; positioned in board area above stage columns
+- [ ] T023 [US5] Integrate badge into board: extend `components/board/board.tsx` — import and render `RetroSpecBadge`; badge and banner are mutually exclusive (badge shown when job is active)
 
 **Checkpoint**: US5 complete — owner sees real-time badge during spec generation
 
@@ -111,11 +111,11 @@
 
 ### Tests for User Story 2
 
-- [x] T024 [P] [US2] Create retro-spec banner unit tests in `tests/unit/components/board/retro-spec-banner.test.tsx` — renders when specs not generated and not dismissed; hidden when dismissed (localStorage); hidden when specs already generated; dismiss button persists to localStorage; generate button opens modal
+- [ ] T024 [P] [US2] Create retro-spec banner unit tests in `tests/unit/components/board/retro-spec-banner.test.tsx` — renders when specs not generated and not dismissed; hidden when dismissed (localStorage); hidden when specs already generated; dismiss button persists to localStorage; generate button opens modal
 
 ### Implementation for User Story 2
 
-- [x] T025 [US2] Add "Generate Specs" option to board menu in `components/board/board.tsx` — ensure modal can be triggered from alternate location for users who dismissed the banner (FR-013); e.g., board header dropdown or project actions menu
+- [ ] T025 [US2] Add "Generate Specs" option to board menu in `components/board/board.tsx` — ensure modal can be triggered from alternate location for users who dismissed the banner (FR-013); e.g., board header dropdown or project actions menu
 
 **Checkpoint**: US2 complete — banner is dismissible and spec generation remains accessible
 
@@ -129,11 +129,11 @@
 
 ### Tests for User Story 4
 
-- [x] T026 [P] [US4] Extend retro-spec API tests in `tests/integration/projects/retro-spec-job.test.ts` — test POST with docUrl and context fields; verify docUrl and context are stored on the job record; verify invalid URL rejected
+- [ ] T026 [P] [US4] Extend retro-spec API tests in `tests/integration/projects/retro-spec-job.test.ts` — test POST with docUrl and context fields; verify docUrl and context are stored on the job record; verify invalid URL rejected
 
 ### Implementation for User Story 4
 
-- [x] T027 [US4] Verify modal docUrl and context fields work end-to-end in `components/board/retro-spec-modal.tsx` — confirm docUrl validation (valid URL format), context textarea, and both fields included in POST payload (already implemented in T014; this task verifies integration)
+- [ ] T027 [US4] Verify modal docUrl and context fields work end-to-end in `components/board/retro-spec-modal.tsx` — confirm docUrl validation (valid URL format), context textarea, and both fields included in POST payload (already implemented in T014; this task verifies integration)
 
 **Checkpoint**: US4 complete — external documentation URL and context flow through the entire pipeline
 
@@ -143,8 +143,8 @@
 
 **Purpose**: The workflow and agent command that execute spec generation in CI
 
-- [x] T028 [P] Create retro-spec GitHub Actions workflow in `.github/workflows/retro-spec.yml` following `onboard.yml` structure — inputs: project_id, job_id, githubRepository, agent, depth, docUrl, context; steps: report RUNNING, fetch credentials, fetch GitHub token, clone repo, fetch docs (if URL, non-fatal), execute agent command, commit specs to default branch, report COMPLETED/FAILED; timeout 30 minutes
-- [x] T029 [P] Create retro-spec agent command in `.claude-plugin/commands/ai-board.retro-spec.md` — prompt template for LLM-powered codebase analysis and spec generation; depth-scaled output (Quick: overview; Standard: architecture + API + data model + workflows; Comprehensive: full functional + technical specs); writes to `specs/specifications/` directory
+- [ ] T028 [P] Create retro-spec GitHub Actions workflow in `.github/workflows/retro-spec.yml` following `onboard.yml` structure — inputs: project_id, job_id, githubRepository, agent, depth, docUrl, context; steps: report RUNNING, fetch credentials, fetch GitHub token, clone repo, fetch docs (if URL, non-fatal), execute agent command, commit specs to default branch, report COMPLETED/FAILED; timeout 30 minutes
+- [ ] T029 [P] Create retro-spec agent command in `.claude-plugin/commands/ai-board.retro-spec.md` — prompt template for LLM-powered codebase analysis and spec generation; depth-scaled output (Quick: overview; Standard: architecture + API + data model + workflows; Comprehensive: full functional + technical specs); writes to `specs/specifications/` directory
 
 **Checkpoint**: Workflow and agent command ready — full end-to-end spec generation functional
 
@@ -154,9 +154,9 @@
 
 **Purpose**: Final integration verification and cross-story consistency
 
-- [x] T030 Run `bun run type-check` and `bun run lint` to verify no type or lint errors across all changed files
-- [x] T031 Run `bun run test:unit` and `bun run test:integration` to verify all new and existing tests pass
-- [x] T032 Verify backward compatibility: existing onboard job tests in `tests/integration/projects/setup-job.test.ts` pass without modification beyond T010
+- [ ] T030 Run `bun run type-check` and `bun run lint` to verify no type or lint errors across all changed files
+- [ ] T031 Run `bun run test:unit` and `bun run test:integration` to verify all new and existing tests pass
+- [ ] T032 Verify backward compatibility: existing onboard job tests in `tests/integration/projects/setup-job.test.ts` pass without modification beyond T010
 
 ---
 
