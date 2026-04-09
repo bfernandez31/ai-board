@@ -594,9 +594,18 @@ generate_config_yml() {
 
   local lang_val="${LANGUAGE:-null}"
   local fw_val="${FRAMEWORK:-none}"
-  local pm_val="${PACKAGE_MANAGER:-npm}"
 
-  # Derive install command from detected package manager
+  # Determine package manager: only default to npm for JS/TS projects
+  local pm_val
+  if [[ -n "$PACKAGE_MANAGER" ]]; then
+    pm_val="$PACKAGE_MANAGER"
+  elif [[ "$LANGUAGE" == "typescript" || "$LANGUAGE" == "javascript" ]]; then
+    pm_val="npm"
+  else
+    pm_val="null"
+  fi
+
+  # Derive install command from detected package manager or language
   local install_cmd="echo 'install not configured'"
   if [[ -n "$PACKAGE_MANAGER" ]]; then
     case "$PACKAGE_MANAGER" in
@@ -612,6 +621,8 @@ generate_config_yml() {
       maven) install_cmd="mvn install" ;;
       gradle) install_cmd="gradle build" ;;
     esac
+  elif [[ "$LANGUAGE" == "go" ]]; then
+    install_cmd="go mod download"
   fi
 
   cat > "$REPO_DIR/.ai-board/config.yml" <<EOF

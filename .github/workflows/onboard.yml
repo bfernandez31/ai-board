@@ -182,7 +182,11 @@ jobs:
         working-directory: target-repo
         run: |
           # Always stage Phase 1 outputs
-          git add .ai-board/config.yml
+          if ! git add .ai-board/config.yml; then
+            echo "STAGE_FAILED=true" >> "$GITHUB_ENV"
+            echo "Failed to stage .ai-board/config.yml"
+            exit 1
+          fi
 
           # Stage Phase 2 outputs if they exist
           git add .ai-board/memory/constitution.md 2>/dev/null || true
@@ -208,7 +212,7 @@ jobs:
 
       # ── Step 9: Build Artifact Summary and Report ───────────────────
       - name: Report COMPLETED
-        if: success() || (failure() && env.PUSH_FAILED != 'true' && env.DETECTION_FAILED != 'true' && env.CLONE_FAILED != 'true' && env.CANCELLED != 'true' && env.CREDENTIAL_FAILED != 'true')
+        if: success() || (failure() && env.PUSH_FAILED != 'true' && env.DETECTION_FAILED != 'true' && env.CLONE_FAILED != 'true' && env.CANCELLED != 'true' && env.CREDENTIAL_FAILED != 'true' && env.STAGE_FAILED != 'true')
         working-directory: target-repo
         run: |
           CREATED=()
@@ -326,8 +330,17 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"status":"FAILED","errorMessage":"Failed to fetch owner AI credential","artifactSummary":{"errorCode":"DISPATCH_FAILED","created":[],"missing":[".ai-board/config.yml","CLAUDE.md",".ai-board/memory/constitution.md","AGENTS.md"]}}' || true
 
+      - name: Report FAILED — Staging failed
+        if: failure() && env.STAGE_FAILED == 'true'
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"Failed to stage generated files for commit","artifactSummary":{"errorCode":"COMMIT_FAILED","created":[],"missing":[".ai-board/config.yml","CLAUDE.md",".ai-board/memory/constitution.md","AGENTS.md"]}}' || true
+
       - name: Report FAILED — Catch-all
-        if: failure() && env.CLONE_FAILED != 'true' && env.DETECTION_FAILED != 'true' && env.PUSH_FAILED != 'true' && env.CANCELLED != 'true' && env.CREDENTIAL_FAILED != 'true'
+        if: failure() && env.CLONE_FAILED != 'true' && env.DETECTION_FAILED != 'true' && env.PUSH_FAILED != 'true' && env.CANCELLED != 'true' && env.CREDENTIAL_FAILED != 'true' && env.STAGE_FAILED != 'true'
         run: |
           curl -sf -X PATCH \
             "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \

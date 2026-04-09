@@ -86,7 +86,7 @@ tests/
 Extend the Zod config validation schema with new language, framework, and package manager values per spec Decision 1.
 
 **Files**:
-- `lib/validations/config.ts` — Add `ruby`, `php` to `ProjectLanguageSchema`; `bundler`, `composer` to `PackageManagerSchema`; `rails`, `laravel`, `rspec`, `phpunit`, `actix`, `rocket` to `ProjectFrameworkSchema`
+- `lib/validations/config.ts` — Add `ruby`, `php` to `ProjectLanguageSchema`; `bundler`, `composer` to `PackageManagerSchema`; `rails`, `laravel`, `actix`, `rocket` to `ProjectFrameworkSchema` (rspec/phpunit excluded — they are test frameworks, not application frameworks)
 - `specs/AIB-449-define-ai-board/contracts/config-schema.ts` — Extend TypeScript type unions to match
 
 **Pattern reference**: Existing enum definitions at `lib/validations/config.ts:11-44`. Additive change — append values to `z.enum([...])` arrays.

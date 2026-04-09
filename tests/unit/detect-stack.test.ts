@@ -290,11 +290,17 @@ describe('detect-stack.sh — Go/Gin', () => {
 
   afterAll(() => cleanupFixture(fixtureDir));
 
-  it('detects go/gin', () => {
+  it('detects go/gin with null package manager (not npm)', () => {
     const analysis = readAnalysisJson(fixtureDir);
     expect(analysis.language).toBe('go');
     expect(analysis.framework).toBe('gin');
+    expect(analysis.packageManager).toBeNull();
     expect(analysis.lockfiles).toContain('go.sum');
+
+    // Verify config.yml does NOT default to npm for Go
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.manager).toBeNull();
   });
 });
 

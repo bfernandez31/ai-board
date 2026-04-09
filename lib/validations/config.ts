@@ -32,8 +32,6 @@ export const ProjectFrameworkSchema = z.enum([
   'micronaut',
   'rails',
   'laravel',
-  'rspec',
-  'phpunit',
   'actix',
   'rocket',
   'none',

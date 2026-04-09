@@ -9,7 +9,7 @@
 
 ### Decision 1: Config Schema Extension Strategy
 
-- **Decision**: Extend the existing config validation schema to include Ruby, PHP languages; bundler, composer package managers; and Rails, Laravel, RSpec, PHPUnit, Actix, Rocket framework/test values — rather than creating a separate onboarding-only schema
+- **Decision**: Extend the existing config validation schema to include Ruby, PHP languages; bundler, composer package managers; and Rails, Laravel, Actix, Rocket framework values — rather than creating a separate onboarding-only schema. RSpec and PHPUnit are test frameworks (detected as `testFramework` in analysis.json), not application frameworks, and are therefore excluded from `ProjectFrameworkSchema`
 - **Policy Applied**: PRAGMATIC
 - **Confidence**: High (0.9, score -6) — internal infrastructure with no user-facing ambiguity
 - **Fallback Triggered?**: No
@@ -108,7 +108,7 @@ The detection script correctly identifies the technology stack across diverse re
 
 1. **Given** a Python repository with `pyproject.toml`, `poetry.lock`, and FastAPI in dependencies, **When** the detection script runs, **Then** `config.yml` contains language: python, packageManager: poetry, framework: fastapi
 2. **Given** a Rust repository with `Cargo.toml` and Actix in dependencies, **When** the detection script runs, **Then** `config.yml` contains language: rust, packageManager: cargo, framework: actix
-3. **Given** a Go repository with `go.mod` and Gin in dependencies, **When** the detection script runs, **Then** `config.yml` contains language: go, framework: gin
+3. **Given** a Go repository with `go.mod` and Gin in dependencies, **When** the detection script runs, **Then** `config.yml` contains language: go, framework: gin, and `runtime.manager` is null (Go uses built-in module system; no external package manager applies)
 
 ---
 

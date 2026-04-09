@@ -10,7 +10,7 @@
 
 export type ProjectLanguage = 'typescript' | 'javascript' | 'python' | 'go' | 'rust' | 'java' | 'kotlin' | 'ruby' | 'php';
 
-export type ProjectFramework = 'nextjs' | 'express' | 'fastapi' | 'django' | 'flask' | 'gin' | 'spring-boot' | 'quarkus' | 'micronaut' | 'rails' | 'laravel' | 'rspec' | 'phpunit' | 'actix' | 'rocket' | 'none';
+export type ProjectFramework = 'nextjs' | 'express' | 'fastapi' | 'django' | 'flask' | 'gin' | 'spring-boot' | 'quarkus' | 'micronaut' | 'rails' | 'laravel' | 'actix' | 'rocket' | 'none';
 
 export type PackageManager = 'bun' | 'npm' | 'yarn' | 'pnpm' | 'pip' | 'poetry' | 'cargo' | 'maven' | 'gradle' | 'bundler' | 'composer';
 

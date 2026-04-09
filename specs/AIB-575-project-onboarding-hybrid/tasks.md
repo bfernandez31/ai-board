@@ -32,11 +32,11 @@
 ### Tests for Foundational Phase
 **RULE (constitution): Extend existing test file — `tests/unit/config-schema.test.ts` already covers config schema validation (50+ tests).**
 
-- [x] T003 [P] Extend `tests/unit/config-schema.test.ts` with validation tests for new enum values: `ruby`, `php` languages; `bundler`, `composer` package managers; `rails`, `laravel`, `rspec`, `phpunit`, `actix`, `rocket` frameworks; and rejection of invalid values like `language: fortran`
+- [x] T003 [P] Extend `tests/unit/config-schema.test.ts` with validation tests for new enum values: `ruby`, `php` languages; `bundler`, `composer` package managers; `rails`, `laravel`, `actix`, `rocket` frameworks; rejection of `rspec`/`phpunit` as `project.framework` (test frameworks, not app frameworks); and rejection of invalid values like `language: fortran`. Tests use `assert(result.success)` for type narrowing (not `if (!result.success) return;` per constitution §III)
 
 ### Implementation for Foundational Phase
 
-- [x] T004 [P] Extend `ProjectLanguageSchema`, `PackageManagerSchema`, and `ProjectFrameworkSchema` enums in `lib/validations/config.ts` — add `ruby`, `php` languages; `bundler`, `composer` package managers; `rails`, `laravel`, `rspec`, `phpunit`, `actix`, `rocket` frameworks
+- [x] T004 [P] Extend `ProjectLanguageSchema`, `PackageManagerSchema`, and `ProjectFrameworkSchema` enums in `lib/validations/config.ts` — add `ruby`, `php` languages; `bundler`, `composer` package managers; `rails`, `laravel`, `actix`, `rocket` frameworks (rspec/phpunit excluded — test frameworks, not app frameworks)
 - [x] T005 [P] Extend TypeScript type unions in `specs/AIB-449-define-ai-board/contracts/config-schema.ts` to match the new Zod enum values added in T004
 
 **Checkpoint**: Config schema accepts all 7 language ecosystems. Tests pass.
