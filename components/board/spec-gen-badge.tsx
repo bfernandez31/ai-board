@@ -65,16 +65,16 @@ export function SpecGenBadge({ projectId }: SpecGenBadgeProps) {
   if (!isActive && !isCompleted && !isFailed) return null;
   if (isCompleted && !showCompleted) return null;
 
+  function getBadgeColorClasses(): string {
+    if (isActive) return 'bg-ctp-sapphire/10 text-ctp-sapphire border border-ctp-sapphire/20';
+    if (isCompleted) return 'bg-ctp-green/10 text-ctp-green border border-ctp-green/20';
+    return 'bg-ctp-red/10 text-ctp-red border border-ctp-red/20';
+  }
+
   return (
     <div
       data-testid="spec-gen-badge"
-      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition-opacity duration-3000 ${
-        isActive
-          ? 'bg-ctp-sapphire/10 text-ctp-sapphire border border-ctp-sapphire/20'
-          : isCompleted
-            ? 'bg-ctp-green/10 text-ctp-green border border-ctp-green/20'
-            : 'bg-ctp-red/10 text-ctp-red border border-ctp-red/20'
-      } ${isFading ? 'opacity-0' : 'opacity-100'}`}
+      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition-opacity duration-3000 ${getBadgeColorClasses()} ${isFading ? 'opacity-0' : 'opacity-100'}`}
     >
       {isActive && (
         <>

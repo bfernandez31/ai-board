@@ -12,6 +12,7 @@ import { useSpecGenPolling } from '@/app/lib/hooks/useSpecGenPolling';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { DEPTH_OPTIONS } from '@/lib/spec-generation/constants';
 import type { Agent, SpecDepth } from '@prisma/client';
 
 interface SetupPageClientProps {
@@ -30,27 +31,6 @@ const AGENTS: { value: Agent; label: string; description: string }[] = [
     value: 'CODEX',
     label: 'Codex',
     description: 'OpenAI Codex agent for code generation and completion',
-  },
-];
-
-const DEPTH_OPTIONS: { value: SpecDepth; label: string; description: string; time: string }[] = [
-  {
-    value: 'QUICK',
-    label: 'Quick',
-    description: 'Single overview document covering project purpose and structure',
-    time: '~5 min',
-  },
-  {
-    value: 'STANDARD',
-    label: 'Standard',
-    description: 'Architecture, API endpoints, and data model documentation',
-    time: '~10 min',
-  },
-  {
-    value: 'COMPREHENSIVE',
-    label: 'Comprehensive',
-    description: 'Full functional specs, technical specs, and cross-references',
-    time: '~20 min',
   },
 ];
 

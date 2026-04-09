@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { DEPTH_OPTIONS } from '@/lib/spec-generation/constants';
 import type { SpecDepth } from '@prisma/client';
 
 interface SpecGenModalProps {
@@ -23,27 +24,6 @@ interface SpecGenModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const DEPTH_OPTIONS: { value: SpecDepth; label: string; description: string; time: string }[] = [
-  {
-    value: 'QUICK',
-    label: 'Quick',
-    description: 'Single overview document covering project purpose and structure',
-    time: '~5 min',
-  },
-  {
-    value: 'STANDARD',
-    label: 'Standard',
-    description: 'Architecture, API endpoints, and data model documentation',
-    time: '~10 min',
-  },
-  {
-    value: 'COMPREHENSIVE',
-    label: 'Comprehensive',
-    description: 'Full functional specs, technical specs, and cross-references',
-    time: '~20 min',
-  },
-];
 
 const specGenFormSchema = z.object({
   depth: z.enum(['QUICK', 'STANDARD', 'COMPREHENSIVE']),

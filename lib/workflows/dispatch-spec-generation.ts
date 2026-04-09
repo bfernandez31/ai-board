@@ -1,7 +1,5 @@
 import { Octokit } from '@octokit/rest';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
-import { getOwnerCredential, getMissingCredentialError } from '@/lib/ai-credentials/workflow';
-import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
 import type { Agent, SpecDepth } from '@prisma/client';
 
 export interface SpecGenDispatchInputs {
@@ -31,15 +29,6 @@ export async function dispatchSpecGenerationWorkflow(
 
   if (!githubToken) {
     throw new Error('GITHUB_TOKEN not configured - required for workflow dispatch');
-  }
-
-  const projectId = parseInt(inputs.project_id, 10);
-  if (!isNaN(projectId)) {
-    const provider = AGENT_PROVIDER_MAP[inputs.agent];
-    const credential = await getOwnerCredential(projectId, provider);
-    if (!credential) {
-      throw new Error(getMissingCredentialError(provider));
-    }
   }
 
   const octokit = new Octokit({ auth: githubToken });
