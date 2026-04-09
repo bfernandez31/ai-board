@@ -113,6 +113,32 @@ function resolveFrameworkNode(repoRoot: string, pkg: { dependencies?: Record<str
   return 'none';
 }
 
+function resolvePythonFramework(pyproject: string): ProjectFramework {
+  if (/fastapi/i.test(pyproject)) return 'fastapi';
+  if (/django/i.test(pyproject)) return 'django';
+  if (/flask/i.test(pyproject)) return 'flask';
+  return 'none';
+}
+
+function resolveJavaBuildFile(entries: Set<string>, repoRoot: string): string {
+  if (entries.has('pom.xml')) {
+    return path.join(repoRoot, 'pom.xml');
+  }
+
+  if (entries.has('build.gradle.kts')) {
+    return path.join(repoRoot, 'build.gradle.kts');
+  }
+
+  return path.join(repoRoot, 'build.gradle');
+}
+
+function resolveJavaFramework(buildFile: string): ProjectFramework {
+  if (/spring-boot/i.test(buildFile)) return 'spring-boot';
+  if (/quarkus/i.test(buildFile)) return 'quarkus';
+  if (/micronaut/i.test(buildFile)) return 'micronaut';
+  return 'none';
+}
+
 export async function detectStackFromRepository(
   repoRoot: string,
   options: DetectStackOptions = {},
@@ -149,11 +175,7 @@ export async function detectStackFromRepository(
   if (entries.has('pyproject.toml') || entries.has('requirements.txt')) {
     const pyproject = readTextFile(path.join(repoRoot, 'pyproject.toml')) ?? '';
     const manager: PackageManager = /poetry/i.test(pyproject) ? 'poetry' : 'pip';
-    const framework: ProjectFramework =
-      /fastapi/i.test(pyproject) ? 'fastapi'
-      : /django/i.test(pyproject) ? 'django'
-      : /flask/i.test(pyproject) ? 'flask'
-      : 'none';
+    const framework = resolvePythonFramework(pyproject);
     signals.push(entries.has('pyproject.toml') ? 'Detected pyproject.toml' : 'Detected requirements.txt');
 
     return {
@@ -260,12 +282,8 @@ export async function detectStackFromRepository(
 
   if (entries.has('pom.xml') || entries.has('build.gradle') || entries.has('build.gradle.kts')) {
     const manager: PackageManager = entries.has('pom.xml') ? 'maven' : 'gradle';
-    const buildFile = readTextFile(path.join(repoRoot, entries.has('pom.xml') ? 'pom.xml' : entries.has('build.gradle.kts') ? 'build.gradle.kts' : 'build.gradle')) ?? '';
-    const framework: ProjectFramework =
-      /spring-boot/i.test(buildFile) ? 'spring-boot'
-      : /quarkus/i.test(buildFile) ? 'quarkus'
-      : /micronaut/i.test(buildFile) ? 'micronaut'
-      : 'none';
+    const buildFile = readTextFile(resolveJavaBuildFile(entries, repoRoot)) ?? '';
+    const framework = resolveJavaFramework(buildFile);
     const primaryLanguage: ProjectLanguage = /kotlin/i.test(buildFile) || entries.has('settings.gradle.kts') ? 'kotlin' : 'java';
     if (primaryLanguage === 'kotlin' && framework === 'spring-boot') {
       conflicts.push('Detected Kotlin build with Spring Boot dependencies');

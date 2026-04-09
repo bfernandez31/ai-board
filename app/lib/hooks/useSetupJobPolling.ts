@@ -63,13 +63,18 @@ export function useSetupJobPolling(
     gcTime: 5 * 60 * 1000,
     refetchInterval: (query) => {
       const result = query.state.data;
-      if (!result) return pollingInterval;
+      if (!result) {
+        return pollingInterval;
+      }
 
-      // Stop polling when configSyncedAt is set (setup complete)
-      if (result.configSyncedAt) return false;
+      if (result.configSyncedAt) {
+        return false;
+      }
 
-      // Only stop polling on FAILED — COMPLETED must keep polling until configSyncedAt is set
-      if (result.job?.status === 'FAILED') return false;
+      const hasFailedJob = result.job?.status === 'FAILED';
+      if (hasFailedJob) {
+        return false;
+      }
 
       return pollingInterval;
     },
@@ -79,7 +84,8 @@ export function useSetupJobPolling(
   const job = data?.job ?? null;
   const configSyncedAt = data?.configSyncedAt ?? null;
   const isTerminal = job ? TERMINAL_STATUSES.has(job.status) : false;
-  const isPolling = isFetching || (!isTerminal && !configSyncedAt);
+  const shouldPoll = !isTerminal && !configSyncedAt;
+  const isPolling = isFetching || shouldPoll;
 
   return {
     job,

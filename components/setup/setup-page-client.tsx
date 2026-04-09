@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, AlertCircle, CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react';
+import type { Agent } from '@prisma/client';
+import { AlertCircle, ArrowRight, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { queryKeys } from '@/app/lib/query-keys';
 import { useSetupJobPolling, type SetupJobPollResult } from '@/app/lib/hooks/useSetupJobPolling';
-import type { Agent } from '@prisma/client';
+import { queryKeys } from '@/app/lib/query-keys';
 
 interface SetupPageClientProps {
   projectId: number;
@@ -16,7 +16,19 @@ interface SetupPageClientProps {
   initialSetupState?: SetupJobPollResult;
 }
 
-const AGENTS: { value: Agent; label: string; description: string }[] = [
+interface AgentOption {
+  value: Agent;
+  label: string;
+  description: string;
+}
+
+interface ArtifactListProps {
+  title: string;
+  artifacts: Array<{ path: string; reason?: string }>;
+  itemKeyPrefix: string;
+}
+
+const AGENTS: AgentOption[] = [
   {
     value: 'CLAUDE',
     label: 'Claude Code',
@@ -29,14 +41,72 @@ const AGENTS: { value: Agent; label: string; description: string }[] = [
   },
 ];
 
-export function SetupPageClient({ projectId, projectName, initialSetupState }: SetupPageClientProps) {
+function getAgentCardClass(isSelected: boolean, isDisabled: boolean): string {
+  const selectionClass = isSelected
+    ? 'border-ctp-mauve ring-1 ring-ctp-mauve/30'
+    : 'hover:border-border/60';
+
+  const disabledClass = isDisabled ? 'opacity-60 pointer-events-none' : '';
+
+  return `aurora-glass cursor-pointer p-4 transition-all ${selectionClass} ${disabledClass}`.trim();
+}
+
+function getAgentIndicatorClass(isSelected: boolean): string {
+  if (isSelected) {
+    return 'h-4 w-4 rounded-full border-2 border-ctp-mauve flex items-center justify-center';
+  }
+
+  return 'h-4 w-4 rounded-full border-2 border-muted-foreground/40 flex items-center justify-center';
+}
+
+function getCompletionStateClasses(isPartial: boolean): string {
+  if (isPartial) {
+    return 'rounded-lg border border-ctp-yellow/30 bg-ctp-yellow/5 p-4';
+  }
+
+  return 'rounded-lg border border-ctp-green/30 bg-ctp-green/5 p-4';
+}
+
+function getCompletionIconClass(isPartial: boolean): string {
+  return isPartial ? 'h-5 w-5 mt-0.5 text-ctp-yellow' : 'h-5 w-5 mt-0.5 text-ctp-green';
+}
+
+function getCompletionTitle(isPartial: boolean): string {
+  return isPartial ? 'Setup partially completed' : 'Setup completed';
+}
+
+function ArtifactList({ title, artifacts, itemKeyPrefix }: ArtifactListProps): React.JSX.Element | null {
+  if (artifacts.length === 0) {
+    return null;
+  }
+
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
+      <ul className="mt-1 text-sm text-foreground">
+        {artifacts.map((artifact) => (
+          <li key={`${itemKeyPrefix}-${artifact.path}`}>
+            {artifact.path}
+            {artifact.reason ? ` (${artifact.reason})` : ''}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export function SetupPageClient({
+  projectId,
+  projectName,
+  initialSetupState,
+}: SetupPageClientProps): React.JSX.Element {
   const router = useRouter();
   const [selectedAgent, setSelectedAgent] = useState<Agent>('CLAUDE');
   const [isDispatching, setIsDispatching] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   const { job, configSyncedAt, isPolling } = useSetupJobPolling(projectId, 2000, initialSetupState);
 
-  // Credential check query
   const { data: credentialData } = useQuery({
     queryKey: queryKeys.projects.credentialCheck(projectId, selectedAgent),
     queryFn: async () => {
@@ -64,8 +134,12 @@ export function SetupPageClient({ projectId, projectName, initialSetupState }: S
   const preservedArtifacts = artifactSummary?.preserved ?? [];
   const missingArtifacts = artifactSummary?.missing ?? [];
 
-  const handleDispatch = useCallback(async () => {
+  const showInitializeButton = !isJobActive && !isJobFailed && !isJobCompleted;
+  const showPollingIndicator = isPolling && !isJobActive;
+
+  async function handleDispatch(): Promise<void> {
     setIsDispatching(true);
+
     try {
       const response = await fetch(`/api/projects/${projectId}/setup/jobs`, {
         method: 'POST',
@@ -82,12 +156,10 @@ export function SetupPageClient({ projectId, projectName, initialSetupState }: S
     } finally {
       setIsDispatching(false);
     }
-  }, [projectId, selectedAgent]);
+  }
 
   const initButtonDisabled = isDispatching || isJobActive || !hasCredential;
 
-  // Redirect to board when config is synced
-  const [redirecting, setRedirecting] = useState(false);
   useEffect(() => {
     if (configSyncedAt && !redirecting) {
       setRedirecting(true);
@@ -120,24 +192,14 @@ export function SetupPageClient({ projectId, projectName, initialSetupState }: S
         {AGENTS.map((agent) => (
           <Card
             key={agent.value}
-            className={`aurora-glass cursor-pointer p-4 transition-all ${
-              selectedAgent === agent.value
-                ? 'border-ctp-mauve ring-1 ring-ctp-mauve/30'
-                : 'hover:border-border/60'
-            } ${isJobActive ? 'opacity-60 pointer-events-none' : ''}`}
+            className={getAgentCardClass(selectedAgent === agent.value, isJobActive)}
             onClick={() => !isJobActive && setSelectedAgent(agent.value)}
             role="radio"
             aria-checked={selectedAgent === agent.value}
             tabIndex={0}
           >
             <div className="flex items-center gap-3">
-              <div
-                className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
-                  selectedAgent === agent.value
-                    ? 'border-ctp-mauve'
-                    : 'border-muted-foreground/40'
-                }`}
-              >
+              <div className={getAgentIndicatorClass(selectedAgent === agent.value)}>
                 {selectedAgent === agent.value && (
                   <div className="h-2 w-2 rounded-full bg-ctp-mauve" />
                 )}
@@ -224,14 +286,12 @@ export function SetupPageClient({ projectId, projectName, initialSetupState }: S
 
       {/* Completed / Partial State */}
       {isJobCompleted && job && !configSyncedAt && (
-        <div className={`rounded-lg border p-4 ${job.partial ? 'border-ctp-yellow/30 bg-ctp-yellow/5' : 'border-ctp-green/30 bg-ctp-green/5'}`}>
+        <div className={getCompletionStateClasses(job.partial)}>
           <div className="flex items-start gap-3">
-            <CheckCircle2 className={`h-5 w-5 mt-0.5 ${job.partial ? 'text-ctp-yellow' : 'text-ctp-green'}`} />
+            <CheckCircle2 className={getCompletionIconClass(job.partial)} />
             <div className="flex-1 space-y-3">
               <div>
-                <p className="text-sm font-medium text-foreground">
-                  {job.partial ? 'Setup partially completed' : 'Setup completed'}
-                </p>
+                <p className="text-sm font-medium text-foreground">{getCompletionTitle(job.partial)}</p>
                 {job.commitSha && (
                   <p className="text-xs text-muted-foreground mt-1">Commit: {job.commitSha}</p>
                 )}
@@ -240,49 +300,16 @@ export function SetupPageClient({ projectId, projectName, initialSetupState }: S
                 )}
               </div>
 
-              {createdArtifacts.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Created</p>
-                  <ul className="mt-1 text-sm text-foreground">
-                    {createdArtifacts.map((artifact) => (
-                      <li key={`created-${artifact.path}`}>{artifact.path}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {preservedArtifacts.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preserved</p>
-                  <ul className="mt-1 text-sm text-foreground">
-                    {preservedArtifacts.map((artifact) => (
-                      <li key={`preserved-${artifact.path}`}>
-                        {artifact.path}{artifact.reason ? ` (${artifact.reason})` : ''}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {missingArtifacts.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Missing</p>
-                  <ul className="mt-1 text-sm text-foreground">
-                    {missingArtifacts.map((artifact) => (
-                      <li key={`missing-${artifact.path}`}>
-                        {artifact.path}{artifact.reason ? ` (${artifact.reason})` : ''}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <ArtifactList title="Created" artifacts={createdArtifacts} itemKeyPrefix="created" />
+              <ArtifactList title="Preserved" artifacts={preservedArtifacts} itemKeyPrefix="preserved" />
+              <ArtifactList title="Missing" artifacts={missingArtifacts} itemKeyPrefix="missing" />
             </div>
           </div>
         </div>
       )}
 
       {/* Initialize Button */}
-      {!isJobActive && !isJobFailed && !isJobCompleted && (
+      {showInitializeButton && (
         <Button
           className="w-full aurora-btn-mauve"
           size="lg"
@@ -304,7 +331,7 @@ export function SetupPageClient({ projectId, projectName, initialSetupState }: S
       )}
 
       {/* Polling indicator */}
-      {isPolling && !isJobActive && (
+      {showPollingIndicator && (
         <p className="text-xs text-muted-foreground text-center">Checking status...</p>
       )}
     </div>
