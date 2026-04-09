@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { Button } from '@/components/ui/button';
 import { X, FileSearch } from 'lucide-react';
 import { RetroSpecModal } from './retro-spec-modal';
@@ -9,25 +9,33 @@ interface RetroSpecBannerProps {
   projectId: number;
   hasSpecs: boolean;
   isGenerating: boolean;
-  onGenerateSuccess?: () => void;
+  onGenerateSuccess?: (() => void) | undefined;
 }
 
 function getDismissalKey(projectId: number): string {
   return `retro-spec-banner-dismissed-${projectId}`;
 }
 
-export function RetroSpecBanner({ projectId, hasSpecs, isGenerating, onGenerateSuccess }: RetroSpecBannerProps) {
-  const [isDismissed, setIsDismissed] = useState(true); // Start hidden to avoid flash
-  const [isModalOpen, setIsModalOpen] = useState(false);
+function getIsDismissed(projectId: number): boolean {
+  try {
+    return localStorage.getItem(getDismissalKey(projectId)) === 'true';
+  } catch {
+    return false;
+  }
+}
 
-  useEffect(() => {
-    try {
-      const dismissed = localStorage.getItem(getDismissalKey(projectId));
-      setIsDismissed(dismissed === 'true');
-    } catch {
-      setIsDismissed(false);
-    }
-  }, [projectId]);
+// No-op subscribe — localStorage changes don't fire events on same page
+const subscribeNoop = () => () => {};
+
+export function RetroSpecBanner({ projectId, hasSpecs, isGenerating, onGenerateSuccess }: RetroSpecBannerProps) {
+  const isDismissedFromStorage = useSyncExternalStore(
+    subscribeNoop,
+    () => getIsDismissed(projectId),
+    () => false
+  );
+  const [isDismissedLocal, setIsDismissedLocal] = useState(false);
+  const isDismissed = isDismissedFromStorage || isDismissedLocal;
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Don't show banner if specs exist, dismissed, or actively generating
   if (hasSpecs || isDismissed || isGenerating) {
@@ -35,7 +43,7 @@ export function RetroSpecBanner({ projectId, hasSpecs, isGenerating, onGenerateS
   }
 
   const handleDismiss = () => {
-    setIsDismissed(true);
+    setIsDismissedLocal(true);
     try {
       localStorage.setItem(getDismissalKey(projectId), 'true');
     } catch {
