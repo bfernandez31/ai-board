@@ -138,8 +138,8 @@
 
 ### Implementation for User Story 5
 
-- [x] T026 [P] [US5] Create `.github/workflows/retro-spec.yml`: `workflow_dispatch` trigger with inputs (project_id, job_id, githubRepository, agent, depth, documentation_url, additional_context). Environment variables (APP_URL, WORKFLOW_API_TOKEN, CLAUDE_CODE_OAUTH_TOKEN, telemetry). Status reporting via curl to PATCH `/api/projects/:projectId/spec-generation/jobs/:jobId/status`. Sparse checkout of ai-board repo + full clone of target repo. Execute `ai-board.retro-spec` command. 30 min timeout. Follow pattern from `.github/workflows/onboard.yml`. See `specs/AIB-587-copy-of-retro/workflows/retro-spec-workflow.md` for full specification
-- [x] T027 [P] [US5] Create `.claude-plugin/commands/ai-board.retro-spec.md` agent command. See `specs/AIB-587-copy-of-retro/workflows/retro-spec-command.md` for full specification
+- [X] T026 [P] [US5] Create `.github/workflows/retro-spec.yml`: `workflow_dispatch` trigger with inputs (project_id, job_id, githubRepository, agent, depth, documentation_url, additional_context). Environment variables (APP_URL, WORKFLOW_API_TOKEN, CLAUDE_CODE_OAUTH_TOKEN, telemetry). Status reporting via curl to PATCH `/api/projects/:projectId/spec-generation/jobs/:jobId/status`. Sparse checkout of ai-board repo + full clone of target repo. Execute `ai-board.retro-spec` command. 30 min timeout. Follow pattern from `.github/workflows/onboard.yml`. See `specs/AIB-587-copy-of-retro/workflows/retro-spec-workflow.md` for full specification
+- [X] T027 [P] [US5] Create `.claude-plugin/commands/ai-board.retro-spec.md` agent command. See `specs/AIB-587-copy-of-retro/workflows/retro-spec-command.md` for full specification
 
 **Checkpoint**: Workflow can be dispatched and executes the retro-spec command end-to-end
 

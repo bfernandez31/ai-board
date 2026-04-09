@@ -1,0 +1,352 @@
+name: Retro-Spec Generation
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: 'Project ID'
+        required: true
+        type: string
+      job_id:
+        description: 'Spec generation job ID'
+        required: true
+        type: string
+      githubRepository:
+        description: 'Target repository in format owner/repo'
+        required: true
+        type: string
+      agent:
+        description: 'Agent type (CLAUDE or CODEX)'
+        required: true
+        type: string
+      depth:
+        description: 'Spec depth (QUICK, STANDARD, COMPREHENSIVE)'
+        required: true
+        type: string
+      documentation_url:
+        description: 'Optional external documentation URL'
+        required: false
+        type: string
+        default: ''
+      additional_context:
+        description: 'Optional additional context for generation'
+        required: false
+        type: string
+        default: ''
+
+env:
+  APP_URL: ${{ vars.APP_URL || 'https://ai-board.vercel.app' }}
+  WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+  CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+  ANTHROPIC_MODEL: "claude-opus-4-6"
+  # Claude Code telemetry
+  CLAUDE_CODE_ENABLE_TELEMETRY: "1"
+  OTEL_LOGS_EXPORTER: "otlp"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/json"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
+  OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
+  OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
+  OTEL_LOGS_EXPORT_INTERVAL: "60000"
+  OTEL_BLRP_SCHEDULE_DELAY: "60000"
+
+jobs:
+  retro-spec:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    steps:
+      # ── Step 1: Report RUNNING ──────────────────────────────────────
+      - name: Report RUNNING
+        id: report-running
+        run: |
+          HTTP_CODE=$(curl -X PATCH \
+            "${{ env.APP_URL }}/api/projects/${{ inputs.project_id }}/spec-generation/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"RUNNING","workflowRunId":${{ github.run_id }}}' \
+            -s -o /dev/null -w "%{http_code}") || true
+          if [ "$HTTP_CODE" = "409" ]; then
+            echo "Job already CANCELLED — aborting workflow"
+            echo "CANCELLED=true" >> "$GITHUB_ENV"
+            exit 1
+          elif [ "$HTTP_CODE" != "200" ]; then
+            echo "Failed to update job status to RUNNING (HTTP $HTTP_CODE)"
+          fi
+
+      # ── Step 2: Fetch Owner AI Credential ───────────────────────────
+      - name: Fetch Owner AI Credential
+        id: fetch-credential
+        run: |
+          PROVIDER=$( [[ "${{ inputs.agent }}" == "CODEX" ]] && echo "OPENAI" || echo "ANTHROPIC" )
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "${APP_URL}/api/internal/credentials?projectId=${{ inputs.project_id }}&provider=${PROVIDER}" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Failed to fetch owner credential (HTTP $HTTP_CODE)"
+            echo "CREDENTIAL_FAILED=true" >> "$GITHUB_ENV"
+            exit 1
+          else
+            CRED_TYPE=$(echo "$BODY" | jq -r '.credentialType')
+            ENV_VAR=$(echo "$BODY" | jq -r '.envVar')
+            CRED_VALUE_B64=$(echo "$BODY" | jq -r '.value')
+            echo "::add-mask::${CRED_VALUE_B64}"
+            CRED_VALUE=$(echo "$CRED_VALUE_B64" | base64 -d)
+            echo "::add-mask::${CRED_VALUE}"
+
+            {
+              echo "${ENV_VAR}<<CREDENTIAL_EOF"
+              echo "${CRED_VALUE}"
+              echo "CREDENTIAL_EOF"
+            } >> "$GITHUB_ENV"
+            echo "Owner credential loaded (type: ${CRED_TYPE}, envVar: ${ENV_VAR})"
+          fi
+          echo "PROJECT_ID=${{ inputs.project_id }}" >> "$GITHUB_ENV"
+
+      # ── Step 2b: Fetch Owner GitHub Token ───────────────────────────
+      - name: Fetch Owner GitHub Token
+        id: fetch-github-token
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "${APP_URL}/api/internal/github-token?projectId=${{ inputs.project_id }}" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            TOKEN_B64=$(echo "$BODY" | jq -r '.token')
+            echo "::add-mask::${TOKEN_B64}"
+            OWNER_GH_TOKEN=$(echo "$TOKEN_B64" | base64 -d)
+            echo "::add-mask::${OWNER_GH_TOKEN}"
+            echo "repo_token=${OWNER_GH_TOKEN}" >> "$GITHUB_OUTPUT"
+            echo "Owner GitHub token loaded"
+          else
+            echo "Owner GitHub token not available (HTTP $HTTP_CODE) — falling back to GH_PAT"
+            echo "repo_token=${{ secrets.GH_PAT }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Step 3: Checkout repos ──────────────────────────────────────
+      - name: Checkout ai-board (sparse)
+        uses: actions/checkout@v4
+        with:
+          path: ai-board
+          sparse-checkout: |
+            .claude-plugin
+            .github/scripts
+          sparse-checkout-cone-mode: true
+
+      - name: Clone target repository
+        id: clone-target
+        env:
+          REPO_TOKEN: ${{ steps.fetch-github-token.outputs.repo_token }}
+        run: |
+          echo "::add-mask::${REPO_TOKEN}"
+          if ! git clone "https://x-access-token:${REPO_TOKEN}@github.com/${{ inputs.githubRepository }}.git" target-repo 2>&1; then
+            echo "CLONE_FAILED=true" >> "$GITHUB_ENV"
+            echo "Failed to clone target repository: ${{ inputs.githubRepository }}"
+            exit 1
+          fi
+          cd target-repo
+          git remote set-url origin "https://github.com/${{ inputs.githubRepository }}.git"
+          DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+          echo "DEFAULT_BRANCH=${DEFAULT_BRANCH}" >> "$GITHUB_ENV"
+
+      # ── Step 4: Setup tools ─────────────────────────────────────────
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 1.3.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.20.0'
+
+      # ── Step 4b: Create plugin symlinks ─────────────────────────────
+      - name: Create plugin symlinks
+        working-directory: target-repo
+        run: |
+          mkdir -p .claude
+          ln -sf ../../ai-board/.claude-plugin/commands .claude/commands
+          ln -sf ../../ai-board/.claude-plugin/skills .claude/skills
+
+      # ── Step 5: Fetch External Documentation (conditional) ──────────
+      - name: Fetch External Documentation
+        if: inputs.documentation_url != ''
+        working-directory: target-repo
+        run: |
+          echo "Fetching external documentation from: ${{ inputs.documentation_url }}"
+          if curl -sf -L --max-time 30 -o external-docs.md "${{ inputs.documentation_url }}"; then
+            echo "DOCS_PATH=external-docs.md" >> "$GITHUB_ENV"
+            echo "External documentation fetched successfully"
+          else
+            echo "Warning: Failed to fetch external documentation — continuing without it"
+            echo "DOCS_PATH=" >> "$GITHUB_ENV"
+          fi
+
+      # ── Step 6: Execute Retro-Spec Command ──────────────────────────
+      - name: Generate specifications
+        id: generate-specs
+        continue-on-error: true
+        working-directory: target-repo
+        run: |
+          DEPTH_LOWER=$(echo "${{ inputs.depth }}" | tr '[:upper:]' '[:lower:]')
+          ARGS="--depth ${DEPTH_LOWER}"
+          if [ -n "${DOCS_PATH:-}" ]; then
+            ARGS="${ARGS} --docs-path ${DOCS_PATH}"
+          fi
+          if [ -n "${{ inputs.additional_context }}" ]; then
+            ARGS="${ARGS} --additional-context \"${{ inputs.additional_context }}\""
+          fi
+
+          bash ../ai-board/.github/scripts/run-agent.sh \
+            "${{ inputs.agent }}" \
+            "ai-board.retro-spec" \
+            "${ARGS}"
+
+      - name: Check generation result
+        run: |
+          if [ "${{ steps.generate-specs.outcome }}" = "failure" ]; then
+            echo "GENERATION_FAILED=true" >> "$GITHUB_ENV"
+            echo "Spec generation failed"
+            exit 1
+          fi
+
+      # ── Step 7: Configure Git, Commit and Push ──────────────────────
+      - name: Configure Git
+        working-directory: target-repo
+        run: |
+          git config user.email "ai-board[bot]@users.noreply.github.com"
+          git config user.name "ai-board[bot]"
+
+      - name: Stage and commit specs
+        id: commit
+        working-directory: target-repo
+        env:
+          REPO_TOKEN: ${{ steps.fetch-github-token.outputs.repo_token }}
+        run: |
+          echo "::add-mask::${REPO_TOKEN}"
+          DEPTH_LOWER=$(echo "${{ inputs.depth }}" | tr '[:upper:]' '[:lower:]')
+
+          # Stage specs directory
+          if ! git add specs/specifications/; then
+            echo "STAGE_FAILED=true" >> "$GITHUB_ENV"
+            echo "Failed to stage specs/specifications/"
+            exit 1
+          fi
+
+          # Remove working artifacts
+          rm -f external-docs.md
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "NO_CHANGES=true" >> "$GITHUB_ENV"
+          else
+            git commit -m "chore: generate project specifications (${DEPTH_LOWER})"
+            git remote set-url origin "https://x-access-token:${REPO_TOKEN}@github.com/${{ inputs.githubRepository }}.git"
+            if ! git push origin "${DEFAULT_BRANCH}"; then
+              git remote set-url origin "https://github.com/${{ inputs.githubRepository }}.git"
+              echo "PUSH_FAILED=true" >> "$GITHUB_ENV"
+              exit 1
+            fi
+            git remote set-url origin "https://github.com/${{ inputs.githubRepository }}.git"
+            COMMIT_SHA=$(git rev-parse HEAD)
+            echo "COMMIT_SHA=${COMMIT_SHA}" >> "$GITHUB_ENV"
+          fi
+
+      # ── Step 8: Report COMPLETED ────────────────────────────────────
+      - name: Report COMPLETED
+        if: success()
+        working-directory: target-repo
+        run: |
+          DEPTH_LOWER=$(echo "${{ inputs.depth }}" | tr '[:upper:]' '[:lower:]')
+
+          # Collect created files
+          CREATED_FILES=$(find specs/specifications/ -type f -name '*.md' 2>/dev/null | sort | jq -R . | jq -s .)
+          if [ -z "$CREATED_FILES" ] || [ "$CREATED_FILES" = "[]" ]; then
+            CREATED_FILES='[]'
+          fi
+
+          DOCS_ACCESSIBLE="false"
+          if [ -n "${{ inputs.documentation_url }}" ] && [ -n "${DOCS_PATH:-}" ]; then
+            DOCS_ACCESSIBLE="true"
+          fi
+
+          ARTIFACT_SUMMARY=$(jq -n \
+            --arg depth "$DEPTH_LOWER" \
+            --argjson created "$CREATED_FILES" \
+            --arg commitSha "${COMMIT_SHA:-}" \
+            --argjson docsAccessible "$DOCS_ACCESSIBLE" \
+            '{
+              depth: $depth,
+              created: $created,
+              documentationUrlAccessible: $docsAccessible
+            }
+            + (if $commitSha != "" then {commitSha: $commitSha} else {} end)')
+
+          curl -sf -X PATCH \
+            "${{ env.APP_URL }}/api/projects/${{ inputs.project_id }}/spec-generation/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --argjson summary "$ARTIFACT_SUMMARY" '{"status":"COMPLETED","artifactSummary":$summary}')" || true
+
+      # ── Error Handlers ──────────────────────────────────────────────
+      - name: Report FAILED — Clone failed
+        if: failure() && env.CLONE_FAILED == 'true'
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.APP_URL }}/api/projects/${{ inputs.project_id }}/spec-generation/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"Failed to clone target repository: ${{ inputs.githubRepository }}"}' || true
+
+      - name: Report FAILED — Credential fetch failed
+        if: failure() && env.CREDENTIAL_FAILED == 'true'
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.APP_URL }}/api/projects/${{ inputs.project_id }}/spec-generation/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"Failed to fetch owner AI credential"}' || true
+
+      - name: Report FAILED — Generation failed
+        if: failure() && env.GENERATION_FAILED == 'true'
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.APP_URL }}/api/projects/${{ inputs.project_id }}/spec-generation/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"Spec generation command failed"}' || true
+
+      - name: Report FAILED — Push failed
+        if: failure() && env.PUSH_FAILED == 'true'
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.APP_URL }}/api/projects/${{ inputs.project_id }}/spec-generation/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"Failed to push specs to target repository"}' || true
+
+      - name: Report FAILED — Catch-all
+        if: failure() && env.CLONE_FAILED != 'true' && env.CREDENTIAL_FAILED != 'true' && env.GENERATION_FAILED != 'true' && env.PUSH_FAILED != 'true' && env.CANCELLED != 'true' && env.STAGE_FAILED != 'true'
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.APP_URL }}/api/projects/${{ inputs.project_id }}/spec-generation/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"Retro-spec workflow failed unexpectedly"}' || true
+
+      - name: Report FAILED — Cancelled
+        if: cancelled()
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.APP_URL }}/api/projects/${{ inputs.project_id }}/spec-generation/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"Retro-spec workflow was cancelled"}' || true
