@@ -422,7 +422,7 @@ describe('UserService', () => {
         refresh_token: 'ghr_newrefresh111',
         expires_at: 9876543210,
         token_type: 'bearer',
-        scope: 'read:user user:email repo',
+        scope: 'read:user user:email repo workflow',
       } as Account;
 
       const mockUser = { id: '12345' };
@@ -449,7 +449,7 @@ describe('UserService', () => {
       expect(capturedAccountUpdate.access_token).toBe('gho_newtoken999');
       expect(capturedAccountUpdate.refresh_token).toBe('ghr_newrefresh111');
       expect(capturedAccountUpdate.expires_at).toBe(9876543210);
-      expect(capturedAccountUpdate.scope).toBe('read:user user:email repo');
+      expect(capturedAccountUpdate.scope).toBe('read:user user:email repo workflow');
     });
   });
 });

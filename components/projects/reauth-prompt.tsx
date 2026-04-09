@@ -10,7 +10,7 @@ interface ReauthPromptProps {
 
 export function ReauthPrompt({ onDismiss }: ReauthPromptProps) {
   const handleReauthorize = () => {
-    signIn('github', { callbackUrl: window.location.href }, { scope: 'read:user user:email repo' });
+    signIn('github', { callbackUrl: window.location.href }, { scope: 'read:user user:email repo workflow' });
   };
 
   return (
