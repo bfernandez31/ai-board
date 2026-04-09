@@ -1,12 +1,15 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { execSync } from 'child_process';
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs';
-import { join } from 'path';
+import { execSync } from 'node:child_process';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 const SCRIPT_PATH = join(__dirname, '../../../.github/scripts/run-command.sh');
 const TMP_DIR = join(__dirname, '../../../tmp-run-command-test');
 
-function runScript(args: string, expectSuccess = true): { stdout: string; stderr: string; exitCode: number } {
+function runScript(
+  args: string,
+  expectSuccess = true,
+): { stdout: string; stderr: string; exitCode: number } {
   try {
     const result = execSync(`bash "${SCRIPT_PATH}" ${args}`, {
       encoding: 'utf-8',
@@ -27,10 +30,17 @@ function runScript(args: string, expectSuccess = true): { stdout: string; stderr
   }
 }
 
+function checkForYq(): boolean {
+  try {
+    execSync('which yq', { encoding: 'utf-8' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // yq is required — available in CI via setup-environment.sh, may not be installed locally
-const hasYq = (() => {
-  try { execSync('which yq', { encoding: 'utf-8' }); return true; } catch { return false; }
-})();
+const hasYq = checkForYq();
 
 describe.skipIf(!hasYq)('run-command.sh', () => {
 

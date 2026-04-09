@@ -16,6 +16,31 @@ export interface HealthScanDispatchInputs {
   ai_board_checkout_dir?: string;
 }
 
+function buildWorkflowInputs(
+  inputs: HealthScanDispatchInputs,
+  project?: Pick<Project, 'id' | 'githubOwner' | 'githubRepo' | 'configSyncedAt' | 'config'>
+): Record<string, string> {
+  const baseInputs = {
+    scan_id: inputs.scan_id,
+    project_id: inputs.project_id,
+    scan_type: inputs.scan_type,
+    base_commit: inputs.base_commit,
+    head_commit: inputs.head_commit,
+    githubRepository: inputs.githubRepository,
+  };
+
+  if (inputs.scan_type !== 'TESTS') {
+    return baseInputs;
+  }
+
+  return {
+    ...baseInputs,
+    target_repo_dir: inputs.target_repo_dir ?? 'target',
+    ai_board_checkout_dir: inputs.ai_board_checkout_dir ?? 'ai-board',
+    ...getProjectServiceInputs(project),
+  };
+}
+
 export async function dispatchHealthScanWorkflow(
   inputs: HealthScanDispatchInputs,
   project?: Pick<Project, 'id' | 'githubOwner' | 'githubRepo' | 'configSyncedAt' | 'config'>
@@ -62,16 +87,7 @@ export async function dispatchHealthScanWorkflow(
       repo,
       workflow_id: 'health-scan.yml',
       ref: 'main',
-      inputs: {
-        ...inputs,
-        ...(inputs.scan_type === 'TESTS'
-          ? {
-              target_repo_dir: inputs.target_repo_dir ?? 'target',
-              ai_board_checkout_dir: inputs.ai_board_checkout_dir ?? 'ai-board',
-            }
-          : {}),
-        ...(inputs.scan_type === 'TESTS' && getProjectServiceInputs(project)),
-      },
+      inputs: buildWorkflowInputs(inputs, project),
     });
   } catch (error) {
     console.error('[health-scan-dispatch] Failed to dispatch workflow:', error);

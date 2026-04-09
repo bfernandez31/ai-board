@@ -19,6 +19,9 @@ UNIT_REPORT="$REPORT_DIR/test-report-unit.json"
 INTEGRATION_REPORT="$REPORT_DIR/test-report-integration.json"
 E2E_REPORT="$REPORT_DIR/test-report-e2e.json"
 SUMMARY_REPORT="$REPORT_DIR/test-report-summary.json"
+UNIT_STDERR="/tmp/test-unit-stderr.txt"
+INTEGRATION_STDERR="/tmp/test-int-stderr.txt"
+E2E_STDERR="/tmp/test-e2e-stderr.txt"
 
 write_suite_report() {
   local report_file="$1"
@@ -72,6 +75,20 @@ run_suite() {
   echo "0 1 1"
 }
 
+run_and_log_suite() {
+  local step="$1"
+  local label="$2"
+  local suite="$3"
+  local command_key="$4"
+  local report_file="$5"
+  local stderr_file="$6"
+
+  echo "[$step] Running $label tests..."
+  read SUITE_PASSED SUITE_FAILED SUITE_TOTAL <<< "$(run_suite "$suite" "$command_key" "$report_file" "$stderr_file")"
+  echo "$label tests: $SUITE_PASSED passed, $SUITE_FAILED failed (total: $SUITE_TOTAL)"
+  echo ""
+}
+
 echo '{}' > "$UNIT_REPORT"
 echo '{}' > "$INTEGRATION_REPORT"
 echo '{}' > "$E2E_REPORT"
@@ -82,20 +99,20 @@ echo "========================================"
 echo "Target: $TARGET_DIR"
 echo ""
 
-echo "[1/3] Running unit tests..."
-read UNIT_PASSED UNIT_FAILED UNIT_TOTAL <<< "$(run_suite "unit" "test_unit" "$UNIT_REPORT" "/tmp/test-unit-stderr.txt")"
-echo "Unit tests: $UNIT_PASSED passed, $UNIT_FAILED failed (total: $UNIT_TOTAL)"
-echo ""
+run_and_log_suite "1/3" "Unit" "unit" "test_unit" "$UNIT_REPORT" "$UNIT_STDERR"
+UNIT_PASSED="$SUITE_PASSED"
+UNIT_FAILED="$SUITE_FAILED"
+UNIT_TOTAL="$SUITE_TOTAL"
 
-echo "[2/3] Running integration tests..."
-read INT_PASSED INT_FAILED INT_TOTAL <<< "$(run_suite "integration" "test_integration" "$INTEGRATION_REPORT" "/tmp/test-int-stderr.txt")"
-echo "Integration tests: $INT_PASSED passed, $INT_FAILED failed (total: $INT_TOTAL)"
-echo ""
+run_and_log_suite "2/3" "Integration" "integration" "test_integration" "$INTEGRATION_REPORT" "$INTEGRATION_STDERR"
+INT_PASSED="$SUITE_PASSED"
+INT_FAILED="$SUITE_FAILED"
+INT_TOTAL="$SUITE_TOTAL"
 
-echo "[3/3] Running E2E tests..."
-read E2E_PASSED E2E_FAILED E2E_TOTAL <<< "$(run_suite "e2e" "test_e2e" "$E2E_REPORT" "/tmp/test-e2e-stderr.txt")"
-echo "E2E tests: $E2E_PASSED passed, $E2E_FAILED failed (total: $E2E_TOTAL)"
-echo ""
+run_and_log_suite "3/3" "E2E" "e2e" "test_e2e" "$E2E_REPORT" "$E2E_STDERR"
+E2E_PASSED="$SUITE_PASSED"
+E2E_FAILED="$SUITE_FAILED"
+E2E_TOTAL="$SUITE_TOTAL"
 
 TOTAL_PASSED=$((UNIT_PASSED + INT_PASSED + E2E_PASSED))
 TOTAL_FAILED=$((UNIT_FAILED + INT_FAILED + E2E_FAILED))

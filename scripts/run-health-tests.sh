@@ -11,29 +11,46 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 RUN_TESTS_WITH_REPORTS="${AI_BOARD_RUN_TESTS_WITH_REPORTS:-$SCRIPT_DIR/run-tests-with-reports.sh}"
 RUN_COMMAND_SCRIPT="${AI_BOARD_RUN_COMMAND_SCRIPT:-$REPO_DIR/.github/scripts/run-command.sh}"
+SUMMARY_FILE="/tmp/test-report-summary.json"
+RESULT_FILE="/tmp/health-scan-result.json"
+PREFLIGHT_LOG="/tmp/run-health-tests-preflight.log"
+FIX_RESULT_FILE="/tmp/health-tests-fix-result.json"
 
 if [[ -z "$TARGET_REPO_DIR" ]]; then
   echo "Usage: ./scripts/run-health-tests.sh <AGENT_TYPE> <TARGET_REPO_DIR>" >&2
   exit 1
 fi
 
-if [[ -n "${AI_BOARD_RUN_AGENT:-}" ]]; then
-  RUN_AGENT="$AI_BOARD_RUN_AGENT"
-elif [[ -f "$REPO_DIR/.github/scripts/run-agent.sh" ]]; then
-  RUN_AGENT="$REPO_DIR/.github/scripts/run-agent.sh"
-elif [[ -f "../ai-board/.github/scripts/run-agent.sh" ]]; then
-  RUN_AGENT="../ai-board/.github/scripts/run-agent.sh"
-else
+resolve_run_agent() {
+  if [[ -n "${AI_BOARD_RUN_AGENT:-}" ]]; then
+    echo "$AI_BOARD_RUN_AGENT"
+    return 0
+  fi
+
+  if [[ -f "$REPO_DIR/.github/scripts/run-agent.sh" ]]; then
+    echo "$REPO_DIR/.github/scripts/run-agent.sh"
+    return 0
+  fi
+
+  if [[ -f "../ai-board/.github/scripts/run-agent.sh" ]]; then
+    echo "../ai-board/.github/scripts/run-agent.sh"
+    return 0
+  fi
+
+  return 1
+}
+
+if ! RUN_AGENT="$(resolve_run_agent)"; then
   echo "❌ run-agent.sh not found" >&2
   exit 1
 fi
 
 read_summary() {
-  cat /tmp/test-report-summary.json
+  cat "$SUMMARY_FILE"
 }
 
 has_errors() {
-  jq -r '.hasErrors' /tmp/test-report-summary.json
+  jq -r '.hasErrors' "$SUMMARY_FILE"
 }
 
 compute_score() {
@@ -83,7 +100,7 @@ write_result() {
       },
       tokensUsed: 0,
       costUsd: 0
-    }' > /tmp/health-scan-result.json
+    }' > "$RESULT_FILE"
 }
 
 write_skipped_result() {
@@ -98,13 +115,13 @@ merge_arrays() {
   echo "$arr1" "$arr2" | jq -s '([.[0][], .[1][]] | unique_by(.id))'
 }
 
-if ! "$RUN_COMMAND_SCRIPT" "$TARGET_REPO_DIR" test_primary >/dev/null 2>/tmp/run-health-tests-preflight.log; then
+if ! "$RUN_COMMAND_SCRIPT" "$TARGET_REPO_DIR" test_primary >/dev/null 2>"$PREFLIGHT_LOG"; then
   echo "❌ Failed to resolve primary test command from config" >&2
-  cat /tmp/run-health-tests-preflight.log >&2 || true
+  cat "$PREFLIGHT_LOG" >&2 || true
   exit 1
 fi
 
-if grep -q "skipping" /tmp/run-health-tests-preflight.log 2>/dev/null; then
+if grep -q "skipping" "$PREFLIGHT_LOG" 2>/dev/null; then
   write_skipped_result "No executable automated test command was detected in project config"
   exit 0
 fi
@@ -143,7 +160,6 @@ PREV_FAILED=$TOTAL_FAILED
 
 while [[ "$(has_errors)" == "true" && $ITERATION -lt $MAX_ITERATIONS ]]; do
   ITERATION=$((ITERATION + 1))
-  FIX_RESULT_FILE="/tmp/health-tests-fix-result.json"
   echo '{"autoFixed":[],"nonFixable":[]}' > "$FIX_RESULT_FILE"
 
   ANTHROPIC_MODEL="${FIX_MODEL:-claude-sonnet-4-6}" \

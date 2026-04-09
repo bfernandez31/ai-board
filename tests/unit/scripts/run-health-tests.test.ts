@@ -1,17 +1,21 @@
-import { afterEach, describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 
 const SCRIPT_PATH = join(__dirname, '../../../scripts/run-health-tests.sh');
 const TMP_ROOT = join(tmpdir(), 'run-health-tests-spec');
 
-function writeExecutable(path: string, content: string) {
+function writeExecutable(path: string, content: string): void {
   writeFileSync(path, content, { mode: 0o755 });
 }
 
-function setupFixture(name: string) {
+function setupFixture(name: string): {
+  root: string;
+  targetDir: string;
+  helpersDir: string;
+} {
   const root = join(TMP_ROOT, name);
   const targetDir = join(root, 'target-repo');
   const helpersDir = join(root, 'helpers');
@@ -23,7 +27,7 @@ function setupFixture(name: string) {
   return { root, targetDir, helpersDir };
 }
 
-function runHealthTests(args: string[], env: NodeJS.ProcessEnv) {
+function runHealthTests(args: string[], env: NodeJS.ProcessEnv): Record<string, unknown> {
   execFileSync('bash', [SCRIPT_PATH, ...args], {
     env: {
       ...process.env,
