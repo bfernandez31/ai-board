@@ -384,3 +384,12 @@ jobs:
             -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{"status":"FAILED","errorMessage":"Onboard workflow failed unexpectedly"}' || true
+
+      - name: Report FAILED — Cancelled
+        if: cancelled()
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.APP_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"Onboard workflow was cancelled"}' || true

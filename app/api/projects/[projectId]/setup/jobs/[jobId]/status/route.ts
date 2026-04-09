@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 import { syncProjectConfig } from '@/lib/config-sync';
+import { getGitHubAccessToken } from '@/lib/github/user-client';
 import type { SetupJobStatus, Prisma } from '@prisma/client';
 
 const setupJobStatusUpdateSchema = z.object({
@@ -115,15 +116,17 @@ export async function PATCH(
       data: updateData,
     });
 
-    // On COMPLETED: trigger config sync (non-blocking)
+    // On COMPLETED: trigger config sync using owner's GitHub token (non-blocking)
     if (newStatus === 'COMPLETED') {
       const project = await prisma.project.findUnique({
         where: { id: projectId },
-        select: { id: true, githubOwner: true, githubRepo: true, configSyncedAt: true },
+        select: { id: true, userId: true, githubOwner: true, githubRepo: true, configSyncedAt: true },
       });
 
       if (project) {
-        syncProjectConfig(project).catch((syncError) => {
+        getGitHubAccessToken(project.userId).then((ownerToken) => {
+          return syncProjectConfig(project, ownerToken ?? undefined);
+        }).catch((syncError) => {
           console.error('[setup-job-status] Config sync failed:', syncError);
         });
       }

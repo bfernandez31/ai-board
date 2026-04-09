@@ -71,14 +71,20 @@ export async function syncProjectConfig(
 
   const octokit = new Octokit({ auth: token });
 
-  // 1. Fetch config from GitHub
+  // 1. Fetch config from GitHub (use repo's default branch, not hardcoded 'main')
   let rawContent: string;
   try {
+    const repoInfo = await octokit.repos.get({
+      owner: project.githubOwner,
+      repo: project.githubRepo,
+    });
+    const defaultBranch = repoInfo.data.default_branch;
+
     const response = await octokit.repos.getContent({
       owner: project.githubOwner,
       repo: project.githubRepo,
       path: CONFIG_FILE_PATH,
-      ref: 'main',
+      ref: defaultBranch,
     });
 
     if (!('content' in response.data) || !response.data.content) {
