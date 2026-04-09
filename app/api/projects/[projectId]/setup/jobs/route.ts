@@ -5,7 +5,6 @@ import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { getOwnerCredential } from '@/lib/ai-credentials/workflow';
 import { dispatchOnboardWorkflow } from '@/lib/workflows/dispatch-onboard';
 import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
-import type { Agent } from '@prisma/client';
 
 const createSetupJobSchema = z.object({
   agent: z.enum(['CLAUDE', 'CODEX']),
@@ -50,7 +49,8 @@ export async function POST(
     const { agent } = parsed.data;
 
     // Pre-flight: check credential
-    const provider = AGENT_PROVIDER_MAP[agent as Agent];
+    // Zod validates agent is 'CLAUDE' | 'CODEX', matching the Agent enum exactly
+    const provider = AGENT_PROVIDER_MAP[agent];
     const credential = await getOwnerCredential(projectId, provider);
     if (!credential) {
       return NextResponse.json(

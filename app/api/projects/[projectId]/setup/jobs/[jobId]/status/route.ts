@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 import { syncProjectConfig } from '@/lib/config-sync';
-import type { SetupJobStatus } from '@prisma/client';
+import type { SetupJobStatus, Prisma } from '@prisma/client';
 
 const setupJobStatusUpdateSchema = z.object({
   status: z.enum(['RUNNING', 'COMPLETED', 'FAILED']),
@@ -53,7 +53,8 @@ export async function PATCH(
     }
 
     const data = parsed.data;
-    const newStatus = data.status as SetupJobStatus;
+    // Zod validates status is 'RUNNING' | 'COMPLETED' | 'FAILED', a subset of SetupJobStatus
+    const newStatus: SetupJobStatus = data.status;
 
     // Find the job
     const job = await prisma.projectSetupJob.findFirst({
@@ -84,7 +85,7 @@ export async function PATCH(
 
     // Build update data
     const now = new Date();
-    const updateData: Record<string, unknown> = {
+    const updateData: Prisma.ProjectSetupJobUncheckedUpdateInput = {
       status: newStatus,
     };
 
@@ -101,7 +102,8 @@ export async function PATCH(
     }
 
     if (data.artifactSummary !== undefined) {
-      updateData.artifactSummary = data.artifactSummary;
+      // Zod z.record(z.string(), z.unknown()) validates JSON-compatible structure; cast to Prisma's InputJsonValue
+      updateData.artifactSummary = data.artifactSummary as Prisma.InputJsonValue;
     }
 
     if (data.workflowRunId !== undefined && !job.workflowRunId) {
