@@ -45,14 +45,27 @@ function mockSetupJobResponse(
   };
 }
 
+function mockSpecGenJobResponse(
+  job: { status: string; errorMessage?: string | null; depth?: string } | null = null,
+  specsGeneratedAt: string | null = null
+) {
+  return {
+    ok: true,
+    json: async () => ({ job, specsGeneratedAt }),
+  };
+}
+
 describe('SetupPageClient', () => {
   beforeEach(() => {
     mockFetch.mockReset();
     mockToast.mockReset();
-    // Default: credential check returns hasCredential=true, setup job returns null
+    // Default: credential check returns hasCredential=true, setup job returns null, spec gen returns null
     mockFetch.mockImplementation((url: string) => {
       if (url.includes('/credential-check')) {
         return Promise.resolve(mockCredentialResponse(true));
+      }
+      if (url.includes('/spec-generation/jobs')) {
+        return Promise.resolve(mockSpecGenJobResponse(null));
       }
       if (url.includes('/setup/jobs') && !url.includes('status')) {
         return Promise.resolve(mockSetupJobResponse(null));
@@ -242,6 +255,9 @@ describe('SetupPageClient', () => {
       if (url.includes('/credential-check')) {
         return Promise.resolve(mockCredentialResponse(true));
       }
+      if (url.includes('/spec-generation/jobs')) {
+        return Promise.resolve(mockSpecGenJobResponse(null));
+      }
       if (url.includes('/setup/jobs')) {
         return Promise.resolve(mockSetupJobResponse(null));
       }
@@ -253,6 +269,107 @@ describe('SetupPageClient', () => {
     await waitFor(() => {
       const button = screen.getByText('Initialize Project');
       expect(button).not.toBeDisabled();
+    });
+  });
+
+  // Step 2 tests (T010, T016)
+  describe('Step 2: Generate Specs', () => {
+    it('renders Step 2 with depth picker when showStep2 is true', () => {
+      renderWithProviders(
+        <SetupPageClient projectId={1} projectName="Test Project" showStep2={true} />
+      );
+
+      expect(screen.getByText('Generate Specs for Test Project')).toBeInTheDocument();
+      expect(screen.getByText('Quick')).toBeInTheDocument();
+      expect(screen.getByText('Standard')).toBeInTheDocument();
+      expect(screen.getByText('Comprehensive')).toBeInTheDocument();
+    });
+
+    it('shows Step 1 when showStep2 is false', () => {
+      renderWithProviders(
+        <SetupPageClient projectId={1} projectName="Test Project" showStep2={false} />
+      );
+
+      expect(screen.getByText('Initialize Project')).toBeInTheDocument();
+      expect(screen.queryByText('Generate Specs for Test Project')).not.toBeInTheDocument();
+    });
+
+    it('renders Generate and Skip buttons', () => {
+      renderWithProviders(
+        <SetupPageClient projectId={1} projectName="Test Project" showStep2={true} />
+      );
+
+      expect(screen.getByText('Generate Specs')).toBeInTheDocument();
+      expect(screen.getByText('Skip for now')).toBeInTheDocument();
+    });
+
+    it('calls POST API when Generate Specs clicked', async () => {
+      const user = userEvent.setup();
+
+      mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+        if (url.includes('/credential-check')) {
+          return Promise.resolve(mockCredentialResponse(true));
+        }
+        if (url.includes('/spec-generation/jobs') && options?.method === 'POST') {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ id: 1, status: 'PENDING', depth: 'STANDARD' }),
+          });
+        }
+        if (url.includes('/spec-generation/jobs')) {
+          return Promise.resolve(mockSpecGenJobResponse(null));
+        }
+        if (url.includes('/setup/jobs')) {
+          return Promise.resolve(mockSetupJobResponse(null));
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      });
+
+      renderWithProviders(
+        <SetupPageClient projectId={1} projectName="Test Project" showStep2={true} />
+      );
+
+      const button = screen.getByText('Generate Specs');
+      await user.click(button);
+
+      await waitFor(() => {
+        const postCalls = mockFetch.mock.calls.filter(
+          (call: unknown[]) =>
+            typeof call[0] === 'string' &&
+            call[0].includes('/spec-generation/jobs') &&
+            (call[1] as RequestInit)?.method === 'POST'
+        );
+        expect(postCalls.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('redirects to board when specsGeneratedAt is set', async () => {
+      const mockPush = vi.fn();
+      vi.mocked(await import('next/navigation')).useRouter = () => ({
+        push: mockPush,
+        refresh: vi.fn(),
+      }) as ReturnType<typeof import('next/navigation').useRouter>;
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('/credential-check')) {
+          return Promise.resolve(mockCredentialResponse(true));
+        }
+        if (url.includes('/spec-generation/jobs')) {
+          return Promise.resolve(mockSpecGenJobResponse(null, '2026-04-09T00:00:00.000Z'));
+        }
+        if (url.includes('/setup/jobs')) {
+          return Promise.resolve(mockSetupJobResponse(null));
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      });
+
+      renderWithProviders(
+        <SetupPageClient projectId={1} projectName="Test Project" showStep2={true} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/Redirecting to board/)).toBeInTheDocument();
+      });
     });
   });
 });

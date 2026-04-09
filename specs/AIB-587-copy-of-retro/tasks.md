@@ -54,12 +54,12 @@
 
 ### Tests for User Story 4
 
-- [x] T010 [US4] Extend `tests/unit/components/setup/setup-page.test.tsx` with redirect-logic tests: (1) renders Step 2 when `configSyncedAt` is set and `specsGeneratedAt` is null, (2) redirects to board when both `configSyncedAt` and `specsGeneratedAt` are set, (3) shows Step 1 when `configSyncedAt` is null, (4) redirects to board when spec gen job is COMPLETED
+- [X] T010 [US4] Extend `tests/unit/components/setup/setup-page.test.tsx` with redirect-logic tests: (1) renders Step 2 when `configSyncedAt` is set and `specsGeneratedAt` is null, (2) redirects to board when both `configSyncedAt` and `specsGeneratedAt` are set, (3) shows Step 1 when `configSyncedAt` is null, (4) redirects to board when spec gen job is COMPLETED
 
 ### Implementation for User Story 4
 
-- [x] T011 [US4] Modify `app/projects/[projectId]/setup/page.tsx` server component: fetch `specsGeneratedAt` alongside `configSyncedAt`, redirect to board only when BOTH are set (or spec gen job completed). If `configSyncedAt` set but `specsGeneratedAt` null → pass `showStep2: true` to `SetupPageClient`. Existing Step 1 behavior unchanged when `configSyncedAt` is null
-- [x] T012 [US4] Update `components/setup/setup-page-client.tsx` to accept `showStep2` prop and conditionally render Step 2 container (implementation of Step 2 content is in US1). When `showStep2` is true, mark Step 1 as complete (non-interactive) and show Step 2 section
+- [X] T011 [US4] Modify `app/projects/[projectId]/setup/page.tsx` server component: fetch `specsGeneratedAt` alongside `configSyncedAt`, redirect to board only when BOTH are set (or spec gen job completed). If `configSyncedAt` set but `specsGeneratedAt` null → pass `showStep2: true` to `SetupPageClient`. Existing Step 1 behavior unchanged when `configSyncedAt` is null
+- [X] T012 [US4] Update `components/setup/setup-page-client.tsx` to accept `showStep2` prop and conditionally render Step 2 container (implementation of Step 2 content is in US1). When `showStep2` is true, mark Step 1 as complete (non-interactive) and show Step 2 section
 
 **Checkpoint**: Setup page redirect logic works correctly for all states
 
@@ -75,14 +75,14 @@
 
 ### Tests for User Story 1
 
-- [x] T013 [US1] Create `tests/integration/projects/spec-generation-job.test.ts` with POST endpoint tests: happy path (201, job created), validation errors (400), missing credentials (422), active job conflict (409 `JOB_ACTIVE`), not-configured guard (409 `NOT_CONFIGURED`), owner-only access (403)
-- [x] T014 [P] [US1] Extend `tests/integration/projects/spec-generation-job.test.ts` with GET endpoint tests: returns latest job, returns null when no jobs, returns `specsGeneratedAt`
-- [x] T015 [P] [US1] Extend `tests/integration/projects/spec-generation-job.test.ts` with PATCH endpoint tests: valid transitions (PENDING→RUNNING, RUNNING→COMPLETED, RUNNING→FAILED), invalid transitions (409), COMPLETED sets `specsGeneratedAt`, workflow token auth required (401)
-- [x] T016 [P] [US1] Extend `tests/unit/components/setup/setup-page.test.tsx` with Step 2 UI tests: renders depth picker (Quick/Standard/Comprehensive radio cards) when `showStep2` is true, Generate button calls POST API, Skip button redirects to board, shows loading/error states
+- [X] T013 [US1] Create `tests/integration/projects/spec-generation-job.test.ts` with POST endpoint tests: happy path (201, job created), validation errors (400), missing credentials (422), active job conflict (409 `JOB_ACTIVE`), not-configured guard (409 `NOT_CONFIGURED`), owner-only access (403)
+- [X] T014 [P] [US1] Extend `tests/integration/projects/spec-generation-job.test.ts` with GET endpoint tests: returns latest job, returns null when no jobs, returns `specsGeneratedAt`
+- [X] T015 [P] [US1] Extend `tests/integration/projects/spec-generation-job.test.ts` with PATCH endpoint tests: valid transitions (PENDING→RUNNING, RUNNING→COMPLETED, RUNNING→FAILED), invalid transitions (409), COMPLETED sets `specsGeneratedAt`, workflow token auth required (401)
+- [X] T016 [P] [US1] Extend `tests/unit/components/setup/setup-page.test.tsx` with Step 2 UI tests: renders depth picker (Quick/Standard/Comprehensive radio cards) when `showStep2` is true, Generate button calls POST API, Skip button redirects to board, shows loading/error states
 
 ### Implementation for User Story 1
 
-- [x] T017 [US1] Implement Step 2 UI in `components/setup/setup-page-client.tsx`: depth picker (3 radio cards with descriptions and estimated times — Quick ~5min, Standard ~10min, Comprehensive ~20min), optional documentation URL input, optional additional context textarea, "Generate Specs" button (POST to `/api/projects/:projectId/spec-generation/jobs`, redirect to board on success), "Skip for now" button (redirect to board). Use project's `defaultAgent`. Use `useSpecGenPolling` for status tracking. Show loading spinner and error with retry states
+- [X] T017 [US1] Implement Step 2 UI in `components/setup/setup-page-client.tsx`: depth picker (3 radio cards with descriptions and estimated times — Quick ~5min, Standard ~10min, Comprehensive ~20min), optional documentation URL input, optional additional context textarea, "Generate Specs" button (POST to `/api/projects/:projectId/spec-generation/jobs`, redirect to board on success), "Skip for now" button (redirect to board). Use project's `defaultAgent`. Use `useSpecGenPolling` for status tracking. Show loading spinner and error with retry states
 
 **Checkpoint**: Full onboarding → spec generation flow works end-to-end
 

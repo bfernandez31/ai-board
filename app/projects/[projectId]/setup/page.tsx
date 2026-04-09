@@ -27,6 +27,7 @@ export default async function SetupPage({
       name: true,
       userId: true,
       configSyncedAt: true,
+      specsGeneratedAt: true,
       githubOwner: true,
       githubRepo: true,
     },
@@ -36,10 +37,13 @@ export default async function SetupPage({
     notFound();
   }
 
-  // If already configured, redirect to board
-  if (project.configSyncedAt) {
+  // If fully configured (init + specs), redirect to board
+  if (project.configSyncedAt && project.specsGeneratedAt) {
     redirect(`/projects/${projectId}/board`);
   }
+
+  // Determine if Step 2 should be shown
+  const showStep2 = !!project.configSyncedAt && !project.specsGeneratedAt;
 
   // Owner-only access
   if (project.userId !== userId) {
@@ -60,6 +64,7 @@ export default async function SetupPage({
       <SetupPageClient
         projectId={projectId}
         projectName={project.name}
+        showStep2={showStep2}
       />
     </main>
   );
