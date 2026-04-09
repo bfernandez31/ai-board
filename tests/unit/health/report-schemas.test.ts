@@ -77,6 +77,23 @@ describe('parseScanReport', () => {
         expect(report!.nonFixable).toHaveLength(1);
       }
     });
+
+    it('keeps ai-board TESTS report bodies valid when skip metadata is present in storage', () => {
+      const report = parseScanReport('TESTS', JSON.stringify({
+        type: 'TESTS',
+        autoFixed: [{ id: 'test-001', severity: 'low', description: 'Fixed assertion' }],
+        nonFixable: [],
+        generatedTickets: [],
+        skipReason: 'No executable automated test command was detected in project config',
+      }));
+
+      expect(report).not.toBeNull();
+      expect(report!.type).toBe('TESTS');
+      if (report!.type === 'TESTS') {
+        expect(report!.autoFixed).toHaveLength(1);
+        expect(report!.nonFixable).toHaveLength(0);
+      }
+    });
   });
 
   describe('SPEC_SYNC', () => {

@@ -12,6 +12,8 @@ export interface HealthScanDispatchInputs {
   base_commit: string;
   head_commit: string;
   githubRepository: string;
+  target_repo_dir?: string;
+  ai_board_checkout_dir?: string;
 }
 
 export async function dispatchHealthScanWorkflow(
@@ -62,6 +64,12 @@ export async function dispatchHealthScanWorkflow(
       ref: 'main',
       inputs: {
         ...inputs,
+        ...(inputs.scan_type === 'TESTS'
+          ? {
+              target_repo_dir: inputs.target_repo_dir ?? 'target',
+              ai_board_checkout_dir: inputs.ai_board_checkout_dir ?? 'ai-board',
+            }
+          : {}),
         ...(inputs.scan_type === 'TESTS' && getProjectServiceInputs(project)),
       },
     });

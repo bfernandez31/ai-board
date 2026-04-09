@@ -10,7 +10,7 @@
 #   1 — Invalid YAML syntax in config.yml
 #   1 — Missing required arguments
 #
-# Supported command keys: install, build, lint, type_check, test_unit, test_integration, test_e2e, db_setup, db_seed
+# Supported command keys: install, build, lint, type_check, test_unit, test_integration, test_e2e, test_primary, db_setup, db_seed
 #
 # Design: When .ai-board/config.yml is absent, the script falls back to hardcoded
 # defaults (matching ai-board's own commands). This ensures backward compatibility
@@ -30,6 +30,7 @@ fi
 TARGET_DIR="$1"
 COMMAND_KEY="$2"
 CONFIG="${TARGET_DIR}/.ai-board/config.yml"
+RESOLVED_COMMAND_KEY="$COMMAND_KEY"
 
 # ─── Fallback Defaults ───────────────────────────────────────────────────────
 # When a target repo has no .ai-board/config.yml, these defaults preserve
@@ -40,9 +41,6 @@ declare -A DEFAULTS=(
   [build]="bun run build"
   [lint]="bun run lint"
   [type_check]="bun run type-check"
-  [test_unit]="bun run test:unit"
-  [test_integration]="bun run test:integration"
-  [test_e2e]="bun run test:e2e"
   [db_setup]="bunx prisma generate && if [ -n \"\${DATABASE_URL:-}\" ]; then bunx prisma migrate deploy; fi"
   [db_seed]="npx tsx tests/global-setup.ts"
 )
@@ -82,16 +80,27 @@ if ! yq eval '.' "$CONFIG" &>/dev/null; then
   exit 1
 fi
 
+# ─── Resolve Generic Test Command Aliases ────────────────────────────────────
+
+if [[ "$COMMAND_KEY" == "test_primary" ]]; then
+  RESOLVED_COMMAND_KEY=$(yq eval '.testCapabilities.primaryCommandKey' "$CONFIG")
+
+  if [[ "$RESOLVED_COMMAND_KEY" == "null" || -z "$RESOLVED_COMMAND_KEY" ]]; then
+    echo "ℹ️  No primary test command configured in testCapabilities — skipping" >&2
+    exit 0
+  fi
+fi
+
 # ─── Read Command ────────────────────────────────────────────────────────────
 
-CMD=$(yq eval ".commands.${COMMAND_KEY}" "$CONFIG")
+CMD=$(yq eval ".commands.${RESOLVED_COMMAND_KEY}" "$CONFIG")
 
 if [[ "$CMD" == "null" || -z "$CMD" ]]; then
-  echo "ℹ️  Command key '${COMMAND_KEY}' not defined in config — skipping" >&2
+  echo "ℹ️  Command key '${RESOLVED_COMMAND_KEY}' not defined in config — skipping" >&2
   exit 0
 fi
 
 # ─── Execute Command ─────────────────────────────────────────────────────────
 
-echo "▶️  Executing: $CMD (key: ${COMMAND_KEY})" >&2
+echo "▶️  Executing: $CMD (key: ${RESOLVED_COMMAND_KEY})" >&2
 (cd "$TARGET_DIR" && eval "$CMD")

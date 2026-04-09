@@ -7,9 +7,16 @@ import { readFile, access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { validateConfig } from '@/lib/validations/config';
-import type { ValidationResult } from '@/lib/validations/config';
+import type { ProjectConfig, ValidationResult } from '@/lib/validations/config';
 
 const CONFIG_PATH = '.ai-board/config.yml';
+
+export interface ResolvedPrimaryTestCommand {
+  key: 'test_unit' | 'test_integration' | 'test_e2e';
+  command: string;
+  framework: string | null;
+  hasE2E: boolean | null;
+}
 
 export async function loadConfig(projectDir: string): Promise<ValidationResult> {
   const filePath = join(projectDir, CONFIG_PATH);
@@ -59,4 +66,25 @@ export async function loadConfig(projectDir: string): Promise<ValidationResult> 
   }
 
   return validateConfig(parsed);
+}
+
+export function resolvePrimaryTestCommand(
+  config: ProjectConfig,
+): ResolvedPrimaryTestCommand | null {
+  const key = config.testCapabilities?.primaryCommandKey;
+  if (!key) {
+    return null;
+  }
+
+  const command = config.commands[key];
+  if (!command) {
+    return null;
+  }
+
+  return {
+    key,
+    command,
+    framework: config.testCapabilities?.framework ?? null,
+    hasE2E: config.testCapabilities?.hasE2E ?? null,
+  };
 }

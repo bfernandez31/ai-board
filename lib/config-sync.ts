@@ -54,7 +54,12 @@ export async function syncProjectConfig(
       project: { name: 'test-project', language: 'typescript', framework: 'nextjs' },
       runtime: { manager: 'bun' },
       services: [{ type: 'postgres', version: '16' }],
-      commands: { install: 'bun install' },
+      commands: { install: 'bun install', test_unit: 'bun run test:unit' },
+      testCapabilities: {
+        framework: 'vitest',
+        primaryCommandKey: 'test_unit',
+        hasE2E: false,
+      },
       agent: { cli: 'claude-code' },
     };
     await prisma.project.update({

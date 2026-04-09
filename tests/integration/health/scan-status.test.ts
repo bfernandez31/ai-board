@@ -17,11 +17,14 @@ describe('Scan Status PATCH Endpoint', () => {
     await ctx.cleanup();
   });
 
-  async function createScan(status: 'PENDING' | 'RUNNING' = 'PENDING') {
+  async function createScan(
+    status: 'PENDING' | 'RUNNING' = 'PENDING',
+    scanType: 'SECURITY' | 'TESTS' = 'SECURITY',
+  ) {
     return prisma.healthScan.create({
       data: {
         projectId: ctx.projectId,
-        scanType: 'SECURITY',
+        scanType,
         status,
       },
     });
@@ -170,6 +173,46 @@ describe('Scan Status PATCH Endpoint', () => {
     });
     expect(healthScore!.securityScore).toBe(75);
     expect(healthScore!.globalScore).toBe(75);
+  });
+
+  it('allows TESTS RUNNING → SKIPPED with skipReason and preserves testsScore', async () => {
+    await prisma.healthScore.create({
+      data: {
+        projectId: ctx.projectId,
+        testsScore: 88,
+        globalScore: 88,
+      },
+    });
+
+    const scan = await createScan('RUNNING', 'TESTS');
+    const response = await makeRequest(ctx.projectId, scan.id, {
+      status: 'SKIPPED',
+      skipReason: 'No executable automated test command was detected in project config',
+      durationMs: 1200,
+    });
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.scan.status).toBe('SKIPPED');
+    expect(data.scan.score).toBeNull();
+
+    const updatedScan = await prisma.healthScan.findUnique({ where: { id: scan.id } });
+    expect(updatedScan?.report).toContain('skipReason');
+
+    const healthScore = await prisma.healthScore.findUnique({
+      where: { projectId: ctx.projectId },
+    });
+    expect(healthScore?.testsScore).toBe(88);
+    expect(healthScore?.globalScore).toBe(88);
+  });
+
+  it('rejects skipped TESTS scans without skipReason', async () => {
+    const scan = await createScan('RUNNING', 'TESTS');
+    const response = await makeRequest(ctx.projectId, scan.id, {
+      status: 'SKIPPED',
+    });
+
+    expect(response.status).toBe(400);
   });
 
   it('preserves existing COMPLETED scans after SKIPPED enum is added', async () => {

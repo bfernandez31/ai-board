@@ -35,6 +35,11 @@ function fullConfig() {
       db_setup: 'bunx prisma generate && bunx prisma migrate deploy',
       db_seed: 'npx tsx tests/global-setup.ts',
     },
+    testCapabilities: {
+      framework: 'vitest',
+      primaryCommandKey: 'test_unit',
+      hasE2E: true,
+    },
     env: { NODE_ENV: 'test', DATABASE_URL: 'postgresql://localhost:5432/myapp_test' },
     agent: { cli: 'claude-code', model: 'claude-sonnet-4-6' },
   };
@@ -102,6 +107,9 @@ describe('validateConfig — valid configs (US1)', () => {
     expect(typeof result.data.commands.test_unit).toBe('string');
     expect(typeof result.data.commands.test_integration).toBe('string');
     expect(typeof result.data.commands.test_e2e).toBe('string');
+    expect(typeof result.data.testCapabilities?.framework).toBe('string');
+    expect(typeof result.data.testCapabilities?.primaryCommandKey).toBe('string');
+    expect(typeof result.data.testCapabilities?.hasE2E).toBe('boolean');
     expect(typeof result.data.env).toBe('object');
     expect(typeof result.data.agent.cli).toBe('string');
     expect(typeof result.data.agent.model).toBe('string');
@@ -408,6 +416,76 @@ describe('validateConfig — optional commands (US4)', () => {
     expect(result.data.commands.test_unit).toBeUndefined();
     expect(result.data.commands.test_integration).toBeUndefined();
     expect(result.data.commands.test_e2e).toBeUndefined();
+  });
+
+  it('accepts testCapabilities when primaryCommandKey references a configured test command', () => {
+    const result = validateConfig(
+      validConfig({
+        commands: {
+          install: 'bun install',
+          test_unit: 'bun run test:unit',
+        },
+        testCapabilities: {
+          framework: 'vitest',
+          primaryCommandKey: 'test_unit',
+          hasE2E: false,
+        },
+      }),
+    );
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.testCapabilities).toEqual({
+      framework: 'vitest',
+      primaryCommandKey: 'test_unit',
+      hasE2E: false,
+    });
+  });
+
+  it('allows nullable testCapabilities values when no test command is configured', () => {
+    const result = validateConfig(
+      validConfig({
+        testCapabilities: {
+          framework: null,
+          primaryCommandKey: null,
+          hasE2E: null,
+        },
+      }),
+    );
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.testCapabilities).toEqual({
+      framework: null,
+      primaryCommandKey: null,
+      hasE2E: null,
+    });
+  });
+
+  it('rejects primaryCommandKey when the referenced command is missing', () => {
+    const result = validateConfig(
+      validConfig({
+        testCapabilities: {
+          framework: 'vitest',
+          primaryCommandKey: 'test_integration',
+          hasE2E: true,
+        },
+      }),
+    );
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'testCapabilities.primaryCommandKey',
+          message: expect.stringContaining('commands.test_integration'),
+        }),
+      ]),
+    );
   });
 
   it('config with commands.lint omitted returns undefined for lint', () => {

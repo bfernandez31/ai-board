@@ -91,16 +91,23 @@ export async function PATCH(
       return NextResponse.json({ error: 'Scan not found' }, { status: 404 });
     }
 
-    // Defensive guard: COMPLIANCE and TESTS scans cannot be SKIPPED — coerce to COMPLETED
+    // Defensive guard: COMPLIANCE scans cannot be SKIPPED — coerce to COMPLETED
     let effectiveStatus: HealthScanStatus = data.status as HealthScanStatus;
-    if (data.status === 'SKIPPED' && (scan.scanType === 'COMPLIANCE' || scan.scanType === 'TESTS')) {
+    if (data.status === 'SKIPPED' && scan.scanType === 'COMPLIANCE') {
       if (data.score == null) {
         return NextResponse.json(
-          { error: 'Score required — COMPLIANCE and TESTS scans cannot be skipped' },
+          { error: 'Score required — COMPLIANCE scans cannot be skipped' },
           { status: 400 }
         );
       }
       effectiveStatus = 'COMPLETED';
+    }
+
+    if (data.status === 'SKIPPED' && scan.scanType === 'TESTS' && !data.skipReason) {
+      return NextResponse.json(
+        { error: 'skipReason required for skipped TESTS scans' },
+        { status: 400 }
+      );
     }
 
     // SKIPPED must NOT have a score (checked after coercion guard)

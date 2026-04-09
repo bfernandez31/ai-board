@@ -1,22 +1,18 @@
 #!/bin/bash
-# Run All Tests with JSON Reports
-#
-# Produces structured JSON reports for each test type:
-#   /tmp/test-report-unit.json
-#   /tmp/test-report-integration.json
-#   /tmp/test-report-e2e.json
-#   /tmp/test-report-summary.json
-#
-# Designed for automated consumption — never exits non-zero due to test failures.
-# Check /tmp/test-report-summary.json for results.
+# Run configured test suites against an explicit target repository and emit a
+# stable summary JSON for the TESTS health scan orchestrator.
 
-# Don't set -e: we want to capture failures, not abort on them
 set +e
 
-PORT=${PORT:-3000}
-BASE_URL="http://localhost:$PORT"
-MAX_WAIT=60
-SERVER_PID=""
+if [[ $# -lt 1 ]]; then
+  echo "Usage: ./scripts/run-tests-with-reports.sh <target-repo-dir>" >&2
+  exit 1
+fi
+
+TARGET_DIR="$1"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+RUN_COMMAND_SCRIPT="${AI_BOARD_RUN_COMMAND_SCRIPT:-$REPO_DIR/.github/scripts/run-command.sh}"
 
 REPORT_DIR="/tmp"
 UNIT_REPORT="$REPORT_DIR/test-report-unit.json"
@@ -24,212 +20,112 @@ INTEGRATION_REPORT="$REPORT_DIR/test-report-integration.json"
 E2E_REPORT="$REPORT_DIR/test-report-e2e.json"
 SUMMARY_REPORT="$REPORT_DIR/test-report-summary.json"
 
-# Initialize report files
+write_suite_report() {
+  local report_file="$1"
+  local suite="$2"
+  local ran="$3"
+  local passed="$4"
+  local failed="$5"
+  local error_message="$6"
+
+  jq -n \
+    --arg suite "$suite" \
+    --argjson ran "$ran" \
+    --argjson passed "$passed" \
+    --argjson failed "$failed" \
+    --argjson total "$((passed + failed))" \
+    --arg error "$error_message" \
+    '{
+      suite: $suite,
+      ran: $ran,
+      passed: $passed,
+      failed: $failed,
+      total: $total,
+      error: (if $error == "" then null else $error end)
+    }' > "$report_file"
+}
+
+run_suite() {
+  local suite="$1"
+  local command_key="$2"
+  local report_file="$3"
+  local stderr_file="$4"
+
+  "$RUN_COMMAND_SCRIPT" "$TARGET_DIR" "$command_key" > /dev/null 2> "$stderr_file"
+  local exit_code=$?
+
+  if [[ $exit_code -eq 0 ]]; then
+    if grep -q "skipping" "$stderr_file" 2>/dev/null; then
+      write_suite_report "$report_file" "$suite" false 0 0 ""
+      echo "0 0 0"
+      return
+    fi
+
+    write_suite_report "$report_file" "$suite" true 1 0 ""
+    echo "1 0 1"
+    return
+  fi
+
+  local error_message
+  error_message=$(tail -c 2000 "$stderr_file" 2>/dev/null)
+  write_suite_report "$report_file" "$suite" true 0 1 "$error_message"
+  echo "0 1 1"
+}
+
 echo '{}' > "$UNIT_REPORT"
 echo '{}' > "$INTEGRATION_REPORT"
 echo '{}' > "$E2E_REPORT"
 
-# Track results
-UNIT_PASSED=0; UNIT_FAILED=0; UNIT_TOTAL=0; UNIT_RAN=false; UNIT_ERROR=""
-INT_PASSED=0; INT_FAILED=0; INT_TOTAL=0; INT_RAN=false; INT_ERROR=""
-E2E_PASSED=0; E2E_FAILED=0; E2E_TOTAL=0; E2E_RAN=false; E2E_ERROR=""
-
-cleanup() {
-    if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
-        echo "Stopping dev server (PID: $SERVER_PID)..."
-        kill "$SERVER_PID" 2>/dev/null || true
-        wait "$SERVER_PID" 2>/dev/null || true
-    fi
-}
-
-trap cleanup EXIT
-
-# Parse vitest JSON report and extract counts
-parse_vitest_report() {
-    local report_file="$1"
-    if [ -f "$report_file" ] && jq empty "$report_file" 2>/dev/null; then
-        local passed failed total
-        passed=$(jq '[.testResults[]?.assertionResults[]? | select(.status == "passed")] | length' "$report_file" 2>/dev/null || echo 0)
-        failed=$(jq '[.testResults[]?.assertionResults[]? | select(.status == "failed")] | length' "$report_file" 2>/dev/null || echo 0)
-        total=$((passed + failed))
-        echo "$passed $failed $total"
-    else
-        echo "0 0 0"
-    fi
-}
-
-# Parse Playwright JSON report and extract counts
-# Playwright nests suites recursively (e.g. auth/, board/ subdirectories),
-# so we must recurse into all .suites[] at every depth level.
-parse_playwright_report() {
-    local report_file="$1"
-    if [ -f "$report_file" ] && jq empty "$report_file" 2>/dev/null; then
-        local passed failed total
-        passed=$(jq '[.. | .specs? // empty | .[]? | .tests[]? | select(.status == "expected")] | length' "$report_file" 2>/dev/null || echo 0)
-        failed=$(jq '[.. | .specs? // empty | .[]? | .tests[]? | select(.status == "unexpected")] | length' "$report_file" 2>/dev/null || echo 0)
-        total=$((passed + failed))
-        echo "$passed $failed $total"
-    else
-        echo "0 0 0"
-    fi
-}
-
 echo "========================================"
 echo "  Running Tests with JSON Reports"
 echo "========================================"
+echo "Target: $TARGET_DIR"
 echo ""
 
-# ── Step 1: Unit Tests ──────────────────────────────────────────────
 echo "[1/3] Running unit tests..."
-bun vitest run --reporter=json --outputFile="$UNIT_REPORT" 2>/tmp/test-unit-stderr.txt
-UNIT_EXIT=$?
-UNIT_RAN=true
-
-if [ $UNIT_EXIT -ne 0 ] && [ ! -s "$UNIT_REPORT" ]; then
-    UNIT_ERROR=$(cat /tmp/test-unit-stderr.txt 2>/dev/null | tail -c 2000)
-    echo "Unit tests failed to produce report (exit: $UNIT_EXIT)"
-else
-    read UNIT_PASSED UNIT_FAILED UNIT_TOTAL <<< "$(parse_vitest_report "$UNIT_REPORT")"
-    echo "Unit tests: $UNIT_PASSED passed, $UNIT_FAILED failed (total: $UNIT_TOTAL)"
-fi
+read UNIT_PASSED UNIT_FAILED UNIT_TOTAL <<< "$(run_suite "unit" "test_unit" "$UNIT_REPORT" "/tmp/test-unit-stderr.txt")"
+echo "Unit tests: $UNIT_PASSED passed, $UNIT_FAILED failed (total: $UNIT_TOTAL)"
 echo ""
 
-# ── Step 2: Start server for integration + e2e ─────────────────────
-EXTERNAL_SERVER=false
-if curl -s "$BASE_URL" > /dev/null 2>&1; then
-    echo "Dev server already running at $BASE_URL"
-    EXTERNAL_SERVER=true
-else
-    echo "[2/3] Starting dev server..."
-    TEST_MODE=true \
-    WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only \
-    NODE_ENV=test \
-    VERCEL_ENV=preview \
-    DEV_LOGIN_ENABLED=true \
-    DEV_LOGIN_SECRET=shared-preview-secret \
-    CREDENTIAL_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
-    bun run dev > /tmp/dev-server.log 2>&1 &
-    SERVER_PID=$!
+echo "[2/3] Running integration tests..."
+read INT_PASSED INT_FAILED INT_TOTAL <<< "$(run_suite "integration" "test_integration" "$INTEGRATION_REPORT" "/tmp/test-int-stderr.txt")"
+echo "Integration tests: $INT_PASSED passed, $INT_FAILED failed (total: $INT_TOTAL)"
+echo ""
 
-    echo -n "Waiting for server"
-    WAITED=0
-    while ! curl -s "$BASE_URL" > /dev/null 2>&1; do
-        if [ $WAITED -ge $MAX_WAIT ]; then
-            echo ""
-            echo "Server failed to start within ${MAX_WAIT}s"
-            INT_ERROR="Server failed to start within ${MAX_WAIT}s"
-            E2E_ERROR="Server not available (failed to start)"
-            # Write summary and exit — can't run int/e2e without server
-            break
-        fi
-        if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-            echo ""
-            echo "Server process died"
-            INT_ERROR="Server process died during startup"
-            E2E_ERROR="Server not available (process died)"
-            break
-        fi
-        echo -n "."
-        sleep 1
-        WAITED=$((WAITED + 1))
-    done
-    if [ -z "$INT_ERROR" ]; then
-        echo " ready!"
-    fi
-fi
+echo "[3/3] Running E2E tests..."
+read E2E_PASSED E2E_FAILED E2E_TOTAL <<< "$(run_suite "e2e" "test_e2e" "$E2E_REPORT" "/tmp/test-e2e-stderr.txt")"
+echo "E2E tests: $E2E_PASSED passed, $E2E_FAILED failed (total: $E2E_TOTAL)"
+echo ""
 
-# ── Step 3: Integration Tests ──────────────────────────────────────
-if [ -z "$INT_ERROR" ]; then
-    echo "[2/3] Running integration tests..."
-    # Override WORKFLOW_API_TOKEN so tests use the same token as the server we started
-    VITEST_INTEGRATION=1 \
-    WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only \
-    bun vitest run --reporter=json --outputFile="$INTEGRATION_REPORT" 2>/tmp/test-int-stderr.txt
-    INT_EXIT=$?
-    INT_RAN=true
-
-    if [ $INT_EXIT -ne 0 ] && [ ! -s "$INTEGRATION_REPORT" ]; then
-        INT_ERROR=$(cat /tmp/test-int-stderr.txt 2>/dev/null | tail -c 2000)
-        echo "Integration tests failed to produce report (exit: $INT_EXIT)"
-    else
-        read INT_PASSED INT_FAILED INT_TOTAL <<< "$(parse_vitest_report "$INTEGRATION_REPORT")"
-        echo "Integration tests: $INT_PASSED passed, $INT_FAILED failed (total: $INT_TOTAL)"
-        # Log failed test names for CI debugging
-        if [ "$INT_FAILED" -gt 0 ] && [ -f "$INTEGRATION_REPORT" ]; then
-            echo "Failed integration tests:"
-            jq -r '.testResults[] | select(.status == "failed") | .assertionResults[] | select(.status == "failed") | "  ✗ \(.ancestorTitles | join(" > ")) > \(.title)\n    \(.failureMessages[0] | split("\n")[0] // "no message")"' "$INTEGRATION_REPORT" 2>/dev/null || true
-        fi
-    fi
-    echo ""
-fi
-
-# ── Step 4: E2E Tests ──────────────────────────────────────────────
-if [ -z "$E2E_ERROR" ]; then
-    echo "[3/3] Running E2E tests..."
-    # Unset CI so Playwright reuses the server we already started
-    # (playwright.config.ts: reuseExistingServer: !process.env.CI)
-    CI= bun playwright test --reporter=json > "$E2E_REPORT" 2>/tmp/test-e2e-stderr.txt
-    E2E_EXIT=$?
-    E2E_RAN=true
-
-    if [ $E2E_EXIT -ne 0 ] && [ ! -s "$E2E_REPORT" ]; then
-        E2E_ERROR=$(cat /tmp/test-e2e-stderr.txt 2>/dev/null | tail -c 2000)
-        echo "E2E tests failed to produce report (exit: $E2E_EXIT)"
-    else
-        read E2E_PASSED E2E_FAILED E2E_TOTAL <<< "$(parse_playwright_report "$E2E_REPORT")"
-        echo "E2E tests: $E2E_PASSED passed, $E2E_FAILED failed (total: $E2E_TOTAL)"
-        # Log failed test names for CI debugging
-        if [ "$E2E_FAILED" -gt 0 ] && [ -f "$E2E_REPORT" ]; then
-            echo "Failed E2E tests:"
-            jq -r '[.. | .specs? // empty | .[]? | select(.tests[]?.status == "unexpected") | "  ✗ \(.file): \(.title)"] | .[]' "$E2E_REPORT" 2>/dev/null || true
-        fi
-    fi
-    echo ""
-fi
-
-# ── Step 5: Write Summary ──────────────────────────────────────────
 TOTAL_PASSED=$((UNIT_PASSED + INT_PASSED + E2E_PASSED))
 TOTAL_FAILED=$((UNIT_FAILED + INT_FAILED + E2E_FAILED))
 TOTAL_TESTS=$((TOTAL_PASSED + TOTAL_FAILED))
 HAS_ERRORS=false
-if [ $TOTAL_FAILED -gt 0 ] || [ -n "$UNIT_ERROR" ] || [ -n "$INT_ERROR" ] || [ -n "$E2E_ERROR" ]; then
-    HAS_ERRORS=true
+if [[ $TOTAL_FAILED -gt 0 ]]; then
+  HAS_ERRORS=true
 fi
 
 jq -n \
-    --argjson totalPassed "$TOTAL_PASSED" \
-    --argjson totalFailed "$TOTAL_FAILED" \
-    --argjson totalTests "$TOTAL_TESTS" \
-    --argjson hasErrors "$HAS_ERRORS" \
-    --argjson unitPassed "$UNIT_PASSED" \
-    --argjson unitFailed "$UNIT_FAILED" \
-    --argjson unitTotal "$UNIT_TOTAL" \
-    --argjson unitRan "$UNIT_RAN" \
-    --arg unitError "$UNIT_ERROR" \
-    --argjson intPassed "$INT_PASSED" \
-    --argjson intFailed "$INT_FAILED" \
-    --argjson intTotal "$INT_TOTAL" \
-    --argjson intRan "$INT_RAN" \
-    --arg intError "$INT_ERROR" \
-    --argjson e2ePassed "$E2E_PASSED" \
-    --argjson e2eFailed "$E2E_FAILED" \
-    --argjson e2eTotal "$E2E_TOTAL" \
-    --argjson e2eRan "$E2E_RAN" \
-    --arg e2eError "$E2E_ERROR" \
-    '{
-        totalPassed: $totalPassed,
-        totalFailed: $totalFailed,
-        totalTests: $totalTests,
-        hasErrors: $hasErrors,
-        unit: { passed: $unitPassed, failed: $unitFailed, total: $unitTotal, ran: $unitRan, error: (if $unitError == "" then null else $unitError end) },
-        integration: { passed: $intPassed, failed: $intFailed, total: $intTotal, ran: $intRan, error: (if $intError == "" then null else $intError end) },
-        e2e: { passed: $e2ePassed, failed: $e2eFailed, total: $e2eTotal, ran: $e2eRan, error: (if $e2eError == "" then null else $e2eError end) }
-    }' > "$SUMMARY_REPORT"
+  --argjson totalPassed "$TOTAL_PASSED" \
+  --argjson totalFailed "$TOTAL_FAILED" \
+  --argjson totalTests "$TOTAL_TESTS" \
+  --argjson hasErrors "$HAS_ERRORS" \
+  --slurpfile unit "$UNIT_REPORT" \
+  --slurpfile integration "$INTEGRATION_REPORT" \
+  --slurpfile e2e "$E2E_REPORT" \
+  '{
+    totalPassed: $totalPassed,
+    totalFailed: $totalFailed,
+    totalTests: $totalTests,
+    hasErrors: $hasErrors,
+    unit: ($unit[0] // {}),
+    integration: ($integration[0] // {}),
+    e2e: ($e2e[0] // {})
+  }' > "$SUMMARY_REPORT"
 
 echo "========================================"
 echo "  Summary: $TOTAL_PASSED passed, $TOTAL_FAILED failed"
 echo "  Reports: $REPORT_DIR/test-report-*.json"
 echo "========================================"
 
-# Always exit 0 — consumer reads summary.json for results
 exit 0

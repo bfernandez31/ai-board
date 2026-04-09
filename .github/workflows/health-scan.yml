@@ -34,6 +34,16 @@ on:
         required: false
         type: string
         default: 'CLAUDE'
+      target_repo_dir:
+        description: 'Checked-out target repository directory'
+        required: false
+        type: string
+        default: 'target'
+      ai_board_checkout_dir:
+        description: 'Checked-out ai-board tools directory'
+        required: false
+        type: string
+        default: 'ai-board'
 
       # Conditional service inputs
       needs_postgres:
@@ -148,6 +158,8 @@ jobs:
       INPUT_HEAD_COMMIT: ${{ inputs.head_commit }}
       INPUT_GITHUB_REPOSITORY: ${{ inputs.githubRepository }}
       INPUT_AGENT: ${{ inputs.agent }}
+      INPUT_TARGET_REPO_DIR: ${{ inputs.target_repo_dir }}
+      INPUT_AI_BOARD_CHECKOUT_DIR: ${{ inputs.ai_board_checkout_dir }}
 
     steps:
       - name: Debug Inputs
@@ -164,10 +176,11 @@ jobs:
       - name: Checkout ai-board (sparse - plugin and scripts)
         uses: actions/checkout@v4
         with:
-          path: ai-board
+          path: ${{ inputs.ai_board_checkout_dir }}
           sparse-checkout: |
             .claude-plugin
             .github/scripts
+            scripts
           sparse-checkout-cone-mode: true
 
       # Step 1a: Fetch owner's GitHub token for external repo access
@@ -187,7 +200,7 @@ jobs:
           repository: ${{ inputs.githubRepository }}
           token: ${{ steps.fetch-github-token.outputs.repo_token }}
           fetch-depth: 0
-          path: target
+          path: ${{ inputs.target_repo_dir }}
 
       # Step 2: Update scan status to RUNNING (US1 T007)
       - name: Update Scan Status - RUNNING
@@ -268,24 +281,24 @@ jobs:
 
       - name: Setup Environment (full for TESTS)
         if: ${{ inputs.scan_type == 'TESTS' }}
-        run: ai-board/.github/scripts/setup-environment.sh target --phase full
+        run: ${{ inputs.ai_board_checkout_dir }}/.github/scripts/setup-environment.sh ${{ inputs.target_repo_dir }} --phase full
 
       - name: Setup Environment (lightweight for non-TESTS)
         if: ${{ inputs.scan_type != 'TESTS' }}
-        run: ai-board/.github/scripts/setup-environment.sh target --phase lightweight
+        run: ${{ inputs.ai_board_checkout_dir }}/.github/scripts/setup-environment.sh ${{ inputs.target_repo_dir }} --phase lightweight
 
       # --- Test infrastructure setup (only for TESTS scan type) ---
       - name: Install Dependencies
         if: ${{ inputs.scan_type == 'TESTS' }}
-        run: ai-board/.github/scripts/run-command.sh target install
+        run: ${{ inputs.ai_board_checkout_dir }}/.github/scripts/run-command.sh ${{ inputs.target_repo_dir }} install
 
       - name: Post-Install Setup (ORM)
         if: ${{ inputs.scan_type == 'TESTS' }}
-        run: ai-board/.github/scripts/setup-environment.sh target --phase post-install
+        run: ${{ inputs.ai_board_checkout_dir }}/.github/scripts/setup-environment.sh ${{ inputs.target_repo_dir }} --phase post-install
 
       - name: Setup Test Environment
         if: ${{ inputs.scan_type == 'TESTS' }}
-        working-directory: target
+        working-directory: ${{ inputs.target_repo_dir }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
@@ -293,7 +306,7 @@ jobs:
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           echo "🔧 Setting up test environment for health scan..."
-          ../ai-board/.github/scripts/setup-test-env.sh
+          ../${{ inputs.ai_board_checkout_dir }}/.github/scripts/setup-test-env.sh
 
       # NOTE: No explicit DB seed step — vitest and Playwright each run their
       # own global-setup automatically. Running it here too caused double-seeding
@@ -301,7 +314,7 @@ jobs:
 
       - name: Get Playwright Version
         if: ${{ inputs.scan_type == 'TESTS' }}
-        working-directory: target
+        working-directory: ${{ inputs.target_repo_dir }}
         id: playwright-version
         run: |
           if [ -f "package.json" ] && node -p "require('./package.json').devDependencies['@playwright/test']" 2>/dev/null; then
@@ -321,21 +334,21 @@ jobs:
 
       - name: Install Playwright Browsers
         if: ${{ inputs.scan_type == 'TESTS' && steps.playwright-version.outputs.has_playwright == 'true' && steps.playwright-cache.outputs.cache-hit != 'true' }}
-        working-directory: target
+        working-directory: ${{ inputs.target_repo_dir }}
         run: npx playwright install chromium --with-deps
 
       # Step 4a: Execute TESTS scan via shell orchestrator (no LLM if all pass)
       - name: Execute Tests Scan (Shell Orchestrated)
         id: scan-exec
         if: ${{ inputs.scan_type == 'TESTS' }}
-        working-directory: target
+        working-directory: ${{ inputs.ai_board_checkout_dir }}
         run: |
           SECONDS=0
 
           echo "🔍 Running TESTS scan via shell orchestrator"
 
           # The orchestrator handles everything: run tests, score, fix loop, result
-          if ./scripts/run-health-tests.sh "$INPUT_AGENT" 2>&1 | tee /tmp/scan_log.txt; then
+          if ./scripts/run-health-tests.sh "$INPUT_AGENT" "../$INPUT_TARGET_REPO_DIR" 2>&1 | tee /tmp/scan_log.txt; then
             DURATION_MS=$((SECONDS * 1000))
             echo "duration_ms=$DURATION_MS" >> $GITHUB_OUTPUT
 
@@ -343,11 +356,6 @@ jobs:
             if [ -f "$RESULT_FILE" ] && jq empty "$RESULT_FILE" 2>/dev/null; then
               # Check for SKIPPED indicator
               SKIPPED=$(jq -r '.skipped // false' "$RESULT_FILE")
-              # Defensive guard: TESTS scans cannot be SKIPPED
-              if [ "$SKIPPED" = "true" ]; then
-                echo "⚠️ TESTS scan emitted skipped=true — ignoring (TESTS never skip)"
-                SKIPPED="false"
-              fi
               echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
               if [ "$SKIPPED" = "true" ]; then
                 {

@@ -1,39 +1,32 @@
 #!/bin/bash
-# Health Test Scan Orchestrator
-#
-# Shell-based orchestration — LLM is only called to fix failing tests.
-# If all tests pass, no LLM is invoked at all.
-#
-# Flow:
-#   1. Run tests → JSON reports
-#   2. Score from first run (fixed, never changes)
-#   3. If no errors → write result, exit
-#   4. If errors → call LLM fix agent → re-run tests → loop (max 3)
-#   5. Write final result with score + fixes + non-fixable
-#
-# Usage: ./scripts/run-health-tests.sh <AGENT_TYPE>
-#   AGENT_TYPE: CLAUDE or CODEX (default: CLAUDE)
-#
-# Outputs: /tmp/health-scan-result.json (same schema as other health scans)
+# Platform-owned TESTS scan orchestrator. Runs from the ai-board checkout
+# against an explicit target repository.
 
 set -uo pipefail
 
 AGENT_TYPE="${1:-CLAUDE}"
+TARGET_REPO_DIR="${2:-}"
 MAX_ITERATIONS=3
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+RUN_TESTS_WITH_REPORTS="${AI_BOARD_RUN_TESTS_WITH_REPORTS:-$SCRIPT_DIR/run-tests-with-reports.sh}"
+RUN_COMMAND_SCRIPT="${AI_BOARD_RUN_COMMAND_SCRIPT:-$REPO_DIR/.github/scripts/run-command.sh}"
 
-# Resolve run-agent.sh path (works in CI where ai-board is a sibling checkout)
-if [ -f "$REPO_DIR/.github/scripts/run-agent.sh" ]; then
-  RUN_AGENT="$REPO_DIR/.github/scripts/run-agent.sh"
-elif [ -f "../ai-board/.github/scripts/run-agent.sh" ]; then
-  RUN_AGENT="../ai-board/.github/scripts/run-agent.sh"
-else
-  echo "❌ run-agent.sh not found"
+if [[ -z "$TARGET_REPO_DIR" ]]; then
+  echo "Usage: ./scripts/run-health-tests.sh <AGENT_TYPE> <TARGET_REPO_DIR>" >&2
   exit 1
 fi
 
-# ── Helpers ─────────────────────────────────────────────────────────
+if [[ -n "${AI_BOARD_RUN_AGENT:-}" ]]; then
+  RUN_AGENT="$AI_BOARD_RUN_AGENT"
+elif [[ -f "$REPO_DIR/.github/scripts/run-agent.sh" ]]; then
+  RUN_AGENT="$REPO_DIR/.github/scripts/run-agent.sh"
+elif [[ -f "../ai-board/.github/scripts/run-agent.sh" ]]; then
+  RUN_AGENT="../ai-board/.github/scripts/run-agent.sh"
+else
+  echo "❌ run-agent.sh not found" >&2
+  exit 1
+fi
 
 read_summary() {
   cat /tmp/test-report-summary.json
@@ -43,26 +36,23 @@ has_errors() {
   jq -r '.hasErrors' /tmp/test-report-summary.json
 }
 
-# Regression-penalty scoring: 100 minus a cost per failure.
-# Goal is 100% pass rate — every failure is a regression the AI introduced.
-# Penalty per fail: unit -1, integration -3, e2e -5 (user-facing = most severe).
-# Floor at 0.
 compute_score() {
   local summary="$1"
   echo "$summary" | jq '
     [0, 100
-      - (.unit.failed        * 1)
+      - (.unit.failed * 1)
       - (.integration.failed * 3)
-      - (.e2e.failed         * 5)
+      - (.e2e.failed * 5)
     ] | max
   '
 }
 
-# Write /tmp/health-scan-result.json
 write_result() {
   local score="$1"
   local auto_fixed="$2"
   local non_fixable="$3"
+  local skipped="${4:-false}"
+  local skip_reason="${5:-}"
 
   local issues_fixed
   local issues_found
@@ -77,10 +67,14 @@ write_result() {
     --argjson issuesFixed "$issues_fixed" \
     --argjson autoFixed "$auto_fixed" \
     --argjson nonFixable "$non_fixable" \
+    --argjson skipped "$skipped" \
+    --arg skipReason "$skip_reason" \
     '{
       score: $score,
       issuesFound: $issuesFound,
       issuesFixed: $issuesFixed,
+      skipped: $skipped,
+      skipReason: (if $skipReason == "" then null else $skipReason end),
       report: {
         type: "TESTS",
         autoFixed: $autoFixed,
@@ -90,26 +84,36 @@ write_result() {
       tokensUsed: 0,
       costUsd: 0
     }' > /tmp/health-scan-result.json
-
-  echo "✅ Result written to /tmp/health-scan-result.json (score: $score, found: $issues_found, fixed: $issues_fixed)"
 }
 
-# Merge two JSON arrays
+write_skipped_result() {
+  local skip_reason="$1"
+  write_result "null" "[]" "[]" "true" "$skip_reason"
+  echo "ℹ️  TESTS scan skipped: $skip_reason"
+}
+
 merge_arrays() {
   local arr1="$1"
   local arr2="$2"
-  echo "$arr1" "$arr2" | jq -s '.[0] + .[1]'
+  echo "$arr1" "$arr2" | jq -s '([.[0][], .[1][]] | unique_by(.id))'
 }
 
-# ── Phase 1: Run Tests ──────────────────────────────────────────────
+if ! "$RUN_COMMAND_SCRIPT" "$TARGET_REPO_DIR" test_primary >/dev/null 2>/tmp/run-health-tests-preflight.log; then
+  echo "❌ Failed to resolve primary test command from config" >&2
+  cat /tmp/run-health-tests-preflight.log >&2 || true
+  exit 1
+fi
+
+if grep -q "skipping" /tmp/run-health-tests-preflight.log 2>/dev/null; then
+  write_skipped_result "No executable automated test command was detected in project config"
+  exit 0
+fi
 
 echo "════════════════════════════════════════"
 echo "  Health Test Scan — Phase 1: Run Tests"
 echo "════════════════════════════════════════"
 
-"$SCRIPT_DIR/run-tests-with-reports.sh"
-
-# ── Phase 2: Score (from first run, never changes) ──────────────────
+"$RUN_TESTS_WITH_REPORTS" "$TARGET_REPO_DIR"
 
 SUMMARY=$(read_summary)
 TOTAL_TESTS=$(echo "$SUMMARY" | jq -r '.totalTests')
@@ -120,16 +124,12 @@ SCORE=$(compute_score "$SUMMARY")
 echo ""
 echo "📊 First-run score: $SCORE ($TOTAL_PASSED passed, $TOTAL_FAILED failed out of $TOTAL_TESTS)"
 
-# ── Phase 3: Check if done ──────────────────────────────────────────
-
-if [ "$(has_errors)" = "false" ]; then
+if [[ "$(has_errors)" == "false" ]]; then
   echo ""
   echo "✅ All tests pass — no LLM needed"
-  write_result "$SCORE" "[]" "[]"
+  write_result "$SCORE" "[]" "[]" "false" ""
   exit 0
 fi
-
-# ── Phase 4: Fix Loop ──────────────────────────────────────────────
 
 echo ""
 echo "════════════════════════════════════════"
@@ -141,85 +141,39 @@ ALL_NON_FIXABLE="[]"
 ITERATION=0
 PREV_FAILED=$TOTAL_FAILED
 
-while [ "$(has_errors)" = "true" ] && [ $ITERATION -lt $MAX_ITERATIONS ]; do
+while [[ "$(has_errors)" == "true" && $ITERATION -lt $MAX_ITERATIONS ]]; do
   ITERATION=$((ITERATION + 1))
-  echo ""
-  echo "── Fix iteration $ITERATION/$MAX_ITERATIONS ──"
-
-  # Call LLM fix agent (Sonnet for cost efficiency)
   FIX_RESULT_FILE="/tmp/health-tests-fix-result.json"
   echo '{"autoFixed":[],"nonFixable":[]}' > "$FIX_RESULT_FILE"
 
   ANTHROPIC_MODEL="${FIX_MODEL:-claude-sonnet-4-6}" \
-    "$RUN_AGENT" "$AGENT_TYPE" "ai-board.health-tests-fix" 2>&1 | tee /tmp/fix-agent-log.txt || true
+    "$RUN_AGENT" "$AGENT_TYPE" "ai-board.health-tests-fix" "$TARGET_REPO_DIR" \
+    2>&1 | tee /tmp/fix-agent-log.txt || true
 
-  # Read fix agent results
-  if [ -f "$FIX_RESULT_FILE" ] && jq empty "$FIX_RESULT_FILE" 2>/dev/null; then
+  if [[ -f "$FIX_RESULT_FILE" ]] && jq empty "$FIX_RESULT_FILE" 2>/dev/null; then
     ITER_FIXED=$(jq -c '.autoFixed // []' "$FIX_RESULT_FILE")
     ITER_NON_FIXABLE=$(jq -c '.nonFixable // []' "$FIX_RESULT_FILE")
     ALL_AUTO_FIXED=$(merge_arrays "$ALL_AUTO_FIXED" "$ITER_FIXED")
-    # Only keep nonFixable from last iteration (previous ones may have been fixed)
     ALL_NON_FIXABLE="$ITER_NON_FIXABLE"
-    echo "  Fixed: $(echo "$ITER_FIXED" | jq 'length'), Non-fixable: $(echo "$ITER_NON_FIXABLE" | jq 'length')"
-  else
-    echo "  ⚠️ Fix agent did not produce valid results"
   fi
 
-  # Re-run tests
-  echo ""
-  echo "  Re-running tests..."
-  "$SCRIPT_DIR/run-tests-with-reports.sh"
+  "$RUN_TESTS_WITH_REPORTS" "$TARGET_REPO_DIR"
 
   NEW_SUMMARY=$(read_summary)
   NEW_FAILED=$(echo "$NEW_SUMMARY" | jq -r '.totalFailed')
-  echo "  After fix: $NEW_FAILED failures remaining (was $PREV_FAILED)"
 
-  # Degradation guard: if more failures than before, revert and stop
-  if [ "$NEW_FAILED" -gt "$PREV_FAILED" ]; then
-    echo ""
-    echo "  🚨 Degradation detected: $PREV_FAILED → $NEW_FAILED failures"
-    echo "  Reverting all changes from this iteration..."
-    git -C "$REPO_DIR" checkout .
-    # Remove any untracked files the agent may have created
-    git -C "$REPO_DIR" clean -fd --quiet
-    # Discard fixes claimed by this iteration since we reverted
+  if [[ "$NEW_FAILED" -gt "$PREV_FAILED" ]]; then
+    git -C "$TARGET_REPO_DIR" checkout . >/dev/null 2>&1 || true
+    git -C "$TARGET_REPO_DIR" clean -fd --quiet >/dev/null 2>&1 || true
     ALL_AUTO_FIXED="[]"
-    echo "  ✅ Reverted. Stopping fix loop."
     break
   fi
 
   PREV_FAILED=$NEW_FAILED
 done
 
-if [ "$(has_errors)" = "false" ]; then
-  echo ""
-  echo "✅ All tests pass after $ITERATION fix iteration(s)"
+if [[ "$(has_errors)" == "false" ]]; then
   ALL_NON_FIXABLE="[]"
 fi
 
-# ── Phase 4b: Commit & push fixes ─────────────────────────────────
-
-FIXED_COUNT=$(echo "$ALL_AUTO_FIXED" | jq 'length')
-if [ "$FIXED_COUNT" -gt 0 ] && [ -n "$(git -C "$REPO_DIR" diff --name-only)" ]; then
-  echo ""
-  echo "📦 Committing $FIXED_COUNT auto-fixed test(s)..."
-  git -C "$REPO_DIR" config user.name "ai-board[bot]"
-  git -C "$REPO_DIR" config user.email "ai-board[bot]@users.noreply.github.com"
-  git -C "$REPO_DIR" add -A
-  git -C "$REPO_DIR" commit -m "fix(tests): auto-fix $FIXED_COUNT test failure(s) [health-scan]
-
-Automated fixes applied by health scan test fixer.
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-  git -C "$REPO_DIR" push
-  echo "✅ Fixes committed and pushed"
-fi
-
-# ── Phase 5: Write Result ──────────────────────────────────────────
-
-echo ""
-echo "════════════════════════════════════════"
-echo "  Health Test Scan — Phase 5: Result"
-echo "════════════════════════════════════════"
-
-write_result "$SCORE" "$ALL_AUTO_FIXED" "$ALL_NON_FIXABLE"
+write_result "$SCORE" "$ALL_AUTO_FIXED" "$ALL_NON_FIXABLE" "false" ""

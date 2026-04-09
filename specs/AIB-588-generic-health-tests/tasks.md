@@ -20,9 +20,9 @@ description: "Actionable task list for Generic Health Tests: Make TESTS Scan Wor
 
 **Purpose**: Add the typed config surface the generic TESTS scan will consume.
 
-- [ ] T001 Extend `lib/validations/config.ts` with `testCapabilities` and primary test-command key validation for `.ai-board/config.yml`
-- [ ] T002 [P] Extend `tests/unit/config-schema.test.ts` with contract coverage from `specs/AIB-588-generic-health-tests/contracts/project-config-tests-profile.md` for optional test commands and `testCapabilities`
-- [ ] T003 [P] Extend `tests/unit/config-loader.test.ts` to load `.ai-board/config.yml` files that include `testCapabilities` and nullable test command fields
+- [X] T001 Extend `lib/validations/config.ts` with `testCapabilities` and primary test-command key validation for `.ai-board/config.yml`
+- [X] T002 [P] Extend `tests/unit/config-schema.test.ts` with contract coverage from `specs/AIB-588-generic-health-tests/contracts/project-config-tests-profile.md` for optional test commands and `testCapabilities`
+- [X] T003 [P] Extend `tests/unit/config-loader.test.ts` to load `.ai-board/config.yml` files that include `testCapabilities` and nullable test command fields
 
 ---
 
@@ -32,9 +32,9 @@ description: "Actionable task list for Generic Health Tests: Make TESTS Scan Wor
 
 **⚠️ CRITICAL**: Complete this phase before starting user story work.
 
-- [ ] T004 Extend `lib/config-loader.ts` to expose validated `testCapabilities` data to downstream TESTS orchestration code
-- [ ] T005 Extend `.github/scripts/run-command.sh` to resolve target-repo test command keys generically and treat missing test commands as a clean skip path instead of an ai-board-only assumption
-- [ ] T006 [P] Extend `tests/unit/scripts/run-command.test.ts` with target-repo command resolution and missing-command skip cases used by the generic TESTS scan
+- [X] T004 Extend `lib/config-loader.ts` to expose validated `testCapabilities` data to downstream TESTS orchestration code
+- [X] T005 Extend `.github/scripts/run-command.sh` to resolve target-repo test command keys generically and treat missing test commands as a clean skip path instead of an ai-board-only assumption
+- [X] T006 [P] Extend `tests/unit/scripts/run-command.test.ts` with target-repo command resolution and missing-command skip cases used by the generic TESTS scan
 
 **Checkpoint**: Shared config validation and generic command execution are ready for story work.
 
@@ -48,15 +48,15 @@ description: "Actionable task list for Generic Health Tests: Make TESTS Scan Wor
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Create `tests/unit/scripts/run-health-tests.test.ts` to cover `specs/AIB-588-generic-health-tests/contracts/tests-health-result.md`, target-repo execution, skipped result envelopes, first-run score preservation, and retry limits
-- [ ] T008 [P] [US1] Extend `tests/unit/health/command-output-validation.test.ts` with assertions for generic TESTS result payloads emitted by `scripts/run-health-tests.sh`
+- [X] T007 [P] [US1] Create `tests/unit/scripts/run-health-tests.test.ts` to cover `specs/AIB-588-generic-health-tests/contracts/tests-health-result.md`, target-repo execution, skipped result envelopes, first-run score preservation, and retry limits
+- [X] T008 [P] [US1] Extend `tests/unit/health/command-output-validation.test.ts` with assertions for generic TESTS result payloads emitted by `scripts/run-health-tests.sh`
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Refactor `scripts/run-tests-with-reports.sh` to execute against an explicit target repository path and always emit JSON summaries for the TESTS orchestrator
-- [ ] T010 [US1] Refactor `scripts/run-health-tests.sh` to run from the ai-board checkout, read target-repo config, select the configured primary test command, preserve first-run scoring, and emit skipped results with `skipReason`
-- [ ] T011 [US1] Update `.github/workflows/health-scan.yml` to invoke the ai-board-owned TESTS orchestrator against the checked-out target repository instead of requiring target-local scripts
-- [ ] T012 [US1] Update `lib/health/scan-dispatch.ts` to pass the TESTS workflow inputs required by the platform-owned orchestrator for external repositories
+- [X] T009 [US1] Refactor `scripts/run-tests-with-reports.sh` to execute against an explicit target repository path and always emit JSON summaries for the TESTS orchestrator
+- [X] T010 [US1] Refactor `scripts/run-health-tests.sh` to run from the ai-board checkout, read target-repo config, select the configured primary test command, preserve first-run scoring, and emit skipped results with `skipReason`
+- [X] T011 [US1] Update `.github/workflows/health-scan.yml` to invoke the ai-board-owned TESTS orchestrator against the checked-out target repository instead of requiring target-local scripts
+- [X] T012 [US1] Update `lib/health/scan-dispatch.ts` to pass the TESTS workflow inputs required by the platform-owned orchestrator for external repositories
 
 **Checkpoint**: External repositories with valid test config can complete a TESTS scan without custom orchestration assets.
 
@@ -70,12 +70,12 @@ description: "Actionable task list for Generic Health Tests: Make TESTS Scan Wor
 
 ### Tests for User Story 2
 
-- [ ] T013 [P] [US2] Extend `tests/unit/detect-stack.test.ts` with contract coverage from `specs/AIB-588-generic-health-tests/contracts/project-config-tests-profile.md` for normalized test, lint, and type-check commands plus `framework` and `hasE2E`
+- [X] T013 [P] [US2] Extend `tests/unit/detect-stack.test.ts` with contract coverage from `specs/AIB-588-generic-health-tests/contracts/project-config-tests-profile.md` for normalized test, lint, and type-check commands plus `framework` and `hasE2E`
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Extend `.github/scripts/detect-stack.sh` to write normalized `commands.test_unit`, `commands.test_integration`, `commands.test_e2e`, `commands.lint`, `commands.type_check`, and `testCapabilities` into generated `.ai-board/config.yml`
-- [ ] T015 [US2] Update `lib/config-sync.ts` to preserve sanitized stack-detected test capability metadata in `Project.config` during config refreshes
+- [X] T014 [US2] Extend `.github/scripts/detect-stack.sh` to write normalized `commands.test_unit`, `commands.test_integration`, `commands.test_e2e`, `commands.lint`, `commands.type_check`, and `testCapabilities` into generated `.ai-board/config.yml`
+- [X] T015 [US2] Update `lib/config-sync.ts` to preserve sanitized stack-detected test capability metadata in `Project.config` during config refreshes
 
 **Checkpoint**: Stack detection produces reusable TESTS capability metadata that later scans can consume without repo-specific customization.
 
@@ -89,13 +89,13 @@ description: "Actionable task list for Generic Health Tests: Make TESTS Scan Wor
 
 ### Tests for User Story 3
 
-- [ ] T016 [P] [US3] Extend `tests/integration/health/scan-status.test.ts` with contract coverage from `specs/AIB-588-generic-health-tests/contracts/health-scan-status-patch.md` for `TESTS` `RUNNING -> SKIPPED`, `skipReason`, and aggregate preservation
-- [ ] T017 [P] [US3] Extend `tests/unit/health/report-schemas.test.ts` to confirm existing ai-board TESTS report bodies remain valid while skipped status moves through the workflow envelope
+- [X] T016 [P] [US3] Extend `tests/integration/health/scan-status.test.ts` with contract coverage from `specs/AIB-588-generic-health-tests/contracts/health-scan-status-patch.md` for `TESTS` `RUNNING -> SKIPPED`, `skipReason`, and aggregate preservation
+- [X] T017 [P] [US3] Extend `tests/unit/health/report-schemas.test.ts` to confirm existing ai-board TESTS report bodies remain valid while skipped status moves through the workflow envelope
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Update `app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts` to allow `TESTS` skips, require `skipReason`, and keep `HealthScore.testsScore` unchanged on skipped runs
-- [ ] T019 [US3] Update `.github/workflows/health-scan.yml` to stop coercing `TESTS` skips to completed and propagate `skipped` plus `skipReason` from `/tmp/health-scan-result.json`
+- [X] T018 [US3] Update `app/api/projects/[projectId]/health/scans/[scanId]/status/route.ts` to allow `TESTS` skips, require `skipReason`, and keep `HealthScore.testsScore` unchanged on skipped runs
+- [X] T019 [US3] Update `.github/workflows/health-scan.yml` to stop coercing `TESTS` skips to completed and propagate `skipped` plus `skipReason` from `/tmp/health-scan-result.json`
 
 **Checkpoint**: ai-board self-scans still behave as before, and skipped TESTS scans persist as a first-class status instead of a workflow error or coerced completion.
 
@@ -105,9 +105,9 @@ description: "Actionable task list for Generic Health Tests: Make TESTS Scan Wor
 
 **Purpose**: Align feature docs with the final implementation and preserve operator clarity across workflows.
 
-- [ ] T020 [P] Update `specs/AIB-588-generic-health-tests/workflows/tests-health-scan-workflow.md` with the final platform-owned TESTS routing, target-repo arguments, and skipped-result handling
-- [ ] T021 [P] Update `specs/AIB-588-generic-health-tests/workflows/stack-detection-workflow.md` to document the generated test capability profile and normalized command fields
-- [ ] T022 [P] Update `specs/AIB-588-generic-health-tests/workflows/tests-health-scan-command.md` with the final `scripts/run-health-tests.sh` CLI contract and result-file expectations
+- [X] T020 [P] Update `specs/AIB-588-generic-health-tests/workflows/tests-health-scan-workflow.md` with the final platform-owned TESTS routing, target-repo arguments, and skipped-result handling
+- [X] T021 [P] Update `specs/AIB-588-generic-health-tests/workflows/stack-detection-workflow.md` to document the generated test capability profile and normalized command fields
+- [X] T022 [P] Update `specs/AIB-588-generic-health-tests/workflows/tests-health-scan-command.md` with the final `scripts/run-health-tests.sh` CLI contract and result-file expectations
 
 ---
 

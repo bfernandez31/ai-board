@@ -38,6 +38,8 @@ LOCKFILES=()
 CONFIG_FILES=()
 RUNTIME_VERSIONS="{}"
 SECONDARY_LANGUAGES=()
+NORMALIZED_COMMANDS_JSON="{}"
+TEST_CAPABILITIES_JSON="{}"
 
 # ─── Project Name ───────────────────────────────────────────────────
 
@@ -532,6 +534,99 @@ detect_commands() {
   COMMANDS_JSON="$cmds"
 }
 
+pick_command() {
+  local keys=("$@")
+  local key
+  for key in "${keys[@]}"; do
+    local value
+    value=$(echo "$COMMANDS_JSON" | jq -r --arg key "$key" '.[$key] // empty')
+    if [[ -n "$value" ]]; then
+      printf '%s' "$value"
+      return 0
+    fi
+  done
+  return 1
+}
+
+set_normalized_command() {
+  local key="$1"
+  local value="$2"
+  if [[ -n "$value" ]]; then
+    NORMALIZED_COMMANDS_JSON=$(echo "$NORMALIZED_COMMANDS_JSON" | jq --arg key "$key" --arg value "$value" '. + {($key): $value}')
+  fi
+}
+
+normalize_commands() {
+  local lint_cmd=""
+  local type_check_cmd=""
+  local test_unit_cmd=""
+  local test_integration_cmd=""
+  local test_e2e_cmd=""
+  local has_e2e="null"
+  local primary_key="null"
+  local framework_value="null"
+
+  lint_cmd="$(pick_command lint lint:check eslint 2>/dev/null || true)"
+  type_check_cmd="$(pick_command type-check type_check typecheck check-types tsc 2>/dev/null || true)"
+  test_unit_cmd="$(pick_command test:unit test-unit unit test 2>/dev/null || true)"
+  test_integration_cmd="$(pick_command test:integration test-integration integration 2>/dev/null || true)"
+  test_e2e_cmd="$(pick_command test:e2e test-e2e e2e playwright 2>/dev/null || true)"
+
+  case "$TEST_FRAMEWORK" in
+    pytest)
+      [[ -z "$test_unit_cmd" ]] && test_unit_cmd="pytest"
+      ;;
+    cargo-test)
+      [[ -z "$test_unit_cmd" ]] && test_unit_cmd="cargo test"
+      ;;
+    go-test)
+      [[ -z "$test_unit_cmd" ]] && test_unit_cmd="go test ./..."
+      ;;
+    rspec)
+      [[ -z "$test_unit_cmd" ]] && test_unit_cmd="bundle exec rspec"
+      ;;
+    phpunit)
+      [[ -z "$test_unit_cmd" ]] && test_unit_cmd="vendor/bin/phpunit"
+      ;;
+  esac
+
+  set_normalized_command "lint" "$lint_cmd"
+  set_normalized_command "type_check" "$type_check_cmd"
+  set_normalized_command "test_unit" "$test_unit_cmd"
+  set_normalized_command "test_integration" "$test_integration_cmd"
+  set_normalized_command "test_e2e" "$test_e2e_cmd"
+
+  if [[ -n "$test_unit_cmd" ]]; then
+    primary_key='"test_unit"'
+  elif [[ -n "$test_integration_cmd" ]]; then
+    primary_key='"test_integration"'
+  elif [[ -n "$test_e2e_cmd" ]]; then
+    primary_key='"test_e2e"'
+  fi
+
+  if [[ -n "$test_e2e_cmd" ]] || [[ "$COMMANDS_JSON" == *"playwright"* ]]; then
+    has_e2e="true"
+  elif [[ "$TEST_FRAMEWORK" == "playwright" ]]; then
+    has_e2e="true"
+  elif [[ -n "$test_unit_cmd" || -n "$test_integration_cmd" ]]; then
+    has_e2e="false"
+  fi
+
+  if [[ -n "$TEST_FRAMEWORK" ]]; then
+    framework_value=$(jq -Rn --arg value "$TEST_FRAMEWORK" '$value')
+  fi
+
+  TEST_CAPABILITIES_JSON=$(jq -n \
+    --argjson framework "$framework_value" \
+    --argjson primaryCommandKey "$primary_key" \
+    --argjson hasE2E "$has_e2e" \
+    '{
+      framework: $framework,
+      primaryCommandKey: $primaryCommandKey,
+      hasE2E: $hasE2E
+    }')
+}
+
 # ─── Runtime Versions ───────────────────────────────────────────────
 
 detect_runtime_versions() {
@@ -632,6 +727,24 @@ generate_config_yml() {
     agent_cli="codex"
   fi
 
+  local lint_cmd
+  local type_check_cmd
+  local test_unit_cmd
+  local test_integration_cmd
+  local test_e2e_cmd
+  local test_framework
+  local primary_command_key
+  local has_e2e
+
+  lint_cmd=$(echo "$NORMALIZED_COMMANDS_JSON" | jq -r '.lint // empty')
+  type_check_cmd=$(echo "$NORMALIZED_COMMANDS_JSON" | jq -r '.type_check // empty')
+  test_unit_cmd=$(echo "$NORMALIZED_COMMANDS_JSON" | jq -r '.test_unit // empty')
+  test_integration_cmd=$(echo "$NORMALIZED_COMMANDS_JSON" | jq -r '.test_integration // empty')
+  test_e2e_cmd=$(echo "$NORMALIZED_COMMANDS_JSON" | jq -r '.test_e2e // empty')
+  test_framework=$(echo "$TEST_CAPABILITIES_JSON" | jq -r '.framework // empty')
+  primary_command_key=$(echo "$TEST_CAPABILITIES_JSON" | jq -r '.primaryCommandKey // empty')
+  has_e2e=$(echo "$TEST_CAPABILITIES_JSON" | jq -r '.hasE2E')
+
   cat > "$REPO_DIR/.ai-board/config.yml" <<EOF
 version: 1
 project:
@@ -642,6 +755,43 @@ runtime:
   manager: ${pm_val}
 commands:
   install: "${install_cmd}"
+EOF
+
+  if [[ -n "$lint_cmd" ]]; then
+    cat >> "$REPO_DIR/.ai-board/config.yml" <<EOF
+  lint: "${lint_cmd}"
+EOF
+  fi
+
+  if [[ -n "$type_check_cmd" ]]; then
+    cat >> "$REPO_DIR/.ai-board/config.yml" <<EOF
+  type_check: "${type_check_cmd}"
+EOF
+  fi
+
+  if [[ -n "$test_unit_cmd" ]]; then
+    cat >> "$REPO_DIR/.ai-board/config.yml" <<EOF
+  test_unit: "${test_unit_cmd}"
+EOF
+  fi
+
+  if [[ -n "$test_integration_cmd" ]]; then
+    cat >> "$REPO_DIR/.ai-board/config.yml" <<EOF
+  test_integration: "${test_integration_cmd}"
+EOF
+  fi
+
+  if [[ -n "$test_e2e_cmd" ]]; then
+    cat >> "$REPO_DIR/.ai-board/config.yml" <<EOF
+  test_e2e: "${test_e2e_cmd}"
+EOF
+  fi
+
+  cat >> "$REPO_DIR/.ai-board/config.yml" <<EOF
+testCapabilities:
+  framework: ${test_framework:-null}
+  primaryCommandKey: ${primary_command_key:-null}
+  hasE2E: ${has_e2e:-null}
 agent:
   cli: ${agent_cli}
 EOF
@@ -706,6 +856,7 @@ detect_framework
 detect_test_framework
 detect_services
 detect_commands
+normalize_commands
 detect_runtime_versions
 generate_config_yml
 generate_analysis_json

@@ -113,10 +113,18 @@ describe('detect-stack.sh — TypeScript/Next.js', () => {
     const config = readConfigYml(fixtureDir);
     const project = config.project as Record<string, unknown>;
     const runtime = config.runtime as Record<string, unknown>;
+    const commands = config.commands as Record<string, unknown>;
+    const testCapabilities = config.testCapabilities as Record<string, unknown>;
 
     expect(project.language).toBe('typescript');
     expect(project.framework).toBe('nextjs');
     expect(runtime.manager).toBe('bun');
+    expect(commands.install).toBe('bun install');
+    expect(commands.lint).toBe('eslint .');
+    expect(commands.test_unit).toBe('vitest run');
+    expect(testCapabilities.framework).toBe('vitest');
+    expect(testCapabilities.primaryCommandKey).toBe('test_unit');
+    expect(testCapabilities.hasE2E).toBe(false);
   });
 
   it('analysis.json has correct structure and values', () => {
@@ -161,9 +169,11 @@ describe('detect-stack.sh — Empty repository', () => {
   it('config.yml has null language and project name from directory', () => {
     const config = readConfigYml(fixtureDir);
     const project = config.project as Record<string, unknown>;
+    const testCapabilities = config.testCapabilities as Record<string, unknown>;
 
     expect(project.language).toBeNull();
     expect(project.name).toBeTruthy();
+    expect(testCapabilities.primaryCommandKey).toBeNull();
   });
 
   it('analysis.json has null language and project name from directory name', () => {
@@ -236,6 +246,14 @@ describe('detect-stack.sh — Python/FastAPI', () => {
     expect(analysis.language).toBe('python');
     expect(analysis.packageManager).toBe('poetry');
     expect(analysis.framework).toBe('fastapi');
+
+    const config = readConfigYml(fixtureDir);
+    const commands = config.commands as Record<string, unknown>;
+    const testCapabilities = config.testCapabilities as Record<string, unknown>;
+    expect(commands.test_unit).toBe('pytest');
+    expect(testCapabilities.framework).toBe('pytest');
+    expect(testCapabilities.primaryCommandKey).toBe('test_unit');
+    expect(testCapabilities.hasE2E).toBe(false);
   });
 });
 

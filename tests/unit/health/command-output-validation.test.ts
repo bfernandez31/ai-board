@@ -298,6 +298,63 @@ describe('TestsReport schema validation', () => {
     expect((parsed as TestsReport).autoFixed).toHaveLength(0);
     expect((parsed as TestsReport).nonFixable).toHaveLength(1);
   });
+
+  it('accepts a generic TESTS result payload for an executed scan', () => {
+    const result = {
+      score: 87,
+      issuesFound: 3,
+      issuesFixed: 1,
+      skipped: false,
+      skipReason: null,
+      report: {
+        type: 'TESTS',
+        autoFixed: [
+          makeIssue({
+            id: 'test-fix-001',
+            severity: 'medium',
+            description: 'Updated flaky assertion',
+          }),
+        ],
+        nonFixable: [
+          makeIssue({
+            id: 'test-fail-001',
+            severity: 'high',
+            description: 'External dependency still timing out',
+          }),
+        ],
+        generatedTickets: [],
+      },
+      tokensUsed: 0,
+      costUsd: 0,
+    };
+
+    expect(result.skipped).toBe(false);
+    expect(result.report.type).toBe('TESTS');
+    expect(scanReportSchema.safeParse(result.report).success).toBe(true);
+  });
+
+  it('accepts a generic TESTS result payload for a skipped scan', () => {
+    const result = {
+      score: null,
+      issuesFound: 0,
+      issuesFixed: 0,
+      skipped: true,
+      skipReason: 'No executable automated test command was detected in project config',
+      report: {
+        type: 'TESTS',
+        autoFixed: [],
+        nonFixable: [],
+        generatedTickets: [],
+      },
+      tokensUsed: 0,
+      costUsd: 0,
+    };
+
+    expect(result.skipped).toBe(true);
+    expect(result.skipReason).toBeTruthy();
+    expect(result.score).toBeNull();
+    expect(scanReportSchema.safeParse(result.report).success).toBe(true);
+  });
 });
 
 // --- US4: Spec Sync Report Validation ---
@@ -340,4 +397,3 @@ describe('SpecSyncReport schema validation', () => {
     expect((parsed as SpecSyncReport).specs[1].status).toBe('drifted');
   });
 });
-

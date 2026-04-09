@@ -13,19 +13,21 @@
 
 ## Functional Phases
 
-1. Read target config and determine whether a test command is runnable.
-2. If not runnable, write skipped result envelope and exit `0`.
-3. Run shared test execution helper against the target repo.
-4. Score the first run.
-5. Invoke existing fix-and-retest loop when failures exist.
-6. Apply degradation guard and target-scoped rollback if retries worsen the result.
-7. Write the final result envelope.
+1. Resolve the target repo path from the second argument.
+2. Use `.github/scripts/run-command.sh <target_repo_dir> test_primary` to determine whether a runnable automated test command exists.
+3. If not runnable, write a skipped result envelope with `skipReason` and exit `0`.
+4. Run `scripts/run-tests-with-reports.sh <target_repo_dir>`.
+5. Score the first run only.
+6. Invoke the fix-and-retest loop when failures exist, re-running the shared helper against the same target repo each time.
+7. Apply target-scoped rollback if retries worsen the result.
+8. Write the final result envelope.
 
 ## Output Format
 
 - Always writes `/tmp/health-scan-result.json` on success or intentional skip
 - Exit code `0` for completed or skipped scans
 - Non-zero exit only for orchestration/setup failures before a valid result can be written
+- Accepts `AI_BOARD_RUN_TESTS_WITH_REPORTS`, `AI_BOARD_RUN_COMMAND_SCRIPT`, and `AI_BOARD_RUN_AGENT` overrides for testability
 
 ## Reporting Contract
 

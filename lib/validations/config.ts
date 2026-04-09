@@ -59,6 +59,11 @@ export const ServiceTypeSchema = z.enum([
 ]);
 
 export const AgentCliSchema = z.enum(['claude-code', 'codex']);
+export const TestCommandKeySchema = z.enum([
+  'test_unit',
+  'test_integration',
+  'test_e2e',
+]);
 
 export const ValidationErrorTypeSchema = z.enum([
   'missing_required',
@@ -110,6 +115,14 @@ export const AgentSectionSchema = z.object({
   model: z.string().optional(),
 }).strict();
 
+export const TestCapabilitiesSectionSchema = z
+  .object({
+    framework: z.string().min(1).nullable().optional(),
+    primaryCommandKey: TestCommandKeySchema.nullable().optional(),
+    hasE2E: z.boolean().nullable().optional(),
+  })
+  .strict();
+
 // ─── Root Config Schema ─────────────────────────────────────────────
 
 export const ProjectConfigSchema = z
@@ -119,8 +132,19 @@ export const ProjectConfigSchema = z
     runtime: RuntimeSectionSchema,
     services: z.array(ServiceConfigSchema).default([]),
     commands: CommandsSectionSchema,
+    testCapabilities: TestCapabilitiesSectionSchema.optional(),
     env: z.record(z.string(), z.string()).default({}),
     agent: AgentSectionSchema.default({ cli: 'claude-code' }),
+  })
+  .superRefine((config, ctx) => {
+    const primaryCommandKey = config.testCapabilities?.primaryCommandKey;
+    if (primaryCommandKey && !config.commands[primaryCommandKey]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['testCapabilities', 'primaryCommandKey'],
+        message: `testCapabilities.primaryCommandKey must reference a configured commands.${primaryCommandKey} value.`,
+      });
+    }
   })
   .strict();
 
@@ -132,6 +156,7 @@ export type RuntimeSection = z.infer<typeof RuntimeSectionSchema>;
 export type CommandsSection = z.infer<typeof CommandsSectionSchema>;
 export type ServiceConfig = z.infer<typeof ServiceConfigSchema>;
 export type AgentSection = z.infer<typeof AgentSectionSchema>;
+export type TestCapabilitiesSection = z.infer<typeof TestCapabilitiesSectionSchema>;
 
 // ─── Validation Types ───────────────────────────────────────────────
 

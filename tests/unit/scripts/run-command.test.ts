@@ -94,6 +94,59 @@ agent:
     expect(result.exitCode).toBe(0);
   });
 
+  it('resolves test_primary through testCapabilities.primaryCommandKey', () => {
+    mkdirSync(join(TMP_DIR, '.ai-board'), { recursive: true });
+    writeFileSync(
+      join(TMP_DIR, '.ai-board/config.yml'),
+      `version: 1
+project:
+  name: Test
+  language: typescript
+runtime:
+  manager: bun
+commands:
+  install: echo installed
+  test_unit: echo "unit tests ran"
+testCapabilities:
+  framework: vitest
+  primaryCommandKey: test_unit
+  hasE2E: false
+agent:
+  cli: claude-code
+`
+    );
+
+    const result = runScript(`${TMP_DIR} test_primary`);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('unit tests ran');
+  });
+
+  it('exits 0 when test_primary is requested without a configured primary command', () => {
+    mkdirSync(join(TMP_DIR, '.ai-board'), { recursive: true });
+    writeFileSync(
+      join(TMP_DIR, '.ai-board/config.yml'),
+      `version: 1
+project:
+  name: Test
+  language: typescript
+runtime:
+  manager: bun
+commands:
+  install: echo installed
+testCapabilities:
+  framework: vitest
+  primaryCommandKey: null
+  hasE2E: false
+agent:
+  cli: claude-code
+`
+    );
+
+    const result = runScript(`${TMP_DIR} test_primary`);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe('');
+  });
+
   it('executes valid command and returns exit code 0', () => {
     mkdirSync(join(TMP_DIR, '.ai-board'), { recursive: true });
     writeFileSync(

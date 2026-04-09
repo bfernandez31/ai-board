@@ -28,9 +28,11 @@ Generate reusable ai-board project configuration that captures install, test, li
    - `commands.test_unit`
    - `commands.test_integration`
    - `commands.test_e2e`
-4. Derive `testCapabilities.framework`, `testCapabilities.primaryCommandKey`, and `testCapabilities.hasE2E`.
-5. Write `.ai-board/config.yml`.
-6. Write `analysis.json` for onboarding/debugging.
+4. Prefer explicit script names when present (`test:unit`, `test:integration`, `test:e2e`, `lint`, `type-check`) and fall back to defensible framework defaults for ecosystems like pytest, cargo, go, rspec, and phpunit.
+5. Derive `testCapabilities.framework`, `testCapabilities.primaryCommandKey`, and `testCapabilities.hasE2E`.
+6. Leave ambiguous commands absent rather than inventing a runnable command.
+7. Write `.ai-board/config.yml`.
+8. Write `analysis.json` for onboarding/debugging.
 
 ## Output
 

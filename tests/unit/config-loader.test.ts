@@ -19,6 +19,43 @@ commands:
   install: bun install
 `;
 
+const TEST_CAPABILITIES_YAML = `version: 1
+
+project:
+  name: my-app
+  language: typescript
+
+runtime:
+  manager: bun
+
+commands:
+  install: bun install
+  test_unit: bun run test:unit
+
+testCapabilities:
+  framework: vitest
+  primaryCommandKey: test_unit
+  hasE2E: false
+`;
+
+const NULLABLE_TEST_CAPABILITIES_YAML = `version: 1
+
+project:
+  name: my-app
+  language: typescript
+
+runtime:
+  manager: bun
+
+commands:
+  install: bun install
+
+testCapabilities:
+  framework: null
+  primaryCommandKey: null
+  hasE2E: null
+`;
+
 const INVALID_YAML = `version: 1
 project:
   name: my-app
@@ -78,6 +115,39 @@ describe('loadConfig', () => {
     expect(result.data.project.language).toBe('typescript');
     expect(result.data.runtime.manager).toBe('bun');
     expect(result.data.commands.install).toBe('bun install');
+  });
+
+  it('loads testCapabilities and nullable test command fields from config', async () => {
+    await writeConfig(TEST_CAPABILITIES_YAML);
+
+    const result = await loadConfig(tempDir);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.commands.test_unit).toBe('bun run test:unit');
+    expect(result.data.commands.test_integration).toBeUndefined();
+    expect(result.data.commands.test_e2e).toBeUndefined();
+    expect(result.data.testCapabilities).toEqual({
+      framework: 'vitest',
+      primaryCommandKey: 'test_unit',
+      hasE2E: false,
+    });
+  });
+
+  it('accepts nullable testCapabilities values when no test command is configured', async () => {
+    await writeConfig(NULLABLE_TEST_CAPABILITIES_YAML);
+
+    const result = await loadConfig(tempDir);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.testCapabilities).toEqual({
+      framework: null,
+      primaryCommandKey: null,
+      hasE2E: null,
+    });
   });
 
   it('empty file returns all required-field errors', async () => {
