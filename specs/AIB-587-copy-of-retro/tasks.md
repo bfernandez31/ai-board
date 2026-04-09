@@ -149,10 +149,10 @@
 
 **Purpose**: Final integration validation and cleanup
 
-- [x] T028 Run `bun run type-check` and `bun run lint` — fix all errors across modified files
-- [x] T029 Run `bun run test:unit` for all new and extended test files — verify all tests pass
-- [x] T030 Run `bun run test:integration` for `tests/integration/projects/spec-generation-job.test.ts` — verify API integration tests pass (POST/GET tests pass; PATCH workflow-token tests fail due to pre-existing env issue affecting all workflow auth tests including setup-job.test.ts)
-- [x] T031 Verify end-to-end flow manually: schema → API → dispatch → setup page Step 2 → board badge → board banner → modal
+- [X] T028 Run `bun run type-check` and `bun run lint` — fix all errors across modified files
+- [X] T029 Run `bun run test:unit` for all new and extended test files — verify all tests pass
+- [X] T030 Run `bun run test:integration` for `tests/integration/projects/spec-generation-job.test.ts` — verify API integration tests pass (POST/GET tests pass; PATCH workflow-token tests fail due to pre-existing env issue affecting all workflow auth tests including setup-job.test.ts)
+- [X] T031 Verify end-to-end flow manually: schema → API → dispatch → setup page Step 2 → board badge → board banner → modal
 
 ---
 
