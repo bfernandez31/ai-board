@@ -13,7 +13,7 @@ const setupJobStatusUpdateSchema = z.object({
 });
 
 const VALID_TRANSITIONS: Record<SetupJobStatus, SetupJobStatus[]> = {
-  PENDING: ['RUNNING'],
+  PENDING: ['RUNNING', 'FAILED'],
   RUNNING: ['COMPLETED', 'FAILED'],
   COMPLETED: ['COMPLETED'],
   FAILED: ['FAILED'],
