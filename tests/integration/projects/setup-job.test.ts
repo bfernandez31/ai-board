@@ -64,7 +64,7 @@ describe('Setup Job API', () => {
     });
 
     it('should reject non-owner with 403', async () => {
-      const nonOwner = await ctx.createUser('non-owner@test.com');
+      const nonOwner = await ctx.createUser(`non-owner@project${ctx.projectId}.e2e.test`);
       const response = await ctx.api.post(
         `/api/projects/${ctx.projectId}/setup/jobs`,
         { agent: 'CLAUDE' },
