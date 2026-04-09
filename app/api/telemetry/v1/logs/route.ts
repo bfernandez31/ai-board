@@ -95,7 +95,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const otlpData = validationResult.data;
 
     // Aggregate metrics from all resource logs
-    let hasCodexEvents = false;
     const metrics = {
       inputTokens: 0,
       outputTokens: 0,
@@ -149,7 +148,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           }
 
           if (isCodexTokenEvent) {
-            hasCodexEvents = true;
             // Codex uses different attribute names for token counts
             // Codex input_token_count is the TOTAL input (includes cached),
             // unlike Claude where input_tokens is only non-cached.
@@ -211,35 +209,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Merge and deduplicate tools in memory to avoid a second DB call
     const mergedTools = [...new Set([...job.toolsUsed, ...metrics.toolsUsed])].sort();
 
-    // Codex OTLP exporter re-sends ALL log records in every batch (cumulative),
-    // so we use MAX to avoid double-counting. Claude sends each record once (delta),
-    // so we accumulate.
+    // Both Claude and Codex OTLP exporters send delta batches (each batch
+    // contains only NEW log records since the last successful export).
+    // All metrics are accumulated by summation.
     // Duration: Claude reports per-request duration_ms (accumulated here);
-    // Codex doesn't — duration is backfilled from job wall clock on completion
+    // Codex doesn't — duration is backfilled from job wall clock on completion.
     const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
-      inputTokens: hasCodexEvents
-        ? Math.max(job.inputTokens || 0, metrics.inputTokens)
-        : (job.inputTokens || 0) + metrics.inputTokens,
-      outputTokens: hasCodexEvents
-        ? Math.max(job.outputTokens || 0, metrics.outputTokens)
-        : (job.outputTokens || 0) + metrics.outputTokens,
-      cacheReadTokens: hasCodexEvents
-        ? Math.max(job.cacheReadTokens || 0, metrics.cacheReadTokens)
-        : (job.cacheReadTokens || 0) + metrics.cacheReadTokens,
+      inputTokens: (job.inputTokens || 0) + metrics.inputTokens,
+      outputTokens: (job.outputTokens || 0) + metrics.outputTokens,
+      cacheReadTokens: (job.cacheReadTokens || 0) + metrics.cacheReadTokens,
       cacheCreationTokens: (job.cacheCreationTokens || 0) + metrics.cacheCreationTokens,
-      costUsd: hasCodexEvents
-        ? Math.max(job.costUsd || 0, metrics.costUsd)
-        : (job.costUsd || 0) + metrics.costUsd,
+      costUsd: (job.costUsd || 0) + metrics.costUsd,
       durationMs: (job.durationMs || 0) + metrics.durationMs,
       toolsUsed: mergedTools,
     };
-
-    // Skip DB update if Codex batch has no new data (same or lower metrics)
-    if (hasCodexEvents &&
-        (updateData.inputTokens as number) === (job.inputTokens || 0) &&
-        (updateData.outputTokens as number) === (job.outputTokens || 0)) {
-      return NextResponse.json({ status: 'accepted', message: 'No new metrics' }, { status: 200 });
-    }
 
     if (metrics.model) {
       updateData.model = metrics.model;
