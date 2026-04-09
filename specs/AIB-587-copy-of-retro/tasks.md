@@ -18,10 +18,10 @@
 
 **Purpose**: Database schema changes shared by all user stories
 
-- [x] T001 Add `SpecDepth` enum (`QUICK`, `STANDARD`, `COMPREHENSIVE`) to `prisma/schema.prisma`
-- [x] T002 Add `SpecGenerationJob` model to `prisma/schema.prisma` with fields: id, projectId, agent (Agent), depth (SpecDepth), status (SetupJobStatus), documentationUrl, additionalContext, workflowRunId, errorMessage, artifactSummary (Json?), startedAt, completedAt, createdAt, updatedAt; indexes on [projectId, status] and [projectId, createdAt(sort: Desc)]; relation to Project with onDelete: Cascade
-- [x] T003 Add `specsGeneratedAt DateTime?` field and `specGenerationJobs SpecGenerationJob[]` relation to the existing `Project` model in `prisma/schema.prisma`
-- [x] T004 Run `bunx prisma migrate dev --name add-spec-generation-job` and `bunx prisma generate`, then verify with `bun run type-check`
+- [X] T001 Add `SpecDepth` enum (`QUICK`, `STANDARD`, `COMPREHENSIVE`) to `prisma/schema.prisma`
+- [X] T002 Add `SpecGenerationJob` model to `prisma/schema.prisma` with fields: id, projectId, agent (Agent), depth (SpecDepth), status (SetupJobStatus), documentationUrl, additionalContext, workflowRunId, errorMessage, artifactSummary (Json?), startedAt, completedAt, createdAt, updatedAt; indexes on [projectId, status] and [projectId, createdAt(sort: Desc)]; relation to Project with onDelete: Cascade
+- [X] T003 Add `specsGeneratedAt DateTime?` field and `specGenerationJobs SpecGenerationJob[]` relation to the existing `Project` model in `prisma/schema.prisma`
+- [X] T004 Run `bunx prisma migrate dev --name add-spec-generation-job` and `bunx prisma generate`, then verify with `bun run type-check`
 
 ---
 

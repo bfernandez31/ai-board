@@ -87,7 +87,9 @@ model Project {
   comparisonRecords   ComparisonRecord[]
   healthScans         HealthScan[]
   healthScore         HealthScore?
+  specsGeneratedAt    DateTime?
   setupJobs           ProjectSetupJob[]
+  specGenerationJobs  SpecGenerationJob[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -600,6 +602,45 @@ model ProjectSetupJob {
 
   // Relations
   project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([projectId, createdAt(sort: Desc)])
+}
+
+enum SpecDepth {
+  QUICK
+  STANDARD
+  COMPREHENSIVE
+}
+
+model SpecGenerationJob {
+  id                Int             @id @default(autoincrement())
+  projectId         Int
+  agent             Agent
+  depth             SpecDepth
+  status            SetupJobStatus  @default(PENDING)
+
+  // Optional inputs
+  documentationUrl  String?         @db.VarChar(2000)
+  additionalContext String?         @db.VarChar(5000)
+
+  // Workflow tracking
+  workflowRunId     BigInt?
+
+  // Error tracking
+  errorMessage      String?         @db.VarChar(2000)
+
+  // Artifacts produced by workflow
+  artifactSummary   Json?
+
+  // Timestamps
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  project           Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, status])
   @@index([projectId, createdAt(sort: Desc)])
