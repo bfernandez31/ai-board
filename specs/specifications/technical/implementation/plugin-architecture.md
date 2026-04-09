@@ -379,7 +379,7 @@ External projects declare their environment via `.ai-board/config.yml` (schema v
 |-------|------|-------------|
 | `version` | `1` (literal) | Schema version — must be `1` |
 | `project.name` | string | Project name |
-| `project.language` | enum | `typescript` \| `python` \| `go` \| `rust` \| `java` |
+| `project.language` | enum \| null | `typescript` \| `javascript` \| `python` \| `go` \| `rust` \| `java` \| `kotlin` \| `ruby` \| `php` \| `null` |
 | `runtime.manager` | enum | `bun` \| `npm` \| `yarn` \| `pnpm` \| `pip` \| `poetry` \| `cargo` |
 | `commands.install` | string | Install command (e.g., `bun install`) |
 

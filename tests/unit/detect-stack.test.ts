@@ -62,6 +62,7 @@ function cleanupFixture(dir: string): void {
 
 describe('detect-stack.sh — TypeScript/Next.js', () => {
   let fixtureDir: string;
+  let result: { exitCode: number; stdout: string; stderr: string };
 
   beforeAll(() => {
     fixtureDir = createFixtureDir('ts-nextjs');
@@ -99,7 +100,10 @@ describe('detect-stack.sh — TypeScript/Next.js', () => {
       'datasource db {\n  provider = "postgresql"\n}\n',
     );
 
-    const result = runDetectStack(fixtureDir);
+    result = runDetectStack(fixtureDir);
+  });
+
+  it('exits with code 0', () => {
     expect(result.exitCode).toBe(0);
   });
 
@@ -139,12 +143,16 @@ describe('detect-stack.sh — TypeScript/Next.js', () => {
 
 describe('detect-stack.sh — Empty repository', () => {
   let fixtureDir: string;
+  let result: { exitCode: number; stdout: string; stderr: string };
 
   beforeAll(() => {
     fixtureDir = createFixtureDir('empty');
     // No manifest files at all
 
-    const result = runDetectStack(fixtureDir);
+    result = runDetectStack(fixtureDir);
+  });
+
+  it('exits with code 0', () => {
     expect(result.exitCode).toBe(0);
   });
 
@@ -203,6 +211,7 @@ describe('detect-stack.sh — Independent execution (US2)', () => {
 
 describe('detect-stack.sh — Python/FastAPI', () => {
   let fixtureDir: string;
+  let result: { exitCode: number; stdout: string; stderr: string };
 
   beforeAll(() => {
     fixtureDir = createFixtureDir('python-fastapi');
@@ -213,7 +222,10 @@ describe('detect-stack.sh — Python/FastAPI', () => {
     );
     fs.writeFileSync(path.join(fixtureDir, 'poetry.lock'), '');
 
-    const result = runDetectStack(fixtureDir);
+    result = runDetectStack(fixtureDir);
+  });
+
+  it('exits with code 0', () => {
     expect(result.exitCode).toBe(0);
   });
 
@@ -229,6 +241,7 @@ describe('detect-stack.sh — Python/FastAPI', () => {
 
 describe('detect-stack.sh — Rust/Actix', () => {
   let fixtureDir: string;
+  let result: { exitCode: number; stdout: string; stderr: string };
 
   beforeAll(() => {
     fixtureDir = createFixtureDir('rust-actix');
@@ -238,7 +251,10 @@ describe('detect-stack.sh — Rust/Actix', () => {
       `[package]\nname = "my-actix-api"\nversion = "0.1.0"\n\n[dependencies]\nactix-web = "4"\ntokio = "1"\n`,
     );
 
-    const result = runDetectStack(fixtureDir);
+    result = runDetectStack(fixtureDir);
+  });
+
+  it('exits with code 0', () => {
     expect(result.exitCode).toBe(0);
   });
 
@@ -254,6 +270,7 @@ describe('detect-stack.sh — Rust/Actix', () => {
 
 describe('detect-stack.sh — Go/Gin', () => {
   let fixtureDir: string;
+  let result: { exitCode: number; stdout: string; stderr: string };
 
   beforeAll(() => {
     fixtureDir = createFixtureDir('go-gin');
@@ -264,7 +281,10 @@ describe('detect-stack.sh — Go/Gin', () => {
     );
     fs.writeFileSync(path.join(fixtureDir, 'go.sum'), '');
 
-    const result = runDetectStack(fixtureDir);
+    result = runDetectStack(fixtureDir);
+  });
+
+  it('exits with code 0', () => {
     expect(result.exitCode).toBe(0);
   });
 
@@ -280,6 +300,7 @@ describe('detect-stack.sh — Go/Gin', () => {
 
 describe('detect-stack.sh — Java/Spring/Maven', () => {
   let fixtureDir: string;
+  let result: { exitCode: number; stdout: string; stderr: string };
 
   beforeAll(() => {
     fixtureDir = createFixtureDir('java-spring');
@@ -289,7 +310,10 @@ describe('detect-stack.sh — Java/Spring/Maven', () => {
       `<project>\n  <parent>\n    <artifactId>spring-boot-starter-parent</artifactId>\n  </parent>\n  <dependencies>\n    <dependency>\n      <groupId>org.springframework.boot</groupId>\n      <artifactId>spring-boot-starter-web</artifactId>\n    </dependency>\n  </dependencies>\n</project>`,
     );
 
-    const result = runDetectStack(fixtureDir);
+    result = runDetectStack(fixtureDir);
+  });
+
+  it('exits with code 0', () => {
     expect(result.exitCode).toBe(0);
   });
 
@@ -305,6 +329,7 @@ describe('detect-stack.sh — Java/Spring/Maven', () => {
 
 describe('detect-stack.sh — Ruby/Rails', () => {
   let fixtureDir: string;
+  let result: { exitCode: number; stdout: string; stderr: string };
 
   beforeAll(() => {
     fixtureDir = createFixtureDir('ruby-rails');
@@ -315,7 +340,10 @@ describe('detect-stack.sh — Ruby/Rails', () => {
     );
     fs.writeFileSync(path.join(fixtureDir, 'Gemfile.lock'), 'GEM\n  specs:\n    rails (7.0.0)\n');
 
-    const result = runDetectStack(fixtureDir);
+    result = runDetectStack(fixtureDir);
+  });
+
+  it('exits with code 0', () => {
     expect(result.exitCode).toBe(0);
   });
 
@@ -331,6 +359,7 @@ describe('detect-stack.sh — Ruby/Rails', () => {
 
 describe('detect-stack.sh — PHP/Laravel', () => {
   let fixtureDir: string;
+  let result: { exitCode: number; stdout: string; stderr: string };
 
   beforeAll(() => {
     fixtureDir = createFixtureDir('php-laravel');
@@ -345,7 +374,10 @@ describe('detect-stack.sh — PHP/Laravel', () => {
     );
     fs.writeFileSync(path.join(fixtureDir, 'composer.lock'), '{}');
 
-    const result = runDetectStack(fixtureDir);
+    result = runDetectStack(fixtureDir);
+  });
+
+  it('exits with code 0', () => {
     expect(result.exitCode).toBe(0);
   });
 
@@ -362,6 +394,7 @@ describe('detect-stack.sh — PHP/Laravel', () => {
 
 describe('detect-stack.sh — Multi-language (TS + Python)', () => {
   let fixtureDir: string;
+  let result: { exitCode: number; stdout: string; stderr: string };
 
   beforeAll(() => {
     fixtureDir = createFixtureDir('multi-lang');
@@ -376,7 +409,10 @@ describe('detect-stack.sh — Multi-language (TS + Python)', () => {
     fs.writeFileSync(path.join(fixtureDir, 'tsconfig.json'), '{}');
     fs.writeFileSync(path.join(fixtureDir, 'pyproject.toml'), `[project]\nname = "ml-backend"\n`);
 
-    const result = runDetectStack(fixtureDir);
+    result = runDetectStack(fixtureDir);
+  });
+
+  it('exits with code 0', () => {
     expect(result.exitCode).toBe(0);
   });
 

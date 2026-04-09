@@ -253,7 +253,8 @@ detect_framework() {
     python)
       local py_deps=""
       if [[ -f "$REPO_DIR/pyproject.toml" ]]; then
-        py_deps=$(grep -iE '^\s*(django|fastapi|flask)\b' "$REPO_DIR/pyproject.toml" 2>/dev/null || true)
+        # Match both key-style (django = "...") and PEP 621 array entries ("django>=...")
+        py_deps=$(grep -iE '(^\s*(django|fastapi|flask)\b|"(django|fastapi|flask)[\s>=<~!])' "$REPO_DIR/pyproject.toml" 2>/dev/null || true)
       fi
       if [[ -f "$REPO_DIR/requirements.txt" ]]; then
         py_deps="$py_deps $(grep -iE '^(django|fastapi|flask)\b' "$REPO_DIR/requirements.txt" 2>/dev/null || true)"
@@ -361,8 +362,11 @@ detect_test_framework() {
       fi
 
       # Check config files
-      if [[ -f "$REPO_DIR/vitest.config.ts" ]] || [[ -f "$REPO_DIR/vitest.config.js" ]]; then
+      if [[ -f "$REPO_DIR/vitest.config.ts" ]]; then
         CONFIG_FILES+=("vitest.config.ts")
+        TEST_FRAMEWORK="vitest"
+      elif [[ -f "$REPO_DIR/vitest.config.js" ]]; then
+        CONFIG_FILES+=("vitest.config.js")
         TEST_FRAMEWORK="vitest"
       fi
       if [[ -f "$REPO_DIR/jest.config.ts" ]] || [[ -f "$REPO_DIR/jest.config.js" ]]; then
@@ -491,6 +495,39 @@ detect_commands() {
     fi
   fi
 
+  # Taskfile tasks (Taskfile.yml or Taskfile.yaml)
+  local taskfile=""
+  if [[ -f "$REPO_DIR/Taskfile.yml" ]]; then
+    taskfile="$REPO_DIR/Taskfile.yml"
+  elif [[ -f "$REPO_DIR/Taskfile.yaml" ]]; then
+    taskfile="$REPO_DIR/Taskfile.yaml"
+  fi
+  if [[ -n "$taskfile" ]]; then
+    CONFIG_FILES+=("$(basename "$taskfile")")
+    local task_names
+    task_names=$(grep -E '^\s{2}[a-zA-Z_-]+:' "$taskfile" 2>/dev/null | sed 's/:.*//' | tr -d ' ' | head -20 || true)
+    if [[ -n "$task_names" ]]; then
+      local task_json="{}"
+      while IFS= read -r tname; do
+        task_json=$(echo "$task_json" | jq --arg k "task:$tname" --arg v "task $tname" '. + {($k): $v}')
+      done <<< "$task_names"
+      cmds=$(echo "$cmds" "$task_json" | jq -s '.[0] + .[1]')
+    fi
+  fi
+
+  # pyproject.toml [project.scripts] section
+  if [[ -f "$REPO_DIR/pyproject.toml" ]]; then
+    local py_scripts
+    py_scripts=$(sed -n '/^\[project\.scripts\]/,/^\[/p' "$REPO_DIR/pyproject.toml" 2>/dev/null | grep -E '^[a-zA-Z_-]+\s*=' | sed 's/\s*=.*//' | head -20 || true)
+    if [[ -n "$py_scripts" ]]; then
+      local py_json="{}"
+      while IFS= read -r sname; do
+        py_json=$(echo "$py_json" | jq --arg k "py:$sname" --arg v "$sname" '. + {($k): $v}')
+      done <<< "$py_scripts"
+      cmds=$(echo "$cmds" "$py_json" | jq -s '.[0] + .[1]')
+    fi
+  fi
+
   COMMANDS_JSON="$cmds"
 }
 
@@ -559,6 +596,24 @@ generate_config_yml() {
   local fw_val="${FRAMEWORK:-none}"
   local pm_val="${PACKAGE_MANAGER:-npm}"
 
+  # Derive install command from detected package manager
+  local install_cmd="echo 'install not configured'"
+  if [[ -n "$PACKAGE_MANAGER" ]]; then
+    case "$PACKAGE_MANAGER" in
+      bun) install_cmd="bun install" ;;
+      yarn) install_cmd="yarn install" ;;
+      pnpm) install_cmd="pnpm install" ;;
+      npm) install_cmd="npm install" ;;
+      cargo) install_cmd="cargo build" ;;
+      pip) install_cmd="pip install -r requirements.txt" ;;
+      poetry) install_cmd="poetry install" ;;
+      bundler) install_cmd="bundle install" ;;
+      composer) install_cmd="composer install" ;;
+      maven) install_cmd="mvn install" ;;
+      gradle) install_cmd="gradle build" ;;
+    esac
+  fi
+
   cat > "$REPO_DIR/.ai-board/config.yml" <<EOF
 version: 1
 project:
@@ -568,7 +623,7 @@ project:
 runtime:
   manager: ${pm_val}
 commands:
-  install: "echo 'install not configured'"
+  install: "${install_cmd}"
 EOF
 }
 

@@ -22,7 +22,7 @@ on:
 
 env:
   API_BASE_URL: ${{ vars.API_BASE_URL || 'https://ai-board.vercel.app' }}
-  APP_URL: ${{ vars.APP_URL }}
+  APP_URL: ${{ vars.APP_URL || vars.API_BASE_URL || 'https://ai-board.vercel.app' }}
   WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
   CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
   ANTHROPIC_MODEL: "claude-opus-4-6"
@@ -57,6 +57,7 @@ jobs:
             -s -o /dev/null -w "%{http_code}") || true
           if [ "$HTTP_CODE" = "409" ]; then
             echo "Job already CANCELLED — aborting workflow"
+            echo "CANCELLED=true" >> "$GITHUB_ENV"
             exit 1
           elif [ "$HTTP_CODE" != "200" ]; then
             echo "Failed to update job status to RUNNING (HTTP $HTTP_CODE)"
@@ -74,7 +75,9 @@ jobs:
           BODY=$(echo "$RESPONSE" | head -n -1)
 
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "No owner credential found (HTTP $HTTP_CODE) — using repository secrets as fallback"
+            echo "Failed to fetch owner credential (HTTP $HTTP_CODE)"
+            echo "CREDENTIAL_FAILED=true" >> "$GITHUB_ENV"
+            exit 1
           else
             CRED_TYPE=$(echo "$BODY" | jq -r '.credentialType')
             ENV_VAR=$(echo "$BODY" | jq -r '.envVar')
@@ -141,6 +144,14 @@ jobs:
         with:
           node-version: '22.20.0'
 
+      # ── Step 6b: Create plugin symlinks ─────────────────────────────
+      - name: Create plugin symlinks
+        working-directory: target-repo
+        run: |
+          mkdir -p .claude
+          ln -sf ../../ai-board/.claude-plugin/commands .claude/commands
+          ln -sf ../../ai-board/.claude-plugin/skills .claude/skills
+
       # ── Step 7: Phase 2 — LLM Content Generation ───────────────────
       - name: Phase 2 — Generate guidance files
         id: generate-guidance
@@ -197,7 +208,7 @@ jobs:
 
       # ── Step 9: Build Artifact Summary and Report ───────────────────
       - name: Report COMPLETED
-        if: success() || (failure() && env.PUSH_FAILED != 'true' && env.DETECTION_FAILED != 'true' && env.CLONE_FAILED != 'true')
+        if: success() || (failure() && env.PUSH_FAILED != 'true' && env.DETECTION_FAILED != 'true' && env.CLONE_FAILED != 'true' && env.CANCELLED != 'true' && env.CREDENTIAL_FAILED != 'true')
         working-directory: target-repo
         run: |
           CREATED=()
@@ -306,8 +317,17 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"status":"FAILED","errorMessage":"Failed to push commit to target repository","artifactSummary":{"errorCode":"COMMIT_FAILED","created":[],"missing":[".ai-board/config.yml","CLAUDE.md",".ai-board/memory/constitution.md","AGENTS.md"]}}' || true
 
+      - name: Report FAILED — Credential fetch failed
+        if: failure() && env.CREDENTIAL_FAILED == 'true'
+        run: |
+          curl -sf -X PATCH \
+            "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED","errorMessage":"Failed to fetch owner AI credential","artifactSummary":{"errorCode":"DISPATCH_FAILED","created":[],"missing":[".ai-board/config.yml","CLAUDE.md",".ai-board/memory/constitution.md","AGENTS.md"]}}' || true
+
       - name: Report FAILED — Catch-all
-        if: failure() && env.CLONE_FAILED != 'true' && env.DETECTION_FAILED != 'true' && env.PUSH_FAILED != 'true'
+        if: failure() && env.CLONE_FAILED != 'true' && env.DETECTION_FAILED != 'true' && env.PUSH_FAILED != 'true' && env.CANCELLED != 'true' && env.CREDENTIAL_FAILED != 'true'
         run: |
           curl -sf -X PATCH \
             "${{ env.API_BASE_URL }}/api/projects/${{ inputs.project_id }}/setup/jobs/${{ inputs.job_id }}/status" \

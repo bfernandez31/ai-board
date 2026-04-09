@@ -73,7 +73,7 @@ export const ValidationErrorTypeSchema = z.enum([
 
 export const ProjectSectionSchema = z.object({
   name: z.string().min(1, 'project.name must be a non-empty string'),
-  language: ProjectLanguageSchema,
+  language: ProjectLanguageSchema.nullable(),
   framework: ProjectFrameworkSchema.default('none'),
 }).strict();
 
