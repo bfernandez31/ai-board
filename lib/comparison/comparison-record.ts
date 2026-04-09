@@ -56,15 +56,22 @@ const comparisonRecordInclude = {
 } satisfies Prisma.ComparisonRecordInclude;
 
 function getWinnerTicketKey(report: ComparisonReport): string {
-  // Primary: highest constitution compliance score
-  const complianceScores = Object.entries(report.compliance).sort(
-    (a, b) => b[1].overall - a[1].overall
-  );
-  if (complianceScores[0]) {
-    return complianceScores[0][0];
+  const comparedTickets = new Set(report.metadata.comparedTickets);
+
+  // Primary: extract ticket key mentioned in the LLM recommendation
+  // Patterns like "Ship AIB-586", "Winner: AIB-586", "AIB-586 is the better"
+  if (report.recommendation) {
+    const ticketPattern = /\b([A-Z]{2,6}-\d+)\b/g;
+    let match;
+    while ((match = ticketPattern.exec(report.recommendation)) !== null) {
+      const key = match[1];
+      if (key && comparedTickets.has(key)) {
+        return key;
+      }
+    }
   }
 
-  // Fallback: ticket with most decision point verdicts (qualitative, not code volume)
+  // Secondary: ticket with most decision point verdicts
   const verdictCounts = new Map<string, number>();
   for (const dp of report.decisionPoints ?? []) {
     if (dp.verdictTicketKey) {
@@ -74,6 +81,14 @@ function getWinnerTicketKey(report: ComparisonReport): string {
   const byVerdicts = [...verdictCounts.entries()].sort((a, b) => b[1] - a[1]);
   if (byVerdicts[0]) {
     return byVerdicts[0][0];
+  }
+
+  // Tertiary: highest constitution compliance score
+  const complianceScores = Object.entries(report.compliance).sort(
+    (a, b) => b[1].overall - a[1].overall
+  );
+  if (complianceScores[0]) {
+    return complianceScores[0][0];
   }
 
   // Last resort: first compared ticket
