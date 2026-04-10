@@ -39,20 +39,13 @@ env:
   WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
   CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
   ANTHROPIC_MODEL: "claude-opus-4-6"
-  # Claude Code telemetry
-  CLAUDE_CODE_ENABLE_TELEMETRY: "1"
-  OTEL_LOGS_EXPORTER: "otlp"
-  OTEL_EXPORTER_OTLP_PROTOCOL: "http/json"
-  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
-  OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
-  OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
-  OTEL_LOGS_EXPORT_INTERVAL: "60000"
-  OTEL_BLRP_SCHEDULE_DELAY: "60000"
+  # Claude Code telemetry — disabled until ProjectSetupJob supports telemetry fields
+  CLAUDE_CODE_ENABLE_TELEMETRY: "0"
 
 jobs:
   retro-spec:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     permissions:
       contents: write
