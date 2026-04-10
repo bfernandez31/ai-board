@@ -265,7 +265,7 @@ invoke_mistral() {
 
   log_info "Invoking vibe with command file: $command_file"
 
-  local model="${MISTRAL_MODEL:-mistral-large-latest}"
+  local model="${MISTRAL_MODEL:-devstral-medium-latest}"
   local prompt
   prompt="$(cat "$command_file")"
 
