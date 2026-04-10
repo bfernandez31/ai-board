@@ -3212,10 +3212,12 @@ env:
 **Workflow Configuration** (Mistral vibe CLI):
 ```yaml
 env:
-  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry/v1/logs
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry/v1/logs
+  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: http/json
   OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
   OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
-  MISTRAL_DISABLE_DATALAKE: "1"
+  VIBE_TELEMETRY: "false"
 ```
 
 **Processing**:

@@ -511,7 +511,7 @@ sequenceDiagram
         RS->>CLI: echo prompt | codex exec --dangerously-bypass-approvals-and-sandbox -m $CODEX_MODEL -
     else AGENT_TYPE = MISTRAL
         RS->>CLI: pip install vibe-cli
-        RS->>RS: disable datalake telemetry (MISTRAL_DISABLE_DATALAKE=1)
+        RS->>RS: disable datalake telemetry (VIBE_TELEMETRY=false)
         RS->>RS: configure OTEL trace export to platform endpoint
         RS->>CLI: vibe run --profile auto-approve "/COMMAND ARGS"
     end

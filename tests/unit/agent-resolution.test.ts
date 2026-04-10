@@ -20,7 +20,7 @@ describe('resolveEffectiveAgent', () => {
     expect(resolveEffectiveAgent('MISTRAL', 'MISTRAL')).toBe('MISTRAL');
   });
 
-  it('falls back to CLAUDE when project default is MISTRAL and ticket agent is null', () => {
+  it('falls back to project default MISTRAL when ticket agent is null', () => {
     expect(resolveEffectiveAgent(null, 'MISTRAL')).toBe('MISTRAL');
   });
 });

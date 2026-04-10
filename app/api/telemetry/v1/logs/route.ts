@@ -396,10 +396,14 @@ async function processTracePayload(body: unknown, startTime: number): Promise<Ne
 
           // Calculate duration from span timestamps
           if (span.startTimeUnixNano && span.endTimeUnixNano) {
-            const startNs = BigInt(String(span.startTimeUnixNano));
-            const endNs = BigInt(String(span.endTimeUnixNano));
-            const durationMs = Number((endNs - startNs) / BigInt(1_000_000));
-            if (durationMs > 0) metrics.durationMs += durationMs;
+            try {
+              const startNs = BigInt(String(span.startTimeUnixNano));
+              const endNs = BigInt(String(span.endTimeUnixNano));
+              const durationMs = Number((endNs - startNs) / BigInt(1_000_000));
+              if (durationMs > 0) metrics.durationMs += durationMs;
+            } catch {
+              // Skip duration accumulation for non-numeric timestamps
+            }
           }
 
           // Extract tool names

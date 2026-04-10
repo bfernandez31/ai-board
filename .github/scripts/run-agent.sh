@@ -5,7 +5,7 @@ set -euo pipefail
 # Abstracts CLI installation, authentication, telemetry, and command invocation
 # across Claude Code and Codex CLI agents.
 
-AGENT_TYPE="${1:?ERROR: AGENT_TYPE is required (CLAUDE or CODEX)}"
+AGENT_TYPE="${1:?ERROR: AGENT_TYPE is required (CLAUDE, CODEX, or MISTRAL)}"
 COMMAND="${2:?ERROR: COMMAND is required (e.g., ai-board.specify)}"
 shift 2
 ARGS="$*"
@@ -233,6 +233,7 @@ install_mistral() {
     log_error "Failed to install vibe-cli"
     exit 1
   fi
+  export PATH="${HOME}/.local/bin:${PATH}"
   if ! command -v vibe &>/dev/null; then
     log_error "Failed to install vibe-cli — CLI binary not found after install"
     exit 1
@@ -250,7 +251,10 @@ setup_mistral_telemetry() {
   fi
 
   # Configure OTLP trace export for vibe
+  # Route traces to /v1/logs (the only implemented telemetry endpoint)
   export OTEL_TRACES_EXPORTER=otlp
+  export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs"
+  export OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=http/json
   export OTEL_EXPORTER_OTLP_PROTOCOL=http/json
   log_info "Mistral telemetry configured: VIBE_TELEMETRY=false, OTEL traces enabled"
 }
