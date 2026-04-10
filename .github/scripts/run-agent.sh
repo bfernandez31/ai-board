@@ -75,12 +75,11 @@ install_claude() {
     return 0
   fi
   log_info "Installing Claude Code CLI..."
-  if ! bun add -g @anthropic-ai/claude-code@2.1.87 >&2; then
+  # Use npm (not bun) — bun 1.3.12+ doesn't add global bin to PATH automatically
+  if ! npm install -g @anthropic-ai/claude-code@2.1.87 >&2; then
     log_error "Failed to install @anthropic-ai/claude-code"
     exit 1
   fi
-  # Ensure bun global bin is on PATH (bun add -g installs there)
-  export PATH="${HOME}/.bun/bin:${PATH}"
   if ! command -v claude &>/dev/null; then
     log_error "Failed to install @anthropic-ai/claude-code — CLI binary not found after install"
     exit 1
