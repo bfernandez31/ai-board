@@ -276,7 +276,7 @@ ${ARGS}"
   fi
 
   log_info "Model: $model"
-  echo "$prompt" | vibe --profile agent -m "$model" -
+  vibe --prompt "$prompt" --agent auto-approve -m "$model"
 }
 
 # --- Main dispatch ---
