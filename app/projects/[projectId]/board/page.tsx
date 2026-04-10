@@ -64,7 +64,7 @@ export default async function ProjectBoardPage({
   );
 
   return (
-    <main className="h-[calc(100vh-4rem)] bg-black overflow-hidden">
+    <main className="h-[calc(100vh-4rem)] bg-background overflow-hidden">
       <Board
         ticketsByStage={ticketsByStage}
         projectId={projectId}

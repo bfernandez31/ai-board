@@ -32,7 +32,7 @@ export default async function BoardPage() {
   const ticketsByStage = await getTicketsByStage(projectId);
 
   return (
-    <main className="h-screen bg-black overflow-hidden">
+    <main className="h-screen bg-background overflow-hidden">
       <Board
         ticketsByStage={ticketsByStage}
         projectId={projectId}
