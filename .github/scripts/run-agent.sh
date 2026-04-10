@@ -288,14 +288,19 @@ invoke_mistral() {
   local prompt
   prompt="$(cat "$command_file")"
 
+  # Write args to a temp file so vibe can `cat` it instead of
+  # wrestling with inline JSON escaping in bash heredocs
   if [[ -n "$ARGS" ]]; then
+    local args_file="/tmp/vibe-args.json"
+    printf '%s' "$ARGS" > "$args_file"
     prompt="${prompt}
 
-${ARGS}"
+The arguments for this command have been written to ${args_file}. Read them with: cat ${args_file}
+Do NOT try to parse the JSON inline in bash — always read from the file."
+    log_info "Args written to $args_file ($(wc -c < "$args_file") bytes)"
   fi
 
-  # Write prompt to temp file, then read back via $(cat) to avoid
-  # shell expansion issues with special chars in the markdown
+  # Write prompt to temp file for safe delivery via $(cat)
   local prompt_file
   prompt_file="$(mktemp /tmp/vibe-prompt-XXXXXX.md)"
   printf '%s' "$prompt" > "$prompt_file"
@@ -305,7 +310,7 @@ ${ARGS}"
   # Prefix with explicit execution instruction — vibe's system prompt
   # tells it to "propose a plan and wait for confirmation", which in
   # headless mode means it never executes. This override forces action.
-  local exec_prefix="IMPORTANT: You are running in CI/CD headless mode. Do NOT just describe a plan — you MUST execute every step using your tools (bash, write_file, read_file, etc.). Do NOT wait for user confirmation. Act immediately and completely."
+  local exec_prefix="IMPORTANT: You are running in CI/CD headless mode. Do NOT just describe a plan — you MUST execute every step using your tools (bash, write_file, read_file, etc.). Do NOT wait for user confirmation. Act immediately and completely. When a step fails, try a different approach — do NOT retry the same command more than twice."
   vibe --prompt "${exec_prefix}
 
 $(cat "$prompt_file")" --agent auto-approve --output streaming
