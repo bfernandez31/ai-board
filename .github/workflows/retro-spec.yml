@@ -156,9 +156,11 @@ jobs:
       - name: Fetch External Documentation
         id: fetch-docs
         if: inputs.docUrl != ''
+        env:
+          DOC_URL: ${{ inputs.docUrl }}
         run: |
-          echo "Fetching documentation from: ${{ inputs.docUrl }}"
-          DOC_CONTENT=$(curl -sL --max-time 30 "${{ inputs.docUrl }}" 2>/dev/null || echo "")
+          echo "Fetching documentation from: ${DOC_URL}"
+          DOC_CONTENT=$(curl -sL --max-time 30 "${DOC_URL}" 2>/dev/null || echo "")
           if [ -z "$DOC_CONTENT" ]; then
             echo "::warning::Documentation URL unreachable, proceeding with codebase only"
             echo "DOC_URL_USED=false" >> "$GITHUB_ENV"
