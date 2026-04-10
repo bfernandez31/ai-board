@@ -610,6 +610,32 @@ jobs:
             "${APP_URL}" \
             "${WORKFLOW_API_TOKEN}"
 
+      # Phase 7: Fetch Claude credential for code review (when project uses non-Claude agent)
+      - name: Fetch Claude Credential for Code Review
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' && inputs.agent != 'CLAUDE' }}
+        run: |
+          echo "🔑 Fetching Anthropic credential for code review (project agent: ${{ inputs.agent }})..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "${APP_URL}/api/internal/credentials?projectId=${{ inputs.project_id }}&provider=ANTHROPIC" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "ℹ️  No Anthropic credential found (HTTP $HTTP_CODE) — code review will use repo secret"
+          else
+            CRED_VALUE_B64=$(echo "$BODY" | jq -r '.value')
+            echo "::add-mask::${CRED_VALUE_B64}"
+            CRED_VALUE=$(echo "$CRED_VALUE_B64" | base64 -d)
+            echo "::add-mask::${CRED_VALUE}"
+            {
+              echo "CLAUDE_CODE_OAUTH_TOKEN<<CREDENTIAL_EOF"
+              echo "${CRED_VALUE}"
+              echo "CREDENTIAL_EOF"
+            } >> "$GITHUB_ENV"
+            echo "✅ Anthropic credential loaded for code review"
+          fi
+
       # Phase 7: Automated Code Review
       - name: Run Code Review
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
