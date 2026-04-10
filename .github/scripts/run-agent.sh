@@ -259,6 +259,23 @@ setup_mistral_telemetry() {
   log_info "Mistral telemetry configured: VIBE_TELEMETRY=false, OTEL traces enabled"
 }
 
+configure_mistral_model() {
+  local model="$1"
+  local vibe_home="${VIBE_HOME:-${HOME}/.vibe}"
+  mkdir -p "$vibe_home"
+
+  cat > "$vibe_home/config.toml" <<TOML
+active_model = "${model}"
+
+[[models]]
+name = "${model}"
+provider = "mistral"
+alias = "${model}"
+TOML
+
+  log_info "Configured vibe model: $model (config: $vibe_home/config.toml)"
+}
+
 invoke_mistral() {
   local command_file
   command_file=$(resolve_command_file "$COMMAND") || exit 1
@@ -266,6 +283,8 @@ invoke_mistral() {
   log_info "Invoking vibe with command file: $command_file"
 
   local model="${MISTRAL_MODEL:-devstral-medium-latest}"
+  configure_mistral_model "$model"
+
   local prompt
   prompt="$(cat "$command_file")"
 
@@ -274,9 +293,6 @@ invoke_mistral() {
 
 ${ARGS}"
   fi
-
-  # Configure model via VIBE_ACTIVE_MODEL env var (no -m CLI flag in vibe)
-  export VIBE_ACTIVE_MODEL="$model"
 
   log_info "Model: $model"
   vibe --prompt "$prompt" --agent auto-approve
