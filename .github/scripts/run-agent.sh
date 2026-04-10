@@ -302,7 +302,13 @@ ${ARGS}"
 
   log_info "Model: $model | Prompt file: $prompt_file ($(wc -c < "$prompt_file") bytes)"
   log_info "Working directory: $(pwd)"
-  vibe --prompt "$(cat "$prompt_file")" --agent auto-approve
+  # Prefix with explicit execution instruction — vibe's system prompt
+  # tells it to "propose a plan and wait for confirmation", which in
+  # headless mode means it never executes. This override forces action.
+  local exec_prefix="IMPORTANT: You are running in CI/CD headless mode. Do NOT just describe a plan — you MUST execute every step using your tools (bash, write_file, read_file, etc.). Do NOT wait for user confirmation. Act immediately and completely."
+  vibe --prompt "${exec_prefix}
+
+$(cat "$prompt_file")" --agent auto-approve --output streaming
   local exit_code=$?
 
   rm -f "$prompt_file"
