@@ -229,7 +229,7 @@ install_mistral() {
     return 0
   fi
   log_info "Installing vibe CLI..."
-  if ! pip install mistral-vibe >&2; then
+  if ! curl -LsSf https://mistral.ai/vibe/install.sh | bash >&2; then
     log_error "Failed to install mistral-vibe"
     exit 1
   fi
