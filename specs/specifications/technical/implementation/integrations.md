@@ -96,7 +96,7 @@ export async function dispatchWorkflow(params: {
   - `githubOwner`, `githubRepo` (required) - Target repository for checkout
   - `agent` (discrete input) - Resolved agent value for PLAN/BUILD commands
   - `specifyPayload` - JSON payload for SPECIFY command (includes `agent` field)
-- **Repository Checkout**: Checks out external project repository using `repository: ${{ inputs.githubOwner }}/${{ inputs.githubRepo }}`
+- **Repository Checkout**: Checks out external project repository. For the `specify` command, queries `gh api repos/<owner>/<repo>` to detect the repository's default branch and checks out that branch. For other commands, uses `inputs.branch`.
 - **Environment**: ubuntu-latest, Node.js 22.20.0, Python 3.11, PostgreSQL 14
 - **Commands**: specify, plan, task, implement, clarify
 - **Services**: PostgreSQL for implement command
@@ -109,7 +109,7 @@ export async function dispatchWorkflow(params: {
 - **Inputs**:
   - `ticket_id`, `quickImplPayload`, `attachments`, `job_id`, `project_id`
   - `githubRepository` (required) - Target repository in format owner/repo
-- **Repository Checkout**: Checks out external project repository
+- **Repository Checkout**: Queries `gh api repos/<owner>/<repo>` to detect the repository's default branch, then checks out that branch with full history (`fetch-depth: 0`)
 - **Environment**: Same as speckit.yml (ubuntu-latest, Node.js, Python, PostgreSQL 14, Playwright)
 - **Command**: Executes `/ai-board.quick-impl` with JSON payload
 - **Timeout**: 120 minutes maximum (matches full spec-kit workflow)

@@ -241,12 +241,22 @@ jobs:
           echo "::add-mask::${TOKEN}"
           echo "repo_token=${TOKEN}" >> "$GITHUB_OUTPUT"
 
+      - name: Detect default branch
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        id: default-branch
+        env:
+          GH_TOKEN: ${{ steps.fetch-github-token.outputs.repo_token }}
+        run: |
+          DEFAULT_BRANCH=$(gh api "repos/${{ inputs.githubRepository }}" --jq '.default_branch')
+          echo "branch=$DEFAULT_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "Default branch: $DEFAULT_BRANCH"
+
       - name: Checkout target repository
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.githubRepository }}
-          ref: main
+          ref: ${{ steps.default-branch.outputs.branch }}
           token: ${{ steps.fetch-github-token.outputs.repo_token }}
           fetch-depth: 0
           path: target

@@ -1,5 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import { CONSTITUTION_PATH, type ConstitutionContent } from '@/lib/types/constitution';
+import { getDefaultBranch } from '@/lib/github/default-branch';
 
 export interface ConstitutionFetchParams {
   owner: string;
@@ -41,7 +42,7 @@ const example = 'mock constitution example';
 export async function fetchConstitutionContent(
   params: ConstitutionFetchParams
 ): Promise<ConstitutionContent> {
-  const { owner, repo, branch = 'main' } = params;
+  const { owner, repo, branch } = params;
 
   // TEST_MODE is custom since Next.js always runs in development mode with `bun run dev`
   if (process.env.TEST_MODE === 'true') {
@@ -57,11 +58,13 @@ export async function fetchConstitutionContent(
   const octokit = new Octokit({ auth: token });
 
   try {
+    const resolvedBranch = branch ?? await getDefaultBranch(octokit, owner, repo);
+
     const response = await octokit.repos.getContent({
       owner,
       repo,
       path: CONSTITUTION_PATH,
-      ref: branch,
+      ref: resolvedBranch,
     });
 
     if (!('content' in response.data) || !response.data.content) {
@@ -98,13 +101,17 @@ export async function updateConstitutionContent(params: {
   sha: string;
   commitMessage?: string;
 }): Promise<{ commitSha: string; updatedAt: string }> {
-  const { owner, repo, branch = 'main', content, sha, commitMessage } = params;
+  const { owner, repo, branch, content, sha, commitMessage } = params;
 
   const token = getValidatedToken();
   const octokit = new Octokit({ auth: token });
   const message = commitMessage || 'docs(constitution): Update project constitution';
 
+  let resolvedBranch = branch;
+
   try {
+    resolvedBranch = resolvedBranch ?? await getDefaultBranch(octokit, owner, repo);
+
     const response = await octokit.repos.createOrUpdateFileContents({
       owner,
       repo,
@@ -112,7 +119,7 @@ export async function updateConstitutionContent(params: {
       message,
       content: Buffer.from(content).toString('base64'),
       sha,
-      branch,
+      branch: resolvedBranch,
     });
 
     return {
@@ -125,7 +132,7 @@ export async function updateConstitutionContent(params: {
         throw new Error('Another user has modified the constitution. Please refresh and try again.');
       }
       if (error.message.includes('Not Found')) {
-        throw new Error(`Branch ${branch} not found in repository`);
+        throw new Error(`Branch ${resolvedBranch} not found in repository`);
       }
       throw error;
     }

@@ -403,11 +403,37 @@ it('should return "New Command Display Name" for new-command', () => {
 - No code changes required for new assistance commands
 - Test fallback pattern with example command
 
+## Default Branch Resolver
+
+### Purpose
+
+Queries the GitHub API to determine a repository's default branch, allowing workflows and application code to avoid hardcoding `"main"`.
+
+### File Location
+
+`lib/github/default-branch.ts`
+
+### API Reference
+
+**Function**: `getDefaultBranch(octokit: Octokit, owner: string, repo: string): Promise<string>`
+
+Returns the repository's configured default branch name (e.g., `"main"`, `"master"`, `"trunk"`).
+
+**Parameters**:
+- `octokit` (Octokit): Authenticated Octokit instance
+- `owner` (string): GitHub repository owner (org or user)
+- `repo` (string): GitHub repository name
+
+**Returns**: Promise resolving to the default branch name string.
+
+**Errors**:
+- Throws on GitHub API failure (network, auth, rate limit)
+
 ## Constitution Fetcher
 
 ### Purpose
 
-Provides utility functions for fetching and managing constitution files from GitHub repositories with test environment support.
+Provides utility functions for fetching and updating constitution files from GitHub repositories, with test environment support and automatic default-branch resolution.
 
 ### File Location
 
@@ -415,76 +441,67 @@ Provides utility functions for fetching and managing constitution files from Git
 
 ### API Reference
 
-**Function**: `fetchConstitutionContent(githubOwner: string, githubRepo: string): Promise<{ content: string; exists: boolean }>`
+**Function**: `fetchConstitutionContent(params: ConstitutionFetchParams): Promise<ConstitutionContent>`
 
 Fetches constitution markdown content from `.ai-board/memory/constitution.md` in the project repository.
 
-**Parameters**:
-- `githubOwner` (string): GitHub repository owner (org or user)
-- `githubRepo` (string): GitHub repository name
+**Parameters** (`ConstitutionFetchParams`):
+- `owner` (string): GitHub repository owner (org or user)
+- `repo` (string): GitHub repository name
+- `branch` (string, optional): Branch to read from; defaults to the repository's default branch
 
-**Returns**: Promise resolving to object with:
+**Returns** (`ConstitutionContent`):
 - `content` (string): Raw markdown content
-- `exists` (boolean): Whether file exists in repository
+- `sha` (string): Git blob SHA (required for subsequent updates)
+- `path` (string): File path within the repository
+- `updatedAt` (string): ISO 8601 timestamp of the fetch
 
 **Test Environment**:
-- Returns mock constitution content when `NODE_ENV !== 'production'`
-- Consistent test data for E2E testing
+- Returns mock constitution content when `TEST_MODE === 'true'`
+- Consistent test data for integration and E2E testing
 
 **Errors**:
-- Throws if GitHub API request fails
-- Returns `exists: false` if file not found (404)
+- Throws `"GITHUB_TOKEN not configured"` if token is absent
+- Throws `"GITHUB_TOKEN is using a placeholder value"` if token contains `test` or `placeholder`
+- Throws `"Constitution file not found at <path>"` on 404
+- Throws `"GitHub API rate limit exceeded"` on rate limit errors
 
-**Function**: `updateConstitutionContent(githubOwner: string, githubRepo: string, content: string): Promise<void>`
+**Function**: `updateConstitutionContent(params): Promise<{ commitSha: string; updatedAt: string }>`
 
-Updates constitution file content via GitHub API commit.
+Updates constitution file content via a GitHub API commit.
 
 **Parameters**:
-- `githubOwner` (string): GitHub repository owner
-- `githubRepo` (string): GitHub repository name
+- `owner` (string): GitHub repository owner
+- `repo` (string): GitHub repository name
+- `branch` (string, optional): Branch to commit to; defaults to the repository's default branch
 - `content` (string): New markdown content
+- `sha` (string): Current blob SHA (for optimistic concurrency)
+- `commitMessage` (string, optional): Commit message; defaults to `"docs(constitution): Update project constitution"`
 
-**Behavior**:
-- Creates commit with message "Update constitution"
-- Uses authenticated GitHub API (PAT token)
-- Test mode: returns success without persisting changes
+**Returns**:
+- `commitSha` (string): SHA of the created commit
+- `updatedAt` (string): ISO 8601 timestamp
 
-**Function**: `fetchConstitutionHistory(githubOwner: string, githubRepo: string): Promise<ConstitutionCommit[]>`
-
-Fetches commit history for constitution file.
-
-**Returns**: Array of commits with:
-- `sha` (string): Commit SHA hash
-- `message` (string): Commit message
-- `author` (string): Author name
-- `date` (string): ISO 8601 timestamp
-- `url` (string): GitHub commit URL
-
-**Function**: `fetchConstitutionDiff(githubOwner: string, githubRepo: string, sha: string): Promise<ConstitutionDiff>`
-
-Fetches diff for specific commit.
-
-**Parameters**:
-- `sha` (string): Commit SHA to fetch diff for
-
-**Returns**: Object with:
-- `additions` (string[]): Added lines
-- `deletions` (string[]): Removed lines
-- `unchanged` (string[]): Unchanged lines
+**Errors**:
+- Throws `"Another user has modified the constitution. Please refresh and try again."` on SHA mismatch
+- Throws `"Branch <name> not found in repository"` on 404
 
 ### Implementation Details
 
 **GitHub API Integration**:
-- Uses Octokit for repository operations
-- Authenticates with `GITHUB_TOKEN` or `GH_PAT`
-- Handles rate limiting and network errors
-- Caches responses at TanStack Query level
+- Uses Octokit for all repository operations
+- Authenticates with `GITHUB_TOKEN` environment variable
+- Validates token is not a placeholder before use
+- Handles rate limiting and Not Found errors explicitly
+
+**Branch Resolution**:
+- When `branch` is omitted, calls `getDefaultBranch(octokit, owner, repo)` to detect the repository's configured default branch
+- Avoids hardcoding `"main"` so the system works with any repository naming convention
 
 **Test Mode Detection**:
 ```typescript
-const isTestMode = process.env.NODE_ENV !== 'production';
-if (isTestMode) {
-  return mockConstitutionData;
+if (process.env.TEST_MODE === 'true') {
+  return mockConstitutionContent;
 }
 ```
 
