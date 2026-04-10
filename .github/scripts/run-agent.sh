@@ -313,7 +313,7 @@ Do NOT try to parse the JSON inline in bash — always read from the file."
   local exec_prefix="IMPORTANT: You are running in CI/CD headless mode. Do NOT just describe a plan — you MUST execute every step using your tools (bash, write_file, read_file, etc.). Do NOT wait for user confirmation. Act immediately and completely. When a step fails, try a different approach — do NOT retry the same command more than twice."
   vibe --prompt "${exec_prefix}
 
-$(cat "$prompt_file")" --agent auto-approve --output streaming
+$(cat "$prompt_file")" --agent auto-approve
   local exit_code=$?
 
   rm -f "$prompt_file"
