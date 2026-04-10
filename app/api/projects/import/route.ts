@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const octokit = await createUserGitHubClient(userId);
 
     // Verify admin rights on the repo
-    let repoData: { description: string | null };
+    let repoData: { description: string | null; defaultBranch: string };
     try {
       const { data } = await octokit.repos.get({
         owner: validated.githubOwner,
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      repoData = { description: data.description };
+      repoData = { description: data.description, defaultBranch: data.default_branch };
     } catch (error) {
       if ((error as { status?: number }).status === 404) {
         return NextResponse.json(
@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       githubRepo: validated.githubRepo,
       key: projectKey,
       userId,
+      defaultBranch: repoData.defaultBranch,
       updatedAt: new Date(),
     };
     const projectSelect = { id: true, name: true, key: true, githubOwner: true, githubRepo: true } as const;
