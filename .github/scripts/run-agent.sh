@@ -275,8 +275,11 @@ invoke_mistral() {
 ${ARGS}"
   fi
 
+  # Configure model via VIBE_ACTIVE_MODEL env var (no -m CLI flag in vibe)
+  export VIBE_ACTIVE_MODEL="$model"
+
   log_info "Model: $model"
-  vibe --prompt "$prompt" --agent auto-approve -m "$model"
+  vibe --prompt "$prompt" --agent auto-approve
 }
 
 # --- Main dispatch ---
