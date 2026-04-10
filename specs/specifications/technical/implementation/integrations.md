@@ -215,7 +215,7 @@ export async function dispatchWorkflow(params: {
 - **Output**: `specs/specifications/` directory committed to the target repository with spec depth matching the selected level
 - **Security**: `docUrl` input is passed via an `env:` block (`DOC_URL`) rather than direct `${{ inputs.docUrl }}` interpolation in the `run:` block, preventing shell metacharacter injection
 - **Error behavior**: Reports FAILED with error message; partial results not committed; unreachable `docUrl` logs a warning and continues
-- **Timeout**: 30 minutes
+- **Timeout**: 60 minutes
 
 ### Dynamic Service Inputs
 

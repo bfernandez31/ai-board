@@ -18,9 +18,9 @@ import { Loader2, FileSearch } from 'lucide-react';
 type Depth = 'QUICK' | 'STANDARD' | 'COMPREHENSIVE';
 
 const DEPTH_OPTIONS: { value: Depth; label: string; description: string; estimate: string }[] = [
-  { value: 'QUICK', label: 'Quick', description: 'Project overview and high-level architecture', estimate: '~2 min' },
-  { value: 'STANDARD', label: 'Standard', description: 'Architecture, APIs, data model, and workflows', estimate: '~5 min' },
-  { value: 'COMPREHENSIVE', label: 'Comprehensive', description: 'Full functional and technical specifications', estimate: '~15 min' },
+  { value: 'QUICK', label: 'Quick', description: 'Project overview and high-level architecture', estimate: '~5 min' },
+  { value: 'STANDARD', label: 'Standard', description: 'Architecture, APIs, data model, and workflows', estimate: '~15 min' },
+  { value: 'COMPREHENSIVE', label: 'Comprehensive', description: 'Full functional and technical specifications', estimate: '~40 min' },
 ];
 
 interface RetroSpecModalProps {

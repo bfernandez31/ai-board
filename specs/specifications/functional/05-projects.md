@@ -578,8 +578,8 @@ The modal provides three configuration options:
 
 **Depth picker** (radio group, required):
 - **Quick** — Project overview and high-level architecture summary (~5 min)
-- **Standard** (default) — Architecture, API endpoints, data model, and key workflows (~10 min)
-- **Comprehensive** — Full functional and technical specs, entity documentation, API schemas, and workflow documentation (~20 min)
+- **Standard** (default) — Architecture, API endpoints, data model, and key workflows (~15 min)
+- **Comprehensive** — Full functional and technical specs, entity documentation, API schemas, and workflow documentation (~40 min)
 
 **Documentation URL** (optional): URL of existing external documentation (Notion, Confluence, wiki). The workflow fetches the URL and incorporates its content. If the URL is unreachable, spec generation continues using only the codebase.
 
