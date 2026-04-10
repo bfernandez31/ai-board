@@ -229,8 +229,8 @@ install_mistral() {
     return 0
   fi
   log_info "Installing vibe CLI..."
-  if ! pip install vibe-cli >&2; then
-    log_error "Failed to install vibe-cli"
+  if ! pip install mistral-vibe >&2; then
+    log_error "Failed to install mistral-vibe"
     exit 1
   fi
   export PATH="${HOME}/.local/bin:${PATH}"
