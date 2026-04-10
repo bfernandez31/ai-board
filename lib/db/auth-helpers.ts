@@ -12,6 +12,7 @@ export interface AuthorizedProject {
   githubOwner: string;
   githubRepo: string;
   clarificationPolicy: string;
+  defaultBranch: string;
 }
 
 async function requireAuthorizedUserId(request?: NextRequest): Promise<string> {
@@ -43,6 +44,7 @@ export async function verifyProjectAccess(projectId: number, request?: NextReque
       githubOwner: true,
       githubRepo: true,
       clarificationPolicy: true,
+      defaultBranch: true,
     },
   });
 
@@ -106,6 +108,7 @@ export async function verifyProjectOwnership(projectId: number, request?: NextRe
       githubOwner: true,
       githubRepo: true,
       clarificationPolicy: true,
+      defaultBranch: true,
     },
   });
 

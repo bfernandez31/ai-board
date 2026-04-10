@@ -638,7 +638,7 @@ export type DocumentError = z.infer<typeof DocumentErrorSchema>;
 - **BRANCH_NOT_ASSIGNED**: Ticket has no branch assigned yet
 - **FILE_NOT_FOUND**: Documentation file not found in repository
 - **NOT_AVAILABLE_YET**: Document not yet created (e.g., plan before planning stage)
-- **NOT_MERGED**: Document not merged to main branch (for SHIP stage tickets)
+- **NOT_MERGED**: Document not merged to the repository's default branch (for SHIP stage tickets)
 - **RATE_LIMIT**: GitHub API rate limit exceeded
 - **GITHUB_API_ERROR**: GitHub API returned an error
 - **INTERNAL_ERROR**: Unexpected server error

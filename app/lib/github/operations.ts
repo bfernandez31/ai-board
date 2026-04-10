@@ -3,7 +3,7 @@ import { Octokit } from '@octokit/rest';
 export interface CommitImageOptions {
   owner: string;
   repo: string;
-  branch?: string;
+  branch: string;
   path: string;
   content: Buffer;
   message: string;
@@ -14,7 +14,7 @@ export interface CommitImageOptions {
 export interface MoveImagesOptions {
   owner: string;
   repo: string;
-  sourceBranch?: string;
+  sourceBranch: string;
   targetBranch: string;
   sourcePath: string;
   targetPath: string;
@@ -25,7 +25,7 @@ export interface MoveImagesOptions {
 export interface DeleteAssetsOptions {
   owner: string;
   repo: string;
-  branch?: string;
+  branch: string;
   path: string;
   authorName: string;
   authorEmail: string;
@@ -40,7 +40,7 @@ export async function commitImageToRepo(
   octokit: Octokit,
   options: CommitImageOptions
 ): Promise<GitHubOperationResult> {
-  const { owner, repo, branch = 'main', path, content, message, authorName, authorEmail } = options;
+  const { owner, repo, branch, path, content, message, authorName, authorEmail } = options;
 
   if (process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true' || process.env.TEST_USER_ID) {
     return { commitSha: `mock-sha-${Date.now()}`, success: true };
@@ -79,7 +79,7 @@ export async function moveImagesToFeatureBranch(
   octokit: Octokit,
   options: MoveImagesOptions
 ): Promise<GitHubOperationResult> {
-  const { owner, repo, sourceBranch = 'main', targetBranch, sourcePath, targetPath, authorName, authorEmail } = options;
+  const { owner, repo, sourceBranch, targetBranch, sourcePath, targetPath, authorName, authorEmail } = options;
 
   try {
     const { data: sourceContents } = await octokit.repos.getContent({
@@ -131,7 +131,7 @@ export async function deleteTicketAssets(
   octokit: Octokit,
   options: DeleteAssetsOptions
 ): Promise<GitHubOperationResult> {
-  const { owner, repo, branch = 'main', path, authorName, authorEmail } = options;
+  const { owner, repo, branch, path, authorName, authorEmail } = options;
 
   try {
     const { data: contents } = await octokit.repos.getContent({ owner, repo, path, ref: branch });

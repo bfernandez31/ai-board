@@ -20,6 +20,7 @@ vi.mock('next/navigation', () => ({
 const mockProjectData = {
   githubOwner: 'testowner',
   githubRepo: 'testrepo',
+  defaultBranch: 'develop',
 };
 
 beforeEach(() => {
@@ -131,7 +132,7 @@ describe('IconRailSidebar', () => {
     const docsLink = await screen.findByRole('link', { name: /docs/i });
     expect(docsLink).toHaveAttribute(
       'href',
-      'https://github.com/testowner/testrepo/tree/main/specs/specifications'
+      'https://github.com/testowner/testrepo/tree/develop/specs/specifications'
     );
     expect(docsLink).toHaveAttribute('target', '_blank');
     expect(docsLink).toHaveAttribute('rel', 'noopener noreferrer');

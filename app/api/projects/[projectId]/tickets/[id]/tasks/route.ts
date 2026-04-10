@@ -46,7 +46,7 @@ export async function GET(
       return NextResponse.json({ error: 'Tasks not available', code: 'NOT_AVAILABLE_YET', message: 'Ticket does not have a completed "plan" job' }, { status: 404 });
     }
 
-    const branch = ticket.stage === 'SHIP' ? 'main' : ticket.branch;
+    const branch = ticket.stage === 'SHIP' ? ticket.project.defaultBranch : ticket.branch;
 
     try {
       const content = await fetchDocumentContent({

@@ -150,11 +150,12 @@ Fetch project details including clarification policy.
     "commands": { "install": "bun install" },
     "agent": { "cli": "claude-code" }
   },
-  "configSyncedAt": "2026-04-02T12:00:00.000Z"
+  "configSyncedAt": "2026-04-02T12:00:00.000Z",
+  "defaultBranch": "main"
 }
 ```
 
-`config` and `configSyncedAt` are `null` when no config has been synced.
+`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync.
 
 **Errors**:
 - `401`: Not authenticated
@@ -2208,7 +2209,7 @@ Fetch spec.md content for a ticket.
 ```
 
 **Branch Resolution**:
-- **SHIP stage**: Fetches from main branch
+- **SHIP stage**: Fetches from the repository's default branch
 - **All other stages**: Fetches from ticket's feature branch
 
 **Errors**:
@@ -2243,7 +2244,7 @@ Fetch plan.md content for a ticket.
 ```
 
 **Branch Resolution**:
-- **SHIP stage**: Fetches from main branch
+- **SHIP stage**: Fetches from the repository's default branch
 - **All other stages**: Fetches from ticket's feature branch
 
 **Errors**:
@@ -2278,7 +2279,7 @@ Fetch tasks.md content for a ticket.
 ```
 
 **Branch Resolution**:
-- **SHIP stage**: Fetches from main branch
+- **SHIP stage**: Fetches from the repository's default branch
 - **All other stages**: Fetches from ticket's feature branch
 
 **Errors**:
@@ -2313,7 +2314,7 @@ Fetch summary.md content for a ticket (read-only).
 ```
 
 **Branch Resolution**:
-- **SHIP stage**: Fetches from main branch
+- **SHIP stage**: Fetches from the repository's default branch
 - **All other stages**: Fetches from ticket's feature branch
 
 **Availability**:
@@ -2459,7 +2460,7 @@ Fetch commit history for a documentation file on a ticket's feature branch.
 ```
 
 **Branch Resolution**:
-- **SHIP stage**: Fetches history from `main` branch
+- **SHIP stage**: Fetches history from the repository's default branch
 - **All other stages**: Fetches history from the ticket's feature branch
 
 **File Path**: `specs/{ticketBranch}/{docType}.md` (uses original branch name even for SHIP tickets)

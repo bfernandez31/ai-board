@@ -81,6 +81,7 @@ model Project {
   defaultAgent        Agent               @default(CLAUDE)
   config              Json?
   configSyncedAt      DateTime?
+  defaultBranch       String              @default("main") @db.VarChar(100)
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
   members             ProjectMember[]

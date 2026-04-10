@@ -56,6 +56,7 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 - `project.key`: 3-char unique identifier (e.g., "AIB")
 - `branch`: Created by workflow, NOT during stage transition
 - `workflowType`: FULL|QUICK — set once, never changes (CLEAN retained in DB enum for historical data)
+- `defaultBranch`: Repository default branch (auto-updated during config sync, defaults to `"main"`)
 - `previewUrl`: Single per project (auto-replaces on deploy)
 - Job commands: `specify`, `plan`, `implement`, `verify`, `ship`, `quick-impl`, `deploy-preview`, `rollback-reset`, `iterate`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`, `comment-ship`, `health-scan`
 - Notifications: 15s polling, soft delete with 30-day retention

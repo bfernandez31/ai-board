@@ -116,8 +116,8 @@ export async function GET(
       );
     }
 
-    // Determine branch (SHIP → main, else → feature branch)
-    const branch = ticket.stage === 'SHIP' ? 'main' : ticket.branch;
+    // Determine branch (SHIP → default branch, else → feature branch)
+    const branch = ticket.stage === 'SHIP' ? project.defaultBranch : ticket.branch;
 
     // Construct file path for this doc type
     // File structure: specs/{branchName}/{docType}.md (created by create-new-feature.sh)

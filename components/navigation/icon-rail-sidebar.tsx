@@ -15,6 +15,7 @@ import {
 interface ProjectResponse {
   githubOwner?: string;
   githubRepo?: string;
+  defaultBranch?: string;
 }
 
 interface IconRailSidebarProps {
@@ -36,7 +37,7 @@ export function IconRailSidebar({ projectId }: IconRailSidebarProps) {
 
   const specsUrl =
     project?.githubOwner && project?.githubRepo
-      ? `https://github.com/${project.githubOwner}/${project.githubRepo}/tree/main/specs/specifications`
+      ? `https://github.com/${project.githubOwner}/${project.githubRepo}/tree/${project.defaultBranch ?? 'main'}/specs/specifications`
       : null;
 
   const viewItems = NAVIGATION_ITEMS.filter((item) => item.group === 'views');

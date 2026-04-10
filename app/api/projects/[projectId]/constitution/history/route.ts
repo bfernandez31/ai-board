@@ -65,7 +65,7 @@ export async function GET(
     const { data: commits } = await octokit.repos.listCommits({
       owner: project.githubOwner,
       repo: project.githubRepo,
-      sha: 'main',
+      sha: project.defaultBranch,
       path: CONSTITUTION_PATH,
     });
 

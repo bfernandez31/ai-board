@@ -80,6 +80,12 @@ export async function syncProjectConfig(
     });
     const defaultBranch = repoInfo.data.default_branch;
 
+    // Persist the default branch so other features can use it without extra API calls
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { defaultBranch },
+    });
+
     const response = await octokit.repos.getContent({
       owner: project.githubOwner,
       repo: project.githubRepo,

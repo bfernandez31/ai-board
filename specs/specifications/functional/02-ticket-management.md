@@ -229,7 +229,7 @@ The ticket detail modal provides quick access to workflow documentation files:
 - Read-only mode only (no edit functionality)
 - Icon: FileOutput
 - Fetches content from feature branch for BUILD/VERIFY stages
-- Fetches content from main branch for SHIP stage
+- Fetches content from the repository's default branch for SHIP stage
 - Not available for QUICK workflow type (summary files only created during full workflow implementation)
 
 **Common Behaviors**:

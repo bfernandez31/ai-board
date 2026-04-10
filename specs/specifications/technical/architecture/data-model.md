@@ -80,6 +80,7 @@ model Project {
   defaultAgent         Agent                @default(CLAUDE)
   config               Json?
   configSyncedAt       DateTime?
+  defaultBranch        String               @default("main")
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
 
@@ -117,6 +118,7 @@ model Project {
 - `defaultAgent`: Default AI agent for all tickets in the project (enum, default: CLAUDE)
 - `config`: Parsed `.ai-board/config.yml` content stored as JSON (nullable — null means no config synced)
 - `configSyncedAt`: Timestamp of the last successful config fetch from GitHub (nullable)
+- `defaultBranch`: The repository's default branch name (default: `"main"`), auto-updated during config sync
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
 

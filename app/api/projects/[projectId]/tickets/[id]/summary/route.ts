@@ -46,7 +46,7 @@ export async function GET(
       return NextResponse.json({ error: 'Summary not available', code: 'SUMMARY_NOT_AVAILABLE', message: 'Ticket does not have a completed "implement" job' }, { status: 404 });
     }
 
-    const branch = ticket.stage === 'SHIP' ? 'main' : ticket.branch;
+    const branch = ticket.stage === 'SHIP' ? ticket.project.defaultBranch : ticket.branch;
 
     try {
       const content = await fetchDocumentContent({
