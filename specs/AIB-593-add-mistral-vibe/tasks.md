@@ -138,9 +138,9 @@
 
 **Purpose**: Final validation across all stories and non-regression check.
 
-- [ ] T029 Run `bun run type-check` and fix any remaining TypeScript errors
-- [ ] T030 Run `bun run lint` and fix any linting issues
-- [ ] T031 Run `bun run test:unit` to confirm all unit tests pass (including pre-existing)
+- [x] T029 Run `bun run type-check` and fix any remaining TypeScript errors ✅ DONE
+- [x] T030 Run `bun run lint` and fix any linting issues ✅ DONE
+- [x] T031 Run `bun run test:unit` to confirm all unit tests pass (including pre-existing) ✅ DONE (91 tests, 7 files)
 - [ ] T032 Run `bun run test:integration` to confirm all integration tests pass (including pre-existing)
 
 ---
