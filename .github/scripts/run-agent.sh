@@ -294,13 +294,14 @@ invoke_mistral() {
 ${ARGS}"
   fi
 
-  # Write prompt to temp file to avoid CLI arg truncation on large prompts
+  # Write prompt to temp file, then read back via $(cat) to avoid
+  # shell expansion issues with special chars in the markdown
   local prompt_file
   prompt_file="$(mktemp /tmp/vibe-prompt-XXXXXX.md)"
-  echo "$prompt" > "$prompt_file"
+  printf '%s' "$prompt" > "$prompt_file"
 
   log_info "Model: $model | Prompt file: $prompt_file ($(wc -c < "$prompt_file") bytes)"
-  vibe --prompt-file "$prompt_file" --agent auto-approve
+  vibe --prompt "$(cat "$prompt_file")" --agent auto-approve
   local exit_code=$?
 
   rm -f "$prompt_file"
