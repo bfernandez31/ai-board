@@ -201,6 +201,32 @@ jobs:
           fi
           echo "PROJECT_ID=${{ inputs.project_id }}" >> "$GITHUB_ENV"
 
+      # All assist commands use Claude — fetch Anthropic credential when project agent is non-Claude
+      - name: Fetch Claude Credential (non-Claude projects)
+        if: ${{ env.SKIP_CLAUDE != 'true' && inputs.agent != 'CLAUDE' }}
+        run: |
+          echo "🔑 Fetching Anthropic credential (project agent: ${{ inputs.agent }})..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "${APP_URL}/api/internal/credentials?projectId=${{ inputs.project_id }}&provider=ANTHROPIC" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "ℹ️  No Anthropic credential found (HTTP $HTTP_CODE) — will use repo secret"
+          else
+            CRED_VALUE_B64=$(echo "$BODY" | jq -r '.value')
+            echo "::add-mask::${CRED_VALUE_B64}"
+            CRED_VALUE=$(echo "$CRED_VALUE_B64" | base64 -d)
+            echo "::add-mask::${CRED_VALUE}"
+            {
+              echo "CLAUDE_CODE_OAUTH_TOKEN<<CREDENTIAL_EOF"
+              echo "${CRED_VALUE}"
+              echo "CREDENTIAL_EOF"
+            } >> "$GITHUB_ENV"
+            echo "✅ Anthropic credential loaded for assist commands"
+          fi
+
       - name: Handle Skip Scenarios
         if: ${{ env.SKIP_CLAUDE == 'true' }}
         run: |
