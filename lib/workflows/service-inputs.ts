@@ -3,6 +3,7 @@ import type { Project } from '@prisma/client';
 interface ServiceEntry {
   type: string;
   version: string;
+  database?: string;
 }
 
 /**
@@ -34,6 +35,9 @@ export function getProjectServiceInputs(project?: Pick<Project, 'config'>): Reco
   for (const service of services) {
     inputs[`needs_${service.type}`] = 'true';
     inputs[`${service.type}_version`] = service.version;
+    if (service.database) {
+      inputs[`${service.type}_db`] = service.database;
+    }
   }
   return inputs;
 }

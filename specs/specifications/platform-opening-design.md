@@ -238,9 +238,9 @@ jobs:
       postgres:
         image: ${{ inputs.needs_postgres && format('postgres:{0}', inputs.postgres_version) || '' }}
         env:
-          POSTGRES_DB: test
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
+          POSTGRES_DB: ${{ inputs.postgres_db }}
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: ${{ inputs.needs_postgres && '--health-cmd pg_isready --health-interval 10s' || '' }}
@@ -258,7 +258,9 @@ Services with `image: ''` don't start — no overhead.
 When the app dispatches a workflow via `handleTicketTransition()`, it reads the project config and passes the right inputs:
 
 ```typescript
-const config = await getProjectConfig(project.id);
+// lib/workflows/service-inputs.ts — maps config.services[] to workflow inputs
+// Generates: needs_{type}, {type}_version, {type}_db (when database is specified)
+const serviceInputs = getProjectServiceInputs(project);
 
 await octokit.actions.createWorkflowDispatch({
   owner: 'bfernandez31',
@@ -267,9 +269,7 @@ await octokit.actions.createWorkflowDispatch({
   inputs: {
     githubRepository: `${project.githubOwner}/${project.githubRepo}`,
     // ... existing inputs
-    needs_postgres: String(!!config.services?.postgres),
-    postgres_version: config.services?.postgres?.version || '16',
-    needs_redis: String(!!config.services?.redis),
+    ...serviceInputs,
   }
 });
 ```

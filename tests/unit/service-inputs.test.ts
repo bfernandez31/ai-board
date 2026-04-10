@@ -78,6 +78,52 @@ describe('getProjectServiceInputs', () => {
       });
     });
 
+    it('includes database name when specified', () => {
+      const result = getProjectServiceInputs(
+        makeProject({
+          services: [
+            { type: 'postgres', version: '14', database: 'myapp_test' },
+          ],
+        })
+      );
+      expect(result).toEqual({
+        needs_postgres: 'true',
+        postgres_version: '14',
+        postgres_db: 'myapp_test',
+      });
+    });
+
+    it('omits database key when not specified', () => {
+      const result = getProjectServiceInputs(
+        makeProject({
+          services: [{ type: 'postgres', version: '14' }],
+        })
+      );
+      expect(result).not.toHaveProperty('postgres_db');
+    });
+
+    it('maps database names for multiple services', () => {
+      const result = getProjectServiceInputs(
+        makeProject({
+          services: [
+            { type: 'postgres', version: '16', database: 'app_test' },
+            { type: 'mysql', version: '8', database: 'app_mysql' },
+            { type: 'redis', version: '7' },
+          ],
+        })
+      );
+      expect(result).toEqual({
+        needs_postgres: 'true',
+        postgres_version: '16',
+        postgres_db: 'app_test',
+        needs_mysql: 'true',
+        mysql_version: '8',
+        mysql_db: 'app_mysql',
+        needs_redis: 'true',
+        redis_version: '7',
+      });
+    });
+
     it('returns empty object when services array is empty', () => {
       const result = getProjectServiceInputs(
         makeProject({ services: [] })

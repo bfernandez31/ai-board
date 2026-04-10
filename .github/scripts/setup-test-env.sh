@@ -1,16 +1,30 @@
 #!/bin/bash
 # Setup test environment file for CI/CD workflows
-# This script creates a .env file from .env.test template and injects GitHub Secrets
+# Config-driven: reads commands.env_setup from .ai-board/config.yml if available,
+# falls back to .env.test template approach, skips if neither exists.
 
 set -e
 
-echo "🔧 Setting up test environment file..."
+echo "🔧 Setting up test environment..."
 
-# Check if .env.test exists
-if [ ! -f ".env.test" ]; then
-  echo "❌ Error: .env.test template not found"
-  exit 1
+# 1. Config-driven: check if project defines a custom env_setup command
+if [ -f ".ai-board/config.yml" ] && command -v yq &>/dev/null; then
+  ENV_SETUP_CMD=$(yq eval '.commands.env_setup' .ai-board/config.yml 2>/dev/null)
+  if [ -n "$ENV_SETUP_CMD" ] && [ "$ENV_SETUP_CMD" != "null" ]; then
+    echo "▶️  Running config env_setup: $ENV_SETUP_CMD"
+    eval "$ENV_SETUP_CMD"
+    echo "✅ Custom env_setup completed"
+    exit 0
+  fi
 fi
+
+# 2. Fallback: .env.test template approach (ai-board default)
+if [ ! -f ".env.test" ]; then
+  echo "ℹ️  No .env.test template and no commands.env_setup in config — skipping"
+  exit 0
+fi
+
+echo "🔧 Setting up test environment file from .env.test template..."
 
 # Copy template to .env
 cp .env.test .env

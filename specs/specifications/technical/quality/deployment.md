@@ -115,21 +115,19 @@ services:
 
 When a `needs_*` flag is false, the corresponding image string is empty and GitHub Actions skips the container entirely — zero overhead.
 
-**Infrastructure Setup** (implement command only, hardcoded as provisioning steps):
+**Infrastructure Setup** (implement command only, config-driven via `setup-environment.sh` and `run-command.sh`):
 
 ```yaml
-  - name: Apply Prisma migrations
+  - name: Post-install setup (ORM)
     if: inputs.command == 'implement'
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
-    run: |
-      npx prisma migrate deploy
-      npx prisma db seed
+    run: ai-board/.github/scripts/setup-environment.sh target --phase post-install
 
-  - name: Install Playwright browsers
+  - name: Setup Test Environment
     if: inputs.command == 'implement'
-    run: npx playwright install --with-deps
+    run: ../ai-board/.github/scripts/setup-test-env.sh
 ```
+
+> Database URL, Prisma commands, and test setup are read from `.ai-board/config.yml` — no hardcoded values.
 
 **Command Execution**:
 
@@ -138,7 +136,6 @@ When a `needs_*` flag is false, the corresponding image string is empty and GitH
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       SKIP_SPECKIT_EXECUTION: ${{ startsWith(inputs.ticketTitle, '[e2e]') && 'true' || 'false' }}
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
     run: |
       if [[ "${{ inputs.command }}" == "specify" ]]; then
         JSON_PAYLOAD=$(jq -n \

@@ -111,6 +111,18 @@ on:
         default: '7'
         type: string
 
+      # Database name inputs
+      postgres_db:
+        description: 'PostgreSQL database name'
+        required: false
+        default: 'postgres'
+        type: string
+      mysql_db:
+        description: 'MySQL database name'
+        required: false
+        default: 'test'
+        type: string
+
 jobs:
   run-speckit:
     runs-on: ubuntu-latest
@@ -127,7 +139,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: ai_board_test
+          POSTGRES_DB: ${{ inputs.postgres_db }}
         ports:
           - 5432:5432
         options: >-
@@ -150,7 +162,7 @@ jobs:
         image: ${{ inputs.needs_mysql && format('mysql:{0}', inputs.mysql_version) || '' }}
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: test
+          MYSQL_DATABASE: ${{ inputs.mysql_db }}
         ports:
           - 3306:3306
         options: >-

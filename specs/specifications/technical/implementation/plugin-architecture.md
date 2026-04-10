@@ -307,7 +307,7 @@ Low-level scripts invoked directly by GitHub Actions workflow YAML. Not part of 
 | `run-command.sh` | All workflows | Config-driven command executor: reads `.ai-board/config.yml` and runs the command mapped to a given key. Exits 0 silently when config is absent or the key is not defined, enabling backward compatibility for non-onboarded repos. |
 | `setup-environment.sh` | All workflows | Centralized environment setup with `--phase` parameter: `lightweight` installs only symlinks and runtime tools (for specify/plan); `full` also installs project dependencies, Prisma, and Playwright (for implement/build/verify). Defaults to `full` when `--phase` is omitted. |
 | `run-agent.sh` | All workflows | Agent CLI abstraction: invokes Claude Code or Codex depending on the `agent` input. |
-| `setup-test-env.sh` | `verify.yml` | Configure test environment variables and database for verification runs. |
+| `setup-test-env.sh` | All workflows (implement/verify) | Config-driven test environment setup: runs `commands.env_setup` from `.ai-board/config.yml` if defined, falls back to `.env.test` template injection, skips gracefully for external projects without either. |
 | `fetch-telemetry.sh` | Various | Collect and report workflow telemetry to the API. |
 | `fetch-repo-token.sh` | Various | Fetch the project owner's GitHub OAuth token via `GET /api/internal/github-token`; falls back to `GH_PAT` secret if the owner token is unavailable. Outputs the token to stdout and masks it in GitHub Actions logs. |
 

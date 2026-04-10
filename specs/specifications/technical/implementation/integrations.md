@@ -223,6 +223,7 @@ Before dispatching any workflow, the system maps the project's stored config to 
 
 **Mapping**:
 - Each entry in `config.services[]` maps to a `needs_{type}: "true"` / `{type}_version: "{version}"` pair
+- When `database` is specified on a service, it is passed as `{type}_db: "{database}"` (used by workflow service containers for `POSTGRES_DB`, `MYSQL_DATABASE`, etc.)
 - When `config` is null, backward-compatible defaults are used: `needs_postgres: "true"`, `postgres_version: "16"`
 - When `config` is present but `services` is empty, no service inputs are added
 
@@ -230,7 +231,7 @@ Before dispatching any workflow, the system maps the project's stored config to 
 
 | Config `services` | Dispatch inputs |
 |-------------------|-----------------|
-| `[{ type: "postgres", version: "14" }]` | `needs_postgres=true`, `postgres_version=14` |
+| `[{ type: "postgres", version: "14", database: "myapp_test" }]` | `needs_postgres=true`, `postgres_version=14`, `postgres_db=myapp_test` |
 | `[{ type: "postgres", version: "16" }, { type: "redis", version: "7" }]` | `needs_postgres=true`, `postgres_version=16`, `needs_redis=true`, `redis_version=7` |
 | `[]` (empty) | *(no service inputs)* |
 | null (no config) | `needs_postgres=true`, `postgres_version=16` |
