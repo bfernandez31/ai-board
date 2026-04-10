@@ -36,10 +36,13 @@ export interface UseRetroSpecPollingReturn {
 
 export function useRetroSpecPolling(
   projectId: number,
-  pollingInterval: number = 2000
+  pollingInterval: number = 2000,
+  /** Skip polling entirely when specs are already generated */
+  enabled: boolean = true
 ): UseRetroSpecPollingReturn {
   const { data, error } = useQuery({
     queryKey: queryKeys.projects.retroSpecJob(projectId),
+    enabled,
     queryFn: async (): Promise<RetroSpecPollResult> => {
       const response = await fetch(
         `/api/projects/${projectId}/setup/jobs?command=RETRO_SPEC`,

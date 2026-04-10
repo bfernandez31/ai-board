@@ -589,15 +589,17 @@ Clicking "Generate Specs" dispatches the background workflow. The modal closes i
 
 ### Board Status Badge
 
+The badge and banner are only rendered when specs have not yet been generated (`hasSpecs = false`). When specs already exist, no polling occurs and neither component is shown.
+
 While a retro-spec job is active, a status badge appears in the board area above the stage columns:
 
 | State | Display |
 |-------|---------|
 | PENDING / RUNNING | "Generating specs..." with pulse animation |
-| COMPLETED | "Specs ready" — fades out after 30 seconds |
+| COMPLETED | "Specs ready" — visible for the remaining time within 30 seconds of `completedAt`, then fades out. Does not reappear on subsequent page navigations. |
 | FAILED | Error indicator with retry button |
 
-The badge is mutually exclusive with the banner: when a job is active, the badge is shown instead of the banner.
+The badge is mutually exclusive with the banner: when a job is active or has failed, the badge is shown instead of the banner. The banner is hidden during FAILED state since the badge handles retry.
 
 ### Triggering Spec Generation After Banner Dismissal
 

@@ -9,6 +9,7 @@ interface RetroSpecBannerProps {
   projectId: number;
   hasSpecs: boolean;
   isGenerating: boolean;
+  isFailed?: boolean;
   defaultAgent?: 'CLAUDE' | 'CODEX';
   onGenerateSuccess?: (() => void) | undefined;
 }
@@ -28,7 +29,7 @@ function getIsDismissed(projectId: number): boolean {
 // No-op subscribe — localStorage changes don't fire events on same page
 const subscribeNoop = () => () => {};
 
-export function RetroSpecBanner({ projectId, hasSpecs, isGenerating, defaultAgent, onGenerateSuccess }: RetroSpecBannerProps) {
+export function RetroSpecBanner({ projectId, hasSpecs, isGenerating, isFailed, defaultAgent, onGenerateSuccess }: RetroSpecBannerProps) {
   const isDismissedFromStorage = useSyncExternalStore(
     subscribeNoop,
     () => getIsDismissed(projectId),
@@ -38,8 +39,8 @@ export function RetroSpecBanner({ projectId, hasSpecs, isGenerating, defaultAgen
   const isDismissed = isDismissedFromStorage || isDismissedLocal;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Don't show banner if specs exist, dismissed, or actively generating
-  if (hasSpecs || isDismissed || isGenerating) {
+  // Don't show banner if specs exist, dismissed, actively generating, or failed (badge handles retry)
+  if (hasSpecs || isDismissed || isGenerating || isFailed) {
     return null;
   }
 

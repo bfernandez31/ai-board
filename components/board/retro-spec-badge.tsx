@@ -14,19 +14,22 @@ interface RetroSpecBadgeProps {
 }
 
 export function RetroSpecBadge({ projectId, defaultAgent }: RetroSpecBadgeProps) {
-  const { isGenerating, isCompleted, isFailed } = useRetroSpecPolling(projectId);
+  const { isGenerating, isCompleted, isFailed, job } = useRetroSpecPolling(projectId);
   const queryClient = useQueryClient();
   const [showCompleted, setShowCompleted] = useState(false);
   const [isRetryModalOpen, setIsRetryModalOpen] = useState(false);
 
-  // Show "Specs ready" for 30s after completion, then fade out
+  // Show "Specs ready" only if job completed within the last 30s, then fade out
   /* eslint-disable react-hooks/set-state-in-effect -- Timer-based state transition: show success badge then auto-hide after 30s */
   useEffect(() => {
-    if (!isCompleted) return;
+    if (!isCompleted || !job?.completedAt) return;
+    const elapsed = Date.now() - new Date(job.completedAt).getTime();
+    if (elapsed >= 30_000) return;
     setShowCompleted(true);
-    const timer = setTimeout(() => setShowCompleted(false), 30_000);
+    const remaining = Math.max(0, 30_000 - elapsed);
+    const timer = setTimeout(() => setShowCompleted(false), remaining);
     return () => clearTimeout(timer);
-  }, [isCompleted]);
+  }, [isCompleted, job?.completedAt]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleRetry = useCallback(() => setIsRetryModalOpen(true), []);

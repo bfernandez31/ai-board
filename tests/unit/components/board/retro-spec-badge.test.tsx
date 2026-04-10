@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
 import { RetroSpecBadge } from '@/components/board/retro-spec-badge';
+import type { RetroSpecJobDto } from '@/app/lib/hooks/useRetroSpecPolling';
 
 // Mock the polling hook
 const mockPollingReturn = {
@@ -53,14 +54,52 @@ describe('RetroSpecBadge', () => {
     expect(screen.getByText('Generating specs...')).toBeInTheDocument();
   });
 
-  it('should render "Specs ready" when completed', () => {
+  it('should render "Specs ready" when completed recently', () => {
     mockPollingReturn.isCompleted = true;
+    mockPollingReturn.job = {
+      id: 1,
+      projectId: 1,
+      agent: 'CLAUDE',
+      command: 'RETRO_SPEC',
+      status: 'COMPLETED',
+      depth: null,
+      docUrl: null,
+      workflowRunId: null,
+      errorMessage: null,
+      artifactSummary: null,
+      startedAt: null,
+      completedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    } as RetroSpecJobDto;
 
     renderWithProviders(<RetroSpecBadge projectId={1} />);
 
     const badge = screen.getByTestId('retro-spec-badge');
     expect(badge).toBeInTheDocument();
     expect(screen.getByText('Specs ready')).toBeInTheDocument();
+  });
+
+  it('should NOT render "Specs ready" when completed more than 30s ago', () => {
+    mockPollingReturn.isCompleted = true;
+    mockPollingReturn.job = {
+      id: 1,
+      projectId: 1,
+      agent: 'CLAUDE',
+      command: 'RETRO_SPEC',
+      status: 'COMPLETED',
+      depth: null,
+      docUrl: null,
+      workflowRunId: null,
+      errorMessage: null,
+      artifactSummary: null,
+      startedAt: null,
+      completedAt: new Date(Date.now() - 60_000).toISOString(),
+      createdAt: new Date().toISOString(),
+    } as RetroSpecJobDto;
+
+    renderWithProviders(<RetroSpecBadge projectId={1} />);
+
+    expect(screen.queryByTestId('retro-spec-badge')).not.toBeInTheDocument();
   });
 
   it('should render error with retry button when failed', () => {

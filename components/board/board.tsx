@@ -144,7 +144,7 @@ export function Board({
   const { jobs: polledJobs } = useJobPolling(projectId, 2000);
 
   // AIB-585: Retro-spec polling for banner/badge state
-  const { isGenerating: isRetroSpecGenerating, isCompleted: isRetroSpecCompleted, isFailed: isRetroSpecFailed } = useRetroSpecPolling(projectId);
+  const { isGenerating: isRetroSpecGenerating, isCompleted: isRetroSpecCompleted, isFailed: isRetroSpecFailed } = useRetroSpecPolling(projectId, 2000, !hasSpecs);
   const [isRetroSpecModalOpen, setIsRetroSpecModalOpen] = useState(false);
   const isBannerDismissed = typeof window !== 'undefined' && (() => { try { return localStorage.getItem(`retro-spec-banner-dismissed-${projectId}`) === 'true'; } catch { return false; } })();
   const handleRetroSpecSuccess = useCallback(() => {
@@ -1231,10 +1231,11 @@ export function Board({
         projectId={projectId}
         hasSpecs={hasSpecs || isRetroSpecCompleted}
         isGenerating={isRetroSpecGenerating}
+        isFailed={isRetroSpecFailed}
         onGenerateSuccess={handleRetroSpecSuccess}
         defaultAgent={defaultAgent}
       />
-      <RetroSpecBadge projectId={projectId} defaultAgent={defaultAgent} />
+      {!hasSpecs && <RetroSpecBadge projectId={projectId} defaultAgent={defaultAgent} />}
 
       <DndContext
         sensors={sensors}
