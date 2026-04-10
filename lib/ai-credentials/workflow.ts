@@ -3,8 +3,14 @@ import { decryptCredential, encryptCredential } from './crypto';
 import { getEnvVar, type WorkflowResolvedCredential } from './types';
 import type { CredentialProvider, UserCredential } from '@prisma/client';
 
+const PROVIDER_DISPLAY_NAMES: Record<CredentialProvider, string> = {
+  ANTHROPIC: 'Anthropic',
+  OPENAI: 'OpenAI',
+  MISTRAL: 'Mistral',
+};
+
 export function getMissingCredentialError(provider: CredentialProvider = 'ANTHROPIC'): string {
-  const providerName = provider === 'OPENAI' ? 'OpenAI' : provider === 'MISTRAL' ? 'Mistral' : 'Anthropic';
+  const providerName = PROVIDER_DISPLAY_NAMES[provider];
   return `No ${providerName} credential configured. Please add your ${providerName} key in Settings → AI Credentials.`;
 }
 

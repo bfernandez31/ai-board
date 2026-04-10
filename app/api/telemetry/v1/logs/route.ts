@@ -104,16 +104,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const otlpData = validationResult.data;
 
     // Aggregate metrics from all resource logs
-    const metrics = {
-      inputTokens: 0,
-      outputTokens: 0,
-      cacheReadTokens: 0,
-      cacheCreationTokens: 0,
-      costUsd: 0,
-      durationMs: 0,
-      model: null as string | null,
-      toolsUsed: new Set<string>(),
-    };
+    const metrics = createEmptyMetrics();
 
     // Process each resourceLog
     for (const resourceLog of otlpData.resourceLogs) {
@@ -192,81 +183,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }, { status: 200 });
     }
 
-    // Check if job exists
-    const job = await prisma.job.findUnique({
-      where: { id: jobId },
-      select: {
-        id: true,
-        inputTokens: true,
-        outputTokens: true,
-        cacheReadTokens: true,
-        cacheCreationTokens: true,
-        costUsd: true,
-        durationMs: true,
-        toolsUsed: true,
-      },
-    });
-
-    if (!job) {
-      console.error('[OTLP Telemetry] Job not found:', { jobId });
-      return NextResponse.json(
-        { error: 'Job not found' },
-        { status: 404 }
-      );
-    }
-
-    // Merge and deduplicate tools in memory to avoid a second DB call
-    const mergedTools = [...new Set([...job.toolsUsed, ...metrics.toolsUsed])].sort();
-
     // Both Claude and Codex OTLP exporters send delta batches (each batch
     // contains only NEW log records since the last successful export).
     // All metrics are accumulated by summation.
     // Duration: Claude reports per-request duration_ms (accumulated here);
     // Codex doesn't — duration is backfilled from job wall clock on completion.
-    const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
-      inputTokens: (job.inputTokens || 0) + metrics.inputTokens,
-      outputTokens: (job.outputTokens || 0) + metrics.outputTokens,
-      cacheReadTokens: (job.cacheReadTokens || 0) + metrics.cacheReadTokens,
-      cacheCreationTokens: (job.cacheCreationTokens || 0) + metrics.cacheCreationTokens,
-      costUsd: (job.costUsd || 0) + metrics.costUsd,
-      durationMs: (job.durationMs || 0) + metrics.durationMs,
-      toolsUsed: mergedTools,
-    };
-
-    if (metrics.model) {
-      updateData.model = metrics.model;
-    }
-
-    const updatedJob = await prisma.job.update({
-      where: { id: jobId },
-      data: updateData,
-      select: {
-        id: true,
-        inputTokens: true,
-        outputTokens: true,
-        costUsd: true,
-      },
-    });
-
-    const elapsedTime = Date.now() - startTime;
-    console.log('[OTLP Telemetry] Success:', {
-      jobId,
-      inputTokens: updatedJob.inputTokens,
-      outputTokens: updatedJob.outputTokens,
-      costUsd: updatedJob.costUsd,
-      toolsCount: metrics.toolsUsed.size,
-      elapsedMs: elapsedTime,
-    });
-
-    return NextResponse.json({
-      status: 'accepted',
-      jobId,
-      metrics: {
-        inputTokens: updatedJob.inputTokens,
-        outputTokens: updatedJob.outputTokens,
-        costUsd: updatedJob.costUsd,
-      }
-    }, { status: 200 });
+    return updateJobMetrics(jobId, metrics, startTime, 'Success');
 
   } catch (error: unknown) {
     const elapsedTime = Date.now() - startTime;
@@ -283,6 +205,106 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 500 }
     );
   }
+}
+
+interface TelemetryMetrics {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  costUsd: number;
+  durationMs: number;
+  model: string | null;
+  toolsUsed: Set<string>;
+}
+
+function createEmptyMetrics(): TelemetryMetrics {
+  return {
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheReadTokens: 0,
+    cacheCreationTokens: 0,
+    costUsd: 0,
+    durationMs: 0,
+    model: null,
+    toolsUsed: new Set<string>(),
+  };
+}
+
+/**
+ * Look up the job, merge accumulated metrics, persist, and return the response.
+ */
+async function updateJobMetrics(
+  jobId: number,
+  metrics: TelemetryMetrics,
+  startTime: number,
+  logLabel: string
+): Promise<NextResponse> {
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    select: {
+      id: true,
+      inputTokens: true,
+      outputTokens: true,
+      cacheReadTokens: true,
+      cacheCreationTokens: true,
+      costUsd: true,
+      durationMs: true,
+      toolsUsed: true,
+    },
+  });
+
+  if (!job) {
+    console.error('[OTLP Telemetry] Job not found:', { jobId });
+    return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+  }
+
+  const mergedTools = [...new Set([...job.toolsUsed, ...metrics.toolsUsed])].sort();
+
+  const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
+    inputTokens: (job.inputTokens || 0) + metrics.inputTokens,
+    outputTokens: (job.outputTokens || 0) + metrics.outputTokens,
+    cacheReadTokens: (job.cacheReadTokens || 0) + metrics.cacheReadTokens,
+    cacheCreationTokens: (job.cacheCreationTokens || 0) + metrics.cacheCreationTokens,
+    costUsd: (job.costUsd || 0) + metrics.costUsd,
+    durationMs: (job.durationMs || 0) + metrics.durationMs,
+    toolsUsed: mergedTools,
+  };
+
+  if (metrics.model) {
+    updateData.model = metrics.model;
+  }
+
+  const updatedJob = await prisma.job.update({
+    where: { id: jobId },
+    data: updateData,
+    select: {
+      id: true,
+      inputTokens: true,
+      outputTokens: true,
+      costUsd: true,
+    },
+  });
+
+  const elapsedTime = Date.now() - startTime;
+  console.log(`[OTLP Telemetry] ${logLabel}:`, {
+    jobId,
+    inputTokens: updatedJob.inputTokens,
+    outputTokens: updatedJob.outputTokens,
+    costUsd: updatedJob.costUsd,
+    toolsCount: metrics.toolsUsed.size,
+    elapsedMs: elapsedTime,
+  });
+
+  return NextResponse.json({
+    status: 'accepted',
+    jobId,
+    metrics: {
+      inputTokens: updatedJob.inputTokens,
+      outputTokens: updatedJob.outputTokens,
+      costUsd: updatedJob.costUsd,
+    }
+  }, { status: 200 });
 }
 
 /**
@@ -344,16 +366,7 @@ async function processTracePayload(body: unknown, startTime: number): Promise<Ne
 
     const traceData = validationResult.data;
 
-    const metrics = {
-      inputTokens: 0,
-      outputTokens: 0,
-      cacheReadTokens: 0,
-      cacheCreationTokens: 0,
-      costUsd: 0,
-      durationMs: 0,
-      model: null as string | null,
-      toolsUsed: new Set<string>(),
-    };
+    const metrics = createEmptyMetrics();
 
     for (const resourceSpan of traceData.resourceSpans) {
       const resourceAttrs = resourceSpan.resource?.attributes;
@@ -413,69 +426,7 @@ async function processTracePayload(body: unknown, startTime: number): Promise<Ne
       }, { status: 200 });
     }
 
-    const job = await prisma.job.findUnique({
-      where: { id: jobId },
-      select: {
-        id: true,
-        inputTokens: true,
-        outputTokens: true,
-        cacheReadTokens: true,
-        cacheCreationTokens: true,
-        costUsd: true,
-        durationMs: true,
-        toolsUsed: true,
-      },
-    });
-
-    if (!job) {
-      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
-    }
-
-    const mergedTools = [...new Set([...job.toolsUsed, ...metrics.toolsUsed])].sort();
-
-    const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
-      inputTokens: (job.inputTokens || 0) + metrics.inputTokens,
-      outputTokens: (job.outputTokens || 0) + metrics.outputTokens,
-      cacheReadTokens: (job.cacheReadTokens || 0) + metrics.cacheReadTokens,
-      cacheCreationTokens: (job.cacheCreationTokens || 0) + metrics.cacheCreationTokens,
-      costUsd: (job.costUsd || 0) + metrics.costUsd,
-      durationMs: (job.durationMs || 0) + metrics.durationMs,
-      toolsUsed: mergedTools,
-    };
-
-    if (metrics.model) {
-      updateData.model = metrics.model;
-    }
-
-    const updatedJob = await prisma.job.update({
-      where: { id: jobId },
-      data: updateData,
-      select: {
-        id: true,
-        inputTokens: true,
-        outputTokens: true,
-        costUsd: true,
-      },
-    });
-
-    const elapsedTime = Date.now() - startTime;
-    console.log('[OTLP Telemetry] Trace processed:', {
-      jobId,
-      inputTokens: updatedJob.inputTokens,
-      outputTokens: updatedJob.outputTokens,
-      costUsd: updatedJob.costUsd,
-      elapsedMs: elapsedTime,
-    });
-
-    return NextResponse.json({
-      status: 'accepted',
-      jobId,
-      metrics: {
-        inputTokens: updatedJob.inputTokens,
-        outputTokens: updatedJob.outputTokens,
-        costUsd: updatedJob.costUsd,
-      }
-    }, { status: 200 });
+    return updateJobMetrics(jobId, metrics, startTime, 'Trace processed');
   } catch (error: unknown) {
     console.error('[OTLP Telemetry] Trace processing error:', {
       jobId,
