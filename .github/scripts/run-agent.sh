@@ -302,7 +302,7 @@ ${ARGS}"
 
   log_info "Model: $model | Prompt file: $prompt_file ($(wc -c < "$prompt_file") bytes)"
   log_info "Working directory: $(pwd)"
-  vibe --prompt "$(cat "$prompt_file")" --agent auto-approve --output streaming
+  vibe --prompt "$(cat "$prompt_file")" --agent auto-approve
   local exit_code=$?
 
   rm -f "$prompt_file"
