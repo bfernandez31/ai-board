@@ -79,6 +79,8 @@ install_claude() {
     log_error "Failed to install @anthropic-ai/claude-code"
     exit 1
   fi
+  # Ensure bun global bin is on PATH (bun add -g installs there)
+  export PATH="${HOME}/.bun/bin:${PATH}"
   if ! command -v claude &>/dev/null; then
     log_error "Failed to install @anthropic-ai/claude-code — CLI binary not found after install"
     exit 1
