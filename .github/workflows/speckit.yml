@@ -272,7 +272,7 @@ jobs:
           echo "repo_token=${TOKEN}" >> "$GITHUB_OUTPUT"
 
       - name: Detect default branch
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' }}
         id: default-branch
         env:
           GH_TOKEN: ${{ steps.fetch-github-token.outputs.repo_token }}
