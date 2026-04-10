@@ -55,10 +55,12 @@ else
   echo "Debug - GH CLI environment:"
   echo "  GH_TOKEN set: $([ -n "$GH_TOKEN" ] && echo "yes (length: ${#GH_TOKEN})" || echo "no")"
   echo "  gh version: $(gh --version | head -n1)"
-  echo "  gh auth status:"
-  gh auth status 2>&1 || echo "  ⚠️ gh auth check failed"
+  echo "  Repository: $(gh repo view --json nameWithOwner -q '.nameWithOwner' 2>/dev/null || echo 'unknown')"
+  echo "  Default branch: $(gh repo view --json defaultBranchRef -q '.defaultBranchRef.name' 2>/dev/null || echo 'unknown')"
   echo ""
 
+  # Use set +e to capture exit code without losing error output
+  set +e
   PR_CREATE_OUTPUT=$(gh pr create \
     --title "feat(${TICKET_ID}): automated implementation" \
     --body "## 🤖 Automated Implementation
@@ -84,10 +86,9 @@ Implementation completed by Claude Code based on the feature specification.
 ---
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)" \
-    --base main \
     --head "${BRANCH}" 2>&1)
-
   PR_CREATE_EXIT=$?
+  set -e
 
   if [ $PR_CREATE_EXIT -eq 0 ]; then
     PR_URL="$PR_CREATE_OUTPUT"
@@ -98,8 +99,7 @@ Implementation completed by Claude Code based on the feature specification.
     echo ""
     echo "Debug information:"
     echo "  Current branch: $(git rev-parse --abbrev-ref HEAD)"
-    echo "  Target branch: ${BRANCH}"
-    echo "  Base branch: main"
+    echo "  Head branch: ${BRANCH}"
     echo "  Remote branches: $(git ls-remote --heads origin | grep -F "${BRANCH}" || echo "not found")"
     echo "  GH_TOKEN set: $([ -n "$GH_TOKEN" ] && echo "yes (length: ${#GH_TOKEN})" || echo "no")"
     echo "  Repository: $(git config --get remote.origin.url)"
