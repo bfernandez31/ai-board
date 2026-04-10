@@ -342,7 +342,7 @@ jobs:
           git config --global user.email "bot@ai-board.app"
 
       - name: Setup Test Environment
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
         working-directory: target
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
