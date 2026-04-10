@@ -211,8 +211,9 @@ export async function dispatchWorkflow(params: {
 **Retro-Spec Workflow** (`.github/workflows/retro-spec.yml`):
 - **Trigger**: `workflow_dispatch`
 - **Inputs**: `project_id`, `job_id`, `githubRepository` (owner/repo), `agent`, `depth` (QUICK/STANDARD/COMPREHENSIVE), `docUrl` (optional), `context` (optional)
-- **Steps**: Report RUNNING → fetch AI credential → clone target repo → fetch external docs (if `docUrl`) → run `ai-board.retro-spec` agent command → commit `specs/specifications/` to default branch → report COMPLETED/FAILED
+- **Steps**: Report RUNNING → fetch AI credential → clone target repo → fetch external docs (if `docUrl`) → run `ai-board.retro-spec` agent command → commit `specs/specifications/` to target repository → report COMPLETED/FAILED
 - **Output**: `specs/specifications/` directory committed to the target repository with spec depth matching the selected level
+- **Security**: `docUrl` input is passed via an `env:` block (`DOC_URL`) rather than direct `${{ inputs.docUrl }}` interpolation in the `run:` block, preventing shell metacharacter injection
 - **Error behavior**: Reports FAILED with error message; partial results not committed; unreachable `docUrl` logs a warning and continues
 - **Timeout**: 30 minutes
 
