@@ -48,13 +48,13 @@
 
 ### Tests for User Story 1
 
-- [ ] T009 [P] [US1] Extend tests/unit/ai-credentials.test.ts with Mistral format validation cases (empty, too short, whitespace, valid, OAUTH_TOKEN rejection)
-- [ ] T010 [P] [US1] Extend tests/integration/credentials/credentials-api.test.ts with Mistral credential CRUD scenarios (create, replace, list)
-- [ ] T011 [P] [US1] Extend tests/integration/credentials/credential-validation.test.ts with Mistral key format validation (min length, no whitespace, type restriction)
+- [x] T009 [P] [US1] Extend tests/unit/ai-credentials.test.ts with Mistral format validation cases (empty, too short, whitespace, valid, OAUTH_TOKEN rejection) ✅ DONE
+- [x] T010 [P] [US1] Extend tests/integration/credentials/credentials-api.test.ts with Mistral credential CRUD scenarios (create, replace, list) ✅ DONE
+- [x] T011 [P] [US1] Extend tests/integration/credentials/credential-validation.test.ts with Mistral key format validation (min length, no whitespace, type restriction) ✅ DONE
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Add Mistral provider option and format hints (placeholder, min length) to components/credentials/credential-form.tsx
+- [x] T012 [US1] Add Mistral provider option and format hints (placeholder, min length) to components/credentials/credential-form.tsx ✅ DONE
 
 **Checkpoint**: Mistral credential can be created, validated, verified, and stored via POST /api/credentials. Tests pass.
 
@@ -68,11 +68,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T013 [P] [US2] Extend tests/unit/agent-schema.test.ts with MISTRAL enum validation
-- [ ] T014 [P] [US2] Extend tests/unit/agent-resolution.test.ts with MISTRAL resolution tests (project default, ticket override, fallback)
-- [ ] T015 [P] [US2] Extend tests/unit/agent-icons.test.ts with Mistral icon path, label, description, and identifier inference (`mistral`, `vibe`)
-- [ ] T016 [P] [US2] Extend tests/unit/components/default-agent-card.test.tsx to verify MISTRAL option renders in agent dropdown
-- [ ] T017 [P] [US2] Extend tests/unit/credential-dispatch-guard.test.ts with MISTRAL dispatch guard (missing credential blocks transition)
+- [x] T013 [P] [US2] Extend tests/unit/agent-schema.test.ts with MISTRAL enum validation ✅ DONE
+- [x] T014 [P] [US2] Extend tests/unit/agent-resolution.test.ts with MISTRAL resolution tests (project default, ticket override, fallback) ✅ DONE
+- [x] T015 [P] [US2] Extend tests/unit/agent-icons.test.ts with Mistral icon path, label, description, and identifier inference (`mistral`, `vibe`) ✅ DONE
+- [x] T016 [P] [US2] Extend tests/unit/components/default-agent-card.test.tsx to verify MISTRAL option renders in agent dropdown ✅ DONE
+- [x] T017 [P] [US2] Extend tests/unit/credential-dispatch-guard.test.ts with MISTRAL dispatch guard (missing credential blocks transition) ✅ DONE
 
 **Checkpoint**: Mistral selectable as default agent, resolves correctly, dispatch blocked without credential. Tests pass.
 
@@ -86,7 +86,7 @@
 
 ### Tests for User Story 3
 
-- [ ] T018 [P] [US3] Extend tests/unit/components/agent-edit-dialog.test.tsx to verify MISTRAL option renders in agent override dropdown
+- [x] T018 [P] [US3] Extend tests/unit/components/agent-edit-dialog.test.tsx to verify MISTRAL option renders in agent override dropdown ✅ DONE
 
 **Checkpoint**: Mistral selectable as per-ticket override. Tests pass.
 
@@ -100,16 +100,16 @@
 
 ### Tests for User Story 4
 
-- [ ] T019 [P] [US4] Extend tests/integration/credentials/workflow-credential.test.ts with Mistral provider parameter (envVar=MISTRAL_API_KEY, encoding)
+- [x] T019 [P] [US4] Extend tests/integration/credentials/workflow-credential.test.ts with Mistral provider parameter (envVar=MISTRAL_API_KEY, encoding) ✅ DONE
 
 ### Implementation for User Story 4
 
-- [ ] T020 [US4] Add MISTRAL case to .github/scripts/run-agent.sh: validate_auth (MISTRAL_API_KEY), install_mistral (pip install vibe-cli), setup_mistral_telemetry (VIBE_TELEMETRY=false, OTEL env vars), invoke_mistral (cat | vibe --profile agent -m mistral-large-latest -)
-- [ ] T021 [P] [US4] Add MISTRAL_API_KEY to env block in .github/workflows/speckit.yml
-- [ ] T022 [P] [US4] Add MISTRAL_API_KEY to env block in .github/workflows/quick-impl.yml
-- [ ] T023 [P] [US4] Add MISTRAL_API_KEY to env block in .github/workflows/verify.yml
-- [ ] T024 [P] [US4] Add MISTRAL_API_KEY to env block in .github/workflows/iterate.yml
-- [ ] T025 [P] [US4] Add MISTRAL_API_KEY to env block in .github/workflows/ai-board-assist.yml
+- [x] T020 [US4] Add MISTRAL case to .github/scripts/run-agent.sh: validate_auth (MISTRAL_API_KEY), install_mistral (pip install vibe-cli), setup_mistral_telemetry (VIBE_TELEMETRY=false, OTEL env vars), invoke_mistral (cat | vibe --profile agent -m mistral-large-latest -) ✅ DONE
+- [x] T021 [P] [US4] Add MISTRAL_API_KEY to env block in .github/workflows/speckit.yml ✅ DONE
+- [x] T022 [P] [US4] Add MISTRAL_API_KEY to env block in .github/workflows/quick-impl.yml ✅ DONE
+- [x] T023 [P] [US4] Add MISTRAL_API_KEY to env block in .github/workflows/verify.yml ✅ DONE
+- [x] T024 [P] [US4] Add MISTRAL_API_KEY to env block in .github/workflows/iterate.yml ✅ DONE
+- [x] T025 [P] [US4] Add MISTRAL_API_KEY to env block in .github/workflows/ai-board-assist.yml ✅ DONE
 
 **Checkpoint**: Workflow dispatched with agent=MISTRAL installs vibe, disables datalake telemetry, and invokes vibe with the command prompt. Tests pass.
 
@@ -123,12 +123,12 @@
 
 ### Tests for User Story 5
 
-- [ ] T026 [P] [US5] Extend tests/integration/telemetry/agent-agnostic.test.ts with Mistral trace event processing (resourceSpans detection, span attribute extraction, cost estimation with MISTRAL_PRICING, no regression for Claude/Codex log processing)
+- [x] T026 [P] [US5] Extend tests/integration/telemetry/agent-agnostic.test.ts with Mistral trace event processing (resourceSpans detection, span attribute extraction, cost estimation with MISTRAL_PRICING, no regression for Claude/Codex log processing) ✅ DONE
 
 ### Implementation for User Story 5
 
-- [ ] T027 [US5] Add OTLP trace Zod schema (resourceSpans, scopeSpans, spans) to lib/schemas/otlp.ts if not already present
-- [ ] T028 [US5] Replace early-return for resourceSpans in app/api/telemetry/v1/logs/route.ts with trace processing logic: add MISTRAL_PRICING table, estimateMistralCost function, parse trace spans (gen_ai.usage.* attributes, gen_ai.request.model, span timestamps for duration, tool.name), accumulate metrics and update Job record
+- [x] T027 [US5] Add OTLP trace Zod schema (resourceSpans, scopeSpans, spans) to lib/schemas/otlp.ts if not already present ✅ DONE
+- [x] T028 [US5] Replace early-return for resourceSpans in app/api/telemetry/v1/logs/route.ts with trace processing logic: add MISTRAL_PRICING table, estimateMistralCost function, parse trace spans (gen_ai.usage.* attributes, gen_ai.request.model, span timestamps for duration, tool.name), accumulate metrics and update Job record ✅ DONE
 
 **Checkpoint**: Posting OTLP trace payload with Mistral span data updates Job telemetry fields correctly. Existing Claude/Codex telemetry unaffected. Tests pass.
 

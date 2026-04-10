@@ -56,6 +56,16 @@ describe('AgentEditDialog', () => {
       expect(statusSection?.textContent).toContain('Codex');
     });
 
+    it('should show override indicator when MISTRAL is set as agent', () => {
+      renderWithProviders(
+        <AgentEditDialog {...defaultProps} currentAgent={Agent.MISTRAL} />
+      );
+
+      const statusSection = screen.getByText('Current Agent').closest('div');
+      expect(statusSection?.textContent).toContain('override');
+      expect(statusSection?.textContent).toContain('Mistral');
+    });
+
     it('should render agent select with combobox role', () => {
       renderWithProviders(<AgentEditDialog {...defaultProps} />);
 

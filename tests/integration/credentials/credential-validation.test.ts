@@ -130,4 +130,41 @@ describe('Credential Format Validation', () => {
       expect(response.data.error).toContain('too short');
     });
   });
+
+  describe('MISTRAL API_KEY format', () => {
+    it('should reject Mistral key shorter than 32 characters', async () => {
+      const response = await ctx.api.post<{ error: string }>('/api/credentials', {
+        provider: 'MISTRAL',
+        credentialType: 'API_KEY',
+        label: '[e2e] Short Mistral Key',
+        value: 'a'.repeat(31),
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toContain('too short');
+    });
+
+    it('should reject Mistral key containing whitespace', async () => {
+      const response = await ctx.api.post<{ error: string }>('/api/credentials', {
+        provider: 'MISTRAL',
+        credentialType: 'API_KEY',
+        label: '[e2e] Whitespace Mistral Key',
+        value: 'a'.repeat(16) + ' ' + 'b'.repeat(16),
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toContain('whitespace');
+    });
+
+    it('should reject MISTRAL + OAUTH_TOKEN combination (not allowed)', async () => {
+      const response = await ctx.api.post<{ error: string }>('/api/credentials', {
+        provider: 'MISTRAL',
+        credentialType: 'OAUTH_TOKEN',
+        label: '[e2e] Mistral OAuth',
+        value: 'a'.repeat(50),
+      });
+
+      expect(response.status).toBe(400);
+    });
+  });
 });

@@ -333,6 +333,104 @@ describe('Agent-Agnostic Telemetry', () => {
     });
   });
 
+  describe('US4: Mistral (vibe) Trace Telemetry', () => {
+    function buildOtlpTracePayload(
+      traceJobId: number,
+      spans: Array<{ name?: string; attributes?: Array<{ key: string; value: Record<string, unknown> }>; startTimeUnixNano?: string; endTimeUnixNano?: string }>
+    ) {
+      return {
+        resourceSpans: [{
+          resource: {
+            attributes: [
+              { key: 'job_id', value: { stringValue: String(traceJobId) } },
+              { key: 'service.name', value: { stringValue: 'vibe' } },
+            ],
+          },
+          scopeSpans: [{
+            spans,
+          }],
+        }],
+      };
+    }
+
+    it('should process Mistral trace payload with token counts and cost estimation', async () => {
+      const payload = buildOtlpTracePayload(jobId, [{
+        name: 'chat_completion',
+        attributes: [
+          { key: 'gen_ai.system', value: { stringValue: 'mistral' } },
+          { key: 'gen_ai.request.model', value: { stringValue: 'mistral-large-latest' } },
+          { key: 'gen_ai.usage.input_tokens', value: { intValue: '1500' } },
+          { key: 'gen_ai.usage.output_tokens', value: { intValue: '800' } },
+          { key: 'gen_ai.usage.cache_read_tokens', value: { intValue: '200' } },
+        ],
+        startTimeUnixNano: '1712700000000000000',
+        endTimeUnixNano: '1712700005000000000',
+      }]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+      expect(response.data).toHaveProperty('status', 'accepted');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.inputTokens).toBe(1500);
+      expect(job!.outputTokens).toBe(800);
+      expect(job!.cacheReadTokens).toBe(200);
+      expect(job!.costUsd).toBeGreaterThan(0);
+      expect(job!.durationMs).toBe(5000);
+      expect(job!.model).toBe('mistral-large-latest');
+    });
+
+    it('should process Mistral trace spans with tool names', async () => {
+      const payload = buildOtlpTracePayload(jobId, [
+        {
+          name: 'chat_completion',
+          attributes: [
+            { key: 'gen_ai.request.model', value: { stringValue: 'mistral-large-latest' } },
+            { key: 'gen_ai.usage.input_tokens', value: { intValue: '100' } },
+            { key: 'gen_ai.usage.output_tokens', value: { intValue: '50' } },
+          ],
+          startTimeUnixNano: '1712700000000000000',
+          endTimeUnixNano: '1712700001000000000',
+        },
+        {
+          name: 'tool_call',
+          attributes: [
+            { key: 'tool.name', value: { stringValue: 'file_read' } },
+          ],
+          startTimeUnixNano: '1712700001000000000',
+          endTimeUnixNano: '1712700002000000000',
+        },
+      ]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.toolsUsed).toContain('file_read');
+    });
+
+    it('should not regress Claude log processing after adding trace support', async () => {
+      // Send a Claude log payload to verify it still works
+      const payload = buildOtlpPayload(jobId, [{
+        body: { stringValue: 'claude_code.api_request' },
+        attributes: [
+          { key: 'input_tokens', value: { stringValue: '500' } },
+          { key: 'output_tokens', value: { stringValue: '250' } },
+          { key: 'cost_usd', value: { stringValue: '0.03' } },
+          { key: 'model', value: { stringValue: 'claude-sonnet-4-6-20250514' } },
+        ],
+      }]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.inputTokens).toBe(500);
+      expect(job!.outputTokens).toBe(250);
+      expect(job!.costUsd).toBeCloseTo(0.03);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('T014: unrecognized event names are silently skipped without error', async () => {
       const payload = buildOtlpPayload(jobId, [

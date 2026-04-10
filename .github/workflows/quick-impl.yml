@@ -196,7 +196,8 @@ jobs:
         if: ${{ env.SKIP_EXECUTION != 'true' && inputs.project_id }}
         run: |
           echo "🔑 Fetching owner AI credential for project ${{ inputs.project_id }}..."
-          PROVIDER=$( [[ "${{ inputs.agent }}" == "CODEX" ]] && echo "OPENAI" || echo "ANTHROPIC" )
+          AGENT="${{ inputs.agent }}"
+          if [[ "$AGENT" == "CODEX" ]]; then PROVIDER="OPENAI"; elif [[ "$AGENT" == "MISTRAL" ]]; then PROVIDER="MISTRAL"; else PROVIDER="ANTHROPIC"; fi
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             "${APP_URL}/api/internal/credentials?projectId=${{ inputs.project_id }}&provider=${PROVIDER}" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}")

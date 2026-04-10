@@ -68,11 +68,53 @@ export const otlpLogsSchema = z.object({
   resourceLogs: z.array(otlpResourceLogsSchema),
 });
 
+// --- Trace schemas (for vibe / Mistral OTLP trace export) ---
+
+export const otlpSpanSchema = z.object({
+  name: z.string().optional(),
+  startTimeUnixNano: int64Schema.optional(),
+  endTimeUnixNano: int64Schema.optional(),
+  attributes: z.array(otlpAttributeSchema).optional(),
+  traceId: z.string().optional(),
+  spanId: z.string().optional(),
+  parentSpanId: z.string().optional(),
+  kind: z.number().optional(),
+  status: z.object({
+    code: z.number().optional(),
+    message: z.string().optional(),
+  }).optional(),
+});
+
+export const otlpScopeSpansSchema = z.object({
+  scope: z.object({
+    name: z.string().optional(),
+    version: z.string().optional(),
+    attributes: z.array(otlpAttributeSchema).optional(),
+  }).optional(),
+  spans: z.array(otlpSpanSchema).optional(),
+});
+
+export const otlpResourceSpansSchema = z.object({
+  resource: z.object({
+    attributes: z.array(otlpAttributeSchema).optional(),
+    droppedAttributesCount: z.number().optional(),
+  }).optional(),
+  scopeSpans: z.array(otlpScopeSpansSchema).optional(),
+});
+
+export const otlpTracesSchema = z.object({
+  resourceSpans: z.array(otlpResourceSpansSchema),
+});
+
 export type OTLPAttribute = z.infer<typeof otlpAttributeSchema>;
 export type OTLPLogRecord = z.infer<typeof otlpLogRecordSchema>;
 export type OTLPScopeLogs = z.infer<typeof otlpScopeLogsSchema>;
 export type OTLPResourceLogs = z.infer<typeof otlpResourceLogsSchema>;
 export type OTLPLogs = z.infer<typeof otlpLogsSchema>;
+export type OTLPSpan = z.infer<typeof otlpSpanSchema>;
+export type OTLPScopeSpans = z.infer<typeof otlpScopeSpansSchema>;
+export type OTLPResourceSpans = z.infer<typeof otlpResourceSpansSchema>;
+export type OTLPTraces = z.infer<typeof otlpTracesSchema>;
 
 /**
  * Extract value from OTLP attribute
