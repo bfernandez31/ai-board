@@ -273,13 +273,14 @@ jobs:
           echo "repo_token=${TOKEN}" >> "$GITHUB_OUTPUT"
 
       - name: Detect default branch
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' }}
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         id: default-branch
         env:
           GH_TOKEN: ${{ steps.fetch-github-token.outputs.repo_token }}
         run: |
           DEFAULT_BRANCH=$(gh api "repos/${{ inputs.githubRepository }}" --jq '.default_branch')
           echo "branch=$DEFAULT_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "DEFAULT_BRANCH=$DEFAULT_BRANCH" >> "$GITHUB_ENV"
           echo "Default branch: $DEFAULT_BRANCH"
 
       - name: Checkout target repository
@@ -558,6 +559,17 @@ jobs:
           if [ "${{ inputs.command }}" = "specify" ]; then
             echo "FEATURE_BRANCH=$current_branch" >> "$GITHUB_ENV"
           fi
+
+      - name: Guard against default branch push
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        run: |
+          if [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ]; then
+            echo "🚫 FATAL: Agent stayed on default branch '$DEFAULT_BRANCH' instead of creating a feature branch."
+            echo "   This would pollute the default branch with uncommitted spec/plan artifacts."
+            echo "   Aborting to protect repository integrity."
+            exit 1
+          fi
+          echo "✅ Branch guard passed: '$CURRENT_BRANCH' ≠ '$DEFAULT_BRANCH'"
 
       - name: Cleanup Temporary Images Before Commit
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && env.IMAGE_COUNT != '' && env.IMAGE_COUNT != '0' }}
