@@ -445,4 +445,108 @@ describe('User Credentials API', () => {
       expect(response.status).toBe(204);
     });
   });
+
+  describe('MISTRAL credential lifecycle', () => {
+    it('should create a MISTRAL API_KEY credential', async () => {
+      const response = await ctx.api.post<{
+        id: number;
+        provider: string;
+        credentialType: string;
+        readinessStatus: string;
+      }>('/api/credentials', {
+        provider: 'MISTRAL',
+        credentialType: 'API_KEY',
+        label: '[e2e] Mistral Key',
+        value: 'a'.repeat(32),
+      });
+
+      // 201 (new) or 422 (rejected by Mistral, key is fake)
+      expect([201, 422]).toContain(response.status);
+      if (response.status === 201) {
+        expect(response.data.provider).toBe('MISTRAL');
+        expect(response.data.credentialType).toBe('API_KEY');
+      }
+    });
+
+    it('should upsert (replace) MISTRAL credential', async () => {
+      const prisma = getPrismaClient();
+
+      // Create initial MISTRAL credential
+      const { encryptedValue, iv, authTag } = encryptCredential('a'.repeat(32));
+      await prisma.userCredential.create({
+        data: {
+          userId: 'test-user-id',
+          provider: 'MISTRAL',
+          credentialType: 'API_KEY',
+          label: '[e2e] Old Mistral Key',
+          encryptedValue, iv, authTag,
+          preview: 'aaaa',
+          readinessStatus: 'READY',
+        },
+      });
+
+      // Attempt to create another MISTRAL credential (should upsert)
+      const response = await ctx.api.post<{
+        id: number;
+        provider: string;
+        label: string;
+      }>('/api/credentials', {
+        provider: 'MISTRAL',
+        credentialType: 'API_KEY',
+        label: '[e2e] New Mistral Key',
+        value: 'b'.repeat(32),
+      });
+
+      // 200 (replaced) or 422 (rejected by Mistral, key is fake)
+      expect([200, 422]).toContain(response.status);
+
+      // Only one MISTRAL credential should exist
+      const listResponse = await ctx.api.get<{
+        credentials: Array<{ provider: string }>;
+      }>('/api/credentials');
+      const mistralCreds = listResponse.data.credentials.filter(c => c.provider === 'MISTRAL');
+      expect(mistralCreds.length).toBeLessThanOrEqual(1);
+    });
+
+    it('should list MISTRAL credential alongside others', async () => {
+      const prisma = getPrismaClient();
+
+      // Create ANTHROPIC credential
+      const { encryptedValue: ev1, iv: iv1, authTag: at1 } = encryptCredential('sk-ant-api03-' + 'a'.repeat(80));
+      await prisma.userCredential.create({
+        data: {
+          userId: 'test-user-id',
+          provider: 'ANTHROPIC',
+          credentialType: 'API_KEY',
+          label: '[e2e] Anthropic Key',
+          encryptedValue: ev1, iv: iv1, authTag: at1,
+          preview: 'aaaa',
+          readinessStatus: 'READY',
+        },
+      });
+
+      // Create MISTRAL credential
+      const { encryptedValue: ev2, iv: iv2, authTag: at2 } = encryptCredential('m'.repeat(32));
+      await prisma.userCredential.create({
+        data: {
+          userId: 'test-user-id',
+          provider: 'MISTRAL',
+          credentialType: 'API_KEY',
+          label: '[e2e] Mistral Key',
+          encryptedValue: ev2, iv: iv2, authTag: at2,
+          preview: 'mmmm',
+          readinessStatus: 'READY',
+        },
+      });
+
+      const response = await ctx.api.get<{
+        credentials: Array<{ provider: string }>;
+      }>('/api/credentials');
+
+      expect(response.status).toBe(200);
+      expect(response.data.credentials).toHaveLength(2);
+      const providers = response.data.credentials.map(c => c.provider).sort();
+      expect(providers).toEqual(['ANTHROPIC', 'MISTRAL']);
+    });
+  });
 });

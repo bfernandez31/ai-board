@@ -10,6 +10,10 @@ describe('projectAgentSchema', () => {
     expect(projectAgentSchema.parse('CODEX')).toBe('CODEX');
   });
 
+  it('accepts MISTRAL', () => {
+    expect(projectAgentSchema.parse('MISTRAL')).toBe('MISTRAL');
+  });
+
   it('rejects invalid values', () => {
     expect(() => projectAgentSchema.parse('INVALID')).toThrow();
   });
@@ -30,6 +34,10 @@ describe('ticketAgentSchema', () => {
 
   it('accepts CODEX', () => {
     expect(ticketAgentSchema.parse('CODEX')).toBe('CODEX');
+  });
+
+  it('accepts MISTRAL', () => {
+    expect(ticketAgentSchema.parse('MISTRAL')).toBe('MISTRAL');
   });
 
   it('accepts null', () => {

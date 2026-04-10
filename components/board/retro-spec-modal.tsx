@@ -27,7 +27,7 @@ interface RetroSpecModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: number;
-  defaultAgent?: 'CLAUDE' | 'CODEX' | undefined;
+  defaultAgent?: import('@prisma/client').Agent | undefined;
   onSuccess?: (() => void) | undefined;
 }
 

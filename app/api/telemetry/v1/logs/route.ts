@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import {
   otlpLogsSchema,
+  otlpTracesSchema,
   findAttribute,
   parseIntAttribute,
   parseFloatAttribute,
@@ -67,9 +68,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Ignore traces/metrics that arrive at the logs endpoint (Codex may send all signals here)
-    if (body && (body.resourceSpans || body.resource_spans || body.resourceMetrics || body.resource_metrics)) {
-      return NextResponse.json({ status: 'accepted', message: 'Traces/metrics ignored at logs endpoint' }, { status: 200 });
+    // Ignore metrics that arrive at the logs endpoint
+    if (body && (body.resourceMetrics || body.resource_metrics)) {
+      return NextResponse.json({ status: 'accepted', message: 'Metrics ignored at logs endpoint' }, { status: 200 });
+    }
+
+    // Process OTLP traces (vibe / Mistral agent)
+    if (body && (body.resourceSpans || body.resource_spans)) {
+      if (body.resource_spans && !body.resourceSpans) {
+        body = normalizeOtlpKeys(body);
+      }
+      return processTracePayload(body, startTime);
     }
 
     // OTLP protobuf JSON uses snake_case (resource_logs), but our schema expects camelCase (resourceLogs)
@@ -95,16 +104,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const otlpData = validationResult.data;
 
     // Aggregate metrics from all resource logs
-    const metrics = {
-      inputTokens: 0,
-      outputTokens: 0,
-      cacheReadTokens: 0,
-      cacheCreationTokens: 0,
-      costUsd: 0,
-      durationMs: 0,
-      model: null as string | null,
-      toolsUsed: new Set<string>(),
-    };
+    const metrics = createEmptyMetrics();
 
     // Process each resourceLog
     for (const resourceLog of otlpData.resourceLogs) {
@@ -183,81 +183,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }, { status: 200 });
     }
 
-    // Check if job exists
-    const job = await prisma.job.findUnique({
-      where: { id: jobId },
-      select: {
-        id: true,
-        inputTokens: true,
-        outputTokens: true,
-        cacheReadTokens: true,
-        cacheCreationTokens: true,
-        costUsd: true,
-        durationMs: true,
-        toolsUsed: true,
-      },
-    });
-
-    if (!job) {
-      console.error('[OTLP Telemetry] Job not found:', { jobId });
-      return NextResponse.json(
-        { error: 'Job not found' },
-        { status: 404 }
-      );
-    }
-
-    // Merge and deduplicate tools in memory to avoid a second DB call
-    const mergedTools = [...new Set([...job.toolsUsed, ...metrics.toolsUsed])].sort();
-
     // Both Claude and Codex OTLP exporters send delta batches (each batch
     // contains only NEW log records since the last successful export).
     // All metrics are accumulated by summation.
     // Duration: Claude reports per-request duration_ms (accumulated here);
     // Codex doesn't — duration is backfilled from job wall clock on completion.
-    const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
-      inputTokens: (job.inputTokens || 0) + metrics.inputTokens,
-      outputTokens: (job.outputTokens || 0) + metrics.outputTokens,
-      cacheReadTokens: (job.cacheReadTokens || 0) + metrics.cacheReadTokens,
-      cacheCreationTokens: (job.cacheCreationTokens || 0) + metrics.cacheCreationTokens,
-      costUsd: (job.costUsd || 0) + metrics.costUsd,
-      durationMs: (job.durationMs || 0) + metrics.durationMs,
-      toolsUsed: mergedTools,
-    };
-
-    if (metrics.model) {
-      updateData.model = metrics.model;
-    }
-
-    const updatedJob = await prisma.job.update({
-      where: { id: jobId },
-      data: updateData,
-      select: {
-        id: true,
-        inputTokens: true,
-        outputTokens: true,
-        costUsd: true,
-      },
-    });
-
-    const elapsedTime = Date.now() - startTime;
-    console.log('[OTLP Telemetry] Success:', {
-      jobId,
-      inputTokens: updatedJob.inputTokens,
-      outputTokens: updatedJob.outputTokens,
-      costUsd: updatedJob.costUsd,
-      toolsCount: metrics.toolsUsed.size,
-      elapsedMs: elapsedTime,
-    });
-
-    return NextResponse.json({
-      status: 'accepted',
-      jobId,
-      metrics: {
-        inputTokens: updatedJob.inputTokens,
-        outputTokens: updatedJob.outputTokens,
-        costUsd: updatedJob.costUsd,
-      }
-    }, { status: 200 });
+    return updateJobMetrics(jobId, metrics, startTime, 'Success');
 
   } catch (error: unknown) {
     const elapsedTime = Date.now() - startTime;
@@ -274,6 +205,106 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 500 }
     );
   }
+}
+
+interface TelemetryMetrics {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  costUsd: number;
+  durationMs: number;
+  model: string | null;
+  toolsUsed: Set<string>;
+}
+
+function createEmptyMetrics(): TelemetryMetrics {
+  return {
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheReadTokens: 0,
+    cacheCreationTokens: 0,
+    costUsd: 0,
+    durationMs: 0,
+    model: null,
+    toolsUsed: new Set<string>(),
+  };
+}
+
+/**
+ * Look up the job, merge accumulated metrics, persist, and return the response.
+ */
+async function updateJobMetrics(
+  jobId: number,
+  metrics: TelemetryMetrics,
+  startTime: number,
+  logLabel: string
+): Promise<NextResponse> {
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    select: {
+      id: true,
+      inputTokens: true,
+      outputTokens: true,
+      cacheReadTokens: true,
+      cacheCreationTokens: true,
+      costUsd: true,
+      durationMs: true,
+      toolsUsed: true,
+    },
+  });
+
+  if (!job) {
+    console.error('[OTLP Telemetry] Job not found:', { jobId });
+    return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+  }
+
+  const mergedTools = [...new Set([...job.toolsUsed, ...metrics.toolsUsed])].sort();
+
+  const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
+    inputTokens: (job.inputTokens || 0) + metrics.inputTokens,
+    outputTokens: (job.outputTokens || 0) + metrics.outputTokens,
+    cacheReadTokens: (job.cacheReadTokens || 0) + metrics.cacheReadTokens,
+    cacheCreationTokens: (job.cacheCreationTokens || 0) + metrics.cacheCreationTokens,
+    costUsd: (job.costUsd || 0) + metrics.costUsd,
+    durationMs: (job.durationMs || 0) + metrics.durationMs,
+    toolsUsed: mergedTools,
+  };
+
+  if (metrics.model) {
+    updateData.model = metrics.model;
+  }
+
+  const updatedJob = await prisma.job.update({
+    where: { id: jobId },
+    data: updateData,
+    select: {
+      id: true,
+      inputTokens: true,
+      outputTokens: true,
+      costUsd: true,
+    },
+  });
+
+  const elapsedTime = Date.now() - startTime;
+  console.log(`[OTLP Telemetry] ${logLabel}:`, {
+    jobId,
+    inputTokens: updatedJob.inputTokens,
+    outputTokens: updatedJob.outputTokens,
+    costUsd: updatedJob.costUsd,
+    toolsCount: metrics.toolsUsed.size,
+    elapsedMs: elapsedTime,
+  });
+
+  return NextResponse.json({
+    status: 'accepted',
+    jobId,
+    metrics: {
+      inputTokens: updatedJob.inputTokens,
+      outputTokens: updatedJob.outputTokens,
+      costUsd: updatedJob.costUsd,
+    }
+  }, { status: 200 });
 }
 
 /**
@@ -298,6 +329,118 @@ function estimateOpenAICost(model: string, inputTokens: number, outputTokens: nu
 }
 
 /**
+ * Estimate Mistral API cost from token counts.
+ * Prices are per-million tokens (source: Mistral API pricing).
+ */
+const MISTRAL_PRICING: Record<string, { input: number; output: number; cached: number }> = {
+  'mistral-large-latest':  { input: 2.00, output: 6.00, cached: 1.00 },
+  'mistral-medium-latest': { input: 0.70, output: 2.10, cached: 0.35 },
+  'mistral-small-latest':  { input: 0.10, output: 0.30, cached: 0.05 },
+  'codestral-latest':      { input: 0.30, output: 0.90, cached: 0.15 },
+};
+
+function estimateMistralCost(model: string, inputTokens: number, outputTokens: number, cachedTokens: number): number {
+  const pricing = MISTRAL_PRICING[model] ?? MISTRAL_PRICING['mistral-large-latest']!;
+  return (
+    (inputTokens / 1_000_000) * pricing.input +
+    (outputTokens / 1_000_000) * pricing.output +
+    (cachedTokens / 1_000_000) * pricing.cached
+  );
+}
+
+/**
+ * Process OTLP trace payloads from vibe (Mistral agent).
+ * Extracts token counts, model, duration, and tools from span attributes.
+ */
+async function processTracePayload(body: unknown, startTime: number): Promise<NextResponse> {
+  let jobId: number | undefined;
+
+  try {
+    const validationResult = otlpTracesSchema.safeParse(body);
+    if (!validationResult.success) {
+      console.error('[OTLP Telemetry] Trace schema validation failed:', {
+        errors: validationResult.error.issues,
+      });
+      return NextResponse.json({ error: 'Invalid OTLP trace format' }, { status: 400 });
+    }
+
+    const traceData = validationResult.data;
+
+    const metrics = createEmptyMetrics();
+
+    for (const resourceSpan of traceData.resourceSpans) {
+      const resourceAttrs = resourceSpan.resource?.attributes;
+      const jobIdAttr = findAttribute(resourceAttrs, 'job_id');
+
+      if (jobIdAttr && !jobId) {
+        jobId = parseInt(String(jobIdAttr), 10);
+        if (isNaN(jobId)) jobId = undefined;
+      }
+
+      for (const scopeSpan of resourceSpan.scopeSpans || []) {
+        for (const span of scopeSpan.spans || []) {
+          const attrs = span.attributes;
+
+          // Extract token metrics from gen_ai.usage.* attributes
+          const inputTokens = parseIntAttribute(findAttribute(attrs, 'gen_ai.usage.input_tokens'));
+          const outputTokens = parseIntAttribute(findAttribute(attrs, 'gen_ai.usage.output_tokens'));
+          const cacheReadTokens = parseIntAttribute(findAttribute(attrs, 'gen_ai.usage.cache_read_tokens'));
+
+          metrics.inputTokens += inputTokens;
+          metrics.outputTokens += outputTokens;
+          metrics.cacheReadTokens += cacheReadTokens;
+
+          // Extract model
+          const model = findAttribute(attrs, 'gen_ai.request.model');
+          if (model) metrics.model = String(model);
+
+          // Calculate duration from span timestamps
+          if (span.startTimeUnixNano && span.endTimeUnixNano) {
+            try {
+              const startNs = BigInt(String(span.startTimeUnixNano));
+              const endNs = BigInt(String(span.endTimeUnixNano));
+              const durationMs = Number((endNs - startNs) / BigInt(1_000_000));
+              if (durationMs > 0) metrics.durationMs += durationMs;
+            } catch {
+              // Skip duration accumulation for non-numeric timestamps
+            }
+          }
+
+          // Extract tool names
+          const toolName = findAttribute(attrs, 'tool.name');
+          if (toolName) metrics.toolsUsed.add(String(toolName));
+
+          // Estimate cost for spans with token data
+          if (inputTokens > 0 || outputTokens > 0) {
+            metrics.costUsd += estimateMistralCost(
+              String(model ?? metrics.model ?? 'mistral-large-latest'),
+              inputTokens,
+              outputTokens,
+              cacheReadTokens
+            );
+          }
+        }
+      }
+    }
+
+    if (!jobId) {
+      return NextResponse.json({
+        status: 'accepted',
+        message: 'Telemetry received but no job_id found in resource attributes'
+      }, { status: 200 });
+    }
+
+    return updateJobMetrics(jobId, metrics, startTime, 'Trace processed');
+  } catch (error: unknown) {
+    console.error('[OTLP Telemetry] Trace processing error:', {
+      jobId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+/**
  * Normalize OTLP protobuf JSON snake_case keys to camelCase.
  * The Rust OTLP exporter uses snake_case (resource_logs, scope_logs, log_records, etc.)
  * while the JS OTLP exporter uses camelCase (resourceLogs, scopeLogs, logRecords, etc.)
@@ -309,8 +452,13 @@ function normalizeOtlpKeys(obj: unknown): unknown {
   if (obj && typeof obj === 'object') {
     const snakeToCamelMap: Record<string, string> = {
       resource_logs: 'resourceLogs',
+      resource_spans: 'resourceSpans',
       scope_logs: 'scopeLogs',
+      scope_spans: 'scopeSpans',
       log_records: 'logRecords',
+      start_time_unix_nano: 'startTimeUnixNano',
+      end_time_unix_nano: 'endTimeUnixNano',
+      parent_span_id: 'parentSpanId',
       time_unix_nano: 'timeUnixNano',
       observed_time_unix_nano: 'observedTimeUnixNano',
       severity_number: 'severityNumber',

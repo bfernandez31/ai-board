@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { useCreateCredential } from "@/lib/hooks/mutations/useCredentials";
 
-type Provider = "ANTHROPIC" | "OPENAI";
+type Provider = "ANTHROPIC" | "OPENAI" | "MISTRAL";
 
 export function CredentialForm() {
   const [provider, setProvider] = useState<Provider>("ANTHROPIC");
@@ -26,6 +26,18 @@ export function CredentialForm() {
 
   function validateFormat(prov: Provider, type: string, val: string): string | null {
     if (!val) return null;
+    if (prov === "MISTRAL") {
+      if (type !== "API_KEY") {
+        return "Mistral only supports API Key credentials";
+      }
+      if (val.length < 32) {
+        return "API key appears too short (minimum 32 characters)";
+      }
+      if (/\s/.test(val)) {
+        return "API key must not contain whitespace";
+      }
+      return null;
+    }
     if (prov === "OPENAI") {
       if (type === "API_KEY") {
         if (!val.startsWith("sk-")) {
@@ -68,12 +80,18 @@ export function CredentialForm() {
     if (type === "OAUTH_TOKEN") {
       return prov === "OPENAI" ? "Paste your Codex token" : "Paste your OAuth token";
     }
+    if (prov === "MISTRAL") return "Paste your Mistral API key";
     return prov === "OPENAI" ? "sk-proj-..." : "sk-ant-api03-...";
   }
 
   function handleProviderChange(newProvider: Provider) {
     setProvider(newProvider);
-    setFormatError(validateFormat(newProvider, credentialType, value));
+    // Mistral only supports API_KEY — reset if OAUTH_TOKEN was selected
+    const effectiveType = newProvider === "MISTRAL" && credentialType === "OAUTH_TOKEN" ? "API_KEY" : credentialType;
+    if (effectiveType !== credentialType) {
+      setCredentialType(effectiveType);
+    }
+    setFormatError(validateFormat(newProvider, effectiveType, value));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -112,6 +130,7 @@ export function CredentialForm() {
             <SelectContent>
               <SelectItem value="ANTHROPIC">Anthropic</SelectItem>
               <SelectItem value="OPENAI">OpenAI</SelectItem>
+              <SelectItem value="MISTRAL">Mistral</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -124,7 +143,7 @@ export function CredentialForm() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="API_KEY">API Key</SelectItem>
-              <SelectItem value="OAUTH_TOKEN">OAuth Token</SelectItem>
+              <SelectItem value="OAUTH_TOKEN" disabled={provider === "MISTRAL"}>OAuth Token</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -5,14 +5,14 @@ import { getOwnerCredential, buildWorkflowPayload, getMissingCredentialError, up
 
 const putSchema = z.object({
   projectId: z.coerce.number().int().positive(),
-  provider: z.enum(['ANTHROPIC', 'OPENAI']),
+  provider: z.enum(['ANTHROPIC', 'OPENAI', 'MISTRAL']),
   value: z.string().min(1),
   encoding: z.enum(['base64', 'plain']).default('base64'),
 });
 
 const querySchema = z.object({
   projectId: z.coerce.number().int().positive(),
-  provider: z.enum(['ANTHROPIC', 'OPENAI']).default('ANTHROPIC'),
+  provider: z.enum(['ANTHROPIC', 'OPENAI', 'MISTRAL']).default('ANTHROPIC'),
 });
 
 export async function GET(request: NextRequest) {

@@ -18,6 +18,11 @@ const AGENT_METADATA: Record<
     iconPath: '/agents/codex.svg',
     label: 'Codex',
   },
+  [Agent.MISTRAL]: {
+    description: 'Mistral vibe',
+    iconPath: '/agents/mistral.svg',
+    label: 'Mistral',
+  },
 };
 
 export function getAgentIconPath(agent: Agent): string {
@@ -47,6 +52,10 @@ export function inferAgentFromIdentifier(agentIdentifier: string | null | undefi
 
   if (isCodexIdentifier) {
     return Agent.CODEX;
+  }
+
+  if (normalizedIdentifier.includes('mistral') || normalizedIdentifier.includes('vibe')) {
+    return Agent.MISTRAL;
   }
 
   return null;

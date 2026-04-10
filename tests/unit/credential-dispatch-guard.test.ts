@@ -297,6 +297,38 @@ describe('BYOK Credential Dispatch Guards', () => {
     it('should generate provider-specific error messages', () => {
       expect(getMissingCredentialError('ANTHROPIC')).toContain('Anthropic');
       expect(getMissingCredentialError('OPENAI')).toContain('OpenAI');
+      expect(getMissingCredentialError('MISTRAL')).toContain('Mistral');
+    });
+
+    it('should resolve MISTRAL provider for Mistral-agent ticket', async () => {
+      mockedGetOwnerCredential.mockResolvedValue(null);
+
+      const { handleTicketTransition } = await import('@/lib/workflows/transition');
+
+      const mistralTicket = createTestTicket({
+        agent: 'MISTRAL' as TicketWithProject['agent'],
+      });
+
+      const result = await handleTicketTransition(mistralTicket, 'SPECIFY' as Stage);
+
+      expect(result.success).toBe(false);
+      expect(result.errorCode).toBe('MISSING_CREDENTIAL');
+      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1, 'MISTRAL');
+    });
+
+    it('should use Mistral-specific error message for missing MISTRAL credential', async () => {
+      mockedGetOwnerCredential.mockResolvedValue(null);
+
+      const { handleTicketTransition } = await import('@/lib/workflows/transition');
+
+      const mistralTicket = createTestTicket({
+        agent: 'MISTRAL' as TicketWithProject['agent'],
+      });
+
+      const result = await handleTicketTransition(mistralTicket, 'SPECIFY' as Stage);
+
+      expect(result.error).toContain('Mistral');
+      expect(result.error).toContain('credential configured');
     });
   });
 

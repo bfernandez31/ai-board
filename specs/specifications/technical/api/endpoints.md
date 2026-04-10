@@ -3079,12 +3079,12 @@ Invalid transitions return 400 error
 
 ### POST /api/telemetry/v1/logs
 
-OTLP HTTP/JSON endpoint for receiving agent telemetry (Claude Code and Codex).
+OTLP HTTP/JSON endpoint for receiving agent telemetry (Claude Code, Codex, and Mistral vibe CLI).
 
 **Authentication**: Bearer token (WORKFLOW_API_TOKEN) via `OTEL_EXPORTER_OTLP_HEADERS`
 **Authorization**: Workflow token validation
 
-**Supported Agents**: Claude Code (`claude_code.*` events) and Codex (`codex.*` events). The endpoint detects the agent from the event name prefix and processes metrics identically for both.
+**Supported Agents**: Claude Code (`claude_code.*` log events), Codex (`codex.*` log events), and Mistral vibe CLI (OTLP trace spans in `resourceSpans`). The endpoint detects the signal type from the payload structure (`resourceLogs` vs `resourceSpans`) and routes processing accordingly.
 
 **Request Body** (OTLP JSON format — Claude Code example):
 ```json
@@ -3136,7 +3136,33 @@ OTLP HTTP/JSON endpoint for receiving agent telemetry (Claude Code and Codex).
 }
 ```
 
-**Supported Event Names**:
+**Request Body** (OTLP JSON format — Mistral vibe CLI trace example):
+```json
+{
+  "resourceSpans": [{
+    "resource": {
+      "attributes": [
+        { "key": "job_id", "value": { "stringValue": "123" } },
+        { "key": "service.name", "value": { "stringValue": "vibe" } }
+      ]
+    },
+    "scopeSpans": [{
+      "spans": [{
+        "name": "llm.chat",
+        "startTimeUnixNano": "1700000000000000000",
+        "endTimeUnixNano":   "1700000005000000000",
+        "attributes": [
+          { "key": "gen_ai.request.model",       "value": { "stringValue": "mistral-large-latest" } },
+          { "key": "gen_ai.usage.input_tokens",  "value": { "intValue": "1200" } },
+          { "key": "gen_ai.usage.output_tokens", "value": { "intValue": "600" } }
+        ]
+      }]
+    }]
+  }]
+}
+```
+
+**Supported Event Names** (log-based — Claude Code and Codex):
 
 | Event Name | Agent | Processing |
 |------------|-------|------------|
@@ -3146,6 +3172,16 @@ OTLP HTTP/JSON endpoint for receiving agent telemetry (Claude Code and Codex).
 | `codex.api_request` | Codex | Token/cost/duration/model metrics |
 | `codex.tool.call` | Codex | Tool usage tracking |
 | All others | Any | Silently skipped |
+
+**Supported Span Attributes** (trace-based — Mistral vibe CLI):
+
+| Attribute | Source | Processing |
+|-----------|--------|------------|
+| `gen_ai.request.model` | `llm.chat` span | Model name |
+| `gen_ai.usage.input_tokens` | `llm.chat` span | Input token count |
+| `gen_ai.usage.output_tokens` | `llm.chat` span | Output token count |
+| `tool.name` | tool invocation span | Tool usage tracking |
+| Span timestamps | any span | Duration (endTime − startTime) |
 
 **Workflow Configuration** (Claude Code):
 ```yaml
@@ -3173,10 +3209,22 @@ env:
   OTEL_BLRP_SCHEDULE_DELAY: "60000"
 ```
 
+**Workflow Configuration** (Mistral vibe CLI):
+```yaml
+env:
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry/v1/logs
+  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: http/json
+  OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
+  OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
+  VIBE_TELEMETRY: "false"
+```
+
 **Processing**:
-- Extracts `job_id` from resource attributes
-- Aggregates metrics from `claude_code.api_request` and `codex.api_request` events (tokens, cost, duration, model)
-- Collects tool names from `claude_code.tool_result`, `claude_code.tool_decision`, and `codex.tool.call` events
+- Detects payload type: `resourceLogs` → log-based path (Claude/Codex); `resourceSpans` → trace-based path (Mistral)
+- Extracts `job_id` from resource attributes for job association in both paths
+- **Log path**: aggregates metrics from `claude_code.api_request` and `codex.api_request` events (tokens, cost, duration, model); collects tool names from tool events
+- **Trace path**: extracts tokens from `gen_ai.usage.*` span attributes, model from `gen_ai.request.model`, duration from span timestamps, tools from `tool.name`; estimates cost using the Mistral pricing table
 - Updates corresponding Job record with aggregated metrics
 - Missing or null metric attributes default to zero (no errors)
 
@@ -3202,21 +3250,28 @@ env:
 - Telemetry is sent automatically by the agent CLI during execution
 - Multiple batches may be received for a single job (metrics are aggregated across all batches)
 - If no job_id in attributes, telemetry is accepted but not stored
-- Agent type (Claude vs Codex) is not stored on the telemetry payload — it is determined via the Job's parent Ticket `agent` field
+- Agent type (Claude vs Codex vs Mistral) is not stored on the telemetry payload — it is determined via the Job's parent Ticket `agent` field
 - Mixed-agent event names in a single payload are supported; all recognized events accumulate to the same Job
+- Payloads without a `job_id` resource attribute are accepted but not stored (logged as unassociated for debugging)
 
 ```mermaid
 sequenceDiagram
-    participant AG as Agent CLI (Claude/Codex)
+    participant AG as Agent CLI
     participant OT as OTEL SDK
     participant EP as POST /api/telemetry/v1/logs
     participant DB as Database (Job)
 
-    AG->>OT: Emit api_request / tool event
+    AG->>OT: Emit api_request / tool event (or trace span)
     OT->>EP: OTLP JSON batch (Bearer token)
     EP->>EP: Validate token + Zod schema
+    EP->>EP: Detect signal type (resourceLogs vs resourceSpans)
     EP->>EP: Extract job_id from resource attrs
-    EP->>EP: Match event names (claude_code.* / codex.*)
+    alt Log payload (Claude / Codex)
+        EP->>EP: Match event names (claude_code.* / codex.*)
+    else Trace payload (Mistral)
+        EP->>EP: Parse spans (gen_ai.* attrs, tool.name)
+        EP->>EP: Estimate cost via Mistral pricing table
+    end
     EP->>DB: SELECT job by id
     DB-->>EP: Current accumulated metrics
     EP->>EP: Add new metrics + merge tools
@@ -3239,7 +3294,7 @@ Fetch aggregated analytics data for project visualization.
 **Query Parameters**:
 - `range` (string, optional): Time range for analytics (7d|30d|90d|all, default: 30d)
 - `outcome` (string, optional): Terminal ticket outcome scope (shipped|closed|all-completed, default: shipped)
-- `agent` (string, optional): Effective agent scope (all|CLAUDE|CODEX, default: all)
+- `agent` (string, optional): Effective agent scope (all|CLAUDE|CODEX|MISTRAL, default: all)
 
 **Behavior**:
 - The endpoint returns one coherent analytics payload for the active `range`, `outcome`, and `agent` filters.

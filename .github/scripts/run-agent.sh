@@ -5,7 +5,7 @@ set -euo pipefail
 # Abstracts CLI installation, authentication, telemetry, and command invocation
 # across Claude Code and Codex CLI agents.
 
-AGENT_TYPE="${1:?ERROR: AGENT_TYPE is required (CLAUDE or CODEX)}"
+AGENT_TYPE="${1:?ERROR: AGENT_TYPE is required (CLAUDE, CODEX, or MISTRAL)}"
 COMMAND="${2:?ERROR: COMMAND is required (e.g., ai-board.specify)}"
 shift 2
 ARGS="$*"
@@ -55,6 +55,12 @@ validate_auth() {
     CODEX)
       if [[ -z "${OPENAI_API_KEY:-}" ]] && [[ -z "${CODEX_OAUTH_JSON:-}" ]]; then
         log_error "OPENAI_API_KEY or CODEX_OAUTH_JSON is required for agent type CODEX"
+        exit 1
+      fi
+      ;;
+    MISTRAL)
+      if [[ -z "${MISTRAL_API_KEY:-}" ]]; then
+        log_error "MISTRAL_API_KEY is required for agent type MISTRAL"
         exit 1
       fi
       ;;
@@ -215,6 +221,64 @@ ${ARGS}"
   echo "$prompt" | codex exec --dangerously-bypass-approvals-and-sandbox -m "$model" -c "reasoning_effort=\"$reasoning\"" -
 }
 
+# --- Mistral functions ---
+
+install_mistral() {
+  if command -v vibe &>/dev/null; then
+    log_info "vibe CLI already installed — skipping"
+    return 0
+  fi
+  log_info "Installing vibe CLI..."
+  if ! pip install vibe-cli >&2; then
+    log_error "Failed to install vibe-cli"
+    exit 1
+  fi
+  export PATH="${HOME}/.local/bin:${PATH}"
+  if ! command -v vibe &>/dev/null; then
+    log_error "Failed to install vibe-cli — CLI binary not found after install"
+    exit 1
+  fi
+  log_info "vibe CLI installed successfully"
+}
+
+setup_mistral_telemetry() {
+  # Disable Mistral datalake telemetry
+  export VIBE_TELEMETRY=false
+
+  if [[ -z "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]]; then
+    log_info "No OTEL_EXPORTER_OTLP_ENDPOINT set — skipping Mistral telemetry config"
+    return 0
+  fi
+
+  # Configure OTLP trace export for vibe
+  # Route traces to /v1/logs (the only implemented telemetry endpoint)
+  export OTEL_TRACES_EXPORTER=otlp
+  export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs"
+  export OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=http/json
+  export OTEL_EXPORTER_OTLP_PROTOCOL=http/json
+  log_info "Mistral telemetry configured: VIBE_TELEMETRY=false, OTEL traces enabled"
+}
+
+invoke_mistral() {
+  local command_file
+  command_file=$(resolve_command_file "$COMMAND") || exit 1
+
+  log_info "Invoking vibe with command file: $command_file"
+
+  local model="${MISTRAL_MODEL:-mistral-large-latest}"
+  local prompt
+  prompt="$(cat "$command_file")"
+
+  if [[ -n "$ARGS" ]]; then
+    prompt="${prompt}
+
+${ARGS}"
+  fi
+
+  log_info "Model: $model"
+  echo "$prompt" | vibe --profile agent -m "$model" -
+}
+
 # --- Main dispatch ---
 
 case "$AGENT_TYPE" in
@@ -231,8 +295,14 @@ case "$AGENT_TYPE" in
     invoke_codex
     persist_codex_token
     ;;
+  MISTRAL)
+    validate_auth
+    install_mistral
+    setup_mistral_telemetry
+    invoke_mistral
+    ;;
   *)
-    log_error "Unsupported agent type '$AGENT_TYPE'. Supported: CLAUDE, CODEX"
+    log_error "Unsupported agent type '$AGENT_TYPE'. Supported: CLAUDE, CODEX, MISTRAL"
     exit 1
     ;;
 esac

@@ -189,6 +189,51 @@ describe('Workflow Credential Retrieval API', () => {
     expect(response.data.error).toContain('credential configured');
   });
 
+  it('should return MISTRAL_API_KEY when provider=MISTRAL', async () => {
+    const prisma = getPrismaClient();
+    const testKey = 'a'.repeat(32);
+    const { encryptedValue, iv, authTag } = encryptCredential(testKey);
+
+    await prisma.userCredential.create({
+      data: {
+        userId: 'test-user-id',
+        provider: 'MISTRAL',
+        credentialType: 'API_KEY',
+        label: '[e2e] Mistral Workflow Key',
+        encryptedValue,
+        iv,
+        authTag,
+        preview: testKey.slice(-4),
+        readinessStatus: 'READY',
+      },
+    });
+
+    const client = createWorkflowClient();
+    const response = await client.get<{
+      envVar: string;
+      value: string;
+      encoding: string;
+      credentialType: string;
+    }>(`/api/internal/credentials?projectId=${ctx.projectId}&provider=MISTRAL`);
+
+    expect(response.status).toBe(200);
+    expect(response.data.envVar).toBe('MISTRAL_API_KEY');
+    expect(response.data.encoding).toBe('base64');
+    expect(Buffer.from(response.data.value, 'base64').toString()).toBe(testKey);
+    expect(response.data.credentialType).toBe('API_KEY');
+  });
+
+  it('should return Mistral-specific 404 error message', async () => {
+    const client = createWorkflowClient();
+    const response = await client.get<{ error: string }>(
+      `/api/internal/credentials?projectId=${ctx.projectId}&provider=MISTRAL`
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.data.error).toContain('Mistral');
+    expect(response.data.error).toContain('credential configured');
+  });
+
   it('should return decrypted OAUTH_TOKEN credential with correct envVar', async () => {
     const prisma = getPrismaClient();
     const testToken = 'oauth-token-value-' + 'b'.repeat(40);

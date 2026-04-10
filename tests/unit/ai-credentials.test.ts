@@ -8,6 +8,7 @@ process.env.CREDENTIAL_ENCRYPTION_KEY = TEST_KEY;
 import { encryptCredential, decryptCredential } from '@/lib/ai-credentials/crypto';
 import { validateFormat } from '@/lib/ai-credentials/providers/anthropic';
 import { validateFormat as validateOpenAIFormat } from '@/lib/ai-credentials/providers/openai';
+import { validateFormat as validateMistralFormat } from '@/lib/ai-credentials/providers/mistral';
 import { getProviderModule } from '@/lib/ai-credentials/providers';
 
 describe('ai-credentials/crypto', () => {
@@ -184,6 +185,48 @@ describe('ai-credentials/providers/openai - validateFormat', () => {
   });
 });
 
+describe('ai-credentials/providers/mistral - validateFormat', () => {
+  describe('API_KEY format', () => {
+    it('should accept valid Mistral API key (32+ chars, no whitespace)', () => {
+      const validKey = 'a'.repeat(32);
+      const result = validateMistralFormat('API_KEY', validKey);
+      expect(result.valid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should reject empty key', () => {
+      const result = validateMistralFormat('API_KEY', '');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('API key is required');
+    });
+
+    it('should reject key shorter than 32 characters', () => {
+      const result = validateMistralFormat('API_KEY', 'a'.repeat(31));
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('too short');
+    });
+
+    it('should reject key containing whitespace', () => {
+      const result = validateMistralFormat('API_KEY', 'a'.repeat(16) + ' ' + 'b'.repeat(16));
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('whitespace');
+    });
+
+    it('should accept key with hyphens and underscores', () => {
+      const result = validateMistralFormat('API_KEY', 'abc-def_ghi-jkl_mno-pqr_stu-vwx_yz');
+      expect(result.valid).toBe(true);
+    });
+  });
+
+  describe('OAUTH_TOKEN rejection', () => {
+    it('should reject OAUTH_TOKEN credential type for Mistral', () => {
+      const result = validateMistralFormat('OAUTH_TOKEN', 'a'.repeat(50));
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Mistral only supports API_KEY credentials');
+    });
+  });
+});
+
 describe('ai-credentials/providers - registry', () => {
   it('should return the correct module for ANTHROPIC', () => {
     const mod = getProviderModule('ANTHROPIC');
@@ -199,5 +242,13 @@ describe('ai-credentials/providers - registry', () => {
     expect(mod.verifyWithProvider).toBeDefined();
     // OpenAI module should accept sk- format
     expect(mod.validateFormat('API_KEY', 'sk-proj-' + 'a'.repeat(40)).valid).toBe(true);
+  });
+
+  it('should return the correct module for MISTRAL', () => {
+    const mod = getProviderModule('MISTRAL');
+    expect(mod.validateFormat).toBeDefined();
+    expect(mod.verifyWithProvider).toBeDefined();
+    // Mistral module should accept 32+ char key
+    expect(mod.validateFormat('API_KEY', 'a'.repeat(32)).valid).toBe(true);
   });
 });

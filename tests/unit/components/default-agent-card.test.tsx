@@ -58,6 +58,16 @@ describe('DefaultAgentCard', () => {
       expect(trigger).toBeInTheDocument();
     });
 
+    it('should render with MISTRAL as default agent', () => {
+      renderWithProviders(
+        <DefaultAgentCard project={{ id: 3, defaultAgent: Agent.MISTRAL }} />
+      );
+
+      expect(screen.getByText('Default AI Agent')).toBeInTheDocument();
+      const trigger = screen.getByTestId('agent-select-trigger');
+      expect(trigger).toBeInTheDocument();
+    });
+
     it('should have a combobox role for the select', () => {
       renderWithProviders(<DefaultAgentCard {...defaultProps} />);
 
