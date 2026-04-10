@@ -285,12 +285,13 @@ After resolving the effective agent, each dispatch path resolves the correct own
 ```typescript
 // lib/ai-credentials/types.ts
 export const AGENT_PROVIDER_MAP: Record<Agent, CredentialProvider> = {
-  CLAUDE: 'ANTHROPIC',
-  CODEX:  'OPENAI',
+  CLAUDE:   'ANTHROPIC',
+  CODEX:    'OPENAI',
+  MISTRAL:  'MISTRAL',
 };
 ```
 
-`getOwnerCredential(projectId, provider)` looks up the project owner's `UserCredential` for the specified provider and returns the decrypted env var name and value. The workflow payload includes the resolved env var (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, or `OPENAI_API_KEY`).
+`getOwnerCredential(projectId, provider)` looks up the project owner's `UserCredential` for the specified provider and returns the decrypted env var name and value. The workflow payload includes the resolved env var (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, or `MISTRAL_API_KEY`).
 
 **Dispatch path behavior**:
 
@@ -508,6 +509,11 @@ sequenceDiagram
         RS->>RS: write ~/.codex/config.toml (OTEL telemetry)
         RS->>RS: read .claude/commands/COMMAND.md
         RS->>CLI: echo prompt | codex exec --dangerously-bypass-approvals-and-sandbox -m $CODEX_MODEL -
+    else AGENT_TYPE = MISTRAL
+        RS->>CLI: pip install vibe-cli
+        RS->>RS: disable datalake telemetry (MISTRAL_DISABLE_DATALAKE=1)
+        RS->>RS: configure OTEL trace export to platform endpoint
+        RS->>CLI: vibe run --profile auto-approve "/COMMAND ARGS"
     end
     CLI-->>RS: exit code
     RS-->>WF: propagated exit code
@@ -515,14 +521,14 @@ sequenceDiagram
 
 **Agent-Specific Behavior**:
 
-| Concern | CLAUDE | CODEX |
-|---------|--------|-------|
-| Package | `@anthropic-ai/claude-code` | `@openai/codex` |
-| Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64) |
-| Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt injection via stdin from `.claude/commands/COMMAND.md` |
-| Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section |
-| Project context | `CLAUDE.md` (native) | `AGENTS.md` at project root, read automatically by Codex |
-| Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `gpt-5.4`), `CODEX_REASONING` env var (default: `high`) |
+| Concern | CLAUDE | CODEX | MISTRAL |
+|---------|--------|-------|---------|
+| Package | `@anthropic-ai/claude-code` | `@openai/codex` | `vibe-cli` (Python pip) |
+| Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64) | `MISTRAL_API_KEY` |
+| Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt injection via stdin from `.claude/commands/COMMAND.md` | `vibe run --profile auto-approve "/COMMAND ARGS"` |
+| Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section | OTEL trace export via env vars; datalake disabled |
+| Project context | `CLAUDE.md` (native) | `AGENTS.md` at project root, read automatically by Codex | `AGENTS.md` at project root, read via native filesystem walk |
+| Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `gpt-5.4`), `CODEX_REASONING` env var (default: `high`) | Determined by vibe CLI defaults |
 
 **Repository Instructions** (Codex only):
 - Target repositories are expected to provide `AGENTS.md` at the project root
@@ -548,7 +554,7 @@ sequenceDiagram
 - Missing auth secret → exits before any CLI installation with descriptive message
 - CLI binary not found after install → fails with clear install error
 - Command `.md` file not found (Codex) → exits with file path shown
-- Unsupported agent type → exits listing supported values: `CLAUDE`, `CODEX`
+- Unsupported agent type → exits listing supported values: `CLAUDE`, `CODEX`, `MISTRAL`
 - Exit code from underlying CLI is always propagated to calling workflow step
 
 **Environment Variables**:
@@ -557,8 +563,9 @@ sequenceDiagram
 - `CODEX_AUTH_JSON`: Alternative to `OPENAI_API_KEY` for Codex (base64-encoded OAuth `auth.json` from `codex login`; decoded and written to `~/.codex/auth.json`)
 - `CODEX_MODEL`: Optional Codex model override (default: `gpt-5.4`)
 - `CODEX_REASONING`: Optional Codex reasoning effort override (default: `high`)
-- `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex telemetry when set
-- `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config
+- `MISTRAL_API_KEY`: Required when `AGENT_TYPE=MISTRAL`
+- `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex and Mistral telemetry when set
+- `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config and Mistral OTEL export
 
 **Usage in Workflows**:
 
@@ -569,6 +576,7 @@ All 6 workflows (`speckit.yml`, `quick-impl.yml`, `verify.yml`, `cleanup.yml`, `
   env:
     CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
   run: |
     .github/scripts/run-agent.sh "${{ inputs.agent }}" ai-board.specify "$PAYLOAD"
 ```

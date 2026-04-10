@@ -1087,7 +1087,7 @@ model ProjectSetupJob {
 **Fields**:
 - `id`: Auto-incrementing unique identifier
 - `projectId`: Parent project (required, cascade delete)
-- `agent`: Selected agent CLI (`CLAUDE` or `CODEX`)
+- `agent`: Selected agent CLI (`CLAUDE`, `CODEX`, or `MISTRAL`)
 - `status`: Current job state (default: `PENDING`)
 - `command`: Job type discriminator (default: `ONBOARD`). `RETRO_SPEC` identifies spec generation jobs.
 - `depth`: Spec generation depth level — `SetupJobDepth` enum: `QUICK`, `STANDARD`, or `COMPREHENSIVE` (RETRO_SPEC only; null for ONBOARD)
@@ -1112,7 +1112,7 @@ model ProjectSetupJob {
 **Business Rules**:
 - Only one job with PENDING or RUNNING status is permitted per project **per command type** at a time — ONBOARD and RETRO_SPEC jobs do not block each other
 - `ONBOARD` jobs require `configSyncedAt` to be null; `RETRO_SPEC` jobs require `configSyncedAt` to be set
-- `agent` determines which credential provider is required (`CLAUDE` → `ANTHROPIC`, `CODEX` → `OPENAI`)
+- `agent` determines which credential provider is required (`CLAUDE` → `ANTHROPIC`, `CODEX` → `OPENAI`, `MISTRAL` → `MISTRAL`)
 - On COMPLETED (ONBOARD), `syncProjectConfig()` runs automatically (non-blocking) to set `configSyncedAt`
 - On COMPLETED (RETRO_SPEC), no config sync — generated specs are committed to the repository by the workflow
 - If config sync fails after an ONBOARD COMPLETED, the job remains COMPLETED but `configSyncedAt` stays null — the setup page remains visible and the user can retry
@@ -1129,6 +1129,7 @@ AI provider identifier for BYOK credentials.
 enum CredentialProvider {
   ANTHROPIC
   OPENAI
+  MISTRAL
 }
 ```
 
@@ -1148,10 +1149,12 @@ enum CredentialType {
 - `ANTHROPIC:OAUTH_TOKEN` → `CLAUDE_CODE_OAUTH_TOKEN`
 - `OPENAI:API_KEY` → `OPENAI_API_KEY`
 - `OPENAI:OAUTH_TOKEN` → `OPENAI_API_KEY`
+- `MISTRAL:API_KEY` → `MISTRAL_API_KEY`
 
 **Provider constraints**:
 - `ANTHROPIC`: supports `API_KEY` and `OAUTH_TOKEN`
 - `OPENAI`: supports `API_KEY` and `OAUTH_TOKEN`
+- `MISTRAL`: supports `API_KEY` only
 
 ### CredentialReadiness
 
@@ -1370,8 +1373,9 @@ AI agent that executes workflow automation for a ticket or project.
 
 ```prisma
 enum Agent {
-  CLAUDE  // Anthropic Claude (default)
-  CODEX   // OpenAI Codex
+  CLAUDE   // Anthropic Claude (default)
+  CODEX    // OpenAI Codex
+  MISTRAL  // Mistral vibe CLI
 }
 ```
 

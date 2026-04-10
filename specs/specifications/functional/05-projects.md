@@ -205,6 +205,11 @@ Projects have a configurable default AI agent that determines which AI executes 
    - Alternative agent for projects requiring OpenAI's offering
    - Must be explicitly selected; not the default
 
+3. **MISTRAL (Mistral vibe CLI)**:
+   - Third provider option for projects requiring Mistral's offering
+   - Uses the vibe CLI for workflow execution
+   - Requires a stored Mistral API key credential
+
 **Configuration**:
 - Accessible from project settings page
 - Dropdown select with agent options
@@ -518,7 +523,7 @@ When a project is imported without a `.ai-board/config.yml` file, the system dir
 
 ### Setup Flow
 
-1. **Agent Selection**: The owner selects which AI agent CLI to use — Claude Code (Anthropic) or Codex (OpenAI)
+1. **Agent Selection**: The owner selects which AI agent CLI to use — Claude Code (Anthropic), Codex (OpenAI), or Mistral (vibe CLI)
 2. **Credential Check**: The system verifies the owner has a valid stored credential for the selected agent's provider. If the credential is missing, the initialize button is disabled and actionable guidance is displayed linking to the credentials settings page
 3. **Initialize**: The owner clicks "Initialize Project" to create a setup job and dispatch the onboarding workflow
 4. **Progress Tracking**: The page polls every 2 seconds and displays the current job state (pending spinner, running progress, or failed error with retry)
