@@ -89,7 +89,7 @@ interface BoardProps {
   projectId: number;
   initialJobs?: Map<number, Job[]>; // Array of jobs per ticket for dual job display
   hasSpecs?: boolean;
-  defaultAgent?: 'CLAUDE' | 'CODEX';
+  defaultAgent?: import('@prisma/client').Agent;
 }
 
 /** Default merge: apply server response fields to optimistic ticket */

@@ -10,7 +10,7 @@ interface RetroSpecBannerProps {
   hasSpecs: boolean;
   isGenerating: boolean;
   isFailed?: boolean;
-  defaultAgent?: 'CLAUDE' | 'CODEX';
+  defaultAgent?: import('@prisma/client').Agent;
   onGenerateSuccess?: (() => void) | undefined;
 }
 

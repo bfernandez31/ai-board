@@ -10,7 +10,7 @@ import { RetroSpecModal } from './retro-spec-modal';
 
 interface RetroSpecBadgeProps {
   projectId: number;
-  defaultAgent?: 'CLAUDE' | 'CODEX';
+  defaultAgent?: import('@prisma/client').Agent;
 }
 
 export function RetroSpecBadge({ projectId, defaultAgent }: RetroSpecBadgeProps) {

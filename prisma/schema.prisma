@@ -303,11 +303,13 @@ enum WorkflowType {
 enum Agent {
   CLAUDE
   CODEX
+  MISTRAL
 }
 
 enum CredentialProvider {
   ANTHROPIC
   OPENAI
+  MISTRAL
 }
 
 enum CredentialType {

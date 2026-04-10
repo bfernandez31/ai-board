@@ -4,7 +4,7 @@ import { getEnvVar, type WorkflowResolvedCredential } from './types';
 import type { CredentialProvider, UserCredential } from '@prisma/client';
 
 export function getMissingCredentialError(provider: CredentialProvider = 'ANTHROPIC'): string {
-  const providerName = provider === 'OPENAI' ? 'OpenAI' : 'Anthropic';
+  const providerName = provider === 'OPENAI' ? 'OpenAI' : provider === 'MISTRAL' ? 'Mistral' : 'Anthropic';
   return `No ${providerName} credential configured. Please add your ${providerName} key in Settings → AI Credentials.`;
 }
 

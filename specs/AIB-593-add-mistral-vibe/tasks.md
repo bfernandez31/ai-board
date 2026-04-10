@@ -18,8 +18,8 @@
 
 **Purpose**: Extend Prisma enums and regenerate client so TypeScript compilation unblocks all downstream work.
 
-- [ ] T001 Add MISTRAL to Agent and CredentialProvider enums in prisma/schema.prisma
-- [ ] T002 Run Prisma migration (`bunx prisma migrate dev --name add-mistral-agent`) and regenerate client (`bunx prisma generate`)
+- [x] T001 Add MISTRAL to Agent and CredentialProvider enums in prisma/schema.prisma ✅ DONE
+- [x] T002 Run Prisma migration (`bunx prisma migrate dev --name add-mistral-agent`) and regenerate client (`bunx prisma generate`) ✅ DONE
 
 ---
 
@@ -29,12 +29,12 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T003 [P] Extend AGENT_PROVIDER_MAP, PROVIDER_ALLOWED_TYPES, and ENV_VAR_MAP with MISTRAL entries in lib/ai-credentials/types.ts
-- [ ] T004 [P] Extend getMissingCredentialError with Mistral provider name in lib/ai-credentials/workflow.ts
-- [ ] T005 [P] Add MISTRAL to AGENT_METADATA and extend inferAgentFromIdentifier (match `mistral`/`vibe`) in app/lib/utils/agent-icons.ts
-- [ ] T006 [P] Create Mistral icon SVG asset at public/agents/mistral.svg
-- [ ] T007 Create Mistral provider module (validateFormat + verifyWithProvider) following openai.ts pattern in lib/ai-credentials/providers/mistral.ts
-- [ ] T008 Register Mistral module in PROVIDER_MODULES in lib/ai-credentials/providers/index.ts (depends on T007)
+- [x] T003 [P] Extend AGENT_PROVIDER_MAP, PROVIDER_ALLOWED_TYPES, and ENV_VAR_MAP with MISTRAL entries in lib/ai-credentials/types.ts ✅ DONE
+- [x] T004 [P] Extend getMissingCredentialError with Mistral provider name in lib/ai-credentials/workflow.ts ✅ DONE
+- [x] T005 [P] Add MISTRAL to AGENT_METADATA and extend inferAgentFromIdentifier (match `mistral`/`vibe`) in app/lib/utils/agent-icons.ts ✅ DONE
+- [x] T006 [P] Create Mistral icon SVG asset at public/agents/mistral.svg ✅ DONE
+- [x] T007 Create Mistral provider module (validateFormat + verifyWithProvider) following openai.ts pattern in lib/ai-credentials/providers/mistral.ts ✅ DONE
+- [x] T008 Register Mistral module in PROVIDER_MODULES in lib/ai-credentials/providers/index.ts (depends on T007) ✅ DONE
 
 **Checkpoint**: `bun run type-check` passes. All `Record<Agent, ...>` and `Record<CredentialProvider, ...>` maps include MISTRAL.
 
