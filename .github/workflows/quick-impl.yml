@@ -171,6 +171,7 @@ jobs:
       OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
       OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
       OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
+      JOB_ID: ${{ inputs.job_id }}
       # Batch log exports — every 60s instead of defaults (Claude Code: 5s, Codex/Rust: 1s)
       OTEL_LOGS_EXPORT_INTERVAL: "60000"
       OTEL_BLRP_SCHEDULE_DELAY: "60000"
@@ -262,6 +263,7 @@ jobs:
         run: |
           DEFAULT_BRANCH=$(gh api "repos/${{ inputs.githubRepository }}" --jq '.default_branch')
           echo "branch=$DEFAULT_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "DEFAULT_BRANCH=$DEFAULT_BRANCH" >> "$GITHUB_ENV"
           echo "Default branch: $DEFAULT_BRANCH"
 
       - name: Checkout target repository
@@ -394,6 +396,17 @@ jobs:
           current_branch="$(git rev-parse --abbrev-ref HEAD)"
           echo "FEATURE_BRANCH=$current_branch" >> "$GITHUB_ENV"
           echo "✅ Feature branch: $current_branch"
+
+      - name: Guard against default branch push
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: |
+          if [ "$FEATURE_BRANCH" = "$DEFAULT_BRANCH" ]; then
+            echo "🚫 FATAL: Agent stayed on default branch '$DEFAULT_BRANCH' instead of creating a feature branch."
+            echo "   This would pollute the default branch with uncommitted artifacts."
+            echo "   Aborting to protect repository integrity."
+            exit 1
+          fi
+          echo "✅ Branch guard passed: '$FEATURE_BRANCH' ≠ '$DEFAULT_BRANCH'"
 
       - name: Cleanup Temporary Images Before Commit
         if: ${{ env.SKIP_EXECUTION != 'true' && env.IMAGE_COUNT != '' && env.IMAGE_COUNT != '0' }}
