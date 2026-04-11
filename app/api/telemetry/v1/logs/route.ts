@@ -180,19 +180,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           }
 
           if (isGeminiApiResponse) {
-            metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
-            metrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
+            const inputTokens = parseIntAttribute(findAttribute(attrs, 'input_tokens'));
+            const outputTokens = parseIntAttribute(findAttribute(attrs, 'output_tokens'));
             // Gemini thought_tokens map to cacheReadTokens for consistency
-            metrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'thought_tokens'));
+            const thoughtTokens = parseIntAttribute(findAttribute(attrs, 'thought_tokens'));
+            metrics.inputTokens += inputTokens;
+            metrics.outputTokens += outputTokens;
+            metrics.cacheReadTokens += thoughtTokens;
             metrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
             const model = findAttribute(attrs, 'model');
             if (model) metrics.model = String(model);
 
             metrics.costUsd += estimateGeminiCost(
               String(model ?? 'gemini-2.5-pro'),
-              parseIntAttribute(findAttribute(attrs, 'input_tokens')),
-              parseIntAttribute(findAttribute(attrs, 'output_tokens')),
-              parseIntAttribute(findAttribute(attrs, 'thought_tokens')),
+              inputTokens,
+              outputTokens,
+              thoughtTokens,
             );
           }
 

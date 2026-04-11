@@ -6,6 +6,7 @@ import { getOwnerCredential } from '@/lib/ai-credentials/workflow';
 import { dispatchOnboardWorkflow } from '@/lib/workflows/dispatch-onboard';
 import { dispatchRetroSpecWorkflow } from '@/lib/workflows/dispatch-retro-spec';
 import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
+import { Agent } from '@prisma/client';
 import type { SetupJobCommand } from '@prisma/client';
 
 function handleOwnershipError(error: unknown): NextResponse {
@@ -17,8 +18,6 @@ function handleOwnershipError(error: unknown): NextResponse {
   }
   return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
 }
-
-import { Agent } from '@prisma/client';
 
 const SETUP_INELIGIBLE_AGENTS: Agent[] = ['GEMINI'];
 
