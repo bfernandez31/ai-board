@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import {
   otlpLogsSchema,
-  otlpTracesSchema,
   findAttribute,
   parseIntAttribute,
   parseFloatAttribute,
 } from '@/lib/schemas/otlp';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+
+const batchPayloadSchema = z.object({
+  jobId: z.number().int().positive().optional(),
+  inputTokens: z.number().int().nonnegative().optional(),
+  outputTokens: z.number().int().nonnegative().optional(),
+  cacheReadTokens: z.number().int().nonnegative().optional(),
+  cacheCreationTokens: z.number().int().nonnegative().optional(),
+  model: z.string().optional(),
+  toolsUsed: z.array(z.string()).optional(),
+});
 
 /**
  * POST /api/telemetry/v1/logs
@@ -73,12 +83,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ status: 'accepted', message: 'Metrics ignored at logs endpoint' }, { status: 200 });
     }
 
-    // Process OTLP traces (vibe / Mistral agent)
-    if (body && (body.resourceSpans || body.resource_spans)) {
-      if (body.resource_spans && !body.resourceSpans) {
-        body = normalizeOtlpKeys(body);
-      }
-      return processTracePayload(body, startTime);
+    // Process batch payload (Mistral post-execution telemetry)
+    // Detected by absence of OTLP-specific keys — must check AFTER resourceLogs and resourceMetrics
+    if (body && typeof body === 'object' && !body.resourceLogs && !body.resource_logs && !body.resourceMetrics && !body.resource_metrics) {
+      return processBatchPayload(body, startTime);
     }
 
     // OTLP protobuf JSON uses snake_case (resource_logs), but our schema expects camelCase (resourceLogs)
@@ -333,10 +341,12 @@ function estimateOpenAICost(model: string, inputTokens: number, outputTokens: nu
  * Prices are per-million tokens (source: Mistral API pricing).
  */
 const MISTRAL_PRICING: Record<string, { input: number; output: number; cached: number }> = {
-  'mistral-large-latest':  { input: 2.00, output: 6.00, cached: 1.00 },
-  'mistral-medium-latest': { input: 0.70, output: 2.10, cached: 0.35 },
-  'mistral-small-latest':  { input: 0.10, output: 0.30, cached: 0.05 },
-  'codestral-latest':      { input: 0.30, output: 0.90, cached: 0.15 },
+  'mistral-large-latest':    { input: 2.00, output: 6.00, cached: 1.00 },
+  'mistral-medium-latest':   { input: 0.70, output: 2.10, cached: 0.35 },
+  'mistral-small-latest':    { input: 0.10, output: 0.30, cached: 0.05 },
+  'codestral-latest':        { input: 0.30, output: 0.90, cached: 0.15 },
+  'devstral-small-latest':   { input: 0.10, output: 0.30, cached: 0.05 },
+  'devstral-medium-latest':  { input: 0.50, output: 1.50, cached: 0.25 },
 };
 
 function estimateMistralCost(model: string, inputTokens: number, outputTokens: number, cachedTokens: number): number {
@@ -349,95 +359,50 @@ function estimateMistralCost(model: string, inputTokens: number, outputTokens: n
 }
 
 /**
- * Process OTLP trace payloads from vibe (Mistral agent).
- * Extracts token counts, model, duration, and tools from span attributes.
+ * Process batch telemetry payload (Mistral post-execution scrape).
+ * Accepts a simple JSON object with pre-aggregated metrics.
  */
-async function processTracePayload(body: unknown, startTime: number): Promise<NextResponse> {
-  let jobId: number | undefined;
-
-  try {
-    const validationResult = otlpTracesSchema.safeParse(body);
-    if (!validationResult.success) {
-      console.error('[OTLP Telemetry] Trace schema validation failed:', {
-        errors: validationResult.error.issues,
-      });
-      return NextResponse.json({ error: 'Invalid OTLP trace format' }, { status: 400 });
-    }
-
-    const traceData = validationResult.data;
-
-    const metrics = createEmptyMetrics();
-
-    for (const resourceSpan of traceData.resourceSpans) {
-      const resourceAttrs = resourceSpan.resource?.attributes;
-      const jobIdAttr = findAttribute(resourceAttrs, 'job_id');
-
-      if (jobIdAttr && !jobId) {
-        jobId = parseInt(String(jobIdAttr), 10);
-        if (isNaN(jobId)) jobId = undefined;
-      }
-
-      for (const scopeSpan of resourceSpan.scopeSpans || []) {
-        for (const span of scopeSpan.spans || []) {
-          const attrs = span.attributes;
-
-          // Extract token metrics from gen_ai.usage.* attributes
-          const inputTokens = parseIntAttribute(findAttribute(attrs, 'gen_ai.usage.input_tokens'));
-          const outputTokens = parseIntAttribute(findAttribute(attrs, 'gen_ai.usage.output_tokens'));
-          const cacheReadTokens = parseIntAttribute(findAttribute(attrs, 'gen_ai.usage.cache_read_tokens'));
-
-          metrics.inputTokens += inputTokens;
-          metrics.outputTokens += outputTokens;
-          metrics.cacheReadTokens += cacheReadTokens;
-
-          // Extract model
-          const model = findAttribute(attrs, 'gen_ai.request.model');
-          if (model) metrics.model = String(model);
-
-          // Calculate duration from span timestamps
-          if (span.startTimeUnixNano && span.endTimeUnixNano) {
-            try {
-              const startNs = BigInt(String(span.startTimeUnixNano));
-              const endNs = BigInt(String(span.endTimeUnixNano));
-              const durationMs = Number((endNs - startNs) / BigInt(1_000_000));
-              if (durationMs > 0) metrics.durationMs += durationMs;
-            } catch {
-              // Skip duration accumulation for non-numeric timestamps
-            }
-          }
-
-          // Extract tool names
-          const toolName = findAttribute(attrs, 'tool.name');
-          if (toolName) metrics.toolsUsed.add(String(toolName));
-
-          // Estimate cost for spans with token data
-          if (inputTokens > 0 || outputTokens > 0) {
-            metrics.costUsd += estimateMistralCost(
-              String(model ?? metrics.model ?? 'mistral-large-latest'),
-              inputTokens,
-              outputTokens,
-              cacheReadTokens
-            );
-          }
-        }
-      }
-    }
-
-    if (!jobId) {
-      return NextResponse.json({
-        status: 'accepted',
-        message: 'Telemetry received but no job_id found in resource attributes'
-      }, { status: 200 });
-    }
-
-    return updateJobMetrics(jobId, metrics, startTime, 'Trace processed');
-  } catch (error: unknown) {
-    console.error('[OTLP Telemetry] Trace processing error:', {
-      jobId,
-      error: error instanceof Error ? error.message : String(error),
+async function processBatchPayload(body: unknown, startTime: number): Promise<NextResponse> {
+  const validationResult = batchPayloadSchema.safeParse(body);
+  if (!validationResult.success) {
+    console.error('[Batch Telemetry] Schema validation failed:', {
+      errors: validationResult.error.issues,
     });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Invalid batch payload' }, { status: 400 });
   }
+
+  const data = validationResult.data;
+
+  if (!data.jobId) {
+    console.warn('[Batch Telemetry] No jobId in payload, metrics not stored');
+    return NextResponse.json({
+      status: 'accepted',
+      message: 'Telemetry received but no jobId found',
+    }, { status: 200 });
+  }
+
+  const metrics = createEmptyMetrics();
+  metrics.inputTokens = data.inputTokens ?? 0;
+  metrics.outputTokens = data.outputTokens ?? 0;
+  metrics.cacheReadTokens = data.cacheReadTokens ?? 0;
+  metrics.cacheCreationTokens = data.cacheCreationTokens ?? 0;
+  metrics.model = data.model ?? null;
+
+  for (const tool of data.toolsUsed ?? []) {
+    metrics.toolsUsed.add(tool);
+  }
+
+  // Estimate cost if tokens provided
+  if (metrics.inputTokens > 0 || metrics.outputTokens > 0) {
+    metrics.costUsd = estimateMistralCost(
+      data.model ?? 'mistral-large-latest',
+      metrics.inputTokens,
+      metrics.outputTokens,
+      metrics.cacheReadTokens,
+    );
+  }
+
+  return updateJobMetrics(data.jobId, metrics, startTime, 'Batch processed');
 }
 
 /**
