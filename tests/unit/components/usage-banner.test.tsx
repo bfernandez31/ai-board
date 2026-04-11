@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { UsageData } from '@/hooks/use-usage';
 import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
 import { UsageBanner } from '@/components/billing/usage-banner';
 
@@ -13,10 +14,25 @@ describe('UsageBanner', () => {
     vi.clearAllMocks();
   });
 
-  it('renders a fixed-height loading skeleton while usage data is unavailable', () => {
-    mockUseUsage.mockReturnValue({ data: undefined });
+  function createUsageData(overrides: Partial<UsageData> = {}): UsageData {
+    return {
+      plan: 'FREE',
+      planName: 'Free',
+      projects: { current: 1, max: 1 },
+      ticketsThisMonth: { current: 3, max: 5, resetDate: '2026-04-01T00:00:00.000Z' },
+      status: 'none',
+      gracePeriodEndsAt: null,
+      ...overrides,
+    };
+  }
 
+  function renderBanner(usage: UsageData | undefined): void {
+    mockUseUsage.mockReturnValue({ data: usage });
     renderWithProviders(<UsageBanner />);
+  }
+
+  it('renders a fixed-height loading skeleton while usage data is unavailable', () => {
+    renderBanner(undefined);
 
     const skeleton = screen.getByTestId('usage-banner-skeleton');
     expect(skeleton).toBeInTheDocument();
@@ -25,18 +41,7 @@ describe('UsageBanner', () => {
   });
 
   it('shows ratios and an upgrade action for Free plan users', () => {
-    mockUseUsage.mockReturnValue({
-      data: {
-        plan: 'FREE',
-        planName: 'Free',
-        projects: { current: 1, max: 1 },
-        ticketsThisMonth: { current: 3, max: 5, resetDate: '2026-04-01T00:00:00.000Z' },
-        status: 'none',
-        gracePeriodEndsAt: null,
-      },
-    });
-
-    renderWithProviders(<UsageBanner />);
+    renderBanner(createUsageData());
 
     expect(screen.getByText('FREE')).toBeInTheDocument();
     expect(screen.getByText('1/1 project · 3/5 tickets this month')).toBeInTheDocument();
@@ -46,18 +51,15 @@ describe('UsageBanner', () => {
   });
 
   it('shows raw counts and a manage plan action for Pro users', () => {
-    mockUseUsage.mockReturnValue({
-      data: {
+    renderBanner(
+      createUsageData({
         plan: 'PRO',
         planName: 'Pro',
         projects: { current: 4, max: null },
         ticketsThisMonth: { current: 12, max: null, resetDate: '2026-04-01T00:00:00.000Z' },
         status: 'active',
-        gracePeriodEndsAt: null,
-      },
-    });
-
-    renderWithProviders(<UsageBanner />);
+      })
+    );
 
     expect(screen.getByText('PRO')).toBeInTheDocument();
     expect(screen.getByText('4 projects · 12 tickets this month')).toBeInTheDocument();
@@ -68,18 +70,15 @@ describe('UsageBanner', () => {
   });
 
   it('shows team styling and counts for Team users', () => {
-    mockUseUsage.mockReturnValue({
-      data: {
+    renderBanner(
+      createUsageData({
         plan: 'TEAM',
         planName: 'Team',
         projects: { current: 2, max: null },
         ticketsThisMonth: { current: 18, max: null, resetDate: '2026-04-01T00:00:00.000Z' },
         status: 'active',
-        gracePeriodEndsAt: null,
-      },
-    });
-
-    renderWithProviders(<UsageBanner />);
+      })
+    );
 
     expect(screen.getByText('TEAM')).toBeInTheDocument();
     expect(screen.getByText('2 projects · 18 tickets this month')).toBeInTheDocument();
@@ -88,18 +87,16 @@ describe('UsageBanner', () => {
   });
 
   it('shows the past-due warning when payment is overdue', () => {
-    mockUseUsage.mockReturnValue({
-      data: {
+    renderBanner(
+      createUsageData({
         plan: 'PRO',
         planName: 'Pro',
         projects: { current: 2, max: null },
         ticketsThisMonth: { current: 5, max: null, resetDate: '2026-04-01T00:00:00.000Z' },
         status: 'past_due',
         gracePeriodEndsAt: '2026-03-20T00:00:00.000Z',
-      },
-    });
-
-    renderWithProviders(<UsageBanner />);
+      })
+    );
 
     expect(screen.getByText(/Payment failed/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /update payment method/i })).toHaveAttribute('href', '/settings/billing');

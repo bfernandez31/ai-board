@@ -5,6 +5,7 @@ import { AlertTriangle, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUsage, type UsageData } from '@/hooks/use-usage';
+import { cn } from '@/lib/utils';
 
 interface BannerStyles {
   cardClassName: string;
@@ -37,15 +38,19 @@ function getBannerStyles(plan: UsageData['plan']): BannerStyles {
 
 function formatUsageSummary(usage: UsageData): string {
   const projectLabel = usage.projects.current === 1 ? 'project' : 'projects';
+  const projectUsage =
+    usage.plan === 'FREE' && usage.projects.max !== null
+      ? `${usage.projects.current}/${usage.projects.max} ${projectLabel}`
+      : `${usage.projects.current} ${projectLabel}`;
+  const ticketUsage =
+    usage.plan === 'FREE' && usage.ticketsThisMonth.max !== null
+      ? `${usage.ticketsThisMonth.current}/${usage.ticketsThisMonth.max} tickets this month`
+      : `${usage.ticketsThisMonth.current} tickets this month`;
 
-  if (usage.plan === 'FREE' && usage.projects.max !== null && usage.ticketsThisMonth.max !== null) {
-    return `${usage.projects.current}/${usage.projects.max} ${projectLabel} · ${usage.ticketsThisMonth.current}/${usage.ticketsThisMonth.max} tickets this month`;
-  }
-
-  return `${usage.projects.current} ${projectLabel} · ${usage.ticketsThisMonth.current} tickets this month`;
+  return `${projectUsage} · ${ticketUsage}`;
 }
 
-function UsageBannerSkeleton() {
+function UsageBannerSkeleton(): JSX.Element {
   return (
     <div
       data-testid="usage-banner-skeleton"
@@ -62,7 +67,7 @@ function UsageBannerSkeleton() {
   );
 }
 
-export function UsageBanner() {
+export function UsageBanner(): JSX.Element {
   const { data: usage } = useUsage();
 
   if (!usage) {
@@ -91,13 +96,16 @@ export function UsageBanner() {
 
       <div
         data-testid="usage-banner-card"
-        className={`min-h-24 rounded-xl border p-4 shadow-sm ${cardClassName}`}
+        className={cn('min-h-24 rounded-xl border p-4 shadow-sm', cardClassName)}
       >
         <div className="flex min-h-16 flex-col justify-between gap-3 md:flex-row md:items-center">
           <div className="flex flex-wrap items-center gap-3">
             <Badge
               data-testid="usage-banner-badge"
-              className={`rounded-full px-3 py-1 text-[11px] font-bold tracking-[0.24em] ${badgeClassName}`}
+              className={cn(
+                'rounded-full px-3 py-1 text-[11px] font-bold tracking-[0.24em]',
+                badgeClassName
+              )}
             >
               {usage.plan}
             </Badge>
