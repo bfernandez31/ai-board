@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Agent } from '@prisma/client';
 import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { getOwnerCredential } from '@/lib/ai-credentials/workflow';
 import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
 
 const querySchema = z.object({
-  agent: z.enum(['CLAUDE', 'CODEX'] as const),
+  agent: z.nativeEnum(Agent),
 });
 
 export async function GET(

@@ -27,6 +27,16 @@ const AGENTS: { value: Agent; label: string; description: string }[] = [
     label: 'Codex',
     description: 'OpenAI Codex agent for code generation and completion',
   },
+  {
+    value: 'MISTRAL',
+    label: 'Mistral',
+    description: 'Mistral vibe agent for code generation and reasoning',
+  },
+  {
+    value: 'GEMINI',
+    label: 'Gemini',
+    description: 'Google Gemini CLI agent for code generation and analysis',
+  },
 ];
 
 export function SetupPageClient({ projectId, projectName }: SetupPageClientProps) {

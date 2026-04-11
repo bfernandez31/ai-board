@@ -5,7 +5,7 @@
  * All queries are read-only against existing Job and Ticket tables.
  */
 
-import { JobStatus } from '@prisma/client';
+import { Agent, JobStatus } from '@prisma/client';
 import type { Prisma, Stage, WorkflowType } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import type {
@@ -210,10 +210,9 @@ async function getAvailableAgents(projectId: number): Promise<AgentOption[]> {
     },
   });
 
-  const counts = new Map<NamedAgent, number>([
-    ['CLAUDE', 0],
-    ['CODEX', 0],
-  ]);
+  const counts = new Map<NamedAgent, number>(
+    Object.values(Agent).map((a) => [a, 0])
+  );
 
   for (const ticket of tickets) {
     const effectiveAgent = (ticket.agent ?? ticket.project.defaultAgent) as NamedAgent;
@@ -229,7 +228,7 @@ async function getAvailableAgents(projectId: number): Promise<AgentOption[]> {
     },
   ];
 
-  for (const agent of ['CLAUDE', 'CODEX'] as const) {
+  for (const agent of Object.values(Agent)) {
     const jobCount = counts.get(agent) ?? 0;
     if (jobCount > 0) {
       options.push({

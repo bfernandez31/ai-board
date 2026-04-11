@@ -429,6 +429,94 @@ describe('Agent-Agnostic Telemetry', () => {
     });
   });
 
+  describe('US5: Gemini Telemetry Ingestion', () => {
+    it('Gemini api_response event extracts token metrics and estimates cost', async () => {
+      const payload = buildOtlpPayload(jobId, [{
+        body: { stringValue: 'gemini_cli.api_response' },
+        attributes: [
+          { key: 'input_tokens', value: { stringValue: '2000' } },
+          { key: 'output_tokens', value: { stringValue: '800' } },
+          { key: 'thought_tokens', value: { stringValue: '500' } },
+          { key: 'model', value: { stringValue: 'gemini-2.5-pro' } },
+          { key: 'duration_ms', value: { stringValue: '3000' } },
+        ],
+      }]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+      expect(response.data).toHaveProperty('status', 'accepted');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.inputTokens).toBe(2000);
+      expect(job!.outputTokens).toBe(800);
+      // thought_tokens maps to cacheReadTokens
+      expect(job!.cacheReadTokens).toBe(500);
+      expect(job!.durationMs).toBe(3000);
+      expect(job!.costUsd).toBeGreaterThan(0);
+      expect(job!.model).toBe('gemini-2.5-pro');
+    });
+
+    it('Gemini tool_call event extracts tool name', async () => {
+      const payload = buildOtlpPayload(jobId, [
+        {
+          body: { stringValue: 'gemini_cli.tool_call' },
+          attributes: [
+            { key: 'tool_name', value: { stringValue: 'read_file' } },
+          ],
+        },
+        {
+          body: { stringValue: 'gemini_cli.tool_call' },
+          attributes: [
+            { key: 'tool_name', value: { stringValue: 'write_file' } },
+          ],
+        },
+      ]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.toolsUsed).toContain('read_file');
+      expect(job!.toolsUsed).toContain('write_file');
+    });
+
+    it('Gemini unknown model falls back to gemini-2.5-pro pricing', async () => {
+      const payload = buildOtlpPayload(jobId, [{
+        body: { stringValue: 'gemini_cli.api_response' },
+        attributes: [
+          { key: 'input_tokens', value: { stringValue: '1000' } },
+          { key: 'output_tokens', value: { stringValue: '500' } },
+          { key: 'model', value: { stringValue: 'gemini-3.0-unknown' } },
+        ],
+      }]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      // Falls back to gemini-2.5-pro pricing (most expensive)
+      expect(job!.costUsd).toBeGreaterThan(0);
+      expect(job!.model).toBe('gemini-3.0-unknown');
+    });
+
+    it('Gemini thought_tokens maps to cacheReadTokens', async () => {
+      const payload = buildOtlpPayload(jobId, [{
+        body: { stringValue: 'gemini_cli.api_response' },
+        attributes: [
+          { key: 'input_tokens', value: { stringValue: '100' } },
+          { key: 'output_tokens', value: { stringValue: '50' } },
+          { key: 'thought_tokens', value: { stringValue: '300' } },
+        ],
+      }]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.cacheReadTokens).toBe(300);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('T014: unrecognized event names are silently skipped without error', async () => {
       const payload = buildOtlpPayload(jobId, [

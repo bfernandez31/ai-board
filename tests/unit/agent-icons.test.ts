@@ -15,6 +15,10 @@ describe('agent-icons utility', () => {
     it('should return correct icon path for MISTRAL', () => {
       expect(getAgentIconPath(Agent.MISTRAL)).toBe('/agents/mistral.svg');
     });
+
+    it('should return correct icon path for GEMINI', () => {
+      expect(getAgentIconPath(Agent.GEMINI)).toBe('/agents/gemini.svg');
+    });
   });
 
   describe('getAgentLabel', () => {
@@ -29,6 +33,10 @@ describe('agent-icons utility', () => {
     it('should return correct label for MISTRAL', () => {
       expect(getAgentLabel(Agent.MISTRAL)).toBe('Mistral');
     });
+
+    it('should return correct label for GEMINI', () => {
+      expect(getAgentLabel(Agent.GEMINI)).toBe('Gemini');
+    });
   });
 
   describe('getAgentDescription', () => {
@@ -42,6 +50,10 @@ describe('agent-icons utility', () => {
 
     it('should return correct description for MISTRAL', () => {
       expect(getAgentDescription(Agent.MISTRAL)).toBe('Mistral vibe');
+    });
+
+    it('should return correct description for GEMINI', () => {
+      expect(getAgentDescription(Agent.GEMINI)).toBe('Google Gemini CLI');
     });
   });
 
@@ -71,6 +83,14 @@ describe('agent-icons utility', () => {
 
     it('resolves vibe identifier as Mistral', () => {
       expect(inferAgentFromIdentifier('vibe')).toBe(Agent.MISTRAL);
+    });
+
+    it('resolves Gemini-flavored identifiers', () => {
+      expect(inferAgentFromIdentifier('gemini-2.5-pro')).toBe(Agent.GEMINI);
+    });
+
+    it('resolves Google identifier as Gemini', () => {
+      expect(inferAgentFromIdentifier('google-ai')).toBe(Agent.GEMINI);
     });
 
     it('returns null for unknown identifiers', () => {

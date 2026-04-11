@@ -18,8 +18,12 @@ function handleOwnershipError(error: unknown): NextResponse {
   return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
 }
 
+import { Agent } from '@prisma/client';
+
+const SETUP_INELIGIBLE_AGENTS: Agent[] = ['GEMINI'];
+
 const createSetupJobSchema = z.object({
-  agent: z.enum(['CLAUDE', 'CODEX']),
+  agent: z.nativeEnum(Agent),
   command: z.enum(['ONBOARD', 'RETRO_SPEC']).default('ONBOARD'),
   depth: z.enum(['QUICK', 'STANDARD', 'COMPREHENSIVE']).optional(),
   docUrl: z.string().url().max(2000).optional(),
@@ -61,8 +65,15 @@ export async function POST(
 
     const { agent, command, depth, docUrl, context } = parsed.data;
 
+    // Agent eligibility: Gemini is not supported for setup workflows (onboard/retro-spec)
+    if (SETUP_INELIGIBLE_AGENTS.includes(agent)) {
+      return NextResponse.json(
+        { error: `${agent} is not supported for setup workflows. Please use Claude or Codex.`, code: 'AGENT_INELIGIBLE' },
+        { status: 400 }
+      );
+    }
+
     // Pre-flight: check credential
-    // Zod validates agent is 'CLAUDE' | 'CODEX', matching the Agent enum exactly
     const provider = AGENT_PROVIDER_MAP[agent];
     const credential = await getOwnerCredential(projectId, provider);
     if (!credential) {

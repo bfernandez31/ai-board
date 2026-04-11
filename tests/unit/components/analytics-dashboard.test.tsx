@@ -311,6 +311,28 @@ describe('AnalyticsDashboard', () => {
     ).toBeInTheDocument();
   });
 
+  it('renders all agent options including Gemini and Mistral when available', () => {
+    const dataWithAllAgents = makeAnalyticsData({}, {
+      availableAgents: [
+        { value: 'all', label: 'All agents', jobCount: 10, isDefault: true },
+        { value: 'CLAUDE', label: 'Claude', jobCount: 4, isDefault: false },
+        { value: 'CODEX', label: 'Codex', jobCount: 3, isDefault: false },
+        { value: 'MISTRAL', label: 'Mistral', jobCount: 2, isDefault: false },
+        { value: 'GEMINI', label: 'Gemini', jobCount: 1, isDefault: false },
+      ],
+    });
+
+    renderWithProviders(
+      <AnalyticsDashboard projectId={1} initialData={dataWithAllAgents} />
+    );
+
+    expect(screen.getByRole('option', { name: 'All agents' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Claude' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Codex' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Mistral' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Gemini' })).toBeInTheDocument();
+  });
+
   it('updates completion-card labels when the active range changes', async () => {
     const allTimeData = makeAnalyticsData(
       { range: 'all', outcome: 'all-completed' },

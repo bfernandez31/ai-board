@@ -142,6 +142,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           const eventKind = String(findAttribute(attrs, 'event.kind') ?? '');
           const isCodexTokenEvent = eventName === 'codex.sse_event' && eventKind === 'response.completed';
 
+          // Gemini: token data in gemini_cli.api_response
+          const isGeminiApiResponse = eventName === 'gemini_cli.api_response';
+          // Gemini: tool usage in gemini_cli.tool_call
+          const isGeminiToolCall = eventName === 'gemini_cli.tool_call';
+
           const isToolEvent = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool_result', 'codex.tool_decision'].includes(eventName);
 
           if (isClaudeApiRequest) {
@@ -172,6 +177,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
             // Estimate cost from OpenAI API pricing (Codex doesn't report cost_usd)
             metrics.costUsd += estimateOpenAICost(String(model ?? 'gpt-5.4'), nonCachedInputTokens, outputTokens, cachedTokens);
+          }
+
+          if (isGeminiApiResponse) {
+            metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
+            metrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
+            // Gemini thought_tokens map to cacheReadTokens for consistency
+            metrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'thought_tokens'));
+            metrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
+            const model = findAttribute(attrs, 'model');
+            if (model) metrics.model = String(model);
+
+            metrics.costUsd += estimateGeminiCost(
+              String(model ?? 'gemini-2.5-pro'),
+              parseIntAttribute(findAttribute(attrs, 'input_tokens')),
+              parseIntAttribute(findAttribute(attrs, 'output_tokens')),
+              parseIntAttribute(findAttribute(attrs, 'thought_tokens')),
+            );
+          }
+
+          if (isGeminiToolCall) {
+            const toolName = findAttribute(attrs, 'tool_name');
+            if (toolName) metrics.toolsUsed.add(String(toolName));
           }
 
           if (isToolEvent) {
@@ -351,6 +378,25 @@ const MISTRAL_PRICING: Record<string, { input: number; output: number; cached: n
 
 function estimateMistralCost(model: string, inputTokens: number, outputTokens: number, cachedTokens: number): number {
   const pricing = MISTRAL_PRICING[model] ?? MISTRAL_PRICING['mistral-large-latest']!;
+  return (
+    (inputTokens / 1_000_000) * pricing.input +
+    (outputTokens / 1_000_000) * pricing.output +
+    (cachedTokens / 1_000_000) * pricing.cached
+  );
+}
+
+/**
+ * Estimate Google Gemini API cost from token counts.
+ * Prices are per-million tokens (source: Google AI pricing).
+ */
+const GEMINI_PRICING: Record<string, { input: number; output: number; cached: number }> = {
+  'gemini-2.5-pro':   { input: 1.25, output: 10.00, cached: 0.3125 },
+  'gemini-2.5-flash': { input: 0.15, output: 3.50,  cached: 0.0375 },
+  'gemini-2.0-flash': { input: 0.10, output: 0.40,  cached: 0.025 },
+};
+
+function estimateGeminiCost(model: string, inputTokens: number, outputTokens: number, cachedTokens: number): number {
+  const pricing = GEMINI_PRICING[model] ?? GEMINI_PRICING['gemini-2.5-pro']!;
   return (
     (inputTokens / 1_000_000) * pricing.input +
     (outputTokens / 1_000_000) * pricing.output +

@@ -23,6 +23,11 @@ const AGENT_METADATA: Record<
     iconPath: '/agents/mistral.svg',
     label: 'Mistral',
   },
+  [Agent.GEMINI]: {
+    description: 'Google Gemini CLI',
+    iconPath: '/agents/gemini.svg',
+    label: 'Gemini',
+  },
 };
 
 export function getAgentIconPath(agent: Agent): string {
@@ -56,6 +61,10 @@ export function inferAgentFromIdentifier(agentIdentifier: string | null | undefi
 
   if (normalizedIdentifier.includes('mistral') || normalizedIdentifier.includes('vibe')) {
     return Agent.MISTRAL;
+  }
+
+  if (normalizedIdentifier.includes('gemini') || normalizedIdentifier.includes('google')) {
+    return Agent.GEMINI;
   }
 
   return null;

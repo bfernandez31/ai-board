@@ -265,6 +265,8 @@ export async function handleTicketTransition(
 
           workflowFile = 'quick-impl.yml';
         } else if (command === 'verify') {
+          // Note: verify.yml is hardcoded to Claude dependencies (Claude Code CLI + Anthropic credentials).
+          // Gemini agent is excluded from verify workflows via backend validation.
           workflowInputs = {
             ticket_id: ticket.ticketKey,
             job_id: job.id.toString(),

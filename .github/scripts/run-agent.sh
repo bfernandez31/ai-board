@@ -5,7 +5,7 @@ set -euo pipefail
 # Abstracts CLI installation, authentication, telemetry, and command invocation
 # across Claude Code and Codex CLI agents.
 
-AGENT_TYPE="${1:?ERROR: AGENT_TYPE is required (CLAUDE, CODEX, or MISTRAL)}"
+AGENT_TYPE="${1:?ERROR: AGENT_TYPE is required (CLAUDE, CODEX, MISTRAL, or GEMINI)}"
 COMMAND="${2:?ERROR: COMMAND is required (e.g., ai-board.specify)}"
 shift 2
 ARGS="$*"
@@ -61,6 +61,12 @@ validate_auth() {
     MISTRAL)
       if [[ -z "${MISTRAL_API_KEY:-}" ]]; then
         log_error "MISTRAL_API_KEY is required for agent type MISTRAL"
+        exit 1
+      fi
+      ;;
+    GEMINI)
+      if [[ -z "${GEMINI_API_KEY:-}" ]] && [[ -z "${GEMINI_OAUTH_TOKEN:-}" ]]; then
+        log_error "GEMINI_API_KEY or GEMINI_OAUTH_TOKEN is required for agent type GEMINI"
         exit 1
       fi
       ;;
@@ -395,6 +401,57 @@ $(cat "$prompt_file")" --agent auto-approve
   return $exit_code
 }
 
+# --- Gemini functions ---
+
+install_gemini() {
+  if command -v gemini &>/dev/null; then
+    log_info "Gemini CLI already installed — skipping"
+    return 0
+  fi
+  log_info "Installing Gemini CLI..."
+  if ! npm install -g @anthropic-ai/gemini-cli >&2; then
+    log_error "Failed to install @anthropic-ai/gemini-cli"
+    exit 1
+  fi
+  if ! command -v gemini &>/dev/null; then
+    log_error "Failed to install Gemini CLI — CLI binary not found after install"
+    exit 1
+  fi
+  log_info "Gemini CLI installed successfully"
+}
+
+setup_gemini_telemetry() {
+  if [[ -z "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]]; then
+    log_info "No OTEL_EXPORTER_OTLP_ENDPOINT set — skipping Gemini telemetry config"
+    return 0
+  fi
+
+  # Gemini CLI supports native OTLP export via env vars
+  export GEMINI_TELEMETRY_ENABLED=1
+  export OTEL_EXPORTER_OTLP_PROTOCOL="http/json"
+  log_info "Gemini telemetry enabled (native OTLP)"
+}
+
+invoke_gemini() {
+  local command_file
+  command_file=$(resolve_command_file "$COMMAND") || exit 1
+
+  log_info "Invoking Gemini with command file: $command_file"
+
+  local model="${GEMINI_MODEL:-gemini-2.5-pro}"
+  local prompt
+  prompt="$(cat "$command_file")"
+
+  if [[ -n "$ARGS" ]]; then
+    prompt="${prompt}
+
+${ARGS}"
+  fi
+
+  log_info "Model: $model | Prompt file: $command_file ($(wc -c < "$command_file") bytes)"
+  echo "$prompt" | gemini --model "$model" --sandbox=none -
+}
+
 # --- Main dispatch ---
 
 case "$AGENT_TYPE" in
@@ -418,8 +475,14 @@ case "$AGENT_TYPE" in
     invoke_mistral
     collect_mistral_telemetry
     ;;
+  GEMINI)
+    validate_auth
+    install_gemini
+    setup_gemini_telemetry
+    invoke_gemini
+    ;;
   *)
-    log_error "Unsupported agent type '$AGENT_TYPE'. Supported: CLAUDE, CODEX, MISTRAL"
+    log_error "Unsupported agent type '$AGENT_TYPE'. Supported: CLAUDE, CODEX, MISTRAL, GEMINI"
     exit 1
     ;;
 esac

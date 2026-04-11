@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Agent } from '@prisma/client';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { getAnalyticsData } from '@/lib/analytics/queries';
 
 const querySchema = z.object({
   range: z.enum(['7d', '30d', '90d', 'all']).default('30d'),
   outcome: z.enum(['shipped', 'closed', 'all-completed']).default('shipped'),
-  agent: z.enum(['all', 'CLAUDE', 'CODEX']).default('all'),
+  agent: z.union([z.literal('all'), z.nativeEnum(Agent)]).default('all'),
 });
 
 export async function GET(

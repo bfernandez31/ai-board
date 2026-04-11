@@ -7,7 +7,9 @@
 
 export type TimeRange = '7d' | '30d' | '90d' | 'all';
 export type TicketOutcomeFilter = 'shipped' | 'closed' | 'all-completed';
-export type NamedAgent = 'CLAUDE' | 'CODEX';
+import type { Agent } from '@prisma/client';
+
+export type NamedAgent = Agent;
 export type AgentFilter = 'all' | NamedAgent;
 
 export interface AnalyticsFilters {

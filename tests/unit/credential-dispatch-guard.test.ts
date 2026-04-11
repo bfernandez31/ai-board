@@ -298,6 +298,7 @@ describe('BYOK Credential Dispatch Guards', () => {
       expect(getMissingCredentialError('ANTHROPIC')).toContain('Anthropic');
       expect(getMissingCredentialError('OPENAI')).toContain('OpenAI');
       expect(getMissingCredentialError('MISTRAL')).toContain('Mistral');
+      expect(getMissingCredentialError('GOOGLE')).toContain('Google');
     });
 
     it('should resolve MISTRAL provider for Mistral-agent ticket', async () => {
@@ -328,6 +329,37 @@ describe('BYOK Credential Dispatch Guards', () => {
       const result = await handleTicketTransition(mistralTicket, 'SPECIFY' as Stage);
 
       expect(result.error).toContain('Mistral');
+      expect(result.error).toContain('credential configured');
+    });
+
+    it('should resolve GOOGLE provider for GEMINI-agent ticket', async () => {
+      mockedGetOwnerCredential.mockResolvedValue(null);
+
+      const { handleTicketTransition } = await import('@/lib/workflows/transition');
+
+      const geminiTicket = createTestTicket({
+        agent: 'GEMINI' as TicketWithProject['agent'],
+      });
+
+      const result = await handleTicketTransition(geminiTicket, 'SPECIFY' as Stage);
+
+      expect(result.success).toBe(false);
+      expect(result.errorCode).toBe('MISSING_CREDENTIAL');
+      expect(mockedGetOwnerCredential).toHaveBeenCalledWith(1, 'GOOGLE');
+    });
+
+    it('should use Google-specific error message for missing GOOGLE credential', async () => {
+      mockedGetOwnerCredential.mockResolvedValue(null);
+
+      const { handleTicketTransition } = await import('@/lib/workflows/transition');
+
+      const geminiTicket = createTestTicket({
+        agent: 'GEMINI' as TicketWithProject['agent'],
+      });
+
+      const result = await handleTicketTransition(geminiTicket, 'SPECIFY' as Stage);
+
+      expect(result.error).toContain('Google');
       expect(result.error).toContain('credential configured');
     });
   });

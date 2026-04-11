@@ -18,8 +18,8 @@
 
 **Purpose**: Prisma schema migration — enum extensions that all user stories depend on
 
-- [ ] T001 Add `GEMINI` to Agent enum and `GOOGLE` to CredentialProvider enum in `prisma/schema.prisma`
-- [ ] T002 Run `bunx prisma migrate dev --name add-gemini-google-enums` and `bunx prisma generate` to apply migration
+- [x] T001 Add `GEMINI` to Agent enum and `GOOGLE` to CredentialProvider enum in `prisma/schema.prisma`
+- [x] T002 Run `bunx prisma migrate dev --name add-gemini-google-enums` and `bunx prisma generate` to apply migration
 
 ---
 
@@ -29,7 +29,7 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Add `GEMINI: 'GOOGLE'` to `AGENT_PROVIDER_MAP`, `GOOGLE: ['API_KEY', 'OAUTH_TOKEN']` to `PROVIDER_ALLOWED_TYPES`, and `'GOOGLE:API_KEY': 'GEMINI_API_KEY'` / `'GOOGLE:OAUTH_TOKEN': 'GEMINI_OAUTH_TOKEN'` to `ENV_VAR_MAP` in `lib/ai-credentials/types.ts`
+- [x] T003 Add `GEMINI: 'GOOGLE'` to `AGENT_PROVIDER_MAP`, `GOOGLE: ['API_KEY', 'OAUTH_TOKEN']` to `PROVIDER_ALLOWED_TYPES`, and `'GOOGLE:API_KEY': 'GEMINI_API_KEY'` / `'GOOGLE:OAUTH_TOKEN': 'GEMINI_OAUTH_TOKEN'` to `ENV_VAR_MAP` in `lib/ai-credentials/types.ts`
 
 **Checkpoint**: Foundation ready — user story implementation can now begin in parallel
 
@@ -43,14 +43,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T004 [P] [US1] Extend `tests/unit/ai-credentials.test.ts` with Google API_KEY format validation (prefix `AIza`, min 39 chars, no whitespace) and OAUTH_TOKEN format validation (min 20 chars, no whitespace) test cases
-- [ ] T005 [P] [US1] Extend `tests/unit/credential-dispatch-guard.test.ts` with GEMINI→GOOGLE provider mapping assertion
-- [ ] T006 [P] [US1] Create `tests/integration/credentials/google-credential.test.ts` with Google credential verification integration tests: mock Google API responses for 200 (READY), 401/403 (ACTION_REQUIRED), 429 (RATE_LIMITED), and timeout (UNREACHABLE) scenarios for both API_KEY and OAUTH_TOKEN
+- [x] T004 [P] [US1] Extend `tests/unit/ai-credentials.test.ts` with Google API_KEY format validation (prefix `AIza`, min 39 chars, no whitespace) and OAUTH_TOKEN format validation (min 20 chars, no whitespace) test cases
+- [x] T005 [P] [US1] Extend `tests/unit/credential-dispatch-guard.test.ts` with GEMINI→GOOGLE provider mapping assertion
+- [x] T006 [P] [US1] Create `tests/integration/credentials/google-credential.test.ts` with Google credential verification integration tests: mock Google API responses for 200 (READY), 401/403 (ACTION_REQUIRED), 429 (RATE_LIMITED), and timeout (UNREACHABLE) scenarios for both API_KEY and OAUTH_TOKEN
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Create `lib/ai-credentials/providers/google.ts` following the Mistral provider pattern (`lib/ai-credentials/providers/mistral.ts`): export `validateFormat()` (API_KEY: `AIza` prefix, >=39 chars; OAUTH_TOKEN: >=20 chars) and `verifyWithProvider()` (GET `https://generativelanguage.googleapis.com/v1beta/models` with key param or Bearer header, 10s timeout, standard HTTP status handling)
-- [ ] T008 [US1] Register Google provider module in `lib/ai-credentials/providers/index.ts` by adding `GOOGLE: google` to `PROVIDER_MODULES` registry
+- [x] T007 [US1] Create `lib/ai-credentials/providers/google.ts` following the Mistral provider pattern (`lib/ai-credentials/providers/mistral.ts`): export `validateFormat()` (API_KEY: `AIza` prefix, >=39 chars; OAUTH_TOKEN: >=20 chars) and `verifyWithProvider()` (GET `https://generativelanguage.googleapis.com/v1beta/models` with key param or Bearer header, 10s timeout, standard HTTP status handling)
+- [x] T008 [US1] Register Google provider module in `lib/ai-credentials/providers/index.ts` by adding `GOOGLE: google` to `PROVIDER_MODULES` registry
 
 **Checkpoint**: Google credentials can be stored, validated, and verified. US1 is independently testable.
 
@@ -64,15 +64,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T009 [P] [US2] Extend `tests/unit/agent-icons.test.ts` with GEMINI metadata assertions: icon path `/agents/gemini.svg`, label "Gemini", description, and `inferAgentFromIdentifier()` detection of "gemini" and "google" strings
-- [ ] T010 [P] [US2] Extend `tests/unit/agent-schema.test.ts` with GEMINI as a valid agent value in Zod schema validation
+- [x] T009 [P] [US2] Extend `tests/unit/agent-icons.test.ts` with GEMINI metadata assertions: icon path `/agents/gemini.svg`, label "Gemini", description, and `inferAgentFromIdentifier()` detection of "gemini" and "google" strings
+- [x] T010 [P] [US2] Extend `tests/unit/agent-schema.test.ts` with GEMINI as a valid agent value in Zod schema validation
 
 ### Implementation for User Story 2
 
-- [ ] T011 [P] [US2] Create `public/agents/gemini.svg` with Gemini sparkle icon SVG matching existing agent icon dimensions
-- [ ] T012 [P] [US2] Add GEMINI entry to `AGENT_METADATA` in `app/lib/utils/agent-icons.ts` with `{ description: 'Google Gemini CLI', iconPath: '/agents/gemini.svg', label: 'Gemini' }` and update `inferAgentFromIdentifier()` to detect "gemini" or "google"
-- [ ] T013 [US2] Add GEMINI and MISTRAL to `AGENTS` array in `components/setup/setup-page-client.tsx` (FR-008, FR-009)
-- [ ] T014 [US2] Extend agent validation schema in `app/api/projects/[projectId]/setup/jobs/route.ts` to include all agents, and add agent eligibility check returning 400 if GEMINI is used for ONBOARD/RETRO_SPEC commands
+- [x] T011 [P] [US2] Create `public/agents/gemini.svg` with Gemini sparkle icon SVG matching existing agent icon dimensions
+- [x] T012 [P] [US2] Add GEMINI entry to `AGENT_METADATA` in `app/lib/utils/agent-icons.ts` with `{ description: 'Google Gemini CLI', iconPath: '/agents/gemini.svg', label: 'Gemini' }` and update `inferAgentFromIdentifier()` to detect "gemini" or "google"
+- [x] T013 [US2] Add GEMINI and MISTRAL to `AGENTS` array in `components/setup/setup-page-client.tsx` (FR-008, FR-009)
+- [x] T014 [US2] Extend agent validation schema in `app/api/projects/[projectId]/setup/jobs/route.ts` to include all agents, and add agent eligibility check returning 400 if GEMINI is used for ONBOARD/RETRO_SPEC commands
 
 **Checkpoint**: Gemini is selectable across all UI surfaces. Mistral setup page gap fixed. US2 is independently testable.
 
@@ -90,11 +90,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T015 [P] [US3] Add `GEMINI) PROVIDER="GOOGLE" ;;` to the credential fetch case statement in `.github/workflows/speckit.yml`
-- [ ] T016 [P] [US3] Add `GEMINI) PROVIDER="GOOGLE" ;;` to the credential fetch case statement in `.github/workflows/quick-impl.yml`
-- [ ] T017 [P] [US3] Add `GEMINI) PROVIDER="GOOGLE" ;;` to the credential fetch case statement in `.github/workflows/iterate.yml`
-- [ ] T018 [US3] Add GEMINI case to `.github/scripts/run-agent.sh`: `validate_auth()` requiring `GEMINI_API_KEY` or `GEMINI_OAUTH_TOKEN`, `install_gemini()` function (npm global install, verify binary), `setup_gemini_telemetry()` function (set `GEMINI_TELEMETRY_ENABLED=1`, OTLP endpoint/protocol), `invoke_gemini()` function (resolve command file, configure model, headless mode), and main dispatch case `GEMINI)` chaining validate→install→setup_telemetry→invoke
-- [ ] T019 [US3] Add comment documenting Gemini exclusion from verify workflow in `lib/workflows/transition.ts` (verify.yml hardcoded to Claude dependencies)
+- [x] T015 [P] [US3] Add `GEMINI) PROVIDER="GOOGLE" ;;` to the credential fetch case statement in `.github/workflows/speckit.yml`
+- [x] T016 [P] [US3] Add `GEMINI) PROVIDER="GOOGLE" ;;` to the credential fetch case statement in `.github/workflows/quick-impl.yml`
+- [x] T017 [P] [US3] Add `GEMINI) PROVIDER="GOOGLE" ;;` to the credential fetch case statement in `.github/workflows/iterate.yml`
+- [x] T018 [US3] Add GEMINI case to `.github/scripts/run-agent.sh`: `validate_auth()` requiring `GEMINI_API_KEY` or `GEMINI_OAUTH_TOKEN`, `install_gemini()` function (npm global install, verify binary), `setup_gemini_telemetry()` function (set `GEMINI_TELEMETRY_ENABLED=1`, OTLP endpoint/protocol), `invoke_gemini()` function (resolve command file, configure model, headless mode), and main dispatch case `GEMINI)` chaining validate→install→setup_telemetry→invoke
+- [x] T019 [US3] Add comment documenting Gemini exclusion from verify workflow in `lib/workflows/transition.ts` (verify.yml hardcoded to Claude dependencies)
 
 **Checkpoint**: Gemini workflows dispatch and execute correctly. US3 is independently testable via workflow run.
 
@@ -108,11 +108,11 @@
 
 ### Tests for User Story 4
 
-- [ ] T020 [US4] Extend `tests/integration/telemetry/agent-agnostic.test.ts` with: Gemini `api_response` event extracting token metrics and cost estimation, Gemini `tool_call` event extracting tool name, unknown model fallback to `gemini-2.5-pro` pricing, and `thought_tokens` mapping to `cacheReadTokens`
+- [x] T020 [US4] Extend `tests/integration/telemetry/agent-agnostic.test.ts` with: Gemini `api_response` event extracting token metrics and cost estimation, Gemini `tool_call` event extracting tool name, unknown model fallback to `gemini-2.5-pro` pricing, and `thought_tokens` mapping to `cacheReadTokens`
 
 ### Implementation for User Story 4
 
-- [ ] T021 [US4] Add Gemini event detection, `GEMINI_PRICING` table (`gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash`), and `estimateGeminiCost()` function to `app/api/telemetry/v1/logs/route.ts` — parse `gemini_cli.api_response` for `input_tokens`, `output_tokens`, `thought_tokens` (→cacheReadTokens), `model`, `duration_ms`; parse `gemini_cli.tool_call` for `tool_name`; follow existing `estimateOpenAICost()`/`estimateMistralCost()` patterns
+- [x] T021 [US4] Add Gemini event detection, `GEMINI_PRICING` table (`gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash`), and `estimateGeminiCost()` function to `app/api/telemetry/v1/logs/route.ts` — parse `gemini_cli.api_response` for `input_tokens`, `output_tokens`, `thought_tokens` (→cacheReadTokens), `model`, `duration_ms`; parse `gemini_cli.tool_call` for `tool_name`; follow existing `estimateOpenAICost()`/`estimateMistralCost()` patterns
 
 **Checkpoint**: Gemini telemetry is captured and costs estimated. US4 is independently testable.
 
@@ -126,13 +126,13 @@
 
 ### Tests for User Story 5
 
-- [ ] T022 [P] [US5] Extend `tests/integration/analytics/analytics-route.test.ts` with test verifying Gemini and Mistral appear in available agents when they have jobs
-- [ ] T023 [P] [US5] Extend `tests/unit/components/analytics-dashboard.test.tsx` with test verifying agent filter renders all agent options including Gemini and Mistral
+- [x] T022 [P] [US5] Extend `tests/integration/analytics/analytics-route.test.ts` with test verifying Gemini and Mistral appear in available agents when they have jobs
+- [x] T023 [P] [US5] Extend `tests/unit/components/analytics-dashboard.test.tsx` with test verifying agent filter renders all agent options including Gemini and Mistral
 
 ### Implementation for User Story 5
 
-- [ ] T024 [US5] Change `NamedAgent` type in `lib/analytics/types.ts` from hardcoded union to `Agent` imported from `@prisma/client` (FR-018)
-- [ ] T025 [US5] Replace hardcoded `['CLAUDE', 'CODEX']` in `getAvailableAgents()` and hardcoded `Map` initialization in `lib/analytics/queries.ts` with dynamic `Object.values(Agent)` from Prisma
+- [x] T024 [US5] Change `NamedAgent` type in `lib/analytics/types.ts` from hardcoded union to `Agent` imported from `@prisma/client` (FR-018)
+- [x] T025 [US5] Replace hardcoded `['CLAUDE', 'CODEX']` in `getAvailableAgents()` and hardcoded `Map` initialization in `lib/analytics/queries.ts` with dynamic `Object.values(Agent)` from Prisma
 
 **Checkpoint**: Analytics dashboard supports all agents dynamically. Mistral gap fixed. US5 is independently testable.
 
@@ -142,9 +142,9 @@
 
 **Purpose**: Final validation across all user stories
 
-- [ ] T026 Run `bun run type-check` and `bun run lint` to verify zero type and lint errors across all changes
-- [ ] T027 Run `bun run test:unit` and `bun run test:integration` to verify all existing and new tests pass
-- [ ] T028 Verify no regressions in existing Claude, Codex, and Mistral functionality (FR-022)
+- [x] T026 Run `bun run type-check` and `bun run lint` to verify zero type and lint errors across all changes
+- [x] T027 Run `bun run test:unit` and `bun run test:integration` to verify all existing and new tests pass
+- [x] T028 Verify no regressions in existing Claude, Codex, and Mistral functionality (FR-022)
 
 ---
 

@@ -355,6 +355,84 @@ describe('Analytics Route', () => {
     expect(noMatch.overview.ticketsClosed.count).toBe(1);
   });
 
+  it('includes Gemini and Mistral in available agents when they have jobs', async () => {
+    await seedAnalyticsFixtures(ctx.projectId);
+
+    // Add Gemini and Mistral tickets with jobs
+    const geminiTicket = await prisma.ticket.create({
+      data: {
+        projectId: ctx.projectId,
+        title: '[e2e] shipped gemini',
+        description: 'analytics gemini ticket',
+        stage: Stage.SHIP,
+        workflowType: WorkflowType.FULL,
+        ticketNumber: 10,
+        ticketKey: 'E2E-10',
+        agent: Agent.GEMINI,
+      },
+    });
+    const mistralTicket = await prisma.ticket.create({
+      data: {
+        projectId: ctx.projectId,
+        title: '[e2e] shipped mistral',
+        description: 'analytics mistral ticket',
+        stage: Stage.SHIP,
+        workflowType: WorkflowType.FULL,
+        ticketNumber: 11,
+        ticketKey: 'E2E-11',
+        agent: Agent.MISTRAL,
+      },
+    });
+    const now = new Date();
+    await prisma.job.createMany({
+      data: [
+        {
+          ticketId: geminiTicket.id,
+          projectId: ctx.projectId,
+          command: 'implement',
+          status: JobStatus.COMPLETED,
+          costUsd: 1.0,
+          inputTokens: 100,
+          outputTokens: 50,
+          updatedAt: now,
+        },
+        {
+          ticketId: mistralTicket.id,
+          projectId: ctx.projectId,
+          command: 'implement',
+          status: JobStatus.COMPLETED,
+          costUsd: 0.5,
+          inputTokens: 80,
+          outputTokens: 40,
+          updatedAt: now,
+        },
+      ],
+    });
+
+    const responseRaw = await GET(
+      new NextRequest(
+        `http://localhost/api/projects/${ctx.projectId}/analytics?outcome=all-completed`
+      ),
+      { params: Promise.resolve({ projectId: String(ctx.projectId) }) }
+    );
+    const response = (await responseRaw.json()) as {
+      availableAgents: Array<{ value: string; label: string; jobCount: number }>;
+    };
+
+    expect(responseRaw.status).toBe(200);
+    const agentValues = response.availableAgents.map((a) => a.value);
+    expect(agentValues).toContain('GEMINI');
+    expect(agentValues).toContain('MISTRAL');
+    const geminiAgent = response.availableAgents.find((a) => a.value === 'GEMINI');
+    expect(geminiAgent).toBeDefined();
+    expect(geminiAgent!.label).toBe('Gemini');
+    expect(geminiAgent!.jobCount).toBe(1);
+    const mistralAgent = response.availableAgents.find((a) => a.value === 'MISTRAL');
+    expect(mistralAgent).toBeDefined();
+    expect(mistralAgent!.label).toBe('Mistral');
+    expect(mistralAgent!.jobCount).toBe(1);
+  });
+
   it('rejects invalid analytics filters', async () => {
     const response = await GET(
       new NextRequest(
