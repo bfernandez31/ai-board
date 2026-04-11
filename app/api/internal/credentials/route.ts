@@ -78,20 +78,19 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await request.json();
-  const parsed = putSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid request body', details: parsed.error.flatten().fieldErrors },
-      { status: 400 }
-    );
-  }
-
-  const { projectId, provider, value, encoding } = parsed.data;
-  const plaintext = encoding === 'base64' ? Buffer.from(value, 'base64').toString('utf8') : value;
-
   try {
+    const body = await request.json();
+    const parsed = putSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const { projectId, provider, value, encoding } = parsed.data;
+    const plaintext = encoding === 'base64' ? Buffer.from(value, 'base64').toString('utf8') : value;
     const updated = await updateOwnerCredential(projectId, provider, plaintext);
 
     if (!updated) {

@@ -130,14 +130,13 @@ export async function POST(request: NextRequest) {
               githubOwner: validated.githubOwner,
               githubRepo: validated.githubRepo,
             },
-            select: { id: true, name: true, key: true },
+            select: { name: true, key: true },
           });
 
           return NextResponse.json(
             {
               error: `This repository is already linked to project "${existingProject?.name ?? 'Unknown'}" (${existingProject?.key ?? 'N/A'}).`,
               code: 'DUPLICATE_REPO',
-              existingProjectId: existingProject?.id ?? null,
             },
             { status: 409 }
           );
