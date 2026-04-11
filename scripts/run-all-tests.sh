@@ -86,7 +86,7 @@ echo ""
 
 # Step 4: E2E Tests
 echo -e "${GREEN}[3/3] Running E2E tests...${NC}"
-bun playwright test
+PLAYWRIGHT_REUSE_SERVER=1 bun playwright test
 echo -e "${GREEN}E2E tests passed!${NC}"
 echo ""
 

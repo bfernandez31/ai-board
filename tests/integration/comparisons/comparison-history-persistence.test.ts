@@ -7,7 +7,7 @@ import {
 import { createTestTicket } from '@/tests/helpers/db-setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 
-const WORKFLOW_TOKEN = 'test-workflow-token-for-e2e-tests-only';
+const WORKFLOW_TOKEN = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
 
 async function postWorkflow<T>(path: string, body: unknown) {

@@ -54,7 +54,7 @@ const config = defineConfig({
   webServer: {
     command: 'TEST_MODE=true WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI, // Reuse in dev (UI mode), restart in CI
+    reuseExistingServer: !process.env.CI || !!process.env.PLAYWRIGHT_REUSE_SERVER, // Reuse in dev or when server pre-started by test orchestrator
     timeout: 120000, // 2 minutes for server startup
     stdout: 'pipe', // Show server output
     stderr: 'pipe',
