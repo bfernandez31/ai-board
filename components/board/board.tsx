@@ -50,7 +50,7 @@ import {
   canRollbackBuildToPlan,
   canRollbackVerifyToBuild,
 } from '@/app/lib/workflows/rollback-validator';
-import { isTicketDeletable, getDeletionBlockReason } from '@/lib/utils/trash-zone-eligibility';
+import { getDeletionBlockReason } from '@/lib/utils/trash-zone-eligibility';
 import { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
 import { useHoverCapability } from '@/lib/hooks/use-hover-capability';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
@@ -1171,9 +1171,31 @@ export function Board({
     const initial = initialJobs.get(ticketId) || [];
     const polled = polledJobs.filter(job => job.ticketId === ticketId);
     const jobMap = new Map(initial.map(j => [j.id, j]));
-    polled.forEach(pj => { jobMap.set(pj.id, pj as unknown as Job); });
+    polled.forEach(pj => {
+      const existing = jobMap.get(pj.id);
+      if (existing) {
+        // Update status from polling but keep other fields from initial
+        jobMap.set(pj.id, { ...existing, status: pj.status, updatedAt: new Date(pj.updatedAt) });
+      } else {
+        // Create minimal Job object for new jobs discovered during polling
+        jobMap.set(pj.id, {
+          id: pj.id,
+          ticketId: pj.ticketId,
+          projectId,
+          status: pj.status,
+          command: pj.command,
+          startedAt: new Date(pj.updatedAt),
+          completedAt: null,
+          branch: null,
+          commitSha: null,
+          logs: null,
+          createdAt: new Date(pj.updatedAt),
+          updatedAt: new Date(pj.updatedAt),
+        } as Job);
+      }
+    });
     return Array.from(jobMap.values());
-  }, [initialJobs, polledJobs]);
+  }, [initialJobs, polledJobs, projectId]);
 
   // T024: Trash zone visibility and disabled state
   const trashZoneState = useMemo<{ isVisible: boolean; isDisabled: boolean; disabledReason?: string }>(() => {
@@ -1183,16 +1205,15 @@ export function Board({
 
     const allTicketJobs = getMergedTicketJobs(activeTicket.id);
     const ticketWithJobs = {
-      ...activeTicket,
+      stage: activeTicket.stage,
       jobs: allTicketJobs.map(j => ({ status: j.status })),
-    } as unknown as Parameters<typeof isTicketDeletable>[0];
+    };
 
-    const isDeletable = isTicketDeletable(ticketWithJobs);
     const reason = getDeletionBlockReason(ticketWithJobs);
 
     return {
       isVisible: true,
-      isDisabled: !isDeletable,
+      isDisabled: reason !== null,
       ...(reason && { disabledReason: reason }),
     };
   }, [activeTicket, isDragging, getMergedTicketJobs]);

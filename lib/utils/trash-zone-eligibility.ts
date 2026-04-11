@@ -1,9 +1,11 @@
-import { Ticket, Job, Stage, JobStatus } from '@prisma/client';
+import { Job, Stage, JobStatus } from '@prisma/client';
 
 /**
- * Ticket type with optional jobs relation
+ * Minimal ticket type for deletion eligibility checks.
+ * Only requires the fields actually used: stage and jobs status.
  */
-type TicketWithJobs = Ticket & {
+type TicketWithJobs = {
+  stage: Stage;
   jobs?: Pick<Job, 'status'>[];
 };
 
@@ -31,22 +33,7 @@ type TicketWithJobs = Ticket & {
  * ```
  */
 export function isTicketDeletable(ticket: TicketWithJobs): boolean {
-  // Rule 1: SHIP stage tickets cannot be deleted
-  if (ticket.stage === Stage.SHIP) {
-    return false;
-  }
-
-  // Rule 2: Tickets with active jobs cannot be deleted
-  const hasActiveJob = ticket.jobs?.some(
-    (job) => job.status === JobStatus.PENDING || job.status === JobStatus.RUNNING
-  );
-
-  if (hasActiveJob) {
-    return false;
-  }
-
-  // All other tickets can be deleted
-  return true;
+  return getDeletionBlockReason(ticket) === null;
 }
 
 /**
