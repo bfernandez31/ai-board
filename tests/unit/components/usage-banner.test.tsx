@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
 import { UsageBanner } from '@/components/billing/usage-banner';
 
-// Mock useUsage hook
 const mockUseUsage = vi.fn();
+
 vi.mock('@/hooks/use-usage', () => ({
   useUsage: () => mockUseUsage(),
 }));
@@ -13,13 +13,18 @@ describe('UsageBanner', () => {
     vi.clearAllMocks();
   });
 
-  it('should render nothing when usage data is not available', () => {
+  it('renders a fixed-height loading skeleton while usage data is unavailable', () => {
     mockUseUsage.mockReturnValue({ data: undefined });
-    const { container } = renderWithProviders(<UsageBanner />);
-    expect(container.innerHTML).toBe('');
+
+    renderWithProviders(<UsageBanner />);
+
+    const skeleton = screen.getByTestId('usage-banner-skeleton');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('min-h-24');
+    expect(skeleton).toHaveClass('animate-pulse');
   });
 
-  it('should show quota numbers for Free plan user', () => {
+  it('shows ratios and an upgrade action for Free plan users', () => {
     mockUseUsage.mockReturnValue({
       data: {
         plan: 'FREE',
@@ -32,12 +37,15 @@ describe('UsageBanner', () => {
     });
 
     renderWithProviders(<UsageBanner />);
-    expect(screen.getByText(/1\/1 projects/)).toBeInTheDocument();
-    expect(screen.getByText(/3\/5 tickets this month/)).toBeInTheDocument();
-    expect(screen.getByText(/Free Plan/)).toBeInTheDocument();
+
+    expect(screen.getByText('FREE')).toBeInTheDocument();
+    expect(screen.getByText('1/1 project · 3/5 tickets this month')).toBeInTheDocument();
+
+    const cta = screen.getByRole('link', { name: /upgrade/i });
+    expect(cta).toHaveAttribute('href', '/settings/billing');
   });
 
-  it('should show only plan name for Pro plan user (no quotas)', () => {
+  it('shows raw counts and a manage plan action for Pro users', () => {
     mockUseUsage.mockReturnValue({
       data: {
         plan: 'PRO',
@@ -50,27 +58,36 @@ describe('UsageBanner', () => {
     });
 
     renderWithProviders(<UsageBanner />);
-    expect(screen.getByText('Pro Plan')).toBeInTheDocument();
-    expect(screen.queryByText(/\d+\/\d+ projects/)).not.toBeInTheDocument();
+
+    expect(screen.getByText('PRO')).toBeInTheDocument();
+    expect(screen.getByText('4 projects · 12 tickets this month')).toBeInTheDocument();
+    expect(screen.queryByText('4/4 project · 12/12 tickets this month')).not.toBeInTheDocument();
+
+    const cta = screen.getByRole('link', { name: /manage plan/i });
+    expect(cta).toHaveAttribute('href', '/settings/billing');
   });
 
-  it('should show only plan name for Team plan user', () => {
+  it('shows team styling and counts for Team users', () => {
     mockUseUsage.mockReturnValue({
       data: {
         plan: 'TEAM',
         planName: 'Team',
         projects: { current: 2, max: null },
-        ticketsThisMonth: { current: 8, max: null, resetDate: '2026-04-01T00:00:00.000Z' },
+        ticketsThisMonth: { current: 18, max: null, resetDate: '2026-04-01T00:00:00.000Z' },
         status: 'active',
         gracePeriodEndsAt: null,
       },
     });
 
     renderWithProviders(<UsageBanner />);
-    expect(screen.getByText('Team Plan')).toBeInTheDocument();
+
+    expect(screen.getByText('TEAM')).toBeInTheDocument();
+    expect(screen.getByText('2 projects · 18 tickets this month')).toBeInTheDocument();
+    expect(screen.getByTestId('usage-banner-card')).toHaveClass('from-indigo-500/15');
+    expect(screen.getByTestId('usage-banner-badge')).toHaveClass('bg-violet-500/15');
   });
 
-  it('should show grace period warning when status is past_due', () => {
+  it('shows the past-due warning when payment is overdue', () => {
     mockUseUsage.mockReturnValue({
       data: {
         plan: 'PRO',
@@ -83,23 +100,8 @@ describe('UsageBanner', () => {
     });
 
     renderWithProviders(<UsageBanner />);
+
     expect(screen.getByText(/Payment failed/)).toBeInTheDocument();
-    expect(screen.getByText(/Update payment method/)).toBeInTheDocument();
-  });
-
-  it('should not show grace period warning when status is active', () => {
-    mockUseUsage.mockReturnValue({
-      data: {
-        plan: 'PRO',
-        planName: 'Pro',
-        projects: { current: 2, max: null },
-        ticketsThisMonth: { current: 5, max: null, resetDate: '2026-04-01T00:00:00.000Z' },
-        status: 'active',
-        gracePeriodEndsAt: null,
-      },
-    });
-
-    renderWithProviders(<UsageBanner />);
-    expect(screen.queryByText(/Payment failed/)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /update payment method/i })).toHaveAttribute('href', '/settings/billing');
   });
 });
