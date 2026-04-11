@@ -95,47 +95,60 @@ fi
 echo ""
 
 # ── Step 2: Start server for integration + e2e ─────────────────────
+# Always start a fresh server with the correct test env vars (WORKFLOW_API_TOKEN etc.).
+# If a server is already running on the port (e.g. started by a prior workflow step with
+# a different token), kill it first so integration tests get the right configuration.
 EXTERNAL_SERVER=false
 if curl -s "$BASE_URL" > /dev/null 2>&1; then
-    echo "Dev server already running at $BASE_URL"
-    EXTERNAL_SERVER=true
-else
-    echo "[2/3] Starting dev server..."
-    TEST_MODE=true \
-    WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only \
-    NODE_ENV=test \
-    VERCEL_ENV=preview \
-    DEV_LOGIN_ENABLED=true \
-    DEV_LOGIN_SECRET=shared-preview-secret \
-    CREDENTIAL_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
-    bun run dev > /tmp/dev-server.log 2>&1 &
-    SERVER_PID=$!
-
-    echo -n "Waiting for server"
-    WAITED=0
-    while ! curl -s "$BASE_URL" > /dev/null 2>&1; do
-        if [ $WAITED -ge $MAX_WAIT ]; then
-            echo ""
-            echo "Server failed to start within ${MAX_WAIT}s"
-            INT_ERROR="Server failed to start within ${MAX_WAIT}s"
-            E2E_ERROR="Server not available (failed to start)"
-            # Write summary and exit — can't run int/e2e without server
-            break
-        fi
-        if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-            echo ""
-            echo "Server process died"
-            INT_ERROR="Server process died during startup"
-            E2E_ERROR="Server not available (process died)"
-            break
-        fi
-        echo -n "."
+    echo "Existing server detected on port $PORT — stopping it to ensure correct test env vars..."
+    lsof -ti ":${PORT}" 2>/dev/null | xargs kill -TERM 2>/dev/null || true
+    WAIT_STOP=0
+    while curl -s "$BASE_URL" > /dev/null 2>&1 && [ $WAIT_STOP -lt 15 ]; do
         sleep 1
-        WAITED=$((WAITED + 1))
+        WAIT_STOP=$((WAIT_STOP + 1))
     done
-    if [ -z "$INT_ERROR" ]; then
-        echo " ready!"
+    # Force kill if still alive after graceful period
+    if curl -s "$BASE_URL" > /dev/null 2>&1; then
+        lsof -ti ":${PORT}" 2>/dev/null | xargs kill -9 2>/dev/null || true
+        sleep 1
     fi
+fi
+
+echo "[2/3] Starting dev server..."
+TEST_MODE=true \
+WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only \
+NODE_ENV=test \
+VERCEL_ENV=preview \
+DEV_LOGIN_ENABLED=true \
+DEV_LOGIN_SECRET=shared-preview-secret \
+CREDENTIAL_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
+bun run dev > /tmp/dev-server.log 2>&1 &
+SERVER_PID=$!
+
+echo -n "Waiting for server"
+WAITED=0
+while ! curl -s "$BASE_URL" > /dev/null 2>&1; do
+    if [ $WAITED -ge $MAX_WAIT ]; then
+        echo ""
+        echo "Server failed to start within ${MAX_WAIT}s"
+        INT_ERROR="Server failed to start within ${MAX_WAIT}s"
+        E2E_ERROR="Server not available (failed to start)"
+        # Write summary and exit — can't run int/e2e without server
+        break
+    fi
+    if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+        echo ""
+        echo "Server process died"
+        INT_ERROR="Server process died during startup"
+        E2E_ERROR="Server not available (process died)"
+        break
+    fi
+    echo -n "."
+    sleep 1
+    WAITED=$((WAITED + 1))
+done
+if [ -z "$INT_ERROR" ]; then
+    echo " ready!"
 fi
 
 # ── Step 3: Integration Tests ──────────────────────────────────────
