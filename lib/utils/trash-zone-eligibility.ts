@@ -1,9 +1,11 @@
-import { Ticket, Job, Stage, JobStatus } from '@prisma/client';
+import { Job, Stage, JobStatus } from '@prisma/client';
 
 /**
- * Ticket type with optional jobs relation
+ * Minimal ticket type for deletion eligibility checks.
+ * Only requires the fields actually used: stage and jobs status.
  */
-type TicketWithJobs = Ticket & {
+type TicketWithJobs = {
+  stage: Stage;
   jobs?: Pick<Job, 'status'>[];
 };
 
