@@ -33,22 +33,7 @@ type TicketWithJobs = {
  * ```
  */
 export function isTicketDeletable(ticket: TicketWithJobs): boolean {
-  // Rule 1: SHIP stage tickets cannot be deleted
-  if (ticket.stage === Stage.SHIP) {
-    return false;
-  }
-
-  // Rule 2: Tickets with active jobs cannot be deleted
-  const hasActiveJob = ticket.jobs?.some(
-    (job) => job.status === JobStatus.PENDING || job.status === JobStatus.RUNNING
-  );
-
-  if (hasActiveJob) {
-    return false;
-  }
-
-  // All other tickets can be deleted
-  return true;
+  return getDeletionBlockReason(ticket) === null;
 }
 
 /**

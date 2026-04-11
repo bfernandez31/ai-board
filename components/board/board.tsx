@@ -50,7 +50,7 @@ import {
   canRollbackBuildToPlan,
   canRollbackVerifyToBuild,
 } from '@/app/lib/workflows/rollback-validator';
-import { isTicketDeletable, getDeletionBlockReason } from '@/lib/utils/trash-zone-eligibility';
+import { getDeletionBlockReason } from '@/lib/utils/trash-zone-eligibility';
 import { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
 import { useHoverCapability } from '@/lib/hooks/use-hover-capability';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
@@ -1209,12 +1209,11 @@ export function Board({
       jobs: allTicketJobs.map(j => ({ status: j.status })),
     };
 
-    const isDeletable = isTicketDeletable(ticketWithJobs);
     const reason = getDeletionBlockReason(ticketWithJobs);
 
     return {
       isVisible: true,
-      isDisabled: !isDeletable,
+      isDisabled: reason !== null,
       ...(reason && { disabledReason: reason }),
     };
   }, [activeTicket, isDragging, getMergedTicketJobs]);
