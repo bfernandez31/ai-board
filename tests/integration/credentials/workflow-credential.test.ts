@@ -28,7 +28,7 @@ describe('Workflow Credential Retrieval API', () => {
   });
 
   function createWorkflowClient() {
-    const workflowToken = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+    const workflowToken = 'test-workflow-token-for-e2e-tests-only';
     return createAPIClient({
       includeTestUserHeader: false,
       enableTestAuthOverride: false,

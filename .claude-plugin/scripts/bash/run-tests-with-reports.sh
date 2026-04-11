@@ -340,8 +340,12 @@ run_test_cmd() {
   if [[ "$fw" == "go-test" ]]; then
     (cd "$TARGET_DIR" && eval "$full_cmd") > "$report_file" 2>&1
     exit_code=$?
-  # For playwright, capture JSON stdout to the report file
+  # For playwright, capture JSON stdout to the report file.
+  # Export PLAYWRIGHT_REUSE_SERVER=1 so Playwright reuses the server we already
+  # started (via start_server_if_needed) instead of trying to start its own,
+  # which would fail with a port conflict in CI where process.env.CI is set.
   elif [[ "$fw" == "playwright" ]]; then
+    export PLAYWRIGHT_REUSE_SERVER=1
     (cd "$TARGET_DIR" && eval "$full_cmd") > "$report_file" 2>/tmp/test-${test_type}-stderr.txt
     exit_code=$?
   else
