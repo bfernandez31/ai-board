@@ -306,7 +306,7 @@ Import a GitHub repository as a new ai-board project.
 - `403` (quota): `{ "error": "Project limit reached...", "code": "PLAN_LIMIT" }`
 - `403` (no admin): `{ "error": "You need admin access to this repository to import it.", "code": "INSUFFICIENT_PERMISSIONS" }`
 - `403` (no scope): `{ "error": "GitHub token lacks repo scope", "code": "MISSING_SCOPE" }`
-- `409` (duplicate repo): `{ "error": "This repository is already linked to project \"Existing Project\" (KEY-123).", "code": "DUPLICATE_REPO", "existingProjectId": 3 }`
+- `409` (duplicate repo): `{ "error": "This repository is already linked to project \"Existing Project\" (KEY-123).", "code": "DUPLICATE_REPO" }`
 - `409` (other conflict): `{ "error": "A conflict occurred while creating the project. Please try again.", "code": "CONFLICT" }`
 - `502`: GitHub API error
 
@@ -4841,6 +4841,7 @@ The response includes `Cache-Control: no-store, no-cache, must-revalidate` and `
 - `400`: `{ "error": "Invalid request body", "details": { ... } }` — missing or invalid fields
 - `401`: Missing or invalid workflow token
 - `404`: `{ "error": "No existing credential found to update" }` — no matching project or credential
+- `500`: `{ "error": "Failed to update credential" }` — malformed JSON body or unexpected server error
 
 ### GET /api/internal/github-token
 
