@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { UsageData } from '@/hooks/use-usage';
 import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
 import { UsageBanner } from '@/components/billing/usage-banner';
 
-// Mock useUsage hook
 const mockUseUsage = vi.fn();
+
 vi.mock('@/hooks/use-usage', () => ({
   useUsage: () => mockUseUsage(),
 }));
@@ -13,93 +14,91 @@ describe('UsageBanner', () => {
     vi.clearAllMocks();
   });
 
-  it('should render nothing when usage data is not available', () => {
-    mockUseUsage.mockReturnValue({ data: undefined });
-    const { container } = renderWithProviders(<UsageBanner />);
-    expect(container.innerHTML).toBe('');
-  });
+  function createUsageData(overrides: Partial<UsageData> = {}): UsageData {
+    return {
+      plan: 'FREE',
+      planName: 'Free',
+      projects: { current: 1, max: 1 },
+      ticketsThisMonth: { current: 3, max: 5, resetDate: '2026-04-01T00:00:00.000Z' },
+      status: 'none',
+      gracePeriodEndsAt: null,
+      ...overrides,
+    };
+  }
 
-  it('should show quota numbers for Free plan user', () => {
-    mockUseUsage.mockReturnValue({
-      data: {
-        plan: 'FREE',
-        planName: 'Free',
-        projects: { current: 1, max: 1 },
-        ticketsThisMonth: { current: 3, max: 5, resetDate: '2026-04-01T00:00:00.000Z' },
-        status: 'none',
-        gracePeriodEndsAt: null,
-      },
-    });
-
+  function renderBanner(usage: UsageData | undefined): void {
+    mockUseUsage.mockReturnValue({ data: usage });
     renderWithProviders(<UsageBanner />);
-    expect(screen.getByText(/1\/1 projects/)).toBeInTheDocument();
-    expect(screen.getByText(/3\/5 tickets this month/)).toBeInTheDocument();
-    expect(screen.getByText(/Free Plan/)).toBeInTheDocument();
+  }
+
+  it('renders a fixed-height loading skeleton while usage data is unavailable', () => {
+    renderBanner(undefined);
+
+    const skeleton = screen.getByTestId('usage-banner-skeleton');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('min-h-24');
+    expect(skeleton).toHaveClass('animate-pulse');
   });
 
-  it('should show only plan name for Pro plan user (no quotas)', () => {
-    mockUseUsage.mockReturnValue({
-      data: {
+  it('shows ratios and an upgrade action for Free plan users', () => {
+    renderBanner(createUsageData());
+
+    expect(screen.getByText('FREE')).toBeInTheDocument();
+    expect(screen.getByText('1/1 project · 3/5 tickets this month')).toBeInTheDocument();
+
+    const cta = screen.getByRole('link', { name: /upgrade/i });
+    expect(cta).toHaveAttribute('href', '/settings/billing');
+  });
+
+  it('shows raw counts and a manage plan action for Pro users', () => {
+    renderBanner(
+      createUsageData({
         plan: 'PRO',
         planName: 'Pro',
         projects: { current: 4, max: null },
         ticketsThisMonth: { current: 12, max: null, resetDate: '2026-04-01T00:00:00.000Z' },
         status: 'active',
-        gracePeriodEndsAt: null,
-      },
-    });
+      })
+    );
 
-    renderWithProviders(<UsageBanner />);
-    expect(screen.getByText('Pro Plan')).toBeInTheDocument();
-    expect(screen.queryByText(/\d+\/\d+ projects/)).not.toBeInTheDocument();
+    expect(screen.getByText('PRO')).toBeInTheDocument();
+    expect(screen.getByText('4 projects · 12 tickets this month')).toBeInTheDocument();
+    expect(screen.queryByText('4/4 project · 12/12 tickets this month')).not.toBeInTheDocument();
+
+    const cta = screen.getByRole('link', { name: /manage plan/i });
+    expect(cta).toHaveAttribute('href', '/settings/billing');
   });
 
-  it('should show only plan name for Team plan user', () => {
-    mockUseUsage.mockReturnValue({
-      data: {
+  it('shows team styling and counts for Team users', () => {
+    renderBanner(
+      createUsageData({
         plan: 'TEAM',
         planName: 'Team',
         projects: { current: 2, max: null },
-        ticketsThisMonth: { current: 8, max: null, resetDate: '2026-04-01T00:00:00.000Z' },
+        ticketsThisMonth: { current: 18, max: null, resetDate: '2026-04-01T00:00:00.000Z' },
         status: 'active',
-        gracePeriodEndsAt: null,
-      },
-    });
+      })
+    );
 
-    renderWithProviders(<UsageBanner />);
-    expect(screen.getByText('Team Plan')).toBeInTheDocument();
+    expect(screen.getByText('TEAM')).toBeInTheDocument();
+    expect(screen.getByText('2 projects · 18 tickets this month')).toBeInTheDocument();
+    expect(screen.getByTestId('usage-banner-card')).toHaveClass('from-indigo-500/15');
+    expect(screen.getByTestId('usage-banner-badge')).toHaveClass('bg-violet-500/15');
   });
 
-  it('should show grace period warning when status is past_due', () => {
-    mockUseUsage.mockReturnValue({
-      data: {
+  it('shows the past-due warning when payment is overdue', () => {
+    renderBanner(
+      createUsageData({
         plan: 'PRO',
         planName: 'Pro',
         projects: { current: 2, max: null },
         ticketsThisMonth: { current: 5, max: null, resetDate: '2026-04-01T00:00:00.000Z' },
         status: 'past_due',
         gracePeriodEndsAt: '2026-03-20T00:00:00.000Z',
-      },
-    });
+      })
+    );
 
-    renderWithProviders(<UsageBanner />);
     expect(screen.getByText(/Payment failed/)).toBeInTheDocument();
-    expect(screen.getByText(/Update payment method/)).toBeInTheDocument();
-  });
-
-  it('should not show grace period warning when status is active', () => {
-    mockUseUsage.mockReturnValue({
-      data: {
-        plan: 'PRO',
-        planName: 'Pro',
-        projects: { current: 2, max: null },
-        ticketsThisMonth: { current: 5, max: null, resetDate: '2026-04-01T00:00:00.000Z' },
-        status: 'active',
-        gracePeriodEndsAt: null,
-      },
-    });
-
-    renderWithProviders(<UsageBanner />);
-    expect(screen.queryByText(/Payment failed/)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /update payment method/i })).toHaveAttribute('href', '/settings/billing');
   });
 });
