@@ -16,7 +16,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select';
 import { Agent } from '@prisma/client';
 import {
@@ -126,7 +125,19 @@ export function AgentEditDialog({
               disabled={isSaving}
             >
               <SelectTrigger id="agent-select">
-                <SelectValue placeholder="Select agent" />
+                <span className="inline-flex items-center gap-1.5 truncate">
+                  {selectedAgent === 'project-default' ? (
+                    <>
+                      <AgentIcon agent={projectDefaultAgent} size={14} />
+                      Use project default
+                    </>
+                  ) : (
+                    <>
+                      <AgentIcon agent={selectedAgent as Agent} size={14} />
+                      {getAgentLabel(selectedAgent as Agent)}
+                    </>
+                  )}
+                </span>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="project-default">
