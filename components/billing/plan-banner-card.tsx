@@ -81,12 +81,13 @@ export function PlanBannerCard() {
   }
 
   const config = planConfig[usage.plan];
-  const isPastDue = usage.status === 'past_due' && usage.gracePeriodEndsAt;
   const isFree = usage.plan === 'FREE';
 
   return (
     <div className="space-y-2">
-      {isPastDue && <PastDueWarning gracePeriodEndsAt={usage.gracePeriodEndsAt!} />}
+      {usage.status === 'past_due' && usage.gracePeriodEndsAt && (
+        <PastDueWarning gracePeriodEndsAt={usage.gracePeriodEndsAt} />
+      )}
 
       <div
         className={`${config.gradient} ${BANNER_HEIGHT} flex items-center justify-between rounded-lg border border-border/50 px-4`}
