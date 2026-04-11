@@ -102,7 +102,7 @@ Maps Agent enum values to SVG favicon image paths, labels, and descriptions for 
 
 - Utility functions: `app/lib/utils/agent-icons.ts`
 - React component: `components/ui/agent-icon.tsx`
-- SVG assets: `public/agents/claude.svg`, `public/agents/codex.svg`
+- SVG assets: `public/agents/claude.svg`, `public/agents/codex.svg`, `public/agents/mistral.svg`, `public/agents/gemini.svg`
 
 ### API Reference
 
@@ -114,6 +114,8 @@ Returns the public URL path to the agent's SVG favicon image.
 |-------|------|
 | CLAUDE | `/agents/claude.svg` |
 | CODEX | `/agents/codex.svg` |
+| MISTRAL | `/agents/mistral.svg` |
+| GEMINI | `/agents/gemini.svg` |
 
 ---
 
@@ -125,6 +127,8 @@ Returns short human-readable label for the given agent.
 |-------|-------|
 | CLAUDE | "Claude" |
 | CODEX | "Codex" |
+| MISTRAL | "Mistral" |
+| GEMINI | "Gemini" |
 
 ---
 
@@ -136,6 +140,8 @@ Returns full description for agent selection UI.
 |-------|-------------|
 | CLAUDE | "Anthropic Claude Code" |
 | CODEX | "OpenAI Codex" |
+| MISTRAL | "Mistral vibe" |
+| GEMINI | "Google Gemini CLI" |
 
 ### AgentIcon Component
 
@@ -180,9 +186,9 @@ interface AgentIconProps {
 **Unit Tests**: `tests/unit/agent-icons.test.ts`
 
 Test coverage:
-- `getAgentIconPath` for CLAUDE and CODEX
-- `getAgentLabel` for CLAUDE and CODEX
-- `getAgentDescription` for CLAUDE and CODEX
+- `getAgentIconPath` for CLAUDE, CODEX, MISTRAL, and GEMINI
+- `getAgentLabel` for CLAUDE, CODEX, MISTRAL, and GEMINI
+- `getAgentDescription` for CLAUDE, CODEX, MISTRAL, and GEMINI
 - Exhaustive enum coverage (no missing agents)
 
 ---

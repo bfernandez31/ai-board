@@ -1112,7 +1112,7 @@ model ProjectSetupJob {
 **Business Rules**:
 - Only one job with PENDING or RUNNING status is permitted per project **per command type** at a time — ONBOARD and RETRO_SPEC jobs do not block each other
 - `ONBOARD` jobs require `configSyncedAt` to be null; `RETRO_SPEC` jobs require `configSyncedAt` to be set
-- `agent` determines which credential provider is required (`CLAUDE` → `ANTHROPIC`, `CODEX` → `OPENAI`, `MISTRAL` → `MISTRAL`)
+- `agent` determines which credential provider is required (`CLAUDE` → `ANTHROPIC`, `CODEX` → `OPENAI`, `MISTRAL` → `MISTRAL`, `GEMINI` → `GOOGLE`)
 - On COMPLETED (ONBOARD), `syncProjectConfig()` runs automatically (non-blocking) to set `configSyncedAt`
 - On COMPLETED (RETRO_SPEC), no config sync — generated specs are committed to the repository by the workflow
 - If config sync fails after an ONBOARD COMPLETED, the job remains COMPLETED but `configSyncedAt` stays null — the setup page remains visible and the user can retry
@@ -1130,6 +1130,7 @@ enum CredentialProvider {
   ANTHROPIC
   OPENAI
   MISTRAL
+  GOOGLE
 }
 ```
 
@@ -1148,13 +1149,16 @@ enum CredentialType {
 - `ANTHROPIC:API_KEY` → `ANTHROPIC_API_KEY`
 - `ANTHROPIC:OAUTH_TOKEN` → `CLAUDE_CODE_OAUTH_TOKEN`
 - `OPENAI:API_KEY` → `OPENAI_API_KEY`
-- `OPENAI:OAUTH_TOKEN` → `OPENAI_API_KEY`
+- `OPENAI:OAUTH_TOKEN` → `CODEX_OAUTH_JSON`
 - `MISTRAL:API_KEY` → `MISTRAL_API_KEY`
+- `GOOGLE:API_KEY` → `GEMINI_API_KEY`
+- `GOOGLE:OAUTH_TOKEN` → `GEMINI_OAUTH_TOKEN`
 
 **Provider constraints**:
 - `ANTHROPIC`: supports `API_KEY` and `OAUTH_TOKEN`
 - `OPENAI`: supports `API_KEY` and `OAUTH_TOKEN`
 - `MISTRAL`: supports `API_KEY` only
+- `GOOGLE`: supports `API_KEY` (Google AI Studio key, `AIza…` prefix) and `OAUTH_TOKEN` (Gemini CLI OAuth refresh token)
 
 ### CredentialReadiness
 
@@ -1376,6 +1380,7 @@ enum Agent {
   CLAUDE   // Anthropic Claude (default)
   CODEX    // OpenAI Codex
   MISTRAL  // Mistral vibe CLI
+  GEMINI   // Google Gemini CLI
 }
 ```
 
