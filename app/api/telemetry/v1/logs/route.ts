@@ -417,13 +417,8 @@ function normalizeOtlpKeys(obj: unknown): unknown {
   if (obj && typeof obj === 'object') {
     const snakeToCamelMap: Record<string, string> = {
       resource_logs: 'resourceLogs',
-      resource_spans: 'resourceSpans',
       scope_logs: 'scopeLogs',
-      scope_spans: 'scopeSpans',
       log_records: 'logRecords',
-      start_time_unix_nano: 'startTimeUnixNano',
-      end_time_unix_nano: 'endTimeUnixNano',
-      parent_span_id: 'parentSpanId',
       time_unix_nano: 'timeUnixNano',
       observed_time_unix_nano: 'observedTimeUnixNano',
       severity_number: 'severityNumber',
