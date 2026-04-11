@@ -45,13 +45,21 @@ The limits applied to a user depend on the *effective plan*, not just the subscr
 
 Users see their current plan consumption at contextual touchpoints without navigating to a dedicated usage page.
 
-### Dashboard Usage Banner
+### Dashboard Plan Banner
 
-A usage banner appears on the projects list page (`/projects`) for all users:
+A plan banner card appears below the "Projects" heading on the projects list page (`/projects`) for all users. While usage data loads, the banner renders a skeleton placeholder of identical height.
 
-- **Free plan**: Shows quota counters — e.g., `1/1 projects | 3/5 tickets this month | Free Plan`
-- **Pro plan**: Shows plan name only — `Pro Plan` (no numeric quotas, limits are unlimited)
-- **Team plan**: Shows plan name only — `Team Plan`
+**Banner layout** (left → right):
+- **Plan badge pill**: shows the current plan name (`FREE`, `PRO`, or `TEAM`) with a plan-specific background
+- **Usage counters**: displayed next to the badge
+  - Free plan — ratio format: e.g., `1/1 projects · 3/5 tickets this month`
+  - Pro / Team plan — raw count format: e.g., `2 projects · 5 tickets this month`
+- **Action link**: right-aligned; `Upgrade` for Free-plan users, `Manage plan` for Pro/Team; links to `/settings/billing`
+
+**Visual styling**: the banner background uses a plan-specific gradient
+- `TEAM` — lavender/mauve gradient
+- `PRO` — sapphire/sky gradient
+- `FREE` — neutral surface gradient
 
 ### Ticket Creation Form
 
@@ -67,7 +75,7 @@ When a Free-plan user is at their project limit:
 
 ### Grace Period Warning
 
-When a user's subscription is `past_due` and within the 7-day grace period, the usage banner displays a warning:
+When a user's subscription is `past_due` and within the 7-day grace period, a warning banner is displayed **above** the plan banner card:
 > "Payment failed. Your plan limits will be reduced to Free on [date]. Update payment method."
 
 The warning links to `/settings/billing` (Stripe customer portal).
