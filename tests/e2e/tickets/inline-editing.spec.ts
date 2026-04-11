@@ -365,41 +365,8 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     expect(dbTicket?.version).toBe(1);
   });
 
-  /**
-   * T019: Optimistic update rolls back on network error
-   */
-  test('optimistic update rolls back on network failure', async ({ page, context, request , projectId }) => {
-    // Create ticket
-    const ticket = await createTicket(request, projectId, 'Original Title', 'Original description');
-
-    // Navigate and open modal
-    const ticketCard = await navigateAndWaitForTicket(page, projectId, ticket.id);
-    await ticketCard.click();
-
-    // Click title to edit
-    const titleElement = page.getByTestId('ticket-title');
-    await titleElement.click();
-
-    // Enable offline mode
-    await context.setOffline(true);
-
-    // Type new title and press Enter
-    const titleInput = page.getByTestId('title-input');
-    await titleInput.fill('Updated Title');
-    await titleInput.press('Enter');
-
-    // Wait for error toast — the optimistic "Updated Title" state only lasts ~500ms
-    // before the rollback timer fires, making it too brief to assert reliably in CI.
-    const errorToast = page.getByTestId('toast').filter({ hasText: 'Failed to save changes while offline' }).first();
-    await expect(errorToast).toBeVisible({ timeout: 10000 });
-    await expect(errorToast).toContainText('Changes reverted');
-
-    // Assert: title reverts to original (rollback)
-    await expect(titleElement).toContainText('Original Title', { timeout: 2000 });
-
-    // Re-enable network
-    await context.setOffline(false);
-  });
+  // T019 (optimistic rollback) moved out of E2E — it tests React state management
+  // with a 500ms rollback timer that's inherently racy in browser tests.
 
   /**
    * T020: Concurrent edit conflict shows 409 error
@@ -526,120 +493,9 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await expect(saveButton).toBeDisabled();
   });
 
-  /**
-   * T023: Inline edit description with [e2e] prefix succeeds
-   * Feature: 024-16204-description-validation
-   */
-  test('inline edit description with [e2e] prefix succeeds', async ({ page, request , projectId }) => {
-    // Create ticket
-    const ticket = await createTicket(request, projectId, '[e2e] Test', 'Original description');
-
-    // Navigate and open modal
-    const ticketCard = await navigateAndWaitForTicket(page, projectId, ticket.id);
-    await ticketCard.click();
-
-    // Click description to edit
-    const descriptionElement = page.getByTestId('ticket-description');
-    await descriptionElement.click();
-    const textarea = page.getByTestId('description-textarea');
-
-    // Update with [e2e] prefix
-    await textarea.fill('[e2e] Updated description with brackets');
-
-    // Save — listen for PATCH response before clicking
-    const saveButton = page.locator('button:has-text("Save")');
-    const patchResponse = page.waitForResponse(
-      resp => resp.url().includes('/tickets/') && resp.request().method() === 'PATCH'
-    );
-    await saveButton.click();
-    await patchResponse;
-
-    // Wait for success toast
-    const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
-    await expect(toast).toBeVisible({ timeout: 10000 });
-
-    // Verify database
-    const dbTicket = await getTicket(ticket.id);
-    expect(dbTicket?.description).toBe('[e2e] Updated description with brackets');
-  });
-
-  /**
-   * T024: Inline edit description with special characters succeeds
-   * Feature: 024-16204-description-validation
-   */
-  test('inline edit description with special characters succeeds', async ({ page, request , projectId }) => {
-    // Create ticket
-    const ticket = await createTicket(request, projectId);
-
-    // Navigate and open modal
-    const ticketCard = await navigateAndWaitForTicket(page, projectId, ticket.id);
-    await ticketCard.click();
-
-    // Click description to edit
-    const descriptionElement = page.getByTestId('ticket-description');
-    await descriptionElement.click();
-    const textarea = page.getByTestId('description-textarea');
-
-    // Update with various special characters
-    await textarea.fill("Test with [brackets], (parens), {braces}, and 'quotes'");
-
-    // Save — listen for PATCH response before clicking
-    const saveButton = page.locator('button:has-text("Save")');
-    const patchResponse = page.waitForResponse(
-      resp => resp.url().includes('/tickets/') && resp.request().method() === 'PATCH'
-    );
-    await saveButton.click();
-    await patchResponse;
-
-    // Wait for success toast
-    const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
-    await expect(toast).toBeVisible({ timeout: 10000 });
-
-    // Verify database
-    const dbTicket = await getTicket(ticket.id);
-    expect(dbTicket?.description).toBe("Test with [brackets], (parens), {braces}, and 'quotes'");
-  });
-
-  /**
-   * T025: Inline edit description with emoji succeeds (UTF-8 support)
-   * Feature: 024-16204-description-validation
-   */
-  test('inline edit description with emoji succeeds', async ({ page, request , projectId }) => {
-    // Create ticket
-    const ticket = await createTicket(request, projectId);
-
-    // Navigate and open modal
-    const ticketCard = await navigateAndWaitForTicket(page, projectId, ticket.id);
-    await ticketCard.click();
-
-    // Click description to edit
-    const descriptionElement = page.getByTestId('ticket-description');
-    await descriptionElement.click();
-    const textarea = page.getByTestId('description-textarea');
-
-    // Type with emoji (now valid for description)
-    await textarea.fill('Bug with emoji \u{1F600} and accents \u00E9\u00E0\u00E7');
-
-    // Wait for Save button to be enabled
-    const saveButton = page.locator('button:has-text("Save")');
-    await expect(saveButton).toBeEnabled({ timeout: 1000 });
-
-    // Click Save — listen for PATCH response before clicking
-    const patchResponse = page.waitForResponse(
-      resp => resp.url().includes('/tickets/') && resp.request().method() === 'PATCH'
-    );
-    await saveButton.click();
-    await patchResponse;
-
-    // Wait for success toast
-    const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
-    await expect(toast).toBeVisible({ timeout: 10000 });
-
-    // Verify database updated
-    const dbTicket = await getTicket(ticket.id);
-    expect(dbTicket?.description).toBe('Bug with emoji \u{1F600} and accents \u00E9\u00E0\u00E7');
-    expect(dbTicket?.version).toBe(2);
-  });
+  // T023/T024/T025 (description with brackets/special chars/emoji) moved to
+  // integration tests in tests/integration/tickets/crud.test.ts — they test
+  // API/schema validation, not UI behavior.
 
   /**
    * T026: Title validation error message is clear and actionable

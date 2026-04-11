@@ -442,6 +442,48 @@ describe('Tickets CRUD', () => {
       expect(response.data.description).toBe(newDescription);
     });
 
+    it('should update description with [e2e] prefix and brackets', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        { title: '[e2e] Bracket test', description: 'Original' }
+      );
+      const response = await ctx.api.patch<{ description: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${createResponse.data.id}`,
+        { description: '[e2e] Updated description with brackets', version: createResponse.data.version }
+      );
+      expect(response.status).toBe(200);
+      expect(response.data.description).toBe('[e2e] Updated description with brackets');
+    });
+
+    it('should update description with special characters', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        { title: '[e2e] Special chars test', description: 'Original' }
+      );
+      const content = "Test with [brackets], (parens), {braces}, and 'quotes'";
+      const response = await ctx.api.patch<{ description: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${createResponse.data.id}`,
+        { description: content, version: createResponse.data.version }
+      );
+      expect(response.status).toBe(200);
+      expect(response.data.description).toBe(content);
+    });
+
+    it('should update description with emoji and accents (UTF-8)', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        { title: '[e2e] Emoji test', description: 'Original' }
+      );
+      const content = 'Bug with emoji \u{1F600} and accents \u00E9\u00E0\u00E7';
+      const response = await ctx.api.patch<{ description: string; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets/${createResponse.data.id}`,
+        { description: content, version: createResponse.data.version }
+      );
+      expect(response.status).toBe(200);
+      expect(response.data.description).toBe(content);
+      expect(response.data.version).toBe(2);
+    });
+
     it('should return 404 for non-existent ticket', async () => {
       const response = await ctx.api.patch(
         `/api/projects/${ctx.projectId}/tickets/999999`,
