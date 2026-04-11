@@ -513,8 +513,10 @@ sequenceDiagram
     else AGENT_TYPE = MISTRAL
         RS->>CLI: pip install vibe-cli
         RS->>RS: disable datalake telemetry (VIBE_TELEMETRY=false)
-        RS->>RS: configure OTEL trace export to platform endpoint
-        RS->>CLI: vibe run --profile auto-approve "/COMMAND ARGS"
+        RS->>RS: write ~/.vibe/config.toml (model config)
+        RS->>CLI: vibe --prompt "..." --agent auto-approve
+        RS->>RS: collect_mistral_telemetry() — scrape session logs
+        RS->>EP: POST /api/telemetry/v1/logs (batch JSON)
     end
     CLI-->>RS: exit code
     RS-->>WF: propagated exit code
@@ -526,8 +528,8 @@ sequenceDiagram
 |---------|--------|-------|---------|
 | Package | `@anthropic-ai/claude-code` | `@openai/codex` | `vibe-cli` (Python pip) |
 | Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64) | `MISTRAL_API_KEY` |
-| Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt injection via stdin from `.claude/commands/COMMAND.md` | `vibe run --profile auto-approve "/COMMAND ARGS"` |
-| Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section | OTEL trace export via env vars; datalake disabled |
+| Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt injection via stdin from `.claude/commands/COMMAND.md` | `vibe --prompt "..." --agent auto-approve` |
+| Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section | Post-execution batch JSON via `collect_mistral_telemetry()`; datalake disabled |
 | Project context | `CLAUDE.md` (native) | `AGENTS.md` at project root, read automatically by Codex | `AGENTS.md` at project root, read via native filesystem walk |
 | Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `gpt-5.4`), `CODEX_REASONING` env var (default: `high`) | Determined by vibe CLI defaults |
 
@@ -565,8 +567,8 @@ sequenceDiagram
 - `CODEX_MODEL`: Optional Codex model override (default: `gpt-5.4`)
 - `CODEX_REASONING`: Optional Codex reasoning effort override (default: `high`)
 - `MISTRAL_API_KEY`: Required when `AGENT_TYPE=MISTRAL`
-- `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex and Mistral telemetry when set
-- `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config and Mistral OTEL export
+- `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex telemetry when set; used by Mistral `collect_mistral_telemetry()` for batch POST target
+- `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config and Mistral batch POST auth
 
 **Usage in Workflows**:
 

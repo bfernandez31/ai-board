@@ -3079,12 +3079,12 @@ Invalid transitions return 400 error
 
 ### POST /api/telemetry/v1/logs
 
-OTLP HTTP/JSON endpoint for receiving agent telemetry (Claude Code, Codex, and Mistral vibe CLI).
+Agent telemetry endpoint supporting OTLP HTTP/JSON (Claude Code, Codex) and batch JSON (Mistral vibe CLI).
 
 **Authentication**: Bearer token (WORKFLOW_API_TOKEN) via `OTEL_EXPORTER_OTLP_HEADERS`
 **Authorization**: Workflow token validation
 
-**Supported Agents**: Claude Code (`claude_code.*` log events), Codex (`codex.*` log events), and Mistral vibe CLI (OTLP trace spans in `resourceSpans`). The endpoint detects the signal type from the payload structure (`resourceLogs` vs `resourceSpans`) and routes processing accordingly.
+**Supported Agents**: Claude Code (`claude_code.*` log events), Codex (`codex.*` log events), and Mistral vibe CLI (post-execution batch payload with `jobId`). The endpoint detects the payload format: `resourceLogs` routes to OTLP log processing, a top-level `jobId` routes to batch processing.
 
 **Request Body** (OTLP JSON format — Claude Code example):
 ```json
@@ -3136,31 +3136,28 @@ OTLP HTTP/JSON endpoint for receiving agent telemetry (Claude Code, Codex, and M
 }
 ```
 
-**Request Body** (OTLP JSON format — Mistral vibe CLI trace example):
+**Request Body** (Batch JSON — Mistral vibe CLI example):
 ```json
 {
-  "resourceSpans": [{
-    "resource": {
-      "attributes": [
-        { "key": "job_id", "value": { "stringValue": "123" } },
-        { "key": "service.name", "value": { "stringValue": "vibe" } }
-      ]
-    },
-    "scopeSpans": [{
-      "spans": [{
-        "name": "llm.chat",
-        "startTimeUnixNano": "1700000000000000000",
-        "endTimeUnixNano":   "1700000005000000000",
-        "attributes": [
-          { "key": "gen_ai.request.model",       "value": { "stringValue": "mistral-large-latest" } },
-          { "key": "gen_ai.usage.input_tokens",  "value": { "intValue": "1200" } },
-          { "key": "gen_ai.usage.output_tokens", "value": { "intValue": "600" } }
-        ]
-      }]
-    }]
-  }]
+  "jobId": 456,
+  "inputTokens": 5000,
+  "outputTokens": 2000,
+  "cacheReadTokens": 300,
+  "model": "devstral-medium-latest",
+  "toolsUsed": ["bash", "write_file", "read_file"]
 }
 ```
+
+**Batch fields**:
+- `jobId` (number, optional): Job to attribute metrics to. If missing, telemetry is accepted but not stored.
+- `inputTokens` (number, optional): Total prompt tokens consumed in session.
+- `outputTokens` (number, optional): Total completion tokens generated in session.
+- `cacheReadTokens` (number, optional): Total cached input tokens.
+- `cacheCreationTokens` (number, optional): Total cache creation tokens.
+- `model` (string, optional): Model used (e.g., `devstral-medium-latest`).
+- `toolsUsed` (string[], optional): Unique tool names used during session.
+
+Cost is estimated server-side from `MISTRAL_PRICING` lookup table based on model and token counts.
 
 **Supported Event Names** (log-based — Claude Code and Codex):
 
@@ -3172,16 +3169,6 @@ OTLP HTTP/JSON endpoint for receiving agent telemetry (Claude Code, Codex, and M
 | `codex.api_request` | Codex | Token/cost/duration/model metrics |
 | `codex.tool.call` | Codex | Tool usage tracking |
 | All others | Any | Silently skipped |
-
-**Supported Span Attributes** (trace-based — Mistral vibe CLI):
-
-| Attribute | Source | Processing |
-|-----------|--------|------------|
-| `gen_ai.request.model` | `llm.chat` span | Model name |
-| `gen_ai.usage.input_tokens` | `llm.chat` span | Input token count |
-| `gen_ai.usage.output_tokens` | `llm.chat` span | Output token count |
-| `tool.name` | tool invocation span | Tool usage tracking |
-| Span timestamps | any span | Duration (endTime − startTime) |
 
 **Workflow Configuration** (Claude Code):
 ```yaml
@@ -3212,19 +3199,16 @@ env:
 **Workflow Configuration** (Mistral vibe CLI):
 ```yaml
 env:
-  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry/v1/logs
-  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: http/json
-  OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
-  OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
-  VIBE_TELEMETRY: "false"
+  VIBE_TELEMETRY: "false"  # Disable Mistral datalake telemetry
+  # Batch telemetry is collected post-execution by collect_mistral_telemetry()
+  # in run-agent.sh — no OTEL env vars needed for vibe.
 ```
 
 **Processing**:
-- Detects payload type: `resourceLogs` → log-based path (Claude/Codex); `resourceSpans` → trace-based path (Mistral)
-- Extracts `job_id` from resource attributes for job association in both paths
+- Detects payload type: `resourceLogs` → log-based path (Claude/Codex); top-level `jobId` → batch path (Mistral)
+- Extracts `job_id` from resource attributes (OTLP) or top-level `jobId` (batch) for job association
 - **Log path**: aggregates metrics from `claude_code.api_request` and `codex.api_request` events (tokens, cost, duration, model); collects tool names from tool events
-- **Trace path**: extracts tokens from `gen_ai.usage.*` span attributes, model from `gen_ai.request.model`, duration from span timestamps, tools from `tool.name`; estimates cost using the Mistral pricing table
+- **Batch path**: reads token counts, model, and tools directly from the JSON payload; estimates cost using the Mistral pricing table
 - Updates corresponding Job record with aggregated metrics
 - Missing or null metric attributes default to zero (no errors)
 
@@ -3261,15 +3245,15 @@ sequenceDiagram
     participant EP as POST /api/telemetry/v1/logs
     participant DB as Database (Job)
 
-    AG->>OT: Emit api_request / tool event (or trace span)
+    AG->>OT: Emit api_request / tool event
     OT->>EP: OTLP JSON batch (Bearer token)
     EP->>EP: Validate token + Zod schema
-    EP->>EP: Detect signal type (resourceLogs vs resourceSpans)
+    EP->>EP: Detect signal type (resourceLogs vs batch JSON)
     EP->>EP: Extract job_id from resource attrs
     alt Log payload (Claude / Codex)
         EP->>EP: Match event names (claude_code.* / codex.*)
-    else Trace payload (Mistral)
-        EP->>EP: Parse spans (gen_ai.* attrs, tool.name)
+    else Batch payload (Mistral)
+        EP->>EP: Read token counts, model, tools from JSON
         EP->>EP: Estimate cost via Mistral pricing table
     end
     EP->>DB: SELECT job by id
