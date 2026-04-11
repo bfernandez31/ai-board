@@ -243,21 +243,95 @@ install_mistral() {
 }
 
 setup_mistral_telemetry() {
-  # Disable Mistral datalake telemetry
+  # Disable Mistral datalake telemetry (data governance)
   export VIBE_TELEMETRY=false
+  log_info "Mistral datalake telemetry disabled"
+}
 
-  if [[ -z "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]]; then
-    log_info "No OTEL_EXPORTER_OTLP_ENDPOINT set — skipping Mistral telemetry config"
+collect_mistral_telemetry() {
+  # Post-execution: scrape vibe session logs and send batch to telemetry endpoint.
+  # Fire-and-forget — never fails the job.
+
+  if [[ -z "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]] || [[ -z "${JOB_ID:-}" ]]; then
+    log_info "Skipping telemetry collection (no endpoint or job_id)"
     return 0
   fi
 
-  # Configure OTLP trace export for vibe
-  # Route traces to /v1/logs (the only implemented telemetry endpoint)
-  export OTEL_TRACES_EXPORTER=otlp
-  export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs"
-  export OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=http/json
-  export OTEL_EXPORTER_OTLP_PROTOCOL=http/json
-  log_info "Mistral telemetry configured: VIBE_TELEMETRY=false, OTEL traces enabled"
+  local vibe_home="${VIBE_HOME:-${HOME}/.vibe}"
+  local sessions_dir="${vibe_home}/sessions"
+
+  if [[ ! -d "$sessions_dir" ]]; then
+    log_info "No vibe sessions directory found — skipping telemetry"
+    return 0
+  fi
+
+  # Find the most recent session directory
+  local session_dir
+  session_dir=$(find "$sessions_dir" -maxdepth 1 -mindepth 1 -type d | sort | tail -1)
+
+  if [[ -z "$session_dir" ]]; then
+    log_info "No session directories found — skipping telemetry"
+    return 0
+  fi
+
+  local metadata_file="${session_dir}/metadata.json"
+  if [[ ! -f "$metadata_file" ]]; then
+    log_info "No metadata.json in session — skipping telemetry"
+    return 0
+  fi
+
+  log_info "Collecting telemetry from: $session_dir"
+
+  # Extract token counts from metadata.json stats
+  local input_tokens output_tokens model
+  input_tokens=$(jq -r '.stats.session_prompt_tokens // 0' "$metadata_file" 2>/dev/null || echo "0")
+  output_tokens=$(jq -r '.stats.session_completion_tokens // 0' "$metadata_file" 2>/dev/null || echo "0")
+  model=$(jq -r '.config.active_model // empty' "$metadata_file" 2>/dev/null || echo "")
+
+  if [[ -z "$model" ]]; then
+    model="${MISTRAL_MODEL:-devstral-medium-latest}"
+  fi
+
+  # Extract unique tool names from messages.jsonl (tool_call entries)
+  local tools_json="[]"
+  local messages_file="${session_dir}/messages.jsonl"
+  if [[ -f "$messages_file" ]]; then
+    tools_json=$(jq -s '[.[].content? // [] | .[]? | select(.type == "tool_use" or .type == "tool_call") | (.name // .function.name // empty)] | unique' "$messages_file" 2>/dev/null || echo "[]")
+    if [[ "$tools_json" == "null" ]] || [[ -z "$tools_json" ]]; then
+      tools_json="[]"
+    fi
+  fi
+
+  # Build and send batch payload
+  local payload
+  payload=$(jq -n \
+    --argjson jobId "$JOB_ID" \
+    --argjson inputTokens "$input_tokens" \
+    --argjson outputTokens "$output_tokens" \
+    --arg model "$model" \
+    --argjson toolsUsed "$tools_json" \
+    '{jobId: $jobId, inputTokens: $inputTokens, outputTokens: $outputTokens, model: $model, toolsUsed: $toolsUsed}')
+
+  log_info "Sending batch telemetry: inputTokens=$input_tokens, outputTokens=$output_tokens, model=$model, tools=$(echo "$tools_json" | jq -r 'length') tools"
+
+  local auth_header=""
+  if [[ -n "${OTEL_EXPORTER_OTLP_HEADERS:-}" ]]; then
+    auth_header="${OTEL_EXPORTER_OTLP_HEADERS#Authorization=}"
+  fi
+
+  local http_code
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X POST "${OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs" \
+    -H "Authorization: ${auth_header}" \
+    -H "Content-Type: application/json" \
+    --data-raw "$payload" \
+    --max-time 10) || true
+
+  if [[ "$http_code" == "200" ]]; then
+    log_info "Batch telemetry sent successfully"
+  else
+    log_info "Batch telemetry failed (HTTP $http_code) — non-blocking"
+  fi
 }
 
 configure_mistral_model() {
@@ -342,6 +416,7 @@ case "$AGENT_TYPE" in
     install_mistral
     setup_mistral_telemetry
     invoke_mistral
+    collect_mistral_telemetry
     ;;
   *)
     log_error "Unsupported agent type '$AGENT_TYPE'. Supported: CLAUDE, CODEX, MISTRAL"
