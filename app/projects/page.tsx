@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { ProjectsContainer } from '@/components/projects/projects-container';
 import { ProjectQuotaGate } from '@/components/projects/project-quota-gate';
-import { UsageBanner } from '@/components/billing/usage-banner';
+import { PlanBannerCard } from '@/components/billing/plan-banner-card';
 import { ProjectsHeaderActions } from '@/components/projects/projects-header-actions';
 import { toProjectWithCount, type ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
@@ -36,7 +36,7 @@ export default async function ProjectsPage() {
         {projects.length > 0 && <ProjectsHeaderActions />}
       </div>
 
-      <UsageBanner />
+      <PlanBannerCard />
 
       <ProjectQuotaGate />
 

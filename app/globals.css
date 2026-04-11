@@ -361,4 +361,9 @@
 
   /* Recommendation container */
   .aurora-bg-recommendation { background: hsl(var(--ctp-mauve) / 0.04); }
+
+  /* Plan banner gradients */
+  .aurora-plan-team { background: linear-gradient(135deg, hsl(var(--ctp-lavender) / 0.10), hsl(var(--ctp-mauve) / 0.12)); }
+  .aurora-plan-pro  { background: linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.10), hsl(var(--ctp-sky) / 0.08)); }
+  .aurora-plan-free { background: linear-gradient(135deg, hsl(var(--ctp-surface-1) / 0.15), hsl(var(--ctp-surface-0) / 0.10)); }
 }
