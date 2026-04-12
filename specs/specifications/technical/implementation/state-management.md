@@ -171,7 +171,11 @@ export function useJobPolling(projectId: number, pollingInterval = 2000) {
       return result.jobs;
     },
     staleTime: 0,
-    refetchInterval: pollingInterval, // Always poll — payload is tiny (active jobs only)
+    // Fast poll (2s) when active jobs exist, slow poll (30s) when idle
+    refetchInterval: (query) => {
+      const jobs = query.state.data || [];
+      return jobs.length > 0 ? pollingInterval : 30000;
+    },
     refetchIntervalInBackground: true,
   });
 
@@ -209,8 +213,14 @@ export function useJobPolling(projectId: number, pollingInterval = 2000) {
 **Features**:
 - **Active-Only Payload**: API returns only PENDING/RUNNING jobs, keeping response tiny (0-2 items typically)
 - **Disappeared Job Detection**: When a previously-seen job vanishes from the response, it has reached terminal status — triggers cache invalidation
-- **Always Polling**: 2-second interval always active (endpoint is lightweight), detects new jobs immediately
+- **Adaptive Polling**: 2-second interval when active jobs exist, 30-second interval when idle (detects new jobs without wasting requests)
 - **Cache Invalidation**: Invalidates tickets and ticketJobs caches when a job disappears (completed/failed/cancelled)
+
+**Board Integration** (`components/board/board.tsx` — `getTicketJobs` callback):
+
+The board's `getTicketJobs` merges polled active jobs with server-provided `initialJobs` for each ticket:
+- **Idle tickets** (no active polled jobs): Uses `initialJobs` directly for workflow status, quality score, and deploy state
+- **Active tickets** (PENDING/RUNNING jobs being polled): Merges polled status updates with `initialJobs` data, and appends historical (terminal) jobs from `initialJobs` that are no longer in the polling response. This ensures completed workflow status and quality score remain visible even when new jobs are running alongside completed ones
 
 ### Ticket Search Query Hook
 

@@ -468,7 +468,7 @@ export function Board({
       }
 
       // Merge polled status updates with initial job data
-      const fullJobs: Job[] = ticketPolledJobs.map(polledJob => {
+      const activeJobs: Job[] = ticketPolledJobs.map(polledJob => {
         // Find matching initial job by ID
         const matchingInitialJob = ticketInitialJobs.find(j => j.id === polledJob.id);
 
@@ -498,6 +498,13 @@ export function Board({
           updatedAt: new Date(polledJob.updatedAt),
         } as Job;
       });
+
+      // Include historical (completed/terminal) jobs from initial data that are no
+      // longer returned by polling (which only sends PENDING/RUNNING). These are
+      // needed for quality score, completed workflow status, etc.
+      const polledIds = new Set(ticketPolledJobs.map(j => j.id));
+      const historicalJobs = ticketInitialJobs.filter(j => !polledIds.has(j.id));
+      const fullJobs = [...activeJobs, ...historicalJobs];
 
       // Find the ticket to get current stage for AI-BOARD filtering
       const ticket = allTickets.find(t => t.id === ticketId);
