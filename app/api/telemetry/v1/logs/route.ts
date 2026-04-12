@@ -16,6 +16,7 @@ const batchPayloadSchema = z.object({
   outputTokens: z.number().int().nonnegative().optional(),
   cacheReadTokens: z.number().int().nonnegative().optional(),
   cacheCreationTokens: z.number().int().nonnegative().optional(),
+  durationMs: z.number().int().nonnegative().optional(),
   model: z.string().optional(),
   toolsUsed: z.array(z.string()).optional(),
   costUsd: z.number().nonnegative().optional(),
@@ -400,6 +401,7 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
   metrics.outputTokens = data.outputTokens ?? 0;
   metrics.cacheReadTokens = data.cacheReadTokens ?? 0;
   metrics.cacheCreationTokens = data.cacheCreationTokens ?? 0;
+  metrics.durationMs = data.durationMs ?? 0;
   metrics.model = data.model ?? null;
 
   for (const tool of data.toolsUsed ?? []) {

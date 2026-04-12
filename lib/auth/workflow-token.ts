@@ -39,5 +39,11 @@ export function isAcceptedWorkflowToken(
 }
 
 export function getWorkflowToken(): string {
-  return process.env.WORKFLOW_API_TOKEN || TEST_WORKFLOW_TOKEN
+  if (process.env.WORKFLOW_API_TOKEN) {
+    return process.env.WORKFLOW_API_TOKEN
+  }
+  if (isWorkflowTokenTestContext()) {
+    return TEST_WORKFLOW_TOKEN
+  }
+  throw new Error("WORKFLOW_API_TOKEN is not set and not in test context")
 }

@@ -413,6 +413,11 @@ install_gemini() {
     log_error "Failed to install @google/gemini-cli"
     exit 1
   fi
+  if ! command -v gemini &>/dev/null; then
+    log_error "Failed to install @google/gemini-cli — CLI binary not found after install"
+    exit 1
+  fi
+  log_info "Gemini CLI installed successfully"
 }
 
 auth_gemini() {
@@ -432,17 +437,31 @@ invoke_gemini() {
 
   local prompt
   prompt="$(cat "$command_file")"
+
   if [[ -n "$ARGS" ]]; then
+    local args_file="/tmp/gemini-args.json"
+    printf '%s' "$ARGS" > "$args_file"
     prompt="${prompt}
 
-${ARGS}"
+The arguments for this command have been written to ${args_file}. Read them with: cat ${args_file}
+Do NOT try to parse the JSON inline in bash — always read from the file."
+    log_info "Args written to $args_file ($(wc -c < "$args_file") bytes)"
   fi
+
+  local prompt_file
+  prompt_file="$(mktemp /tmp/gemini-prompt-XXXXXX.md)"
+  printf '%s' "$prompt" > "$prompt_file"
 
   local output_file
   output_file="$(mktemp /tmp/gemini-stream-XXXX.jsonl)"
   log_info "Invoking Gemini with command file: $command_file"
-  gemini -p "$prompt" --output-format stream-json 2>&1 | tee "$output_file"
+  log_info "Prompt file: $prompt_file ($(wc -c < "$prompt_file") bytes)"
+  gemini -p "$(cat "$prompt_file")" --output-format stream-json 2>&1 | tee "$output_file" || true
+  local exit_code=${PIPESTATUS[0]}
   export GEMINI_STREAM_FILE="$output_file"
+
+  rm -f "$prompt_file"
+  return $exit_code
 }
 
 collect_gemini_telemetry() {
@@ -453,9 +472,9 @@ collect_gemini_telemetry() {
   local tools_json model input_tokens output_tokens duration_ms
   tools_json=$(jq -s '[.[] | select(.type == "tool_use" or .event == "tool_use") | (.name // .tool // empty)] | unique' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "[]")
   model=$(jq -rs '[.[] | .model? // .metadata?.model? // empty] | map(select(length > 0)) | last // empty' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "")
-  input_tokens=$(jq -rs '[.[] | .usage?.inputTokens? // .usage?.input_tokens? // 0] | add' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
-  output_tokens=$(jq -rs '[.[] | .usage?.outputTokens? // .usage?.output_tokens? // 0] | add' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
-  duration_ms=$(jq -rs '[.[] | .durationMs? // .duration_ms? // 0] | add' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  input_tokens=$(jq -rs '[.[] | .usage?.inputTokens? // .usage?.input_tokens? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  output_tokens=$(jq -rs '[.[] | .usage?.outputTokens? // .usage?.output_tokens? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  duration_ms=$(jq -rs '[.[] | .durationMs? // .duration_ms? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
 
   local payload
   payload=$(jq -n \
@@ -472,6 +491,11 @@ collect_gemini_telemetry() {
   local auth_header=""
   if [[ -n "${OTEL_EXPORTER_OTLP_HEADERS:-}" ]]; then
     auth_header="${OTEL_EXPORTER_OTLP_HEADERS#Authorization=}"
+  fi
+
+  if [[ -z "$auth_header" ]]; then
+    log_info "Skipping Gemini telemetry — no auth header available"
+    return 0
   fi
 
   curl -s -o /dev/null \
@@ -509,8 +533,10 @@ case "$AGENT_TYPE" in
     validate_auth
     install_gemini
     auth_gemini
-    invoke_gemini
+    gemini_exit=0
+    invoke_gemini || gemini_exit=$?
     collect_gemini_telemetry
+    exit $gemini_exit
     ;;
   *)
     log_error "Unsupported agent type '$AGENT_TYPE'. Supported: CLAUDE, CODEX, MISTRAL, GEMINI"

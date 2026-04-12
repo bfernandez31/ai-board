@@ -8,9 +8,9 @@ export const GEMINI_SUPPORTED_COMMANDS = [
   'implement',
   'quick-impl',
   'iterate',
+  'verify',
 ] as const;
 export const GEMINI_BLOCKED_COMMANDS = [
-  'verify',
   'comment-specify',
   'comment-plan',
   'comment-build',

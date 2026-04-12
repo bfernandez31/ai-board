@@ -73,7 +73,7 @@ export async function POST(
     }
 
     // Pre-flight: check credential
-    // Zod validates agent is 'CLAUDE' | 'CODEX', matching the Agent enum exactly
+    // Zod validates agent is one of 'CLAUDE' | 'CODEX' | 'MISTRAL' | 'GEMINI'
     const provider = AGENT_PROVIDER_MAP[agent];
     const credential = await getOwnerCredential(projectId, provider);
     if (!credential) {

@@ -39,12 +39,12 @@ export function validateFormat(
       return { valid: false, error: 'Google OAuth bundle must be valid JSON' };
     }
 
-    const hasRefreshToken = typeof parsed.refresh_token === 'string';
-    const hasAccessToken = typeof parsed.access_token === 'string';
+    const hasRefreshToken = typeof parsed.refresh_token === 'string' && parsed.refresh_token.length > 0;
+    const hasAccessToken = typeof parsed.access_token === 'string' && parsed.access_token.length > 0;
     const hasCredentialEnvelope =
-      isJSONObject(parsed.credentials) ||
-      isJSONObject(parsed.auth) ||
-      isJSONObject(parsed.tokens);
+      (isJSONObject(parsed.credentials) && Object.keys(parsed.credentials).length > 0) ||
+      (isJSONObject(parsed.auth) && Object.keys(parsed.auth).length > 0) ||
+      (isJSONObject(parsed.tokens) && Object.keys(parsed.tokens).length > 0);
 
     if (!hasRefreshToken && !hasAccessToken && !hasCredentialEnvelope) {
       return {
@@ -83,9 +83,12 @@ export async function verifyWithProvider(
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(value)}`,
+      'https://generativelanguage.googleapis.com/v1beta/models',
       {
         method: 'GET',
+        headers: {
+          'x-goog-api-key': value,
+        },
         signal: controller.signal,
       }
     );

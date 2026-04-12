@@ -237,6 +237,8 @@ describe('AnalyticsDashboard', () => {
     renderWithProviders(<AnalyticsDashboard projectId={1} initialData={makeAnalyticsData()} />);
 
     expect(screen.getByTestId('analytics-agent-filter')).toHaveValue('all');
+    expect(screen.getByRole('option', { name: 'Gemini' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Mistral' })).toBeInTheDocument();
   });
 
   it('updates outcome filter, query params, and replaces stale values after a refetch', async () => {

@@ -476,9 +476,9 @@ Check whether the project owner has a valid credential for a given agent's provi
 
 | Param | Type | Required |
 |-------|------|----------|
-| `agent` | `"CLAUDE"` \| `"CODEX"` | Yes |
+| `agent` | `"CLAUDE"` \| `"CODEX"` \| `"MISTRAL"` \| `"GEMINI"` | Yes |
 
-**Agent-to-provider mapping**: `CLAUDE` → `ANTHROPIC`, `CODEX` → `OPENAI`
+**Agent-to-provider mapping**: `CLAUDE` → `ANTHROPIC`, `CODEX` → `OPENAI`, `MISTRAL` → `MISTRAL`, `GEMINI` → `GOOGLE`
 
 **Response** (200 OK — credential present):
 ```json
