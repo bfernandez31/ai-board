@@ -3,35 +3,30 @@
  *
  * Tests for the retro-spec status badge in the board.
  * Verifies rendering for generating, completed, and failed states.
+ * The badge receives all state via props (no internal polling).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
 import { RetroSpecBadge } from '@/components/board/retro-spec-badge';
 import type { RetroSpecJobDto } from '@/app/lib/hooks/useRetroSpecPolling';
 
-// Mock the polling hook
-const mockPollingReturn = {
-  job: null,
+// Mock the modal to avoid complex dialog rendering
+vi.mock('@/components/board/retro-spec-modal', () => ({
+  RetroSpecModal: ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) =>
+    open ? <div data-testid="retro-spec-modal"><button onClick={() => onOpenChange(false)}>Close</button></div> : null,
+}));
+
+const baseProps = {
+  projectId: 1,
   isGenerating: false,
   isCompleted: false,
   isFailed: false,
-  error: null,
+  job: null as RetroSpecJobDto | null,
 };
-
-vi.mock('@/app/lib/hooks/useRetroSpecPolling', () => ({
-  useRetroSpecPolling: () => mockPollingReturn,
-}));
 
 describe('RetroSpecBadge', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    Object.assign(mockPollingReturn, {
-      job: null,
-      isGenerating: false,
-      isCompleted: false,
-      isFailed: false,
-      error: null,
-    });
   });
 
   afterEach(() => {
@@ -39,15 +34,13 @@ describe('RetroSpecBadge', () => {
   });
 
   it('should not render when no active job', () => {
-    renderWithProviders(<RetroSpecBadge projectId={1} />);
+    renderWithProviders(<RetroSpecBadge {...baseProps} />);
 
     expect(screen.queryByTestId('retro-spec-badge')).not.toBeInTheDocument();
   });
 
   it('should render "Generating specs..." with spinner when generating', () => {
-    mockPollingReturn.isGenerating = true;
-
-    renderWithProviders(<RetroSpecBadge projectId={1} />);
+    renderWithProviders(<RetroSpecBadge {...baseProps} isGenerating={true} />);
 
     const badge = screen.getByTestId('retro-spec-badge');
     expect(badge).toBeInTheDocument();
@@ -55,8 +48,7 @@ describe('RetroSpecBadge', () => {
   });
 
   it('should render "Specs ready" when completed recently', () => {
-    mockPollingReturn.isCompleted = true;
-    mockPollingReturn.job = {
+    const job: RetroSpecJobDto = {
       id: 1,
       projectId: 1,
       agent: 'CLAUDE',
@@ -70,9 +62,11 @@ describe('RetroSpecBadge', () => {
       startedAt: null,
       completedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
-    } as RetroSpecJobDto;
+    };
 
-    renderWithProviders(<RetroSpecBadge projectId={1} />);
+    renderWithProviders(
+      <RetroSpecBadge {...baseProps} isCompleted={true} job={job} />
+    );
 
     const badge = screen.getByTestId('retro-spec-badge');
     expect(badge).toBeInTheDocument();
@@ -80,8 +74,7 @@ describe('RetroSpecBadge', () => {
   });
 
   it('should NOT render "Specs ready" when completed more than 30s ago', () => {
-    mockPollingReturn.isCompleted = true;
-    mockPollingReturn.job = {
+    const job: RetroSpecJobDto = {
       id: 1,
       projectId: 1,
       agent: 'CLAUDE',
@@ -95,17 +88,17 @@ describe('RetroSpecBadge', () => {
       startedAt: null,
       completedAt: new Date(Date.now() - 60_000).toISOString(),
       createdAt: new Date().toISOString(),
-    } as RetroSpecJobDto;
+    };
 
-    renderWithProviders(<RetroSpecBadge projectId={1} />);
+    renderWithProviders(
+      <RetroSpecBadge {...baseProps} isCompleted={true} job={job} />
+    );
 
     expect(screen.queryByTestId('retro-spec-badge')).not.toBeInTheDocument();
   });
 
   it('should render error with retry button when failed', () => {
-    mockPollingReturn.isFailed = true;
-
-    renderWithProviders(<RetroSpecBadge projectId={1} />);
+    renderWithProviders(<RetroSpecBadge {...baseProps} isFailed={true} />);
 
     const badge = screen.getByTestId('retro-spec-badge');
     expect(badge).toBeInTheDocument();

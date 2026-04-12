@@ -2,7 +2,6 @@ import { notFound, redirect } from 'next/navigation';
 import { Board } from '@/components/board/board';
 import { getTicketsWithJobs } from '@/lib/db/tickets';
 import { getProject } from '@/lib/db/projects';
-import { prisma } from '@/lib/db/client';
 
 // Force dynamic rendering to ensure fresh data on router.refresh()
 export const dynamic = 'force-dynamic';
@@ -31,8 +30,8 @@ export default async function ProjectBoardPage({
     notFound();
   }
 
-  // Fetch project, tickets+jobs, and retro-spec status in parallel
-  const [project, { ticketsByStage, ticketsWithJobs }, completedRetroSpec] = await Promise.all([
+  // Fetch project and tickets+jobs in parallel
+  const [project, { ticketsByStage, ticketsWithJobs }] = await Promise.all([
     getProject(projectId).catch((error) => {
       if (
         error instanceof Error &&
@@ -43,18 +42,12 @@ export default async function ProjectBoardPage({
       throw error;
     }),
     getTicketsWithJobs(projectId),
-    prisma.projectSetupJob.findFirst({
-      where: { projectId, command: 'RETRO_SPEC', status: 'COMPLETED' },
-      select: { id: true },
-    }),
   ]);
 
   // Redirect to setup page if project is not yet configured
   if (!project.configSyncedAt) {
     redirect(`/projects/${projectId}/setup`);
   }
-
-  const hasSpecs = !!completedRetroSpec;
 
   // Transform tickets with jobs into initialJobs map
   // Jobs are already included in the tickets query (no N+1 problem)
@@ -69,7 +62,7 @@ export default async function ProjectBoardPage({
         ticketsByStage={ticketsByStage}
         projectId={projectId}
         initialJobs={initialJobs}
-        hasSpecs={hasSpecs}
+        hasSpecs={project.hasSpecs}
         defaultAgent={project.defaultAgent}
       />
     </main>

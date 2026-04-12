@@ -24,10 +24,10 @@ describe('Retro-Spec Job API', () => {
       where: { projectId: ctx.projectId },
     });
 
-    // Set project as configured (required for RETRO_SPEC)
+    // Set project as configured (required for RETRO_SPEC) and reset hasSpecs
     await prisma.project.update({
       where: { id: ctx.projectId },
-      data: { configSyncedAt: new Date() },
+      data: { configSyncedAt: new Date(), hasSpecs: false },
     });
 
     // Ensure test user has an ANTHROPIC credential
@@ -194,9 +194,92 @@ describe('Retro-Spec Job API', () => {
     });
   });
 
-  // NOTE: PATCH tests for workflow-auth status transitions are covered by
-  // the existing setup-job.test.ts. The RETRO_SPEC-specific PATCH behavior
-  // (skipping config sync on COMPLETED) is verified in the route code and
-  // does not require additional integration tests here. Workflow auth tests
-  // require WORKFLOW_API_TOKEN env alignment between test client and server.
+  describe('PATCH status → hasSpecs side effect', () => {
+    // These tests create jobs directly in DB via raw SQL to avoid:
+    // 1. The workflow dispatch that fails in test env (POST returns 500)
+    // 2. The SetupJobDepth enum type drift between Prisma schema and actual DB
+    const workflowHeaders = {
+      includeTestUserHeader: false as const,
+      enableTestAuthOverride: false as const,
+      headers: {
+        Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN || 'test-workflow-token'}`,
+      },
+    };
+
+    async function createRetroSpecJobInDb(projectId: number): Promise<number> {
+      const prisma = getPrismaClient();
+      const result = await prisma.$queryRaw<{ id: number }[]>`
+        INSERT INTO "ProjectSetupJob" ("projectId", "agent", "command", "status", "depth", "createdAt", "updatedAt")
+        VALUES (${projectId}, 'CLAUDE', 'RETRO_SPEC', 'PENDING', 'QUICK', NOW(), NOW())
+        RETURNING id
+      `;
+      return result[0].id;
+    }
+
+    it('should set project.hasSpecs to true when RETRO_SPEC job completes', async () => {
+      const prisma = getPrismaClient();
+
+      // Verify hasSpecs starts as false
+      const projectBefore = await prisma.project.findUnique({
+        where: { id: ctx.projectId },
+        select: { hasSpecs: true },
+      });
+      expect(projectBefore?.hasSpecs).toBe(false);
+
+      // Create RETRO_SPEC job directly in DB
+      const jobId = await createRetroSpecJobInDb(ctx.projectId);
+
+      // Transition PENDING → RUNNING
+      const runResponse = await ctx.api.patch(
+        `/api/projects/${ctx.projectId}/setup/jobs/${jobId}/status`,
+        { status: 'RUNNING' },
+        workflowHeaders
+      );
+      expect(runResponse.status).toBe(200);
+
+      // Transition RUNNING → COMPLETED
+      const completeResponse = await ctx.api.patch(
+        `/api/projects/${ctx.projectId}/setup/jobs/${jobId}/status`,
+        { status: 'COMPLETED' },
+        workflowHeaders
+      );
+      expect(completeResponse.status).toBe(200);
+
+      // Verify hasSpecs is now true
+      const projectAfter = await prisma.project.findUnique({
+        where: { id: ctx.projectId },
+        select: { hasSpecs: true },
+      });
+      expect(projectAfter?.hasSpecs).toBe(true);
+    });
+
+    it('should NOT set project.hasSpecs when RETRO_SPEC job fails', async () => {
+      const prisma = getPrismaClient();
+
+      // Create RETRO_SPEC job directly in DB
+      const jobId = await createRetroSpecJobInDb(ctx.projectId);
+
+      // PENDING → RUNNING → FAILED
+      const runResponse = await ctx.api.patch(
+        `/api/projects/${ctx.projectId}/setup/jobs/${jobId}/status`,
+        { status: 'RUNNING' },
+        workflowHeaders
+      );
+      expect(runResponse.status).toBe(200);
+
+      const failResponse = await ctx.api.patch(
+        `/api/projects/${ctx.projectId}/setup/jobs/${jobId}/status`,
+        { status: 'FAILED', errorMessage: 'Workflow crashed' },
+        workflowHeaders
+      );
+      expect(failResponse.status).toBe(200);
+
+      // hasSpecs should still be false
+      const project = await prisma.project.findUnique({
+        where: { id: ctx.projectId },
+        select: { hasSpecs: true },
+      });
+      expect(project?.hasSpecs).toBe(false);
+    });
+  });
 });

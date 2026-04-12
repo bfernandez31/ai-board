@@ -143,13 +143,32 @@ export function Board({
   // T030: Job polling integration for real-time job status updates
   const { jobs: polledJobs } = useJobPolling(projectId, 2000);
 
-  // AIB-585: Retro-spec polling for banner/badge state
-  const { isGenerating: isRetroSpecGenerating, isCompleted: isRetroSpecCompleted, isFailed: isRetroSpecFailed } = useRetroSpecPolling(projectId, 2000, !hasSpecs);
+  // AIB-585: Retro-spec polling — only active during generation phase
+  // Check localStorage to resume polling after page refresh during an active generation
+  const retroSpecActiveKey = `retro-spec-active-${projectId}`;
+  const [retroSpecPollingEnabled, setRetroSpecPollingEnabled] = useState(() => {
+    if (hasSpecs) return false;
+    try { return localStorage.getItem(retroSpecActiveKey) === 'true'; } catch { return false; }
+  });
+  const { isGenerating: isRetroSpecGenerating, isCompleted: isRetroSpecCompleted, isFailed: isRetroSpecFailed, job: retroSpecJob } = useRetroSpecPolling(projectId, 2000, retroSpecPollingEnabled);
+
+  // Clear active flag when generation reaches a terminal state
+  useEffect(() => {
+    if (isRetroSpecCompleted || isRetroSpecFailed) {
+      setRetroSpecPollingEnabled(false);
+      try { localStorage.removeItem(retroSpecActiveKey); } catch {}
+    }
+  }, [isRetroSpecCompleted, isRetroSpecFailed, retroSpecActiveKey]);
+
   const [isRetroSpecModalOpen, setIsRetroSpecModalOpen] = useState(false);
-  const isBannerDismissed = typeof window !== 'undefined' && (() => { try { return localStorage.getItem(`retro-spec-banner-dismissed-${projectId}`) === 'true'; } catch { return false; } })();
+  const [isBannerDismissed] = useState(() => {
+    try { return localStorage.getItem(`retro-spec-banner-dismissed-${projectId}`) === 'true'; } catch { return false; }
+  });
   const handleRetroSpecSuccess = useCallback(() => {
+    setRetroSpecPollingEnabled(true);
+    try { localStorage.setItem(retroSpecActiveKey, 'true'); } catch {}
     queryClient.invalidateQueries({ queryKey: queryKeys.projects.retroSpecJob(projectId) });
-  }, [queryClient, projectId]);
+  }, [queryClient, projectId, retroSpecActiveKey]);
 
   const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(
     null
@@ -1256,7 +1275,17 @@ export function Board({
         onGenerateSuccess={handleRetroSpecSuccess}
         defaultAgent={defaultAgent}
       />
-      {!hasSpecs && <RetroSpecBadge projectId={projectId} defaultAgent={defaultAgent} />}
+      {!hasSpecs && (
+        <RetroSpecBadge
+          projectId={projectId}
+          isGenerating={isRetroSpecGenerating}
+          isCompleted={isRetroSpecCompleted}
+          isFailed={isRetroSpecFailed}
+          job={retroSpecJob}
+          defaultAgent={defaultAgent}
+          onRetrySuccess={handleRetroSpecSuccess}
+        />
+      )}
 
       <DndContext
         sensors={sensors}

@@ -1,21 +1,22 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { useRetroSpecPolling } from '@/app/lib/hooks/useRetroSpecPolling';
-import { queryKeys } from '@/app/lib/query-keys';
 import { RetroSpecModal } from './retro-spec-modal';
+import type { RetroSpecJobDto } from '@/app/lib/hooks/useRetroSpecPolling';
 
 interface RetroSpecBadgeProps {
   projectId: number;
+  isGenerating: boolean;
+  isCompleted: boolean;
+  isFailed: boolean;
+  job: RetroSpecJobDto | null;
   defaultAgent?: import('@prisma/client').Agent;
+  onRetrySuccess?: () => void;
 }
 
-export function RetroSpecBadge({ projectId, defaultAgent }: RetroSpecBadgeProps) {
-  const { isGenerating, isCompleted, isFailed, job } = useRetroSpecPolling(projectId);
-  const queryClient = useQueryClient();
+export function RetroSpecBadge({ projectId, isGenerating, isCompleted, isFailed, job, defaultAgent, onRetrySuccess }: RetroSpecBadgeProps) {
   const [showCompleted, setShowCompleted] = useState(false);
   const [isRetryModalOpen, setIsRetryModalOpen] = useState(false);
 
@@ -86,7 +87,7 @@ export function RetroSpecBadge({ projectId, defaultAgent }: RetroSpecBadgeProps)
           onOpenChange={setIsRetryModalOpen}
           projectId={projectId}
           defaultAgent={defaultAgent}
-          onSuccess={() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.retroSpecJob(projectId) })}
+          onSuccess={() => onRetrySuccess?.()}
         />
       </>
     );

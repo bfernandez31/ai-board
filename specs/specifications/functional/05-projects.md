@@ -25,6 +25,7 @@ Each project contains:
   - Workflows execute on external project repositories
 - **Default Clarification Policy**: How AI resolves ambiguities during specification
 - **Default Agent**: Which AI agent executes workflow automation (CLAUDE or CODEX; default: CLAUDE)
+- **Has Specs**: Whether project specifications have been generated (boolean, default: false; set to true when a RETRO_SPEC job completes)
 - **Creation Timestamp**: When project was created
 - **Last Updated**: Most recent activity across all tickets
 
@@ -566,9 +567,18 @@ When the workflow fails, the setup page displays the error message and offers a 
 
 After onboarding completes, the project board offers a one-click workflow to generate project specifications for the existing codebase. Generated specs are committed to `specs/specifications/` in the target repository and improve health scan results, AI ticket workflows, and code review quality.
 
+### hasSpecs Field
+
+The `Project` model includes a `hasSpecs` boolean field (default `false`) that tracks whether project specifications have been generated:
+
+- Set to `true` when a RETRO_SPEC job completes successfully (via the job status PATCH endpoint)
+- Returned by `GET /api/projects/{id}` as part of the project payload — no separate query needed
+- The board page reads `project.hasSpecs` directly to decide whether to show the spec generation banner/badge
+- The `/api/projects/{id}/setup/jobs?command=RETRO_SPEC` endpoint is only called during active generation polling, not on initial board load
+
 ### Spec Generation Banner
 
-When a project has `configSyncedAt` set but no completed spec generation job, a dismissible banner appears on the board:
+When a project has `hasSpecs = false`, a dismissible banner appears on the board:
 
 > "Project specs not generated — Specs improve health scans, ticket workflows, and code review quality — [Generate] [×]"
 
@@ -595,6 +605,8 @@ Clicking "Generate Specs" dispatches the background workflow. The modal closes i
 ### Board Status Badge
 
 The badge and banner are only rendered when specs have not yet been generated (`hasSpecs = false`). When specs already exist, no polling occurs and neither component is shown.
+
+**Polling activation**: The setup jobs endpoint is not polled on initial board load. Polling only starts when the user explicitly triggers spec generation (or resumes via a localStorage flag after page refresh during an active generation). This avoids unnecessary API calls for projects that simply have no specs yet.
 
 While a retro-spec job is active, a status badge appears in the board area above the stage columns:
 
