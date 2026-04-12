@@ -20,9 +20,9 @@ description: "Task list for Add Gemini CLI as AI Agent feature implementation"
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create Gemini icon asset at `/public/agents/gemini.svg`
-- [ ] T002 Add Gemini to project dependencies in `package.json`
-- [ ] T003 [P] Configure environment variables for Gemini in `.env.example`
+- [✅] T001 Create Gemini icon asset at `/public/agents/gemini.svg`
+- [✅] T002 Add Gemini to project dependencies in `package.json`
+- [✅] T003 [P] Configure environment variables for Gemini in `.env.example`
 
 ---
 
@@ -32,12 +32,12 @@ description: "Task list for Add Gemini CLI as AI Agent feature implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Extend Prisma schema with Google credential fields in `/prisma/schema.prisma`
-- [ ] T005 [P] Add GEMINI enum value to Agent type in `/types/agent.ts`
-- [ ] T006 [P] Create Gemini agent metadata in `/lib/agents.ts`
-- [ ] T007 [P] Add Gemini event types to telemetry in `/types/telemetry.ts`
-- [ ] T008 Create base credential validation utilities in `/lib/credentials.ts`
-- [ ] T009 Setup database migration for Gemini support
+- [✅] T004 Extend Prisma schema with Google credential fields in `/prisma/schema.prisma`
+- [✅] T005 [P] Add GEMINI enum value to Agent type in `/types/agent.ts`
+- [✅] T006 [P] Create Gemini agent metadata in `/lib/agents.ts`
+- [✅] T007 [P] Add Gemini event types to telemetry in `/types/telemetry.ts`
+- [✅] T008 Create base credential validation utilities in `/lib/credentials.ts`
+- [✅] T009 Setup database migration for Gemini support
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
