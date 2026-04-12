@@ -11,13 +11,12 @@ const PROJECTS = [
   { name: 'web-app', repo: 'acme/web-app', tickets: 87, shipped: 'WEB-84' },
   { name: 'api-service', repo: 'acme/api-service', tickets: 53, shipped: 'API-51' },
   { name: 'mobile-app', repo: 'acme/mobile-app', tickets: 34, shipped: 'MOB-31' },
-  { name: 'design-system', repo: 'acme/design-system', tickets: 28, shipped: 'DSN-26' },
-  { name: 'infra', repo: 'acme/infra', tickets: 19, shipped: 'INF-17' },
 ];
 
 export const Dashboard: React.FC = () => {
   const zoom = useZoomIn(0);
-  const ticketCount = useCounter(363, 10, 40);
+  const shippedCount = useCounter(138, 10, 35);
+  const successRate = useCounter(94, 10, 35);
 
   return (
     <AbsoluteFill>
@@ -26,20 +25,20 @@ export const Dashboard: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
           <div>
             <h1 style={{ fontSize: 36, fontWeight: 700, color: colors.text, fontFamily: fonts.display, margin: 0 }}>Projects</h1>
-            <span style={{ fontSize: 14, color: colors.subtext0, fontFamily: fonts.body }}>6 projects</span>
+            <span style={{ fontSize: 14, color: colors.subtext0, fontFamily: fonts.body }}>4 projects</span>
           </div>
           <MockCard style={{ padding: '12px 24px', display: 'flex', gap: 32 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ fontSize: 24, fontWeight: 700, color: colors.mauve, fontFamily: fonts.mono }}>{ticketCount}</span>
-              <span style={{ fontSize: 11, color: colors.subtext0 }}>tickets</span>
+              <span style={{ fontSize: 24, fontWeight: 700, color: colors.green, fontFamily: fonts.mono }}>{shippedCount}</span>
+              <span style={{ fontSize: 11, color: colors.subtext0 }}>shipped</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ fontSize: 24, fontWeight: 700, color: colors.green, fontFamily: fonts.mono }}>94%</span>
-              <span style={{ fontSize: 11, color: colors.subtext0 }}>pass rate</span>
+              <span style={{ fontSize: 24, fontWeight: 700, color: colors.green, fontFamily: fonts.mono }}>{successRate}%</span>
+              <span style={{ fontSize: 11, color: colors.subtext0 }}>success rate</span>
             </div>
           </MockCard>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
           {PROJECTS.map((project, i) => (
             <StaggeredCard key={project.name} project={project} index={i} />
           ))}
@@ -49,7 +48,6 @@ export const Dashboard: React.FC = () => {
   );
 };
 
-// Extracted to avoid hooks-in-loop violation
 const StaggeredCard: React.FC<{ project: typeof PROJECTS[number]; index: number }> = ({ project, index }) => {
   const stagger = useStagger(index, 8, 5);
   return (

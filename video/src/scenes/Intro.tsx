@@ -22,7 +22,7 @@ export const Intro: React.FC = () => {
         <Typewriter text="Write a ticket..." delay={15} speed={2} fontSize={72} fontFamily={fonts.display} color={colors.text} />
         <div style={{ opacity: subtitleOpacity, transform: `translateY(${subtitleY}px)` }}>
           <span style={{ fontSize: 36, fontFamily: fonts.display, background: `linear-gradient(90deg, ${colors.blue}, ${colors.mauve}, ${colors.pink})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            We handle the rest.
+            Specified. Planned. Built. Verified. Automatically.
           </span>
         </div>
       </AbsoluteFill>
