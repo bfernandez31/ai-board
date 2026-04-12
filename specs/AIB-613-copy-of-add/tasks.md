@@ -78,18 +78,18 @@ description: "Task list for Add Gemini CLI as AI Agent feature implementation"
 
 ### Tests for User Story 2
 
-- [ ] T020 [P] [US2] Extend agent selector tests in `/tests/agent-selector.test.tsx` with Gemini selection tests
+- [✅] T020 [P] [US2] Extend agent selector tests in `/tests/integration/projects/settings.test.ts` with Gemini selection tests
 - [ ] T021 [P] [US2] Add agent badge tests in `/tests/ticket/agent-badge.test.tsx` for Gemini icon display
 - [ ] T022 [P] [US2] Create workflow availability tests in `/tests/workflows.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T023 [P] [US2] Add Gemini option to agent selector in `/components/agent-selector.tsx`
-- [ ] T024 [P] [US2] Create Gemini icon component in `/components/agents/gemini-icon.tsx`
-- [ ] T025 [US2] Add Gemini to agent badge display in `/components/ticket/agent-badge.tsx`
-- [ ] T026 [P] [US2] Implement default agent selection endpoint in `/app/api/projects/[id]/agent/route.ts`
-- [ ] T027 [US2] Add workflow availability validation for Gemini in `/lib/workflows.ts`
-- [ ] T028 [P] [US2] Update agent metadata with supported workflows in `/lib/agents.ts`
+- [✅] T023 [P] [US2] Add Gemini option to agent selector in `/components/settings/default-agent-card.tsx`
+- [✅] T024 [P] [US2] Create Gemini icon component in `/app/lib/utils/agent-icons.ts` and `/public/agents/gemini.svg`
+- [✅] T025 [US2] Add Gemini to agent badge display in `/components/board/ticket-card.tsx`
+- [✅] T026 [P] [US2] Implement default agent selection endpoint in `/app/api/projects/[projectId]/route.ts`
+- [✅] T027 [US2] Add workflow availability validation for Gemini in `/lib/workflows.ts`
+- [✅] T028 [P] [US2] Update agent metadata with supported workflows in `/lib/workflows.ts`
 - [ ] T029 [US2] Add per-ticket agent override functionality in ticket creation flow
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
