@@ -66,7 +66,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Parse request body
-    let body;
+    let body: Record<string, unknown>;
     try {
       body = await request.json();
     } catch (parseError) {
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // OTLP protobuf JSON uses snake_case (resource_logs), but our schema expects camelCase (resourceLogs)
     // Normalize snake_case keys to camelCase for compatibility
     if (body && !body.resourceLogs && body.resource_logs) {
-      body = normalizeOtlpKeys(body);
+      body = normalizeOtlpKeys(body) as Record<string, unknown>;
     }
 
     // Validate OTLP schema
