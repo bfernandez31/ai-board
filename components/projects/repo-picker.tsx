@@ -115,7 +115,7 @@ export function RepoPicker({ onSelect }: RepoPickerProps) {
       </div>
 
       {/* Repo list */}
-      <div className="space-y-2 max-h-[400px] overflow-y-auto">
+      <div className="space-y-2 max-h-[300px] overflow-y-auto">
         {isLoading && (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
