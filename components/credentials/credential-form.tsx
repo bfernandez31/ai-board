@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { useCreateCredential } from "@/lib/hooks/mutations/useCredentials";
 
-type Provider = "ANTHROPIC" | "OPENAI" | "MISTRAL";
+type Provider = "ANTHROPIC" | "OPENAI" | "MISTRAL" | "GOOGLE";
 
 export function CredentialForm() {
   const [provider, setProvider] = useState<Provider>("ANTHROPIC");
@@ -35,6 +35,24 @@ export function CredentialForm() {
       }
       if (/\s/.test(val)) {
         return "API key must not contain whitespace";
+      }
+      return null;
+    }
+    if (prov === "GOOGLE") {
+      if (type === "API_KEY") {
+        if (!val.startsWith("AIza")) {
+          return 'API key must start with "AIza"';
+        }
+        if (val.length < 39) {
+          return "API key appears too short";
+        }
+      } else if (type === "OAUTH_TOKEN") {
+        if (val.length < 20) {
+          return "OAuth token must be at least 20 characters";
+        }
+      }
+      if (/\s/.test(val)) {
+        return "Credential must not contain whitespace";
       }
       return null;
     }
@@ -81,6 +99,7 @@ export function CredentialForm() {
       return prov === "OPENAI" ? "Paste your Codex token" : "Paste your OAuth token";
     }
     if (prov === "MISTRAL") return "Paste your Mistral API key";
+    if (prov === "GOOGLE") return "AIza...";
     return prov === "OPENAI" ? "sk-proj-..." : "sk-ant-api03-...";
   }
 
@@ -131,6 +150,7 @@ export function CredentialForm() {
               <SelectItem value="ANTHROPIC">Anthropic</SelectItem>
               <SelectItem value="OPENAI">OpenAI</SelectItem>
               <SelectItem value="MISTRAL">Mistral</SelectItem>
+              <SelectItem value="GOOGLE">Google</SelectItem>
             </SelectContent>
           </Select>
         </div>
