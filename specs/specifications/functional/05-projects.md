@@ -24,7 +24,7 @@ Each project contains:
   - Used for workflow automation and code management
   - Workflows execute on external project repositories
 - **Default Clarification Policy**: How AI resolves ambiguities during specification
-- **Default Agent**: Which AI agent executes workflow automation (CLAUDE or CODEX; default: CLAUDE)
+- **Default Agent**: Which AI agent executes workflow automation (CLAUDE, CODEX, MISTRAL, or GEMINI; default: CLAUDE)
 - **Creation Timestamp**: When project was created
 - **Last Updated**: Most recent activity across all tickets
 
@@ -209,6 +209,12 @@ Projects have a configurable default AI agent that determines which AI executes 
    - Third provider option for projects requiring Mistral's offering
    - Uses the vibe CLI for workflow execution
    - Requires a stored Mistral API key credential
+
+4. **GEMINI (Google Gemini CLI)**:
+   - Google's AI agent for workflow automation
+   - Uses the Gemini CLI for workflow execution
+   - Requires a stored Google API key or OAuth token credential
+   - Supports speckit.yml, quick-impl.yml, and iterate.yml workflows
 
 **Configuration**:
 - Accessible from project settings page

@@ -289,10 +289,11 @@ export const AGENT_PROVIDER_MAP: Record<Agent, CredentialProvider> = {
   CLAUDE:   'ANTHROPIC',
   CODEX:    'OPENAI',
   MISTRAL:  'MISTRAL',
+  GEMINI:    'GOOGLE',
 };
 ```
 
-`getOwnerCredential(projectId, provider)` looks up the project owner's `UserCredential` for the specified provider and returns the decrypted env var name and value. The workflow payload includes the resolved env var (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, or `MISTRAL_API_KEY`).
+`getOwnerCredential(projectId, provider)` looks up the project owner's `UserCredential` for the specified provider and returns the decrypted env var name and value. The workflow payload includes the resolved env var (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `MISTRAL_API_KEY`, `GOOGLE_API_KEY`, or `GOOGLE_OAUTH_TOKEN`).
 
 **Dispatch path behavior**:
 
@@ -524,14 +525,14 @@ sequenceDiagram
 
 **Agent-Specific Behavior**:
 
-| Concern | CLAUDE | CODEX | MISTRAL |
-|---------|--------|-------|---------|
-| Package | `@anthropic-ai/claude-code` | `@openai/codex` | `vibe-cli` (Python pip) |
-| Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64) | `MISTRAL_API_KEY` |
-| Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt injection via stdin from `.claude/commands/COMMAND.md` | `vibe --prompt "..." --agent auto-approve` |
-| Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section | Post-execution batch JSON via `collect_mistral_telemetry()`; datalake disabled |
-| Project context | `CLAUDE.md` (native) | `AGENTS.md` at project root, read automatically by Codex | `AGENTS.md` at project root, read via native filesystem walk |
-| Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `gpt-5.4`), `CODEX_REASONING` env var (default: `high`) | Determined by vibe CLI defaults |
+| Concern | CLAUDE | CODEX | MISTRAL | GEMINI |
+|---------|--------|-------|---------|--------|
+| Package | `@anthropic-ai/claude-code` | `@openai/codex` | `vibe-cli` (Python pip) | `gemini-cli` (Google) |
+| Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64) | `MISTRAL_API_KEY` | `GOOGLE_API_KEY` or `GOOGLE_OAUTH_TOKEN` |
+| Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt injection via stdin from `.claude/commands/COMMAND.md` | `vibe --prompt "..." --agent auto-approve` | `gemini run --headless --workflow "..."` |
+| Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section | Post-execution batch JSON via `collect_mistral_telemetry()`; datalake disabled | OTLP events via Gemini CLI native support |
+| Project context | `CLAUDE.md` (native) | `AGENTS.md` at project root, read automatically by Codex | `AGENTS.md` at project root, read via native filesystem walk | `AGENTS.md` at project root |
+| Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `gpt-5.4`), `CODEX_REASONING` env var (default: `high`) | Determined by vibe CLI defaults | Determined by Gemini CLI defaults |
 
 **Repository Instructions** (Codex only):
 - Target repositories are expected to provide `AGENTS.md` at the project root
@@ -557,7 +558,7 @@ sequenceDiagram
 - Missing auth secret → exits before any CLI installation with descriptive message
 - CLI binary not found after install → fails with clear install error
 - Command `.md` file not found (Codex) → exits with file path shown
-- Unsupported agent type → exits listing supported values: `CLAUDE`, `CODEX`, `MISTRAL`
+- Unsupported agent type → exits listing supported values: `CLAUDE`, `CODEX`, `MISTRAL`, `GEMINI`
 - Exit code from underlying CLI is always propagated to calling workflow step
 
 **Environment Variables**:
@@ -567,6 +568,8 @@ sequenceDiagram
 - `CODEX_MODEL`: Optional Codex model override (default: `gpt-5.4`)
 - `CODEX_REASONING`: Optional Codex reasoning effort override (default: `high`)
 - `MISTRAL_API_KEY`: Required when `AGENT_TYPE=MISTRAL`
+- `GOOGLE_API_KEY`: Required when `AGENT_TYPE=GEMINI` (API key auth mode)
+- `GOOGLE_OAUTH_TOKEN`: Alternative to `GOOGLE_API_KEY` for Gemini (OAuth token auth mode)
 - `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex telemetry when set; used by Mistral `collect_mistral_telemetry()` for batch POST target
 - `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config and Mistral batch POST auth
 
@@ -580,6 +583,7 @@ All 6 workflows (`speckit.yml`, `quick-impl.yml`, `verify.yml`, `cleanup.yml`, `
     CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+    GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
   run: |
     .github/scripts/run-agent.sh "${{ inputs.agent }}" ai-board.specify "$PAYLOAD"
 ```

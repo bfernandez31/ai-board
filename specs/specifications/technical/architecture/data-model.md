@@ -1130,6 +1130,7 @@ enum CredentialProvider {
   ANTHROPIC
   OPENAI
   MISTRAL
+  GOOGLE
 }
 ```
 
@@ -1150,11 +1151,14 @@ enum CredentialType {
 - `OPENAI:API_KEY` → `OPENAI_API_KEY`
 - `OPENAI:OAUTH_TOKEN` → `OPENAI_API_KEY`
 - `MISTRAL:API_KEY` → `MISTRAL_API_KEY`
+- `GOOGLE:API_KEY` → `GOOGLE_API_KEY`
+- `GOOGLE:OAUTH_TOKEN` → `GOOGLE_OAUTH_TOKEN`
 
 **Provider constraints**:
 - `ANTHROPIC`: supports `API_KEY` and `OAUTH_TOKEN`
 - `OPENAI`: supports `API_KEY` and `OAUTH_TOKEN`
 - `MISTRAL`: supports `API_KEY` only
+- `GOOGLE`: supports `API_KEY` and `OAUTH_TOKEN`
 
 ### CredentialReadiness
 
@@ -1376,6 +1380,7 @@ enum Agent {
   CLAUDE   // Anthropic Claude (default)
   CODEX    // OpenAI Codex
   MISTRAL  // Mistral vibe CLI
+  GEMINI   // Google Gemini CLI
 }
 ```
 
