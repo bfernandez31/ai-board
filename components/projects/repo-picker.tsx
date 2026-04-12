@@ -86,7 +86,7 @@ export function RepoPicker({ onSelect }: RepoPickerProps) {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       {/* Search and filters */}
       <div className="flex gap-2">
         <div className="relative flex-1">

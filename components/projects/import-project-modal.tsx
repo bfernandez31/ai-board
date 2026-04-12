@@ -149,7 +149,7 @@ export function ImportProjectModal({ open, onOpenChange }: ImportProjectModalPro
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="aurora-card sm:max-w-[600px] max-h-[85vh] overflow-hidden">
+      <DialogContent className="aurora-card sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Import Project</DialogTitle>
           <DialogDescription>
