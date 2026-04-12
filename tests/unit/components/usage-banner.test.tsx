@@ -31,12 +31,11 @@ describe('UsageBanner', () => {
     renderWithProviders(<UsageBanner />);
   }
 
-  it('renders a fixed-height loading skeleton while usage data is unavailable', () => {
+  it('renders a loading skeleton while usage data is unavailable', () => {
     renderBanner(undefined);
 
     const skeleton = screen.getByTestId('usage-banner-skeleton');
     expect(skeleton).toBeInTheDocument();
-    expect(skeleton).toHaveClass('min-h-24');
     expect(skeleton).toHaveClass('animate-pulse');
   });
 

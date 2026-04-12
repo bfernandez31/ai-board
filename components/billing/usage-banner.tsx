@@ -54,9 +54,9 @@ function UsageBannerSkeleton(): JSX.Element {
   return (
     <div
       data-testid="usage-banner-skeleton"
-      className="min-h-24 animate-pulse rounded-xl border border-border bg-gradient-to-r from-muted/90 via-muted/60 to-background p-4"
+      className="animate-pulse rounded-xl border border-border bg-gradient-to-r from-muted/90 via-muted/60 to-background px-4 py-2.5"
     >
-      <div className="flex min-h-16 flex-col justify-between gap-3 md:flex-row md:items-center">
+      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
         <div className="flex flex-wrap items-center gap-3">
           <Skeleton className="h-7 w-16 rounded-full" />
           <Skeleton className="h-5 w-48 rounded-full sm:w-64" />
@@ -96,9 +96,9 @@ export function UsageBanner(): JSX.Element {
 
       <div
         data-testid="usage-banner-card"
-        className={cn('min-h-24 rounded-xl border p-4 shadow-sm', cardClassName)}
+        className={cn('rounded-xl border px-4 py-2.5 shadow-sm', cardClassName)}
       >
-        <div className="flex min-h-16 flex-col justify-between gap-3 md:flex-row md:items-center">
+        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
           <div className="flex flex-wrap items-center gap-3">
             <Badge
               data-testid="usage-banner-badge"

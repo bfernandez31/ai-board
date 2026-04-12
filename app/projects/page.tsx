@@ -40,7 +40,9 @@ export default async function ProjectsPage() {
 
       <ProjectQuotaGate />
 
-      <ProjectsContainer projects={projects} />
+      <div className="mt-6">
+        <ProjectsContainer projects={projects} />
+      </div>
     </div>
   );
 }
