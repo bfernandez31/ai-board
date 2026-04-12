@@ -1,6 +1,6 @@
 'use client';
 
-import type { WorkflowType } from '@prisma/client';
+import { Agent, type WorkflowType } from '@prisma/client';
 import { Sparkles } from 'lucide-react';
 import { getAgentLabel, inferAgentFromIdentifier } from '@/app/lib/utils/agent-icons';
 import { AgentIcon } from '@/components/ui/agent-icon';
@@ -61,20 +61,18 @@ export function ComparisonCardMetadata({
   iconSize,
   className,
 }: ComparisonCardMetadataProps): JSX.Element {
-  const resolvedAgent = inferAgentFromIdentifier(agent);
+  const resolvedAgent = inferAgentFromIdentifier(agent) ?? Agent.CLAUDE;
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      {resolvedAgent && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span data-testid="comparison-agent-badge" className="shrink-0">
-              <AgentIcon agent={resolvedAgent} size={iconSize} />
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{getAgentLabel(resolvedAgent)}</TooltipContent>
-        </Tooltip>
-      )}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span data-testid="comparison-agent-badge" className="shrink-0">
+            <AgentIcon agent={resolvedAgent} size={iconSize} />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{getAgentLabel(resolvedAgent)}</TooltipContent>
+      </Tooltip>
       <WorkflowTypeBadge workflowType={workflowType} />
     </div>
   );

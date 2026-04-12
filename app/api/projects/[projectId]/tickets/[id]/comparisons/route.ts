@@ -101,22 +101,28 @@ export async function POST(
       return jsonError(400, 'Markdown path does not match report metadata', 'VALIDATION_ERROR');
     }
 
-    // Resolve source ticket from key
-    const sourceTicket = await prisma.ticket.findFirst({
-      where: {
-        ticketKey: payload.sourceTicketKey,
-        projectId,
-      },
-      select: {
-        id: true,
-        ticketKey: true,
-        title: true,
-        stage: true,
-        workflowType: true,
-        agent: true,
-        branch: true,
-      },
-    });
+    // Resolve source ticket and project default agent
+    const [sourceTicket, project] = await Promise.all([
+      prisma.ticket.findFirst({
+        where: {
+          ticketKey: payload.sourceTicketKey,
+          projectId,
+        },
+        select: {
+          id: true,
+          ticketKey: true,
+          title: true,
+          stage: true,
+          workflowType: true,
+          agent: true,
+          branch: true,
+        },
+      }),
+      prisma.project.findUnique({
+        where: { id: projectId },
+        select: { defaultAgent: true },
+      }),
+    ]);
 
     if (!sourceTicket) {
       return jsonError(404, 'Source ticket not found for project', 'TICKET_NOT_FOUND');
@@ -184,6 +190,7 @@ export async function POST(
 
     const { record, isDuplicate } = await persistComparisonRecord({
       projectId,
+      defaultAgent: project?.defaultAgent ?? null,
       sourceTicket,
       participants: orderedParticipants,
       compareRunKey: payload.compareRunKey,

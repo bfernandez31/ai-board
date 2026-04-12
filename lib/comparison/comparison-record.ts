@@ -28,6 +28,7 @@ type PersistableTicket = {
 
 type PersistComparisonInput = {
   projectId: number;
+  defaultAgent: Agent | null;
   sourceTicket: PersistableTicket;
   participants: PersistableTicket[];
   compareRunKey?: string | null;
@@ -274,7 +275,7 @@ export function createComparisonRecordInput(
           rank: ranking.rank,
           score: ranking.score,
           workflowTypeAtComparison: ticket.workflowType,
-          agentAtComparison: ticket.agent,
+          agentAtComparison: ticket.agent ?? input.defaultAgent ?? 'CLAUDE',
           rankRationale: ranking.rankRationale,
           metricSnapshot: {
             create: {

@@ -99,11 +99,12 @@ describe('ComparisonParticipantGrid', () => {
     expect(screen.getByAltText('CLAUDE')).toHaveAttribute('width', '16');
   });
 
-  it('renders clean workflow badge and omits unknown agent identifiers', () => {
+  it('renders clean workflow badge and falls back to Claude for unknown agent identifiers', () => {
     renderComparisonParticipantGrid([{ ticketId: 2, workflowType: 'CLEAN' as const, agent: 'custom-runner' }]);
 
     expect(screen.getByTestId('comparison-workflow-badge')).toHaveTextContent('Clean');
-    expect(screen.queryByTestId('comparison-agent-badge')).not.toBeInTheDocument();
+    expect(screen.getByTestId('comparison-agent-badge')).toBeInTheDocument();
+    expect(screen.getByAltText('CLAUDE')).toBeInTheDocument();
   });
 
   it('renders rationale text', () => {

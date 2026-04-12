@@ -175,7 +175,7 @@ describe('ComparisonHeroCard', () => {
     expect(screen.getByAltText('CLAUDE')).toHaveAttribute('width', '20');
   });
 
-  it('omits the winner agent icon when agent data is missing', () => {
+  it('falls back to Claude icon when agent data is missing', () => {
     renderWithProviders(
       <ComparisonHeroCard
         winner={makeWinner({ agent: null })}
@@ -186,7 +186,8 @@ describe('ComparisonHeroCard', () => {
       />
     );
 
-    expect(screen.queryByTestId('comparison-agent-badge')).not.toBeInTheDocument();
+    expect(screen.getByTestId('comparison-agent-badge')).toBeInTheDocument();
+    expect(screen.getByAltText('CLAUDE')).toBeInTheDocument();
     expect(screen.getByTestId('comparison-workflow-badge')).toBeInTheDocument();
   });
 });
