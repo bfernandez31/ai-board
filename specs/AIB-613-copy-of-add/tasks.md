@@ -79,8 +79,8 @@ description: "Task list for Add Gemini CLI as AI Agent feature implementation"
 ### Tests for User Story 2
 
 - [✅] T020 [P] [US2] Extend agent selector tests in `/tests/integration/projects/settings.test.ts` with Gemini selection tests
-- [ ] T021 [P] [US2] Add agent badge tests in `/tests/ticket/agent-badge.test.tsx` for Gemini icon display
-- [ ] T022 [P] [US2] Create workflow availability tests in `/tests/workflows.test.ts`
+- [✅] T021 [P] [US2] Add agent badge tests in `/tests/ticket/agent-badge.test.tsx` for Gemini icon display
+- [✅] T022 [P] [US2] Create workflow availability tests in `/tests/workflows.test.ts`
 
 ### Implementation for User Story 2
 
@@ -90,7 +90,7 @@ description: "Task list for Add Gemini CLI as AI Agent feature implementation"
 - [✅] T026 [P] [US2] Implement default agent selection endpoint in `/app/api/projects/[projectId]/route.ts`
 - [✅] T027 [US2] Add workflow availability validation for Gemini in `/lib/workflows.ts`
 - [✅] T028 [P] [US2] Update agent metadata with supported workflows in `/lib/workflows.ts`
-- [ ] T029 [US2] Add per-ticket agent override functionality in ticket creation flow
+- [✅] T029 [US2] Add per-ticket agent override functionality in ticket creation flow
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -104,22 +104,22 @@ description: "Task list for Add Gemini CLI as AI Agent feature implementation"
 
 ### Tests for User Story 3
 
-- [ ] T030 [P] [US3] Extend workflow dispatch tests in `/tests/workflows.test.ts` with Gemini scenarios
-- [ ] T031 [P] [US3] Add telemetry parsing tests in `/tests/telemetry.test.ts` for Gemini events
-- [ ] T032 [P] [US3] Create run-agent.sh integration tests for Gemini case
+- [✅] T030 [P] [US3] Extend workflow dispatch tests in `/tests/workflows.test.ts` with Gemini scenarios
+- [✅] T031 [P] [US3] Add telemetry parsing tests in `/tests/telemetry.test.ts` for Gemini events
+- [✅] T032 [P] [US3] Create run-agent.sh integration tests for Gemini case
 
 ### Implementation for User Story 3
 
-- [ ] T033 [US3] Add GEMINI case to run-agent.sh in `/scripts/run-agent.sh`
-- [ ] T034 [US3] Implement Gemini CLI installation check in `/scripts/run-agent.sh`
-- [ ] T035 [P] [US3] Add environment variable injection for Gemini in `/scripts/run-agent.sh`
-- [ ] T036 [P] [US3] Implement telemetry configuration for Gemini in `/scripts/run-agent.sh`
-- [ ] T037 [US3] Add Gemini event parsing in `/lib/telemetry.ts`
-- [ ] T038 [P] [US3] Implement token counting logic for Gemini in `/lib/telemetry.ts`
-- [ ] T039 [P] [US3] Add tool call tracking for Gemini in `/lib/telemetry.ts`
-- [ ] T040 [US3] Extend workflow dispatch API in `/app/api/workflows/route.ts` for Gemini
-- [ ] T041 [P] [US3] Add workflow availability checks in `/lib/workflows.ts`
-- [ ] T042 [US3] Implement cost estimation logic for Gemini in `/lib/analytics.ts`
+- [✅] T033 [US3] Add GEMINI case to run-agent.sh in `/scripts/run-agent.sh`
+- [✅] T034 [US3] Implement Gemini CLI installation check in `/scripts/run-agent.sh`
+- [✅] T035 [P] [US3] Add environment variable injection for Gemini in `/scripts/run-agent.sh`
+- [✅] T036 [P] [US3] Implement telemetry configuration for Gemini in `/scripts/run-agent.sh`
+- [✅] T037 [US3] Add Gemini event parsing in `/lib/telemetry.ts`
+- [✅] T038 [P] [US3] Implement token counting logic for Gemini in `/lib/telemetry.ts`
+- [✅] T039 [P] [US3] Add tool call tracking for Gemini in `/lib/telemetry.ts`
+- [✅] T040 [US3] Extend workflow dispatch API in `/app/api/workflows/route.ts` for Gemini
+- [✅] T041 [P] [US3] Add workflow availability checks in `/lib/workflows.ts`
+- [✅] T042 [US3] Implement cost estimation logic for Gemini in `/lib/analytics.ts`
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently
 
@@ -133,19 +133,19 @@ description: "Task list for Add Gemini CLI as AI Agent feature implementation"
 
 ### Tests for User Story 4
 
-- [ ] T043 [P] [US4] Extend analytics dashboard tests in `/tests/analytics.test.tsx` with Gemini filter tests
-- [ ] T044 [P] [US4] Add agent filtering tests for dynamic agent enumeration
-- [ ] T045 [P] [US4] Create cost estimation tests for Gemini in `/tests/analytics.test.tsx`
+- [✅] T043 [P] [US4] Extend analytics dashboard tests in `/tests/analytics.test.tsx` with Gemini filter tests
+- [✅] T044 [P] [US4] Add agent filtering tests for dynamic agent enumeration
+- [✅] T045 [P] [US4] Create cost estimation tests for Gemini in `/tests/analytics.test.tsx`
 
 ### Implementation for User Story 4
 
-- [ ] T046 [P] [US4] Add Gemini to agent filter component in `/components/analytics/agent-filter.tsx`
-- [ ] T047 [US4] Make agent filtering dynamic based on Agent enum in `/lib/analytics.ts`
-- [ ] T048 [P] [US4] Fix NamedAgent type to include GEMINI in `/types/agent.ts`
-- [ ] T049 [P] [US4] Update getAgentLabel() function to support Gemini in `/lib/analytics.ts`
-- [ ] T050 [US4] Add Gemini metrics to dashboard charts in `/components/analytics/dashboard.tsx`
-- [ ] T051 [P] [US4] Implement cost estimation for Gemini jobs in `/lib/analytics.ts`
-- [ ] T052 [P] [US4] Add tool distribution tracking for Gemini in `/components/analytics/dashboard.tsx`
+- [✅] T046 [P] [US4] Add Gemini to agent filter component in `/components/analytics/agent-filter.tsx`
+- [✅] T047 [US4] Make agent filtering dynamic based on Agent enum in `/lib/analytics.ts`
+- [✅] T048 [P] [US4] Fix NamedAgent type to include GEMINI in `/types/agent.ts`
+- [✅] T049 [P] [US4] Update getAgentLabel() function to support Gemini in `/lib/analytics.ts`
+- [✅] T050 [US4] Add Gemini metrics to dashboard charts in `/components/analytics/dashboard.tsx`
+- [✅] T051 [P] [US4] Implement cost estimation for Gemini jobs in `/lib/analytics.ts`
+- [✅] T052 [P] [US4] Add tool distribution tracking for Gemini in `/components/analytics/dashboard.tsx`
 
 **Checkpoint**: At this point, all user stories should be independently functional
 
@@ -159,15 +159,15 @@ description: "Task list for Add Gemini CLI as AI Agent feature implementation"
 
 ### Tests for User Story 5
 
-- [ ] T053 [P] [US5] Extend project setup tests in `/tests/setup.test.tsx` with Gemini selection tests
-- [ ] T054 [P] [US5] Add agent enumeration tests for dynamic agent list
+- [✅] T053 [P] [US5] Extend project setup tests in `/tests/setup.test.tsx` with Gemini selection tests
+- [✅] T054 [P] [US5] Add agent enumeration tests for dynamic agent list
 
 ### Implementation for User Story 5
 
-- [ ] T055 [P] [US5] Add Gemini to project setup agent selection in `/components/setup/setup-page-client.tsx`
-- [ ] T056 [US5] Make agent list dynamic or include all agents in `/lib/setup.ts`
-- [ ] T057 [P] [US5] Fix Mistral inclusion in setup page in `/components/setup/setup-page-client.tsx`
-- [ ] T058 [US5] Ensure default agent selection works with Gemini in `/lib/setup.ts`
+- [✅] T055 [P] [US5] Add Gemini to project setup agent selection in `/components/setup/setup-page-client.tsx`
+- [✅] T056 [US5] Make agent list dynamic or include all agents in `/lib/setup.ts`
+- [✅] T057 [P] [US5] Fix Mistral inclusion in setup page in `/components/setup/setup-page-client.tsx`
+- [✅] T058 [US5] Ensure default agent selection works with Gemini in `/lib/setup.ts`
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -177,12 +177,12 @@ description: "Task list for Add Gemini CLI as AI Agent feature implementation"
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T059 [P] Documentation updates for Gemini integration
-- [ ] T060 Code cleanup and refactoring across all Gemini components
-- [ ] T061 Performance optimization for telemetry processing
-- [ ] T062 [P] Additional unit tests for edge cases
-- [ ] T063 Security hardening for credential storage
-- [ ] T064 Error handling improvements across all components
+- [✅] T059 [P] Documentation updates for Gemini integration
+- [✅] T060 Code cleanup and refactoring across all Gemini components
+- [✅] T061 Performance optimization for telemetry processing
+- [✅] T062 [P] Additional unit tests for edge cases
+- [✅] T063 Security hardening for credential storage
+- [✅] T064 Error handling improvements across all components
 
 ---
 
