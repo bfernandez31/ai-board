@@ -22,7 +22,7 @@ export function validateFormat(
       return { valid: false, error: 'Invalid Google API key format: must start with AIza' };
     }
 
-    if (/\[\s].test(value)) {
+    if (/\s/.test(value)) {
       return { valid: false, error: 'Invalid Google API key format: key must not contain whitespace' };
     }
 
@@ -38,7 +38,7 @@ export function validateFormat(
       return { valid: false, error: 'Invalid Google OAuth token format: token is too short' };
     }
 
-    if (/\[\s].test(value)) {
+    if (/\s/.test(value)) {
       return { valid: false, error: 'Invalid Google OAuth token format: token must not contain whitespace' };
     }
 

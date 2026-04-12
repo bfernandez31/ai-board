@@ -52,8 +52,8 @@ description: "Task list for Add Gemini CLI as AI Agent feature implementation"
 ### Tests for User Story 1
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T010 [P] [US1] Extend credential tests in `/tests/credentials.test.ts` with Google credential validation tests
-- [ ] T011 [P] [US1] Add Google credential encryption tests in `/tests/credentials.test.ts`
+- [✅] T010 [P] [US1] Extend credential tests in `/tests/credentials.test.ts` with Google credential validation tests
+- [✅] T011 [P] [US1] Add Google credential encryption tests in `/tests/credentials.test.ts`
 - [ ] T012 [P] [US1] Create credential form component tests in `/tests/settings/credentials-form.test.tsx`
 
 ### Implementation for User Story 1

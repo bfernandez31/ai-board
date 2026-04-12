@@ -7,6 +7,7 @@ const PROVIDER_DISPLAY_NAMES: Record<CredentialProvider, string> = {
   ANTHROPIC: 'Anthropic',
   OPENAI: 'OpenAI',
   MISTRAL: 'Mistral',
+  GOOGLE: 'Google',
 };
 
 export function getMissingCredentialError(provider: CredentialProvider = 'ANTHROPIC'): string {
