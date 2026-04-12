@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserOrToken } from '@/lib/db/users';
 import { prisma } from '@/lib/db/client';
 
+/**
+ * Retrieve Google credential for the authenticated user
+ */
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUserOrToken(request);
@@ -28,9 +31,10 @@ export async function GET(request: NextRequest) {
     });
     
     if (!credential) {
-      return NextResponse.json({
-        error: 'No Google credential found for this user',
-      }, { status: 404 });
+      return NextResponse.json(
+        { error: 'No Google credential found for this user' },
+        { status: 404 }
+      );
     }
     
     return NextResponse.json({
@@ -41,14 +45,15 @@ export async function GET(request: NextRequest) {
         updatedAt: credential.updatedAt.toISOString(),
       },
     });
-    
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
     console.error('Failed to retrieve Google credential:', error);
-    return NextResponse.json({
-      error: 'Failed to retrieve Google credential',
-    }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to retrieve Google credential' },
+      { status: 500 }
+    );
   }
 }

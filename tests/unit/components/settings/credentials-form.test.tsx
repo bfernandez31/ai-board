@@ -58,82 +58,92 @@ describe('CredentialForm - Google Support', () => {
     expect(oauthOption).toBeInTheDocument();
   });
 
-  it('should validate Google API key format (AIza...)', () => {
+  it('should validate Google API key format (AIza...)', async () => {
     render(<CredentialForm />);
     
-    // Select Google provider and API_KEY type
-    const providerTrigger = screen.getByRole('combobox', { name: 'Provider' });
-    fireEvent.mouseDown(providerTrigger);
-    fireEvent.click(screen.getByText('Google'));
+    // Find the hidden select element and change its value
+    const hiddenSelect = screen.getByRole('combobox', { name: 'Provider' }).nextElementSibling as HTMLSelectElement;
+    fireEvent.change(hiddenSelect, { target: { value: 'GOOGLE' } });
     
-    // Enter invalid API key (missing AIza prefix)
-    const valueInput = screen.getByLabelText('API Key');
-    fireEvent.change(valueInput, { target: { value: 'invalid-key' } });
-    
-    // Should show format error
-    expect(screen.getByText(/API key must start with "sk-ant-api"/)).toBeInTheDocument();
+    // Wait for provider change to take effect
+    await waitFor(() => {
+      // Enter invalid API key (missing AIza prefix)
+      const valueInput = screen.getByLabelText('API Key');
+      fireEvent.change(valueInput, { target: { value: 'invalid-key' } });
+      
+      // Should show format error for Google API key
+      expect(screen.getByText(/API key must start with "AIza"/)).toBeInTheDocument();
+    });
     
     // Enter valid API key
-    fireEvent.change(valueInput, { target: { value: 'sk-ant-api' + 'a'.repeat(50) } });
+    const valueInput = screen.getByLabelText('API Key');
+    fireEvent.change(valueInput, { target: { value: 'AIza' + 'a'.repeat(50) } });
     
     // Should not show format error
-    expect(screen.queryByText(/API key must start with "sk-ant-api"/)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText(/API key must start with "AIza"/)).not.toBeInTheDocument();
+    });
   });
 
-  it('should validate Google OAuth token format (20+ chars)', () => {
+  it('should validate Google OAuth token format (20+ chars)', async () => {
     render(<CredentialForm />);
     
-    // Select Google provider and OAUTH_TOKEN type
-    const providerTrigger = screen.getByRole('combobox', { name: 'Provider' });
-    fireEvent.mouseDown(providerTrigger);
-    fireEvent.click(screen.getByText('Google'));
+    // Find the hidden select elements and change their values
+    const providerHiddenSelect = screen.getByRole('combobox', { name: 'Provider' }).nextElementSibling as HTMLSelectElement;
+    fireEvent.change(providerHiddenSelect, { target: { value: 'GOOGLE' } });
     
-    const typeTrigger = screen.getByRole('combobox', { name: 'Credential Type' });
-    fireEvent.mouseDown(typeTrigger);
-    fireEvent.click(screen.getByText('OAuth Token'));
+    const typeHiddenSelect = screen.getByRole('combobox', { name: 'Credential Type' }).nextElementSibling as HTMLSelectElement;
+    fireEvent.change(typeHiddenSelect, { target: { value: 'OAUTH_TOKEN' } });
     
-    // Enter invalid OAuth token (too short)
-    const valueInput = screen.getByLabelText('API Key');
-    fireEvent.change(valueInput, { target: { value: 'short-token' } });
+    // Wait for type change to take effect
+    await waitFor(() => {
+      // Enter invalid OAuth token (too short)
+      const valueInput = screen.getByLabelText('OAuth Token');
+      fireEvent.change(valueInput, { target: { value: 'short-token' } });
+      
+      // Should show format error for OAuth token length
+      expect(screen.getByText(/OAuth token must be at least 20 characters/)).toBeInTheDocument();
+    });
     
-    // Should show format error
-    expect(screen.getByText(/API key must start with "sk-ant-api"/)).toBeInTheDocument();
-    
-    // Enter valid API key
-    fireEvent.change(valueInput, { target: { value: 'sk-ant-api' + 'a'.repeat(50) } });
+    // Enter valid OAuth token
+    const valueInput = screen.getByLabelText('OAuth Token');
+    fireEvent.change(valueInput, { target: { value: 'valid-oauth-token-1234567890' } });
     
     // Should not show format error
-    expect(screen.queryByText(/API key must start with "sk-ant-api"/)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText(/OAuth token must be at least 20 characters/)).not.toBeInTheDocument();
+    });
   });
 
-  it('should show appropriate placeholder for Google API key', () => {
+  it('should show appropriate placeholder for Google API key', async () => {
     render(<CredentialForm />);
     
-    // Select Google provider
-    const providerTrigger = screen.getByRole('combobox', { name: 'Provider' });
-    fireEvent.mouseDown(providerTrigger);
-    fireEvent.click(screen.getByText('Google'));
+    // Find the hidden select element and change its value
+    const hiddenSelect = screen.getByRole('combobox', { name: 'Provider' }).nextElementSibling as HTMLSelectElement;
+    fireEvent.change(hiddenSelect, { target: { value: 'GOOGLE' } });
     
-    // Check placeholder
-    const valueInput = screen.getByLabelText('API Key');
-    expect(valueInput).toHaveAttribute('placeholder', expect.stringContaining('sk-ant-api'));
+    // Wait for provider change to take effect and check placeholder
+    await waitFor(() => {
+      const valueInput = screen.getByLabelText('API Key');
+      expect(valueInput).toHaveAttribute('placeholder', expect.stringContaining('AIza'));
+    });
   });
 
-  it('should show appropriate placeholder for Google OAuth token', () => {
+  it('should show appropriate placeholder for Google OAuth token', async () => {
     render(<CredentialForm />);
     
-    // Select Google provider and OAUTH_TOKEN type
-    const providerTrigger = screen.getByRole('combobox', { name: 'Provider' });
-    fireEvent.mouseDown(providerTrigger);
-    fireEvent.click(screen.getByText('Google'));
+    // Find the hidden select elements and change their values
+    const providerHiddenSelect = screen.getByRole('combobox', { name: 'Provider' }).nextElementSibling as HTMLSelectElement;
+    fireEvent.change(providerHiddenSelect, { target: { value: 'GOOGLE' } });
     
-    const typeTrigger = screen.getByRole('combobox', { name: 'Credential Type' });
-    fireEvent.mouseDown(typeTrigger);
-    fireEvent.click(screen.getByText('OAuth Token'));
+    const typeHiddenSelect = screen.getByRole('combobox', { name: 'Credential Type' }).nextElementSibling as HTMLSelectElement;
+    fireEvent.change(typeHiddenSelect, { target: { value: 'OAUTH_TOKEN' } });
     
-    // Check placeholder
-    const valueInput = screen.getByLabelText('API Key');
-    expect(valueInput).toHaveAttribute('placeholder', expect.stringContaining('sk-ant-api'));
+    // Wait for type change to take effect and check placeholder
+    await waitFor(() => {
+      const valueInput = screen.getByLabelText('OAuth Token');
+      expect(valueInput).toHaveAttribute('placeholder', expect.stringContaining('OAuth token'));
+    });
   });
 
   it('should submit Google credential successfully', async () => {

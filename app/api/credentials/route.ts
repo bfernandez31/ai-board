@@ -12,6 +12,9 @@ const createCredentialSchema = z.object({
   value: z.string().min(1, 'Credential value is required'),
 });
 
+/**
+ * Convert credential list item to API response format
+ */
 function toCredentialResponse(c: CredentialListItem) {
   return {
     id: c.id,
@@ -28,6 +31,9 @@ function toCredentialResponse(c: CredentialListItem) {
   };
 }
 
+/**
+ * List all credentials for the authenticated user
+ */
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUserOrToken(request);
@@ -40,11 +46,15 @@ export async function GET(request: NextRequest) {
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
     console.error('Failed to list credentials:', error);
     return NextResponse.json({ error: 'Failed to list credentials' }, { status: 500 });
   }
 }
 
+/**
+ * Create or replace a credential for the authenticated user
+ */
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUserOrToken(request);
