@@ -49,9 +49,6 @@ export async function verifyWorkflowToken(
     return false;
   }
 
-  // Extract token from header
-  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
   // Get expected token from environment
   const expectedTokens = getAcceptedWorkflowTokens();
 
@@ -62,5 +59,6 @@ export async function verifyWorkflowToken(
     return false;
   }
 
-  return isAcceptedWorkflowToken(token);
+  const token = authHeader.slice('Bearer '.length);
+  return isAcceptedWorkflowToken(token, expectedTokens);
 }

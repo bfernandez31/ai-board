@@ -34,7 +34,7 @@ export function validateWorkflowAuth(request: NextRequest): WorkflowAuthResult {
     return { isValid: false, error: 'Invalid Authorization header format' };
   }
 
-  const isValid = isAcceptedWorkflowToken(token);
+  const isValid = isAcceptedWorkflowToken(token, expectedTokens);
 
   if (!isValid) {
     console.warn('[Workflow Auth] Invalid token');

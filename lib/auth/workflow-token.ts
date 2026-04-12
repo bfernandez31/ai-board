@@ -2,6 +2,13 @@ import { timingSafeEqual } from "node:crypto"
 
 export const TEST_WORKFLOW_TOKEN = "test-workflow-token-for-e2e-tests-only"
 
+function isTokenMatch(token: string, expectedToken: string): boolean {
+  return (
+    token.length === expectedToken.length &&
+    timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken))
+  )
+}
+
 export function isWorkflowTokenTestContext(): boolean {
   return (
     process.env.TEST_MODE === "true" ||
@@ -24,12 +31,11 @@ export function getAcceptedWorkflowTokens(): string[] {
   return [...tokens]
 }
 
-export function isAcceptedWorkflowToken(token: string): boolean {
-  return getAcceptedWorkflowTokens().some(
-    (expectedToken) =>
-      token.length === expectedToken.length &&
-      timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken))
-  )
+export function isAcceptedWorkflowToken(
+  token: string,
+  expectedTokens: string[] = getAcceptedWorkflowTokens()
+): boolean {
+  return expectedTokens.some((expectedToken) => isTokenMatch(token, expectedToken))
 }
 
 export function getWorkflowToken(): string {
