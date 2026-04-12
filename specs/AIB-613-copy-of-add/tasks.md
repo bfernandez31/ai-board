@@ -62,9 +62,9 @@ description: "Task list for Add Gemini CLI as AI Agent feature implementation"
 - [✅] T014 [P] [US1] Implement Google credential validation in `/lib/ai-credentials/providers/google.ts`
 - [✅] T015 [US1] Add Google credential storage endpoint in `/app/api/credentials/route.ts`
 - [✅] T016 [P] [US1] Create Google credential validation endpoint in `/app/api/credentials/google/validate/route.ts`
-- [ ] T017 [US1] Implement AES-256-GCM encryption for Google credentials in `/lib/credentials.ts`
-- [ ] T018 [P] [US1] Add Google credential retrieval endpoint in `/app/api/credentials/google/route.ts`
-- [ ] T019 [US1] Add credential validation status tracking in `/lib/credentials.ts`
+- [✅] T017 [US1] Implement AES-256-GCM encryption for Google credentials in `/lib/ai-credentials/crypto.ts`
+- [✅] T018 [P] [US1] Add Google credential retrieval endpoint in `/app/api/credentials/google/route.ts`
+- [✅] T019 [US1] Add credential validation status tracking in `/lib/ai-credentials/service.ts`
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
