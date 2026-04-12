@@ -7,6 +7,7 @@ import { dispatchOnboardWorkflow } from '@/lib/workflows/dispatch-onboard';
 import { dispatchRetroSpecWorkflow } from '@/lib/workflows/dispatch-retro-spec';
 import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
 import type { SetupJobCommand } from '@prisma/client';
+import { supportsOnboardAgent } from '@/app/lib/utils/agent-resolution';
 
 function handleOwnershipError(error: unknown): NextResponse {
   if (error instanceof Error && error.message === 'Project not found') {
@@ -19,7 +20,7 @@ function handleOwnershipError(error: unknown): NextResponse {
 }
 
 const createSetupJobSchema = z.object({
-  agent: z.enum(['CLAUDE', 'CODEX']),
+  agent: z.enum(['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']),
   command: z.enum(['ONBOARD', 'RETRO_SPEC']).default('ONBOARD'),
   depth: z.enum(['QUICK', 'STANDARD', 'COMPREHENSIVE']).optional(),
   docUrl: z.string().url().max(2000).optional(),
@@ -60,6 +61,16 @@ export async function POST(
     }
 
     const { agent, command, depth, docUrl, context } = parsed.data;
+
+    if (!supportsOnboardAgent(agent)) {
+      return NextResponse.json(
+        {
+          error: `${agent} is not supported for ${command.toLowerCase().replace('_', ' ')} setup workflows yet`,
+          code: 'AGENT_UNSUPPORTED',
+        },
+        { status: 409 }
+      );
+    }
 
     // Pre-flight: check credential
     // Zod validates agent is 'CLAUDE' | 'CODEX', matching the Agent enum exactly

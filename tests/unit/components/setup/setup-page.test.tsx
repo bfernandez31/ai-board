@@ -64,8 +64,10 @@ describe('SetupPageClient', () => {
   it('renders agent selection options', () => {
     renderWithProviders(<SetupPageClient projectId={1} projectName="Test Project" />);
 
-    expect(screen.getByText('Claude Code')).toBeInTheDocument();
+    expect(screen.getByText('Claude')).toBeInTheDocument();
     expect(screen.getByText('Codex')).toBeInTheDocument();
+    expect(screen.getByText('Mistral')).toBeInTheDocument();
+    expect(screen.getByText('Gemini')).toBeInTheDocument();
   });
 
   it('renders initialize button', () => {
@@ -234,6 +236,18 @@ describe('SetupPageClient', () => {
       const button = screen.getByText('Initialize Project');
       expect(button).toBeDisabled();
       expect(screen.getByText(/Missing.*credential/)).toBeInTheDocument();
+    });
+  });
+
+  it('disables initialize button for unsupported Gemini setup', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SetupPageClient projectId={1} projectName="Test Project" />);
+
+    await user.click(screen.getByText('Gemini'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/setup is not available yet/i)).toBeInTheDocument();
+      expect(screen.getByText('Initialize Project')).toBeDisabled();
     });
   });
 

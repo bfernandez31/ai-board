@@ -233,6 +233,39 @@ describe('Workflow Credential Retrieval API', () => {
     expect(response.data.error).toContain('credential configured');
   });
 
+  it('should return GEMINI_OAUTH_JSON when provider=GOOGLE and credentialType=OAUTH_TOKEN', async () => {
+    const prisma = getPrismaClient();
+    const testBundle = JSON.stringify({ refresh_token: 'refresh-token', credentials: { access_token: 'access-token' } });
+    const { encryptedValue, iv, authTag } = encryptCredential(testBundle);
+
+    await prisma.userCredential.create({
+      data: {
+        userId: 'test-user-id',
+        provider: 'GOOGLE',
+        credentialType: 'OAUTH_TOKEN',
+        label: '[e2e] Gemini Workflow OAuth',
+        encryptedValue,
+        iv,
+        authTag,
+        preview: 'json',
+        readinessStatus: 'READY',
+      },
+    });
+
+    const client = createWorkflowClient();
+    const response = await client.get<{
+      envVar: string;
+      value: string;
+      encoding: string;
+      credentialType: string;
+    }>(`/api/internal/credentials?projectId=${ctx.projectId}&provider=GOOGLE`);
+
+    expect(response.status).toBe(200);
+    expect(response.data.envVar).toBe('GEMINI_OAUTH_JSON');
+    expect(Buffer.from(response.data.value, 'base64').toString()).toBe(testBundle);
+    expect(response.data.credentialType).toBe('OAUTH_TOKEN');
+  });
+
   it('should return decrypted OAUTH_TOKEN credential with correct envVar', async () => {
     const prisma = getPrismaClient();
     const testToken = 'oauth-token-value-' + 'b'.repeat(40);

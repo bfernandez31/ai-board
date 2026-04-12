@@ -213,6 +213,8 @@ async function getAvailableAgents(projectId: number): Promise<AgentOption[]> {
   const counts = new Map<NamedAgent, number>([
     ['CLAUDE', 0],
     ['CODEX', 0],
+    ['MISTRAL', 0],
+    ['GEMINI', 0],
   ]);
 
   for (const ticket of tickets) {
@@ -229,7 +231,7 @@ async function getAvailableAgents(projectId: number): Promise<AgentOption[]> {
     },
   ];
 
-  for (const agent of ['CLAUDE', 'CODEX'] as const) {
+  for (const agent of ['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI'] as const) {
     const jobCount = counts.get(agent) ?? 0;
     if (jobCount > 0) {
       options.push({
@@ -311,6 +313,7 @@ async function getOverviewMetrics(
 
   const completedJobs = currentJobs.filter((job) => job.status === 'COMPLETED');
   const totalCost = completedJobs.reduce((sum, job) => sum + (job.costUsd ?? 0), 0);
+  const costsIncomplete = completedJobs.some((job) => job.costUsd == null);
   const previousCost = previousJobs.reduce((sum, job) => sum + (job.costUsd ?? 0), 0);
   const successRate =
     currentJobs.length > 0 ? (completedJobs.length / currentJobs.length) * 100 : 0;
@@ -323,6 +326,7 @@ async function getOverviewMetrics(
 
   return {
     totalCost: Math.round(totalCost * 100) / 100,
+    costsIncomplete,
     costTrend: Math.round(calculateTrend(totalCost, previousCost) * 10) / 10,
     successRate: Math.round(successRate * 10) / 10,
     avgDuration,

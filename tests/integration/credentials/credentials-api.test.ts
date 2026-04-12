@@ -138,7 +138,7 @@ describe('User Credentials API', () => {
 
     it('should return 400 for invalid provider', async () => {
       const response = await ctx.api.post('/api/credentials', {
-        provider: 'GOOGLE',
+        provider: 'INVALID',
         credentialType: 'API_KEY',
         label: '[e2e] Wrong Provider',
         value: 'sk-ant-api03-' + 'a'.repeat(80),
@@ -179,6 +179,26 @@ describe('User Credentials API', () => {
       // Should be 422 (rejected by provider) or possibly 422 (unreachable)
       expect([422]).toContain(response.status);
       expect(response.data).toHaveProperty('code');
+    });
+
+    it('should create Google OAuth credential with structural verification', async () => {
+      const response = await ctx.api.post<{
+        provider: string;
+        credentialType: string;
+        readinessStatus: string;
+        verificationCode: string;
+      }>('/api/credentials', {
+        provider: 'GOOGLE',
+        credentialType: 'OAUTH_TOKEN',
+        label: '[e2e] Gemini OAuth Bundle',
+        value: JSON.stringify({ refresh_token: 'refresh-token', credentials: { access_token: 'access-token' } }),
+      });
+
+      expect(response.status).toBe(201);
+      expect(response.data.provider).toBe('GOOGLE');
+      expect(response.data.credentialType).toBe('OAUTH_TOKEN');
+      expect(response.data.readinessStatus).toBe('READY');
+      expect(response.data.verificationCode).toBe('VALID');
     });
   });
 

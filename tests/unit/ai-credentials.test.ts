@@ -9,6 +9,7 @@ import { encryptCredential, decryptCredential } from '@/lib/ai-credentials/crypt
 import { validateFormat } from '@/lib/ai-credentials/providers/anthropic';
 import { validateFormat as validateOpenAIFormat } from '@/lib/ai-credentials/providers/openai';
 import { validateFormat as validateMistralFormat } from '@/lib/ai-credentials/providers/mistral';
+import { validateFormat as validateGoogleFormat } from '@/lib/ai-credentials/providers/google';
 import { getProviderModule } from '@/lib/ai-credentials/providers';
 
 describe('ai-credentials/crypto', () => {
@@ -227,6 +228,32 @@ describe('ai-credentials/providers/mistral - validateFormat', () => {
   });
 });
 
+describe('ai-credentials/providers/google - validateFormat', () => {
+  it('accepts valid Google API key format', () => {
+    expect(validateGoogleFormat('API_KEY', 'AIza' + 'a'.repeat(24)).valid).toBe(true);
+  });
+
+  it('rejects Google API key containing whitespace', () => {
+    const result = validateGoogleFormat('API_KEY', 'AIza' + 'a '.repeat(12));
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('whitespace');
+  });
+
+  it('accepts cached Gemini OAuth bundle JSON', () => {
+    const result = validateGoogleFormat(
+      'OAUTH_TOKEN',
+      JSON.stringify({ refresh_token: 'refresh-token', credentials: { access_token: 'abc' } })
+    );
+    expect(result.valid).toBe(true);
+  });
+
+  it('rejects malformed Google OAuth bundle JSON', () => {
+    const result = validateGoogleFormat('OAUTH_TOKEN', 'not-json');
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('valid JSON');
+  });
+});
+
 describe('ai-credentials/providers - registry', () => {
   it('should return the correct module for ANTHROPIC', () => {
     const mod = getProviderModule('ANTHROPIC');
@@ -250,5 +277,12 @@ describe('ai-credentials/providers - registry', () => {
     expect(mod.verifyWithProvider).toBeDefined();
     // Mistral module should accept 32+ char key
     expect(mod.validateFormat('API_KEY', 'a'.repeat(32)).valid).toBe(true);
+  });
+
+  it('should return the correct module for GOOGLE', () => {
+    const mod = getProviderModule('GOOGLE');
+    expect(mod.validateFormat).toBeDefined();
+    expect(mod.verifyWithProvider).toBeDefined();
+    expect(mod.validateFormat('API_KEY', 'AIza' + 'a'.repeat(24)).valid).toBe(true);
   });
 });

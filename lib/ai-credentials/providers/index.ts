@@ -1,6 +1,7 @@
 import type { CredentialProvider, CredentialType } from '@prisma/client';
 import type { FormatValidationResult, VerificationResult } from '../types';
 import * as anthropic from './anthropic';
+import * as google from './google';
 import * as mistral from './mistral';
 import * as openai from './openai';
 
@@ -13,6 +14,7 @@ const PROVIDER_MODULES: Record<CredentialProvider, ProviderModule> = {
   ANTHROPIC: anthropic,
   OPENAI: openai,
   MISTRAL: mistral,
+  GOOGLE: google,
 };
 
 export function getProviderModule(provider: CredentialProvider): ProviderModule {

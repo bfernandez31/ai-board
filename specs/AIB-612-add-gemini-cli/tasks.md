@@ -11,9 +11,9 @@
 
 **Purpose**: Establish the schema and provider scaffolding required for all later work.
 
-- [ ] T001 Extend `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` with `Agent.GEMINI` and `CredentialProvider.GOOGLE`, and create the generated migration under `/home/runner/work/ai-board/ai-board/target/prisma/migrations/`
-- [ ] T002 [P] Create `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/providers/google.ts` for Google API key verification and Gemini OAuth bundle validation
-- [ ] T003 [P] Regenerate the Prisma client from `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` so generated enum types include `GEMINI` and `GOOGLE`
+- [X] T001 Extend `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` with `Agent.GEMINI` and `CredentialProvider.GOOGLE`, and create the generated migration under `/home/runner/work/ai-board/ai-board/target/prisma/migrations/`
+- [X] T002 [P] Create `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/providers/google.ts` for Google API key verification and Gemini OAuth bundle validation
+- [X] T003 [P] Regenerate the Prisma client from `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` so generated enum types include `GEMINI` and `GOOGLE`
 
 ---
 
@@ -23,9 +23,9 @@
 
 **⚠️ CRITICAL**: No user story work should start until this phase is complete.
 
-- [ ] T004 [P] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-schema.test.ts`, `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-icons.test.ts`, and `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-resolution.test.ts` with Gemini and Google coverage before shared helper changes
-- [ ] T005 Extend `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/types.ts` and `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/providers/index.ts` with `GEMINI -> GOOGLE` mappings, allowed credential types, and workflow env-var contracts
-- [ ] T006 [P] Extend `/home/runner/work/ai-board/ai-board/target/app/lib/schemas/agent.ts`, `/home/runner/work/ai-board/ai-board/target/app/lib/utils/agent-icons.ts`, and `/home/runner/work/ai-board/ai-board/target/app/lib/utils/agent-resolution.ts` with shared Gemini metadata, aliases, and workflow-support helpers
+- [X] T004 [P] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-schema.test.ts`, `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-icons.test.ts`, and `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-resolution.test.ts` with Gemini and Google coverage before shared helper changes
+- [X] T005 Extend `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/types.ts` and `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/providers/index.ts` with `GEMINI -> GOOGLE` mappings, allowed credential types, and workflow env-var contracts
+- [X] T006 [P] Extend `/home/runner/work/ai-board/ai-board/target/app/lib/schemas/agent.ts`, `/home/runner/work/ai-board/ai-board/target/app/lib/utils/agent-icons.ts`, and `/home/runner/work/ai-board/ai-board/target/app/lib/utils/agent-resolution.ts` with shared Gemini metadata, aliases, and workflow-support helpers
 
 **Checkpoint**: Shared enums, provider maps, and agent metadata are stable for all stories.
 
@@ -39,17 +39,17 @@
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/ai-credentials.test.ts` with Google provider validation, readiness, and provider/type compatibility cases
+- [X] T007 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/ai-credentials.test.ts` with Google provider validation, readiness, and provider/type compatibility cases
 - [ ] T008 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/credential-form.test.tsx` with Google API key and OAuth bundle entry states in the credential form
-- [ ] T009 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/credentials/credentials-api.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/integration/credentials/credential-validation.test.ts` with Google create, retest, and unreachable-provider error scenarios
-- [ ] T010 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/credentials/workflow-credential.test.ts` with Google workflow credential resolution cases for `GEMINI_API_KEY` and `GEMINI_OAUTH_JSON`
+- [X] T009 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/credentials/credentials-api.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/integration/credentials/credential-validation.test.ts` with Google create, retest, and unreachable-provider error scenarios
+- [X] T010 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/credentials/workflow-credential.test.ts` with Google workflow credential resolution cases for `GEMINI_API_KEY` and `GEMINI_OAUTH_JSON`
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Implement Google provider verification and OAuth bundle structural validation in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/providers/google.ts` and wire it through `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/providers/index.ts`
-- [ ] T012 [US1] Extend `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/service.ts` and `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/workflow.ts` for encrypted Google credential storage, readiness handling, and workflow-facing env-var payloads
-- [ ] T013 [US1] Extend `/home/runner/work/ai-board/ai-board/target/app/api/credentials/route.ts`, `/home/runner/work/ai-board/ai-board/target/app/api/credentials/[id]/test/route.ts`, and `/home/runner/work/ai-board/ai-board/target/app/api/internal/credentials/route.ts` to accept, retest, and resolve Google credentials with `no-store` responses
-- [ ] T014 [US1] Extend `/home/runner/work/ai-board/ai-board/target/components/credentials/credential-form.tsx` and `/home/runner/work/ai-board/ai-board/target/components/credentials/credential-item.tsx` to collect Google credentials, show validation feedback, and mask stored values
+- [X] T011 [US1] Implement Google provider verification and OAuth bundle structural validation in `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/providers/google.ts` and wire it through `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/providers/index.ts`
+- [X] T012 [US1] Extend `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/service.ts` and `/home/runner/work/ai-board/ai-board/target/lib/ai-credentials/workflow.ts` for encrypted Google credential storage, readiness handling, and workflow-facing env-var payloads
+- [X] T013 [US1] Extend `/home/runner/work/ai-board/ai-board/target/app/api/credentials/route.ts`, `/home/runner/work/ai-board/ai-board/target/app/api/credentials/[id]/test/route.ts`, and `/home/runner/work/ai-board/ai-board/target/app/api/internal/credentials/route.ts` to accept, retest, and resolve Google credentials with `no-store` responses
+- [X] T014 [US1] Extend `/home/runner/work/ai-board/ai-board/target/components/credentials/credential-form.tsx` and `/home/runner/work/ai-board/ai-board/target/components/credentials/credential-item.tsx` to collect Google credentials, show validation feedback, and mask stored values
 
 **Checkpoint**: User Story 1 is complete when Google credentials can be saved, validated, and resolved safely for Gemini workflows.
 
@@ -109,12 +109,12 @@
 
 ### Tests for User Story 4
 
-- [ ] T029 [P] [US4] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/analytics/analytics-route.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/unit/components/analytics-dashboard.test.tsx` with Gemini and Mistral filter options, effective-agent normalization, and incomplete-cost scenarios
+- [X] T029 [P] [US4] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/analytics/analytics-route.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/unit/components/analytics-dashboard.test.tsx` with Gemini and Mistral filter options, effective-agent normalization, and incomplete-cost scenarios
 
 ### Implementation for User Story 4
 
-- [ ] T030 [US4] Extend `/home/runner/work/ai-board/ai-board/target/lib/analytics/types.ts`, `/home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts`, and `/home/runner/work/ai-board/ai-board/target/lib/analytics/aggregations.ts` to derive available agents and cost semantics from effective agent history
-- [ ] T031 [US4] Extend `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/analytics/route.ts` and `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/analytics/page.tsx` to accept `agent=GEMINI|MISTRAL` and normalize invalid filters to `all`
+- [X] T030 [US4] Extend `/home/runner/work/ai-board/ai-board/target/lib/analytics/types.ts`, `/home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts`, and `/home/runner/work/ai-board/ai-board/target/lib/analytics/aggregations.ts` to derive available agents and cost semantics from effective agent history
+- [X] T031 [US4] Extend `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/analytics/route.ts` and `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/analytics/page.tsx` to accept `agent=GEMINI|MISTRAL` and normalize invalid filters to `all`
 - [ ] T032 [US4] Extend `/home/runner/work/ai-board/ai-board/target/components/analytics/analytics-dashboard.tsx`, `/home/runner/work/ai-board/ai-board/target/components/analytics/overview-cards.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/analytics/top-tools-chart.tsx` to render Gemini and Mistral filter options plus incomplete-cost messaging
 
 **Checkpoint**: User Story 4 is complete when analytics surfaces show Gemini and Mistral consistently and accurately.

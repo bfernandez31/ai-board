@@ -8,6 +8,7 @@ import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
 import { getProjectServiceInputs } from '@/lib/workflows/service-inputs';
 import { ensureFreshConfig } from '@/lib/config-sync';
 import { prisma } from '@/lib/db/client';
+import { supportsWorkflowCommand } from '@/app/lib/utils/agent-resolution';
 
 /** Stage-to-command mapping (null = manual/no workflow) */
 export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
@@ -24,7 +25,7 @@ export interface TransitionResult {
   success: boolean;
   jobId?: number;
   error?: string;
-  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB' | 'MISSING_CREDENTIAL' | 'CONFIG_SYNC_FAILED';
+  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB' | 'MISSING_CREDENTIAL' | 'CONFIG_SYNC_FAILED' | 'UNSUPPORTED_AGENT';
   details?: {
     currentStage?: Stage;
     targetStage?: Stage;
@@ -161,10 +162,18 @@ export async function handleTicketTransition(
       };
     }
 
+    const effectiveAgent = resolveEffectiveAgent(ticket);
+    if (!supportsWorkflowCommand(effectiveAgent, command)) {
+      return {
+        success: false,
+        error: `${effectiveAgent} does not support the ${command} workflow`,
+        errorCode: 'UNSUPPORTED_AGENT',
+      };
+    }
+
     // Validate BYOK credential and ensure fresh config before dispatch
     if (!isWorkflowTestMode(process.env.GITHUB_TOKEN)) {
-      const effectiveAgentForCred = resolveEffectiveAgent(ticket);
-      const provider = AGENT_PROVIDER_MAP[effectiveAgentForCred];
+      const provider = AGENT_PROVIDER_MAP[effectiveAgent];
       const credential = await getOwnerCredential(ticket.projectId, provider);
       if (!credential) {
         return {
@@ -238,8 +247,6 @@ export async function handleTicketTransition(
         });
 
         let workflowInputs: Record<string, string>;
-
-        const effectiveAgent = resolveEffectiveAgent(ticket);
 
         if (isQuickImpl) {
           const quickImplPayload = {

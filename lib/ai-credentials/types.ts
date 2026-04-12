@@ -56,12 +56,14 @@ export const AGENT_PROVIDER_MAP: Record<Agent, CredentialProvider> = {
   CLAUDE: 'ANTHROPIC',
   CODEX: 'OPENAI',
   MISTRAL: 'MISTRAL',
+  GEMINI: 'GOOGLE',
 };
 
 export const PROVIDER_ALLOWED_TYPES: Record<CredentialProvider, CredentialType[]> = {
   ANTHROPIC: ['API_KEY', 'OAUTH_TOKEN'],
   OPENAI: ['API_KEY', 'OAUTH_TOKEN'],
   MISTRAL: ['API_KEY'],
+  GOOGLE: ['API_KEY', 'OAUTH_TOKEN'],
 };
 
 export const ENV_VAR_MAP: Record<string, string> = {
@@ -70,6 +72,8 @@ export const ENV_VAR_MAP: Record<string, string> = {
   'OPENAI:API_KEY': 'OPENAI_API_KEY',
   'OPENAI:OAUTH_TOKEN': 'CODEX_OAUTH_JSON',
   'MISTRAL:API_KEY': 'MISTRAL_API_KEY',
+  'GOOGLE:API_KEY': 'GEMINI_API_KEY',
+  'GOOGLE:OAUTH_TOKEN': 'GEMINI_OAUTH_JSON',
 };
 
 export function getEnvVar(provider: CredentialProvider, credentialType: CredentialType): string {

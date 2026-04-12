@@ -11,12 +11,15 @@ import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 
 const batchPayloadSchema = z.object({
   jobId: z.number().int().positive().optional(),
+  agent: z.enum(['MISTRAL', 'GEMINI']).optional(),
   inputTokens: z.number().int().nonnegative().optional(),
   outputTokens: z.number().int().nonnegative().optional(),
   cacheReadTokens: z.number().int().nonnegative().optional(),
   cacheCreationTokens: z.number().int().nonnegative().optional(),
   model: z.string().optional(),
   toolsUsed: z.array(z.string()).optional(),
+  costUsd: z.number().nonnegative().optional(),
+  costStatus: z.enum(['ESTIMATED', 'UNAVAILABLE']).optional(),
 });
 
 /**
@@ -149,7 +152,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             metrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
             metrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
             metrics.cacheCreationTokens += parseIntAttribute(findAttribute(attrs, 'cache_creation_tokens'));
-            metrics.costUsd += parseFloatAttribute(findAttribute(attrs, 'cost_usd'));
+            metrics.costUsd =
+              (metrics.costUsd ?? 0) + parseFloatAttribute(findAttribute(attrs, 'cost_usd'));
             metrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
             const model = findAttribute(attrs, 'model');
             if (model) metrics.model = String(model);
@@ -171,7 +175,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             if (model) metrics.model = String(model);
 
             // Estimate cost from OpenAI API pricing (Codex doesn't report cost_usd)
-            metrics.costUsd += estimateOpenAICost(String(model ?? 'gpt-5.4'), nonCachedInputTokens, outputTokens, cachedTokens);
+            metrics.costUsd =
+              (metrics.costUsd ?? 0) +
+              estimateOpenAICost(
+                String(model ?? 'gpt-5.4'),
+                nonCachedInputTokens,
+                outputTokens,
+                cachedTokens
+              );
           }
 
           if (isToolEvent) {
@@ -220,7 +231,7 @@ interface TelemetryMetrics {
   outputTokens: number;
   cacheReadTokens: number;
   cacheCreationTokens: number;
-  costUsd: number;
+  costUsd: number | null;
   durationMs: number;
   model: string | null;
   toolsUsed: Set<string>;
@@ -232,7 +243,7 @@ function createEmptyMetrics(): TelemetryMetrics {
     outputTokens: 0,
     cacheReadTokens: 0,
     cacheCreationTokens: 0,
-    costUsd: 0,
+    costUsd: null,
     durationMs: 0,
     model: null,
     toolsUsed: new Set<string>(),
@@ -274,10 +285,13 @@ async function updateJobMetrics(
     outputTokens: (job.outputTokens || 0) + metrics.outputTokens,
     cacheReadTokens: (job.cacheReadTokens || 0) + metrics.cacheReadTokens,
     cacheCreationTokens: (job.cacheCreationTokens || 0) + metrics.cacheCreationTokens,
-    costUsd: (job.costUsd || 0) + metrics.costUsd,
     durationMs: (job.durationMs || 0) + metrics.durationMs,
     toolsUsed: mergedTools,
   };
+
+  if (metrics.costUsd != null) {
+    updateData.costUsd = (job.costUsd || 0) + metrics.costUsd;
+  }
 
   if (metrics.model) {
     updateData.model = metrics.model;
@@ -392,8 +406,13 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
     metrics.toolsUsed.add(tool);
   }
 
-  // Estimate cost if tokens provided
-  if (metrics.inputTokens > 0 || metrics.outputTokens > 0) {
+  if (typeof data.costUsd === 'number') {
+    metrics.costUsd = data.costUsd;
+  } else if (
+    data.agent !== 'GEMINI' &&
+    data.costStatus !== 'UNAVAILABLE' &&
+    (metrics.inputTokens > 0 || metrics.outputTokens > 0)
+  ) {
     metrics.costUsd = estimateMistralCost(
       data.model ?? 'mistral-large-latest',
       metrics.inputTokens,

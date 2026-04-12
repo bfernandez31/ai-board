@@ -43,6 +43,11 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
             </span>
             <span>vs previous period</span>
           </div>
+          {metrics.costsIncomplete && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Some job costs are unavailable and excluded from totals.
+            </p>
+          )}
         </CardContent>
       </Card>
 

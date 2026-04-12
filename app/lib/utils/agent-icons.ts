@@ -1,4 +1,4 @@
-import { Agent } from '@prisma/client';
+import type { Agent } from '@prisma/client';
 
 const AGENT_METADATA: Record<
   Agent,
@@ -8,20 +8,25 @@ const AGENT_METADATA: Record<
     label: string;
   }
 > = {
-  [Agent.CLAUDE]: {
+  CLAUDE: {
     description: 'Anthropic Claude Code',
     iconPath: '/agents/claude.svg',
     label: 'Claude',
   },
-  [Agent.CODEX]: {
+  CODEX: {
     description: 'OpenAI Codex',
     iconPath: '/agents/codex.svg',
     label: 'Codex',
   },
-  [Agent.MISTRAL]: {
+  MISTRAL: {
     description: 'Mistral vibe',
     iconPath: '/agents/mistral.svg',
     label: 'Mistral',
+  },
+  GEMINI: {
+    description: 'Google Gemini CLI',
+    iconPath: '/agents/gemini.svg',
+    label: 'Gemini',
   },
 };
 
@@ -47,15 +52,19 @@ export function inferAgentFromIdentifier(agentIdentifier: string | null | undefi
     normalizedIdentifier.includes('gpt-');
 
   if (normalizedIdentifier.includes('claude')) {
-    return Agent.CLAUDE;
+    return 'CLAUDE';
   }
 
   if (isCodexIdentifier) {
-    return Agent.CODEX;
+    return 'CODEX';
   }
 
   if (normalizedIdentifier.includes('mistral') || normalizedIdentifier.includes('vibe')) {
-    return Agent.MISTRAL;
+    return 'MISTRAL';
+  }
+
+  if (normalizedIdentifier.includes('gemini') || normalizedIdentifier.includes('google')) {
+    return 'GEMINI';
   }
 
   return null;

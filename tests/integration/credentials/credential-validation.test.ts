@@ -167,4 +167,36 @@ describe('Credential Format Validation', () => {
       expect(response.status).toBe(400);
     });
   });
+
+  describe('GOOGLE credential formats', () => {
+    it('should reject Google OAuth bundle that is not JSON', async () => {
+      const response = await ctx.api.post<{ error: string }>('/api/credentials', {
+        provider: 'GOOGLE',
+        credentialType: 'OAUTH_TOKEN',
+        label: '[e2e] Invalid Google Bundle',
+        value: 'not-json',
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toContain('valid JSON');
+    });
+
+    it('should accept GOOGLE + OAUTH_TOKEN cached bundle', async () => {
+      const response = await ctx.api.post<{
+        provider: string;
+        credentialType: string;
+        readinessStatus: string;
+      }>('/api/credentials', {
+        provider: 'GOOGLE',
+        credentialType: 'OAUTH_TOKEN',
+        label: '[e2e] Gemini OAuth',
+        value: JSON.stringify({ refresh_token: 'refresh-token', credentials: { access_token: 'abc' } }),
+      });
+
+      expect(response.status).toBe(201);
+      expect(response.data.provider).toBe('GOOGLE');
+      expect(response.data.credentialType).toBe('OAUTH_TOKEN');
+      expect(response.data.readinessStatus).toBe('READY');
+    });
+  });
 });

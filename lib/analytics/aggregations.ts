@@ -119,6 +119,10 @@ export function getAgentLabel(agent: AgentFilter): string {
       return 'Claude';
     case 'CODEX':
       return 'Codex';
+    case 'MISTRAL':
+      return 'Mistral';
+    case 'GEMINI':
+      return 'Gemini';
   }
 }
 

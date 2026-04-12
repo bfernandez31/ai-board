@@ -110,8 +110,9 @@ export async function testCredential(
 
   const credentialType = credential.credentialType as 'API_KEY' | 'OAUTH_TOKEN';
 
-  // OAuth tokens skip provider verification (format-only validation)
-  if (credentialType === 'OAUTH_TOKEN') {
+  // Most OAuth tokens are treated as cached auth blobs and skip live verification.
+  // Google is the exception: Gemini uses a structured bundle that must be revalidated.
+  if (credentialType === 'OAUTH_TOKEN' && credential.provider !== 'GOOGLE') {
     const result: VerificationResult = {
       readinessStatus: 'READY',
       verificationCode: 'SKIPPED',

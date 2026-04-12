@@ -6,7 +6,7 @@ import { getAnalyticsData } from '@/lib/analytics/queries';
 const querySchema = z.object({
   range: z.enum(['7d', '30d', '90d', 'all']).default('30d'),
   outcome: z.enum(['shipped', 'closed', 'all-completed']).default('shipped'),
-  agent: z.enum(['all', 'CLAUDE', 'CODEX']).default('all'),
+  agent: z.enum(['all', 'CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']).default('all'),
 });
 
 export async function GET(
