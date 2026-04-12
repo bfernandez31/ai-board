@@ -13,14 +13,13 @@ const validateGoogleCredentialSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    await getCurrentUserOrToken(request); // Ensure user is authenticated
+    await getCurrentUserOrToken(request);
     
     const body = await request.json();
     const { credentialType, value } = validateGoogleCredentialSchema.parse(body);
     
     const providerModule = getProviderModule('GOOGLE');
     
-    // Validate format first
     const formatResult = providerModule.validateFormat(credentialType, value);
     if (!formatResult.valid) {
       return NextResponse.json(
@@ -33,7 +32,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // If format is valid, attempt provider verification
     const verificationResult = await providerModule.verifyWithProvider(credentialType, value);
     
     return NextResponse.json({

@@ -9,7 +9,6 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUserOrToken(request);
     
-    // Get the user's Google credential
     const credential = await prisma.userCredential.findFirst({
       where: {
         userId: user.id,
