@@ -392,10 +392,13 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Now try to save in browser (with stale version 1)
     await titleInput.fill('My Update');
-    await titleInput.press('Enter');
 
-    // Wait for API error response
-    await page.waitForTimeout(300);
+    // Wait for PATCH response before asserting toast (avoids 300ms timeout flakiness in CI)
+    const conflictResponse = page.waitForResponse(
+      resp => resp.url().includes('/tickets/') && resp.request().method() === 'PATCH'
+    );
+    await titleInput.press('Enter');
+    await conflictResponse;
 
     // Assert: API returns 409
     // Wait for conflict toast
@@ -537,8 +540,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     // Error should be gone
     await expect(errorMessage).not.toBeVisible();
 
-    // Press Enter to save
+    // Press Enter to save — wait for PATCH response before asserting toast (CI stability)
+    const patchResponse = page.waitForResponse(
+      resp => resp.url().includes('/tickets/') && resp.request().method() === 'PATCH'
+    );
     await input.press('Enter');
+    await patchResponse;
 
     // Wait for input to disappear (edit mode exits)
     await expect(input).not.toBeVisible({ timeout: 2000 });
