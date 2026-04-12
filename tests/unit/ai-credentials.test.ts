@@ -9,6 +9,7 @@ import { encryptCredential, decryptCredential } from '@/lib/ai-credentials/crypt
 import { validateFormat } from '@/lib/ai-credentials/providers/anthropic';
 import { validateFormat as validateOpenAIFormat } from '@/lib/ai-credentials/providers/openai';
 import { validateFormat as validateMistralFormat } from '@/lib/ai-credentials/providers/mistral';
+import { validateFormat as validateGoogleFormat } from '@/lib/ai-credentials/providers/google';
 import { getProviderModule } from '@/lib/ai-credentials/providers';
 
 describe('ai-credentials/crypto', () => {
@@ -227,6 +228,67 @@ describe('ai-credentials/providers/mistral - validateFormat', () => {
   });
 });
 
+describe('ai-credentials/providers/google - validateFormat', () => {
+  describe('API_KEY format', () => {
+    it('should accept valid Google API key format (AIza...)', () => {
+      const validKey = 'AIza' + 'a'.repeat(35);
+      const result = validateGoogleFormat('API_KEY', validKey);
+      expect(result.valid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should reject empty API key', () => {
+      const result = validateGoogleFormat('API_KEY', '');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('API key is required');
+    });
+
+    it('should reject API key that is too short', () => {
+      const result = validateGoogleFormat('API_KEY', 'AIza' + 'a'.repeat(10));
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('too short');
+    });
+
+    it('should reject API key without AIza prefix', () => {
+      const result = validateGoogleFormat('API_KEY', 'invalid-' + 'a'.repeat(35));
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('must start with AIza');
+    });
+
+    it('should reject API key containing whitespace', () => {
+      const result = validateGoogleFormat('API_KEY', 'AIza' + 'a'.repeat(18) + ' ' + 'b'.repeat(17));
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('whitespace');
+    });
+  });
+
+  describe('OAUTH_TOKEN format', () => {
+    it('should accept valid Google OAuth token (20+ chars)', () => {
+      const result = validateGoogleFormat('OAUTH_TOKEN', 'ya29.' + 'a'.repeat(50));
+      expect(result.valid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should reject empty OAuth token', () => {
+      const result = validateGoogleFormat('OAUTH_TOKEN', '');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('OAuth token is required');
+    });
+
+    it('should reject OAuth token that is too short', () => {
+      const result = validateGoogleFormat('OAUTH_TOKEN', 'short-token');
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('too short');
+    });
+
+    it('should reject OAuth token containing whitespace', () => {
+      const result = validateGoogleFormat('OAUTH_TOKEN', 'ya29.' + 'a'.repeat(20) + ' ' + 'b'.repeat(20));
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('whitespace');
+    });
+  });
+});
+
 describe('ai-credentials/providers - registry', () => {
   it('should return the correct module for ANTHROPIC', () => {
     const mod = getProviderModule('ANTHROPIC');
@@ -250,5 +312,15 @@ describe('ai-credentials/providers - registry', () => {
     expect(mod.verifyWithProvider).toBeDefined();
     // Mistral module should accept 32+ char key
     expect(mod.validateFormat('API_KEY', 'a'.repeat(32)).valid).toBe(true);
+  });
+
+  it('should return the correct module for GOOGLE', () => {
+    const mod = getProviderModule('GOOGLE');
+    expect(mod.validateFormat).toBeDefined();
+    expect(mod.verifyWithProvider).toBeDefined();
+    // Google module should accept AIza... format
+    expect(mod.validateFormat('API_KEY', 'AIza' + 'a'.repeat(35)).valid).toBe(true);
+    // Google module should accept OAuth tokens
+    expect(mod.validateFormat('OAUTH_TOKEN', 'ya29.' + 'a'.repeat(50)).valid).toBe(true);
   });
 });
