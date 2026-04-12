@@ -68,7 +68,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Parse request body
     let body: Record<string, unknown>;
     try {
-      body = await request.json() as Record<string, unknown>;
+      body = await request.json();
     } catch (parseError) {
       // If JSON parse fails, try reading as text for debugging
       console.error('[OTLP Telemetry] JSON parse error:', parseError);
