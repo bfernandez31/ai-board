@@ -1,31 +1,14 @@
-import { timingSafeEqual } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import { isExplicitTestOverrideRequest } from '@/lib/auth/test-user-override';
+import {
+  getAcceptedWorkflowTokens,
+  isAcceptedWorkflowToken,
+} from '@/lib/auth/workflow-token';
 
 /**
  * Authentication source types
  */
 export type AuthSource = 'session' | 'workflow' | null;
-
-const TEST_WORKFLOW_TOKEN = 'test-workflow-token-for-e2e-tests-only';
-
-function getAcceptedWorkflowTokens(): string[] {
-  const tokens = new Set<string>();
-
-  if (process.env.WORKFLOW_API_TOKEN) {
-    tokens.add(process.env.WORKFLOW_API_TOKEN);
-  }
-
-  if (
-    process.env.TEST_MODE === 'true' ||
-    process.env.NODE_ENV === 'test' ||
-    process.env.VITEST_INTEGRATION === '1'
-  ) {
-    tokens.add(TEST_WORKFLOW_TOKEN);
-  }
-
-  return [...tokens];
-}
 
 /**
  * Check if request has a workflow Bearer token
@@ -79,8 +62,5 @@ export async function verifyWorkflowToken(
     return false;
   }
 
-  return expectedTokens.some((expectedToken) => (
-    token.length === expectedToken.length &&
-    timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken))
-  ));
+  return isAcceptedWorkflowToken(token);
 }

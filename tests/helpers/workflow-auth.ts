@@ -1,3 +1,5 @@
+import { getWorkflowToken as getSharedWorkflowToken } from '@/lib/auth/workflow-token';
+
 /**
  * Workflow Authentication Helpers
  *
@@ -9,7 +11,7 @@
  * Get workflow authentication token for testing
  */
 export function getWorkflowToken(): string {
-  return process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+  return getSharedWorkflowToken();
 }
 
 /**
