@@ -92,6 +92,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
               onClick={handleCopyUrl}
               className="h-8 w-8 text-muted-foreground hover:text-foreground"
               data-testid="copy-deployment-url"
+              aria-label={isCopied ? 'Copied' : 'Copy deployment URL'}
             >
               {isCopied ? (
                 <Check className="h-4 w-4" data-testid="check-icon" />
