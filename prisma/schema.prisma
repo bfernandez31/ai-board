@@ -305,12 +305,14 @@ enum Agent {
   CLAUDE
   CODEX
   MISTRAL
+  GEMINI
 }
 
 enum CredentialProvider {
   ANTHROPIC
   OPENAI
   MISTRAL
+  GOOGLE
 }
 
 enum CredentialType {

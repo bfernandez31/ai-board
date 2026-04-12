@@ -16,7 +16,7 @@ on:
         required: true
         type: string
       agent:
-        description: 'Agent type (CLAUDE or CODEX)'
+        description: 'Agent type (CLAUDE, CODEX, or MISTRAL)'
         required: true
         type: string
 
@@ -66,7 +66,16 @@ jobs:
       - name: Fetch Owner AI Credential
         id: fetch-credential
         run: |
-          PROVIDER=$( [[ "${{ inputs.agent }}" == "CODEX" ]] && echo "OPENAI" || echo "ANTHROPIC" )
+          if [[ "${{ inputs.agent }}" == "GEMINI" ]]; then
+            echo "Gemini is not supported for onboard workflows"
+            exit 1
+          elif [[ "${{ inputs.agent }}" == "CODEX" ]]; then
+            PROVIDER="OPENAI"
+          elif [[ "${{ inputs.agent }}" == "MISTRAL" ]]; then
+            PROVIDER="MISTRAL"
+          else
+            PROVIDER="ANTHROPIC"
+          fi
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             "${APP_URL}/api/internal/credentials?projectId=${{ inputs.project_id }}&provider=${PROVIDER}" \
             -H "Authorization: Bearer ${{ env.WORKFLOW_API_TOKEN }}")

@@ -14,9 +14,10 @@ import {
 import { useCreateCredential } from "@/lib/hooks/mutations/useCredentials";
 
 type Provider = "ANTHROPIC" | "OPENAI" | "MISTRAL";
+type ExtendedProvider = Provider | "GOOGLE";
 
 export function CredentialForm() {
-  const [provider, setProvider] = useState<Provider>("ANTHROPIC");
+  const [provider, setProvider] = useState<ExtendedProvider>("ANTHROPIC");
   const [credentialType, setCredentialType] = useState("API_KEY");
   const [label, setLabel] = useState("");
   const [value, setValue] = useState("");
@@ -24,7 +25,7 @@ export function CredentialForm() {
 
   const createCredential = useCreateCredential();
 
-  function validateFormat(prov: Provider, type: string, val: string): string | null {
+  function validateFormat(prov: ExtendedProvider, type: string, val: string): string | null {
     if (!val) return null;
     if (prov === "MISTRAL") {
       if (type !== "API_KEY") {
@@ -48,6 +49,35 @@ export function CredentialForm() {
         }
       }
       // OAUTH_TOKEN: no format constraint
+      return null;
+    }
+    if (prov === "GOOGLE") {
+      if (type === "API_KEY") {
+        if (val.length < 20) {
+          return "Google API key appears too short";
+        }
+        if (/\s/.test(val)) {
+          return "Google API key must not contain whitespace";
+        }
+        return null;
+      }
+
+      try {
+        const parsed = JSON.parse(val) as Record<string, unknown>;
+        const hasAuthData =
+          typeof parsed.refresh_token === "string" ||
+          typeof parsed.access_token === "string" ||
+          (typeof parsed.credentials === "object" && parsed.credentials !== null) ||
+          (typeof parsed.auth === "object" && parsed.auth !== null) ||
+          (typeof parsed.tokens === "object" && parsed.tokens !== null);
+
+        if (!hasAuthData) {
+          return "Google OAuth bundle must include cached Gemini authentication data";
+        }
+      } catch {
+        return "Google OAuth bundle must be valid JSON";
+      }
+
       return null;
     }
     // ANTHROPIC
@@ -76,15 +106,18 @@ export function CredentialForm() {
     setFormatError(validateFormat(provider, newType, value));
   }
 
-  function getPlaceholder(prov: Provider, type: string): string {
+  function getPlaceholder(prov: ExtendedProvider, type: string): string {
     if (type === "OAUTH_TOKEN") {
-      return prov === "OPENAI" ? "Paste your Codex token" : "Paste your OAuth token";
+      if (prov === "OPENAI") return "Paste your Codex token";
+      if (prov === "GOOGLE") return 'Paste your Gemini auth bundle JSON';
+      return "Paste your OAuth token";
     }
     if (prov === "MISTRAL") return "Paste your Mistral API key";
+    if (prov === "GOOGLE") return "Paste your Gemini API key";
     return prov === "OPENAI" ? "sk-proj-..." : "sk-ant-api03-...";
   }
 
-  function handleProviderChange(newProvider: Provider) {
+  function handleProviderChange(newProvider: ExtendedProvider) {
     setProvider(newProvider);
     // Mistral only supports API_KEY — reset if OAUTH_TOKEN was selected
     const effectiveType = newProvider === "MISTRAL" && credentialType === "OAUTH_TOKEN" ? "API_KEY" : credentialType;
@@ -131,6 +164,7 @@ export function CredentialForm() {
               <SelectItem value="ANTHROPIC">Anthropic</SelectItem>
               <SelectItem value="OPENAI">OpenAI</SelectItem>
               <SelectItem value="MISTRAL">Mistral</SelectItem>
+              <SelectItem value="GOOGLE">Google</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -162,8 +196,12 @@ export function CredentialForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="value">
-          {credentialType === "API_KEY" ? "API Key" : "OAuth Token"}
+          <Label htmlFor="value">
+          {provider === "GOOGLE" && credentialType === "OAUTH_TOKEN"
+            ? "Gemini OAuth Bundle"
+            : credentialType === "API_KEY"
+              ? "API Key"
+              : "OAuth Token"}
         </Label>
         <Input
           id="value"

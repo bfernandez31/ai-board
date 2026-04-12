@@ -6,7 +6,7 @@ import { getProviderModule } from '@/lib/ai-credentials/providers';
 import { PROVIDER_ALLOWED_TYPES, type CredentialListItem } from '@/lib/ai-credentials/types';
 
 const createCredentialSchema = z.object({
-  provider: z.enum(['ANTHROPIC', 'OPENAI', 'MISTRAL']),
+  provider: z.enum(['ANTHROPIC', 'OPENAI', 'MISTRAL', 'GOOGLE']),
   credentialType: z.enum(['API_KEY', 'OAUTH_TOKEN']),
   label: z.string().min(1, 'Label is required').max(100, 'Label must be 100 characters or less').transform(v => v.trim()),
   value: z.string().min(1, 'Credential value is required'),
@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // OAuth tokens skip live verification (format-only validation)
-    const verificationResult = validated.credentialType === 'OAUTH_TOKEN'
+    // Google OAuth bundles are structurally revalidated; other OAuth credentials remain cached-auth only.
+    const verificationResult = (validated.provider !== 'GOOGLE' && validated.credentialType === 'OAUTH_TOKEN')
       ? { readinessStatus: 'READY' as const, verificationCode: 'SKIPPED' as const, verificationMessage: null }
       : await providerModule.verifyWithProvider(validated.credentialType, validated.value);
 

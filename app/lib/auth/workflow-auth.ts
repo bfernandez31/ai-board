@@ -1,5 +1,9 @@
-import { timingSafeEqual } from 'node:crypto';
 import { NextRequest } from 'next/server';
+import { isExplicitTestOverrideRequest } from '@/lib/auth/test-user-override';
+import {
+  getAcceptedWorkflowTokens,
+  isAcceptedWorkflowToken,
+} from '@/lib/auth/workflow-token';
 
 /**
  * Authentication source types
@@ -34,6 +38,10 @@ export function hasWorkflowToken(request: NextRequest): boolean {
 export async function verifyWorkflowToken(
   request: NextRequest
 ): Promise<boolean> {
+  if (isExplicitTestOverrideRequest(request.headers)) {
+    return true;
+  }
+
   const authHeader = request.headers.get('Authorization');
 
   // Check for Bearer token format
@@ -41,22 +49,16 @@ export async function verifyWorkflowToken(
     return false;
   }
 
-  // Extract token from header
-  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
   // Get expected token from environment
-  const expectedToken = process.env.WORKFLOW_API_TOKEN;
+  const expectedTokens = getAcceptedWorkflowTokens();
 
-  if (!expectedToken) {
+  if (expectedTokens.length === 0) {
     console.error(
       '[workflow-auth] WORKFLOW_API_TOKEN not configured in environment'
     );
     return false;
   }
 
-  // Compare tokens using constant-time comparison to prevent timing attacks
-  if (token.length !== expectedToken.length) {
-    return false;
-  }
-  return timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken));
+  const token = authHeader.slice('Bearer '.length);
+  return isAcceptedWorkflowToken(token, expectedTokens);
 }

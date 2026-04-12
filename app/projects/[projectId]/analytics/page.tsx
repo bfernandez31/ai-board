@@ -13,7 +13,7 @@ export const revalidate = 0;
 
 const VALID_RANGES = new Set<TimeRange>(['7d', '30d', '90d', 'all']);
 const VALID_OUTCOMES = new Set<TicketOutcomeFilter>(['shipped', 'closed', 'all-completed']);
-const VALID_AGENTS = new Set<AgentFilter>(['all', 'CLAUDE', 'CODEX']);
+const VALID_AGENTS = new Set<AgentFilter>(['all', 'CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']);
 
 function parseProjectId(projectIdString: string): number {
   const projectId = parseInt(projectIdString, 10);

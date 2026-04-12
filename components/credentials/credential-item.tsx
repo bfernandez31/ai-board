@@ -44,6 +44,21 @@ function typeLabel(type: string) {
   return type === "API_KEY" ? "API Key" : "OAuth Token";
 }
 
+function providerLabel(provider: string) {
+  switch (provider) {
+    case "ANTHROPIC":
+      return "Anthropic";
+    case "OPENAI":
+      return "OpenAI";
+    case "MISTRAL":
+      return "Mistral";
+    case "GOOGLE":
+      return "Google";
+    default:
+      return provider;
+  }
+}
+
 export function CredentialItem({ credential }: CredentialItemProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const deleteCredential = useDeleteCredential();
@@ -61,7 +76,7 @@ export function CredentialItem({ credential }: CredentialItemProps) {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium truncate">{credential.label}</span>
           <Badge variant="outline" className="text-xs">
-            {credential.provider}
+            {providerLabel(credential.provider)}
           </Badge>
           <Badge variant="outline" className="text-xs">
             {typeLabel(credential.credentialType)}

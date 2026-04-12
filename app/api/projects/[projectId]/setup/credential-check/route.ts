@@ -5,7 +5,7 @@ import { getOwnerCredential } from '@/lib/ai-credentials/workflow';
 import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
 
 const querySchema = z.object({
-  agent: z.enum(['CLAUDE', 'CODEX'] as const),
+  agent: z.enum(['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI'] as const),
 });
 
 export async function GET(

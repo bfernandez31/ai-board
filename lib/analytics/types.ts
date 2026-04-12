@@ -7,7 +7,7 @@
 
 export type TimeRange = '7d' | '30d' | '90d' | 'all';
 export type TicketOutcomeFilter = 'shipped' | 'closed' | 'all-completed';
-export type NamedAgent = 'CLAUDE' | 'CODEX';
+export type NamedAgent = 'CLAUDE' | 'CODEX' | 'MISTRAL' | 'GEMINI';
 export type AgentFilter = 'all' | NamedAgent;
 
 export interface AnalyticsFilters {
@@ -31,6 +31,8 @@ export interface AgentOption {
 export interface OverviewMetrics {
   /** Total cost in USD for the period */
   totalCost: number;
+  /** True when cost totals omit jobs with unavailable pricing */
+  costsIncomplete: boolean;
   /** Percentage change compared to previous equivalent period */
   costTrend: number;
   /** Percentage of successful jobs (COMPLETED / (COMPLETED + FAILED)) */

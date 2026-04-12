@@ -10,24 +10,21 @@ import { queryKeys } from '@/app/lib/query-keys';
 import { useSetupJobPolling } from '@/app/lib/hooks/useSetupJobPolling';
 import { useToast } from '@/hooks/use-toast';
 import type { Agent } from '@prisma/client';
+import { getAgentDescription, getAgentLabel } from '@/app/lib/utils/agent-icons';
+import { SETUP_VISIBLE_AGENTS, supportsOnboardAgent } from '@/app/lib/utils/agent-resolution';
 
 interface SetupPageClientProps {
   projectId: number;
   projectName: string;
 }
 
-const AGENTS: { value: Agent; label: string; description: string }[] = [
-  {
-    value: 'CLAUDE',
-    label: 'Claude Code',
-    description: 'Anthropic Claude agent for code generation and analysis',
-  },
-  {
-    value: 'CODEX',
-    label: 'Codex',
-    description: 'OpenAI Codex agent for code generation and completion',
-  },
-];
+const AGENTS: { value: Agent; label: string; description: string; supported: boolean }[] =
+  SETUP_VISIBLE_AGENTS.map((value) => ({
+    value,
+    label: getAgentLabel(value),
+    description: getAgentDescription(value),
+    supported: supportsOnboardAgent(value),
+  }));
 
 export function SetupPageClient({ projectId, projectName }: SetupPageClientProps) {
   const router = useRouter();
@@ -87,7 +84,8 @@ export function SetupPageClient({ projectId, projectName }: SetupPageClientProps
     }
   }, [projectId, selectedAgent, toast]);
 
-  const initButtonDisabled = isDispatching || isJobActive || !hasCredential;
+  const selectedAgentSupported = supportsOnboardAgent(selectedAgent);
+  const initButtonDisabled = isDispatching || isJobActive || !hasCredential || !selectedAgentSupported;
 
   // Redirect to board when config is synced
   const [redirecting, setRedirecting] = useState(false);
@@ -148,6 +146,11 @@ export function SetupPageClient({ projectId, projectName }: SetupPageClientProps
               <div>
                 <p className="font-medium text-foreground">{agent.label}</p>
                 <p className="text-sm text-muted-foreground">{agent.description}</p>
+                {!agent.supported && (
+                  <p className="text-xs text-muted-foreground">
+                    Visible here for consistency, but setup is not supported yet.
+                  </p>
+                )}
               </div>
             </div>
           </Card>
@@ -172,6 +175,22 @@ export function SetupPageClient({ projectId, projectName }: SetupPageClientProps
                   Settings
                 </a>{' '}
                 to continue.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hasCredential && !selectedAgentSupported && (
+        <div className="rounded-lg border border-ctp-yellow/30 bg-ctp-yellow/5 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-ctp-yellow mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {getAgentLabel(selectedAgent)} setup is not available yet
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Choose Claude, Codex, or Mistral to run onboarding for this project.
               </p>
             </div>
           </div>

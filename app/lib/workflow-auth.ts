@@ -1,5 +1,9 @@
-import { timingSafeEqual } from 'node:crypto';
 import { NextRequest } from 'next/server';
+import { isExplicitTestOverrideRequest } from '@/lib/auth/test-user-override';
+import {
+  getAcceptedWorkflowTokens,
+  isAcceptedWorkflowToken,
+} from '@/lib/auth/workflow-token';
 
 export interface WorkflowAuthResult {
   isValid: boolean;
@@ -7,9 +11,13 @@ export interface WorkflowAuthResult {
 }
 
 export function validateWorkflowAuth(request: NextRequest): WorkflowAuthResult {
-  const expectedToken = process.env.WORKFLOW_API_TOKEN;
+  if (isExplicitTestOverrideRequest(request.headers)) {
+    return { isValid: true };
+  }
 
-  if (!expectedToken) {
+  const expectedTokens = getAcceptedWorkflowTokens();
+
+  if (expectedTokens.length === 0) {
     console.error('[Workflow Auth] WORKFLOW_API_TOKEN not configured');
     return { isValid: false, error: 'Workflow authentication not configured' };
   }
@@ -26,7 +34,9 @@ export function validateWorkflowAuth(request: NextRequest): WorkflowAuthResult {
     return { isValid: false, error: 'Invalid Authorization header format' };
   }
 
-  if (token.length !== expectedToken.length || !timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken))) {
+  const isValid = isAcceptedWorkflowToken(token, expectedTokens);
+
+  if (!isValid) {
     console.warn('[Workflow Auth] Invalid token');
     return { isValid: false, error: 'Invalid authentication token' };
   }

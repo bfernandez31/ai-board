@@ -3,9 +3,9 @@ set -euo pipefail
 
 # Unified agent runner script for GitHub workflows
 # Abstracts CLI installation, authentication, telemetry, and command invocation
-# across Claude Code and Codex CLI agents.
+# across Claude Code, Codex, Mistral, and Gemini CLI agents.
 
-AGENT_TYPE="${1:?ERROR: AGENT_TYPE is required (CLAUDE, CODEX, or MISTRAL)}"
+AGENT_TYPE="${1:?ERROR: AGENT_TYPE is required (CLAUDE, CODEX, MISTRAL, or GEMINI)}"
 COMMAND="${2:?ERROR: COMMAND is required (e.g., ai-board.specify)}"
 shift 2
 ARGS="$*"
@@ -61,6 +61,12 @@ validate_auth() {
     MISTRAL)
       if [[ -z "${MISTRAL_API_KEY:-}" ]]; then
         log_error "MISTRAL_API_KEY is required for agent type MISTRAL"
+        exit 1
+      fi
+      ;;
+    GEMINI)
+      if [[ -z "${GEMINI_API_KEY:-}" ]] && [[ -z "${GEMINI_OAUTH_JSON:-}" ]]; then
+        log_error "GEMINI_API_KEY or GEMINI_OAUTH_JSON is required for agent type GEMINI"
         exit 1
       fi
       ;;
@@ -395,6 +401,111 @@ $(cat "$prompt_file")" --agent auto-approve
   return $exit_code
 }
 
+# --- Gemini functions ---
+
+install_gemini() {
+  if command -v gemini &>/dev/null; then
+    log_info "Gemini CLI already installed — skipping"
+    return 0
+  fi
+  log_info "Installing Gemini CLI..."
+  if ! npm install -g @google/gemini-cli >&2; then
+    log_error "Failed to install @google/gemini-cli"
+    exit 1
+  fi
+  if ! command -v gemini &>/dev/null; then
+    log_error "Failed to install @google/gemini-cli — CLI binary not found after install"
+    exit 1
+  fi
+  log_info "Gemini CLI installed successfully"
+}
+
+auth_gemini() {
+  mkdir -p ~/.gemini
+  if [[ -n "${GEMINI_OAUTH_JSON:-}" ]]; then
+    printf '%s' "$GEMINI_OAUTH_JSON" > ~/.gemini/oauth.json
+    chmod 600 ~/.gemini/oauth.json
+    log_info "Gemini authenticated via cached OAuth bundle"
+  else
+    log_info "Gemini authenticated via API key"
+  fi
+}
+
+invoke_gemini() {
+  local command_file
+  command_file=$(resolve_command_file "$COMMAND") || exit 1
+
+  local prompt
+  prompt="$(cat "$command_file")"
+
+  if [[ -n "$ARGS" ]]; then
+    local args_file="/tmp/gemini-args.json"
+    printf '%s' "$ARGS" > "$args_file"
+    prompt="${prompt}
+
+The arguments for this command have been written to ${args_file}. Read them with: cat ${args_file}
+Do NOT try to parse the JSON inline in bash — always read from the file."
+    log_info "Args written to $args_file ($(wc -c < "$args_file") bytes)"
+  fi
+
+  local prompt_file
+  prompt_file="$(mktemp /tmp/gemini-prompt-XXXXXX.md)"
+  printf '%s' "$prompt" > "$prompt_file"
+
+  local output_file
+  output_file="$(mktemp /tmp/gemini-stream-XXXX.jsonl)"
+  log_info "Invoking Gemini with command file: $command_file"
+  log_info "Prompt file: $prompt_file ($(wc -c < "$prompt_file") bytes)"
+  gemini -p "$(cat "$prompt_file")" --output-format stream-json 2>&1 | tee "$output_file" || true
+  local exit_code=${PIPESTATUS[0]}
+  export GEMINI_STREAM_FILE="$output_file"
+
+  rm -f "$prompt_file"
+  return $exit_code
+}
+
+collect_gemini_telemetry() {
+  if [[ -z "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]] || [[ -z "${JOB_ID:-}" ]] || [[ -z "${GEMINI_STREAM_FILE:-}" ]] || [[ ! -f "${GEMINI_STREAM_FILE}" ]]; then
+    return 0
+  fi
+
+  local tools_json model input_tokens output_tokens duration_ms
+  tools_json=$(jq -s '[.[] | select(.type == "tool_use" or .event == "tool_use") | (.name // .tool // empty)] | unique' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "[]")
+  model=$(jq -rs '[.[] | .model? // .metadata?.model? // empty] | map(select(length > 0)) | last // empty' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "")
+  input_tokens=$(jq -rs '[.[] | .usage?.inputTokens? // .usage?.input_tokens? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  output_tokens=$(jq -rs '[.[] | .usage?.outputTokens? // .usage?.output_tokens? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  duration_ms=$(jq -rs '[.[] | .durationMs? // .duration_ms? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+
+  local payload
+  payload=$(jq -n \
+    --argjson jobId "$JOB_ID" \
+    --arg agent "GEMINI" \
+    --arg model "$model" \
+    --argjson inputTokens "$input_tokens" \
+    --argjson outputTokens "$output_tokens" \
+    --argjson durationMs "$duration_ms" \
+    --argjson toolsUsed "$tools_json" \
+    --arg costStatus "UNAVAILABLE" \
+    '{jobId: $jobId, agent: $agent, model: $model, inputTokens: $inputTokens, outputTokens: $outputTokens, durationMs: $durationMs, toolsUsed: $toolsUsed, costStatus: $costStatus}')
+
+  local auth_header=""
+  if [[ -n "${OTEL_EXPORTER_OTLP_HEADERS:-}" ]]; then
+    auth_header="${OTEL_EXPORTER_OTLP_HEADERS#Authorization=}"
+  fi
+
+  if [[ -z "$auth_header" ]]; then
+    log_info "Skipping Gemini telemetry — no auth header available"
+    return 0
+  fi
+
+  curl -s -o /dev/null \
+    -X POST "${OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs" \
+    -H "Authorization: ${auth_header}" \
+    -H "Content-Type: application/json" \
+    --data-raw "$payload" \
+    --max-time 10 || true
+}
+
 # --- Main dispatch ---
 
 case "$AGENT_TYPE" in
@@ -418,8 +529,17 @@ case "$AGENT_TYPE" in
     invoke_mistral
     collect_mistral_telemetry
     ;;
+  GEMINI)
+    validate_auth
+    install_gemini
+    auth_gemini
+    gemini_exit=0
+    invoke_gemini || gemini_exit=$?
+    collect_gemini_telemetry
+    exit $gemini_exit
+    ;;
   *)
-    log_error "Unsupported agent type '$AGENT_TYPE'. Supported: CLAUDE, CODEX, MISTRAL"
+    log_error "Unsupported agent type '$AGENT_TYPE'. Supported: CLAUDE, CODEX, MISTRAL, GEMINI"
     exit 1
     ;;
 esac

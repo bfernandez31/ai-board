@@ -30,7 +30,7 @@ on:
         required: true
         type: string
       agent:
-        description: 'Agent type (CLAUDE or CODEX)'
+        description: 'Agent type (CLAUDE, CODEX, or MISTRAL)'
         required: false
         type: string
         default: 'CLAUDE'
@@ -214,7 +214,16 @@ jobs:
       - name: Fetch Owner AI Credential
         run: |
           echo "🔑 Fetching owner AI credential for project $INPUT_PROJECT_ID..."
-          PROVIDER=$( [[ "${INPUT_AGENT}" == "CODEX" ]] && echo "OPENAI" || echo "ANTHROPIC" )
+          if [[ "${INPUT_AGENT}" == "GEMINI" ]]; then
+            echo "Gemini is not supported for health-scan workflows"
+            exit 1
+          elif [[ "${INPUT_AGENT}" == "CODEX" ]]; then
+            PROVIDER="OPENAI"
+          elif [[ "${INPUT_AGENT}" == "MISTRAL" ]]; then
+            PROVIDER="MISTRAL"
+          else
+            PROVIDER="ANTHROPIC"
+          fi
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             "${APP_URL}/api/internal/credentials?projectId=${INPUT_PROJECT_ID}&provider=${PROVIDER}" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}")

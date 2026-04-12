@@ -180,6 +180,7 @@ function makeAnalyticsData(filters: Partial<AnalyticsFilters> = {}, overrides: P
   return {
     overview: {
       totalCost: 10,
+      costsIncomplete: false,
       costTrend: 20,
       successRate: 80,
       avgDuration: 1000,
@@ -203,6 +204,8 @@ function makeAnalyticsData(filters: Partial<AnalyticsFilters> = {}, overrides: P
       { value: 'all', label: 'All agents', jobCount: 3, isDefault: true },
       { value: 'CLAUDE', label: 'Claude', jobCount: 2, isDefault: false },
       { value: 'CODEX', label: 'Codex', jobCount: 1, isDefault: false },
+      { value: 'GEMINI', label: 'Gemini', jobCount: 1, isDefault: false },
+      { value: 'MISTRAL', label: 'Mistral', jobCount: 1, isDefault: false },
     ],
     generatedAt: '2026-03-14T00:00:00.000Z',
     jobCount: 3,
@@ -228,6 +231,14 @@ describe('AnalyticsDashboard', () => {
     expect(screen.getByTestId('analytics-agent-filter')).toHaveValue('all');
     expect(screen.getByTestId('analytics-range-filter')).toHaveValue('30d');
     expect(screen.getByText('Tickets Shipped')).toBeInTheDocument();
+  });
+
+  it('renders Gemini and Mistral filter options when available', () => {
+    renderWithProviders(<AnalyticsDashboard projectId={1} initialData={makeAnalyticsData()} />);
+
+    expect(screen.getByTestId('analytics-agent-filter')).toHaveValue('all');
+    expect(screen.getByRole('option', { name: 'Gemini' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Mistral' })).toBeInTheDocument();
   });
 
   it('updates outcome filter, query params, and replaces stale values after a refetch', async () => {
