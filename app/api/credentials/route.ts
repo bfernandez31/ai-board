@@ -6,7 +6,7 @@ import { getProviderModule } from '@/lib/ai-credentials/providers';
 import { PROVIDER_ALLOWED_TYPES, type CredentialListItem } from '@/lib/ai-credentials/types';
 
 const createCredentialSchema = z.object({
-  provider: z.enum(['ANTHROPIC', 'OPENAI', 'MISTRAL']),
+  provider: z.enum(['ANTHROPIC', 'OPENAI', 'MISTRAL', 'GOOGLE']),
   credentialType: z.enum(['API_KEY', 'OAUTH_TOKEN']),
   label: z.string().min(1, 'Label is required').max(100, 'Label must be 100 characters or less').transform(v => v.trim()),
   value: z.string().min(1, 'Credential value is required'),
