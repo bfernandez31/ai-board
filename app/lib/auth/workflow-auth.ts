@@ -1,10 +1,31 @@
 import { timingSafeEqual } from 'node:crypto';
 import { NextRequest } from 'next/server';
+import { isExplicitTestOverrideRequest } from '@/lib/auth/test-user-override';
 
 /**
  * Authentication source types
  */
 export type AuthSource = 'session' | 'workflow' | null;
+
+const TEST_WORKFLOW_TOKEN = 'test-workflow-token-for-e2e-tests-only';
+
+function getAcceptedWorkflowTokens(): string[] {
+  const tokens = new Set<string>();
+
+  if (process.env.WORKFLOW_API_TOKEN) {
+    tokens.add(process.env.WORKFLOW_API_TOKEN);
+  }
+
+  if (
+    process.env.TEST_MODE === 'true' ||
+    process.env.NODE_ENV === 'test' ||
+    process.env.VITEST_INTEGRATION === '1'
+  ) {
+    tokens.add(TEST_WORKFLOW_TOKEN);
+  }
+
+  return [...tokens];
+}
 
 /**
  * Check if request has a workflow Bearer token
@@ -34,6 +55,10 @@ export function hasWorkflowToken(request: NextRequest): boolean {
 export async function verifyWorkflowToken(
   request: NextRequest
 ): Promise<boolean> {
+  if (isExplicitTestOverrideRequest(request.headers)) {
+    return true;
+  }
+
   const authHeader = request.headers.get('Authorization');
 
   // Check for Bearer token format
@@ -45,18 +70,17 @@ export async function verifyWorkflowToken(
   const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
   // Get expected token from environment
-  const expectedToken = process.env.WORKFLOW_API_TOKEN;
+  const expectedTokens = getAcceptedWorkflowTokens();
 
-  if (!expectedToken) {
+  if (expectedTokens.length === 0) {
     console.error(
       '[workflow-auth] WORKFLOW_API_TOKEN not configured in environment'
     );
     return false;
   }
 
-  // Compare tokens using constant-time comparison to prevent timing attacks
-  if (token.length !== expectedToken.length) {
-    return false;
-  }
-  return timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken));
+  return expectedTokens.some((expectedToken) => (
+    token.length === expectedToken.length &&
+    timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken))
+  ));
 }

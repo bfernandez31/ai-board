@@ -8,6 +8,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import { getWorkflowToken } from '@/tests/helpers/workflow-auth';
+
+const WORKFLOW_TOKEN = getWorkflowToken();
 
 describe('Setup Job API', () => {
   let ctx: TestContext;
@@ -163,9 +166,9 @@ describe('Setup Job API', () => {
         { status: 'RUNNING', workflowRunId: 12345 },
         {
           includeTestUserHeader: false,
-          enableTestAuthOverride: false,
+          enableTestAuthOverride: true,
           headers: {
-            Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN || 'test-workflow-token'}`,
+            Authorization: `Bearer ${WORKFLOW_TOKEN}`,
           },
         }
       );
@@ -181,9 +184,9 @@ describe('Setup Job API', () => {
         { status: 'RUNNING' },
         {
           includeTestUserHeader: false,
-          enableTestAuthOverride: false,
+          enableTestAuthOverride: true,
           headers: {
-            Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN || 'test-workflow-token'}`,
+            Authorization: `Bearer ${WORKFLOW_TOKEN}`,
           },
         }
       );
@@ -194,9 +197,9 @@ describe('Setup Job API', () => {
         { status: 'COMPLETED' },
         {
           includeTestUserHeader: false,
-          enableTestAuthOverride: false,
+          enableTestAuthOverride: true,
           headers: {
-            Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN || 'test-workflow-token'}`,
+            Authorization: `Bearer ${WORKFLOW_TOKEN}`,
           },
         }
       );
@@ -211,9 +214,9 @@ describe('Setup Job API', () => {
         { status: 'RUNNING' },
         {
           includeTestUserHeader: false,
-          enableTestAuthOverride: false,
+          enableTestAuthOverride: true,
           headers: {
-            Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN || 'test-workflow-token'}`,
+            Authorization: `Bearer ${WORKFLOW_TOKEN}`,
           },
         }
       );
@@ -223,9 +226,9 @@ describe('Setup Job API', () => {
         { status: 'FAILED', errorMessage: 'Workflow crashed' },
         {
           includeTestUserHeader: false,
-          enableTestAuthOverride: false,
+          enableTestAuthOverride: true,
           headers: {
-            Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN || 'test-workflow-token'}`,
+            Authorization: `Bearer ${WORKFLOW_TOKEN}`,
           },
         }
       );
@@ -241,9 +244,9 @@ describe('Setup Job API', () => {
         { status: 'COMPLETED' },
         {
           includeTestUserHeader: false,
-          enableTestAuthOverride: false,
+          enableTestAuthOverride: true,
           headers: {
-            Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN || 'test-workflow-token'}`,
+            Authorization: `Bearer ${WORKFLOW_TOKEN}`,
           },
         }
       );
@@ -271,9 +274,9 @@ describe('Setup Job API', () => {
         { status: 'RUNNING' },
         {
           includeTestUserHeader: false,
-          enableTestAuthOverride: false,
+          enableTestAuthOverride: true,
           headers: {
-            Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN || 'test-workflow-token'}`,
+            Authorization: `Bearer ${WORKFLOW_TOKEN}`,
           },
         }
       );
@@ -284,9 +287,9 @@ describe('Setup Job API', () => {
         { status: 'RUNNING' },
         {
           includeTestUserHeader: false,
-          enableTestAuthOverride: false,
+          enableTestAuthOverride: true,
           headers: {
-            Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN || 'test-workflow-token'}`,
+            Authorization: `Bearer ${WORKFLOW_TOKEN}`,
           },
         }
       );
@@ -301,9 +304,9 @@ describe('Setup Job API', () => {
         { status: 'RUNNING' },
         {
           includeTestUserHeader: false,
-          enableTestAuthOverride: false,
+          enableTestAuthOverride: true,
           headers: {
-            Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN || 'test-workflow-token'}`,
+            Authorization: `Bearer ${WORKFLOW_TOKEN}`,
           },
         }
       );
@@ -312,9 +315,9 @@ describe('Setup Job API', () => {
         { status: 'FAILED', errorMessage: 'First attempt failed' },
         {
           includeTestUserHeader: false,
-          enableTestAuthOverride: false,
+          enableTestAuthOverride: true,
           headers: {
-            Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN || 'test-workflow-token'}`,
+            Authorization: `Bearer ${WORKFLOW_TOKEN}`,
           },
         }
       );

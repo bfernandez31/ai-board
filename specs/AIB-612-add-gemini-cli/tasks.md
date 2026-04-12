@@ -40,7 +40,7 @@
 ### Tests for User Story 1
 
 - [X] T007 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/ai-credentials.test.ts` with Google provider validation, readiness, and provider/type compatibility cases
-- [ ] T008 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/credential-form.test.tsx` with Google API key and OAuth bundle entry states in the credential form
+- [X] T008 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/credential-form.test.tsx` with Google API key and OAuth bundle entry states in the credential form
 - [X] T009 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/credentials/credentials-api.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/integration/credentials/credential-validation.test.ts` with Google create, retest, and unreachable-provider error scenarios
 - [X] T010 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/credentials/workflow-credential.test.ts` with Google workflow credential resolution cases for `GEMINI_API_KEY` and `GEMINI_OAUTH_JSON`
 
@@ -63,18 +63,18 @@
 
 ### Tests for User Story 2
 
-- [ ] T015 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/default-agent-card.test.tsx`, `/home/runner/work/ai-board/ai-board/target/tests/unit/components/agent-edit-dialog.test.tsx`, and `/home/runner/work/ai-board/ai-board/target/tests/unit/components/new-ticket-modal.test.tsx` with Gemini selection scenarios
-- [ ] T016 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/setup/setup-page.test.tsx` and `/home/runner/work/ai-board/ai-board/target/tests/unit/components/ticket-card-deploy.test.tsx` with Gemini setup-option visibility and ticket badge rendering coverage
-- [ ] T017 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/credential-dispatch-guard.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/integration/tickets/transitions.test.ts` with supported and unsupported Gemini workflow guard cases
-- [ ] T018 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup-job.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup-redirect.test.ts` with Gemini setup credential-check and blocked onboarding scenarios
+- [X] T015 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/default-agent-card.test.tsx`, `/home/runner/work/ai-board/ai-board/target/tests/unit/components/agent-edit-dialog.test.tsx`, and `/home/runner/work/ai-board/ai-board/target/tests/unit/components/new-ticket-modal.test.tsx` with Gemini selection scenarios
+- [X] T016 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/setup/setup-page.test.tsx` and `/home/runner/work/ai-board/ai-board/target/tests/unit/components/ticket-card-deploy.test.tsx` with Gemini setup-option visibility and ticket badge rendering coverage
+- [X] T017 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/credential-dispatch-guard.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/integration/tickets/transitions.test.ts` with supported and unsupported Gemini workflow guard cases
+- [X] T018 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup-job.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/setup-redirect.test.ts` with Gemini setup credential-check and blocked onboarding scenarios
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Extend `/home/runner/work/ai-board/ai-board/target/components/settings/default-agent-card.tsx`, `/home/runner/work/ai-board/ai-board/target/components/tickets/agent-edit-dialog.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/board/new-ticket-modal.tsx` to offer Gemini in supported selection surfaces
-- [ ] T020 [US2] Extend `/home/runner/work/ai-board/ai-board/target/components/board/ticket-card.tsx` and `/home/runner/work/ai-board/ai-board/target/components/setup/setup-page-client.tsx` to render Gemini labels/icons and consistent supported-agent choices
-- [ ] T021 [US2] Extend `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/credential-check/route.ts` and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/jobs/route.ts` to resolve Google credentials and reject unsupported Gemini setup dispatches before job creation
-- [ ] T022 [US2] Extend `/home/runner/work/ai-board/ai-board/target/lib/workflows/transition.ts` and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/transition/route.ts` to enforce Gemini workflow eligibility and missing-credential errors before dispatch
-- [ ] T023 [US2] Extend `/home/runner/work/ai-board/ai-board/target/lib/workflows/dispatch-onboard.ts`, `/home/runner/work/ai-board/ai-board/target/lib/workflows/dispatch-retro-spec.ts`, `/home/runner/work/ai-board/ai-board/target/app/lib/workflows/dispatch-ai-board.ts`, `/home/runner/work/ai-board/ai-board/target/app/lib/workflows/dispatch-rollback-reset.ts`, and `/home/runner/work/ai-board/ai-board/target/lib/health/scan-dispatch.ts` to preserve explicit non-Gemini behavior for unsupported workflows
+- [X] T019 [US2] Extend `/home/runner/work/ai-board/ai-board/target/components/settings/default-agent-card.tsx`, `/home/runner/work/ai-board/ai-board/target/components/tickets/agent-edit-dialog.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/board/new-ticket-modal.tsx` to offer Gemini in supported selection surfaces
+- [X] T020 [US2] Extend `/home/runner/work/ai-board/ai-board/target/components/board/ticket-card.tsx` and `/home/runner/work/ai-board/ai-board/target/components/setup/setup-page-client.tsx` to render Gemini labels/icons and consistent supported-agent choices
+- [X] T021 [US2] Extend `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/credential-check/route.ts` and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/setup/jobs/route.ts` to resolve Google credentials and reject unsupported Gemini setup dispatches before job creation
+- [X] T022 [US2] Extend `/home/runner/work/ai-board/ai-board/target/lib/workflows/transition.ts` and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/transition/route.ts` to enforce Gemini workflow eligibility and missing-credential errors before dispatch
+- [X] T023 [US2] Extend `/home/runner/work/ai-board/ai-board/target/lib/workflows/dispatch-onboard.ts`, `/home/runner/work/ai-board/ai-board/target/lib/workflows/dispatch-retro-spec.ts`, `/home/runner/work/ai-board/ai-board/target/app/lib/workflows/dispatch-ai-board.ts`, `/home/runner/work/ai-board/ai-board/target/app/lib/workflows/dispatch-rollback-reset.ts`, and `/home/runner/work/ai-board/ai-board/target/lib/health/scan-dispatch.ts` to preserve explicit non-Gemini behavior for unsupported workflows
 
 **Checkpoint**: User Story 2 is complete when supported selectors show Gemini consistently and unsupported entry points block it before dispatch.
 
@@ -88,14 +88,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/telemetry/aggregation.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts` with Gemini batch payload merge and `costStatus=UNAVAILABLE` coverage
+- [X] T024 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/telemetry/aggregation.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts` with Gemini batch payload merge and `costStatus=UNAVAILABLE` coverage
 
 ### Implementation for User Story 3
 
-- [ ] T025 [US3] Extend `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh` to install `@google/gemini-cli`, restore Google auth material, run Gemini headlessly, and emit `stream-json` telemetry
-- [ ] T026 [US3] Extend `/home/runner/work/ai-board/ai-board/target/.github/workflows/speckit.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/quick-impl.yml`, and `/home/runner/work/ai-board/ai-board/target/.github/workflows/iterate.yml` to pass Google credentials only for Gemini-supported workflow runs
-- [ ] T027 [US3] Extend `/home/runner/work/ai-board/ai-board/target/.github/workflows/verify.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/ai-board-assist.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/onboard.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/retro-spec.yml`, and `/home/runner/work/ai-board/ai-board/target/.github/workflows/health-scan.yml` to preserve explicit non-Gemini auth paths and rejection behavior
-- [ ] T028 [US3] Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` to ingest Gemini batch payloads, merge usage stats, and preserve unavailable-cost semantics
+- [X] T025 [US3] Extend `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh` to install `@google/gemini-cli`, restore Google auth material, run Gemini headlessly, and emit `stream-json` telemetry
+- [X] T026 [US3] Extend `/home/runner/work/ai-board/ai-board/target/.github/workflows/speckit.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/quick-impl.yml`, and `/home/runner/work/ai-board/ai-board/target/.github/workflows/iterate.yml` to pass Google credentials only for Gemini-supported workflow runs
+- [X] T027 [US3] Extend `/home/runner/work/ai-board/ai-board/target/.github/workflows/verify.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/ai-board-assist.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/onboard.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/retro-spec.yml`, and `/home/runner/work/ai-board/ai-board/target/.github/workflows/health-scan.yml` to preserve explicit non-Gemini auth paths and rejection behavior
+- [X] T028 [US3] Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` to ingest Gemini batch payloads, merge usage stats, and preserve unavailable-cost semantics
 
 **Checkpoint**: User Story 3 is complete when supported Gemini workflows run end to end and persist complete job metrics.
 
@@ -115,7 +115,7 @@
 
 - [X] T030 [US4] Extend `/home/runner/work/ai-board/ai-board/target/lib/analytics/types.ts`, `/home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts`, and `/home/runner/work/ai-board/ai-board/target/lib/analytics/aggregations.ts` to derive available agents and cost semantics from effective agent history
 - [X] T031 [US4] Extend `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/analytics/route.ts` and `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/analytics/page.tsx` to accept `agent=GEMINI|MISTRAL` and normalize invalid filters to `all`
-- [ ] T032 [US4] Extend `/home/runner/work/ai-board/ai-board/target/components/analytics/analytics-dashboard.tsx`, `/home/runner/work/ai-board/ai-board/target/components/analytics/overview-cards.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/analytics/top-tools-chart.tsx` to render Gemini and Mistral filter options plus incomplete-cost messaging
+- [X] T032 [US4] Extend `/home/runner/work/ai-board/ai-board/target/components/analytics/analytics-dashboard.tsx`, `/home/runner/work/ai-board/ai-board/target/components/analytics/overview-cards.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/analytics/top-tools-chart.tsx` to render Gemini and Mistral filter options plus incomplete-cost messaging
 
 **Checkpoint**: User Story 4 is complete when analytics surfaces show Gemini and Mistral consistently and accurately.
 
@@ -125,9 +125,9 @@
 
 **Purpose**: Run repo-wide validation and fix cross-story regressions after all targeted changes land.
 
-- [ ] T033 [P] Run focused unit regressions covering `/home/runner/work/ai-board/ai-board/target/tests/unit/` and fix any Gemini or Google breakage in the corresponding source files under `/home/runner/work/ai-board/ai-board/target/app/`, `/home/runner/work/ai-board/ai-board/target/components/`, and `/home/runner/work/ai-board/ai-board/target/lib/`
-- [ ] T034 [P] Run focused integration regressions covering `/home/runner/work/ai-board/ai-board/target/tests/integration/` and fix any workflow, credential, setup, telemetry, or analytics failures in the touched API and workflow files
-- [ ] T035 Run `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`, `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh`, `/home/runner/work/ai-board/ai-board/target/app/`, `/home/runner/work/ai-board/ai-board/target/components/`, and `/home/runner/work/ai-board/ai-board/target/lib/` through final `bun run type-check` and `bun run lint` cleanup
+- [X] T033 [P] Run focused unit regressions covering `/home/runner/work/ai-board/ai-board/target/tests/unit/` and fix any Gemini or Google breakage in the corresponding source files under `/home/runner/work/ai-board/ai-board/target/app/`, `/home/runner/work/ai-board/ai-board/target/components/`, and `/home/runner/work/ai-board/ai-board/target/lib/`
+- [X] T034 [P] Run focused integration regressions covering `/home/runner/work/ai-board/ai-board/target/tests/integration/` and fix any workflow, credential, setup, telemetry, or analytics failures in the touched API and workflow files
+- [X] T035 Run `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`, `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh`, `/home/runner/work/ai-board/ai-board/target/app/`, `/home/runner/work/ai-board/ai-board/target/components/`, and `/home/runner/work/ai-board/ai-board/target/lib/` through final `bun run type-check` and `bun run lint` cleanup
 
 ---
 
