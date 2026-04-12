@@ -79,9 +79,13 @@ export async function GET(
       );
     }
 
-    // 4. Query jobs for project (performance-optimized with index)
+    // Terminal jobs (COMPLETED/FAILED/CANCELLED) are excluded to reduce payload size.
+    // The frontend detects job completion when a previously-seen job disappears.
     const jobs = await prisma.job.findMany({
-      where: { projectId },
+      where: {
+        projectId,
+        status: { in: ['PENDING', 'RUNNING'] },
+      },
       select: {
         id: true,
         status: true,

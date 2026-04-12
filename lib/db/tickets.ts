@@ -85,56 +85,101 @@ function sortByStage<T extends { ticketNumber: number; updatedAt: string | Date 
   }
 }
 
+/** Shared select fields for ticket queries */
+const TICKET_SELECT = {
+  id: true,
+  ticketNumber: true,
+  ticketKey: true,
+  title: true,
+  description: true,
+  stage: true,
+  version: true,
+  projectId: true,
+  branch: true,
+  previewUrl: true,
+  autoMode: true,
+  clarificationPolicy: true,
+  agent: true,
+  workflowType: true,
+  attachments: true,
+  createdAt: true,
+  updatedAt: true,
+  project: {
+    select: {
+      clarificationPolicy: true,
+      defaultAgent: true,
+      githubOwner: true,
+      githubRepo: true,
+    },
+  },
+} as const;
+
+export interface TicketsByStageResult {
+  ticketsByStage: Record<Stage, TicketWithVersion[]>;
+  shipTotal: number;
+}
+
 /**
- * Fetch all tickets for a project, grouped by stage with optimistic concurrency version
+ * Fetch tickets for a project, grouped by stage.
+ * SHIP stage is paginated: only the first `shipLimit` tickets are returned.
+ * Use `getMoreShipTickets()` to load additional SHIP tickets.
  */
 export async function getTicketsByStage(
-  projectId: number
-): Promise<Record<Stage, TicketWithVersion[]>> {
-  const tickets = await prisma.ticket.findMany({
-    where: { projectId },
-    select: {
-      id: true,
-      ticketNumber: true,
-      ticketKey: true,
-      title: true,
-      description: true,
-      stage: true,
-      version: true,
-      projectId: true,
-      branch: true,
-      previewUrl: true,
-      autoMode: true,
-      clarificationPolicy: true,
-      agent: true,
-      workflowType: true,
-      attachments: true,
-      createdAt: true,
-      updatedAt: true,
-      project: {
-        select: {
-          clarificationPolicy: true,
-          defaultAgent: true,
-          githubOwner: true,
-          githubRepo: true,
-        },
-      },
-    },
-    // No orderBy here - we'll sort per-stage after grouping
-  });
+  projectId: number,
+  shipLimit: number = 50
+): Promise<TicketsByStageResult> {
+  // Fetch non-SHIP/non-CLOSED tickets + limited SHIP tickets in parallel.
+  // CLOSED tickets are excluded — they are not displayed on the board.
+  const [nonShipTickets, shipTickets, shipTotal] = await Promise.all([
+    prisma.ticket.findMany({
+      where: { projectId, stage: { notIn: ['SHIP', 'CLOSED'] } },
+      select: TICKET_SELECT,
+    }),
+    prisma.ticket.findMany({
+      where: { projectId, stage: 'SHIP' },
+      select: TICKET_SELECT,
+      orderBy: { updatedAt: 'desc' },
+      take: shipLimit,
+    }),
+    prisma.ticket.count({
+      where: { projectId, stage: 'SHIP' },
+    }),
+  ]);
 
   const grouped = createEmptyStageMap<TicketWithVersion>();
 
-  for (const ticket of tickets) {
+  for (const ticket of nonShipTickets) {
     const stage = ticket.stage as Stage;
     if (!(stage in grouped)) continue;
-
     grouped[stage].push(toTicketWithVersion(ticket));
+  }
+
+  for (const ticket of shipTickets) {
+    grouped[Stage.SHIP].push(toTicketWithVersion(ticket));
   }
 
   sortByStage(grouped);
 
-  return grouped;
+  return { ticketsByStage: grouped, shipTotal };
+}
+
+/**
+ * Load additional SHIP tickets for pagination (offset-based).
+ */
+export async function getMoreShipTickets(
+  projectId: number,
+  offset: number,
+  limit: number = 50
+): Promise<TicketWithVersion[]> {
+  const tickets = await prisma.ticket.findMany({
+    where: { projectId, stage: 'SHIP' },
+    select: TICKET_SELECT,
+    orderBy: { updatedAt: 'desc' },
+    skip: offset,
+    take: limit,
+  });
+
+  return tickets.map(toTicketWithVersion);
 }
 
 /**
@@ -189,48 +234,34 @@ export async function createTicket(
 }
 
 /**
- * Fetch all tickets for a project with jobs included (single query, no N+1)
+ * Fetch tickets for a project with jobs included (single query, no N+1).
+ * SHIP stage is paginated: only the first `shipLimit` tickets are returned.
  */
-export async function getTicketsWithJobs(projectId: number) {
-  const tickets = await prisma.ticket.findMany({
-    where: { projectId },
-    select: {
-      id: true,
-      ticketNumber: true,
-      ticketKey: true,
-      title: true,
-      description: true,
-      stage: true,
-      version: true,
-      projectId: true,
-      branch: true,
-      previewUrl: true,
-      autoMode: true,
-      clarificationPolicy: true,
-      agent: true,
-      workflowType: true,
-      attachments: true,
-      createdAt: true,
-      updatedAt: true,
-      project: {
-        select: {
-          clarificationPolicy: true,
-          defaultAgent: true,
-          githubOwner: true,
-          githubRepo: true,
-        },
-      },
-      jobs: {
-        orderBy: { startedAt: 'desc' },
-      },
-    },
-    // No orderBy here - we'll sort per-stage after grouping
-  });
+export async function getTicketsWithJobs(projectId: number, shipLimit: number = 50) {
+  const jobsInclude = { jobs: { orderBy: { startedAt: 'desc' as const } } };
 
-  const rawByStage = createEmptyStageMap<(typeof tickets)[number]>();
+  const [nonShipTickets, shipTickets, shipTotal] = await Promise.all([
+    prisma.ticket.findMany({
+      where: { projectId, stage: { notIn: ['SHIP', 'CLOSED'] } },
+      select: { ...TICKET_SELECT, ...jobsInclude },
+    }),
+    prisma.ticket.findMany({
+      where: { projectId, stage: 'SHIP' },
+      select: { ...TICKET_SELECT, ...jobsInclude },
+      orderBy: { updatedAt: 'desc' },
+      take: shipLimit,
+    }),
+    prisma.ticket.count({
+      where: { projectId, stage: 'SHIP' },
+    }),
+  ]);
+
+  const allTickets = [...nonShipTickets, ...shipTickets];
+
+  const rawByStage = createEmptyStageMap<(typeof allTickets)[number]>();
   const ticketsByStage = createEmptyStageMap<TicketWithVersion>();
 
-  for (const ticket of tickets) {
+  for (const ticket of allTickets) {
     const stage = ticket.stage as Stage;
     if (!(stage in ticketsByStage)) continue;
 
@@ -247,7 +278,7 @@ export async function getTicketsWithJobs(projectId: number) {
   sortByStage(ticketsByStage);
   sortByStage(rawByStage);
 
-  return { ticketsByStage, ticketsWithJobs: rawByStage };
+  return { ticketsByStage, ticketsWithJobs: rawByStage, shipTotal };
 }
 
 /**

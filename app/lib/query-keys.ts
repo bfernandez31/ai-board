@@ -26,6 +26,8 @@ export const queryKeys = {
       ['projects', projectId, 'tickets', ticketId, 'jobs'] as const,
     ticketByKey: (projectId: number, ticketKey: string) =>
       ['projects', projectId, 'tickets', 'by-key', ticketKey] as const,
+    shipTotal: (projectId: number) =>
+      ['projects', projectId, 'tickets', 'ship-total'] as const,
     setupJob: (projectId: number) =>
       ['projects', projectId, 'setup', 'job'] as const,
     retroSpecJob: (projectId: number) =>

@@ -73,39 +73,51 @@ export const queryKeys = {
 
 **Hook** (`app/lib/hooks/queries/useTickets.ts`):
 
+The tickets API returns stage-grouped data with `_shipTotal` metadata. The hook flattens to `TicketWithVersion[]` (cache format stays flat for compatibility with optimistic mutations) and stores `shipTotal` in a separate cache key.
+
 ```typescript
-import { useQuery } from '@tanstack/react-query';
-import { queryKeys } from '@/app/lib/query-keys';
+export function useTicketsByStage(projectId: number) {
+  const queryClient = useQueryClient();
 
-export function useTickets(projectId: number) {
   return useQuery({
-    queryKey: queryKeys.projects.tickets(projectId),
+    queryKey: queryKeys.projects.tickets(projectId),   // cache: TicketWithVersion[]
     queryFn: async () => {
-      const response = await fetch(`/api/projects/${projectId}/tickets`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch tickets');
-      }
-
-      return response.json();
+      const { tickets, shipTotal } = await fetchTicketsFromAPI(projectId);
+      queryClient.setQueryData(queryKeys.projects.shipTotal(projectId), shipTotal);
+      return tickets;
     },
-    staleTime: 1000 * 60,  // 1 minute
+    select: (tickets) => groupByStage(tickets),        // Record<Stage, TicketWithVersion[]>
+    staleTime: 5000,
   });
 }
 ```
 
-**Usage**:
+**SHIP Pagination Hooks**:
 
 ```typescript
-function BoardComponent({ projectId }: { projectId: number }) {
-  const { data, isLoading, error } = useTickets(projectId);
+// Read-only: SHIP total count (populated reactively by useTicketsByStage)
+export function useShipTotal(projectId: number) {
+  return useQuery<number>({
+    queryKey: queryKeys.projects.shipTotal(projectId),
+    enabled: false,  // Never self-fetches — seeded by Board + updated by useTicketsByStage
+    staleTime: Infinity,
+    initialData: 0,
+  });
+}
 
-  if (isLoading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage error={error} />;
-
-  return <Board tickets={data.tickets} />;
+// Mutation: load next page of SHIP tickets and append to cache
+export function useLoadMoreShipTickets(projectId: number) {
+  // Fetches /api/projects/:id/tickets?stage=SHIP&offset=N&limit=50
+  // onSuccess: appends results to the flat TicketWithVersion[] cache
+  return { loadMore, isLoading };
 }
 ```
+
+**Cache Architecture**:
+- `queryKeys.projects.tickets(id)` → `TicketWithVersion[]` (flat, all stages combined, SHIP limited to 50 initially)
+- `queryKeys.projects.shipTotal(id)` → `number` (total SHIP tickets for pagination)
+- Cache format is flat array to stay compatible with all optimistic mutation hooks (stage transitions, delete, create, update)
+- Board component seeds both caches with SSR data on mount
 
 ### Comments Query with Polling
 
@@ -143,63 +155,62 @@ export function useComments(projectId: number, ticketId: number, options?: {
 
 **Hook** (`app/lib/hooks/useJobPolling.ts`):
 
-```typescript
-export function useJobPolling(projectId: number) {
-  const [terminalJobIds, setTerminalJobIds] = useState<Set<number>>(new Set());
+The API endpoint only returns PENDING/RUNNING jobs. The hook detects job completion by tracking which previously-polled jobs disappear from the response ("disappeared jobs" pattern).
 
-  const { data, isError } = useQuery({
-    queryKey: queryKeys.projects.jobs(projectId),
+```typescript
+export function useJobPolling(projectId: number, pollingInterval = 2000) {
+  const queryClient = useQueryClient();
+  const previousJobsRef = useRef<JobStatusDto[]>([]);
+
+  const { data, error, isFetching, dataUpdatedAt, failureCount } = useQuery({
+    queryKey: queryKeys.projects.jobsStatus(projectId),
     queryFn: async () => {
       const response = await fetch(`/api/projects/${projectId}/jobs/status`);
-
-      if (!response.ok) throw new Error('Failed to fetch job status');
-
-      return response.json();
-    },
-    refetchInterval: (query) => {
-      const jobs = query.state.data?.jobs || [];
-
-      // Stop polling when all jobs terminal
-      const allTerminal = jobs.every((job: Job) =>
-        ['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status)
-      );
-
-      return allTerminal ? false : 2000;  // 2 seconds or stop
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = await response.json();
+      return result.jobs;
     },
     staleTime: 0,
+    refetchInterval: pollingInterval, // Always poll — payload is tiny (active jobs only)
+    refetchIntervalInBackground: true,
   });
 
-  // Track terminal jobs
+  const jobs = useMemo(() => data || [], [data]);
+
+  // Detect job completion: jobs that were in previous poll but not in current
   useEffect(() => {
-    if (data?.jobs) {
-      const newTerminalIds = new Set(terminalJobIds);
-
-      data.jobs.forEach((job: Job) => {
-        if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status)) {
-          newTerminalIds.add(job.id);
-        }
-      });
-
-      setTerminalJobIds(newTerminalIds);
+    if (previousJobsRef.current.length === 0 && jobs.length > 0) {
+      previousJobsRef.current = jobs;
+      return;
     }
-  }, [data]);
 
-  return {
-    jobs: data?.jobs || [],
-    isPolling: !isError && data?.jobs.some((job: Job) =>
-      !['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status)
-    ),
-    error: isError,
-  };
+    const currentIds = new Set(jobs.map(j => j.id));
+    const disappearedJobs = previousJobsRef.current.filter(
+      prev => !currentIds.has(prev.id)
+    );
+
+    if (disappearedJobs.length > 0) {
+      // Invalidate tickets + per-ticket job caches
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.tickets(projectId) });
+      for (const job of disappearedJobs) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.ticketJobs(projectId, job.ticketId),
+        });
+      }
+    }
+
+    previousJobsRef.current = jobs;
+  }, [jobs, projectId, queryClient]);
+
+  return { jobs, isPolling: isFetching || jobs.length > 0, ... };
 }
 ```
 
 **Features**:
-- **Auto-Stop**: Polling stops when all jobs terminal
-- **Auto-Resume**: Polling resumes when new jobs created
-- **Terminal Tracking**: Client tracks which jobs completed
-- **2-Second Interval**: Real-time feel
-- **Cache Invalidation**: Automatically invalidates tickets and ticketJobs caches when job reaches terminal state
+- **Active-Only Payload**: API returns only PENDING/RUNNING jobs, keeping response tiny (0-2 items typically)
+- **Disappeared Job Detection**: When a previously-seen job vanishes from the response, it has reached terminal status — triggers cache invalidation
+- **Always Polling**: 2-second interval always active (endpoint is lightweight), detects new jobs immediately
+- **Cache Invalidation**: Invalidates tickets and ticketJobs caches when a job disappears (completed/failed/cancelled)
 
 ### Ticket Search Query Hook
 

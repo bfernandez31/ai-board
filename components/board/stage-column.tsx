@@ -4,12 +4,13 @@ import * as React from 'react';
 
 import { useDroppable } from '@dnd-kit/core';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import { Stage } from '@/lib/stage-transitions';
 import { TicketCard } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
 import { MobileScrollButton } from './mobile-scroll-button';
 import { TicketWithVersion } from '@/lib/types';
-import { Ban, Inbox } from 'lucide-react';
+import { Ban, Inbox, Loader2, ChevronDown } from 'lucide-react';
 import type { DualJobState } from '@/lib/types/job-types';
 
 interface StageColumnProps {
@@ -23,6 +24,9 @@ interface StageColumnProps {
   isBlockedByJob?: boolean;
   activePreviewTicket?: { ticketKey: string } | null;
   activeDeploymentTicket?: number | null;
+  totalCount?: number; // Total tickets for this stage (for pagination)
+  onLoadMore?: () => void; // Callback to load more tickets
+  isLoadingMore?: boolean; // Whether more tickets are being loaded
 }
 
 // Stage configuration matching original design
@@ -142,6 +146,9 @@ export const StageColumn = React.memo(
     isBlockedByJob = false,
     activePreviewTicket,
     activeDeploymentTicket,
+    totalCount,
+    onLoadMore,
+    isLoadingMore = false,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
@@ -232,9 +239,11 @@ export const StageColumn = React.memo(
             </h2>
             {/* Ticket count badge */}
             <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-[0.58rem] font-semibold shadow-[0_0_8px_hsl(var(--ctp-crust)/0.5)] ring-1 ring-inset ring-border/20 ${stageConfig.badgeBgColor} ${stageConfig.badgeTextColor}`}
+              className={`flex h-6 min-w-6 px-1.5 items-center justify-center rounded-full text-[0.58rem] font-semibold shadow-[0_0_8px_hsl(var(--ctp-crust)/0.5)] ring-1 ring-inset ring-border/20 ${stageConfig.badgeBgColor} ${stageConfig.badgeTextColor}`}
             >
-              {ticketCount}
+              {totalCount !== undefined && totalCount > ticketCount
+                ? `${ticketCount}/${totalCount}`
+                : ticketCount}
             </span>
           </div>
         </div>
@@ -249,23 +258,45 @@ export const StageColumn = React.memo(
 
             {/* Ticket Cards */}
             {tickets.length > 0 ? (
-              tickets.map((ticket) => {
-                const dualJobs = getTicketJobs?.(ticket.id);
-                return (
-                  <TicketCard
-                    key={ticket.id}
-                    ticket={ticket}
-                    workflowJob={dualJobs?.workflow || null}
-                    aiBoardJob={dualJobs?.aiBoard || null}
-                    deployJob={dualJobs?.deployJob || null}
-                    qualityScore={dualJobs?.qualityScore ?? null}
-                    isDraggable={isDraggable}
-                    activePreviewTicket={activePreviewTicket || null}
-                    activeDeploymentTicket={activeDeploymentTicket || null}
-                    {...(onTicketClick && { onTicketClick })}
-                  />
-                );
-              })
+              <>
+                {tickets.map((ticket) => {
+                  const dualJobs = getTicketJobs?.(ticket.id);
+                  return (
+                    <TicketCard
+                      key={ticket.id}
+                      ticket={ticket}
+                      workflowJob={dualJobs?.workflow || null}
+                      aiBoardJob={dualJobs?.aiBoard || null}
+                      deployJob={dualJobs?.deployJob || null}
+                      qualityScore={dualJobs?.qualityScore ?? null}
+                      isDraggable={isDraggable}
+                      activePreviewTicket={activePreviewTicket || null}
+                      activeDeploymentTicket={activeDeploymentTicket || null}
+                      {...(onTicketClick && { onTicketClick })}
+                    />
+                  );
+                })}
+
+                {/* Load More button for paginated stages */}
+                {onLoadMore && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onLoadMore}
+                    disabled={isLoadingMore}
+                    className="w-full text-xs text-muted-foreground"
+                  >
+                    {isLoadingMore ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3 mr-1" />
+                    )}
+                    {isLoadingMore
+                      ? 'Loading...'
+                      : `Load more (${(totalCount ?? ticketCount) - ticketCount} remaining)`}
+                  </Button>
+                )}
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 gap-2">
                 <Inbox className="w-8 h-8 text-muted-foreground/30" strokeWidth={1.5} />

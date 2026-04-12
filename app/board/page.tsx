@@ -29,13 +29,14 @@ export default async function BoardPage() {
     throw error;
   }
 
-  const ticketsByStage = await getTicketsByStage(projectId);
+  const { ticketsByStage, shipTotal } = await getTicketsByStage(projectId);
 
   return (
     <main className="h-screen bg-background overflow-hidden">
       <Board
         ticketsByStage={ticketsByStage}
         projectId={projectId}
+        shipTotal={shipTotal}
       />
     </main>
   );

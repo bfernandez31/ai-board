@@ -339,6 +339,29 @@ export type AIBoardCommentRequest = z.infer<typeof aiBoardCommentRequestSchema>;
 
 ## Job Schemas
 
+### JobStatusResponseSchema (Polling)
+
+```typescript
+export const JobStatusDtoSchema = z.object({
+  id: z.number(),
+  ticketId: z.number(),
+  status: z.enum(['PENDING', 'RUNNING']),  // Only active statuses returned
+  command: z.string(),
+  updatedAt: z.string().datetime(),
+});
+
+export const JobStatusResponseSchema = z.object({
+  jobs: z.array(JobStatusDtoSchema),
+});
+```
+
+**Location**: `app/lib/schemas/job-polling.ts`
+
+**Notes**:
+- The GET `/api/projects/:projectId/jobs/status` endpoint only returns PENDING and RUNNING jobs
+- Terminal jobs (COMPLETED, FAILED, CANCELLED) are excluded from the response to minimize payload
+- The frontend detects completion when a previously-polled job disappears from the response
+
 ### UpdateJobStatusSchema
 
 ```typescript

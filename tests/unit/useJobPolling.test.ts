@@ -20,17 +20,16 @@ describe('useJobPolling - Cache Invalidation', () => {
     vi.clearAllMocks();
   });
 
-  it('should invalidate tickets cache when job transitions to COMPLETED', async () => {
-    // Spy on invalidateQueries
+  it('should invalidate tickets cache when a job disappears (completed)', async () => {
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
-    // Mock fetch to return job with RUNNING status, then COMPLETED
+    // API only returns active jobs. First poll: RUNNING, second poll: empty (job completed).
     let callCount = 0;
     global.fetch = vi.fn(() => {
       callCount++;
       const jobs: JobStatusDto[] = callCount === 1
         ? [{ id: 1, ticketId: 10, status: 'RUNNING', updatedAt: new Date().toISOString() }]
-        : [{ id: 1, ticketId: 10, status: 'COMPLETED', updatedAt: new Date().toISOString() }];
+        : [];
 
       return Promise.resolve({
         ok: true,
@@ -38,7 +37,6 @@ describe('useJobPolling - Cache Invalidation', () => {
       } as Response);
     });
 
-    // Render hook
     const { result } = renderHook(() => useJobPolling(1, 100), {
       wrapper: ({ children }) => (
         React.createElement(QueryClientProvider, { client: queryClient }, children)
@@ -48,8 +46,8 @@ describe('useJobPolling - Cache Invalidation', () => {
     // Wait for first poll (RUNNING status)
     await waitFor(() => expect(result.current.jobs.length).toBe(1), { timeout: 1000 });
 
-    // Wait for second poll (COMPLETED status)
-    await waitFor(() => expect(result.current.jobs[0]?.status).toBe('COMPLETED'), { timeout: 1000 });
+    // Wait for second poll (job disappeared — completed)
+    await waitFor(() => expect(result.current.jobs.length).toBe(0), { timeout: 1000 });
 
     // Verify invalidateQueries was called with correct query key
     await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({
@@ -60,13 +58,11 @@ describe('useJobPolling - Cache Invalidation', () => {
   it('should NOT invalidate cache on initial load', async () => {
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
+    // Initial load with empty response (no active jobs)
     global.fetch = vi.fn(() => {
-      const jobs: JobStatusDto[] = [
-        { id: 1, ticketId: 10, status: 'COMPLETED', updatedAt: new Date().toISOString() },
-      ];
       return Promise.resolve({
         ok: true,
-        json: async () => ({ jobs }),
+        json: async () => ({ jobs: [] }),
       } as Response);
     });
 
@@ -76,12 +72,12 @@ describe('useJobPolling - Cache Invalidation', () => {
       ),
     });
 
-    await waitFor(() => expect(result.current.jobs.length).toBe(1), { timeout: 1000 });
+    await waitFor(() => expect(result.current.jobs).toEqual([]), { timeout: 1000 });
 
     // Wait a bit to ensure no invalidation happens
     await new Promise(resolve => setTimeout(resolve, 200));
 
-    // Should NOT invalidate on initial load (job was already COMPLETED)
+    // Should NOT invalidate on initial load (no jobs disappeared)
     expect(invalidateSpy).not.toHaveBeenCalled();
   });
 
@@ -113,11 +109,11 @@ describe('useJobPolling - Cache Invalidation', () => {
     // Wait a bit to ensure no invalidation happens
     await new Promise(resolve => setTimeout(resolve, 200));
 
-    // Should NOT invalidate (neither PENDING nor RUNNING is terminal)
+    // Should NOT invalidate (job is still active, just changed status)
     expect(invalidateSpy).not.toHaveBeenCalled();
   });
 
-  it('should invalidate cache for multiple jobs transitioning simultaneously', async () => {
+  it('should invalidate cache for multiple jobs disappearing simultaneously', async () => {
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
     let callCount = 0;
@@ -128,10 +124,7 @@ describe('useJobPolling - Cache Invalidation', () => {
             { id: 1, ticketId: 10, status: 'RUNNING', updatedAt: new Date().toISOString() },
             { id: 2, ticketId: 11, status: 'RUNNING', updatedAt: new Date().toISOString() },
           ]
-        : [
-            { id: 1, ticketId: 10, status: 'COMPLETED', updatedAt: new Date().toISOString() },
-            { id: 2, ticketId: 11, status: 'FAILED', updatedAt: new Date().toISOString() },
-          ];
+        : [];
 
       return Promise.resolve({
         ok: true,
@@ -153,7 +146,7 @@ describe('useJobPolling - Cache Invalidation', () => {
     });
   });
 
-  it('should invalidate ticketJobs cache when job transitions to terminal status', async () => {
+  it('should invalidate ticketJobs cache when a job disappears', async () => {
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
     let callCount = 0;
@@ -161,7 +154,7 @@ describe('useJobPolling - Cache Invalidation', () => {
       callCount++;
       const jobs: JobStatusDto[] = callCount === 1
         ? [{ id: 1, ticketId: 10, status: 'RUNNING', updatedAt: new Date().toISOString() }]
-        : [{ id: 1, ticketId: 10, status: 'COMPLETED', updatedAt: new Date().toISOString() }];
+        : [];
 
       return Promise.resolve({
         ok: true,
@@ -178,16 +171,16 @@ describe('useJobPolling - Cache Invalidation', () => {
     // Wait for first poll (RUNNING status)
     await waitFor(() => expect(result.current.jobs.length).toBe(1), { timeout: 1000 });
 
-    // Wait for second poll (COMPLETED status)
-    await waitFor(() => expect(result.current.jobs[0]?.status).toBe('COMPLETED'), { timeout: 1000 });
+    // Wait for second poll (job disappeared)
+    await waitFor(() => expect(result.current.jobs.length).toBe(0), { timeout: 1000 });
 
-    // Verify ticketJobs cache was invalidated for the terminal job's ticket
+    // Verify ticketJobs cache was invalidated for the disappeared job's ticket
     await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['projects', 1, 'tickets', 10, 'jobs'],
     }), { timeout: 1000 });
   });
 
-  it('should invalidate ticketJobs for each terminal job in multiple jobs scenario', async () => {
+  it('should invalidate ticketJobs for each disappeared job in multiple jobs scenario', async () => {
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
     let callCount = 0;
@@ -198,10 +191,7 @@ describe('useJobPolling - Cache Invalidation', () => {
             { id: 1, ticketId: 10, status: 'RUNNING', updatedAt: new Date().toISOString() },
             { id: 2, ticketId: 20, status: 'RUNNING', updatedAt: new Date().toISOString() },
           ]
-        : [
-            { id: 1, ticketId: 10, status: 'COMPLETED', updatedAt: new Date().toISOString() },
-            { id: 2, ticketId: 20, status: 'FAILED', updatedAt: new Date().toISOString() },
-          ];
+        : [];
 
       return Promise.resolve({
         ok: true,

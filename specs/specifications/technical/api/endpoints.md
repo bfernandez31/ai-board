@@ -594,7 +594,7 @@ List organizations the authenticated user belongs to.
 
 ### GET /api/projects/:projectId/tickets
 
-Fetch all tickets for a project, grouped by stage. When `stage` or `workflowType` query params are provided, returns a flat filtered array instead.
+Fetch tickets for a project, grouped by stage. SHIP stage is paginated (default 50 tickets). When `stage` or `workflowType` query params are provided, returns a flat filtered array instead.
 
 **Authentication**: Required (session or workflow Bearer token)
 **Authorization**: Must be project owner or member (workflow token bypasses)
@@ -606,9 +606,13 @@ Fetch all tickets for a project, grouped by stage. When `stage` or `workflowType
 - `stage` (string, optional): Filter by stage — `INBOX|SPECIFY|PLAN|BUILD|VERIFY|SHIP|CLOSED`
 - `workflowType` (string, optional): Filter by workflow type — `FULL|QUICK|CLEAN`
 - `limit` (number, optional): Maximum number of tickets to return (min: 1). Only applies when at least one filter is provided. Results are sorted by `updatedAt` desc.
+- `offset` (number, optional): Skip N tickets (min: 0). Used for SHIP "Load More" pagination. When `stage=SHIP` and `offset` is provided, returns the next page of SHIP tickets.
 - `updatedSince` (string, optional): ISO 8601 datetime. Only return tickets updated after this timestamp.
 
-**Response — no filters** (200 OK): Stage-grouped object
+**Response — no filters** (200 OK): Stage-grouped object with SHIP pagination metadata
+
+All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tickets (sorted by `updatedAt` desc). `_shipTotal` indicates the total number of SHIP tickets for "Load More" pagination.
+
 ```json
 {
   "INBOX": [...],
@@ -634,11 +638,27 @@ Fetch all tickets for a project, grouped by stage. When `stage` or `workflowType
       "createdAt": "2025-01-10T14:00:00.000Z",
       "updatedAt": "2025-01-15T10:30:00.000Z"
     }
+  ],
+  "_shipTotal": 248
+}
+```
+
+**Response — SHIP Load More** (`?stage=SHIP&offset=50&limit=50`) (200 OK):
+```json
+{
+  "tickets": [
+    {
+      "id": 38,
+      "ticketKey": "ABC-3",
+      "title": "Older shipped ticket",
+      "stage": "SHIP",
+      ...
+    }
   ]
 }
 ```
 
-**Response — with filters** (200 OK): Flat array of matching tickets
+**Response — with other filters** (200 OK): Flat array of matching tickets
 ```json
 [
   {
@@ -2891,7 +2911,9 @@ Launch a new comparison workflow for selected VERIFY-stage tickets.
 
 ### GET /api/projects/:projectId/jobs/status
 
-Fetch all job statuses for a project (polling endpoint).
+Fetch active (PENDING/RUNNING) job statuses for a project (polling endpoint).
+
+Only returns jobs with `status` of `PENDING` or `RUNNING`. Terminal jobs (COMPLETED, FAILED, CANCELLED) are excluded to minimize payload size. The frontend detects job completion when a previously-polled job disappears from the response.
 
 **Authentication**: Required (session) or Bearer PAT
 **Authorization**: Must be project owner or member
@@ -2913,24 +2935,21 @@ Fetch all job statuses for a project (polling endpoint).
       "id": 123,
       "ticketId": 42,
       "status": "RUNNING",
+      "command": "implement",
       "updatedAt": "2025-01-15T10:30:00.000Z"
-    },
-    {
-      "id": 124,
-      "ticketId": 43,
-      "status": "COMPLETED",
-      "updatedAt": "2025-01-15T10:25:00.000Z"
     }
   ]
 }
 ```
+
+Returns an empty `jobs` array when no active jobs exist.
 
 **Errors**:
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 - `404`: Project not found
 
-**Performance**: <100ms p95 (indexed query on projectId)
+**Performance**: <100ms p95 (indexed query on projectId + status filter)
 
 ### POST /api/projects/:projectId/jobs
 

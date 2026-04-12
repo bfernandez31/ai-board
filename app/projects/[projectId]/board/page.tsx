@@ -31,7 +31,7 @@ export default async function ProjectBoardPage({
   }
 
   // Fetch project and tickets+jobs in parallel
-  const [project, { ticketsByStage, ticketsWithJobs }] = await Promise.all([
+  const [project, { ticketsByStage, ticketsWithJobs, shipTotal }] = await Promise.all([
     getProject(projectId).catch((error) => {
       if (
         error instanceof Error &&
@@ -64,6 +64,7 @@ export default async function ProjectBoardPage({
         initialJobs={initialJobs}
         hasSpecs={project.hasSpecs}
         defaultAgent={project.defaultAgent}
+        shipTotal={shipTotal}
       />
     </main>
   );

@@ -13,13 +13,6 @@ export interface UseJobPollingReturn {
   error: Error | null;
 }
 
-const TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED', 'CANCELLED']);
-
-function areAllJobsTerminal(jobs: JobStatusDto[]): boolean {
-  if (jobs.length === 0) return false;
-  return jobs.every(job => TERMINAL_STATUSES.has(job.status));
-}
-
 export function useJobPolling(
   projectId: number,
   pollingInterval: number = 2000
@@ -43,38 +36,40 @@ export function useJobPolling(
     },
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
+    // Fast poll (2s) when active jobs exist, slow poll (30s) when idle.
+    // Slow idle poll detects new jobs starting without wasting requests.
     refetchInterval: (query) => {
       const jobs = query.state.data || [];
-      return areAllJobsTerminal(jobs) ? false : pollingInterval;
+      return jobs.length > 0 ? pollingInterval : 30000;
     },
     refetchIntervalInBackground: true,
     enabled: true,
   });
 
   const jobs = useMemo(() => data || [], [data]);
-  const allTerminal = areAllJobsTerminal(jobs);
+  const hasActiveJobs = jobs.length > 0;
 
+  // Detect job completion by tracking jobs that disappear from the active-only response.
+  // The API only returns PENDING/RUNNING jobs, so a previously-seen job that's no longer
+  // in the response has transitioned to a terminal status.
   useEffect(() => {
     if (previousJobsRef.current.length === 0 && jobs.length > 0) {
       previousJobsRef.current = jobs;
       return;
     }
 
-    const newlyTerminal = jobs.filter(job => {
-      const isTerminal = TERMINAL_STATUSES.has(job.status);
-      const wasTerminal = previousJobsRef.current.some(
-        prev => prev.id === job.id && TERMINAL_STATUSES.has(prev.status)
-      );
-      return isTerminal && !wasTerminal;
-    });
+    const currentIds = new Set(jobs.map(j => j.id));
+    const disappearedJobs = previousJobsRef.current.filter(
+      prev => !currentIds.has(prev.id)
+    );
 
-    if (newlyTerminal.length > 0) {
-      console.log('[useJobPolling] Detected terminal jobs:', newlyTerminal);
+    if (disappearedJobs.length > 0) {
+      console.log('[useJobPolling] Jobs completed:', disappearedJobs.map(j => j.id));
       queryClient.invalidateQueries({
         queryKey: queryKeys.projects.tickets(projectId),
       });
 
-      for (const job of newlyTerminal) {
+      for (const job of disappearedJobs) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.projects.ticketJobs(projectId, job.ticketId),
         });
@@ -86,7 +81,7 @@ export function useJobPolling(
 
   return {
     jobs,
-    isPolling: isFetching || !allTerminal,
+    isPolling: isFetching || hasActiveJobs,
     lastPollTime: dataUpdatedAt || null,
     errorCount: failureCount,
     error: error as Error | null,

@@ -35,7 +35,7 @@ import {
 } from '@/lib/optimistic-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useJobPolling } from '@/app/lib/hooks/useJobPolling';
-import { useTicketsByStage, useTicketByKey } from '@/app/lib/hooks/queries/useTickets';
+import { useTicketsByStage, useTicketByKey, useLoadMoreShipTickets, useShipTotal } from '@/app/lib/hooks/queries/useTickets';
 import { useTicketJobs } from '@/app/lib/hooks/queries/useTicketJobs';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Job, ClarificationPolicy } from '@prisma/client';
@@ -90,6 +90,7 @@ interface BoardProps {
   initialJobs?: Map<number, Job[]>; // Array of jobs per ticket for dual job display
   hasSpecs?: boolean;
   defaultAgent?: import('@prisma/client').Agent;
+  shipTotal?: number; // Total SHIP tickets count (for pagination)
 }
 
 /** Default merge: apply server response fields to optimistic ticket */
@@ -111,6 +112,7 @@ export function Board({
   initialJobs = new Map(),
   hasSpecs = false,
   defaultAgent = 'CLAUDE',
+  shipTotal: initialShipTotal = 0,
 }: BoardProps) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -123,7 +125,11 @@ export function Board({
       queryKeys.projects.tickets(projectId),
       Object.values(initialTicketsByStage).flat()
     );
-  }, [projectId, initialTicketsByStage, queryClient]);
+    queryClient.setQueryData(
+      queryKeys.projects.shipTotal(projectId),
+      initialShipTotal
+    );
+  }, [projectId, initialTicketsByStage, initialShipTotal, queryClient]);
 
   // T008: Seed ticket jobs cache with server data for immediate reactivity
   React.useEffect(() => {
@@ -139,6 +145,15 @@ export function Board({
 
   // Fetch tickets using TanStack Query (automatically updates on cache invalidation)
   const { data: ticketsByStage = initialTicketsByStage } = useTicketsByStage(projectId);
+
+  // SHIP stage "Load More" pagination
+  const { data: shipTotal = initialShipTotal } = useShipTotal(projectId);
+  const { loadMore: loadMoreShip, isLoading: isLoadingMoreShip } = useLoadMoreShipTickets(projectId);
+  const shipTicketCount = ticketsByStage[Stage.SHIP]?.length ?? 0;
+  const hasMoreShipTickets = shipTicketCount < shipTotal;
+  const handleLoadMoreShip = useCallback(() => {
+    loadMoreShip(shipTicketCount);
+  }, [loadMoreShip, shipTicketCount]);
 
   // T030: Job polling integration for real-time job status updates
   const { jobs: polledJobs } = useJobPolling(projectId, 2000);
@@ -1329,6 +1344,11 @@ export function Board({
                   isBlockedByJob={isBlocked}
                   activePreviewTicket={activePreviewTicket}
                   activeDeploymentTicket={activeDeploymentTicket}
+                  {...(stage === Stage.SHIP && hasMoreShipTickets && {
+                    totalCount: shipTotal,
+                    onLoadMore: handleLoadMoreShip,
+                    isLoadingMore: isLoadingMoreShip,
+                  })}
                 />
               );
             })}

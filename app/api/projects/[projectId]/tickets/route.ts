@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { getTicketsByStage, createTicket } from '@/lib/db/tickets';
+import { getTicketsByStage, getMoreShipTickets, createTicket } from '@/lib/db/tickets';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { CreateTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { TicketAttachmentsArraySchema } from '@/app/lib/schemas/ticket';
@@ -36,24 +36,32 @@ export async function GET(
       await verifyProjectAccess(projectId, request);
     }
 
-    // Optional filters: ?stage=SHIP&workflowType=FULL&limit=50&updatedSince=2025-01-01T00:00:00Z
+    // Optional filters: ?stage=SHIP&workflowType=FULL&limit=50&offset=0&updatedSince=2025-01-01T00:00:00Z
     const { searchParams } = new URL(request.url);
     const ticketFiltersSchema = z.object({
       stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP', 'CLOSED']).optional(),
       workflowType: z.enum(['FULL', 'QUICK', 'CLEAN']).optional(),
       limit: z.coerce.number().int().min(1).optional(),
+      offset: z.coerce.number().int().min(0).optional(),
       updatedSince: z.string().datetime().optional(),
     });
     const filtersParsed = ticketFiltersSchema.safeParse({
       stage: searchParams.get('stage') || undefined,
       workflowType: searchParams.get('workflowType') || undefined,
       limit: searchParams.get('limit') || undefined,
+      offset: searchParams.get('offset') || undefined,
       updatedSince: searchParams.get('updatedSince') || undefined,
     });
     if (!filtersParsed.success) {
       return NextResponse.json({ error: 'Invalid filter parameters', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
-    const { stage: stageParam, workflowType: workflowTypeParam, limit: limitParam, updatedSince } = filtersParsed.data;
+    const { stage: stageParam, workflowType: workflowTypeParam, limit: limitParam, offset: offsetParam, updatedSince } = filtersParsed.data;
+
+    // SHIP "Load More" pagination: ?stage=SHIP&offset=50&limit=50
+    if (stageParam === 'SHIP' && offsetParam !== undefined) {
+      const tickets = await getMoreShipTickets(projectId, offsetParam, limitParam ?? 50);
+      return NextResponse.json({ tickets }, { status: 200 });
+    }
 
     // If filters provided, query directly with Prisma for efficiency
     if (stageParam || workflowTypeParam || limitParam || updatedSince) {
@@ -70,8 +78,9 @@ export async function GET(
       return NextResponse.json(filtered, { status: 200 });
     }
 
-    const ticketsByStage = await getTicketsByStage(projectId);
-    return NextResponse.json(ticketsByStage, { status: 200 });
+    // Default: return all tickets grouped by stage, with SHIP limited to 50
+    const { ticketsByStage, shipTotal } = await getTicketsByStage(projectId);
+    return NextResponse.json({ ...ticketsByStage, _shipTotal: shipTotal }, { status: 200 });
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
