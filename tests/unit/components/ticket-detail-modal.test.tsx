@@ -286,6 +286,38 @@ describe('TicketDetailModal', () => {
       expect(screen.queryByRole('button', { name: /spec/i })).not.toBeInTheDocument();
     });
 
+    it('regression: should show Spec/Plan/Tasks buttons when polled jobs empty but fullJobs has completed jobs', () => {
+      // Regression for polling optimization (947f1a81): the jobs/status endpoint
+      // now returns only PENDING/RUNNING jobs, so once a workflow completes the
+      // `jobs` prop (polled) is empty. Completion state must come from `fullJobs`
+      // (fetched via useTicketJobs), otherwise the Spec/Plan/Tasks/Summary action
+      // buttons silently disappear from the ticket detail footer.
+      const ticket = createMockTicket({ branch: 'feature/test', stage: 'VERIFY', workflowType: 'FULL' });
+      const polledJobs: TicketJob[] = []; // workflow finished → status endpoint returns nothing
+      const fullJobs = [
+        createMockJob({ id: 101, command: 'specify', status: 'COMPLETED' }),
+        createMockJob({ id: 102, command: 'plan', status: 'COMPLETED' }),
+        createMockJob({ id: 103, command: 'implement', status: 'COMPLETED' }),
+      ];
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={polledJobs}
+          fullJobs={fullJobs}
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /^spec$/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^plan$/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^tasks$/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^summary$/i })).toBeInTheDocument();
+    });
+
     it('should show View Specification button after job completes and branch is added', async () => {
       const initialTicket = createMockTicket({ branch: null, stage: 'SPECIFY' });
       const initialJobs: TicketJob[] = [];

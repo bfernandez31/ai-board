@@ -261,13 +261,18 @@ export function TicketDetailModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, hasJobs]);
 
+  // Completion state must come from `fullJobs` (fetched via useTicketJobs) and
+  // not from the polled `jobs` prop. Since the polling optimization (947f1a81),
+  // the /jobs/status endpoint only returns PENDING/RUNNING jobs, so once a
+  // workflow completes the polled `jobs` array is empty and would incorrectly
+  // hide the Spec/Plan/Tasks/Summary buttons.
   const completedJobs = useMemo(() => {
-    if (!localTicket?.branch || jobs.length === 0) {
+    if (!localTicket?.branch || fullJobs.length === 0) {
       return { specify: false, plan: false, implement: false };
     }
-    const has = (cmd: string) => jobs.some(j => j.command === cmd && j.status === 'COMPLETED');
+    const has = (cmd: string) => fullJobs.some(j => j.command === cmd && j.status === 'COMPLETED');
     return { specify: has('specify'), plan: has('plan'), implement: has('implement') };
-  }, [localTicket?.branch, jobs]);
+  }, [localTicket?.branch, fullJobs]);
 
   const showPlanButton = localTicket?.workflowType === 'FULL' && completedJobs.plan;
   const showTasksButton = showPlanButton;
