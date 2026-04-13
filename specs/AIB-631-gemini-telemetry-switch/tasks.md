@@ -4,7 +4,7 @@ Migrate Gemini CLI telemetry from custom stdout scraping to native OTLP ingestio
 
 ## Phase 1: Setup & Baseline
 - [x] T001 Verify project structure and document baseline state per specs/AIB-631-gemini-telemetry-switch/plan.md
-- [ ] T002 [P] Execute existing telemetry tests to ensure a clean baseline: `npm test tests/integration/telemetry/agent-agnostic.test.ts`
+- [x] T002 [P] Execute existing telemetry tests to ensure a clean baseline: `npm test tests/integration/telemetry/agent-agnostic.test.ts`
 
 ## Phase 2: Server-side Gemini OTLP Ingestion (US1)
 - [ ] T003 [P] [US1] Create baseline integration test for Gemini OTLP in `tests/integration/telemetry/agent-agnostic.test.ts` (expect failure)
