@@ -124,6 +124,15 @@ describe('Retro-Spec Job API', () => {
       expect(response.status).toBe(400);
     });
 
+    it('should reject http:// docUrl for SSRF protection', async () => {
+      const response = await ctx.api.post(
+        `/api/projects/${ctx.projectId}/setup/jobs`,
+        { agent: 'CLAUDE', command: 'RETRO_SPEC', depth: 'STANDARD', docUrl: 'http://169.254.169.254/latest/meta-data/' }
+      );
+
+      expect(response.status).toBe(400);
+    });
+
     it('should accept RETRO_SPEC with docUrl and context', async () => {
       const response = await ctx.api.post<{
         id: number;
