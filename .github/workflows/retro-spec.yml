@@ -161,8 +161,38 @@ jobs:
         env:
           DOC_URL: ${{ inputs.docUrl }}
         run: |
+          # Validate URL scheme — only HTTPS allowed (prevents SSRF via http/file/ftp/gopher)
+          if [[ ! "${DOC_URL}" =~ ^https:// ]]; then
+            echo "::error::docUrl must use https:// scheme. Got: ${DOC_URL%%://*}://"
+            exit 1
+          fi
+
+          # Extract hostname and resolve to IP to block private/link-local ranges
+          DOC_HOST="${DOC_URL#https://}"
+          # Strip userinfo (user:pass@) if present
+          DOC_HOST="${DOC_HOST#*@}"
+          # Handle IPv6 bracket notation (e.g., [2001:db8::1])
+          if [[ "$DOC_HOST" == \[* ]]; then
+            DOC_HOST="${DOC_HOST#\[}"
+            DOC_HOST="${DOC_HOST%%\]*}"
+          else
+            DOC_HOST="${DOC_HOST%%[/:]*}"
+          fi
+          RESOLVED_IPS=$(getent hosts "${DOC_HOST}" 2>/dev/null | awk '{print $1}' || true)
+          if [ -z "$RESOLVED_IPS" ]; then
+            echo "::warning::Cannot resolve hostname '${DOC_HOST}', proceeding with codebase only"
+            echo "DOC_URL_USED=false" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          for ip in $RESOLVED_IPS; do
+            if [[ "$ip" =~ ^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|169\.254\.|127\.|0\.|::1|fe80:|f[cd][0-9a-f][0-9a-f]:) ]]; then
+              echo "::error::docUrl resolves to private/link-local IP (${ip}). Blocked for SSRF protection."
+              exit 1
+            fi
+          done
+
           echo "Fetching documentation from: ${DOC_URL}"
-          DOC_CONTENT=$(curl -sL --max-time 30 "${DOC_URL}" 2>/dev/null || echo "")
+          DOC_CONTENT=$(curl -s --max-redirs 0 --max-time 30 "${DOC_URL}" 2>/dev/null || echo "")
           if [ -z "$DOC_CONTENT" ]; then
             echo "::warning::Documentation URL unreachable, proceeding with codebase only"
             echo "DOC_URL_USED=false" >> "$GITHUB_ENV"

@@ -342,7 +342,7 @@ Create a setup job and dispatch the onboarding workflow or the retro-spec workfl
 | `agent` | `"CLAUDE"` \| `"CODEX"` | Yes |
 | `command` | `"ONBOARD"` \| `"RETRO_SPEC"` | No (default: `"ONBOARD"`) |
 | `depth` | `"QUICK"` \| `"STANDARD"` \| `"COMPREHENSIVE"` | Required when `command === "RETRO_SPEC"` |
-| `docUrl` | string (max 2000, valid URL) | No |
+| `docUrl` | string (HTTPS URL only, max 2000) | No |
 | `context` | string | No |
 
 **Pre-flight checks by command**:

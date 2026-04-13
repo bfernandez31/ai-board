@@ -23,7 +23,7 @@ const createSetupJobSchema = z.object({
   agent: z.enum(['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']),
   command: z.enum(['ONBOARD', 'RETRO_SPEC']).default('ONBOARD'),
   depth: z.enum(['QUICK', 'STANDARD', 'COMPREHENSIVE']).optional(),
-  docUrl: z.string().url().max(2000).optional(),
+  docUrl: z.string().url().max(2000).startsWith('https://').optional(),
   context: z.string().optional(),
 }).refine(
   (data) => data.command !== 'RETRO_SPEC' || data.depth !== undefined,
