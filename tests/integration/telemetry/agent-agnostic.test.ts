@@ -429,6 +429,124 @@ describe('Agent-Agnostic Telemetry', () => {
     });
   });
 
+  describe('US5: Gemini Batch Telemetry', () => {
+    it('Gemini batch payload with known model estimates cost', async () => {
+      const payload = {
+        jobId,
+        agent: 'GEMINI',
+        model: 'gemini-2.5-pro',
+        inputTokens: 15000,
+        outputTokens: 3000,
+        thinkingTokens: 5000,
+        cacheReadTokens: 8000,
+        durationMs: 45000,
+        toolsUsed: ['Read', 'Edit', 'Bash'],
+      };
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+      expect(response.data).toHaveProperty('status', 'accepted');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.inputTokens).toBe(15000);
+      expect(job!.outputTokens).toBe(3000);
+      expect(job!.thinkingTokens).toBe(5000);
+      expect(job!.cacheReadTokens).toBe(8000);
+      expect(job!.costUsd).toBeGreaterThan(0);
+      expect(job!.model).toBe('gemini-2.5-pro');
+      expect(job!.toolsUsed).toContain('Read');
+      expect(job!.toolsUsed).toContain('Edit');
+      expect(job!.toolsUsed).toContain('Bash');
+    });
+
+    it('Gemini batch payload with unknown model has null cost', async () => {
+      const payload = {
+        jobId,
+        agent: 'GEMINI',
+        model: 'gemini-unknown-model',
+        inputTokens: 5000,
+        outputTokens: 1000,
+        thinkingTokens: 0,
+      };
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.inputTokens).toBe(5000);
+      expect(job!.outputTokens).toBe(1000);
+      expect(job!.costUsd).toBeNull();
+    });
+
+    it('Gemini batch payload with explicit costUsd uses provided value', async () => {
+      const payload = {
+        jobId,
+        agent: 'GEMINI',
+        model: 'gemini-2.5-pro',
+        inputTokens: 1000,
+        outputTokens: 500,
+        costUsd: 0.42,
+      };
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.costUsd).toBeCloseTo(0.42);
+    });
+
+    it('Gemini thinking tokens accumulate across multiple batches', async () => {
+      // First batch with thinking tokens
+      const payload1 = {
+        jobId,
+        agent: 'GEMINI',
+        model: 'gemini-2.5-pro',
+        inputTokens: 5000,
+        outputTokens: 1000,
+        thinkingTokens: 2000,
+        cacheReadTokens: 500,
+      };
+      await workflowApi.post('/api/telemetry/v1/logs', payload1);
+
+      // Second batch with more thinking tokens
+      const payload2 = {
+        jobId,
+        agent: 'GEMINI',
+        model: 'gemini-2.5-pro',
+        inputTokens: 3000,
+        outputTokens: 800,
+        thinkingTokens: 1500,
+        cacheReadTokens: 300,
+      };
+      await workflowApi.post('/api/telemetry/v1/logs', payload2);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.inputTokens).toBe(8000);      // 5000 + 3000
+      expect(job!.outputTokens).toBe(1800);      // 1000 + 800
+      expect(job!.thinkingTokens).toBe(3500);    // 2000 + 1500
+      expect(job!.cacheReadTokens).toBe(800);    // 500 + 300
+      expect(job!.costUsd).toBeGreaterThan(0);
+    });
+
+    it('Gemini batch without thinkingTokens defaults to 0', async () => {
+      const payload = {
+        jobId,
+        agent: 'GEMINI',
+        model: 'gemini-2.5-flash',
+        inputTokens: 5000,
+        outputTokens: 1000,
+        // No thinkingTokens field
+      };
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.thinkingTokens).toBe(0);
+      expect(job!.costUsd).toBeGreaterThan(0);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('T014: unrecognized event names are silently skipped without error', async () => {
       const payload = buildOtlpPayload(jobId, [

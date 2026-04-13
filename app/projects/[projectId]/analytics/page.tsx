@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { Agent } from '@prisma/client';
 import { getProject } from '@/lib/db/projects';
 import { getAnalyticsData } from '@/lib/analytics/queries';
 import { DEFAULT_ANALYTICS_FILTERS } from '@/lib/analytics/aggregations';
@@ -13,7 +14,7 @@ export const revalidate = 0;
 
 const VALID_RANGES = new Set<TimeRange>(['7d', '30d', '90d', 'all']);
 const VALID_OUTCOMES = new Set<TicketOutcomeFilter>(['shipped', 'closed', 'all-completed']);
-const VALID_AGENTS = new Set<AgentFilter>(['all', 'CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']);
+const VALID_AGENTS = new Set<AgentFilter>(['all', ...Object.values(Agent)] as AgentFilter[]);
 
 function parseProjectId(projectIdString: string): number {
   const projectId = parseInt(projectIdString, 10);

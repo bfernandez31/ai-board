@@ -47,6 +47,7 @@ model Job {
   outputTokens        Int? // Total output tokens generated
   cacheReadTokens     Int? // Total cache read tokens
   cacheCreationTokens Int? // Total cache creation tokens
+  thinkingTokens      Int? // Total thinking/reasoning tokens (Gemini thinking mode)
   costUsd             Float? // Total cost in USD
   durationMs          Int? // Total Claude API duration in milliseconds
   model               String?  @db.VarChar(50) // Primary model used

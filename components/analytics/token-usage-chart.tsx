@@ -17,10 +17,11 @@ export function TokenUsageChart({
   const chartData = [
     { name: 'Input', tokens: data.inputTokens, fill: 'hsl(var(--chart-1))' },
     { name: 'Output', tokens: data.outputTokens, fill: 'hsl(var(--chart-2))' },
+    { name: 'Thinking', tokens: data.thinkingTokens, fill: 'hsl(var(--chart-4))' },
     { name: 'Cache', tokens: data.cacheTokens, fill: 'hsl(var(--chart-3))' },
   ];
 
-  const total = data.inputTokens + data.outputTokens + data.cacheTokens;
+  const total = data.inputTokens + data.outputTokens + data.thinkingTokens + data.cacheTokens;
 
   if (total === 0) {
     return (

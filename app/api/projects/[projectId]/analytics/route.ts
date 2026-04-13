@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Agent } from '@prisma/client';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { getAnalyticsData } from '@/lib/analytics/queries';
+import type { AgentFilter } from '@/lib/analytics/types';
+
+const agentValues = ['all', ...Object.values(Agent)] as [string, ...string[]];
 
 const querySchema = z.object({
   range: z.enum(['7d', '30d', '90d', 'all']).default('30d'),
   outcome: z.enum(['shipped', 'closed', 'all-completed']).default('shipped'),
-  agent: z.enum(['all', 'CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']).default('all'),
+  agent: z.enum(agentValues).default('all').transform((v) => v as AgentFilter),
 });
 
 export async function GET(

@@ -355,6 +355,61 @@ describe('Analytics Route', () => {
     expect(noMatch.overview.ticketsClosed.count).toBe(1);
   });
 
+  it('token breakdown includes thinking tokens when Gemini jobs present', async () => {
+    await seedAnalyticsFixtures(ctx.projectId);
+
+    // Add a Gemini ticket+job with thinkingTokens
+    const geminiTicket = await prisma.ticket.create({
+      data: {
+        projectId: ctx.projectId,
+        title: '[e2e] shipped gemini',
+        description: 'analytics gemini ticket',
+        stage: Stage.SHIP,
+        workflowType: WorkflowType.FULL,
+        ticketNumber: 100,
+        ticketKey: 'E2E-100',
+        updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        agent: Agent.GEMINI,
+      },
+    });
+
+    await prisma.job.create({
+      data: {
+        ticketId: geminiTicket.id,
+        projectId: ctx.projectId,
+        command: 'implement',
+        status: JobStatus.COMPLETED,
+        startedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        costUsd: 0.50,
+        durationMs: 5000,
+        inputTokens: 10000,
+        outputTokens: 2000,
+        thinkingTokens: 3000,
+        cacheReadTokens: 500,
+        cacheCreationTokens: 100,
+        toolsUsed: ['Read', 'Edit'],
+      },
+    });
+
+    const response = await GET(
+      new NextRequest(
+        `http://localhost/api/projects/${ctx.projectId}/analytics?outcome=all-completed`
+      ),
+      { params: Promise.resolve({ projectId: String(ctx.projectId) }) }
+    );
+    const data = (await response.json()) as {
+      tokenUsage: { inputTokens: number; outputTokens: number; thinkingTokens: number; cacheTokens: number };
+      availableAgents: Array<{ value: string }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(data.tokenUsage.thinkingTokens).toBe(3000);
+    // Verify Gemini appears in available agents
+    expect(data.availableAgents.some((a: { value: string }) => a.value === 'GEMINI')).toBe(true);
+  });
+
   it('rejects invalid analytics filters', async () => {
     const response = await GET(
       new NextRequest(

@@ -7,6 +7,7 @@ interface JobTelemetryData {
   outputTokens: number | null;
   cacheReadTokens: number | null;
   cacheCreationTokens: number | null;
+  thinkingTokens: number | null;
   costUsd: number | null;
   durationMs: number | null;
   model: string | null;
@@ -25,6 +26,7 @@ export function aggregateJobTelemetry(
   let outputTokens = 0;
   let cacheReadTokens = 0;
   let cacheCreationTokens = 0;
+  let thinkingTokens = 0;
   let costUsd = 0;
   let durationMs = 0;
 
@@ -36,6 +38,7 @@ export function aggregateJobTelemetry(
     outputTokens += job.outputTokens ?? 0;
     cacheReadTokens += job.cacheReadTokens ?? 0;
     cacheCreationTokens += job.cacheCreationTokens ?? 0;
+    thinkingTokens += job.thinkingTokens ?? 0;
     costUsd += job.costUsd ?? 0;
     durationMs += job.durationMs ?? 0;
 
@@ -66,6 +69,7 @@ export function aggregateJobTelemetry(
     outputTokens,
     cacheReadTokens,
     cacheCreationTokens,
+    thinkingTokens,
     costUsd,
     durationMs,
     model: primaryModel,
@@ -82,6 +86,7 @@ export function createEmptyTelemetry(ticketKey: string): TicketTelemetry {
     outputTokens: 0,
     cacheReadTokens: 0,
     cacheCreationTokens: 0,
+    thinkingTokens: 0,
     costUsd: 0,
     durationMs: 0,
     model: null,
@@ -104,6 +109,7 @@ export function buildTelemetryQuery(
       outputTokens: true,
       cacheReadTokens: true,
       cacheCreationTokens: true,
+      thinkingTokens: true,
       costUsd: true,
       durationMs: true,
       model: true,

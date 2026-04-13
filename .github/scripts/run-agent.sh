@@ -469,11 +469,14 @@ collect_gemini_telemetry() {
     return 0
   fi
 
-  local tools_json model input_tokens output_tokens duration_ms
+  local tools_json model input_tokens output_tokens thinking_tokens cache_read_tokens cache_creation_tokens duration_ms
   tools_json=$(jq -s '[.[] | select(.type == "tool_use" or .event == "tool_use") | (.name // .tool // empty)] | unique' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "[]")
   model=$(jq -rs '[.[] | .model? // .metadata?.model? // empty] | map(select(length > 0)) | last // empty' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "")
   input_tokens=$(jq -rs '[.[] | .usage?.inputTokens? // .usage?.input_tokens? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
   output_tokens=$(jq -rs '[.[] | .usage?.outputTokens? // .usage?.output_tokens? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  thinking_tokens=$(jq -rs '[.[] | .usage?.thinkingTokens? // .usage?.thinking_tokens? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  cache_read_tokens=$(jq -rs '[.[] | .usage?.cacheReadTokens? // .usage?.cache_read_tokens? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  cache_creation_tokens=$(jq -rs '[.[] | .usage?.cacheCreationTokens? // .usage?.cache_creation_tokens? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
   duration_ms=$(jq -rs '[.[] | .durationMs? // .duration_ms? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
 
   local payload
@@ -483,10 +486,12 @@ collect_gemini_telemetry() {
     --arg model "$model" \
     --argjson inputTokens "$input_tokens" \
     --argjson outputTokens "$output_tokens" \
+    --argjson thinkingTokens "$thinking_tokens" \
+    --argjson cacheReadTokens "$cache_read_tokens" \
+    --argjson cacheCreationTokens "$cache_creation_tokens" \
     --argjson durationMs "$duration_ms" \
     --argjson toolsUsed "$tools_json" \
-    --arg costStatus "UNAVAILABLE" \
-    '{jobId: $jobId, agent: $agent, model: $model, inputTokens: $inputTokens, outputTokens: $outputTokens, durationMs: $durationMs, toolsUsed: $toolsUsed, costStatus: $costStatus}')
+    '{jobId: $jobId, agent: $agent, model: $model, inputTokens: $inputTokens, outputTokens: $outputTokens, thinkingTokens: $thinkingTokens, cacheReadTokens: $cacheReadTokens, cacheCreationTokens: $cacheCreationTokens, durationMs: $durationMs, toolsUsed: $toolsUsed}')
 
   local auth_header=""
   if [[ -n "${OTEL_EXPORTER_OTLP_HEADERS:-}" ]]; then

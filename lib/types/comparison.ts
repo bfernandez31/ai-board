@@ -148,6 +148,9 @@ export interface TicketTelemetry {
   /** Total cache creation tokens */
   cacheCreationTokens: number;
 
+  /** Total thinking/reasoning tokens */
+  thinkingTokens: number;
+
   /** Total cost in USD */
   costUsd: number;
 

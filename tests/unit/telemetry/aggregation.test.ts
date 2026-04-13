@@ -116,6 +116,7 @@ describe('Telemetry Aggregation', () => {
         outputTokens: 0,
         cacheReadTokens: 0,
         cacheCreationTokens: 0,
+        thinkingTokens: 0,
         costUsd: 0,
         durationMs: 0,
         model: null,

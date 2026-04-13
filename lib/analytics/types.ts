@@ -67,6 +67,8 @@ export interface TokenBreakdown {
   inputTokens: number;
   /** Total output tokens generated */
   outputTokens: number;
+  /** Total thinking/reasoning tokens */
+  thinkingTokens: number;
   /** Total cache tokens (read + creation) */
   cacheTokens: number;
 }

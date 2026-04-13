@@ -14,6 +14,7 @@ const batchPayloadSchema = z.object({
   agent: z.enum(['MISTRAL', 'GEMINI']).optional(),
   inputTokens: z.number().int().nonnegative().optional(),
   outputTokens: z.number().int().nonnegative().optional(),
+  thinkingTokens: z.number().int().nonnegative().optional(),
   cacheReadTokens: z.number().int().nonnegative().optional(),
   cacheCreationTokens: z.number().int().nonnegative().optional(),
   durationMs: z.number().int().nonnegative().optional(),
@@ -230,6 +231,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 interface TelemetryMetrics {
   inputTokens: number;
   outputTokens: number;
+  thinkingTokens: number;
   cacheReadTokens: number;
   cacheCreationTokens: number;
   costUsd: number | null;
@@ -242,6 +244,7 @@ function createEmptyMetrics(): TelemetryMetrics {
   return {
     inputTokens: 0,
     outputTokens: 0,
+    thinkingTokens: 0,
     cacheReadTokens: 0,
     cacheCreationTokens: 0,
     costUsd: null,
@@ -266,6 +269,7 @@ async function updateJobMetrics(
       id: true,
       inputTokens: true,
       outputTokens: true,
+      thinkingTokens: true,
       cacheReadTokens: true,
       cacheCreationTokens: true,
       costUsd: true,
@@ -284,6 +288,7 @@ async function updateJobMetrics(
   const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
     inputTokens: (job.inputTokens || 0) + metrics.inputTokens,
     outputTokens: (job.outputTokens || 0) + metrics.outputTokens,
+    thinkingTokens: (job.thinkingTokens || 0) + metrics.thinkingTokens,
     cacheReadTokens: (job.cacheReadTokens || 0) + metrics.cacheReadTokens,
     cacheCreationTokens: (job.cacheCreationTokens || 0) + metrics.cacheCreationTokens,
     durationMs: (job.durationMs || 0) + metrics.durationMs,
@@ -374,6 +379,40 @@ function estimateMistralCost(model: string, inputTokens: number, outputTokens: n
 }
 
 /**
+ * Estimate Gemini API cost from token counts.
+ * Prices are per-million tokens (source: Google AI pricing).
+ * Uses prefix matching for model names to handle version suffixes (e.g., gemini-2.5-pro-preview-05-06).
+ */
+const GEMINI_PRICING: Record<string, { input: number; output: number; thinking: number; cached: number }> = {
+  'gemini-2.5-pro':   { input: 1.25, output: 10.00, thinking: 3.75, cached: 0.3125 },
+  'gemini-2.5-flash': { input: 0.15, output: 0.60,  thinking: 0.45, cached: 0.0375 },
+  'gemini-2.0-flash': { input: 0.10, output: 0.40,  thinking: 0.00, cached: 0.025  },
+};
+
+export function estimateGeminiCost(
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  thinkingTokens: number,
+  cachedTokens: number
+): number | null {
+  // Exact match first, then prefix match for version suffixes
+  let pricing = GEMINI_PRICING[model];
+  if (!pricing) {
+    const prefix = Object.keys(GEMINI_PRICING).find((key) => model.startsWith(key));
+    if (prefix) pricing = GEMINI_PRICING[prefix];
+  }
+  if (!pricing) return null;
+
+  return (
+    (inputTokens / 1_000_000) * pricing.input +
+    (outputTokens / 1_000_000) * pricing.output +
+    (thinkingTokens / 1_000_000) * pricing.thinking +
+    (cachedTokens / 1_000_000) * pricing.cached
+  );
+}
+
+/**
  * Process batch telemetry payload (Mistral post-execution scrape).
  * Accepts a simple JSON object with pre-aggregated metrics.
  */
@@ -399,6 +438,7 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
   const metrics = createEmptyMetrics();
   metrics.inputTokens = data.inputTokens ?? 0;
   metrics.outputTokens = data.outputTokens ?? 0;
+  metrics.thinkingTokens = data.thinkingTokens ?? 0;
   metrics.cacheReadTokens = data.cacheReadTokens ?? 0;
   metrics.cacheCreationTokens = data.cacheCreationTokens ?? 0;
   metrics.durationMs = data.durationMs ?? 0;
@@ -410,6 +450,18 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
 
   if (typeof data.costUsd === 'number') {
     metrics.costUsd = data.costUsd;
+  } else if (
+    data.agent === 'GEMINI' &&
+    (metrics.inputTokens > 0 || metrics.outputTokens > 0)
+  ) {
+    const cost = estimateGeminiCost(
+      data.model ?? '',
+      metrics.inputTokens,
+      metrics.outputTokens,
+      metrics.thinkingTokens,
+      metrics.cacheReadTokens,
+    );
+    if (cost !== null) metrics.costUsd = cost;
   } else if (
     data.agent !== 'GEMINI' &&
     data.costStatus !== 'UNAVAILABLE' &&

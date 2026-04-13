@@ -18,8 +18,8 @@
 
 **Purpose**: Add the `thinkingTokens` field to the Job model — blocks all downstream work
 
-- [ ] T001 Add `thinkingTokens Int?` field to Job model in `prisma/schema.prisma` (after `cacheCreationTokens`, before `costUsd`)
-- [ ] T002 Run Prisma migration (`bunx prisma migrate dev --name add-thinking-tokens`) and regenerate client (`bunx prisma generate`)
+- [x] T001 Add `thinkingTokens Int?` field to Job model in `prisma/schema.prisma` (after `cacheCreationTokens`, before `costUsd`)
+- [x] T002 Run Prisma migration (`bunx prisma migrate dev --name add-thinking-tokens`) and regenerate client (`bunx prisma generate`)
 
 ---
 
@@ -29,9 +29,9 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Add `GEMINI_PRICING` record (gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash) with 5-tier pricing (input, output, thinking, cached, cacheCreation) in `app/api/telemetry/v1/logs/route.ts` (after existing pricing tables)
-- [ ] T004 Add `estimateGeminiCost(model, inputTokens, outputTokens, thinkingTokens, cachedTokens)` function with prefix matching in `app/api/telemetry/v1/logs/route.ts` (follow `estimateOpenAICost()` / `estimateMistralCost()` pattern)
-- [ ] T005 Extend `TelemetryMetrics` interface to add `thinkingTokens: number` and update `createEmptyMetrics()` to include `thinkingTokens: 0` in `app/api/telemetry/v1/logs/route.ts`
+- [x] T003 Add `GEMINI_PRICING` record (gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash) with 5-tier pricing (input, output, thinking, cached, cacheCreation) in `app/api/telemetry/v1/logs/route.ts` (after existing pricing tables)
+- [x] T004 Add `estimateGeminiCost(model, inputTokens, outputTokens, thinkingTokens, cachedTokens)` function with prefix matching in `app/api/telemetry/v1/logs/route.ts` (follow `estimateOpenAICost()` / `estimateMistralCost()` pattern)
+- [x] T005 Extend `TelemetryMetrics` interface to add `thinkingTokens: number` and update `createEmptyMetrics()` to include `thinkingTokens: 0` in `app/api/telemetry/v1/logs/route.ts`
 
 **Checkpoint**: Pricing infrastructure ready — user story implementation can now begin
 
@@ -45,14 +45,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T006 [P] [US1] Create Gemini cost estimation unit tests in `tests/unit/telemetry/gemini-cost.test.ts`: known model correct calculation, unknown model returns null, prefix match (e.g. `gemini-2.5-pro-preview`), zero thinking tokens, cost formula accuracy per model
-- [ ] T007 [P] [US1] Extend `tests/integration/telemetry/agent-agnostic.test.ts` with Gemini cost tests: known model cost estimated, unknown model cost null, explicit costUsd uses provided value
+- [x] T006 [P] [US1] Create Gemini cost estimation unit tests in `tests/unit/telemetry/gemini-cost.test.ts`: known model correct calculation, unknown model returns null, prefix match (e.g. `gemini-2.5-pro-preview`), zero thinking tokens, cost formula accuracy per model
+- [x] T007 [P] [US1] Extend `tests/integration/telemetry/agent-agnostic.test.ts` with Gemini cost tests: known model cost estimated, unknown model cost null, explicit costUsd uses provided value
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Extend `batchPayloadSchema` in `app/api/telemetry/v1/logs/route.ts` to add `thinkingTokens: z.number().int().nonnegative().optional()`
-- [ ] T009 [US1] Update `processBatchPayload()` in `app/api/telemetry/v1/logs/route.ts`: map `data.thinkingTokens` to `metrics.thinkingTokens`, replace Gemini cost skip logic with `estimateGeminiCost()` call when `agent === 'GEMINI'` and tokens present
-- [ ] T010 [US1] Update `updateJobMetrics()` in `app/api/telemetry/v1/logs/route.ts`: add `thinkingTokens` to select clause and accumulation logic (`thinkingTokens: (job.thinkingTokens || 0) + metrics.thinkingTokens`)
+- [x] T008 [US1] Extend `batchPayloadSchema` in `app/api/telemetry/v1/logs/route.ts` to add `thinkingTokens: z.number().int().nonnegative().optional()`
+- [x] T009 [US1] Update `processBatchPayload()` in `app/api/telemetry/v1/logs/route.ts`: map `data.thinkingTokens` to `metrics.thinkingTokens`, replace Gemini cost skip logic with `estimateGeminiCost()` call when `agent === 'GEMINI'` and tokens present
+- [x] T010 [US1] Update `updateJobMetrics()` in `app/api/telemetry/v1/logs/route.ts`: add `thinkingTokens` to select clause and accumulation logic (`thinkingTokens: (job.thinkingTokens || 0) + metrics.thinkingTokens`)
 
 **Checkpoint**: Gemini jobs now have cost estimation — verify unit and integration tests pass
 
@@ -66,14 +66,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T011 [P] [US2] Extend `tests/integration/telemetry/agent-agnostic.test.ts` with Gemini token tests: thinking tokens accumulated, default to 0 when absent, multiple batches accumulate metrics
+- [x] T011 [P] [US2] Extend `tests/integration/telemetry/agent-agnostic.test.ts` with Gemini token tests: thinking tokens accumulated, default to 0 when absent, multiple batches accumulate metrics
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Update `collect_gemini_telemetry()` in `.github/scripts/run-agent.sh`: extract thinking tokens, cache read tokens, and cache creation tokens from stream-json; add new fields to batch payload; remove `costStatus: "UNAVAILABLE"` from payload
-- [ ] T013 [US2] Extend `TicketJobWithTelemetry` interface in `lib/types/job-types.ts` to add `thinkingTokens: number | null`
-- [ ] T014 [P] [US2] Extend `TicketTelemetry` interface in `lib/types/comparison.ts` to add `thinkingTokens: number`
-- [ ] T015 [US2] Update `aggregateJobTelemetry()` in `lib/comparison/telemetry-extractor.ts` to accumulate `thinkingTokens` from jobs
+- [x] T012 [US2] Update `collect_gemini_telemetry()` in `.github/scripts/run-agent.sh`: extract thinking tokens, cache read tokens, and cache creation tokens from stream-json; add new fields to batch payload; remove `costStatus: "UNAVAILABLE"` from payload
+- [x] T013 [US2] Extend `TicketJobWithTelemetry` interface in `lib/types/job-types.ts` to add `thinkingTokens: number | null`
+- [x] T014 [P] [US2] Extend `TicketTelemetry` interface in `lib/types/comparison.ts` to add `thinkingTokens: number`
+- [x] T015 [US2] Update `aggregateJobTelemetry()` in `lib/comparison/telemetry-extractor.ts` to accumulate `thinkingTokens` from jobs
 
 **Checkpoint**: Gemini telemetry parsing is complete with thinking token support — verify integration tests pass
 
@@ -87,13 +87,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T016 [P] [US3] Extend `tests/integration/analytics/analytics-route.test.ts` with test: token breakdown includes thinking tokens when Gemini jobs present
+- [x] T016 [P] [US3] Extend `tests/integration/analytics/analytics-route.test.ts` with test: token breakdown includes thinking tokens when Gemini jobs present
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Add `thinkingTokens: number` to `TokenBreakdown` interface in `lib/analytics/types.ts`
-- [ ] T018 [US3] Update `getTokenUsage()` in `lib/analytics/queries.ts` to aggregate `thinkingTokens` alongside other token types
-- [ ] T019 [US3] Add "Thinking" bar to token usage chart in `components/analytics/token-usage-chart.tsx` with appropriate color
+- [x] T017 [US3] Add `thinkingTokens: number` to `TokenBreakdown` interface in `lib/analytics/types.ts`
+- [x] T018 [US3] Update `getTokenUsage()` in `lib/analytics/queries.ts` to aggregate `thinkingTokens` alongside other token types
+- [x] T019 [US3] Add "Thinking" bar to token usage chart in `components/analytics/token-usage-chart.tsx` with appropriate color
 
 **Checkpoint**: Analytics dashboard shows Gemini thinking tokens — verify integration test passes
 
@@ -107,13 +107,13 @@
 
 ### Tests for User Story 4
 
-- [ ] T020 [P] [US4] Extend `tests/integration/analytics/analytics-route.test.ts` with test: agent filter with only Claude+Gemini jobs returns only those agents in `availableAgents`
+- [x] T020 [P] [US4] Extend `tests/integration/analytics/analytics-route.test.ts` with test: agent filter with only Claude+Gemini jobs returns only those agents in `availableAgents`
 
 ### Implementation for User Story 4
 
-- [ ] T021 [P] [US4] Replace hardcoded Zod agent enum in `app/api/projects/[projectId]/analytics/route.ts` with dynamic derivation from Prisma `Agent` enum: `z.enum(['all', ...Object.values(Agent)])`
-- [ ] T022 [P] [US4] Replace hardcoded `VALID_AGENTS` Set in `app/projects/[projectId]/analytics/page.tsx` with dynamic derivation from Prisma `Agent` enum
-- [ ] T023 [US4] Update `getAvailableAgents()` in `lib/analytics/queries.ts`: initialize `counts` Map from `Object.values(Agent)` and replace hardcoded agent iteration loop
+- [x] T021 [P] [US4] Replace hardcoded Zod agent enum in `app/api/projects/[projectId]/analytics/route.ts` with dynamic derivation from Prisma `Agent` enum: `z.enum(['all', ...Object.values(Agent)])`
+- [x] T022 [P] [US4] Replace hardcoded `VALID_AGENTS` Set in `app/projects/[projectId]/analytics/page.tsx` with dynamic derivation from Prisma `Agent` enum
+- [x] T023 [US4] Update `getAvailableAgents()` in `lib/analytics/queries.ts`: initialize `counts` Map from `Object.values(Agent)` and replace hardcoded agent iteration loop
 
 **Checkpoint**: Agent filter is fully dynamic — verify integration test passes
 
@@ -123,9 +123,9 @@
 
 **Purpose**: Final validation and regression prevention
 
-- [ ] T024 Run `bun run type-check` and fix any TypeScript errors across all modified files
-- [ ] T025 Run `bun run lint` and fix any linting issues across all modified files
-- [ ] T026 Run full test suite (`bun run test:unit` and `bun run test:integration`) to verify zero regressions on existing Claude, Codex, and Mistral telemetry
+- [x] T024 Run `bun run type-check` and fix any TypeScript errors across all modified files
+- [x] T025 Run `bun run lint` and fix any linting issues across all modified files
+- [x] T026 Run full test suite (`bun run test:unit` and `bun run test:integration`) to verify zero regressions on existing Claude, Codex, and Mistral telemetry
 
 ---
 

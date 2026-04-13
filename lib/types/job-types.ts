@@ -58,6 +58,7 @@ export interface TicketJobWithTelemetry {
   outputTokens: number | null;
   cacheReadTokens: number | null;
   cacheCreationTokens: number | null;
+  thinkingTokens: number | null;
   costUsd: number | null;
   durationMs: number | null;
   model: string | null;
