@@ -338,11 +338,20 @@ DEV_LOGIN_SECRET=<shared-preview-secret>
 
 If preview-login variables are absent or the environment is not a Vercel preview deployment, credentials sign-in remains hidden and unusable.
 
+### Required for Test Environments
+
+```env
+TEST_WORKFLOW_TOKEN=<test-only-workflow-token>
+```
+
+`TEST_WORKFLOW_TOKEN` is accepted by `getAcceptedWorkflowTokens()` and returned by `getWorkflowToken()` only when `isWorkflowTokenTestContext()` is true (i.e. `NODE_ENV=test`, `TEST_MODE=true`, or `VITEST_INTEGRATION=1`). It is never accepted in production contexts.
+
 ## Security Notes
 
 - Preview login is excluded from production by environment gating
 - Secret comparison uses `timingSafeEqual` (preview login credentials and workflow token verification)
-- Workflow token verification (`app/lib/workflow-auth.ts`) uses `timingSafeEqual` from `node:crypto` to prevent timing attacks; mismatched token lengths short-circuit before the byte comparison
+- Workflow token verification (`lib/auth/workflow-token.ts`) uses `timingSafeEqual` from `node:crypto` to prevent timing attacks; mismatched token lengths short-circuit before the byte comparison
+- Test workflow tokens are sourced exclusively from the `TEST_WORKFLOW_TOKEN` environment variable — no token value is hardcoded in source code
 - Failed credentials attempts return a generic error
 - Authorization stays server-side after sign-in
 - PAT validation and browser-session validation are separate code paths

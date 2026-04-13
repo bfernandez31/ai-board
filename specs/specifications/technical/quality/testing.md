@@ -34,7 +34,9 @@ tests/
 │   │   └── mention-input.test.tsx
 │   ├── job-state-machine.test.ts
 │   ├── useJobPolling.test.ts
-│   └── query-keys.test.ts
+│   ├── query-keys.test.ts
+│   └── lib/
+│       └── workflow-token.test.ts
 ├── integration/             # Integration tests (Vitest)
 │   ├── projects/            # Domain: project management
 │   │   ├── crud.test.ts

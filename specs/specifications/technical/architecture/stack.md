@@ -411,6 +411,7 @@
   - `DEV_LOGIN_SECRET`: Shared secret for preview credentials login
   - `ANTHROPIC_API_KEY`: Claude API key
   - `WORKFLOW_API_TOKEN`: GitHub Actions authentication
+  - `TEST_WORKFLOW_TOKEN`: Test-only workflow token (accepted only in test contexts; never hardcoded in source)
   - `CLOUDINARY_CLOUD_NAME`: Cloudinary account
   - `CLOUDINARY_API_KEY`: Cloudinary API key
   - `CLOUDINARY_API_SECRET`: Cloudinary API secret
