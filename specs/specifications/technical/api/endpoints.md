@@ -3107,12 +3107,12 @@ Invalid transitions return 400 error
 
 ### POST /api/telemetry/v1/logs
 
-Agent telemetry endpoint supporting OTLP HTTP/JSON (Claude Code, Codex) and batch JSON (Mistral vibe CLI, Gemini CLI).
+Agent telemetry endpoint supporting OTLP HTTP/JSON (Claude Code, Codex, Gemini CLI) and batch JSON (Mistral vibe CLI).
 
 **Authentication**: Bearer token (WORKFLOW_API_TOKEN) via `OTEL_EXPORTER_OTLP_HEADERS`
 **Authorization**: Workflow token validation
 
-**Supported Agents**: Claude Code (`claude_code.*` log events), Codex (`codex.*` log events), and batch JSON payloads from Mistral vibe CLI and Gemini CLI. The endpoint detects the payload format: `resourceLogs` routes to OTLP log processing, a top-level `jobId` routes to batch processing.
+**Supported Agents**: Claude Code (`claude_code.*` log events), Codex (`codex.*` log events), Gemini CLI (`gemini_cli.*` log events), and batch JSON payloads from Mistral vibe CLI. The endpoint detects the payload format: `resourceLogs` routes to OTLP log processing, a top-level `jobId` routes to batch processing.
 
 **Request Body** (OTLP JSON format — Claude Code example):
 ```json
@@ -3139,24 +3139,24 @@ Agent telemetry endpoint supporting OTLP HTTP/JSON (Claude Code, Codex) and batc
 }
 ```
 
-**Request Body** (OTLP JSON format — Codex example):
+**Request Body** (OTLP JSON format — Gemini example):
 ```json
 {
   "resourceLogs": [{
     "resource": {
       "attributes": [
         { "key": "job_id", "value": { "stringValue": "123" } },
-        { "key": "service.name", "value": { "stringValue": "codex" } }
+        { "key": "service.name", "value": { "stringValue": "gemini-cli" } }
       ]
     },
     "scopeLogs": [{
       "logRecords": [{
-        "body": { "stringValue": "codex.api_request" },
+        "body": { "stringValue": "gemini_cli.api_response" },
         "attributes": [
-          { "key": "input_tokens", "value": { "stringValue": "800" } },
-          { "key": "output_tokens", "value": { "stringValue": "400" } },
-          { "key": "cost_usd", "value": { "stringValue": "0.03" } },
-          { "key": "model", "value": { "stringValue": "codex-mini-latest" } }
+          { "key": "gemini_cli.usage.input_tokens", "value": { "intValue": "5000" } },
+          { "key": "gemini_cli.usage.output_tokens", "value": { "intValue": "2000" } },
+          { "key": "gemini_cli.usage.cache_read_tokens", "value": { "intValue": "300" } },
+          { "key": "gemini_cli.model", "value": { "stringValue": "gemini-2.0-pro" } }
         ]
       }]
     }]
@@ -3164,15 +3164,14 @@ Agent telemetry endpoint supporting OTLP HTTP/JSON (Claude Code, Codex) and batc
 }
 ```
 
-**Request Body** (Batch JSON — Mistral / Gemini example):
+**Request Body** (Batch JSON — Mistral example):
 ```json
 {
   "jobId": 456,
-  "agent": "GEMINI",
+  "agent": "MISTRAL",
   "inputTokens": 5000,
   "outputTokens": 2000,
-  "cacheReadTokens": 300,
-  "model": "gemini-3-pro",
+  "model": "mistral-large-latest",
   "toolsUsed": ["bash", "write_file", "read_file"]
 }
 ```
@@ -3183,14 +3182,14 @@ Agent telemetry endpoint supporting OTLP HTTP/JSON (Claude Code, Codex) and batc
 - `outputTokens` (number, optional): Total completion tokens generated in session.
 - `cacheReadTokens` (number, optional): Total cached input tokens.
 - `cacheCreationTokens` (number, optional): Total cache creation tokens.
-- `agent` (string, optional): Batch emitter identity such as `MISTRAL` or `GEMINI`.
-- `model` (string, optional): Model used (e.g., `devstral-medium-latest` or `gemini-3-pro`).
+- `agent` (string, optional): Batch emitter identity such as `MISTRAL`.
+- `model` (string, optional): Model used (e.g., `mistral-large-latest`).
 - `toolsUsed` (string[], optional): Unique tool names used during session.
 - `costStatus` (string, optional): `ESTIMATED` or `UNAVAILABLE` for providers that cannot always resolve pricing.
 
 Cost is estimated server-side from provider pricing lookups when available. When pricing metadata is unavailable, the batch may preserve usage metrics while reporting `costStatus: "UNAVAILABLE"`.
 
-**Supported Event Names** (log-based — Claude Code and Codex):
+**Supported Event Names** (log-based — Claude Code, Codex, Gemini):
 
 | Event Name | Agent | Processing |
 |------------|-------|------------|
@@ -3199,6 +3198,8 @@ Cost is estimated server-side from provider pricing lookups when available. When
 | `claude_code.tool_decision` | Claude | Tool usage tracking |
 | `codex.api_request` | Codex | Token/cost/duration/model metrics |
 | `codex.tool.call` | Codex | Tool usage tracking |
+| `gemini_cli.api_response` | Gemini | Token/duration/model usage metrics |
+| `gemini_cli.tool_call` | Gemini | Tool usage tracking |
 | All others | Any | Silently skipped |
 
 **Workflow Configuration** (Claude Code):
@@ -3227,6 +3228,17 @@ env:
   OTEL_BLRP_SCHEDULE_DELAY: "60000"
 ```
 
+**Workflow Configuration** (Gemini CLI):
+```yaml
+env:
+  OTEL_LOGS_EXPORTER: "otlp"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/json"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
+  OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
+  OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+```
+
 **Workflow Configuration** (Mistral vibe CLI):
 ```yaml
 env:
@@ -3235,18 +3247,10 @@ env:
   # in run-agent.sh — no OTEL env vars needed for vibe.
 ```
 
-**Workflow Configuration** (Gemini CLI):
-```yaml
-env:
-  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-  # Batch telemetry is collected post-execution by collect_gemini_telemetry()
-  # from Gemini stream-json output in run-agent.sh.
-```
-
 **Processing**:
-- Detects payload type: `resourceLogs` → log-based path (Claude/Codex); top-level `jobId` → batch path (Mistral/Gemini)
+- Detects payload type: `resourceLogs` → log-based path (Claude/Codex/Gemini); top-level `jobId` → batch path (Mistral)
 - Extracts `job_id` from resource attributes (OTLP) or top-level `jobId` (batch) for job association
-- **Log path**: aggregates metrics from `claude_code.api_request` and `codex.api_request` events (tokens, cost, duration, model); collects tool names from tool events
+- **Log path**: aggregates metrics from `claude_code.*`, `codex.*`, and `gemini_cli.*` events (tokens, cost, duration, model); collects tool names from tool events
 - **Batch path**: reads token counts, model, agent, and tools directly from the JSON payload; estimates cost when provider pricing is known and otherwise preserves usage with unavailable-cost status
 - Updates corresponding Job record with aggregated metrics
 - Missing or null metric attributes default to zero (no errors)
@@ -3273,7 +3277,7 @@ env:
 - Telemetry is sent automatically by the agent CLI during execution
 - Multiple batches may be received for a single job (metrics are aggregated across all batches)
 - If no job_id in attributes, telemetry is accepted but not stored
-- Agent type (Claude vs Codex vs Mistral) is not stored on the telemetry payload — it is determined via the Job's parent Ticket `agent` field
+- Agent type (Claude vs Codex vs Gemini vs Mistral) is not stored on the telemetry payload — it is determined via the Job's parent Ticket `agent` field
 - Mixed-agent event names in a single payload are supported; all recognized events accumulate to the same Job
 - Payloads without a `job_id` resource attribute are accepted but not stored (logged as unassociated for debugging)
 
@@ -3289,8 +3293,8 @@ sequenceDiagram
     EP->>EP: Validate token + Zod schema
     EP->>EP: Detect signal type (resourceLogs vs batch JSON)
     EP->>EP: Extract job_id from resource attrs
-    alt Log payload (Claude / Codex)
-        EP->>EP: Match event names (claude_code.* / codex.*)
+    alt Log payload (Claude / Codex / Gemini)
+        EP->>EP: Match event names (claude_code.* / codex.* / gemini_cli.*)
     else Batch payload (Mistral)
         EP->>EP: Read token counts, model, tools from JSON
         EP->>EP: Estimate cost via Mistral pricing table

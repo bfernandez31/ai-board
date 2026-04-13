@@ -295,13 +295,13 @@ model Job {
   updatedAt       DateTime
   workflowRunId   BigInt?   // GitHub Actions workflow run ID (populated on first RUNNING callback)
 
-  // Claude telemetry metrics (aggregated from all API calls in the job)
+  // Agent telemetry metrics (aggregated from all API calls in the job for Claude, Codex, and Gemini)
   inputTokens         Int?      // Total input tokens consumed
   outputTokens        Int?      // Total output tokens generated
   cacheReadTokens     Int?      // Total cache read tokens
   cacheCreationTokens Int?      // Total cache creation tokens
   costUsd             Float?    // Total cost in USD
-  durationMs          Int?      // Total Claude API duration in milliseconds
+  durationMs          Int?      // Total agent API duration in milliseconds
   model               String?   @db.VarChar(50)  // Primary model used
   toolsUsed           String[]  @default([])     // List of tools used (Edit, Write, Bash, etc.)
 
