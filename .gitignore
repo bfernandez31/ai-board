@@ -90,3 +90,6 @@ video/node_modules/
 
 # Superpowers brainstorm sessions
 .superpowers/
+
+# AI-Board agent inputs (runtime payloads for workflow agents)
+.ai-board/agent-inputs/
