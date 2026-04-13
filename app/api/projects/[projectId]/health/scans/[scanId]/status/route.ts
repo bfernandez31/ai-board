@@ -178,7 +178,7 @@ export async function PATCH(
 
     // Compute Quality Gate score before the transaction (read-only query)
     let qualityGateScore: number | null = null;
-    if (effectiveStatus === 'COMPLETED' && data.score !== undefined) {
+    if (effectiveStatus === 'COMPLETED' && data.score != null) {
       try {
         const qgData = await getQualityGateData(projectId);
         qualityGateScore = qgData.averageScore;
