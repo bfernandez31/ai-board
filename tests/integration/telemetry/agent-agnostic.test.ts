@@ -39,6 +39,39 @@ function buildOtlpPayload(
   };
 }
 
+function buildGeminiNativePayload(
+  jobId: number,
+  logRecords: Array<{ eventName?: string; body?: string; attributes?: Array<{ key: string; value: Record<string, unknown> }> }>
+) {
+  return buildOtlpPayload(jobId, logRecords.map((logRecord) => ({
+    body: logRecord.body ? { stringValue: logRecord.body } : { stringValue: '' },
+    attributes: [
+      ...(logRecord.eventName
+        ? [{ key: 'event.name', value: { stringValue: logRecord.eventName } }]
+        : []),
+      ...(logRecord.attributes ?? []),
+    ],
+  })));
+}
+
+async function waitForLatestJobId(prisma: ReturnType<typeof getPrismaClient>, ticketId: number): Promise<number> {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: { jobs: { orderBy: { createdAt: 'desc' } } },
+    });
+
+    const latestJobId = ticket?.jobs[0]?.id;
+    if (latestJobId) {
+      return latestJobId;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  throw new Error(`Timed out waiting for a job on ticket ${ticketId}`);
+}
+
 describe('Agent-Agnostic Telemetry', () => {
   let ctx: TestContext;
   let workflowApi: APIClient;
@@ -65,11 +98,7 @@ describe('Agent-Agnostic Telemetry', () => {
       targetStage: 'SPECIFY',
     });
 
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-      include: { jobs: { orderBy: { createdAt: 'desc' } } },
-    });
-    jobId = ticket!.jobs[0]!.id;
+    jobId = await waitForLatestJobId(prisma, ticketId);
 
     // Set job to RUNNING so telemetry can be received
     await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
@@ -429,22 +458,34 @@ describe('Agent-Agnostic Telemetry', () => {
     });
   });
 
-  describe('Gemini native batch telemetry', () => {
-    it('preserves thinking and cache buckets separately for Gemini jobs', async () => {
-      const payload = {
-        jobId,
-        agent: 'GEMINI',
-        model: 'gemini-2.5-pro',
-        inputTokens: 1500,
-        outputTokens: 800,
-        thinkingTokens: 200,
-        cacheReadTokens: 120,
-        cacheCreationTokens: 40,
-        durationMs: 5234,
-        toolsUsed: ['read_file', 'shell'],
-        costStatus: 'ESTIMATED',
-        usageSnapshotMode: 'CUMULATIVE',
-      };
+  describe('Gemini native OTLP telemetry', () => {
+    it('persists Gemini-native model, tokens, tools, duration, and supported-model cost', async () => {
+      const payload = buildGeminiNativePayload(jobId, [
+        {
+          body: 'gemini_cli.api_response',
+          attributes: [
+            { key: 'model', value: { stringValue: 'gemini-2.5-pro' } },
+            { key: 'input_tokens', value: { intValue: '1500' } },
+            { key: 'output_tokens', value: { intValue: '800' } },
+            { key: 'thinking_tokens', value: { intValue: '200' } },
+            { key: 'cache_read_tokens', value: { intValue: '120' } },
+            { key: 'cache_creation_tokens', value: { intValue: '40' } },
+            { key: 'duration_ms', value: { intValue: '5234' } },
+          ],
+        },
+        {
+          eventName: 'gemini_cli.tool_call',
+          attributes: [
+            { key: 'tool_name', value: { stringValue: 'read_file' } },
+          ],
+        },
+        {
+          eventName: 'gemini_cli.tool_result',
+          attributes: [
+            { key: 'tool', value: { stringValue: 'shell' } },
+          ],
+        },
+      ]);
 
       const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
       expect(response.status).toBe(200);
@@ -460,48 +501,60 @@ describe('Agent-Agnostic Telemetry', () => {
       expect(job!.costUsd).toBeGreaterThan(0);
     });
 
-    it('merges partial and delayed Gemini snapshots without double-counting repeated finals', async () => {
-      await workflowApi.post('/api/telemetry/v1/logs', {
-        jobId,
-        agent: 'GEMINI',
-        model: 'gemini-2.5-flash',
-        inputTokens: 400,
-        outputTokens: 100,
-        thinkingTokens: 30,
-        toolsUsed: ['read_file'],
-        costStatus: 'ESTIMATED',
-        usageSnapshotMode: 'CUMULATIVE',
-      });
+    it('merges partial and delayed Gemini-native snapshots without double-counting repeated finals', async () => {
+      await workflowApi.post('/api/telemetry/v1/logs', buildGeminiNativePayload(jobId, [
+        {
+          body: 'gemini_cli.api_response',
+          attributes: [
+            { key: 'model', value: { stringValue: 'gemini-2.5-flash' } },
+            { key: 'input_tokens', value: { intValue: '400' } },
+            { key: 'output_tokens', value: { intValue: '100' } },
+            { key: 'thinking_tokens', value: { intValue: '30' } },
+          ],
+        },
+        {
+          eventName: 'gemini_cli.tool_call',
+          attributes: [
+            { key: 'tool_name', value: { stringValue: 'read_file' } },
+          ],
+        },
+      ]));
 
-      await workflowApi.post('/api/telemetry/v1/logs', {
-        jobId,
-        agent: 'GEMINI',
-        model: 'gemini-2.5-flash',
-        inputTokens: 1000,
-        outputTokens: 250,
-        thinkingTokens: 80,
-        cacheReadTokens: 50,
-        cacheCreationTokens: 10,
-        durationMs: 4500,
-        toolsUsed: ['read_file', 'shell'],
-        costStatus: 'ESTIMATED',
-        usageSnapshotMode: 'CUMULATIVE',
-      });
+      await workflowApi.post('/api/telemetry/v1/logs', buildGeminiNativePayload(jobId, [
+        {
+          body: 'gemini_cli.api_response',
+          attributes: [
+            { key: 'model', value: { stringValue: 'gemini-2.5-flash' } },
+            { key: 'input_tokens', value: { intValue: '1000' } },
+            { key: 'output_tokens', value: { intValue: '250' } },
+            { key: 'thinking_tokens', value: { intValue: '80' } },
+            { key: 'cache_read_tokens', value: { intValue: '50' } },
+            { key: 'cache_creation_tokens', value: { intValue: '10' } },
+            { key: 'duration_ms', value: { intValue: '4500' } },
+          ],
+        },
+        {
+          eventName: 'gemini_cli.tool_result',
+          attributes: [
+            { key: 'tool_name', value: { stringValue: 'shell' } },
+          ],
+        },
+      ]));
 
-      await workflowApi.post('/api/telemetry/v1/logs', {
-        jobId,
-        agent: 'GEMINI',
-        model: 'gemini-2.5-flash',
-        inputTokens: 1000,
-        outputTokens: 250,
-        thinkingTokens: 80,
-        cacheReadTokens: 50,
-        cacheCreationTokens: 10,
-        durationMs: 4500,
-        toolsUsed: ['read_file', 'shell'],
-        costStatus: 'ESTIMATED',
-        usageSnapshotMode: 'CUMULATIVE',
-      });
+      await workflowApi.post('/api/telemetry/v1/logs', buildGeminiNativePayload(jobId, [
+        {
+          body: 'gemini_cli.api_response',
+          attributes: [
+            { key: 'model', value: { stringValue: 'gemini-2.5-flash' } },
+            { key: 'input_tokens', value: { intValue: '1000' } },
+            { key: 'output_tokens', value: { intValue: '250' } },
+            { key: 'thinking_tokens', value: { intValue: '80' } },
+            { key: 'cache_read_tokens', value: { intValue: '50' } },
+            { key: 'cache_creation_tokens', value: { intValue: '10' } },
+            { key: 'duration_ms', value: { intValue: '4500' } },
+          ],
+        },
+      ]));
 
       const job = await prisma.job.findUnique({ where: { id: jobId } });
       expect(job!.inputTokens).toBe(1000);
@@ -514,17 +567,23 @@ describe('Agent-Agnostic Telemetry', () => {
     });
 
     it('keeps Gemini pricing unavailable for unsupported models while preserving telemetry', async () => {
-      const response = await workflowApi.post('/api/telemetry/v1/logs', {
-        jobId,
-        agent: 'GEMINI',
-        model: 'gemini-experimental-x',
-        inputTokens: 900,
-        outputTokens: 300,
-        thinkingTokens: 90,
-        toolsUsed: ['shell'],
-        costStatus: 'UNAVAILABLE',
-        usageSnapshotMode: 'CUMULATIVE',
-      });
+      const response = await workflowApi.post('/api/telemetry/v1/logs', buildGeminiNativePayload(jobId, [
+        {
+          body: 'gemini_cli.api_response',
+          attributes: [
+            { key: 'model', value: { stringValue: 'gemini-experimental-x' } },
+            { key: 'input_tokens', value: { intValue: '900' } },
+            { key: 'output_tokens', value: { intValue: '300' } },
+            { key: 'thinking_tokens', value: { intValue: '90' } },
+          ],
+        },
+        {
+          eventName: 'gemini_cli.tool_result',
+          attributes: [
+            { key: 'tool_name', value: { stringValue: 'shell' } },
+          ],
+        },
+      ]));
 
       expect(response.status).toBe(200);
 
@@ -559,18 +618,19 @@ describe('Agent-Agnostic Telemetry', () => {
           },
         });
 
-        const response = await workflowApi.post('/api/telemetry/v1/logs', {
-          jobId,
-          agent: 'GEMINI',
-          model,
-          inputTokens: 1200,
-          outputTokens: 400,
-          thinkingTokens: 100,
-          cacheReadTokens: 80,
-          cacheCreationTokens: 20,
-          costStatus: 'ESTIMATED',
-          usageSnapshotMode: 'CUMULATIVE',
-        });
+        const response = await workflowApi.post('/api/telemetry/v1/logs', buildGeminiNativePayload(jobId, [
+          {
+            body: 'gemini_cli.api_response',
+            attributes: [
+              { key: 'model', value: { stringValue: model } },
+              { key: 'input_tokens', value: { intValue: '1200' } },
+              { key: 'output_tokens', value: { intValue: '400' } },
+              { key: 'thinking_tokens', value: { intValue: '100' } },
+              { key: 'cache_read_tokens', value: { intValue: '80' } },
+              { key: 'cache_creation_tokens', value: { intValue: '20' } },
+            ],
+          },
+        ]));
 
         expect(response.status).toBe(200);
 
@@ -578,6 +638,36 @@ describe('Agent-Agnostic Telemetry', () => {
         expect(job!.model).toBe(model);
         expect(job!.costUsd).toBeGreaterThan(0);
       }
+    });
+
+    it('returns 404 for Gemini-native OTLP correlated to a missing job', async () => {
+      const response = await workflowApi.post(
+        '/api/telemetry/v1/logs',
+        buildGeminiNativePayload(999999, [
+          {
+            body: 'gemini_cli.api_response',
+            attributes: [
+              { key: 'model', value: { stringValue: 'gemini-2.5-flash' } },
+              { key: 'input_tokens', value: { intValue: '100' } },
+              { key: 'output_tokens', value: { intValue: '50' } },
+            ],
+          },
+        ])
+      );
+
+      expect(response.status).toBe(404);
+    });
+
+    it('rejects Gemini batch payloads after the native-provider switch', async () => {
+      const response = await workflowApi.post('/api/telemetry/v1/logs', {
+        jobId,
+        agent: 'GEMINI',
+        model: 'gemini-2.5-flash',
+        inputTokens: 1000,
+        outputTokens: 250,
+      });
+
+      expect(response.status).toBe(400);
     });
   });
 

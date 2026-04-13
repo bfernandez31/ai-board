@@ -11,8 +11,8 @@
 
 **Purpose**: Establish the native Gemini telemetry runner contract and shared OTLP schema support required by every story.
 
-- [ ] T001 Extend `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh` to configure Gemini native OTLP export settings and remove `--output-format stream-json` / `GEMINI_STREAM_FILE` assumptions from Gemini execution
-- [ ] T002 [P] Extend `/home/runner/work/ai-board/ai-board/target/lib/schemas/otlp.ts` with any helper or attribute compatibility needed for Gemini `gemini_cli.*` OTLP log records and mixed string-or-number fields
+- [X] T001 Extend `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh` to configure Gemini native OTLP export settings and remove `--output-format stream-json` / `GEMINI_STREAM_FILE` assumptions from Gemini execution
+- [X] T002 [P] Extend `/home/runner/work/ai-board/ai-board/target/lib/schemas/otlp.ts` with any helper or attribute compatibility needed for Gemini `gemini_cli.*` OTLP log records and mixed string-or-number fields
 
 ---
 
@@ -22,8 +22,8 @@
 
 **⚠️ CRITICAL**: No user story work should start until this phase is complete.
 
-- [ ] T003 Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` to route OTLP records by provider event identity, keep `processBatchPayload()` as the Mistral-only branch, and remove Gemini from the supported batch contract
-- [ ] T004 [P] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/telemetry/otlp-schema.test.ts` with failing-first Gemini-native OTLP validation cases and Gemini batch-contract rejection coverage
+- [X] T003 Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` to route OTLP records by provider event identity, keep `processBatchPayload()` as the Mistral-only branch, and remove Gemini from the supported batch contract
+- [X] T004 [P] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/telemetry/otlp-schema.test.ts` with failing-first Gemini-native OTLP validation cases and Gemini batch-contract rejection coverage
 
 **Checkpoint**: Gemini has a single native telemetry path and batch JSON is explicitly reserved for Mistral before story-specific work begins.
 
@@ -37,13 +37,13 @@
 
 ### Tests for User Story 1
 
-- [ ] T005 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts` with Gemini-native OTLP success cases covering model, input/output tokens, cached tokens, tool events, duration, and supported-model cost handling
-- [ ] T006 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/jobs/ticket-jobs.test.ts` with Gemini-native telemetry visibility assertions for `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`
+- [X] T005 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts` with Gemini-native OTLP success cases covering model, input/output tokens, cached tokens, tool events, duration, and supported-model cost handling
+- [X] T006 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/jobs/ticket-jobs.test.ts` with Gemini-native telemetry visibility assertions for `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` to parse Gemini `gemini_cli.*` API and tool events, normalize native token buckets, estimate or store cost from native fields, and merge the result onto the existing `Job` telemetry columns
-- [ ] T008 [US1] Extend `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh` to invoke Gemini in standard mode with native telemetry enabled and stop posting reconstructed Gemini batch payloads after execution
+- [X] T007 [US1] Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` to parse Gemini `gemini_cli.*` API and tool events, normalize native token buckets, estimate or store cost from native fields, and merge the result onto the existing `Job` telemetry columns
+- [X] T008 [US1] Extend `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh` to invoke Gemini in standard mode with native telemetry enabled and stop posting reconstructed Gemini batch payloads after execution
 
 **Checkpoint**: User Story 1 is complete when successful Gemini jobs produce trustworthy native telemetry on existing job surfaces with no reconstructed batch path involved.
 
@@ -57,13 +57,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T009 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/jobs/status.test.ts` with Gemini failure cases where `/home/runner/work/ai-board/ai-board/target/app/api/jobs/[id]/status/route.ts` remains authoritative for terminal status and duration fallback
-- [ ] T010 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts` with partial Gemini-native OTLP, missing-job correlation, and absent-telemetry scenarios that must not mutate another job or imply success
+- [X] T009 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/jobs/status.test.ts` with Gemini failure cases where `/home/runner/work/ai-board/ai-board/target/app/api/jobs/[id]/status/route.ts` remains authoritative for terminal status and duration fallback
+- [X] T010 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts` with partial Gemini-native OTLP, missing-job correlation, and absent-telemetry scenarios that must not mutate another job or imply success
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` to merge partial Gemini telemetry safely, preserve nulls for missing optional native fields, and ignore unmatched `job_id` payloads without corrupting persisted job metrics
-- [ ] T012 [US2] Extend `/home/runner/work/ai-board/ai-board/target/app/api/jobs/[id]/status/route.ts` to preserve failed and cancelled Gemini terminal states plus wall-clock `durationMs` backfill when native Gemini telemetry is late or missing
+- [X] T011 [US2] Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` to merge partial Gemini telemetry safely, preserve nulls for missing optional native fields, and ignore unmatched `job_id` payloads without corrupting persisted job metrics
+- [X] T012 [US2] Extend `/home/runner/work/ai-board/ai-board/target/app/api/jobs/[id]/status/route.ts` to preserve failed and cancelled Gemini terminal states plus wall-clock `durationMs` backfill when native Gemini telemetry is late or missing
 
 **Checkpoint**: User Story 2 is complete when Gemini failures are visible as failures regardless of telemetry completeness and valid pre-failure telemetry is still retained.
 
@@ -77,13 +77,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T013 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts` with Mistral batch non-regression coverage and rejected Gemini batch-payload scenarios
+- [X] T013 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts` with Mistral batch non-regression coverage and rejected Gemini batch-payload scenarios
 
 ### Implementation for User Story 3
 
-- [ ] T014 [US3] Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` to reject Gemini batch submissions while preserving the existing Mistral batch merge behavior and non-Gemini OTLP handling
-- [ ] T015 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/specs/specifications/technical/api/endpoints.md`, `/home/runner/work/ai-board/ai-board/target/specs/specifications/technical/implementation/integrations.md`, `/home/runner/work/ai-board/ai-board/target/specs/specifications/technical/implementation/plugin-architecture.md`, and `/home/runner/work/ai-board/ai-board/target/specs/specifications/technical/architecture/overview.md` to document Gemini-native OTLP routing and Mistral-only batch telemetry
-- [ ] T016 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/specs/AIB-612-add-gemini-cli/contracts/telemetry-api.md` and `/home/runner/work/ai-board/ai-board/target/specs/AIB-612-add-gemini-cli/workflows/gemini-usage-ingestion.md` to remove historical Gemini batch guidance and point to the supported native-provider path
+- [X] T014 [US3] Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` to reject Gemini batch submissions while preserving the existing Mistral batch merge behavior and non-Gemini OTLP handling
+- [X] T015 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/specs/specifications/technical/api/endpoints.md`, `/home/runner/work/ai-board/ai-board/target/specs/specifications/technical/implementation/integrations.md`, `/home/runner/work/ai-board/ai-board/target/specs/specifications/technical/implementation/plugin-architecture.md`, and `/home/runner/work/ai-board/ai-board/target/specs/specifications/technical/architecture/overview.md` to document Gemini-native OTLP routing and Mistral-only batch telemetry
+- [X] T016 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/specs/AIB-612-add-gemini-cli/contracts/telemetry-api.md` and `/home/runner/work/ai-board/ai-board/target/specs/AIB-612-add-gemini-cli/workflows/gemini-usage-ingestion.md` to remove historical Gemini batch guidance and point to the supported native-provider path
 
 **Checkpoint**: User Story 3 is complete when provider routing is explicit in code and docs, Mistral still works on batch telemetry, and Gemini no longer has any supported batch fallback.
 
@@ -93,8 +93,8 @@
 
 **Purpose**: Run focused regression cleanup and repo validation across the touched telemetry surfaces.
 
-- [ ] T017 [P] Run focused regression cleanup against `/home/runner/work/ai-board/ai-board/target/tests/unit/telemetry/otlp-schema.test.ts`, `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts`, `/home/runner/work/ai-board/ai-board/target/tests/integration/jobs/status.test.ts`, and `/home/runner/work/ai-board/ai-board/target/tests/integration/jobs/ticket-jobs.test.ts`
-- [ ] T018 Run final validation cleanup for `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh`, `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts`, `/home/runner/work/ai-board/ai-board/target/app/api/jobs/[id]/status/route.ts`, and `/home/runner/work/ai-board/ai-board/target/lib/schemas/otlp.ts` with `bun run test:unit`, `bun run test:integration`, `bun run type-check`, and `bun run lint`
+- [X] T017 [P] Run focused regression cleanup against `/home/runner/work/ai-board/ai-board/target/tests/unit/telemetry/otlp-schema.test.ts`, `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts`, `/home/runner/work/ai-board/ai-board/target/tests/integration/jobs/status.test.ts`, and `/home/runner/work/ai-board/ai-board/target/tests/integration/jobs/ticket-jobs.test.ts`
+- [X] T018 Run final validation cleanup for `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh`, `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts`, `/home/runner/work/ai-board/ai-board/target/app/api/jobs/[id]/status/route.ts`, and `/home/runner/work/ai-board/ai-board/target/lib/schemas/otlp.ts` with `bun run test:unit`, `bun run test:integration`, `bun run type-check`, and `bun run lint`
 
 ---
 

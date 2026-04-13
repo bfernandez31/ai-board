@@ -3190,7 +3190,7 @@ Agent telemetry endpoint supporting OTLP HTTP/JSON (Claude Code, Codex) and batc
 
 Cost is estimated server-side from provider pricing lookups when available. When pricing metadata is unavailable, the batch may preserve usage metrics while reporting `costStatus: "UNAVAILABLE"`.
 
-**Supported Event Names** (log-based — Claude Code and Codex):
+**Supported Event Names** (log-based — Claude Code, Codex, and Gemini):
 
 | Event Name | Agent | Processing |
 |------------|-------|------------|
@@ -3199,6 +3199,11 @@ Cost is estimated server-side from provider pricing lookups when available. When
 | `claude_code.tool_decision` | Claude | Tool usage tracking |
 | `codex.api_request` | Codex | Token/cost/duration/model metrics |
 | `codex.tool.call` | Codex | Tool usage tracking |
+| `codex.sse_event` with `event.kind=response.completed` | Codex | Token/model metrics plus cost estimation |
+| `gemini_cli.api_response` | Gemini | Cumulative token/model/duration metrics plus cost estimation when supported |
+| `gemini_cli.tool_call` | Gemini | Tool usage tracking |
+| `gemini_cli.tool_result` | Gemini | Tool usage tracking |
+| `gemini_cli.tool_decision` | Gemini | Tool usage tracking |
 | All others | Any | Silently skipped |
 
 **Workflow Configuration** (Claude Code):
@@ -3239,15 +3244,19 @@ env:
 ```yaml
 env:
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-  # Batch telemetry is collected post-execution by collect_gemini_telemetry()
-  # from Gemini stream-json output in run-agent.sh.
+  OTEL_LOGS_EXPORTER: "otlp"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/json"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
+  OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
+  OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
+  OTEL_BLRP_SCHEDULE_DELAY: "60000"
 ```
 
 **Processing**:
-- Detects payload type: `resourceLogs` → log-based path (Claude/Codex); top-level `jobId` → batch path (Mistral/Gemini)
+- Detects payload type: `resourceLogs` → log-based path (Claude/Codex/Gemini); top-level `jobId` → batch path (Mistral-only)
 - Extracts `job_id` from resource attributes (OTLP) or top-level `jobId` (batch) for job association
-- **Log path**: aggregates metrics from `claude_code.api_request` and `codex.api_request` events (tokens, cost, duration, model); collects tool names from tool events
-- **Batch path**: reads token counts, model, agent, and tools directly from the JSON payload; estimates cost when provider pricing is known and otherwise preserves usage with unavailable-cost status
+- **Log path**: aggregates metrics from Claude delta events, Codex completion events, and Gemini cumulative `gemini_cli.*` events; collects tool names from tool events
+- **Batch path**: reads token counts, model, agent, and tools directly from the JSON payload for Mistral only; Gemini batch payloads are rejected
 - Updates corresponding Job record with aggregated metrics
 - Missing or null metric attributes default to zero (no errors)
 

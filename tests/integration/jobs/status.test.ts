@@ -27,6 +27,24 @@ function createWorkflowClient(): APIClient {
   });
 }
 
+async function waitForLatestJobId(prisma: ReturnType<typeof getPrismaClient>, ticketId: number): Promise<number> {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: { jobs: { orderBy: { id: 'desc' } } },
+    });
+
+    const latestJobId = ticket?.jobs[0]?.id;
+    if (latestJobId) {
+      return latestJobId;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  throw new Error(`Timed out waiting for a job on ticket ${ticketId}`);
+}
+
 describe('Jobs Status', () => {
   let ctx: TestContext;
   let workflowApi: APIClient;
@@ -55,11 +73,7 @@ describe('Jobs Status', () => {
     });
 
     // Get the job ID
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-      include: { jobs: { orderBy: { id: 'desc' } } },
-    });
-    jobId = ticket!.jobs[0]!.id;
+    jobId = await waitForLatestJobId(prisma, ticketId);
   });
 
   describe('GET /api/projects/:projectId/jobs/status', () => {
@@ -210,6 +224,60 @@ describe('Jobs Status', () => {
 
       expect(response.status).toBe(200);
       expect(response.data.status).toBe('CANCELLED');
+    });
+
+    it('keeps FAILED authoritative when Gemini telemetry is partial', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      await prisma.job.update({
+        where: { id: jobId },
+        data: {
+          inputTokens: 700,
+          outputTokens: 180,
+          model: 'gemini-2.5-flash',
+          toolsUsed: ['read_file'],
+        },
+      });
+
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'FAILED' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.status).toBe('FAILED');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.status).toBe('FAILED');
+      expect(job?.inputTokens).toBe(700);
+      expect(job?.outputTokens).toBe(180);
+      expect(job?.model).toBe('gemini-2.5-flash');
+      expect(job?.toolsUsed).toEqual(['read_file']);
+    });
+
+    it('backfills duration for Gemini failures when native telemetry is missing', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const startedAt = new Date(Date.now() - 6_000);
+      await prisma.job.update({
+        where: { id: jobId },
+        data: {
+          startedAt,
+          durationMs: null,
+        },
+      });
+
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'FAILED' }
+      );
+
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.status).toBe('FAILED');
+      expect(job?.durationMs).not.toBeNull();
+      expect(job!.durationMs!).toBeGreaterThanOrEqual(5_000);
     });
   });
 

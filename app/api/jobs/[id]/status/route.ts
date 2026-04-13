@@ -229,7 +229,7 @@ export async function PATCH(
     });
 
     // Backfill duration from wall clock if telemetry didn't provide it (Codex)
-    if (isTerminalState && updatedJob.startedAt && updatedJob.completedAt && !updatedJob.durationMs) {
+    if (isTerminalState && updatedJob.startedAt && updatedJob.completedAt && updatedJob.durationMs == null) {
       const wallClockMs = updatedJob.completedAt.getTime() - updatedJob.startedAt.getTime();
       if (wallClockMs > 0) {
         await prisma.job.update({

@@ -328,11 +328,11 @@ if (!project) {
 - **Database Query Performance**: <50ms for indexed queries
 
 #### OTLP Telemetry Collection
-- **Protocol**: Claude Code and Codex agents export telemetry via OTLP HTTP JSON to `/api/telemetry/v1/logs`; Mistral and Gemini send normalized batch JSON after command execution
+- **Protocol**: Claude Code, Codex, and Gemini export telemetry via OTLP HTTP JSON to `/api/telemetry/v1/logs`; Mistral sends normalized batch JSON after command execution
 - **Metrics per Job**: Input/output/cached tokens, cost or unavailable-cost state, duration, model, tools used
-- **Cost Tracking**: Real cost reported by Claude agent; estimated from provider pricing tables for Codex and Mistral; Gemini may report `UNAVAILABLE` cost when pricing metadata is missing
+- **Cost Tracking**: Real cost reported by Claude agent; estimated from provider pricing tables for Codex, Gemini, and Mistral when supported; unsupported Gemini models preserve usage with unavailable cost
 - **Configuration**: Agent runner script (`run-agent.sh`) configures OTLP endpoints, auth material, and prompt delivery per agent type
-- **Batching**: Claude Code uses `OTEL_LOGS_EXPORT_INTERVAL=60000` (default 5s) and Codex uses `OTEL_BLRP_SCHEDULE_DELAY=60000` (Rust SDK default 1s) to batch log exports every 60s; Mistral and Gemini batch telemetry from captured CLI session output
+- **Batching**: Claude Code uses `OTEL_LOGS_EXPORT_INTERVAL=60000` (default 5s), Codex uses `OTEL_BLRP_SCHEDULE_DELAY=60000` (Rust SDK default 1s), and Gemini uses the same OTLP batch processor settings for native `gemini_cli.*` log exports; Mistral remains post-execution batch telemetry
 
 ### Testing Strategy
 

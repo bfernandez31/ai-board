@@ -699,6 +699,23 @@ auth_gemini() {
   fi
 }
 
+setup_gemini_telemetry() {
+  if [[ -z "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]]; then
+    log_info "No OTEL_EXPORTER_OTLP_ENDPOINT set — skipping Gemini telemetry config"
+    return 0
+  fi
+
+  export OTEL_LOGS_EXPORTER=otlp
+  export OTEL_EXPORTER_OTLP_PROTOCOL=http/json
+  export OTEL_EXPORTER_OTLP_LOGS_PROTOCOL=http/json
+  export OTEL_EXPORTER_OTLP_LOGS_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs"
+  export OTEL_BLRP_SCHEDULE_DELAY="${OTEL_BLRP_SCHEDULE_DELAY:-60000}"
+  export OTEL_BLRP_MAX_EXPORT_BATCH_SIZE="${OTEL_BLRP_MAX_EXPORT_BATCH_SIZE:-2048}"
+  export OTEL_BLRP_MAX_QUEUE_SIZE="${OTEL_BLRP_MAX_QUEUE_SIZE:-4096}"
+
+  log_info "Configured Gemini native OTLP telemetry"
+}
+
 invoke_gemini() {
   local command_file
   command_file=$(resolve_command_file "$COMMAND") || exit 1
@@ -710,84 +727,17 @@ invoke_gemini() {
   prompt_file="$(mktemp /tmp/gemini-prompt-XXXXXX.md)"
   printf '%s' "$prompt" > "$prompt_file"
 
-  local output_file
-  output_file="$(mktemp /tmp/gemini-stream-XXXX.jsonl)"
   log_info "Invoking Gemini with command file: $command_file"
   log_info "Prompt file: $prompt_file ($(wc -c < "$prompt_file") bytes)"
   # Use --prompt=<value> (= form) so yargs never confuses the value with a flag
   # when the prompt content starts with '-' (e.g. YAML frontmatter '---\n...').
   # The plain `-p "..."` form fails with "Not enough arguments following: p"
   # whenever the value's first character is '-'.
-  gemini "--prompt=$(cat "$prompt_file")" --output-format stream-json --approval-mode=yolo 2>&1 | tee "$output_file" || true
-  local exit_code=${PIPESTATUS[0]}
-  export GEMINI_STREAM_FILE="$output_file"
+  gemini "--prompt=$(cat "$prompt_file")" --approval-mode=yolo
+  local exit_code=$?
 
   rm -f "$prompt_file"
   return $exit_code
-}
-
-collect_gemini_telemetry() {
-  if [[ -z "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]] || [[ -z "${JOB_ID:-}" ]] || [[ -z "${GEMINI_STREAM_FILE:-}" ]] || [[ ! -f "${GEMINI_STREAM_FILE}" ]]; then
-    return 0
-  fi
-
-  local tools_json model input_tokens output_tokens thinking_tokens cache_read_tokens cache_creation_tokens duration_ms cost_status
-  tools_json=$(jq -rs '[.. | objects | select(((.type? // .event? // .kind? // "") | tostring) | test("tool_use|tool_call|tool_result")) | (.name // .tool // .toolName // .function?.name // empty) | select(type == "string" and length > 0)] | unique' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "[]")
-  model=$(jq -rs '[.. | objects | (.model? // .metadata?.model? // .response?.model? // empty) | select(type == "string" and length > 0)] | last // empty' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "")
-  input_tokens=$(jq -rs '[.. | objects | .usage? // .usageMetadata? // empty | (.inputTokens // .input_tokens // .promptTokenCount // .prompt_token_count // empty) | tonumber?] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
-  output_tokens=$(jq -rs '[.. | objects | .usage? // .usageMetadata? // empty | (.outputTokens // .output_tokens // .candidatesTokenCount // .candidates_token_count // empty) | tonumber?] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
-  thinking_tokens=$(jq -rs '[.. | objects | .usage? // .usageMetadata? // empty | (.thinkingTokens // .thinking_token_count // .thoughtsTokenCount // .thoughts_token_count // .thoughtTokenCount // empty) | tonumber?] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
-  cache_read_tokens=$(jq -rs '[.. | objects | .usage? // .usageMetadata? // empty | (.cacheReadTokens // .cache_read_tokens // .cachedContentTokenCount // .cached_content_token_count // .cachedTokenCount // .cached_token_count // empty) | tonumber?] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
-  cache_creation_tokens=$(jq -rs '[.. | objects | .usage? // .usageMetadata? // empty | (.cacheCreationTokens // .cache_creation_tokens // .cacheWriteTokens // .cache_write_tokens // empty) | tonumber?] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
-  duration_ms=$(jq -rs '[.. | objects | (.durationMs? // .duration_ms? // .timing?.durationMs? // .timing?.duration_ms? // empty) | tonumber?] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
-
-  if [[ -z "$model" && -n "${GEMINI_MODEL:-}" ]]; then
-    model="$GEMINI_MODEL"
-  fi
-
-  case "$model" in
-    *gemini-2.5-pro*|*gemini-2.5-flash*|*gemini-2.0-flash*)
-      cost_status="ESTIMATED"
-      ;;
-    *)
-      cost_status="UNAVAILABLE"
-      ;;
-  esac
-
-  local payload
-  payload=$(jq -n \
-    --argjson jobId "$JOB_ID" \
-    --arg agent "GEMINI" \
-    --arg model "$model" \
-    --argjson inputTokens "$input_tokens" \
-    --argjson outputTokens "$output_tokens" \
-    --argjson thinkingTokens "$thinking_tokens" \
-    --argjson cacheReadTokens "$cache_read_tokens" \
-    --argjson cacheCreationTokens "$cache_creation_tokens" \
-    --argjson durationMs "$duration_ms" \
-    --argjson toolsUsed "$tools_json" \
-    --arg costStatus "$cost_status" \
-    --arg usageSnapshotMode "CUMULATIVE" \
-    '{jobId: $jobId, agent: $agent, model: $model, inputTokens: $inputTokens, outputTokens: $outputTokens, thinkingTokens: $thinkingTokens, cacheReadTokens: $cacheReadTokens, cacheCreationTokens: $cacheCreationTokens, durationMs: $durationMs, toolsUsed: $toolsUsed, costStatus: $costStatus, usageSnapshotMode: $usageSnapshotMode}')
-
-  local auth_header=""
-  if [[ -n "${OTEL_EXPORTER_OTLP_HEADERS:-}" ]]; then
-    auth_header="${OTEL_EXPORTER_OTLP_HEADERS#Authorization=}"
-  fi
-
-  if [[ -z "$auth_header" ]]; then
-    log_info "Skipping Gemini telemetry — no auth header available"
-    return 0
-  fi
-
-  log_info "Sending Gemini telemetry: input=$input_tokens output=$output_tokens thinking=$thinking_tokens cacheRead=$cache_read_tokens cacheCreate=$cache_creation_tokens model=${model:-unknown} tools=$(echo "$tools_json" | jq -r 'length') costStatus=$cost_status"
-
-  curl -s -o /dev/null \
-    -X POST "${OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs" \
-    -H "Authorization: ${auth_header}" \
-    -H "Content-Type: application/json" \
-    --data-raw "$payload" \
-    --max-time 10 || true
 }
 
 # --- Main dispatch ---
@@ -817,9 +767,9 @@ case "$AGENT_TYPE" in
     validate_auth
     install_gemini
     auth_gemini
+    setup_gemini_telemetry
     gemini_exit=0
     invoke_gemini || gemini_exit=$?
-    collect_gemini_telemetry
     exit $gemini_exit
     ;;
   *)

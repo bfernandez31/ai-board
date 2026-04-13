@@ -279,7 +279,8 @@ Some commands remain agent-specific or workflow-restricted. For example, `code-r
 Agents emit different telemetry shapes:
 
 - **Claude / Codex**: OTLP log events
-- **Mistral / Gemini**: normalized batch JSON after command execution
+- **Mistral**: normalized batch JSON after command execution
+- **Gemini**: native `gemini_cli.*` OTLP log events during command execution
 
 The job runner normalizes these into a common `agentMetrics` shape, falling back to `null` or unavailable-cost status for fields a provider does not expose directly.
 
