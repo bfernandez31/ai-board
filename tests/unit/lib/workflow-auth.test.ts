@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 
 function makeRequest(headers: Record<string, string> = {}): NextRequest {
   return new NextRequest('http://localhost:3000/api/test', { headers });

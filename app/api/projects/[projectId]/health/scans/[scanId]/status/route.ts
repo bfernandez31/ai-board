@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
-import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { calculateGlobalScore } from '@/lib/health/score-calculator';
 import { getQualityGateData } from '@/lib/health/quality-gate';
 import type { HealthScanStatus, HealthScanType } from '@prisma/client';

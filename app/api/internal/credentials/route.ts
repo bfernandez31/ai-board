@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { getOwnerCredential, buildWorkflowPayload, getMissingCredentialError, updateOwnerCredential } from '@/lib/ai-credentials/workflow';
 
 const putSchema = z.object({
