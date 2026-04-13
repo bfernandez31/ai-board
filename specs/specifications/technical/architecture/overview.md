@@ -75,7 +75,7 @@ ai-board/
 │   ├── health-scan.yml           # Health scan workflow
 │   └── rollback-reset.yml        # VERIFY→PLAN rollback
 ├── .github/scripts/              # Shared shell utilities for workflows
-│   ├── run-agent.sh              # Unified agent runner (Claude/Codex)
+│   ├── run-agent.sh              # Unified agent runner (Claude/Codex/Mistral/Gemini)
 │   ├── setup-environment.sh      # Centralized environment setup (reads .ai-board/config.yml)
 │   ├── fetch-telemetry.sh        # Pre-fetch job telemetry for /compare
 │   └── setup-test-env.sh         # Prepare test environment
@@ -328,11 +328,11 @@ if (!project) {
 - **Database Query Performance**: <50ms for indexed queries
 
 #### OTLP Telemetry Collection
-- **Protocol**: Claude Code and Codex agents export telemetry via OTLP HTTP JSON to `/api/telemetry/v1/logs`
-- **Metrics per Job**: Input/output/cached tokens, cost, duration, model, tools used
-- **Cost Tracking**: Real cost reported by Claude agent; estimated from OpenAI API pricing for Codex
-- **Configuration**: Agent runner script (`run-agent.sh`) configures OTLP endpoints and env vars per agent type
-- **Batching**: Claude Code uses `OTEL_LOGS_EXPORT_INTERVAL=60000` (default 5s) and Codex uses `OTEL_BLRP_SCHEDULE_DELAY=60000` (Rust SDK default 1s) to batch log exports every 60s (force-flushed on shutdown)
+- **Protocol**: Claude Code and Codex agents export telemetry via OTLP HTTP JSON to `/api/telemetry/v1/logs`; Mistral and Gemini send normalized batch JSON after command execution
+- **Metrics per Job**: Input/output/cached tokens, cost or unavailable-cost state, duration, model, tools used
+- **Cost Tracking**: Real cost reported by Claude agent; estimated from provider pricing tables for Codex and Mistral; Gemini may report `UNAVAILABLE` cost when pricing metadata is missing
+- **Configuration**: Agent runner script (`run-agent.sh`) configures OTLP endpoints, auth material, and prompt delivery per agent type
+- **Batching**: Claude Code uses `OTEL_LOGS_EXPORT_INTERVAL=60000` (default 5s) and Codex uses `OTEL_BLRP_SCHEDULE_DELAY=60000` (Rust SDK default 1s) to batch log exports every 60s; Mistral and Gemini batch telemetry from captured CLI session output
 
 ### Testing Strategy
 

@@ -1236,8 +1236,10 @@ The effective agent is determined by a priority chain:
 **Supported Agents**:
 - `CLAUDE` — Anthropic Claude CLI (default)
 - `CODEX` — OpenAI Codex CLI
+- `MISTRAL` — Mistral vibe CLI
+- `GEMINI` — Google Gemini CLI
 
 **Scope**:
-- All workflow types receive the resolved agent: SPECIFY, PLAN, BUILD, VERIFY, QUICK, AI-BOARD assist, iterate
+- Core ticket workflows receive the resolved agent: SPECIFY, PLAN, BUILD, VERIFY, QUICK, iterate
+- Some workflows remain explicitly agent-restricted even when ticket/project resolution returns a different default. For example, ai-board-assist code review remains Claude-only, and setup / retro-spec / health-scan may reject unsupported agents before dispatch.
 - Agent selection is read-only during dispatch — it flows from the database into workflow inputs without changing ticket state
-

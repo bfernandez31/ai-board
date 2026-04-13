@@ -78,7 +78,7 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 
 ### Command-to-Stage Mapping
 
-Each command is designed to run at a specific workflow stage. Commands are invoked either by GitHub Actions workflows or locally via Claude Code.
+Each command is designed to run at a specific workflow stage. Commands are invoked either by GitHub Actions workflows or locally via Claude Code. In CI, the `run-agent.sh` wrapper adapts the same command markdown to Claude, Codex, Mistral, and Gemini runtimes.
 
 | Command | Workflow Stage | Workflow File | Description |
 |---------|---------------|---------------|-------------|
@@ -255,31 +255,33 @@ See [Agent Resolution](integrations.md#agent-resolution) for details.
 
 The `run-agent.sh` script abstracts CLI differences:
 
-| Aspect | Claude Code | Codex CLI |
-|--------|------------|-----------|
-| **Command invocation** | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Reads `.claude/commands/COMMAND.md`, pipes content via stdin to `codex exec` |
-| **Project context** | Reads `CLAUDE.md` natively | Reads `AGENTS.md` at project root via Codex auto-discovery |
-| **Model** | `ANTHROPIC_MODEL` env var | `CODEX_MODEL` env var (default: `gpt-5.4`) |
-| **Reasoning** | N/A (built-in) | `CODEX_REASONING` env var (default: `high`) |
-| **Auth** | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64-encoded OAuth token from `codex login`) |
+| Aspect | Claude Code | Codex CLI | Mistral vibe CLI | Gemini CLI |
+|--------|-------------|-----------|------------------|------------|
+| **Command invocation** | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Reads command markdown, injects structured invocation context, executes via `codex exec` | Reads command markdown, injects structured invocation context, executes via `vibe --prompt ... --agent auto-approve` | Reads command markdown, injects structured invocation context, executes via `gemini --prompt=... --output-format stream-json` |
+| **Project context** | Reads `CLAUDE.md` natively | Reads `AGENTS.md` at project root via auto-discovery | Reads `AGENTS.md` at project root | Reads `AGENTS.md` at project root |
+| **Model** | `ANTHROPIC_MODEL` env var | `CODEX_MODEL` env var (default: `gpt-5.4`) | CLI default / configured by vibe | CLI default / configured by Gemini runtime |
+| **Reasoning** | N/A (built-in) | `CODEX_REASONING` env var (default: `high`) | N/A | N/A |
+| **Auth** | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` | `MISTRAL_API_KEY` | `GEMINI_API_KEY` or `GEMINI_OAUTH_JSON` |
 
 ### Command Compatibility
 
-All 21 commands are designed to work with both agents. Key differences:
+Core ticket workflow commands (`specify`, `plan`, `tasks`, `implement`, `quick-impl`, `verify`, `iterate`, `code-simplifier`, `sync-specifications`) are designed to run through the shared runner across supported agents.
+
+Key differences:
 
 - **Claude**: Commands are invoked as native slash commands (`/ai-board.implement`)
-- **Codex**: Command `.md` file content is read and injected as a prompt via stdin, with arguments appended
+- **Non-Claude agents**: Command markdown is adapted into a prompt with structured invocation context. Large payloads can be passed via workspace files (`--input-file`, `--extra-file`) rather than raw inline argument concatenation.
 
-Both agents work in the same `target/` directory with the same symlinked commands, templates, and scripts.
+Some commands remain agent-specific or workflow-restricted. For example, `code-review` is Claude-only, and setup / retro-spec / health-scan flows may explicitly reject unsupported agents.
 
 ### Telemetry Differences
 
-Claude and Codex agents emit different telemetry data:
+Agents emit different telemetry shapes:
 
-- **Claude**: Reports token usage (input/output), tool calls, and cache statistics natively via structured output
-- **Codex**: Does not emit per-request token breakdowns; telemetry is limited to command exit codes and elapsed time. Token usage must be tracked externally via OpenAI API usage endpoints if needed
+- **Claude / Codex**: OTLP log events
+- **Mistral / Gemini**: normalized batch JSON after command execution
 
-The job runner normalizes both into a common `agentMetrics` shape, falling back to `null` for fields the agent does not provide.
+The job runner normalizes these into a common `agentMetrics` shape, falling back to `null` or unavailable-cost status for fields a provider does not expose directly.
 
 ## Templates
 

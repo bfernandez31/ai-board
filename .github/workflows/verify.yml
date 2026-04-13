@@ -35,7 +35,7 @@ on:
         type: string
 
       agent:
-        description: 'Agent CLI to use (CLAUDE, CODEX, or MISTRAL)'
+        description: 'Agent CLI to use (CLAUDE, CODEX, MISTRAL, or GEMINI)'
         required: true
         type: string
 
@@ -215,8 +215,7 @@ jobs:
           echo "🔑 Fetching owner AI credential for project ${{ inputs.project_id }}..."
           AGENT="${{ inputs.agent }}"
           if [[ "$AGENT" == "GEMINI" ]]; then
-            echo "Gemini is not supported for verify workflows"
-            exit 1
+            PROVIDER="GOOGLE"
           elif [[ "$AGENT" == "CODEX" ]]; then
             PROVIDER="OPENAI"
           elif [[ "$AGENT" == "MISTRAL" ]]; then

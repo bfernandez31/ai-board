@@ -8,7 +8,44 @@ set -euo pipefail
 AGENT_TYPE="${1:?ERROR: AGENT_TYPE is required (CLAUDE, CODEX, MISTRAL, or GEMINI)}"
 COMMAND="${2:?ERROR: COMMAND is required (e.g., ai-board.specify)}"
 shift 2
-ARGS="$*"
+ORIGINAL_ARGS=("$@")
+
+STRUCTURED_INPUT_FILE=""
+STRUCTURED_EXTRA_FILES=()
+STRUCTURED_NOTES=()
+RAW_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --input-file)
+      shift
+      STRUCTURED_INPUT_FILE="${1:-}"
+      ;;
+    --extra-file)
+      shift
+      STRUCTURED_EXTRA_FILES+=("${1:-}")
+      ;;
+    --note)
+      shift
+      STRUCTURED_NOTES+=("${1:-}")
+      ;;
+    --)
+      shift
+      while [[ $# -gt 0 ]]; do
+        RAW_ARGS+=("$1")
+        shift
+      done
+      break
+      ;;
+    *)
+      RAW_ARGS+=("$1")
+      ;;
+  esac
+  shift || true
+done
+
+ARGS="${RAW_ARGS[*]}"
+ORIGINAL_ARGS_STRING="${ORIGINAL_ARGS[*]}"
 
 # --- Logging helpers ---
 
@@ -18,6 +55,255 @@ log_info() {
 
 log_error() {
   echo "❌ [run-agent] ERROR: $*" >&2
+}
+
+json_array_from_args() {
+  if [[ ${#RAW_ARGS[@]} -eq 0 ]]; then
+    echo "[]"
+    return 0
+  fi
+
+  printf '%s\n' "${RAW_ARGS[@]}" | jq -R . | jq -s .
+}
+
+json_array_from_values() {
+  if [[ $# -eq 0 ]]; then
+    echo "[]"
+    return 0
+  fi
+
+  printf '%s\n' "$@" | jq -R . | jq -s .
+}
+
+extract_json_prefix() {
+  local value="$1"
+  python3 - "$value" <<'PY'
+import json
+import sys
+
+value = sys.argv[1]
+decoder = json.JSONDecoder()
+
+try:
+    parsed, end = decoder.raw_decode(value)
+except Exception:
+    print(json.dumps({"parsed": False}))
+    sys.exit(0)
+
+rest = value[end:].strip()
+print(json.dumps({
+    "parsed": True,
+    "json": parsed,
+    "rest": rest,
+}))
+PY
+}
+
+write_agent_input_file() {
+  local prefix="$1"
+  local content="$2"
+  local dir=".ai-board/agent-inputs"
+  mkdir -p "$dir"
+  local file
+  file="$(mktemp "${dir}/${prefix}-XXXXXX.txt")"
+  printf '%s' "$content" > "$file"
+  printf '%s' "$file"
+}
+
+build_non_claude_prompt() {
+  local command_file="$1"
+  local prompt
+  prompt="$(cat "$command_file")"
+
+  if [[ ${#RAW_ARGS[@]} -eq 0 && -z "$STRUCTURED_INPUT_FILE" && ${#STRUCTURED_EXTRA_FILES[@]} -eq 0 && ${#STRUCTURED_NOTES[@]} -eq 0 ]]; then
+    printf '%s' "$prompt"
+    return 0
+  fi
+
+  prompt="${prompt}
+
+## Invocation Context"
+
+  if [[ ${#RAW_ARGS[@]} -gt 0 ]]; then
+    local args_json
+    args_json="$(json_array_from_args)"
+    prompt="${prompt}
+
+### Legacy Argument Tokens
+The workflow passed the following exact argument tokens after the command name.
+Treat this JSON array as the source of truth for token boundaries and ordering.
+
+\`\`\`json
+${args_json}
+\`\`\`"
+  fi
+
+  if [[ -n "$STRUCTURED_INPUT_FILE" ]]; then
+    prompt="${prompt}
+
+### Structured Primary Input File
+\`${STRUCTURED_INPUT_FILE}\`
+
+Read this file directly from the workspace before proceeding."
+  fi
+
+  if [[ ${#STRUCTURED_EXTRA_FILES[@]} -gt 0 ]]; then
+    local structured_extra_files_json
+    structured_extra_files_json="$(json_array_from_values "${STRUCTURED_EXTRA_FILES[@]}")"
+    prompt="${prompt}
+
+### Structured Extra Files
+\`\`\`json
+${structured_extra_files_json}
+\`\`\`"
+  fi
+
+  if [[ ${#STRUCTURED_NOTES[@]} -gt 0 ]]; then
+    local structured_notes_json
+    structured_notes_json="$(json_array_from_values "${STRUCTURED_NOTES[@]}")"
+    prompt="${prompt}
+
+### Structured Runtime Notes
+\`\`\`json
+${structured_notes_json}
+\`\`\`"
+  fi
+
+  case "$COMMAND" in
+    ai-board.specify)
+      prompt="${prompt}
+
+### Parsed Hint
+- The primary feature payload must be read from the structured input file when present.
+- If no structured input file is present, token 0 is the primary feature payload.
+- Any remaining file tokens are attached image paths prepared by the workflow."
+
+      if [[ -z "$STRUCTURED_INPUT_FILE" && ${#RAW_ARGS[@]} -gt 0 ]]; then
+        local primary_input="${RAW_ARGS[0]}"
+        local primary_input_file
+        primary_input_file="$(write_agent_input_file "specify-input" "$primary_input")"
+        prompt="${prompt}
+
+#### Fallback Primary Command Input File
+\`${primary_input_file}\`"
+
+        if [[ -n "$primary_input" ]]; then
+          prompt="${prompt}
+
+#### Token 0 Preview
+\`\`\`
+${primary_input:0:1200}
+\`\`\`"
+        fi
+      fi
+
+      if [[ ${#RAW_ARGS[@]} -gt 1 ]]; then
+        local extra_files_json
+        extra_files_json="$(json_array_from_values "${RAW_ARGS[@]:1}")"
+        prompt="${prompt}
+
+#### Legacy Attached File Tokens
+\`\`\`json
+${extra_files_json}
+\`\`\`"
+      fi
+      ;;
+    ai-board.quick-impl)
+      prompt="${prompt}
+
+### Parsed Hint
+- The primary quick-impl payload must be read from the structured input file when present.
+- Structured runtime notes override any legacy concatenated guidance.
+- If no structured input file is present, token 0 may contain a JSON payload followed by runtime guidance."
+
+      if [[ -z "$STRUCTURED_INPUT_FILE" && ${#RAW_ARGS[@]} -gt 0 ]]; then
+        local first_token="${RAW_ARGS[0]}"
+        local first_token_file
+        first_token_file="$(write_agent_input_file "quick-impl-input" "$first_token")"
+        local parsed_json
+        parsed_json="$(extract_json_prefix "$first_token")"
+
+        prompt="${prompt}
+
+#### Fallback Primary Command Input File
+\`${first_token_file}\`"
+
+        if [[ "$(echo "$parsed_json" | jq -r '.parsed')" == "true" ]]; then
+          local payload_json
+          local trailing_notes
+          payload_json="$(echo "$parsed_json" | jq '.json')"
+          trailing_notes="$(echo "$parsed_json" | jq -r '.rest')"
+
+          local payload_file
+          payload_file="$(write_agent_input_file "quick-impl-payload" "$(echo "$payload_json" | jq -c .)")"
+
+          prompt="${prompt}
+
+#### Parsed Payload File
+\`${payload_file}\`
+
+#### Parsed Payload Prefix
+\`\`\`json
+${payload_json}
+\`\`\`"
+
+          if [[ -n "$trailing_notes" ]]; then
+            prompt="${prompt}
+
+#### Runtime Notes Extracted From Token 0
+\`\`\`
+${trailing_notes}
+\`\`\`"
+          fi
+        fi
+      fi
+
+      if [[ ${#RAW_ARGS[@]} -gt 1 ]]; then
+        local quick_impl_files_json
+        quick_impl_files_json="$(json_array_from_values "${RAW_ARGS[@]:1}")"
+        prompt="${prompt}
+
+#### Legacy Attached File Tokens
+\`\`\`json
+${quick_impl_files_json}
+\`\`\`"
+      fi
+      ;;
+    ai-board.implement)
+      prompt="${prompt}
+
+### Parsed Hint
+- If token 0 starts with \`--continue\`, treat it as a continuation flag plus workflow runtime guidance."
+
+      if [[ "${RAW_ARGS[0]}" == --continue* ]]; then
+        local continue_notes="${RAW_ARGS[0]#--continue}"
+        continue_notes="${continue_notes# }"
+        prompt="${prompt}
+
+#### Continuation Mode
+\`--continue\`"
+
+        if [[ -n "$continue_notes" ]]; then
+          prompt="${prompt}
+
+#### Runtime Notes
+\`\`\`
+${continue_notes}
+\`\`\`"
+        fi
+      fi
+      ;;
+    ai-board.verify)
+      prompt="${prompt}
+
+### Runtime Notes
+\`\`\`
+${ARGS}
+\`\`\`"
+      ;;
+  esac
+
+  printf '%s' "$prompt"
 }
 
 # --- Command file resolution ---
@@ -94,8 +380,8 @@ install_claude() {
 }
 
 invoke_claude() {
-  log_info "Invoking Claude: /$COMMAND $ARGS"
-  claude --dangerously-skip-permissions "/$COMMAND $ARGS"
+  log_info "Invoking Claude: /$COMMAND $ORIGINAL_ARGS_STRING"
+  claude --dangerously-skip-permissions "/$COMMAND $ORIGINAL_ARGS_STRING"
 }
 
 # --- Codex functions ---
@@ -216,13 +502,7 @@ invoke_codex() {
   local model="${CODEX_MODEL:-gpt-5.4}"
   local reasoning="${CODEX_REASONING:-high}"
   local prompt
-  prompt="$(cat "$command_file")"
-
-  if [[ -n "$ARGS" ]]; then
-    prompt="${prompt}
-
-${ARGS}"
-  fi
+  prompt="$(build_non_claude_prompt "$command_file")"
 
   log_info "Model: $model | Reasoning: $reasoning"
   echo "$prompt" | codex exec --dangerously-bypass-approvals-and-sandbox -m "$model" -c "reasoning_effort=\"$reasoning\"" -
@@ -367,19 +647,7 @@ invoke_mistral() {
   configure_mistral_model "$model"
 
   local prompt
-  prompt="$(cat "$command_file")"
-
-  # Write args to a temp file so vibe can `cat` it instead of
-  # wrestling with inline JSON escaping in bash heredocs
-  if [[ -n "$ARGS" ]]; then
-    local args_file="/tmp/vibe-args.json"
-    printf '%s' "$ARGS" > "$args_file"
-    prompt="${prompt}
-
-The arguments for this command have been written to ${args_file}. Read them with: cat ${args_file}
-Do NOT try to parse the JSON inline in bash — always read from the file."
-    log_info "Args written to $args_file ($(wc -c < "$args_file") bytes)"
-  fi
+  prompt="$(build_non_claude_prompt "$command_file")"
 
   # Write prompt to temp file for safe delivery via $(cat)
   local prompt_file
@@ -436,17 +704,7 @@ invoke_gemini() {
   command_file=$(resolve_command_file "$COMMAND") || exit 1
 
   local prompt
-  prompt="$(cat "$command_file")"
-
-  if [[ -n "$ARGS" ]]; then
-    local args_file="/tmp/gemini-args.json"
-    printf '%s' "$ARGS" > "$args_file"
-    prompt="${prompt}
-
-The arguments for this command have been written to ${args_file}. Read them with: cat ${args_file}
-Do NOT try to parse the JSON inline in bash — always read from the file."
-    log_info "Args written to $args_file ($(wc -c < "$args_file") bytes)"
-  fi
+  prompt="$(build_non_claude_prompt "$command_file")"
 
   local prompt_file
   prompt_file="$(mktemp /tmp/gemini-prompt-XXXXXX.md)"
@@ -460,7 +718,7 @@ Do NOT try to parse the JSON inline in bash — always read from the file."
   # when the prompt content starts with '-' (e.g. YAML frontmatter '---\n...').
   # The plain `-p "..."` form fails with "Not enough arguments following: p"
   # whenever the value's first character is '-'.
-  gemini "--prompt=$(cat "$prompt_file")" --output-format stream-json 2>&1 | tee "$output_file" || true
+  gemini "--prompt=$(cat "$prompt_file")" --output-format stream-json --approval-mode=yolo 2>&1 | tee "$output_file" || true
   local exit_code=${PIPESTATUS[0]}
   export GEMINI_STREAM_FILE="$output_file"
 

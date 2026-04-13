@@ -454,13 +454,15 @@ export const ticketAgentSchema = z.nativeEnum(Agent).nullable();
 ```
 
 **Validation Rules**:
-- **projectAgentSchema**: Required, must be `CLAUDE` or `CODEX`
-- **ticketAgentSchema**: Optional (nullable), must be `CLAUDE`, `CODEX`, or `null`
+- **projectAgentSchema**: Required, must be a valid `Agent` enum value
+- **ticketAgentSchema**: Optional (nullable), must be a valid `Agent` enum value or `null`
 - `null` on a ticket means inherit the project's `defaultAgent` at workflow dispatch time
 
 **Agent Values**:
 - `CLAUDE` — Anthropic Claude (default for all projects)
 - `CODEX` — OpenAI Codex
+- `MISTRAL` — Mistral vibe CLI
+- `GEMINI` — Google Gemini CLI
 
 **Usage**:
 - `projectAgentSchema` used in `UpdateProjectSchema` for `defaultAgent` field

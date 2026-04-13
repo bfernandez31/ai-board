@@ -384,12 +384,13 @@ jobs:
 
       - name: Prepare Specify Payload
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && inputs.specifyPayload != '' }}
+        working-directory: target
         run: |
-          # Write JSON payload to temp file to avoid bash escaping issues
-          cat > /tmp/specify_payload.json <<'EOF'
+          mkdir -p .ai-board/agent-inputs
+          cat > .ai-board/agent-inputs/specify_payload.json <<'EOF'
           ${{ inputs.specifyPayload }}
           EOF
-          echo "SPECIFY_PAYLOAD_FILE=/tmp/specify_payload.json" >> "$GITHUB_ENV"
+          echo "SPECIFY_PAYLOAD_FILE=.ai-board/agent-inputs/specify_payload.json" >> "$GITHUB_ENV"
 
       - name: Seed Test Database
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
@@ -429,11 +430,22 @@ jobs:
               payload=$(cat "$SPECIFY_PAYLOAD_FILE")
 
               # Add image paths if available
-              if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
-                echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
-                ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.specify" "$payload" $IMAGE_PATHS
+              if [ "${{ inputs.agent }}" = "CLAUDE" ]; then
+                if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
+                  echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
+                  ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.specify" "$payload" $IMAGE_PATHS
+                else
+                  ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.specify" "$payload"
+                fi
               else
-                ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.specify" "$payload"
+                cmd=(../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.specify" --input-file "$SPECIFY_PAYLOAD_FILE")
+                if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
+                  echo "🖼️  Passing $IMAGE_COUNT images as structured extra files"
+                  for image_path in $IMAGE_PATHS; do
+                    cmd+=(--extra-file "$image_path")
+                  done
+                fi
+                "${cmd[@]}"
               fi
               ;;
             plan)

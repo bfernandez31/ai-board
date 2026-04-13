@@ -326,12 +326,13 @@ jobs:
 
       - name: Prepare Quick-Impl Payload
         if: ${{ env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
         run: |
-          # Write JSON payload to temp file
-          cat > /tmp/quick_impl_payload.json <<'EOF'
+          mkdir -p .ai-board/agent-inputs
+          cat > .ai-board/agent-inputs/quick_impl_payload.json <<'EOF'
           ${{ inputs.quickImplPayload }}
           EOF
-          echo "QUICK_IMPL_PAYLOAD_FILE=/tmp/quick_impl_payload.json" >> "$GITHUB_ENV"
+          echo "QUICK_IMPL_PAYLOAD_FILE=.ai-board/agent-inputs/quick_impl_payload.json" >> "$GITHUB_ENV"
 
       - name: Prepare Images for Claude
         if: ${{ env.SKIP_EXECUTION != 'true' && inputs.attachments != '[]' }}
@@ -379,13 +380,25 @@ jobs:
           # Execute /quick-impl command with JSON payload
           # Command will internally call create-new-feature.sh --mode=quick-impl
           payload=$(cat "$QUICK_IMPL_PAYLOAD_FILE")
+          runtime_note="IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
 
           # Add image paths if available
-          if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
-            echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
-            ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.quick-impl" "$payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests" $IMAGE_PATHS
+          if [ "${{ inputs.agent }}" = "CLAUDE" ]; then
+            if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
+              echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
+              ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.quick-impl" "$payload $runtime_note" $IMAGE_PATHS
+            else
+              ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.quick-impl" "$payload $runtime_note"
+            fi
           else
-            ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.quick-impl" "$payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
+            cmd=(../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.quick-impl" --input-file "$QUICK_IMPL_PAYLOAD_FILE" --note "$runtime_note")
+            if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
+              echo "🖼️  Passing $IMAGE_COUNT images as structured extra files"
+              for image_path in $IMAGE_PATHS; do
+                cmd+=(--extra-file "$image_path")
+              done
+            fi
+            "${cmd[@]}"
           fi
 
       - name: Capture Branch Name

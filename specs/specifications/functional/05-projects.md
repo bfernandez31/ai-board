@@ -211,6 +211,12 @@ Projects have a configurable default AI agent that determines which AI executes 
    - Uses the vibe CLI for workflow execution
    - Requires a stored Mistral API key credential
 
+4. **GEMINI (Google Gemini CLI)**:
+   - Fourth provider option for projects requiring Google's offering
+   - Uses the Gemini CLI for supported ticket workflows
+   - Requires a stored Google credential (API key or supported Gemini auth bundle)
+   - Some workflows remain restricted even when Gemini is selected as the project default
+
 **Configuration**:
 - Accessible from project settings page
 - Dropdown select with agent options
@@ -524,7 +530,7 @@ When a project is imported without a `.ai-board/config.yml` file, the system dir
 
 ### Setup Flow
 
-1. **Agent Selection**: The owner selects which AI agent CLI to use — Claude Code (Anthropic), Codex (OpenAI), or Mistral (vibe CLI)
+1. **Agent Selection**: The owner selects which AI agent CLI to use from the setup page options. The selected agent becomes the project's default agent, but the onboarding workflow may still reject agents that are unsupported for setup automation.
 2. **Credential Check**: The system verifies the owner has a valid stored credential for the selected agent's provider. If the credential is missing, the initialize button is disabled and actionable guidance is displayed linking to the credentials settings page
 3. **Initialize**: The owner clicks "Initialize Project" to create a setup job and dispatch the onboarding workflow
 4. **Progress Tracking**: The page polls every 2 seconds and displays the current job state (pending spinner, running progress, or failed error with retry)
