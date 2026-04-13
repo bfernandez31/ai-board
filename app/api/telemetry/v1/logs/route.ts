@@ -7,7 +7,7 @@ import {
   parseIntAttribute,
   parseFloatAttribute,
 } from '@/lib/schemas/otlp';
-import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 
 const batchPayloadSchema = z.object({
   jobId: z.number().int().positive().optional(),

@@ -6,7 +6,7 @@ import {
   JobStatus,
 } from '@/app/lib/job-state-machine';
 import { prisma } from '@/lib/db/client';
-import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { sendJobCompletionNotification } from '@/app/lib/push/send-notification';
 
 /**

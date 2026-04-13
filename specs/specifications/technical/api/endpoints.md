@@ -345,6 +345,8 @@ Create a setup job and dispatch the onboarding workflow or the retro-spec workfl
 | `docUrl` | string (HTTPS URL only, max 2000) | No |
 | `context` | string | No |
 
+When `docUrl` is provided, the workflow attempts to fetch that URL during retro-spec generation. Redirects are followed, and an unreachable URL does not block generation.
+
 **Pre-flight checks by command**:
 - `ONBOARD`: project ownership, `configSyncedAt` is null, no active ONBOARD job, credential exists
 - `RETRO_SPEC`: project ownership, `configSyncedAt` is set, no active RETRO_SPEC job, credential exists
@@ -365,7 +367,7 @@ Active-job check is scoped by command type — ONBOARD and RETRO_SPEC jobs do no
 ```
 
 **Errors**:
-- `400`: `VALIDATION_ERROR` — invalid body, missing `depth` for RETRO_SPEC, or invalid `docUrl`
+- `400`: `VALIDATION_ERROR` — invalid body, missing `depth` for RETRO_SPEC, or `docUrl` that is not a valid URL
 - `401`: Not authenticated
 - `403`: `FORBIDDEN` — not project owner
 - `404`: `PROJECT_NOT_FOUND`

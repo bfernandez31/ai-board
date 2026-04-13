@@ -211,7 +211,7 @@ export async function dispatchWorkflow(params: {
 **Retro-Spec Workflow** (`.github/workflows/retro-spec.yml`):
 - **Trigger**: `workflow_dispatch`
 - **Inputs**: `project_id`, `job_id`, `githubRepository` (owner/repo), `agent`, `depth` (QUICK/STANDARD/COMPREHENSIVE), `docUrl` (optional), `context` (optional)
-- **Steps**: Report RUNNING → fetch AI credential → clone target repo → fetch external docs (if `docUrl`) → run `ai-board.retro-spec` agent command → commit `specs/specifications/` to target repository → report COMPLETED/FAILED
+- **Steps**: Report RUNNING → fetch AI credential → clone target repo → fetch external docs with redirect following (if `docUrl`) → run `ai-board.retro-spec` agent command → commit `specs/specifications/` to target repository → report COMPLETED/FAILED
 - **Output**: `specs/specifications/` directory committed to the target repository with spec depth matching the selected level
 - **Security**: `docUrl` is validated at two layers: (1) the API enforces HTTPS-only via Zod (`.startsWith('https://')`); (2) the workflow validates the HTTPS scheme, strips userinfo components, handles IPv6 bracket notation, and resolves the hostname, blocking private/link-local IP ranges (RFC 1918: `10.x`, `172.16–31.x`, `192.168.x`; link-local: `169.254.x`; loopback: `127.x`; IPv6: `::1`, `fe80:`, full `fc00::/7` ULA range) before the `curl` call to prevent SSRF. Redirects are blocked (`--max-redirs 0`) to prevent redirect-based SSRF bypasses. The input is also passed via an `env:` block (`DOC_URL`) rather than direct interpolation, preventing shell metacharacter injection.
 - **Error behavior**: Reports FAILED with error message; partial results not committed; unresolvable `docUrl` hostname logs a warning and continues without fetching docs

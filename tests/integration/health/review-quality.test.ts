@@ -20,11 +20,8 @@ vi.mock('@/lib/health/scan-dispatch', () => ({
   dispatchHealthScanWorkflow: vi.fn(async () => undefined),
 }));
 
-vi.mock('@/app/lib/workflow-auth', () => ({
-  validateWorkflowAuth: vi.fn(() => ({ isValid: true })),
-}));
-
 vi.mock('@/app/lib/auth/workflow-auth', () => ({
+  validateWorkflowAuth: vi.fn(() => ({ isValid: true })),
   verifyWorkflowToken: vi.fn(async () => false),
 }));
 

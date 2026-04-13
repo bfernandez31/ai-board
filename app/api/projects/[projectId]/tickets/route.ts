@@ -14,7 +14,7 @@ import { Readable } from 'stream';
 import { prisma } from '@/lib/db/client';
 import { requireAuth } from '@/lib/db/users';
 import { getUserSubscription } from '@/lib/billing/subscription';
-import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 
 export async function GET(
   request: NextRequest,
