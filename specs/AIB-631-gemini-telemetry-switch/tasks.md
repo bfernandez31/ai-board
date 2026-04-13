@@ -34,9 +34,9 @@ Migrate Gemini CLI telemetry from custom stdout scraping to native OTLP ingestio
 - [x] T021 Remove `GEMINI_STREAM_FILE` exports and related temp file cleanups in `.github/scripts/run-agent.sh`
 
 ## Phase 6: Polish & Validation
-- [ ] T022 [P] Run all telemetry-related tests: `npm test tests/integration/telemetry/`
-- [ ] T023 Perform a full dry-run of `.github/scripts/run-agent.sh` with `AGENT_TYPE=GEMINI` in a local/simulated CI environment
-- [ ] T024 Final code review for `any` types or strict mode violations in modified files
+- [x] T022 [P] Run all telemetry-related tests: `npm test tests/integration/telemetry/`
+- [x] T023 Perform a full dry-run of `.github/scripts/run-agent.sh` with `AGENT_TYPE=GEMINI` in a local/simulated CI environment
+- [x] T024 Final code review for `any` types or strict mode violations in modified files
 
 ## Dependencies
 1. **US1 Completion** (T003-T009) is required before **US2** (T010-T012).
