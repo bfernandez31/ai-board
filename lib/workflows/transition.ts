@@ -1,14 +1,9 @@
 import { Stage, JobStatus, Ticket, Project, Agent } from '@prisma/client';
-import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
-import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
-import { getOwnerCredential, getMissingCredentialError } from '@/lib/ai-credentials/workflow';
-import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
-import { getProjectServiceInputs } from '@/lib/workflows/service-inputs';
-import { ensureFreshConfig } from '@/lib/config-sync';
 import { prisma } from '@/lib/db/client';
 import { supportsWorkflowCommand } from '@/app/lib/utils/agent-resolution';
+import { dispatchWorkflow } from '@/lib/workflows/dispatch';
 
 /** Stage-to-command mapping (null = manual/no workflow) */
 export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
@@ -45,8 +40,7 @@ export function resolveEffectiveAgent(ticket: TicketWithProject): Agent {
 
 /** SPECIFY, PLAN, BUILD require validation; INBOX, VERIFY, SHIP do not */
 function shouldValidateJobCompletion(currentStage: Stage): boolean {
-  const stagesRequiringValidation: Stage[] = [Stage.SPECIFY, Stage.PLAN, Stage.BUILD];
-  return stagesRequiringValidation.includes(currentStage);
+  return ([Stage.SPECIFY, Stage.PLAN, Stage.BUILD] as Stage[]).includes(currentStage);
 }
 
 function getJobValidationErrorMessage(status: JobStatus): string {
@@ -54,13 +48,10 @@ function getJobValidationErrorMessage(status: JobStatus): string {
     case JobStatus.PENDING:
     case JobStatus.RUNNING:
       return 'Cannot transition: workflow is still running';
-
     case JobStatus.FAILED:
       return 'Cannot transition: previous workflow failed. Please retry the workflow.';
-
     case JobStatus.CANCELLED:
       return 'Cannot transition: workflow was cancelled. Please retry the workflow.';
-
     default:
       return 'Cannot transition: job is not completed';
   }
@@ -82,19 +73,10 @@ async function validateJobCompletion(
   const workflowJob = await prisma.job.findFirst({
     where: {
       ticketId: ticket.id,
-      command: {
-        not: {
-          startsWith: 'comment-',
-        },
-      },
+      command: { not: { startsWith: 'comment-' } },
     },
     orderBy: { startedAt: 'desc' },
-    select: {
-      id: true,
-      status: true,
-      command: true,
-      startedAt: true,
-    },
+    select: { id: true, status: true, command: true },
   });
 
   if (!workflowJob) {
@@ -107,14 +89,13 @@ async function validateJobCompletion(
   }
 
   if (workflowJob.status !== JobStatus.COMPLETED) {
-    const errorMessage = getJobValidationErrorMessage(workflowJob.status);
     return {
       success: false,
       errorCode: 'JOB_NOT_COMPLETED',
-      error: errorMessage,
+      error: getJobValidationErrorMessage(workflowJob.status),
       details: {
         currentStage: ticket.stage,
-        targetStage: targetStage,
+        targetStage,
         jobStatus: workflowJob.status,
         jobCommand: workflowJob.command,
       },
@@ -122,6 +103,79 @@ async function validateJobCompletion(
   }
 
   return { success: true };
+}
+
+/**
+ * Constructs the workflow file and inputs for the given transition.
+ */
+function getWorkflowConfig(
+  ticket: TicketWithProject,
+  job: { id: number },
+  command: string,
+  targetStage: Stage,
+  isQuickImpl: boolean,
+  effectiveAgent: Agent
+) {
+  const baseInputs = {
+    ticket_id: ticket.ticketKey,
+    job_id: job.id.toString(),
+    project_id: ticket.projectId.toString(),
+    githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
+    agent: effectiveAgent,
+  };
+
+  if (isQuickImpl) {
+    return {
+      workflowId: 'quick-impl.yml',
+      inputs: {
+        ...baseInputs,
+        quickImplPayload: JSON.stringify({
+          ticketKey: ticket.ticketKey,
+          title: ticket.title,
+          description: ticket.description || '',
+          agent: effectiveAgent,
+        }),
+        ...(ticket.attachments && { attachments: JSON.stringify(ticket.attachments) }),
+      },
+    };
+  }
+
+  if (command === 'verify') {
+    return {
+      workflowId: 'verify.yml',
+      inputs: {
+        ...baseInputs,
+        branch: ticket.branch || '',
+        workflowType: ticket.workflowType,
+      },
+    };
+  }
+
+  const inputs: Record<string, string> = {
+    ...baseInputs,
+    command,
+    branch: ticket.branch || '',
+  };
+
+  if (targetStage === Stage.SPECIFY) {
+    const effectivePolicy = ticket.clarificationPolicy ?? ticket.project.clarificationPolicy;
+    inputs.specifyPayload = JSON.stringify({
+      ticketKey: ticket.ticketKey,
+      title: ticket.title,
+      description: ticket.description || '',
+      clarificationPolicy: effectivePolicy,
+      agent: effectiveAgent,
+    });
+
+    if (ticket.attachments) {
+      inputs.attachments = JSON.stringify(ticket.attachments);
+    }
+  }
+
+  return {
+    workflowId: 'speckit.yml',
+    inputs,
+  };
 }
 
 /**
@@ -133,10 +187,9 @@ export async function handleTicketTransition(
   targetStage: Stage
 ): Promise<TransitionResult> {
   try {
-    const currentStage = ticket.stage as Stage;
+    const currentStage = ticket.stage;
 
     // Prisma Stage and ValidationStage are structurally identical string enums
-    // but TypeScript treats them as distinct nominal types, requiring a bridge cast
     if (!isValidTransition(currentStage as unknown as ValidationStage, targetStage as unknown as ValidationStage)) {
       return {
         success: false,
@@ -149,18 +202,11 @@ export async function handleTicketTransition(
 
     if (!isQuickImpl) {
       const jobValidation = await validateJobCompletion(ticket, targetStage);
-      if (!jobValidation.success) {
-        return jobValidation;
-      }
+      if (!jobValidation.success) return jobValidation;
     }
 
     const command = isQuickImpl ? 'quick-impl' : STAGE_COMMAND_MAP[targetStage];
-
-    if (!command) {
-      return {
-        success: true,
-      };
-    }
+    if (!command) return { success: true };
 
     const effectiveAgent = resolveEffectiveAgent(ticket);
     if (!supportsWorkflowCommand(effectiveAgent, command)) {
@@ -171,211 +217,57 @@ export async function handleTicketTransition(
       };
     }
 
-    // Validate BYOK credential and ensure fresh config before dispatch
-    if (!isWorkflowTestMode(process.env.GITHUB_TOKEN)) {
-      const provider = AGENT_PROVIDER_MAP[effectiveAgent];
-      const credential = await getOwnerCredential(ticket.projectId, provider);
-      if (!credential) {
-        return {
-          success: false,
-          error: getMissingCredentialError(provider),
-          errorCode: 'MISSING_CREDENTIAL',
-        };
-      }
-
-      try {
-        await ensureFreshConfig(ticket.project);
-      } catch (configError) {
-        return {
-          success: false,
-          error: configError instanceof Error ? configError.message : 'Config sync failed before dispatch',
-          errorCode: 'CONFIG_SYNC_FAILED',
-        };
-      }
-    }
-
-    let job;
-    if (isQuickImpl) {
-      const [createdJob] = await prisma.$transaction([
-        prisma.job.create({
-          data: {
-            ticketId: ticket.id,
-            projectId: ticket.projectId,
-            command,
-            status: JobStatus.PENDING,
-            startedAt: new Date(),
-            updatedAt: new Date(),
-          },
-        }),
-        prisma.ticket.update({
-          where: { id: ticket.id },
-          data: { workflowType: 'QUICK' },
-        }),
-      ]);
-      job = createdJob;
-    } else {
-      job = await prisma.job.create({
-        data: {
-          ticketId: ticket.id,
-          projectId: ticket.projectId,
-          command,
-          status: JobStatus.PENDING,
-          startedAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
-    }
-
-    const githubToken = process.env.GITHUB_TOKEN;
-
-    if (!isWorkflowTestMode(githubToken)) {
-      const aiboardOwner = process.env.GITHUB_OWNER;
-      const aiboardRepo = process.env.GITHUB_REPO;
-
-      if (!aiboardOwner || !aiboardRepo) {
-        return {
-          success: false,
-          error: 'GITHUB_OWNER and GITHUB_REPO environment variables must be set',
-          errorCode: 'GITHUB_ERROR',
-        };
-      }
-      let workflowFile = '';
-
-      try {
-        const octokit = new Octokit({
-          auth: githubToken,
-        });
-
-        let workflowInputs: Record<string, string>;
-
-        if (isQuickImpl) {
-          const quickImplPayload = {
-            ticketKey: ticket.ticketKey,
-            title: ticket.title,
-            description: ticket.description || '',
-            agent: effectiveAgent,
-          };
-
-          workflowInputs = {
-            ticket_id: ticket.ticketKey,
-            quickImplPayload: JSON.stringify(quickImplPayload),
-            job_id: job.id.toString(),
-            project_id: ticket.projectId.toString(),
-            githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
-            agent: effectiveAgent,
-            ...getProjectServiceInputs(ticket.project),
-          };
-
-          if (ticket.attachments) {
-            workflowInputs.attachments = JSON.stringify(ticket.attachments);
-          }
-
-          workflowFile = 'quick-impl.yml';
-        } else if (command === 'verify') {
-          workflowInputs = {
-            ticket_id: ticket.ticketKey,
-            job_id: job.id.toString(),
-            project_id: ticket.projectId.toString(),
-            branch: ticket.branch || '',
-            workflowType: ticket.workflowType,
-            githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
-            agent: effectiveAgent,
-            ...getProjectServiceInputs(ticket.project),
-          };
-
-          workflowFile = 'verify.yml';
-        } else {
-          workflowInputs = {
-            ticket_id: ticket.ticketKey,
-            command,
-            branch: ticket.branch || '',
-            job_id: job.id.toString(),
-            project_id: ticket.projectId.toString(),
-            githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
-            agent: effectiveAgent,
-            ...(command === 'implement' && getProjectServiceInputs(ticket.project)),
-          };
-
-          if (targetStage === Stage.SPECIFY) {
-            const effectivePolicy = ticket.clarificationPolicy ?? ticket.project.clarificationPolicy;
-            const specifyPayload = {
-              ticketKey: ticket.ticketKey,
-              title: ticket.title,
-              description: ticket.description || '',
-              clarificationPolicy: effectivePolicy,
-              agent: effectiveAgent,
-            };
-
-            workflowInputs.specifyPayload = JSON.stringify(specifyPayload);
-
-            if (ticket.attachments) {
-              workflowInputs.attachments = JSON.stringify(ticket.attachments);
-            }
-          }
-
-          workflowFile = 'speckit.yml';
-        }
-
-        console.log('[Workflow Dispatch]', {
-          aiboardRepo: `${aiboardOwner}/${aiboardRepo}`,
-          targetRepo: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
-          workflow: workflowFile,
-          command,
-          ticketKey: ticket.ticketKey,
-        });
-
-        await octokit.actions.createWorkflowDispatch({
-          owner: aiboardOwner,
-          repo: aiboardRepo,
-          workflow_id: workflowFile,
-          ref: 'main',
-          inputs: workflowInputs,
-        });
-      } catch (githubError) {
-        if (githubError instanceof RequestError) {
-          console.error('GitHub workflow dispatch failed:', {
-            ticketId: ticket.id,
-            command,
-            status: githubError.status,
-            message: githubError.message,
-          });
-
-          await prisma.job.delete({ where: { id: job.id } }).catch((deleteError) => {
-            console.warn('Failed to delete job after GitHub dispatch failure:', { jobId: job.id, error: deleteError });
-          });
-
-          let errorMessage = 'GitHub workflow dispatch failed';
-          if (githubError.status === 401) {
-            errorMessage = 'GitHub authentication failed. Check GITHUB_TOKEN in .env';
-          } else if (githubError.status === 403) {
-            errorMessage = 'GitHub rate limit exceeded';
-          } else if (githubError.status === 404) {
-            errorMessage = `Workflow file '${workflowFile}' not found in ai-board repository (${aiboardOwner}/${aiboardRepo}). Check .github/workflows/`;
-          } else {
-            errorMessage = githubError.message;
-          }
-
-          return {
-            success: false,
-            error: errorMessage,
-            errorCode: 'GITHUB_ERROR',
-          };
-        }
-
-        throw githubError;
-      }
-    }
-
-    return {
-      success: true,
-      jobId: job.id,
+    const jobData = {
+      ticketId: ticket.id,
+      projectId: ticket.projectId,
+      command,
+      status: JobStatus.PENDING,
+      startedAt: new Date(),
+      updatedAt: new Date(),
     };
+
+    const job = isQuickImpl
+      ? (await prisma.$transaction([
+          prisma.job.create({ data: jobData }),
+          prisma.ticket.update({ where: { id: ticket.id }, data: { workflowType: 'QUICK' } }),
+        ]))[0]
+      : await prisma.job.create({ data: jobData });
+
+    try {
+      const { workflowId, inputs } = getWorkflowConfig(ticket, job, command, targetStage, isQuickImpl, effectiveAgent);
+
+      await dispatchWorkflow({
+        workflowId,
+        projectId: ticket.projectId,
+        agent: effectiveAgent,
+        githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
+        inputs,
+        project: ticket.project,
+      });
+
+      return { success: true, jobId: job.id };
+    } catch (error) {
+      // Rollback job on dispatch failure
+      await prisma.job.delete({ where: { id: job.id } }).catch(() => {});
+
+      if (error instanceof RequestError) {
+        let errorMessage = error.message;
+        if (error.status === 401) errorMessage = 'GitHub authentication failed. Check GITHUB_TOKEN in .env';
+        else if (error.status === 403) errorMessage = 'GitHub rate limit exceeded';
+        else if (error.status === 404) errorMessage = 'Workflow file not found. Check .github/workflows/';
+
+        return { success: false, error: errorMessage, errorCode: 'GITHUB_ERROR' };
+      }
+
+      if (error instanceof Error && error.message.includes('credential')) {
+        return { success: false, error: error.message, errorCode: 'MISSING_CREDENTIAL' };
+      }
+
+      throw error;
+    }
   } catch (error) {
     console.error('Error in handleTicketTransition:', error);
-    return {
-      success: false,
-      error: 'Internal server error during transition',
-    };
+    return { success: false, error: 'Internal server error during transition' };
   }
 }
 

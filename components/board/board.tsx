@@ -38,7 +38,7 @@ import { useJobPolling } from '@/app/lib/hooks/useJobPolling';
 import { useTicketsByStage, useTicketByKey, useLoadMoreShipTickets, useShipTotal } from '@/app/lib/hooks/queries/useTickets';
 import { useTicketJobs } from '@/app/lib/hooks/queries/useTicketJobs';
 import { queryKeys } from '@/app/lib/query-keys';
-import { Job, ClarificationPolicy } from '@prisma/client';
+import { Job, ClarificationPolicy, Agent } from '@prisma/client';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { DualJobState } from '@/lib/types/job-types';
 import { getWorkflowJob, getAIBoardJob, getDeployJob } from '@/lib/utils/job-filtering';
@@ -89,7 +89,7 @@ interface BoardProps {
   projectId: number;
   initialJobs?: Map<number, Job[]>; // Array of jobs per ticket for dual job display
   hasSpecs?: boolean;
-  defaultAgent?: import('@prisma/client').Agent;
+  defaultAgent?: Agent;
   shipTotal?: number; // Total SHIP tickets count (for pagination)
 }
 
@@ -426,98 +426,63 @@ export function Board({
     }
   }, [fetchedTicket, fetchedTicketSuccess, fetchedTicketError, pendingTicketKey, isModalOpen, selectedTicketId]);
 
+  // T030: Get merged ticket jobs (initial + polled updates)
+  const mergeTicketJobs = useCallback((ticketId: number): Job[] => {
+    const initial = initialJobs.get(ticketId) || [];
+    const polled = polledJobs.filter(job => job.ticketId === ticketId);
+    
+    // Map initial jobs for efficient lookup and update
+    const jobMap = new Map(initial.map(j => [j.id, j]));
+    
+    polled.forEach(pj => {
+      const existing = jobMap.get(pj.id);
+      if (existing) {
+        jobMap.set(pj.id, { 
+          ...existing, 
+          status: pj.status, 
+          command: pj.command, 
+          updatedAt: new Date(pj.updatedAt) 
+        });
+      } else {
+        jobMap.set(pj.id, {
+          id: pj.id,
+          ticketId: pj.ticketId,
+          projectId,
+          status: pj.status,
+          command: pj.command,
+          startedAt: new Date(pj.updatedAt),
+          createdAt: new Date(pj.updatedAt),
+          updatedAt: new Date(pj.updatedAt),
+        } as Job);
+      }
+    });
+    
+    return Array.from(jobMap.values());
+  }, [initialJobs, polledJobs, projectId]);
+
   // T030: Get dual job state for a ticket (workflow + AI-BOARD + deploy jobs)
-  // Merges polled job updates with initial job data for real-time status display
-  // - workflow: Latest workflow job (specify, plan, implement, quick-impl, verify)
-  // - aiBoard: Latest AI-BOARD job matching current stage (comment-specify, comment-plan, etc.)
-  // - deployJob: Latest deploy preview job (deploy-preview command)
-  // Polling integration:
-  // - Initial render: Uses initialJobs from server-side data
-  // - Subsequent renders: Merges polled status updates with initial job data
-  // - Creates minimal Job objects for new jobs created during session
   const getTicketJobs = useCallback(
     (ticketId: number): DualJobState => {
-      // Get initial jobs array for this ticket
-      const ticketInitialJobs = initialJobs.get(ticketId) || [];
+      const fullJobs = mergeTicketJobs(ticketId);
+      const ticket = allTickets.find(t => t.id === ticketId);
 
-      // Get all polled jobs for this ticket
-      const ticketPolledJobs = polledJobs.filter(job => job.ticketId === ticketId);
-
-      // Helper: find quality score from latest COMPLETED verify job
-      const getLatestQualityScore = (jobs: Job[]): number | null => {
-        const verifyJob = jobs
-          .filter((j) => j.command === 'verify' && j.status === 'COMPLETED' && j.qualityScore != null)
-          .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
-        return verifyJob?.qualityScore ?? null;
-      };
-
-      // If no jobs at all, return null state
-      if (ticketInitialJobs.length === 0 && ticketPolledJobs.length === 0) {
+      if (fullJobs.length === 0) {
         return { workflow: null, aiBoard: null, deployJob: null, qualityScore: null };
       }
 
-      // If no polled jobs yet, use initial jobs (first render)
-      if (ticketPolledJobs.length === 0) {
-        const ticket = allTickets.find(t => t.id === ticketId);
-        return {
-          workflow: ticket ? getWorkflowJob(ticketInitialJobs, ticket.stage) : null,
-          aiBoard: ticket ? getAIBoardJob(ticketInitialJobs, ticket.stage) : null,
-          deployJob: getDeployJob(ticketInitialJobs),
-          qualityScore: getLatestQualityScore(ticketInitialJobs),
-        };
-      }
+      // Find latest quality score from COMPLETED verify jobs
+      const verifyJob = fullJobs
+        .filter((j) => j.command === 'verify' && j.status === 'COMPLETED' && j.qualityScore != null)
+        .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
 
-      // Merge polled status updates with initial job data
-      const activeJobs: Job[] = ticketPolledJobs.map(polledJob => {
-        // Find matching initial job by ID
-        const matchingInitialJob = ticketInitialJobs.find(j => j.id === polledJob.id);
-
-        if (matchingInitialJob) {
-          // Update status from polling but keep other fields from initial
-          return {
-            ...matchingInitialJob,
-            status: polledJob.status,
-            command: polledJob.command, // Update command in case it changed
-            updatedAt: new Date(polledJob.updatedAt),
-          } as Job;
-        }
-
-        // Fallback: create minimal Job object from polled data (for new jobs created during session)
-        return {
-          id: polledJob.id,
-          ticketId: polledJob.ticketId,
-          projectId,
-          status: polledJob.status,
-          command: polledJob.command,
-          startedAt: new Date(polledJob.updatedAt),
-          completedAt: null,
-          branch: null,
-          commitSha: null,
-          logs: null,
-          createdAt: new Date(polledJob.updatedAt),
-          updatedAt: new Date(polledJob.updatedAt),
-        } as Job;
-      });
-
-      // Include historical (completed/terminal) jobs from initial data that are no
-      // longer returned by polling (which only sends PENDING/RUNNING). These are
-      // needed for quality score, completed workflow status, etc.
-      const polledIds = new Set(ticketPolledJobs.map(j => j.id));
-      const historicalJobs = ticketInitialJobs.filter(j => !polledIds.has(j.id));
-      const fullJobs = [...activeJobs, ...historicalJobs];
-
-      // Find the ticket to get current stage for AI-BOARD filtering
-      const ticket = allTickets.find(t => t.id === ticketId);
-
-      // Use filtering functions to get workflow, AI-BOARD, and deploy jobs
       return {
         workflow: ticket ? getWorkflowJob(fullJobs, ticket.stage) : null,
         aiBoard: ticket ? getAIBoardJob(fullJobs, ticket.stage) : null,
         deployJob: getDeployJob(fullJobs),
-        qualityScore: getLatestQualityScore(fullJobs),
+        qualityScore: verifyJob?.qualityScore ?? null,
       };
     },
-    [polledJobs, initialJobs, projectId, allTickets]
+    [mergeTicketJobs, allTickets]
   );
 
   // Find the ticket with active deployment (PENDING or RUNNING deploy job)
@@ -1072,48 +1037,21 @@ export function Board({
     (stage: Stage): string => {
       if (!isDragging || !dragSource || !activeTicket) return '';
 
-      // Helper function to get most recent workflow job
-      const getMostRecentWorkflowJob = () => {
-        const ticketJobs = initialJobs.get(activeTicket.id) || [];
-        const polledTicketJobs = polledJobs.filter(job => job.ticketId === activeTicket.id && !job.command.startsWith('comment-'));
-
-        if (polledTicketJobs.length > 0) {
-          const mostRecentPolled = polledTicketJobs.reduce((latest, current) =>
-            new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest
-          );
-          return {
-            id: mostRecentPolled.id,
-            status: mostRecentPolled.status,
-            command: mostRecentPolled.command,
-          };
-        } else {
-          const workflowJobs = ticketJobs.filter(job => job.command && !job.command.startsWith('comment-'));
-          if (workflowJobs.length > 0 && workflowJobs[0]) {
-            const firstJob = workflowJobs[0];
-            return {
-              id: firstJob.id,
-              status: firstJob.status,
-              command: firstJob.command,
-            };
-          }
-        }
-        return null;
-      };
+      const jobs = getTicketJobs(activeTicket.id);
+      const workflowJob = jobs.workflow;
 
       // AIB-512: Rollback mode for new transitions — highlight valid rollback targets
       if (validRollbackTargets.length > 0 && validRollbackTargets.includes(stage)) {
-        // Validate specific transition
-        const mostRecentWorkflowJob = getMostRecentWorkflowJob();
         let validation = { allowed: false };
 
         if (dragSource === Stage.SPECIFY && stage === Stage.INBOX) {
-          validation = canRollbackSpecifyToInbox(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
+          validation = canRollbackSpecifyToInbox(dragSource, stage, activeTicket.workflowType, workflowJob);
         } else if (dragSource === Stage.PLAN && stage === Stage.SPECIFY) {
-          validation = canRollbackPlanToSpecify(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
+          validation = canRollbackPlanToSpecify(dragSource, stage, activeTicket.workflowType, workflowJob);
         } else if (dragSource === Stage.BUILD && stage === Stage.PLAN) {
-          validation = canRollbackBuildToPlan(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
+          validation = canRollbackBuildToPlan(dragSource, stage, activeTicket.workflowType, workflowJob);
         } else if (dragSource === Stage.VERIFY && stage === Stage.BUILD) {
-          validation = canRollbackVerifyToBuild(dragSource, stage, activeTicket.workflowType, mostRecentWorkflowJob);
+          validation = canRollbackVerifyToBuild(dragSource, stage, activeTicket.workflowType, workflowJob);
         }
 
         if (validation.allowed) {
@@ -1124,42 +1062,32 @@ export function Board({
 
       // Rollback mode: Dragging from BUILD to INBOX
       if (dragSource === Stage.BUILD && stage === Stage.INBOX) {
-        const mostRecentWorkflowJob = getMostRecentWorkflowJob();
-
-        // Validate rollback eligibility (only for quick-impl workflows)
         const validation = canRollbackToInbox(
           dragSource,
           stage,
           activeTicket.workflowType,
-          mostRecentWorkflowJob
+          workflowJob
         );
 
         if (validation.allowed) {
-          // Rollback eligible - amber border
           return 'border-4 border-dashed border-amber-500 bg-amber-500/10';
         } else {
-          // Rollback not allowed - disabled with tooltip hint
           return 'opacity-50 cursor-not-allowed';
         }
       }
 
       // Rollback mode: Dragging from VERIFY to PLAN (AIB-75)
       if (dragSource === Stage.VERIFY && stage === Stage.PLAN) {
-        const mostRecentWorkflowJob = getMostRecentWorkflowJob();
-
-        // Validate rollback eligibility (only for FULL workflows)
         const validation = canRollbackToPlan(
           dragSource,
           stage,
           activeTicket.workflowType,
-          mostRecentWorkflowJob
+          workflowJob
         );
 
         if (validation.allowed) {
-          // Rollback eligible - amber border
           return 'border-4 border-dashed border-amber-500 bg-amber-500/10';
         } else {
-          // Rollback not allowed - disabled with tooltip hint
           return 'opacity-50 cursor-not-allowed';
         }
       }
@@ -1172,13 +1100,10 @@ export function Board({
       // Quick-impl mode: Dragging from INBOX
       if (dragSource === Stage.INBOX) {
         if (stage === Stage.SPECIFY) {
-          // Normal workflow - blue
           return 'border-4 border-dashed border-primary bg-primary/10';
         } else if (stage === Stage.BUILD) {
-          // Quick-impl - green
           return 'border-4 border-dashed border-ctp-green bg-ctp-green/10';
         } else {
-          // Invalid - gray with reduced opacity
           return 'opacity-50 cursor-not-allowed';
         }
       }
@@ -1186,10 +1111,8 @@ export function Board({
       // AIB-148: Close mode - Dragging from VERIFY to SHIP or CLOSED
       if (dragSource === Stage.VERIFY) {
         if (stage === Stage.SHIP) {
-          // Normal ship - green
           return 'border-4 border-dashed border-ctp-green bg-ctp-green/10';
         } else if (stage === Stage.CLOSED) {
-          // Close zone - red
           return 'border-4 border-dashed border-destructive bg-destructive/10';
         }
       }
@@ -1201,42 +1124,11 @@ export function Board({
         return 'opacity-50 cursor-not-allowed';
       }
     },
-    [isDragging, dragSource, draggedTicketHasJob, activeTicket, initialJobs, polledJobs, validRollbackTargets]
+    [isDragging, dragSource, draggedTicketHasJob, activeTicket, getTicketJobs, validRollbackTargets]
   );
 
   // AIB-148: Filter out CLOSED stage from board display - CLOSED tickets are not shown on the board
   const stages = getAllStages().filter(s => s !== Stage.CLOSED);
-
-  // Merge initial and polled jobs for a ticket (polled takes precedence for status)
-  const getMergedTicketJobs = useCallback((ticketId: number) => {
-    const initial = initialJobs.get(ticketId) || [];
-    const polled = polledJobs.filter(job => job.ticketId === ticketId);
-    const jobMap = new Map(initial.map(j => [j.id, j]));
-    polled.forEach(pj => {
-      const existing = jobMap.get(pj.id);
-      if (existing) {
-        // Update status from polling but keep other fields from initial
-        jobMap.set(pj.id, { ...existing, status: pj.status, updatedAt: new Date(pj.updatedAt) });
-      } else {
-        // Create minimal Job object for new jobs discovered during polling
-        jobMap.set(pj.id, {
-          id: pj.id,
-          ticketId: pj.ticketId,
-          projectId,
-          status: pj.status,
-          command: pj.command,
-          startedAt: new Date(pj.updatedAt),
-          completedAt: null,
-          branch: null,
-          commitSha: null,
-          logs: null,
-          createdAt: new Date(pj.updatedAt),
-          updatedAt: new Date(pj.updatedAt),
-        } as Job);
-      }
-    });
-    return Array.from(jobMap.values());
-  }, [initialJobs, polledJobs, projectId]);
 
   // T024: Trash zone visibility and disabled state
   const trashZoneState = useMemo<{ isVisible: boolean; isDisabled: boolean; disabledReason?: string }>(() => {
@@ -1244,7 +1136,7 @@ export function Board({
       return { isVisible: false, isDisabled: false };
     }
 
-    const allTicketJobs = getMergedTicketJobs(activeTicket.id);
+    const allTicketJobs = mergeTicketJobs(activeTicket.id);
     const ticketWithJobs = {
       stage: activeTicket.stage,
       jobs: allTicketJobs.map(j => ({ status: j.status })),
@@ -1257,7 +1149,7 @@ export function Board({
       isDisabled: reason !== null,
       ...(reason && { disabledReason: reason }),
     };
-  }, [activeTicket, isDragging, getMergedTicketJobs]);
+  }, [activeTicket, isDragging, mergeTicketJobs]);
 
   // AIB-148: Close zone visibility and disabled state (only for VERIFY tickets)
   const closeZoneState = useMemo<{ isVisible: boolean; isDisabled: boolean; disabledReason?: string }>(() => {
@@ -1265,7 +1157,7 @@ export function Board({
       return { isVisible: false, isDisabled: false };
     }
 
-    const allTicketJobs = getMergedTicketJobs(activeTicket.id);
+    const allTicketJobs = mergeTicketJobs(activeTicket.id);
     const hasActiveJob = allTicketJobs.some(j => ['PENDING', 'RUNNING'].includes(j.status));
 
     if (hasActiveJob) {
@@ -1280,7 +1172,7 @@ export function Board({
       isVisible: true,
       isDisabled: false,
     };
-  }, [activeTicket, isDragging, getMergedTicketJobs]);
+  }, [activeTicket, isDragging, mergeTicketJobs]);
 
   // Check if any column is being hovered during drag
   const isAnyColumnOver = activeTicket !== null;

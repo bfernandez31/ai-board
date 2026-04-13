@@ -79,9 +79,12 @@ export async function POST(
         updatedAt: true,
         project: {
           select: {
+            id: true,
             githubOwner: true,
             githubRepo: true,
             defaultAgent: true,
+            config: true,
+            configSyncedAt: true,
           },
         },
       },

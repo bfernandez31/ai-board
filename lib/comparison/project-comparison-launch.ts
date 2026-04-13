@@ -10,9 +10,12 @@ type LaunchTicket = Pick<
   'id' | 'ticketKey' | 'title' | 'branch' | 'projectId' | 'stage' | 'agent' | 'updatedAt'
 > & {
   project: {
+    id: number;
     githubOwner: string;
     githubRepo: string;
     defaultAgent: Agent | null;
+    config: import('@prisma/client').Prisma.JsonValue;
+    configSyncedAt: Date | null;
   };
 };
 
@@ -124,7 +127,7 @@ export async function createProjectComparisonLaunch(input: {
     project_id: projectId.toString(),
     githubRepository: `${sourceTicket.project.githubOwner}/${sourceTicket.project.githubRepo}`,
     agent: sourceTicket.agent ?? sourceTicket.project.defaultAgent ?? 'CLAUDE',
-  });
+  }, sourceTicket.project);
 
   return {
     jobId: job.id,

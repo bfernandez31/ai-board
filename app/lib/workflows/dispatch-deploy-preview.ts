@@ -1,5 +1,4 @@
-import { Octokit } from '@octokit/rest';
-import { isWorkflowTestMode } from './test-mode';
+import { dispatchWorkflow } from '@/lib/workflows/dispatch';
 
 /**
  * GitHub workflow dispatch inputs for deploy preview workflow
@@ -25,51 +24,17 @@ export interface DeployPreviewWorkflowInputs {
  *
  * @param inputs Workflow dispatch inputs
  * @throws Error if GITHUB_TOKEN not configured or dispatch fails
- *
- * @example
- * await dispatchDeployPreviewWorkflow({
- *   ticket_id: '123',
- *   project_id: '1',
- *   branch: '080-feature-branch',
- *   job_id: '456',
- * });
  */
 export async function dispatchDeployPreviewWorkflow(
   inputs: DeployPreviewWorkflowInputs
 ): Promise<void> {
-  const githubToken = process.env.GITHUB_TOKEN;
-
-  if (isWorkflowTestMode(githubToken)) {
-    console.log('[dispatch-deploy-preview] Skipping workflow dispatch in test mode:', {
-      ticket_id: inputs.ticket_id,
-      branch: inputs.branch,
-    });
-    return; // Exit early - no GitHub API call
-  }
-
-  if (!githubToken) {
-    throw new Error(
-      'GITHUB_TOKEN not configured - required for workflow dispatch'
-    );
-  }
-
-  const octokit = new Octokit({ auth: githubToken });
-
-  const owner = process.env.GITHUB_OWNER;
-  const repo = process.env.GITHUB_REPO;
-
-  if (!owner || !repo) {
-    throw new Error(
-      'GITHUB_OWNER and GITHUB_REPO environment variables required'
-    );
-  }
+  const projectId = parseInt(inputs.project_id, 10);
 
   try {
-    await octokit.actions.createWorkflowDispatch({
-      owner,
-      repo,
-      workflow_id: 'deploy-preview.yml',
-      ref: 'main', // Workflow runs on main branch
+    await dispatchWorkflow({
+      workflowId: 'deploy-preview.yml',
+      projectId: isNaN(projectId) ? 0 : projectId,
+      githubRepository: inputs.githubRepository,
       inputs: {
         ticket_id: inputs.ticket_id,
         project_id: inputs.project_id,

@@ -1,8 +1,5 @@
-import { Octokit } from '@octokit/rest';
-import { isWorkflowTestMode } from './test-mode';
-import { getOwnerCredential, getMissingCredentialError } from '@/lib/ai-credentials/workflow';
-import { getProjectServiceInputs } from '@/lib/workflows/service-inputs';
-import type { Project } from '@prisma/client';
+import { Agent } from '@prisma/client';
+import { dispatchWorkflow, type ProjectWithConfig } from '@/lib/workflows/dispatch';
 
 export interface AIBoardWorkflowInputs {
   ticket_id: string;
@@ -17,48 +14,24 @@ export interface AIBoardWorkflowInputs {
   agent: string;
 }
 
+/**
+ * Dispatches the AI-BOARD assist workflow using the consolidated dispatch helper.
+ * AI-BOARD assist always requires an ANTHROPIC credential as it uses Claude for orchestration.
+ */
 export async function dispatchAIBoardWorkflow(
   inputs: AIBoardWorkflowInputs,
-  project?: Pick<Project, 'config'>
+  project?: ProjectWithConfig
 ): Promise<void> {
-  const githubToken = process.env.GITHUB_TOKEN;
-
-  if (isWorkflowTestMode(githubToken)) {
-    console.log('[dispatch-ai-board] Skipping workflow dispatch in test mode:', {
-      ticket_id: inputs.ticket_id,
-      stage: inputs.stage,
-    });
-    return;
-  }
-
-  // AI-Board assist always uses Claude → always resolve ANTHROPIC credential
   const projectId = parseInt(inputs.project_id, 10);
-  if (!isNaN(projectId)) {
-    const credential = await getOwnerCredential(projectId, 'ANTHROPIC');
-    if (!credential) {
-      throw new Error(getMissingCredentialError('ANTHROPIC'));
-    }
-  }
-
-  if (!githubToken) {
-    throw new Error('GITHUB_TOKEN not configured - required for workflow dispatch');
-  }
-
-  const octokit = new Octokit({ auth: githubToken });
-  const owner = process.env.GITHUB_OWNER;
-  const repo = process.env.GITHUB_REPO;
-
-  if (!owner || !repo) {
-    throw new Error('GITHUB_OWNER and GITHUB_REPO environment variables required');
-  }
 
   try {
-    await octokit.actions.createWorkflowDispatch({
-      owner,
-      repo,
-      workflow_id: 'ai-board-assist.yml',
-      ref: 'main',
-      inputs: { ...inputs, ...getProjectServiceInputs(project) },
+    await dispatchWorkflow({
+      workflowId: 'ai-board-assist.yml',
+      projectId: isNaN(projectId) ? 0 : projectId,
+      agent: Agent.CLAUDE, // AI-Board assist always uses Claude
+      githubRepository: inputs.githubRepository,
+      inputs: inputs as unknown as Record<string, string>,
+      project,
     });
   } catch (error) {
     console.error('[dispatch-ai-board] Failed to dispatch workflow:', error);

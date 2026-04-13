@@ -1,7 +1,5 @@
-import { Octokit } from '@octokit/rest';
 import { prisma } from '@/lib/db/client';
-import { isWorkflowTestMode } from './test-mode';
-import { getOwnerCredential, getMissingCredentialError } from '@/lib/ai-credentials/workflow';
+import { dispatchWorkflow } from '@/lib/workflows/dispatch';
 import type { CredentialProvider } from '@prisma/client';
 
 export interface RollbackResetWorkflowInputs {
@@ -19,20 +17,13 @@ export interface RollbackResetDispatchResult {
   jobId: number;
 }
 
+/**
+ * Dispatches the rollback-reset workflow using the consolidated dispatch helper.
+ * Handles job creation and status updates on failure.
+ */
 export async function dispatchRollbackResetWorkflow(
   inputs: RollbackResetWorkflowInputs
 ): Promise<RollbackResetDispatchResult> {
-  const githubToken = process.env.GITHUB_TOKEN;
-
-  // Validate BYOK credential before creating job or dispatching workflow
-  if (!isWorkflowTestMode(githubToken)) {
-    const provider = inputs.provider ?? 'ANTHROPIC';
-    const credential = await getOwnerCredential(inputs.projectId, provider);
-    if (!credential) {
-      throw new Error(getMissingCredentialError(provider));
-    }
-  }
-
   const job = await prisma.job.create({
     data: {
       ticketId: inputs.ticketId,
@@ -45,33 +36,11 @@ export async function dispatchRollbackResetWorkflow(
     },
   });
 
-  if (isWorkflowTestMode(githubToken)) {
-    console.log('[dispatch-rollback-reset] Skipping workflow dispatch in test mode:', {
-      ticketKey: inputs.ticketKey,
-      branch: inputs.branch,
-      jobId: job.id,
-    });
-    return { jobId: job.id };
-  }
-
-  if (!githubToken) {
-    throw new Error('GITHUB_TOKEN not configured - required for workflow dispatch');
-  }
-
-  const octokit = new Octokit({ auth: githubToken });
-  const owner = process.env.GITHUB_OWNER;
-  const repo = process.env.GITHUB_REPO;
-
-  if (!owner || !repo) {
-    throw new Error('GITHUB_OWNER and GITHUB_REPO environment variables required');
-  }
-
   try {
-    await octokit.actions.createWorkflowDispatch({
-      owner,
-      repo,
-      workflow_id: 'rollback-reset.yml',
-      ref: 'main',
+    await dispatchWorkflow({
+      workflowId: 'rollback-reset.yml',
+      projectId: inputs.projectId,
+      githubRepository: `${inputs.githubOwner}/${inputs.githubRepo}`,
       inputs: {
         ticket_id: inputs.ticketKey,
         project_id: inputs.projectId.toString(),
