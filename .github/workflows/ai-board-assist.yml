@@ -167,54 +167,13 @@ jobs:
             -d '{"status": "RUNNING", "workflowRunId": ${{ github.run_id }}}' \
             -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
 
-      - name: Fetch Owner AI Credential
+      # All assist commands (compare, code-review, fix, assist) run on Claude
+      # regardless of the project's primary agent — only the Anthropic credential
+      # is needed. The project agent input is ignored here.
+      - name: Fetch Claude Credential
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         run: |
-          echo "🔑 Fetching owner AI credential for project ${{ inputs.project_id }}..."
-          AGENT="${{ inputs.agent }}"
-          if [[ "$AGENT" == "GEMINI" ]]; then
-            echo "Gemini is not supported for ai-board-assist workflows"
-            exit 1
-          elif [[ "$AGENT" == "CODEX" ]]; then
-            PROVIDER="OPENAI"
-          elif [[ "$AGENT" == "MISTRAL" ]]; then
-            PROVIDER="MISTRAL"
-          else
-            PROVIDER="ANTHROPIC"
-          fi
-          RESPONSE=$(curl -s -w "\n%{http_code}" \
-            "${APP_URL}/api/internal/credentials?projectId=${{ inputs.project_id }}&provider=${PROVIDER}" \
-            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}")
-          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | head -n -1)
-
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "⚠️ No owner credential found (HTTP $HTTP_CODE) — using repository secrets as fallback"
-          else
-            CRED_TYPE=$(echo "$BODY" | jq -r '.credentialType')
-            ENV_VAR=$(echo "$BODY" | jq -r '.envVar')
-            CRED_VALUE_B64=$(echo "$BODY" | jq -r '.value')
-            echo "::add-mask::${CRED_VALUE_B64}"
-            CRED_VALUE=$(echo "$CRED_VALUE_B64" | base64 -d)
-
-            # Mask the credential value in logs
-            echo "::add-mask::${CRED_VALUE}"
-
-            # Export to GITHUB_ENV (heredoc for multi-line values like auth.json)
-            {
-              echo "${ENV_VAR}<<CREDENTIAL_EOF"
-              echo "${CRED_VALUE}"
-              echo "CREDENTIAL_EOF"
-            } >> "$GITHUB_ENV"
-            echo "✅ Owner credential loaded (type: ${CRED_TYPE}, envVar: ${ENV_VAR})"
-          fi
-          echo "PROJECT_ID=${{ inputs.project_id }}" >> "$GITHUB_ENV"
-
-      # All assist commands use Claude — fetch Anthropic credential when project agent is non-Claude
-      - name: Fetch Claude Credential (non-Claude projects)
-        if: ${{ env.SKIP_CLAUDE != 'true' && inputs.agent != 'CLAUDE' }}
-        run: |
-          echo "🔑 Fetching Anthropic credential (project agent: ${{ inputs.agent }})..."
+          echo "🔑 Fetching Anthropic credential for project ${{ inputs.project_id }}..."
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             "${APP_URL}/api/internal/credentials?projectId=${{ inputs.project_id }}&provider=ANTHROPIC" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}")
@@ -222,7 +181,7 @@ jobs:
           BODY=$(echo "$RESPONSE" | head -n -1)
 
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "ℹ️  No Anthropic credential found (HTTP $HTTP_CODE) — will use repo secret"
+            echo "⚠️ No Anthropic credential found (HTTP $HTTP_CODE) — using repository secret as fallback"
           else
             CRED_VALUE_B64=$(echo "$BODY" | jq -r '.value')
             echo "::add-mask::${CRED_VALUE_B64}"
@@ -233,8 +192,9 @@ jobs:
               echo "${CRED_VALUE}"
               echo "CREDENTIAL_EOF"
             } >> "$GITHUB_ENV"
-            echo "✅ Anthropic credential loaded for assist commands"
+            echo "✅ Anthropic credential loaded"
           fi
+          echo "PROJECT_ID=${{ inputs.project_id }}" >> "$GITHUB_ENV"
 
       - name: Handle Skip Scenarios
         if: ${{ env.SKIP_CLAUDE == 'true' }}
