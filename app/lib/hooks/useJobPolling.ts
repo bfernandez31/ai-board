@@ -19,19 +19,32 @@ export function useJobPolling(
 ): UseJobPollingReturn {
   const queryClient = useQueryClient();
   const previousJobsRef = useRef<JobStatusDto[]>([]);
+  const trackedJobIdsRef = useRef<Set<number>>(new Set());
 
   const { data, error, isFetching, dataUpdatedAt, failureCount } = useQuery({
     queryKey: queryKeys.projects.jobsStatus(projectId),
     queryFn: async () => {
-      const response = await fetch(`/api/projects/${projectId}/jobs/status`, {
-        cache: 'no-store',
-      });
+      const trackedJobIds = Array.from(trackedJobIdsRef.current).sort((a, b) => a - b);
+      const searchParams = new URLSearchParams();
+      if (trackedJobIds.length > 0) {
+        searchParams.set('jobIds', trackedJobIds.join(','));
+      }
+
+      const response = await fetch(
+        `/api/projects/${projectId}/jobs/status${searchParams.size > 0 ? `?${searchParams.toString()}` : ''}`,
+        {
+          cache: 'no-store',
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result: { jobs: JobStatusDto[] } = await response.json();
+      for (const job of result.jobs) {
+        trackedJobIdsRef.current.add(job.id);
+      }
       return result.jobs;
     },
     staleTime: 0,
@@ -40,18 +53,19 @@ export function useJobPolling(
     // Slow idle poll detects new jobs starting without wasting requests.
     refetchInterval: (query) => {
       const jobs = query.state.data || [];
-      return jobs.length > 0 ? pollingInterval : 30000;
+      const hasActiveJobs = jobs.some((job) => job.status === 'PENDING' || job.status === 'RUNNING');
+      return hasActiveJobs ? pollingInterval : 30000;
     },
     refetchIntervalInBackground: true,
     enabled: true,
   });
 
   const jobs = useMemo(() => data || [], [data]);
-  const hasActiveJobs = jobs.length > 0;
+  const hasActiveJobs = jobs.some((job) => job.status === 'PENDING' || job.status === 'RUNNING');
 
-  // Detect job completion by tracking jobs that disappear from the active-only response.
-  // The API only returns PENDING/RUNNING jobs, so a previously-seen job that's no longer
-  // in the response has transitioned to a terminal status.
+  // Detect when previously seen jobs stop being returned. This should now be rare because
+  // tracked job IDs keep terminal jobs visible, but invalidation remains as a safety net
+  // and refreshes richer ticket/job payloads after workflow completion.
   useEffect(() => {
     if (previousJobsRef.current.length === 0 && jobs.length > 0) {
       previousJobsRef.current = jobs;

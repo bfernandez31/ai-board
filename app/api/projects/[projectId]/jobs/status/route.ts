@@ -3,7 +3,8 @@
  *
  * Polling endpoint for job status updates
  *
- * Returns all jobs for a project with their current status.
+ * Returns active jobs for a project with their current status.
+ * Clients can optionally keep specific jobs tracked via `jobIds`.
  * Used for client-side polling at 2-second intervals.
  *
  * Contract: specs/028-519-replace-sse/contracts/job-polling-api.yml
@@ -17,7 +18,7 @@ import { JobStatusResponseSchema } from '@/app/lib/schemas/job-polling';
 /**
  * GET /api/projects/[projectId]/jobs/status
  *
- * @param _request - Next.js request object (unused but required by Next.js route signature)
+ * @param request - Next.js request object
  * @param params - Route parameters { projectId: string }
  * @returns JSON response with job statuses or error
  */
@@ -46,6 +47,15 @@ export async function GET(
         { status: 400 }
       );
     }
+
+    const trackedJobIds = Array.from(
+      new Set(
+        (request.nextUrl.searchParams.get('jobIds') || '')
+          .split(',')
+          .map((value) => parseInt(value.trim(), 10))
+          .filter((value) => Number.isInteger(value) && value > 0)
+      )
+    );
 
     // 3. Verify project exists and check access (owner OR member)
     const project = await prisma.project.findFirst({
@@ -79,12 +89,18 @@ export async function GET(
       );
     }
 
-    // Terminal jobs (COMPLETED/FAILED/CANCELLED) are excluded to reduce payload size.
-    // The frontend detects job completion when a previously-seen job disappears.
+    // Default behavior keeps the payload focused on active jobs.
+    // Clients may also pass `jobIds` to keep tracking specific jobs until they reach
+    // a terminal status, which avoids stale UI state without returning full history.
     const jobs = await prisma.job.findMany({
       where: {
         projectId,
-        status: { in: ['PENDING', 'RUNNING'] },
+        OR: [
+          { status: { in: ['PENDING', 'RUNNING'] } },
+          ...(trackedJobIds.length > 0
+            ? [{ id: { in: trackedJobIds } }]
+            : []),
+        ],
       },
       select: {
         id: true,

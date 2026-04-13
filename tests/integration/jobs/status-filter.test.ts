@@ -1,8 +1,8 @@
 /**
  * Integration Tests: Jobs Status - Active-Only Filter
  *
- * Verifies that GET /api/projects/:projectId/jobs/status only returns
- * PENDING and RUNNING jobs (terminal jobs excluded).
+ * Verifies that GET /api/projects/:projectId/jobs/status returns active jobs by default
+ * and can optionally keep tracking specific terminal jobs by id.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -128,5 +128,47 @@ describe('Jobs Status - Active-Only Filter', () => {
     // Filter to only this test's jobs (other tests may have residual data)
     const testJobs = response.data.jobs.filter((j) => j.id === jobId);
     expect(testJobs).toHaveLength(0);
+  });
+
+  it('should return a tracked COMPLETED job when requested by id', async () => {
+    await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+    await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'COMPLETED' });
+
+    const response = await ctx.api.get<{ jobs: Array<{ id: number; status: string }> }>(
+      `/api/projects/${ctx.projectId}/jobs/status?jobIds=${jobId}`
+    );
+
+    expect(response.status).toBe(200);
+    const job = response.data.jobs.find((j) => j.id === jobId);
+    expect(job).toBeDefined();
+    expect(job!.status).toBe('COMPLETED');
+  });
+
+  it('should return a tracked FAILED job when requested by id', async () => {
+    await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+    await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'FAILED' });
+
+    const response = await ctx.api.get<{ jobs: Array<{ id: number; status: string }> }>(
+      `/api/projects/${ctx.projectId}/jobs/status?jobIds=${jobId}`
+    );
+
+    expect(response.status).toBe(200);
+    const job = response.data.jobs.find((j) => j.id === jobId);
+    expect(job).toBeDefined();
+    expect(job!.status).toBe('FAILED');
+  });
+
+  it('should return a tracked CANCELLED job when requested by id', async () => {
+    await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+    await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'CANCELLED' });
+
+    const response = await ctx.api.get<{ jobs: Array<{ id: number; status: string }> }>(
+      `/api/projects/${ctx.projectId}/jobs/status?jobIds=${jobId}`
+    );
+
+    expect(response.status).toBe(200);
+    const job = response.data.jobs.find((j) => j.id === jobId);
+    expect(job).toBeDefined();
+    expect(job!.status).toBe('CANCELLED');
   });
 });

@@ -260,8 +260,13 @@ export function useProjectComparisonPendingJobs(
   return useQuery({
     queryKey: comparisonKeys.projectJobs(projectId, pendingJobIds),
     queryFn: async () => {
+      const searchParams = new URLSearchParams();
+      if (pendingJobIds.length > 0) {
+        searchParams.set('jobIds', pendingJobIds.join(','));
+      }
+
       const response = await fetchJson<ProjectJobsStatusResponse>(
-        `/api/projects/${projectId}/jobs/status`,
+        `/api/projects/${projectId}/jobs/status${searchParams.size > 0 ? `?${searchParams.toString()}` : ''}`,
         'Failed to fetch comparison job status'
       );
 
