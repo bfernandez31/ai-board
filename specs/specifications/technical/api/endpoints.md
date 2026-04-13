@@ -452,7 +452,7 @@ Update setup job status from the onboarding or retro-spec workflow.
 
 **Side effects**:
 - `RUNNING`: sets `startedAt` and `workflowRunId` (first-write-wins)
-- `COMPLETED` (ONBOARD jobs): sets `completedAt`, awaits `syncProjectConfig()`; if sync fails, returns 200 with `configSyncError`
+- `COMPLETED` (ONBOARD jobs): sets `completedAt`, awaits `syncProjectConfig()`; if sync fails (non-success outcome or thrown exception), returns 200 with `configSyncError` (and `configSyncErrorCode` for non-throwing failures)
 - `COMPLETED` (RETRO_SPEC jobs): sets `completedAt` only — no config sync (specs are committed to the repo by the workflow)
 - `FAILED`: sets `completedAt`, persists `errorMessage`
 
@@ -463,8 +463,10 @@ Update setup job status from the onboarding or retro-spec workflow.
 
 **Response** (200 OK — config sync failed, ONBOARD only):
 ```json
-{ "id": 1, "status": "COMPLETED", "completedAt": "2026-04-08T12:01:30.000Z", "configSyncError": "Token expired" }
+{ "id": 1, "status": "COMPLETED", "completedAt": "2026-04-08T12:01:30.000Z", "configSyncError": "Token expired", "configSyncErrorCode": "GITHUB_ERROR" }
 ```
+
+> `configSyncErrorCode` is present when `syncProjectConfig()` returns a non-success outcome (one of `VALIDATION_ERROR`, `CONFIG_NOT_FOUND`, `GITHUB_ERROR`, `YAML_PARSE_ERROR`). It is absent when the failure was an unexpected thrown exception.
 
 **Errors**: `400` (`VALIDATION_ERROR` or `INVALID_TRANSITION`), `401` (invalid token), `404` (job/project not found)
 
