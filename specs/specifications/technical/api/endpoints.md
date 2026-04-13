@@ -1083,7 +1083,7 @@ sequenceDiagram
 - **Jobs**: All jobs copied with complete telemetry data:
   - Command, status, branch, commit SHA
   - Timestamps (startedAt, completedAt)
-  - Token metrics (input, output, cache read, cache creation)
+  - Token metrics (input, output, thinking, cache read, cache creation)
   - Cost and performance (costUsd, durationMs)
   - Model identifier and tools used
   - Jobs reference new ticket ID
@@ -1994,7 +1994,7 @@ Fetch all jobs for a specific ticket with full telemetry data.
 
 **Fields**:
 - All standard Job fields (id, ticketId, projectId, command, status, branch)
-- Full telemetry data (inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens)
+- Full telemetry data (inputTokens, outputTokens, thinkingTokens, cacheReadTokens, cacheCreationTokens)
 - Cost and duration metrics (costUsd, durationMs)
 - Model identifier (model)
 - Tools usage array (toolsUsed)
@@ -3098,12 +3098,12 @@ Invalid transitions return 400 error
 
 ### POST /api/telemetry/v1/logs
 
-Agent telemetry endpoint supporting OTLP HTTP/JSON (Claude Code, Codex) and batch JSON (Mistral vibe CLI).
+Agent telemetry endpoint supporting OTLP HTTP/JSON (Claude Code, Codex) and batch JSON (Mistral vibe CLI, Gemini CLI).
 
 **Authentication**: Bearer token (WORKFLOW_API_TOKEN) via `OTEL_EXPORTER_OTLP_HEADERS`
 **Authorization**: Workflow token validation
 
-**Supported Agents**: Claude Code (`claude_code.*` log events), Codex (`codex.*` log events), and Mistral vibe CLI (post-execution batch payload with `jobId`). The endpoint detects the payload format: `resourceLogs` routes to OTLP log processing, a top-level `jobId` routes to batch processing.
+**Supported Agents**: Claude Code (`claude_code.*` log events), Codex (`codex.*` log events), Mistral vibe CLI, and Gemini CLI (post-execution batch payload with `jobId` and `agent`). The endpoint detects the payload format: `resourceLogs` routes to OTLP log processing, a top-level `jobId` routes to batch processing.
 
 **Request Body** (OTLP JSON format — Claude Code example):
 ```json
@@ -3159,6 +3159,7 @@ Agent telemetry endpoint supporting OTLP HTTP/JSON (Claude Code, Codex) and batc
 ```json
 {
   "jobId": 456,
+  "agent": "MISTRAL",
   "inputTokens": 5000,
   "outputTokens": 2000,
   "cacheReadTokens": 300,
@@ -3167,16 +3168,34 @@ Agent telemetry endpoint supporting OTLP HTTP/JSON (Claude Code, Codex) and batc
 }
 ```
 
+**Request Body** (Batch JSON — Gemini CLI example):
+```json
+{
+  "jobId": 789,
+  "agent": "GEMINI",
+  "model": "gemini-2.5-flash",
+  "inputTokens": 8000,
+  "outputTokens": 1500,
+  "thinkingTokens": 400,
+  "cacheReadTokens": 0,
+  "cacheCreationTokens": 0,
+  "durationMs": 12000,
+  "toolsUsed": ["bash", "read_file"]
+}
+```
+
 **Batch fields**:
 - `jobId` (number, optional): Job to attribute metrics to. If missing, telemetry is accepted but not stored.
+- `agent` (string, optional): Agent type submitting the batch — `"MISTRAL"` or `"GEMINI"`. Used to select the correct cost estimation pricing table.
 - `inputTokens` (number, optional): Total prompt tokens consumed in session.
 - `outputTokens` (number, optional): Total completion tokens generated in session.
+- `thinkingTokens` (number, optional): Total thinking/reasoning tokens (Gemini thinking mode only; defaults to 0).
 - `cacheReadTokens` (number, optional): Total cached input tokens.
 - `cacheCreationTokens` (number, optional): Total cache creation tokens.
-- `model` (string, optional): Model used (e.g., `devstral-medium-latest`).
+- `model` (string, optional): Model used (e.g., `devstral-medium-latest`, `gemini-2.5-flash`).
 - `toolsUsed` (string[], optional): Unique tool names used during session.
 
-Cost is estimated server-side from `MISTRAL_PRICING` lookup table based on model and token counts.
+Cost is estimated server-side from agent-specific pricing tables (`MISTRAL_PRICING` or `GEMINI_PRICING`) based on model and token counts. For Gemini, thinking tokens are priced at their own rate. If the model is not in the pricing table, cost is set to null (unavailable).
 
 **Supported Event Names** (log-based — Claude Code and Codex):
 
@@ -3223,11 +3242,20 @@ env:
   # in run-agent.sh — no OTEL env vars needed for vibe.
 ```
 
+**Workflow Configuration** (Gemini CLI):
+```yaml
+env:
+  # Batch telemetry is collected post-execution by collect_gemini_telemetry()
+  # in run-agent.sh, which parses stream-json output and POSTs a batch payload.
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
+  OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
+```
+
 **Processing**:
-- Detects payload type: `resourceLogs` → log-based path (Claude/Codex); top-level `jobId` → batch path (Mistral)
+- Detects payload type: `resourceLogs` → log-based path (Claude/Codex); top-level `jobId` → batch path (Mistral/Gemini)
 - Extracts `job_id` from resource attributes (OTLP) or top-level `jobId` (batch) for job association
 - **Log path**: aggregates metrics from `claude_code.api_request` and `codex.api_request` events (tokens, cost, duration, model); collects tool names from tool events
-- **Batch path**: reads token counts, model, and tools directly from the JSON payload; estimates cost using the Mistral pricing table
+- **Batch path**: reads token counts (including `thinkingTokens`), model, and tools directly from the JSON payload; estimates cost using the agent-specific pricing table (`MISTRAL_PRICING` for Mistral, `GEMINI_PRICING` for Gemini)
 - Updates corresponding Job record with aggregated metrics
 - Missing or null metric attributes default to zero (no errors)
 
@@ -3250,12 +3278,13 @@ env:
 - `404`: Job not found (if job_id provided)
 
 **Notes**:
-- Telemetry is sent automatically by the agent CLI during execution
+- Telemetry is sent automatically by the agent CLI during execution (Claude/Codex) or posted post-execution by `collect_gemini_telemetry()` / `collect_mistral_telemetry()` in `run-agent.sh` (Gemini/Mistral)
 - Multiple batches may be received for a single job (metrics are aggregated across all batches)
 - If no job_id in attributes, telemetry is accepted but not stored
-- Agent type (Claude vs Codex vs Mistral) is not stored on the telemetry payload — it is determined via the Job's parent Ticket `agent` field
+- For OTLP log payloads, agent type is determined via the Job's parent Ticket `agent` field; for batch payloads, the `agent` field in the payload selects the pricing table
 - Mixed-agent event names in a single payload are supported; all recognized events accumulate to the same Job
 - Payloads without a `job_id` resource attribute are accepted but not stored (logged as unassociated for debugging)
+- Gemini cost is set to null when the reported model is not in the pricing table — no incorrect estimate is generated
 
 ```mermaid
 sequenceDiagram
@@ -3271,9 +3300,9 @@ sequenceDiagram
     EP->>EP: Extract job_id from resource attrs
     alt Log payload (Claude / Codex)
         EP->>EP: Match event names (claude_code.* / codex.*)
-    else Batch payload (Mistral)
-        EP->>EP: Read token counts, model, tools from JSON
-        EP->>EP: Estimate cost via Mistral pricing table
+    else Batch payload (Mistral / Gemini)
+        EP->>EP: Read token counts (incl. thinkingTokens), model, tools from JSON
+        EP->>EP: Estimate cost via agent-specific pricing table
     end
     EP->>DB: SELECT job by id
     DB-->>EP: Current accumulated metrics
@@ -3297,7 +3326,7 @@ Fetch aggregated analytics data for project visualization.
 **Query Parameters**:
 - `range` (string, optional): Time range for analytics (7d|30d|90d|all, default: 30d)
 - `outcome` (string, optional): Terminal ticket outcome scope (shipped|closed|all-completed, default: shipped)
-- `agent` (string, optional): Effective agent scope (all|CLAUDE|CODEX|MISTRAL, default: all)
+- `agent` (string, optional): Effective agent scope (all|CLAUDE|CODEX|MISTRAL|GEMINI, default: all). Accepted values are derived dynamically from the `Agent` Prisma enum.
 
 **Behavior**:
 - The endpoint returns one coherent analytics payload for the active `range`, `outcome`, and `agent` filters.
@@ -3355,6 +3384,7 @@ sequenceDiagram
   "tokenUsage": {
     "inputTokens": 1250000,
     "outputTokens": 450000,
+    "thinkingTokens": 25000,
     "cacheTokens": 380000
   },
   "cacheEfficiency": {
@@ -3426,6 +3456,7 @@ sequenceDiagram
 - `tokenUsage`: Token consumption breakdown
   - `inputTokens`: Total input tokens
   - `outputTokens`: Total output tokens
+  - `thinkingTokens`: Total thinking/reasoning tokens (Gemini thinking mode)
   - `cacheTokens`: Total cache tokens (read + creation)
 - `cacheEfficiency`: Cache performance metrics
   - `totalTokens`: All tokens processed
@@ -3443,7 +3474,7 @@ sequenceDiagram
   - `week`: ISO week identifier (YYYY-Www)
   - `ticketsShipped`: Tickets shipped that week
 - `filters`: Applied filter set returned by the server
-- `availableAgents`: Agent filter options derived from completed tickets with recorded job history in the project
+- `availableAgents`: Agent filter options derived dynamically from the database — only agents with completed-ticket job history in the project are included. The accepted values are driven by the `Agent` Prisma enum, so new agent types appear automatically once jobs exist.
 - `qualityScore`: Code quality analytics (Team plan only; null for non-Team users)
   - `averageScore`: Average final quality score across all FULL workflow COMPLETED verify jobs in range
   - `scoreOverTime`: Weekly average quality scores (same granularity as `costOverTime`)

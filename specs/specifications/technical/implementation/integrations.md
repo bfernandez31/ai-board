@@ -476,15 +476,16 @@ await fetch(`${APP_URL}/api/jobs/${job_id}/status`, {
 
 **Script**: `.github/scripts/run-agent.sh`
 
-**Purpose**: Unified entry point for all AI CLI invocations across GitHub workflows. Abstracts CLI installation, authentication, telemetry configuration, and command invocation for Claude Code and Codex CLI.
+**Purpose**: Unified entry point for all AI CLI invocations across GitHub workflows. Abstracts CLI installation, authentication, telemetry configuration, and command invocation for Claude Code, Codex, Mistral, and Gemini CLI agents.
 
 **Interface**:
 ```bash
 .github/scripts/run-agent.sh <AGENT_TYPE> <COMMAND> [ARGS...]
 
 # Examples
-.github/scripts/run-agent.sh CLAUDE ai-board.specify "$PAYLOAD"
-.github/scripts/run-agent.sh CODEX  ai-board.implement "$TICKET_KEY $TITLE"
+.github/scripts/run-agent.sh CLAUDE  ai-board.specify "$PAYLOAD"
+.github/scripts/run-agent.sh CODEX   ai-board.implement "$TICKET_KEY $TITLE"
+.github/scripts/run-agent.sh GEMINI  ai-board.specify "$PAYLOAD"
 ```
 
 **Agent Execution Flow**:
@@ -517,6 +518,12 @@ sequenceDiagram
         RS->>CLI: vibe --prompt "..." --agent auto-approve
         RS->>RS: collect_mistral_telemetry() — scrape session logs
         RS->>EP: POST /api/telemetry/v1/logs (batch JSON)
+    else AGENT_TYPE = GEMINI
+        RS->>CLI: pip install gemini-cli (or bun install)
+        RS->>RS: auth_gemini() — write OAuth JSON or use API key
+        RS->>CLI: gemini -p "$(cat prompt)" --output-format stream-json | tee stream.jsonl
+        RS->>RS: collect_gemini_telemetry() — parse stream-json output
+        RS->>EP: POST /api/telemetry/v1/logs (batch JSON with agent=GEMINI)
     end
     CLI-->>RS: exit code
     RS-->>WF: propagated exit code
@@ -524,14 +531,14 @@ sequenceDiagram
 
 **Agent-Specific Behavior**:
 
-| Concern | CLAUDE | CODEX | MISTRAL |
-|---------|--------|-------|---------|
-| Package | `@anthropic-ai/claude-code` | `@openai/codex` | `vibe-cli` (Python pip) |
-| Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64) | `MISTRAL_API_KEY` |
-| Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt injection via stdin from `.claude/commands/COMMAND.md` | `vibe --prompt "..." --agent auto-approve` |
-| Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section | Post-execution batch JSON via `collect_mistral_telemetry()`; datalake disabled |
-| Project context | `CLAUDE.md` (native) | `AGENTS.md` at project root, read automatically by Codex | `AGENTS.md` at project root, read via native filesystem walk |
-| Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `gpt-5.4`), `CODEX_REASONING` env var (default: `high`) | Determined by vibe CLI defaults |
+| Concern | CLAUDE | CODEX | MISTRAL | GEMINI |
+|---------|--------|-------|---------|--------|
+| Package | `@anthropic-ai/claude-code` | `@openai/codex` | `vibe-cli` (Python pip) | `gemini-cli` |
+| Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64) | `MISTRAL_API_KEY` | `GEMINI_API_KEY` or `GEMINI_OAUTH_JSON` (base64 JSON) |
+| Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt injection via stdin from `.claude/commands/COMMAND.md` | `vibe --prompt "..." --agent auto-approve` | `gemini -p "$(cat prompt)" --output-format stream-json` |
+| Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section | Post-execution batch JSON via `collect_mistral_telemetry()`; datalake disabled | Post-execution batch JSON via `collect_gemini_telemetry()`; parses stream-json output |
+| Project context | `CLAUDE.md` (native) | `AGENTS.md` at project root, read automatically by Codex | `AGENTS.md` at project root, read via native filesystem walk | Standard prompt file passed via `-p` flag |
+| Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `gpt-5.4`), `CODEX_REASONING` env var (default: `high`) | Determined by vibe CLI defaults | Determined by Gemini CLI defaults |
 
 **Repository Instructions** (Codex only):
 - Target repositories are expected to provide `AGENTS.md` at the project root
@@ -553,11 +560,22 @@ sequenceDiagram
 - Codex does not report `cost_usd`; the telemetry endpoint estimates cost from OpenAI API pricing based on token counts and the resolved model name
 - Codex does not report `duration_ms`; duration is backfilled from the job wall clock (`completedAt - startedAt`) when the job reaches a terminal state and `durationMs` is still 0
 
+**Gemini Telemetry Collection** (`collect_gemini_telemetry()`):
+
+After Gemini CLI invocation completes, the function parses the stream-json output file to extract token usage, tool usage, and model information, then POSTs a batch payload to the telemetry endpoint:
+
+- Reads `$GEMINI_STREAM_FILE` (stream-json output captured during execution)
+- Extracts: input tokens, output tokens, thinking tokens, cache read/creation tokens, duration, model, tool names
+- Supports both camelCase (`thinkingTokens`) and snake_case (`thinking_tokens`) field formats from the CLI
+- Posts to `$OTEL_EXPORTER_OTLP_ENDPOINT` with `agent: "GEMINI"` in the payload
+- Server estimates cost from `GEMINI_PRICING` table; thinking tokens are priced at their own rate
+- If `OTEL_EXPORTER_OTLP_ENDPOINT` or `JOB_ID` is unset, the function returns without error (no-op)
+
 **Error Handling**:
 - Missing auth secret → exits before any CLI installation with descriptive message
 - CLI binary not found after install → fails with clear install error
 - Command `.md` file not found (Codex) → exits with file path shown
-- Unsupported agent type → exits listing supported values: `CLAUDE`, `CODEX`, `MISTRAL`
+- Unsupported agent type → exits listing supported values: `CLAUDE`, `CODEX`, `MISTRAL`, `GEMINI`
 - Exit code from underlying CLI is always propagated to calling workflow step
 
 **Environment Variables**:
@@ -567,8 +585,10 @@ sequenceDiagram
 - `CODEX_MODEL`: Optional Codex model override (default: `gpt-5.4`)
 - `CODEX_REASONING`: Optional Codex reasoning effort override (default: `high`)
 - `MISTRAL_API_KEY`: Required when `AGENT_TYPE=MISTRAL`
-- `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex telemetry when set; used by Mistral `collect_mistral_telemetry()` for batch POST target
-- `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config and Mistral batch POST auth
+- `GEMINI_API_KEY`: Required when `AGENT_TYPE=GEMINI` (API key auth mode)
+- `GEMINI_OAUTH_JSON`: Alternative to `GEMINI_API_KEY` for Gemini (base64-encoded OAuth JSON; decoded and written to `~/.gemini/oauth.json`)
+- `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex telemetry when set; used by Mistral and Gemini post-execution batch POST target
+- `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config and Mistral/Gemini batch POST auth
 
 **Usage in Workflows**:
 
