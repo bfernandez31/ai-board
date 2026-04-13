@@ -27,11 +27,11 @@ Migrate Gemini CLI telemetry from custom stdout scraping to native OTLP ingestio
 - [x] T016 [P] [US3] Verify Mistral preservation and Gemini batch rejection with integration tests
 
 ## Phase 5: Agent Runner Update
-- [ ] T017 Update `install_gemini` in `.github/scripts/run-agent.sh` to ensure latest version with OTLP support (if version pinning is required)
-- [ ] T018 Refactor `invoke_gemini` in `.github/scripts/run-agent.sh` to remove `--output-format stream-json` and `2>&1 | tee "$output_file"`
-- [ ] T019 Update `invoke_gemini` in `.github/scripts/run-agent.sh` to export `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_RESOURCE_ATTRIBUTES` (including `job_id`)
-- [ ] T020 Remove `collect_gemini_telemetry` function and its invocation from `.github/scripts/run-agent.sh`
-- [ ] T021 Remove `GEMINI_STREAM_FILE` exports and related temp file cleanups in `.github/scripts/run-agent.sh`
+- [x] T017 Update `install_gemini` in `.github/scripts/run-agent.sh` to ensure latest version with OTLP support (if version pinning is required)
+- [x] T018 Refactor `invoke_gemini` in `.github/scripts/run-agent.sh` to remove `--output-format stream-json` and `2>&1 | tee "$output_file"`
+- [x] T019 Update `invoke_gemini` in `.github/scripts/run-agent.sh` to export `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_RESOURCE_ATTRIBUTES` (including `job_id`)
+- [x] T020 Remove `collect_gemini_telemetry` function and its invocation from `.github/scripts/run-agent.sh`
+- [x] T021 Remove `GEMINI_STREAM_FILE` exports and related temp file cleanups in `.github/scripts/run-agent.sh`
 
 ## Phase 6: Polish & Validation
 - [ ] T022 [P] Run all telemetry-related tests: `npm test tests/integration/telemetry/`
