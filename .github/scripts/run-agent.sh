@@ -456,7 +456,11 @@ Do NOT try to parse the JSON inline in bash — always read from the file."
   output_file="$(mktemp /tmp/gemini-stream-XXXX.jsonl)"
   log_info "Invoking Gemini with command file: $command_file"
   log_info "Prompt file: $prompt_file ($(wc -c < "$prompt_file") bytes)"
-  gemini -p "$(cat "$prompt_file")" --output-format stream-json 2>&1 | tee "$output_file" || true
+  # Use --prompt=<value> (= form) so yargs never confuses the value with a flag
+  # when the prompt content starts with '-' (e.g. YAML frontmatter '---\n...').
+  # The plain `-p "..."` form fails with "Not enough arguments following: p"
+  # whenever the value's first character is '-'.
+  gemini "--prompt=$(cat "$prompt_file")" --output-format stream-json 2>&1 | tee "$output_file" || true
   local exit_code=${PIPESTATUS[0]}
   export GEMINI_STREAM_FILE="$output_file"
 
