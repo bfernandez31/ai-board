@@ -435,18 +435,17 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
     }, { status: 200 });
   }
 
-  const metrics = createEmptyMetrics();
-  metrics.inputTokens = data.inputTokens ?? 0;
-  metrics.outputTokens = data.outputTokens ?? 0;
-  metrics.thinkingTokens = data.thinkingTokens ?? 0;
-  metrics.cacheReadTokens = data.cacheReadTokens ?? 0;
-  metrics.cacheCreationTokens = data.cacheCreationTokens ?? 0;
-  metrics.durationMs = data.durationMs ?? 0;
-  metrics.model = data.model ?? null;
-
-  for (const tool of data.toolsUsed ?? []) {
-    metrics.toolsUsed.add(tool);
-  }
+  const metrics: TelemetryMetrics = {
+    inputTokens: data.inputTokens ?? 0,
+    outputTokens: data.outputTokens ?? 0,
+    thinkingTokens: data.thinkingTokens ?? 0,
+    cacheReadTokens: data.cacheReadTokens ?? 0,
+    cacheCreationTokens: data.cacheCreationTokens ?? 0,
+    costUsd: null,
+    durationMs: data.durationMs ?? 0,
+    model: data.model ?? null,
+    toolsUsed: new Set(data.toolsUsed ?? []),
+  };
 
   if (typeof data.costUsd === 'number') {
     metrics.costUsd = data.costUsd;
