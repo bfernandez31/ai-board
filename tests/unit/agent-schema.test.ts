@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { projectAgentSchema, ticketAgentSchema } from '@/app/lib/schemas/agent';
+import { AGENT_FILTER_VALUES, NAMED_AGENTS } from '@/lib/analytics/types';
 
 describe('projectAgentSchema', () => {
   it('accepts CLAUDE', () => {
@@ -58,5 +59,15 @@ describe('ticketAgentSchema', () => {
 
   it('rejects empty string', () => {
     expect(() => ticketAgentSchema.parse('')).toThrow();
+  });
+});
+
+describe('analytics agent types', () => {
+  it('reuses the shared named agent list', () => {
+    expect(NAMED_AGENTS).toEqual(['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']);
+  });
+
+  it('allows all plus every supported named agent as analytics filters', () => {
+    expect(AGENT_FILTER_VALUES).toEqual(['all', 'CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']);
   });
 });

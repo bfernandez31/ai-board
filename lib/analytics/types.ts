@@ -5,10 +5,15 @@
  * These types match the API contract defined in contracts/analytics-api.yaml.
  */
 
+import type { Agent } from '@prisma/client';
+import { ALL_AGENTS } from '@/app/lib/utils/agent-resolution';
+
 export type TimeRange = '7d' | '30d' | '90d' | 'all';
 export type TicketOutcomeFilter = 'shipped' | 'closed' | 'all-completed';
-export type NamedAgent = 'CLAUDE' | 'CODEX' | 'MISTRAL' | 'GEMINI';
-export type AgentFilter = 'all' | NamedAgent;
+export const NAMED_AGENTS = ALL_AGENTS;
+export const AGENT_FILTER_VALUES = ['all', ...ALL_AGENTS] as const;
+export type NamedAgent = Agent;
+export type AgentFilter = (typeof AGENT_FILTER_VALUES)[number];
 
 export interface AnalyticsFilters {
   range: TimeRange;
@@ -67,6 +72,8 @@ export interface TokenBreakdown {
   inputTokens: number;
   /** Total output tokens generated */
   outputTokens: number;
+  /** Total Gemini thinking tokens generated */
+  thinkingTokens: number;
   /** Total cache tokens (read + creation) */
   cacheTokens: number;
 }

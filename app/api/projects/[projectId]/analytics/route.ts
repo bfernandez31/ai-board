@@ -2,22 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { getAnalyticsData } from '@/lib/analytics/queries';
+import { AGENT_FILTER_VALUES } from '@/lib/analytics/types';
 
 const querySchema = z.object({
   range: z.enum(['7d', '30d', '90d', 'all']).default('30d'),
   outcome: z.enum(['shipped', 'closed', 'all-completed']).default('shipped'),
-  agent: z.enum(['all', 'CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']).default('all'),
+  agent: z.enum(AGENT_FILTER_VALUES).default('all'),
 });
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
-) {
+): Promise<NextResponse> {
   try {
     const { projectId: projectIdStr } = await params;
     const projectId = parseInt(projectIdStr, 10);
 
-    if (isNaN(projectId) || projectId <= 0) {
+    if (Number.isNaN(projectId) || projectId <= 0) {
       return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
     }
 

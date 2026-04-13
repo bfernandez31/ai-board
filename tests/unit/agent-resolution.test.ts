@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ALL_AGENTS,
   resolveEffectiveAgent,
   supportsOnboardAgent,
+  supportsSetupAgentSelection,
   supportsWorkflowCommand,
 } from '@/app/lib/utils/agent-resolution';
 
@@ -40,5 +42,13 @@ describe('resolveEffectiveAgent', () => {
     expect(supportsWorkflowCommand('GEMINI', 'quick-impl')).toBe(true);
     expect(supportsWorkflowCommand('GEMINI', 'verify')).toBe(true);
     expect(supportsWorkflowCommand('CLAUDE', 'verify')).toBe(true);
+  });
+
+  it('exposes a shared supported-agent list in stable analytics order', () => {
+    expect(ALL_AGENTS).toEqual(['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']);
+  });
+
+  it('keeps every supported agent selectable during project setup', () => {
+    expect(ALL_AGENTS.every((agent) => supportsSetupAgentSelection(agent))).toBe(true);
   });
 });

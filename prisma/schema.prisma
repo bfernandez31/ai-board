@@ -45,6 +45,7 @@ model Job {
   // Claude telemetry metrics (aggregated from all API calls in the job)
   inputTokens         Int? // Total input tokens consumed
   outputTokens        Int? // Total output tokens generated
+  thinkingTokens      Int? // Total reasoning / thinking tokens generated
   cacheReadTokens     Int? // Total cache read tokens
   cacheCreationTokens Int? // Total cache creation tokens
   costUsd             Float? // Total cost in USD
