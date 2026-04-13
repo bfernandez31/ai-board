@@ -232,20 +232,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 interface TelemetryMetrics {
   inputTokens: number;
   outputTokens: number;
-  thinkingTokens: number;
+  thinkingTokens: number | null;
   cacheReadTokens: number;
   cacheCreationTokens: number;
   costUsd: number | null;
   durationMs: number;
   model: string | null;
   toolsUsed: Set<string>;
+  /** When set, Gemini cost is estimated from merged token values using this model */
+  geminiCostModel?: string | null;
 }
 
 function createEmptyMetrics(): TelemetryMetrics {
   return {
     inputTokens: 0,
     outputTokens: 0,
-    thinkingTokens: 0,
+    thinkingTokens: null,
     cacheReadTokens: 0,
     cacheCreationTokens: 0,
     costUsd: null,
@@ -299,22 +301,46 @@ async function updateJobMetrics(
 
   const mergedTools = [...new Set([...job.toolsUsed, ...metrics.toolsUsed])].sort();
 
+  const mergedInputTokens = mergeTelemetryValue(job.inputTokens, metrics.inputTokens, mergeMode);
+  const mergedOutputTokens = mergeTelemetryValue(job.outputTokens, metrics.outputTokens, mergeMode);
+  const mergedCacheReadTokens = mergeTelemetryValue(job.cacheReadTokens, metrics.cacheReadTokens, mergeMode);
+  const mergedCacheCreationTokens = mergeTelemetryValue(
+    job.cacheCreationTokens,
+    metrics.cacheCreationTokens,
+    mergeMode
+  );
+  const mergedThinkingTokens = metrics.thinkingTokens != null
+    ? mergeTelemetryValue(job.thinkingTokens, metrics.thinkingTokens, mergeMode)
+    : null;
+
   const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
-    inputTokens: mergeTelemetryValue(job.inputTokens, metrics.inputTokens, mergeMode),
-    outputTokens: mergeTelemetryValue(job.outputTokens, metrics.outputTokens, mergeMode),
-    thinkingTokens: mergeTelemetryValue(job.thinkingTokens, metrics.thinkingTokens, mergeMode),
-    cacheReadTokens: mergeTelemetryValue(job.cacheReadTokens, metrics.cacheReadTokens, mergeMode),
-    cacheCreationTokens: mergeTelemetryValue(
-      job.cacheCreationTokens,
-      metrics.cacheCreationTokens,
-      mergeMode
-    ),
+    inputTokens: mergedInputTokens,
+    outputTokens: mergedOutputTokens,
+    cacheReadTokens: mergedCacheReadTokens,
+    cacheCreationTokens: mergedCacheCreationTokens,
     durationMs: mergeTelemetryValue(job.durationMs, metrics.durationMs, mergeMode),
     toolsUsed: mergedTools,
   };
 
+  if (mergedThinkingTokens != null) {
+    updateData.thinkingTokens = mergedThinkingTokens;
+  }
+
   if (metrics.costUsd != null) {
     updateData.costUsd = mergeTelemetryValue(job.costUsd, metrics.costUsd, mergeMode);
+  }
+
+  if (metrics.geminiCostModel) {
+    const estimatedCost = estimateGeminiCost(metrics.geminiCostModel, {
+      inputTokens: mergedInputTokens,
+      outputTokens: mergedOutputTokens,
+      thinkingTokens: mergedThinkingTokens ?? job.thinkingTokens ?? 0,
+      cacheReadTokens: mergedCacheReadTokens,
+      cacheCreationTokens: mergedCacheCreationTokens,
+    });
+    if (estimatedCost != null) {
+      updateData.costUsd = estimatedCost;
+    }
   }
 
   if (metrics.model) {
@@ -487,7 +513,7 @@ function estimateGeminiCost(
   return (
     (metrics.inputTokens / 1_000_000) * pricing.input +
     (metrics.outputTokens / 1_000_000) * pricing.output +
-    (metrics.thinkingTokens / 1_000_000) * pricing.thinking +
+    ((metrics.thinkingTokens ?? 0) / 1_000_000) * pricing.thinking +
     (metrics.cacheReadTokens / 1_000_000) * pricing.cacheRead +
     (metrics.cacheCreationTokens / 1_000_000) * pricing.cacheCreation
   );
@@ -519,7 +545,7 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
   const metrics = createEmptyMetrics();
   metrics.inputTokens = data.inputTokens ?? 0;
   metrics.outputTokens = data.outputTokens ?? 0;
-  metrics.thinkingTokens = data.thinkingTokens ?? 0;
+  metrics.thinkingTokens = data.thinkingTokens ?? null;
   metrics.cacheReadTokens = data.cacheReadTokens ?? 0;
   metrics.cacheCreationTokens = data.cacheCreationTokens ?? 0;
   metrics.durationMs = data.durationMs ?? 0;
@@ -529,10 +555,16 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
     metrics.toolsUsed.add(tool);
   }
 
+  // Gemini's promptTokenCount (mapped to inputTokens by the shell script) includes
+  // cached content. Normalize to non-cached only, consistent with the Codex OTLP path.
+  if (data.agent === 'GEMINI') {
+    metrics.inputTokens = Math.max(0, metrics.inputTokens - metrics.cacheReadTokens);
+  }
+
   if (typeof data.costUsd === 'number') {
     metrics.costUsd = data.costUsd;
   } else if (data.agent === 'GEMINI' && data.costStatus !== 'UNAVAILABLE') {
-    metrics.costUsd = estimateGeminiCost(data.model, metrics);
+    metrics.geminiCostModel = data.model ?? null;
   } else if (
     data.agent !== 'GEMINI' &&
     data.costStatus !== 'UNAVAILABLE' &&
@@ -546,7 +578,7 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
     );
   }
 
-  const mergeMode = data.usageSnapshotMode ?? (data.agent === 'GEMINI' ? 'CUMULATIVE' : 'DELTA');
+  const mergeMode = data.usageSnapshotMode ?? 'DELTA';
 
   return updateJobMetrics(data.jobId, metrics, startTime, 'Batch processed', mergeMode);
 }
