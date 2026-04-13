@@ -471,6 +471,23 @@ describe('Agent-Agnostic Telemetry', () => {
       const job = await prisma.job.findUnique({ where: { id: jobId } });
       expect(job!.toolsUsed).toContain('ls_dir');
     });
+
+    it('T010: should handle malformed Gemini OTLP attributes gracefully', async () => {
+      const payload = buildOtlpPayload(jobId, [{
+        body: { stringValue: 'gemini_cli.api_response' },
+        attributes: [
+          { key: 'gemini_cli.usage.input_tokens', value: { stringValue: 'not-a-number' } },
+          { key: 'gemini_cli.model', value: { stringValue: 'gemini-2.5-pro' } },
+        ],
+      }]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      // Should gracefully default to 0 for invalid tokens
+      expect(job!.inputTokens).toBe(0);
+    });
   });
 
   describe('Gemini native batch telemetry', () => {

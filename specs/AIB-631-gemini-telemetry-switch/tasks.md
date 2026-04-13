@@ -16,9 +16,9 @@ Migrate Gemini CLI telemetry from custom stdout scraping to native OTLP ingestio
 - [x] T009 [P] [US1] Verify Gemini OTLP ingestion with integration tests: `npm test tests/integration/telemetry/agent-agnostic.test.ts`
 
 ## Phase 3: Error Handling & Resilience (US2)
-- [ ] T010 [P] [US2] Add test case for failed Gemini job (malformed or missing attributes) in `tests/integration/telemetry/agent-agnostic.test.ts`
-- [ ] T011 [US2] Implement "MALFORMED_TELEMETRY" warning and graceful skip in `app/api/telemetry/v1/logs/route.ts` for invalid Gemini payloads
-- [ ] T012 [P] [US2] Verify error handling with integration tests: `npm test tests/integration/telemetry/agent-agnostic.test.ts`
+- [x] T010 [P] [US2] Add test case for failed Gemini job (malformed or missing attributes) in `tests/integration/telemetry/agent-agnostic.test.ts`
+- [x] T011 [US2] Implement "MALFORMED_TELEMETRY" warning and graceful skip in `app/api/telemetry/v1/logs/route.ts` for invalid Gemini payloads
+- [x] T012 [P] [US2] Verify error handling with integration tests: `npm test tests/integration/telemetry/agent-agnostic.test.ts`
 
 ## Phase 4: Refactor Batch Path (US3)
 - [ ] T013 [P] [US3] Add test case for Mistral batch telemetry to `tests/integration/telemetry/agent-agnostic.test.ts` to ensure no regression

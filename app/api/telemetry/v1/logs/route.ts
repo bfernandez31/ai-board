@@ -199,11 +199,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
           if (isGeminiApiResponse) {
             // Gemini CLI OTLP attributes use "gemini_cli." prefix
-            const totalInputTokens = parseIntAttribute(findAttribute(attrs, 'gemini_cli.usage.input_tokens'));
+            const rawInput = findAttribute(attrs, 'gemini_cli.usage.input_tokens');
+            const totalInputTokens = parseIntAttribute(rawInput);
             const outputTokens = parseIntAttribute(findAttribute(attrs, 'gemini_cli.usage.output_tokens'));
             const cachedTokens = parseIntAttribute(findAttribute(attrs, 'gemini_cli.usage.cache_read_tokens'));
             const creationTokens = parseIntAttribute(findAttribute(attrs, 'gemini_cli.usage.cache_creation_tokens'));
             const thinkingTokens = parseIntAttribute(findAttribute(attrs, 'gemini_cli.usage.thinking_tokens'));
+
+            const model = findAttribute(attrs, 'gemini_cli.model');
+
+            // US2: Resilience - detect malformed payloads
+            if (model === undefined || (rawInput !== undefined && isNaN(parseInt(String(rawInput), 10)))) {
+              console.warn('[OTLP Telemetry] MALFORMED_TELEMETRY: Gemini payload missing model or has invalid tokens');
+              // Graceful skip - don't process this record but continue with others
+              continue;
+            }
 
             // Normalize: store non-cached in inputTokens for consistency
             const nonCachedInputTokens = Math.max(0, totalInputTokens - cachedTokens);
@@ -215,7 +225,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             metrics.thinkingTokens = (metrics.thinkingTokens ?? 0) + thinkingTokens;
             metrics.durationMs += parseIntAttribute(findAttribute(attrs, 'gemini_cli.duration_ms'));
 
-            const model = findAttribute(attrs, 'gemini_cli.model');
             if (model) {
               metrics.model = String(model);
               metrics.geminiCostModel = String(model);
