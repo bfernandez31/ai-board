@@ -1,21 +1,24 @@
 # Workflow Artifact: Gemini Telemetry Intake and Normalization
 
-## Workflow Definition
+> **Superseded**: The batch normalization approach described below was replaced by native OTLP intake in [AIB-629](../../AIB-629-gemini-telemetry-switch/workflows/gemini-otlp-intake.md). Gemini telemetry now arrives as `gemini_cli.*` OTLP log records and is processed by the same OTLP handler as Claude and Codex.
 
-### Input
+## Workflow Definition (SUPERSEDED)
 
-- normalized Gemini batch payload
-- workflow bearer token
-- target `jobId`
+### Input (AIB-629 — current)
 
-### Phases
+- Gemini OTLP log records (via standard OTEL exporter)
+- workflow bearer token (in `OTEL_EXPORTER_OTLP_HEADERS`)
+- `job_id` in `OTEL_RESOURCE_ATTRIBUTES`
+
+### Phases (AIB-629 — current)
 
 1. Validate workflow auth.
-2. Validate Gemini payload schema.
-3. Resolve the referenced job.
-4. Normalize Gemini usage categories into shared job telemetry fields.
-5. Merge tools and usage without double-counting repeated result payloads.
-6. Persist updated job telemetry for analytics.
+2. Validate OTLP schema.
+3. Detect `gemini_cli.api_response` events by event name.
+4. Parse token attributes (`input_tokens`, `output_tokens`, `thinking_tokens`, `cache_read_tokens`, `cache_creation_tokens`, `duration_ms`, `model`).
+5. Estimate cost server-side using `estimateGeminiCost()`.
+6. Merge metrics in DELTA mode (same as Claude/Codex).
+7. Persist updated job telemetry.
 
 ## Callback / Reporting Contract
 
@@ -27,4 +30,4 @@
 ## Error behavior
 
 - Invalid or unmatchable events must not mutate unrelated jobs.
-- Recoverable delayed telemetry may complete the job record later.
+- If no OTLP events arrive, job retains null metrics (missing-telemetry state).

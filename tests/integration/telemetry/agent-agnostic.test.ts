@@ -429,25 +429,24 @@ describe('Agent-Agnostic Telemetry', () => {
     });
   });
 
-  describe('Gemini native batch telemetry', () => {
-    it('preserves thinking and cache buckets separately for Gemini jobs', async () => {
-      const payload = {
-        jobId,
-        agent: 'GEMINI',
-        model: 'gemini-2.5-pro',
-        inputTokens: 1500,
-        outputTokens: 800,
-        thinkingTokens: 200,
-        cacheReadTokens: 120,
-        cacheCreationTokens: 40,
-        durationMs: 5234,
-        toolsUsed: ['read_file', 'shell'],
-        costStatus: 'ESTIMATED',
-        usageSnapshotMode: 'CUMULATIVE',
-      };
+  describe('Gemini native OTLP telemetry', () => {
+    it('T001a: gemini_cli.api_response event updates Job with token breakdown, model, duration, and cost', async () => {
+      const payload = buildOtlpPayload(jobId, [{
+        body: { stringValue: 'gemini_cli.api_response' },
+        attributes: [
+          { key: 'input_tokens', value: { stringValue: '1500' } },
+          { key: 'output_tokens', value: { stringValue: '800' } },
+          { key: 'thinking_tokens', value: { stringValue: '200' } },
+          { key: 'cache_read_tokens', value: { stringValue: '120' } },
+          { key: 'cache_creation_tokens', value: { stringValue: '40' } },
+          { key: 'duration_ms', value: { stringValue: '5234' } },
+          { key: 'model', value: { stringValue: 'gemini-2.5-pro-preview-05-06' } },
+        ],
+      }]);
 
       const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
       expect(response.status).toBe(200);
+      expect(response.data).toHaveProperty('status', 'accepted');
 
       const job = await prisma.job.findUnique({ where: { id: jobId } });
       expect(job!.inputTokens).toBe(1500);
@@ -456,76 +455,94 @@ describe('Agent-Agnostic Telemetry', () => {
       expect(job!.cacheReadTokens).toBe(120);
       expect(job!.cacheCreationTokens).toBe(40);
       expect(job!.durationMs).toBe(5234);
-      expect(job!.toolsUsed).toEqual(['read_file', 'shell']);
+      expect(job!.model).toBe('gemini-2.5-pro-preview-05-06');
       expect(job!.costUsd).toBeGreaterThan(0);
     });
 
-    it('merges partial and delayed Gemini snapshots without double-counting repeated finals', async () => {
-      await workflowApi.post('/api/telemetry/v1/logs', {
-        jobId,
-        agent: 'GEMINI',
-        model: 'gemini-2.5-flash',
-        inputTokens: 400,
-        outputTokens: 100,
-        thinkingTokens: 30,
-        toolsUsed: ['read_file'],
-        costStatus: 'ESTIMATED',
-        usageSnapshotMode: 'CUMULATIVE',
-      });
+    it('T001b: gemini_cli.tool_call and gemini_cli.tool_result events add tools to toolsUsed', async () => {
+      const payload = buildOtlpPayload(jobId, [
+        {
+          body: { stringValue: 'gemini_cli.tool_call' },
+          attributes: [
+            { key: 'tool_name', value: { stringValue: 'read_file' } },
+          ],
+        },
+        {
+          body: { stringValue: 'gemini_cli.tool_result' },
+          attributes: [
+            { key: 'tool_name', value: { stringValue: 'shell' } },
+          ],
+        },
+      ]);
 
-      await workflowApi.post('/api/telemetry/v1/logs', {
-        jobId,
-        agent: 'GEMINI',
-        model: 'gemini-2.5-flash',
-        inputTokens: 1000,
-        outputTokens: 250,
-        thinkingTokens: 80,
-        cacheReadTokens: 50,
-        cacheCreationTokens: 10,
-        durationMs: 4500,
-        toolsUsed: ['read_file', 'shell'],
-        costStatus: 'ESTIMATED',
-        usageSnapshotMode: 'CUMULATIVE',
-      });
-
-      await workflowApi.post('/api/telemetry/v1/logs', {
-        jobId,
-        agent: 'GEMINI',
-        model: 'gemini-2.5-flash',
-        inputTokens: 1000,
-        outputTokens: 250,
-        thinkingTokens: 80,
-        cacheReadTokens: 50,
-        cacheCreationTokens: 10,
-        durationMs: 4500,
-        toolsUsed: ['read_file', 'shell'],
-        costStatus: 'ESTIMATED',
-        usageSnapshotMode: 'CUMULATIVE',
-      });
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
 
       const job = await prisma.job.findUnique({ where: { id: jobId } });
-      expect(job!.inputTokens).toBe(1000);
-      expect(job!.outputTokens).toBe(250);
-      expect(job!.thinkingTokens).toBe(80);
-      expect(job!.cacheReadTokens).toBe(50);
-      expect(job!.cacheCreationTokens).toBe(10);
-      expect(job!.durationMs).toBe(4500);
-      expect(job!.toolsUsed).toEqual(['read_file', 'shell']);
+      expect(job!.toolsUsed).toContain('read_file');
+      expect(job!.toolsUsed).toContain('shell');
     });
 
-    it('keeps Gemini pricing unavailable for unsupported models while preserving telemetry', async () => {
-      const response = await workflowApi.post('/api/telemetry/v1/logs', {
-        jobId,
-        agent: 'GEMINI',
-        model: 'gemini-experimental-x',
-        inputTokens: 900,
-        outputTokens: 300,
-        thinkingTokens: 90,
-        toolsUsed: ['shell'],
-        costStatus: 'UNAVAILABLE',
-        usageSnapshotMode: 'CUMULATIVE',
-      });
+    it('T001c: multiple Gemini OTLP batches accumulate correctly in DELTA mode', async () => {
+      // First batch
+      const payload1 = buildOtlpPayload(jobId, [{
+        body: { stringValue: 'gemini_cli.api_response' },
+        attributes: [
+          { key: 'input_tokens', value: { stringValue: '400' } },
+          { key: 'output_tokens', value: { stringValue: '100' } },
+          { key: 'thinking_tokens', value: { stringValue: '30' } },
+          { key: 'duration_ms', value: { stringValue: '2000' } },
+          { key: 'model', value: { stringValue: 'gemini-2.5-flash' } },
+        ],
+      }]);
+      await workflowApi.post('/api/telemetry/v1/logs', payload1);
 
+      // Second batch
+      const payload2 = buildOtlpPayload(jobId, [
+        {
+          body: { stringValue: 'gemini_cli.api_response' },
+          attributes: [
+            { key: 'input_tokens', value: { stringValue: '600' } },
+            { key: 'output_tokens', value: { stringValue: '150' } },
+            { key: 'thinking_tokens', value: { stringValue: '50' } },
+            { key: 'cache_read_tokens', value: { stringValue: '50' } },
+            { key: 'cache_creation_tokens', value: { stringValue: '10' } },
+            { key: 'duration_ms', value: { stringValue: '2500' } },
+            { key: 'model', value: { stringValue: 'gemini-2.5-flash' } },
+          ],
+        },
+        {
+          body: { stringValue: 'gemini_cli.tool_call' },
+          attributes: [
+            { key: 'tool_name', value: { stringValue: 'shell' } },
+          ],
+        },
+      ]);
+      await workflowApi.post('/api/telemetry/v1/logs', payload2);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.inputTokens).toBe(1000);   // 400 + 600
+      expect(job!.outputTokens).toBe(250);    // 100 + 150
+      expect(job!.thinkingTokens).toBe(80);   // 30 + 50
+      expect(job!.cacheReadTokens).toBe(50);  // 0 + 50
+      expect(job!.cacheCreationTokens).toBe(10); // 0 + 10
+      expect(job!.durationMs).toBe(4500);     // 2000 + 2500
+      expect(job!.toolsUsed).toContain('shell');
+      expect(job!.costUsd).toBeGreaterThan(0);
+    });
+
+    it('T001d: unsupported model preserves telemetry with cost = null', async () => {
+      const payload = buildOtlpPayload(jobId, [{
+        body: { stringValue: 'gemini_cli.api_response' },
+        attributes: [
+          { key: 'input_tokens', value: { stringValue: '900' } },
+          { key: 'output_tokens', value: { stringValue: '300' } },
+          { key: 'thinking_tokens', value: { stringValue: '90' } },
+          { key: 'model', value: { stringValue: 'gemini-experimental-x' } },
+        ],
+      }]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
       expect(response.status).toBe(200);
 
       const job = await prisma.job.findUnique({ where: { id: jobId } });
@@ -536,14 +553,15 @@ describe('Agent-Agnostic Telemetry', () => {
       expect(job!.costUsd).toBeNull();
     });
 
-    it('estimates Gemini cost for supported 2.5 Pro, 2.5 Flash, and 2.0 Flash models', async () => {
+    it('T002: estimates Gemini cost correctly for all supported models via OTLP path', async () => {
       const supportedModels = [
-        'gemini-2.5-pro',
+        'gemini-2.5-pro-preview-05-06',
         'gemini-2.5-flash',
         'gemini-2.0-flash',
       ] as const;
 
       for (const model of supportedModels) {
+        // Reset job metrics between iterations
         await prisma.job.update({
           where: { id: jobId },
           data: {
@@ -559,25 +577,71 @@ describe('Agent-Agnostic Telemetry', () => {
           },
         });
 
-        const response = await workflowApi.post('/api/telemetry/v1/logs', {
-          jobId,
-          agent: 'GEMINI',
-          model,
-          inputTokens: 1200,
-          outputTokens: 400,
-          thinkingTokens: 100,
-          cacheReadTokens: 80,
-          cacheCreationTokens: 20,
-          costStatus: 'ESTIMATED',
-          usageSnapshotMode: 'CUMULATIVE',
-        });
+        const payload = buildOtlpPayload(jobId, [{
+          body: { stringValue: 'gemini_cli.api_response' },
+          attributes: [
+            { key: 'input_tokens', value: { stringValue: '1200' } },
+            { key: 'output_tokens', value: { stringValue: '400' } },
+            { key: 'thinking_tokens', value: { stringValue: '100' } },
+            { key: 'cache_read_tokens', value: { stringValue: '80' } },
+            { key: 'cache_creation_tokens', value: { stringValue: '20' } },
+            { key: 'model', value: { stringValue: model } },
+          ],
+        }]);
 
+        const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
         expect(response.status).toBe(200);
 
         const job = await prisma.job.findUnique({ where: { id: jobId } });
         expect(job!.model).toBe(model);
         expect(job!.costUsd).toBeGreaterThan(0);
       }
+    });
+  });
+
+  describe('US2: Gemini Failure Path — Missing Telemetry', () => {
+    it('T008a: job retains null metrics when no Gemini OTLP events arrive', async () => {
+      // Do not send any telemetry — the job should retain its default null/zero state
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      // Job was set to RUNNING in beforeEach but received no telemetry
+      expect(job!.inputTokens).toBeNull();
+      expect(job!.outputTokens).toBeNull();
+      expect(job!.thinkingTokens).toBeNull();
+      expect(job!.costUsd).toBeNull();
+      expect(job!.model).toBeNull();
+    });
+
+    it('T008b: OTLP payload without job_id in resource attributes returns 200 with warning', async () => {
+      // Send Gemini OTLP event with no job_id in resource attributes
+      const payload = {
+        resourceLogs: [{
+          resource: {
+            attributes: [
+              { key: 'service.name', value: { stringValue: 'gemini-cli' } },
+            ],
+          },
+          scopeLogs: [{
+            logRecords: [{
+              body: { stringValue: 'gemini_cli.api_response' },
+              attributes: [
+                { key: 'input_tokens', value: { stringValue: '500' } },
+                { key: 'output_tokens', value: { stringValue: '200' } },
+                { key: 'model', value: { stringValue: 'gemini-2.5-pro' } },
+              ],
+            }],
+          }],
+        }],
+      };
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+      expect(response.data).toHaveProperty('message');
+      expect(response.data.message).toContain('no job_id');
+
+      // Verify original job was not modified
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.inputTokens).toBeNull();
+      expect(job!.outputTokens).toBeNull();
     });
   });
 

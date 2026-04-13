@@ -1,30 +1,30 @@
 # Workflow Artifact: Gemini Native Telemetry Emission
 
-## Workflow Definition
+> **Superseded**: The stream-JSON emission approach described below was replaced by native OTLP emission in [AIB-629](../../AIB-629-gemini-telemetry-switch/workflows/gemini-native-otlp-emission.md). Gemini CLI now emits OTLP log records natively using standard OTEL environment variables — no `--output-format stream-json`, no `GEMINI_STREAM_FILE`, no post-execution scraping.
+
+## Workflow Definition (SUPERSEDED)
 
 ### Input
 
 - `JOB_ID`
 - selected Gemini command and prompt
 - Gemini auth material
-- telemetry endpoint config
+- telemetry endpoint config (standard OTEL env vars)
 
-### Phases
+### Phases (AIB-629 — current)
 
-1. Invoke Gemini headlessly with `--output-format stream-json`.
-2. Write streamed events to `GEMINI_STREAM_FILE`.
-3. Preserve Gemini exit code independently from telemetry export.
-4. Pass the captured stream to the Gemini telemetry normalization step.
+1. Invoke Gemini headlessly (no `--output-format stream-json`).
+2. Gemini CLI emits `gemini_cli.*` OTLP log records natively via `OTEL_EXPORTER_OTLP_ENDPOINT`.
+3. Telemetry is processed in real-time by the OTLP endpoint — no post-execution collection needed.
 
 ### Environment requirements
 
 - `GEMINI_API_KEY` or `GEMINI_OAUTH_JSON`
 - `OTEL_EXPORTER_OTLP_ENDPOINT`
 - `OTEL_EXPORTER_OTLP_HEADERS`
-- `JOB_ID`
+- `OTEL_RESOURCE_ATTRIBUTES` (includes `job_id`)
 
 ## Error behavior
 
 - CLI/auth/install failures fail the workflow step.
-- Telemetry export remains non-blocking after command execution.
-- Missing telemetry must remain explicit; the workflow must not fabricate complete metrics from partial stream output.
+- If OTLP emission fails silently, the job retains null metrics (missing-telemetry state) — no fabricated success.

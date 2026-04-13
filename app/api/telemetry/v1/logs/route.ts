@@ -11,7 +11,6 @@ import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 
 const batchPayloadSchema = z.object({
   jobId: z.number().int().positive().optional(),
-  agent: z.enum(['MISTRAL', 'GEMINI']).optional(),
   inputTokens: z.number().int().nonnegative().optional(),
   outputTokens: z.number().int().nonnegative().optional(),
   thinkingTokens: z.number().int().nonnegative().optional(),
@@ -22,7 +21,6 @@ const batchPayloadSchema = z.object({
   toolsUsed: z.array(z.string()).optional(),
   costUsd: z.number().nonnegative().optional(),
   costStatus: z.enum(['ESTIMATED', 'UNAVAILABLE']).optional(),
-  usageSnapshotMode: z.enum(['DELTA', 'CUMULATIVE']).optional(),
 });
 
 /**
@@ -148,7 +146,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           const eventKind = String(findAttribute(attrs, 'event.kind') ?? '');
           const isCodexTokenEvent = eventName === 'codex.sse_event' && eventKind === 'response.completed';
 
-          const isToolEvent = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool_result', 'codex.tool_decision'].includes(eventName);
+          // Gemini: token data in gemini_cli.api_response
+          const isGeminiApiResponse = eventName === 'gemini_cli.api_response';
+
+          const isToolEvent = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool_result', 'codex.tool_decision', 'gemini_cli.tool_call', 'gemini_cli.tool_result'].includes(eventName);
 
           if (isClaudeApiRequest) {
             metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
@@ -186,6 +187,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 outputTokens,
                 cachedTokens
               );
+          }
+
+          if (isGeminiApiResponse) {
+            metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
+            metrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
+            const thinkingTokens = parseIntAttribute(findAttribute(attrs, 'thinking_tokens'));
+            if (thinkingTokens > 0) {
+              metrics.thinkingTokens = (metrics.thinkingTokens ?? 0) + thinkingTokens;
+            }
+            metrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
+            metrics.cacheCreationTokens += parseIntAttribute(findAttribute(attrs, 'cache_creation_tokens'));
+            metrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
+            const model = findAttribute(attrs, 'model');
+            if (model) {
+              metrics.model = String(model);
+              metrics.geminiCostModel = String(model);
+            }
           }
 
           if (isToolEvent) {
@@ -555,18 +573,9 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
     metrics.toolsUsed.add(tool);
   }
 
-  // Gemini's promptTokenCount (mapped to inputTokens by the shell script) includes
-  // cached content. Normalize to non-cached only, consistent with the Codex OTLP path.
-  if (data.agent === 'GEMINI') {
-    metrics.inputTokens = Math.max(0, metrics.inputTokens - metrics.cacheReadTokens);
-  }
-
   if (typeof data.costUsd === 'number') {
     metrics.costUsd = data.costUsd;
-  } else if (data.agent === 'GEMINI' && data.costStatus !== 'UNAVAILABLE') {
-    metrics.geminiCostModel = data.model ?? null;
   } else if (
-    data.agent !== 'GEMINI' &&
     data.costStatus !== 'UNAVAILABLE' &&
     (metrics.inputTokens > 0 || metrics.outputTokens > 0)
   ) {
@@ -578,9 +587,7 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
     );
   }
 
-  const mergeMode = data.usageSnapshotMode ?? 'DELTA';
-
-  return updateJobMetrics(data.jobId, metrics, startTime, 'Batch processed', mergeMode);
+  return updateJobMetrics(data.jobId, metrics, startTime, 'Batch processed');
 }
 
 /**

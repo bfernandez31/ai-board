@@ -22,16 +22,16 @@
 
 ### Tests for User Story 1
 
-- [ ] T001 [P] [US1] Extend Gemini OTLP test suite in `tests/integration/telemetry/agent-agnostic.test.ts`: replace `describe('Gemini native batch telemetry')` with `describe('Gemini native OTLP telemetry')` containing test cases for: (a) `gemini_cli.api_response` event updates Job with input/output/thinking/cache-read/cache-creation tokens, model, duration, and estimated cost; (b) `gemini_cli.tool_call` and `gemini_cli.tool_result` events add tools to `toolsUsed`; (c) multiple OTLP batches accumulate correctly in DELTA mode; (d) unsupported model preserves telemetry with cost = null
-- [ ] T002 [P] [US1] Extend cost estimation tests in `tests/integration/telemetry/agent-agnostic.test.ts`: add test cases validating `estimateGeminiCost()` works correctly for all supported models (gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash) when invoked via the OTLP path
+- [x] T001 [P] [US1] ✅ DONE — Extend Gemini OTLP test suite in `tests/integration/telemetry/agent-agnostic.test.ts`: replace `describe('Gemini native batch telemetry')` with `describe('Gemini native OTLP telemetry')` containing test cases for: (a) `gemini_cli.api_response` event updates Job with input/output/thinking/cache-read/cache-creation tokens, model, duration, and estimated cost; (b) `gemini_cli.tool_call` and `gemini_cli.tool_result` events add tools to `toolsUsed`; (c) multiple OTLP batches accumulate correctly in DELTA mode; (d) unsupported model preserves telemetry with cost = null
+- [x] T002 [P] [US1] ✅ DONE — Extend cost estimation tests in `tests/integration/telemetry/agent-agnostic.test.ts`: add test cases validating `estimateGeminiCost()` works correctly for all supported models (gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash) when invoked via the OTLP path
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Add Gemini OTLP event handler in `app/api/telemetry/v1/logs/route.ts`: add `isGeminiApiResponse` check (`eventName === 'gemini_cli.api_response'`), parse token attributes (`input_tokens`, `output_tokens`, `thinking_tokens`, `cache_read_tokens`, `cache_creation_tokens`, `duration_ms`, `model`) using `parseIntAttribute(findAttribute(...))` pattern, set `geminiCostModel` on metrics for server-side cost estimation (follow Codex pattern at lines 164-188)
-- [ ] T004 [US1] Add Gemini tool events to tool detection list in `app/api/telemetry/v1/logs/route.ts`: add `gemini_cli.tool_call` and `gemini_cli.tool_result` to the tool event name list so Gemini tool usage is captured in `toolsUsed`
-- [ ] T005 [US1] Remove `--output-format stream-json` flag and `tee "$output_file"` pipe from `invoke_gemini()` in `.github/scripts/run-agent.sh`; remove `output_file` variable and `GEMINI_STREAM_FILE` export
-- [ ] T006 [US1] Delete `collect_gemini_telemetry()` function entirely from `.github/scripts/run-agent.sh` (lines 729-791)
-- [ ] T007 [US1] Simplify Gemini dispatch block in `.github/scripts/run-agent.sh` (lines 816-823): remove `gemini_exit=0`, `invoke_gemini || gemini_exit=$?`, `collect_gemini_telemetry`, `exit $gemini_exit` — replace with simple `invoke_gemini` call (matching Claude dispatch pattern at lines 796-800)
+- [x] T003 [US1] ✅ DONE — Add Gemini OTLP event handler in `app/api/telemetry/v1/logs/route.ts`: add `isGeminiApiResponse` check (`eventName === 'gemini_cli.api_response'`), parse token attributes (`input_tokens`, `output_tokens`, `thinking_tokens`, `cache_read_tokens`, `cache_creation_tokens`, `duration_ms`, `model`) using `parseIntAttribute(findAttribute(...))` pattern, set `geminiCostModel` on metrics for server-side cost estimation (follow Codex pattern at lines 164-188)
+- [x] T004 [US1] ✅ DONE — Add Gemini tool events to tool detection list in `app/api/telemetry/v1/logs/route.ts`: add `gemini_cli.tool_call` and `gemini_cli.tool_result` to the tool event name list so Gemini tool usage is captured in `toolsUsed`
+- [x] T005 [US1] ✅ DONE — Remove `--output-format stream-json` flag and `tee "$output_file"` pipe from `invoke_gemini()` in `.github/scripts/run-agent.sh`; remove `output_file` variable and `GEMINI_STREAM_FILE` export
+- [x] T006 [US1] ✅ DONE — Delete `collect_gemini_telemetry()` function entirely from `.github/scripts/run-agent.sh` (lines 729-791)
+- [x] T007 [US1] ✅ DONE — Simplify Gemini dispatch block in `.github/scripts/run-agent.sh` (lines 816-823): remove `gemini_exit=0`, `invoke_gemini || gemini_exit=$?`, `collect_gemini_telemetry`, `exit $gemini_exit` — replace with simple `invoke_gemini` call (matching Claude dispatch pattern at lines 796-800)
 
 **Checkpoint**: Gemini OTLP events are parsed and stored correctly. Agent script no longer performs batch telemetry collection. All US1 tests pass.
 
@@ -45,7 +45,7 @@
 
 ### Tests for User Story 2
 
-- [ ] T008 [US2] Extend failure-path tests in `tests/integration/telemetry/agent-agnostic.test.ts`: add test case verifying that when no Gemini OTLP events arrive for a job, the job retains null metrics (missing-telemetry state) — no fabricated success; verify existing OTLP error-handling behavior (no `job_id` in resource attributes returns 200 with warning) applies to Gemini events
+- [x] T008 [US2] ✅ DONE — Extend failure-path tests in `tests/integration/telemetry/agent-agnostic.test.ts`: add test case verifying that when no Gemini OTLP events arrive for a job, the job retains null metrics (missing-telemetry state) — no fabricated success; verify existing OTLP error-handling behavior (no `job_id` in resource attributes returns 200 with warning) applies to Gemini events
 
 ### Implementation for User Story 2
 
@@ -63,15 +63,15 @@ No additional implementation required — US2 is covered by the existing OTLP er
 
 ### Tests for User Story 3
 
-- [ ] T009 [US3] Verify existing Mistral batch tests pass unchanged in `tests/integration/telemetry/agent-agnostic.test.ts`: run the existing Mistral batch test suite and confirm zero regressions after batch handler simplification (no new test code needed — this is a regression gate)
+- [x] T009 [US3] ✅ DONE — Verify existing Mistral batch tests pass unchanged in `tests/integration/telemetry/agent-agnostic.test.ts`: run the existing Mistral batch test suite and confirm zero regressions after batch handler simplification (no new test code needed — this is a regression gate)
 
 ### Implementation for User Story 3
 
-- [ ] T010 [US3] Remove `agent` field from `batchPayloadSchema` in `app/api/telemetry/v1/logs/route.ts` (line 14)
-- [ ] T011 [US3] Remove `usageSnapshotMode` field from `batchPayloadSchema` in `app/api/telemetry/v1/logs/route.ts` (line 25)
-- [ ] T012 [US3] Remove Gemini input token normalization in `processBatchPayload()` in `app/api/telemetry/v1/logs/route.ts` (lines 559-562: `if (data.agent === 'GEMINI')` block)
-- [ ] T013 [US3] Remove Gemini cost estimation branch in `app/api/telemetry/v1/logs/route.ts` (lines 566-568) and simplify cost estimation to Mistral-only by removing `data.agent !== 'GEMINI'` guard (lines 569-578)
-- [ ] T014 [US3] Remove `usageSnapshotMode` variable in `app/api/telemetry/v1/logs/route.ts` — always use DELTA mode; update `updateJobMetrics` call to omit merge mode parameter (line 581)
+- [x] T010 [US3] ✅ DONE — Remove `agent` field from `batchPayloadSchema` in `app/api/telemetry/v1/logs/route.ts` (line 14)
+- [x] T011 [US3] ✅ DONE — Remove `usageSnapshotMode` field from `batchPayloadSchema` in `app/api/telemetry/v1/logs/route.ts` (line 25)
+- [x] T012 [US3] ✅ DONE — Remove Gemini input token normalization in `processBatchPayload()` in `app/api/telemetry/v1/logs/route.ts` (lines 559-562: `if (data.agent === 'GEMINI')` block)
+- [x] T013 [US3] ✅ DONE — Remove Gemini cost estimation branch in `app/api/telemetry/v1/logs/route.ts` (lines 566-568) and simplify cost estimation to Mistral-only by removing `data.agent !== 'GEMINI'` guard (lines 569-578)
+- [x] T014 [US3] ✅ DONE — Remove `usageSnapshotMode` variable in `app/api/telemetry/v1/logs/route.ts` — always use DELTA mode; update `updateJobMetrics` call to omit merge mode parameter (line 581)
 
 **Checkpoint**: Batch handler is Mistral-only. All Gemini-specific batch code removed. Existing Mistral batch tests and Claude/Codex OTLP tests pass unchanged.
 
@@ -85,10 +85,10 @@ No additional implementation required — US2 is covered by the existing OTLP er
 
 ### Implementation for User Story 4
 
-- [ ] T015 [P] [US4] Update `specs/AIB-626-fix-gemini-telemetry/spec.md`: add note that the batch approach was replaced by native OTLP in AIB-629
-- [ ] T016 [P] [US4] Update `specs/AIB-626-fix-gemini-telemetry/contracts/telemetry-api.md`: mark Gemini batch payload as superseded; reference AIB-629 contract at `specs/AIB-629-gemini-telemetry-switch/contracts/telemetry-api.md`
-- [ ] T017 [P] [US4] Update `specs/AIB-626-fix-gemini-telemetry/workflows/gemini-native-telemetry-emission.md`: remove stream-json references; add note referencing AIB-629 emission workflow
-- [ ] T018 [P] [US4] Update `specs/AIB-626-fix-gemini-telemetry/workflows/gemini-telemetry-intake.md`: remove batch normalization references; add note referencing AIB-629 intake workflow
+- [x] T015 [P] [US4] ✅ DONE — Update `specs/AIB-626-fix-gemini-telemetry/spec.md`: add note that the batch approach was replaced by native OTLP in AIB-629
+- [x] T016 [P] [US4] ✅ DONE — Update `specs/AIB-626-fix-gemini-telemetry/contracts/telemetry-api.md`: mark Gemini batch payload as superseded; reference AIB-629 contract at `specs/AIB-629-gemini-telemetry-switch/contracts/telemetry-api.md`
+- [x] T017 [P] [US4] ✅ DONE — Update `specs/AIB-626-fix-gemini-telemetry/workflows/gemini-native-telemetry-emission.md`: remove stream-json references; add note referencing AIB-629 emission workflow
+- [x] T018 [P] [US4] ✅ DONE — Update `specs/AIB-626-fix-gemini-telemetry/workflows/gemini-telemetry-intake.md`: remove batch normalization references; add note referencing AIB-629 intake workflow
 
 **Checkpoint**: All AIB-626 documentation updated. No stale references to Gemini batch telemetry remain.
 
@@ -98,8 +98,8 @@ No additional implementation required — US2 is covered by the existing OTLP er
 
 **Purpose**: Final validation across all user stories
 
-- [ ] T019 Run full integration test suite (`bun run test:integration`) to verify zero regressions across all telemetry paths (Claude OTLP, Codex OTLP, Gemini OTLP, Mistral batch)
-- [ ] T020 Run `bun run type-check` and `bun run lint` to verify no type errors or lint violations introduced
+- [x] T019 ✅ DONE — Run full integration test suite (`bun run test:integration`) to verify zero regressions across all telemetry paths (Claude OTLP, Codex OTLP, Gemini OTLP, Mistral batch)
+- [x] T020 ✅ DONE — Run `bun run type-check` and `bun run lint` to verify no type errors or lint violations introduced
 
 ---
 

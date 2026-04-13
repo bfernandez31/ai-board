@@ -2,8 +2,10 @@
 
 **Feature Branch**: `AIB-626-fix-gemini-telemetry`  
 **Created**: 2026-04-13  
-**Status**: Draft  
+**Status**: Superseded by AIB-629  
 **Input**: User description: "Fix Gemini telemetry: native OTLP parsing and cost estimation"
+
+> **Note**: The batch telemetry approach introduced in AIB-626 was replaced by native OTLP emission in [AIB-629](../AIB-629-gemini-telemetry-switch/spec.md). Gemini now emits telemetry via standard OpenTelemetry environment variables (same as Claude and Codex), eliminating the stream-JSON scraping and post-execution batch collection.
 
 ## Auto-Resolved Decisions *(mandatory when clarification policies apply)*
 

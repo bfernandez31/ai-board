@@ -1,16 +1,18 @@
 # Contract: Gemini Native Telemetry Intake
 
+> **Superseded**: The Gemini batch payload described below was replaced by native OTLP emission in [AIB-629](../../AIB-629-gemini-telemetry-switch/contracts/telemetry-api.md). Gemini now emits `gemini_cli.*` OTLP log records natively. The batch endpoint is now Mistral-only.
+
 ## Endpoint Extended
 
 ### `POST /api/telemetry/v1/logs`
 
 Continue supporting:
-- OTLP logs for Claude and Codex
+- OTLP logs for Claude, Codex, and Gemini (native)
 - batch JSON for Mistral
 
-Extend Gemini batch JSON so it can represent native Gemini telemetry categories without conflation.
+~~Extend Gemini batch JSON so it can represent native Gemini telemetry categories without conflation.~~
 
-## Gemini batch payload
+## Gemini batch payload (SUPERSEDED — see AIB-629)
 
 ```json
 {
