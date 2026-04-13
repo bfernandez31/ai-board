@@ -1,7 +1,5 @@
 import { timingSafeEqual } from "node:crypto"
 
-export const TEST_WORKFLOW_TOKEN = "test-workflow-token-for-e2e-tests-only"
-
 function isTokenMatch(token: string, expectedToken: string): boolean {
   return (
     token.length === expectedToken.length &&
@@ -24,8 +22,9 @@ export function getAcceptedWorkflowTokens(): string[] {
     tokens.add(process.env.WORKFLOW_API_TOKEN)
   }
 
-  if (isWorkflowTokenTestContext()) {
-    tokens.add(TEST_WORKFLOW_TOKEN)
+  // Only accept test token from env var — never hardcoded in source
+  if (isWorkflowTokenTestContext() && process.env.TEST_WORKFLOW_TOKEN) {
+    tokens.add(process.env.TEST_WORKFLOW_TOKEN)
   }
 
   return [...tokens]
@@ -42,8 +41,8 @@ export function getWorkflowToken(): string {
   if (process.env.WORKFLOW_API_TOKEN) {
     return process.env.WORKFLOW_API_TOKEN
   }
-  if (isWorkflowTokenTestContext()) {
-    return TEST_WORKFLOW_TOKEN
+  if (isWorkflowTokenTestContext() && process.env.TEST_WORKFLOW_TOKEN) {
+    return process.env.TEST_WORKFLOW_TOKEN
   }
   throw new Error("WORKFLOW_API_TOKEN is not set and not in test context")
 }

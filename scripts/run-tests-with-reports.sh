@@ -117,6 +117,7 @@ fi
 echo "[2/3] Starting dev server..."
 TEST_MODE=true \
 WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only \
+TEST_WORKFLOW_TOKEN=test-workflow-token-for-e2e-tests-only \
 NODE_ENV=test \
 VERCEL_ENV=preview \
 DEV_LOGIN_ENABLED=true \
