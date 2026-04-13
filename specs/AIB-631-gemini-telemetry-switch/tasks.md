@@ -7,7 +7,7 @@ Migrate Gemini CLI telemetry from custom stdout scraping to native OTLP ingestio
 - [x] T002 [P] Execute existing telemetry tests to ensure a clean baseline: `npm test tests/integration/telemetry/agent-agnostic.test.ts`
 
 ## Phase 2: Server-side Gemini OTLP Ingestion (US1)
-- [ ] T003 [P] [US1] Create baseline integration test for Gemini OTLP in `tests/integration/telemetry/agent-agnostic.test.ts` (expect failure)
+- [x] T003 [P] [US1] Create baseline integration test for Gemini OTLP in `tests/integration/telemetry/agent-agnostic.test.ts` (expect failure)
 - [ ] T004 [US1] Extend `app/api/telemetry/v1/logs/route.ts` to identify `gemini_cli.api_response` and `gemini_cli.tool_call` events
 - [ ] T005 [US1] Implement attribute extraction for `gemini_cli.usage.*` in `app/api/telemetry/v1/logs/route.ts`
 - [ ] T006 [US1] Implement attribute extraction for `gemini_cli.model` and `gemini_cli.duration_ms` in `app/api/telemetry/v1/logs/route.ts`

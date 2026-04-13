@@ -429,6 +429,50 @@ describe('Agent-Agnostic Telemetry', () => {
     });
   });
 
+  describe('Gemini OTLP Telemetry (US1)', () => {
+    it('T003: Gemini api_response updates job tokens and cost', async () => {
+      const payload = buildOtlpPayload(jobId, [{
+        body: { stringValue: 'gemini_cli.api_response' },
+        attributes: [
+          { key: 'gemini_cli.usage.input_tokens', value: { stringValue: '1200' } },
+          { key: 'gemini_cli.usage.output_tokens', value: { stringValue: '600' } },
+          { key: 'gemini_cli.usage.thinking_tokens', value: { stringValue: '150' } },
+          { key: 'gemini_cli.usage.cache_read_tokens', value: { stringValue: '200' } },
+          { key: 'gemini_cli.model', value: { stringValue: 'gemini-2.5-pro' } },
+          { key: 'gemini_cli.duration_ms', value: { stringValue: '3500' } },
+        ],
+      }]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      // Total input = 1200. Project convention (seen in route.ts) seems to be: 
+      // job.inputTokens = raw_input - cache_read.
+      // So 1200 - 200 = 1000.
+      expect(job!.inputTokens).toBe(1000);
+      expect(job!.outputTokens).toBe(600);
+      expect(job!.thinkingTokens).toBe(150);
+      expect(job!.cacheReadTokens).toBe(200);
+      expect(job!.durationMs).toBe(3500);
+      expect(job!.costUsd).toBeGreaterThan(0);
+    });
+
+    it('T003: Gemini tool_call updates toolsUsed', async () => {
+      const payload = buildOtlpPayload(jobId, [{
+        body: { stringValue: 'gemini_cli.tool_call' },
+        attributes: [
+          { key: 'gemini_cli.tool_name', value: { stringValue: 'ls_dir' } },
+        ],
+      }]);
+
+      await workflowApi.post('/api/telemetry/v1/logs', payload);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.toolsUsed).toContain('ls_dir');
+    });
+  });
+
   describe('Gemini native batch telemetry', () => {
     it('preserves thinking and cache buckets separately for Gemini jobs', async () => {
       const payload = {
