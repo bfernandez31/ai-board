@@ -6,14 +6,19 @@ import { getAnalyticsData } from '@/lib/analytics/queries';
 import { DEFAULT_ANALYTICS_FILTERS } from '@/lib/analytics/aggregations';
 import { AnalyticsDashboard } from '@/components/analytics/analytics-dashboard';
 import { Button } from '@/components/ui/button';
-import type { AgentFilter, TicketOutcomeFilter, TimeRange } from '@/lib/analytics/types';
+import {
+  AGENT_FILTER_VALUES,
+  type AgentFilter,
+  type TicketOutcomeFilter,
+  type TimeRange,
+} from '@/lib/analytics/types';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const VALID_RANGES = new Set<TimeRange>(['7d', '30d', '90d', 'all']);
 const VALID_OUTCOMES = new Set<TicketOutcomeFilter>(['shipped', 'closed', 'all-completed']);
-const VALID_AGENTS = new Set<AgentFilter>(['all', 'CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']);
+const VALID_AGENTS = new Set<AgentFilter>(AGENT_FILTER_VALUES);
 
 function parseProjectId(projectIdString: string): number {
   const projectId = parseInt(projectIdString, 10);

@@ -174,6 +174,114 @@ describe('Analytics Route', () => {
     });
   }
 
+  async function seedGeminiAnalyticsFixtures(projectId: number) {
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { defaultAgent: Agent.GEMINI },
+    });
+
+    const now = new Date();
+    const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+    const tickets = await prisma.ticket.createManyAndReturn({
+      data: [
+        {
+          projectId,
+          title: '[e2e] shipped supported gemini',
+          description: 'analytics shipped ticket',
+          stage: Stage.SHIP,
+          workflowType: WorkflowType.FULL,
+          ticketNumber: 11,
+          ticketKey: 'E2E-11',
+          updatedAt: daysAgo(2),
+        },
+        {
+          projectId,
+          title: '[e2e] shipped unsupported gemini',
+          description: 'analytics shipped ticket',
+          stage: Stage.SHIP,
+          workflowType: WorkflowType.FULL,
+          ticketNumber: 12,
+          ticketKey: 'E2E-12',
+          updatedAt: daysAgo(1),
+        },
+        {
+          projectId,
+          title: '[e2e] closed codex history',
+          description: 'analytics closed ticket',
+          stage: Stage.CLOSED,
+          workflowType: WorkflowType.QUICK,
+          ticketNumber: 13,
+          ticketKey: 'E2E-13',
+          updatedAt: daysAgo(3),
+          closedAt: daysAgo(3),
+          agent: Agent.CODEX,
+        },
+      ],
+    });
+
+    const idByKey = new Map(tickets.map((ticket) => [ticket.ticketKey, ticket.id]));
+
+    await prisma.job.createMany({
+      data: [
+        {
+          ticketId: idByKey.get('E2E-11')!,
+          projectId,
+          command: 'implement',
+          status: JobStatus.COMPLETED,
+          startedAt: daysAgo(2),
+          completedAt: daysAgo(2),
+          updatedAt: daysAgo(2),
+          costUsd: 1.11,
+          durationMs: 1200,
+          inputTokens: 1000,
+          outputTokens: 200,
+          thinkingTokens: 100,
+          cacheReadTokens: 80,
+          cacheCreationTokens: 20,
+          model: 'gemini-2.5-pro',
+          toolsUsed: ['shell'],
+        },
+        {
+          ticketId: idByKey.get('E2E-12')!,
+          projectId,
+          command: 'verify',
+          status: JobStatus.COMPLETED,
+          startedAt: daysAgo(1),
+          completedAt: daysAgo(1),
+          updatedAt: daysAgo(1),
+          costUsd: null,
+          durationMs: 1800,
+          inputTokens: 800,
+          outputTokens: 250,
+          thinkingTokens: 120,
+          cacheReadTokens: 50,
+          cacheCreationTokens: 10,
+          model: 'gemini-experimental-x',
+          toolsUsed: ['read_file'],
+        },
+        {
+          ticketId: idByKey.get('E2E-13')!,
+          projectId,
+          command: 'verify',
+          status: JobStatus.COMPLETED,
+          startedAt: daysAgo(3),
+          completedAt: daysAgo(3),
+          updatedAt: daysAgo(3),
+          costUsd: 2.25,
+          durationMs: 900,
+          inputTokens: 300,
+          outputTokens: 90,
+          thinkingTokens: null,
+          cacheReadTokens: 10,
+          cacheCreationTokens: 5,
+          model: 'gpt-5.4',
+          toolsUsed: ['Edit'],
+        },
+      ],
+    });
+  }
+
   it('filters shipped, closed, and all-completed datasets consistently', async () => {
     await seedAnalyticsFixtures(ctx.projectId);
 
@@ -353,6 +461,61 @@ describe('Analytics Route', () => {
     expect(noMatch.hasData).toBe(false);
     expect(noMatch.overview.ticketsShipped.count).toBe(0);
     expect(noMatch.overview.ticketsClosed.count).toBe(1);
+  });
+
+  it('keeps Gemini jobs visible in analytics totals while unsupported pricing marks costs incomplete', async () => {
+    await seedGeminiAnalyticsFixtures(ctx.projectId);
+
+    const responseRaw = await GET(
+      new NextRequest(
+        `http://localhost/api/projects/${ctx.projectId}/analytics?outcome=all-completed&agent=GEMINI`
+      ),
+      { params: Promise.resolve({ projectId: String(ctx.projectId) }) }
+    );
+    const response = (await responseRaw.json()) as {
+      jobCount: number;
+      overview: { totalCost: number; costsIncomplete: boolean };
+      tokenUsage: { inputTokens: number; outputTokens: number; thinkingTokens: number; cacheTokens: number };
+      topTools: Array<{ tool: string; count: number }>;
+    };
+
+    expect(responseRaw.status).toBe(200);
+    expect(response.jobCount).toBe(2);
+    expect(response.overview.totalCost).toBe(1.11);
+    expect(response.overview.costsIncomplete).toBe(true);
+    expect(response.tokenUsage).toEqual({
+      inputTokens: 1800,
+      outputTokens: 450,
+      thinkingTokens: 220,
+      cacheTokens: 160,
+    });
+    expect(response.topTools).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ tool: 'shell', count: 1 }),
+        expect.objectContaining({ tool: 'read_file', count: 1 }),
+      ])
+    );
+  });
+
+  it('derives availableAgents from the shared supported-agent source plus project history', async () => {
+    await seedGeminiAnalyticsFixtures(ctx.projectId);
+
+    const responseRaw = await GET(
+      new NextRequest(
+        `http://localhost/api/projects/${ctx.projectId}/analytics?outcome=all-completed`
+      ),
+      { params: Promise.resolve({ projectId: String(ctx.projectId) }) }
+    );
+    const response = (await responseRaw.json()) as {
+      availableAgents: Array<{ value: string; label: string; jobCount: number; isDefault: boolean }>;
+    };
+
+    expect(responseRaw.status).toBe(200);
+    expect(response.availableAgents).toEqual([
+      { value: 'all', label: 'All agents', jobCount: 3, isDefault: true },
+      { value: 'CODEX', label: 'Codex', jobCount: 1, isDefault: false },
+      { value: 'GEMINI', label: 'Gemini', jobCount: 2, isDefault: false },
+    ]);
   });
 
   it('rejects invalid analytics filters', async () => {

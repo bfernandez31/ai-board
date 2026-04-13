@@ -13,6 +13,10 @@ import type {
   TimeRange,
   ToolUsage,
 } from './types';
+import {
+  ALL_AGENTS,
+  getAgentLabel as getSharedAgentLabel,
+} from '@/app/lib/utils/agent-resolution';
 
 /**
  * T005: Command-to-stage mapping
@@ -112,18 +116,11 @@ export function getOutcomeLabel(outcome: TicketOutcomeFilter): string {
 }
 
 export function getAgentLabel(agent: AgentFilter): string {
-  switch (agent) {
-    case 'all':
-      return 'All agents';
-    case 'CLAUDE':
-      return 'Claude';
-    case 'CODEX':
-      return 'Codex';
-    case 'MISTRAL':
-      return 'Mistral';
-    case 'GEMINI':
-      return 'Gemini';
-  }
+  return agent === 'all' ? 'All agents' : getSharedAgentLabel(agent);
+}
+
+export function getSupportedAnalyticsAgents() {
+  return ALL_AGENTS;
 }
 
 export function buildAnalyticsEmptyMessage(filters: AnalyticsFilters): string {

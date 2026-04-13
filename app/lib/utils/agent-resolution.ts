@@ -1,7 +1,7 @@
 import type { Agent } from '@prisma/client';
 
-export const ALL_AGENTS: Agent[] = ['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI'];
-export const SETUP_VISIBLE_AGENTS: Agent[] = ['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI'];
+export const ALL_AGENTS = ['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI'] as const satisfies readonly Agent[];
+export const SETUP_VISIBLE_AGENTS = [...ALL_AGENTS] as const satisfies readonly Agent[];
 export const GEMINI_SUPPORTED_COMMANDS = [
   'specify',
   'plan',
@@ -23,6 +23,20 @@ export const GEMINI_BLOCKED_COMMANDS = [
   'retro-spec',
   'ai-board-assist',
 ] as const;
+export const AGENT_LABELS: Record<(typeof ALL_AGENTS)[number], string> = {
+  CLAUDE: 'Claude',
+  CODEX: 'Codex',
+  MISTRAL: 'Mistral',
+  GEMINI: 'Gemini',
+};
+
+export function isSupportedAgent(value: string): value is (typeof ALL_AGENTS)[number] {
+  return ALL_AGENTS.includes(value as (typeof ALL_AGENTS)[number]);
+}
+
+export function getAgentLabel(agent: (typeof ALL_AGENTS)[number]): string {
+  return AGENT_LABELS[agent];
+}
 
 export function resolveEffectiveAgent(
   ticketAgent: Agent | null,

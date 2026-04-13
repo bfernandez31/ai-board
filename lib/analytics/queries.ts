@@ -8,6 +8,7 @@
 import { JobStatus } from '@prisma/client';
 import type { Prisma, Stage, WorkflowType } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
+import { ALL_AGENTS } from '@/app/lib/utils/agent-resolution';
 import type {
   AgentOption,
   AnalyticsData,
@@ -211,10 +212,7 @@ async function getAvailableAgents(projectId: number): Promise<AgentOption[]> {
   });
 
   const counts = new Map<NamedAgent, number>([
-    ['CLAUDE', 0],
-    ['CODEX', 0],
-    ['MISTRAL', 0],
-    ['GEMINI', 0],
+    ...ALL_AGENTS.map((agent) => [agent, 0] as const),
   ]);
 
   for (const ticket of tickets) {
@@ -231,7 +229,7 @@ async function getAvailableAgents(projectId: number): Promise<AgentOption[]> {
     },
   ];
 
-  for (const agent of ['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI'] as const) {
+  for (const agent of ALL_AGENTS) {
     const jobCount = counts.get(agent) ?? 0;
     if (jobCount > 0) {
       options.push({
@@ -420,6 +418,7 @@ async function getTokenUsage(
     _sum: {
       inputTokens: true,
       outputTokens: true,
+      thinkingTokens: true,
       cacheReadTokens: true,
       cacheCreationTokens: true,
     },
@@ -428,12 +427,17 @@ async function getTokenUsage(
   return {
     inputTokens: result._sum.inputTokens ?? 0,
     outputTokens: result._sum.outputTokens ?? 0,
+    thinkingTokens: result._sum.thinkingTokens ?? 0,
     cacheTokens: (result._sum.cacheReadTokens ?? 0) + (result._sum.cacheCreationTokens ?? 0),
   };
 }
 
 function getCacheEfficiency(tokenUsage: TokenBreakdown): CacheMetrics {
-  const totalTokens = tokenUsage.inputTokens + tokenUsage.outputTokens + tokenUsage.cacheTokens;
+  const totalTokens =
+    tokenUsage.inputTokens +
+    tokenUsage.outputTokens +
+    tokenUsage.thinkingTokens +
+    tokenUsage.cacheTokens;
   const savingsPercentage =
     totalTokens > 0 ? Math.round((tokenUsage.cacheTokens / totalTokens) * 1000) / 10 : 0;
   const estimatedSavingsUsd = Math.round(tokenUsage.cacheTokens * 0.0000027 * 100) / 100;

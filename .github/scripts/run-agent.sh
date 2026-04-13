@@ -469,12 +469,28 @@ collect_gemini_telemetry() {
     return 0
   fi
 
-  local tools_json model input_tokens output_tokens duration_ms
-  tools_json=$(jq -s '[.[] | select(.type == "tool_use" or .event == "tool_use") | (.name // .tool // empty)] | unique' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "[]")
-  model=$(jq -rs '[.[] | .model? // .metadata?.model? // empty] | map(select(length > 0)) | last // empty' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "")
-  input_tokens=$(jq -rs '[.[] | .usage?.inputTokens? // .usage?.input_tokens? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
-  output_tokens=$(jq -rs '[.[] | .usage?.outputTokens? // .usage?.output_tokens? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
-  duration_ms=$(jq -rs '[.[] | .durationMs? // .duration_ms? // 0] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  local tools_json model input_tokens output_tokens thinking_tokens cache_read_tokens cache_creation_tokens duration_ms cost_status
+  tools_json=$(jq -rs '[.. | objects | select(((.type? // .event? // .kind? // "") | tostring) | test("tool_use|tool_call|tool_result")) | (.name // .tool // .toolName // .function?.name // empty) | select(type == "string" and length > 0)] | unique' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "[]")
+  model=$(jq -rs '[.. | objects | (.model? // .metadata?.model? // .response?.model? // empty) | select(type == "string" and length > 0)] | last // empty' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "")
+  input_tokens=$(jq -rs '[.. | objects | .usage? // .usageMetadata? // empty | (.inputTokens?, .input_tokens?, .promptTokenCount?, .prompt_token_count?) | tonumber?] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  output_tokens=$(jq -rs '[.. | objects | .usage? // .usageMetadata? // empty | (.outputTokens?, .output_tokens?, .candidatesTokenCount?, .candidates_token_count?) | tonumber?] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  thinking_tokens=$(jq -rs '[.. | objects | .usage? // .usageMetadata? // empty | (.thinkingTokens?, .thinking_token_count?, .thoughtsTokenCount?, .thoughts_token_count?, .thoughtTokenCount?) | tonumber?] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  cache_read_tokens=$(jq -rs '[.. | objects | .usage? // .usageMetadata? // empty | (.cacheReadTokens?, .cache_read_tokens?, .cachedContentTokenCount?, .cached_content_token_count?, .cachedTokenCount?, .cached_token_count?) | tonumber?] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  cache_creation_tokens=$(jq -rs '[.. | objects | .usage? // .usageMetadata? // empty | (.cacheCreationTokens?, .cache_creation_tokens?, .cacheWriteTokens?, .cache_write_tokens?) | tonumber?] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+  duration_ms=$(jq -rs '[.. | objects | (.durationMs? // .duration_ms? // .timing?.durationMs? // .timing?.duration_ms? // empty) | tonumber?] | add // 0' "$GEMINI_STREAM_FILE" 2>/dev/null || echo "0")
+
+  if [[ -z "$model" && -n "${GEMINI_MODEL:-}" ]]; then
+    model="$GEMINI_MODEL"
+  fi
+
+  case "$model" in
+    *gemini-2.5-pro*|*gemini-2.5-flash*|*gemini-2.0-flash*)
+      cost_status="ESTIMATED"
+      ;;
+    *)
+      cost_status="UNAVAILABLE"
+      ;;
+  esac
 
   local payload
   payload=$(jq -n \
@@ -483,10 +499,14 @@ collect_gemini_telemetry() {
     --arg model "$model" \
     --argjson inputTokens "$input_tokens" \
     --argjson outputTokens "$output_tokens" \
+    --argjson thinkingTokens "$thinking_tokens" \
+    --argjson cacheReadTokens "$cache_read_tokens" \
+    --argjson cacheCreationTokens "$cache_creation_tokens" \
     --argjson durationMs "$duration_ms" \
     --argjson toolsUsed "$tools_json" \
-    --arg costStatus "UNAVAILABLE" \
-    '{jobId: $jobId, agent: $agent, model: $model, inputTokens: $inputTokens, outputTokens: $outputTokens, durationMs: $durationMs, toolsUsed: $toolsUsed, costStatus: $costStatus}')
+    --arg costStatus "$cost_status" \
+    --arg usageSnapshotMode "CUMULATIVE" \
+    '{jobId: $jobId, agent: $agent, model: $model, inputTokens: $inputTokens, outputTokens: $outputTokens, thinkingTokens: $thinkingTokens, cacheReadTokens: $cacheReadTokens, cacheCreationTokens: $cacheCreationTokens, durationMs: $durationMs, toolsUsed: $toolsUsed, costStatus: $costStatus, usageSnapshotMode: $usageSnapshotMode}')
 
   local auth_header=""
   if [[ -n "${OTEL_EXPORTER_OTLP_HEADERS:-}" ]]; then
@@ -497,6 +517,8 @@ collect_gemini_telemetry() {
     log_info "Skipping Gemini telemetry — no auth header available"
     return 0
   fi
+
+  log_info "Sending Gemini telemetry: input=$input_tokens output=$output_tokens thinking=$thinking_tokens cacheRead=$cache_read_tokens cacheCreate=$cache_creation_tokens model=${model:-unknown} tools=$(echo "$tools_json" | jq -r 'length') costStatus=$cost_status"
 
   curl -s -o /dev/null \
     -X POST "${OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs" \

@@ -189,7 +189,7 @@ function makeAnalyticsData(filters: Partial<AnalyticsFilters> = {}, overrides: P
     },
     costOverTime: [{ date: '2026-03-10', cost: 10 }],
     costByStage: [{ stage: 'BUILD', cost: 10, percentage: 100 }],
-    tokenUsage: { inputTokens: 100, outputTokens: 50, cacheTokens: 25 },
+    tokenUsage: { inputTokens: 100, outputTokens: 50, thinkingTokens: 10, cacheTokens: 25 },
     cacheEfficiency: {
       totalTokens: 175,
       cacheTokens: 25,
@@ -239,6 +239,26 @@ describe('AnalyticsDashboard', () => {
     expect(screen.getByTestId('analytics-agent-filter')).toHaveValue('all');
     expect(screen.getByRole('option', { name: 'Gemini' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Mistral' })).toBeInTheDocument();
+  });
+
+  it('renders only the server-provided agent options without a client fallback list', () => {
+    renderWithProviders(
+      <AnalyticsDashboard
+        projectId={1}
+        initialData={makeAnalyticsData({}, {
+          availableAgents: [
+            { value: 'all', label: 'All agents', jobCount: 2, isDefault: true },
+            { value: 'GEMINI', label: 'Gemini', jobCount: 2, isDefault: false },
+          ],
+        })}
+      />
+    );
+
+    expect(screen.getByRole('option', { name: 'All agents' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Gemini' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Claude' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Codex' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Mistral' })).not.toBeInTheDocument();
   });
 
   it('updates outcome filter, query params, and replaces stale values after a refetch', async () => {
@@ -294,7 +314,7 @@ describe('AnalyticsDashboard', () => {
             jobCount: 0,
             costOverTime: [],
             costByStage: [],
-            tokenUsage: { inputTokens: 0, outputTokens: 0, cacheTokens: 0 },
+            tokenUsage: { inputTokens: 0, outputTokens: 0, thinkingTokens: 0, cacheTokens: 0 },
             cacheEfficiency: {
               totalTokens: 0,
               cacheTokens: 0,

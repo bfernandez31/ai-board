@@ -20,8 +20,8 @@ description: "Actionable, dependency-ordered implementation tasks for Fix Gemini
 
 **Purpose**: Align shared agent and analytics typing so downstream telemetry, pricing, and filter work uses one Gemini-aware source of truth.
 
-- [ ] T001 Update `/home/runner/work/ai-board/ai-board/target/app/lib/utils/agent-resolution.ts` and `/home/runner/work/ai-board/ai-board/target/lib/analytics/types.ts` to expose a shared authoritative Gemini-capable agent source for analytics and telemetry consumers.
-- [ ] T002 [P] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-resolution.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-schema.test.ts` to lock the shared agent definitions before feature implementation.
+- [X] T001 Update `/home/runner/work/ai-board/ai-board/target/app/lib/utils/agent-resolution.ts` and `/home/runner/work/ai-board/ai-board/target/lib/analytics/types.ts` to expose a shared authoritative Gemini-capable agent source for analytics and telemetry consumers. ✅ DONE
+- [X] T002 [P] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-resolution.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-schema.test.ts` to lock the shared agent definitions before feature implementation. ✅ DONE
 
 ---
 
@@ -31,9 +31,9 @@ description: "Actionable, dependency-ordered implementation tasks for Fix Gemini
 
 **⚠️ CRITICAL**: No user story work should start until this phase is complete.
 
-- [ ] T003 Update `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`, generate an additive migration in `/home/runner/work/ai-board/ai-board/target/prisma/migrations/`, and regenerate the Prisma client so `Job` can persist `thinkingTokens` distinctly from cache and output usage.
-- [ ] T004 [P] Refactor `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` shared Gemini normalization helpers to accept native usage buckets, explicit `costStatus`, and duplicate-suppression inputs before story-specific behavior is added.
-- [ ] T005 [P] Extend `/home/runner/work/ai-board/ai-board/target/lib/analytics/types.ts` and `/home/runner/work/ai-board/ai-board/target/lib/analytics/aggregations.ts` so analytics can carry separate thinking, cache-read, and cache-creation usage without conflation.
+- [X] T003 Update `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`, generate an additive migration in `/home/runner/work/ai-board/ai-board/target/prisma/migrations/`, and regenerate the Prisma client so `Job` can persist `thinkingTokens` distinctly from cache and output usage. ✅ DONE
+- [X] T004 [P] Refactor `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` shared Gemini normalization helpers to accept native usage buckets, explicit `costStatus`, and duplicate-suppression inputs before story-specific behavior is added. ✅ DONE
+- [X] T005 [P] Extend `/home/runner/work/ai-board/ai-board/target/lib/analytics/types.ts` and `/home/runner/work/ai-board/ai-board/target/lib/analytics/aggregations.ts` so analytics can carry separate thinking, cache-read, and cache-creation usage without conflation. ✅ DONE
 
 **Checkpoint**: Shared schema, route primitives, and analytics types are ready for story implementation.
 
@@ -49,13 +49,13 @@ description: "Actionable, dependency-ordered implementation tasks for Fix Gemini
 
 **NOTE**: Extend existing tests first and ensure they fail before implementation.
 
-- [ ] T006 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts` with Gemini ingestion cases for separate thinking/cache categories, partial payloads, delayed merges, and repeated final payload suppression.
+- [X] T006 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts` with Gemini ingestion cases for separate thinking/cache categories, partial payloads, delayed merges, and repeated final payload suppression. ✅ DONE
 
 ### Implementation for User Story 1
 
-- [ ] T007 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh` so `collect_gemini_telemetry()` extracts native Gemini usage buckets, tool activity, model, and duration from `stream-json` output into the batch payload contract.
-- [ ] T008 [US1] Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` Gemini batch validation and merge logic to persist native usage categories, preserve partial telemetry, and reject repeated final payload double-counting.
-- [ ] T009 [US1] Extend `/home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts` and `/home/runner/work/ai-board/ai-board/target/lib/analytics/aggregations.ts` so Gemini jobs contribute normalized token and tool metrics to existing analytics outputs without collapsing thinking into cache or output totals.
+- [X] T007 [P] [US1] Extend `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh` so `collect_gemini_telemetry()` extracts native Gemini usage buckets, tool activity, model, and duration from `stream-json` output into the batch payload contract. ✅ DONE
+- [X] T008 [US1] Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` Gemini batch validation and merge logic to persist native usage categories, preserve partial telemetry, and reject repeated final payload double-counting. ✅ DONE
+- [X] T009 [US1] Extend `/home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts` and `/home/runner/work/ai-board/ai-board/target/lib/analytics/aggregations.ts` so Gemini jobs contribute normalized token and tool metrics to existing analytics outputs without collapsing thinking into cache or output totals. ✅ DONE
 
 **Checkpoint**: Gemini telemetry is stored accurately and appears in analytics with correct usage and tool data.
 
@@ -69,13 +69,13 @@ description: "Actionable, dependency-ordered implementation tasks for Fix Gemini
 
 ### Tests for User Story 2
 
-- [ ] T010 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts` with Gemini pricing scenarios for 2.5 Pro, 2.5 Flash, 2.0 Flash, and unsupported models that must remain `UNAVAILABLE`.
-- [ ] T011 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/analytics/analytics-route.test.ts` with Gemini cost aggregation and `overview.costsIncomplete` scenarios covering mixed supported and unsupported Gemini history.
+- [X] T010 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts` with Gemini pricing scenarios for 2.5 Pro, 2.5 Flash, 2.0 Flash, and unsupported models that must remain `UNAVAILABLE`. ✅ DONE
+- [X] T011 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/analytics/analytics-route.test.ts` with Gemini cost aggregation and `overview.costsIncomplete` scenarios covering mixed supported and unsupported Gemini history. ✅ DONE
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` with Gemini model-family pricing tables and per-category cost calculation for input, output, thinking, cache-read, and cache-creation usage.
-- [ ] T013 [US2] Extend `/home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts` and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/analytics/route.ts` so Gemini jobs remain visible in analytics totals while unsupported Gemini pricing keeps cost summaries explicitly incomplete.
+- [X] T012 [US2] Extend `/home/runner/work/ai-board/ai-board/target/app/api/telemetry/v1/logs/route.ts` with Gemini model-family pricing tables and per-category cost calculation for input, output, thinking, cache-read, and cache-creation usage. ✅ DONE
+- [X] T013 [US2] Extend `/home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts` and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/analytics/route.ts` so Gemini jobs remain visible in analytics totals while unsupported Gemini pricing keeps cost summaries explicitly incomplete. ✅ DONE
 
 **Checkpoint**: Supported Gemini jobs receive server-estimated cost, and unsupported Gemini jobs remain visible with explicit unavailable-cost semantics.
 
@@ -89,13 +89,13 @@ description: "Actionable, dependency-ordered implementation tasks for Fix Gemini
 
 ### Tests for User Story 3
 
-- [ ] T014 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/analytics/analytics-route.test.ts` with authoritative agent-option scenarios that prove `availableAgents` comes from shared supported-agent definitions plus project job history.
-- [ ] T015 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/analytics-dashboard.test.tsx` to verify the dashboard renders server-provided agent options, including Gemini, without client-side hardcoded fallbacks.
+- [X] T014 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/analytics/analytics-route.test.ts` with authoritative agent-option scenarios that prove `availableAgents` comes from shared supported-agent definitions plus project job history. ✅ DONE
+- [X] T015 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/analytics-dashboard.test.tsx` to verify the dashboard renders server-provided agent options, including Gemini, without client-side hardcoded fallbacks. ✅ DONE
 
 ### Implementation for User Story 3
 
-- [ ] T016 [US3] Extend `/home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts` and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/analytics/route.ts` to replace the analytics-local hardcoded agent loop with the shared authoritative supported-agent source and history-aware option generation.
-- [ ] T017 [US3] Extend `/home/runner/work/ai-board/ai-board/target/components/analytics/analytics-dashboard.tsx` to consume the authoritative server-provided agent options without introducing any client-maintained agent list.
+- [X] T016 [US3] Extend `/home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts` and `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/analytics/route.ts` to replace the analytics-local hardcoded agent loop with the shared authoritative supported-agent source and history-aware option generation. ✅ DONE
+- [X] T017 [US3] Extend `/home/runner/work/ai-board/ai-board/target/components/analytics/analytics-dashboard.tsx` to consume the authoritative server-provided agent options without introducing any client-maintained agent list. ✅ DONE
 
 **Checkpoint**: Analytics agent filters stay aligned with the supported-agent source and historical project data without manual maintenance.
 
@@ -105,8 +105,8 @@ description: "Actionable, dependency-ordered implementation tasks for Fix Gemini
 
 **Purpose**: Close remaining regressions and verify the feature end-to-end across all affected agents.
 
-- [ ] T018 [P] Re-run and stabilize `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts`, `/home/runner/work/ai-board/ai-board/target/tests/integration/analytics/analytics-route.test.ts`, `/home/runner/work/ai-board/ai-board/target/tests/unit/components/analytics-dashboard.test.tsx`, `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-resolution.test.ts`, and `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-schema.test.ts` to confirm Claude, Codex, Mistral, and Gemini regressions are covered together.
-- [ ] T019 Run `bun run type-check` and `bun run lint` from `/home/runner/work/ai-board/ai-board/target/` and fix any issues in the touched files before shipping the Gemini telemetry changes.
+- [X] T018 [P] Re-run and stabilize `/home/runner/work/ai-board/ai-board/target/tests/integration/telemetry/agent-agnostic.test.ts`, `/home/runner/work/ai-board/ai-board/target/tests/integration/analytics/analytics-route.test.ts`, `/home/runner/work/ai-board/ai-board/target/tests/unit/components/analytics-dashboard.test.tsx`, `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-resolution.test.ts`, and `/home/runner/work/ai-board/ai-board/target/tests/unit/agent-schema.test.ts` to confirm Claude, Codex, Mistral, and Gemini regressions are covered together. ✅ DONE
+- [X] T019 Run `bun run type-check` and `bun run lint` from `/home/runner/work/ai-board/ai-board/target/` and fix any issues in the touched files before shipping the Gemini telemetry changes. ✅ DONE
 
 ---
 

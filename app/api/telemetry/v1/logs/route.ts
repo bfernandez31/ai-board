@@ -14,6 +14,7 @@ const batchPayloadSchema = z.object({
   agent: z.enum(['MISTRAL', 'GEMINI']).optional(),
   inputTokens: z.number().int().nonnegative().optional(),
   outputTokens: z.number().int().nonnegative().optional(),
+  thinkingTokens: z.number().int().nonnegative().optional(),
   cacheReadTokens: z.number().int().nonnegative().optional(),
   cacheCreationTokens: z.number().int().nonnegative().optional(),
   durationMs: z.number().int().nonnegative().optional(),
@@ -21,6 +22,7 @@ const batchPayloadSchema = z.object({
   toolsUsed: z.array(z.string()).optional(),
   costUsd: z.number().nonnegative().optional(),
   costStatus: z.enum(['ESTIMATED', 'UNAVAILABLE']).optional(),
+  usageSnapshotMode: z.enum(['DELTA', 'CUMULATIVE']).optional(),
 });
 
 /**
@@ -230,6 +232,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 interface TelemetryMetrics {
   inputTokens: number;
   outputTokens: number;
+  thinkingTokens: number;
   cacheReadTokens: number;
   cacheCreationTokens: number;
   costUsd: number | null;
@@ -242,6 +245,7 @@ function createEmptyMetrics(): TelemetryMetrics {
   return {
     inputTokens: 0,
     outputTokens: 0,
+    thinkingTokens: 0,
     cacheReadTokens: 0,
     cacheCreationTokens: 0,
     costUsd: null,
@@ -258,7 +262,8 @@ async function updateJobMetrics(
   jobId: number,
   metrics: TelemetryMetrics,
   startTime: number,
-  logLabel: string
+  logLabel: string,
+  mergeMode: 'DELTA' | 'CUMULATIVE' = 'DELTA'
 ): Promise<NextResponse> {
   const job = await prisma.job.findUnique({
     where: { id: jobId },
@@ -266,6 +271,7 @@ async function updateJobMetrics(
       id: true,
       inputTokens: true,
       outputTokens: true,
+      thinkingTokens: true,
       cacheReadTokens: true,
       cacheCreationTokens: true,
       costUsd: true,
@@ -280,18 +286,28 @@ async function updateJobMetrics(
   }
 
   const mergedTools = [...new Set([...job.toolsUsed, ...metrics.toolsUsed])].sort();
+  const getMergedValue = (existing: number | null, incoming: number): number => {
+    if (mergeMode === 'CUMULATIVE') {
+      return Math.max(existing ?? 0, incoming);
+    }
+    return (existing ?? 0) + incoming;
+  };
 
   const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
-    inputTokens: (job.inputTokens || 0) + metrics.inputTokens,
-    outputTokens: (job.outputTokens || 0) + metrics.outputTokens,
-    cacheReadTokens: (job.cacheReadTokens || 0) + metrics.cacheReadTokens,
-    cacheCreationTokens: (job.cacheCreationTokens || 0) + metrics.cacheCreationTokens,
-    durationMs: (job.durationMs || 0) + metrics.durationMs,
+    inputTokens: getMergedValue(job.inputTokens, metrics.inputTokens),
+    outputTokens: getMergedValue(job.outputTokens, metrics.outputTokens),
+    thinkingTokens: getMergedValue(job.thinkingTokens, metrics.thinkingTokens),
+    cacheReadTokens: getMergedValue(job.cacheReadTokens, metrics.cacheReadTokens),
+    cacheCreationTokens: getMergedValue(job.cacheCreationTokens, metrics.cacheCreationTokens),
+    durationMs: getMergedValue(job.durationMs, metrics.durationMs),
     toolsUsed: mergedTools,
   };
 
   if (metrics.costUsd != null) {
-    updateData.costUsd = (job.costUsd || 0) + metrics.costUsd;
+    updateData.costUsd =
+      mergeMode === 'CUMULATIVE'
+        ? Math.max(job.costUsd ?? 0, metrics.costUsd)
+        : (job.costUsd ?? 0) + metrics.costUsd;
   }
 
   if (metrics.model) {
@@ -305,6 +321,7 @@ async function updateJobMetrics(
       id: true,
       inputTokens: true,
       outputTokens: true,
+      thinkingTokens: true,
       costUsd: true,
     },
   });
@@ -314,6 +331,7 @@ async function updateJobMetrics(
     jobId,
     inputTokens: updatedJob.inputTokens,
     outputTokens: updatedJob.outputTokens,
+    thinkingTokens: updatedJob.thinkingTokens,
     costUsd: updatedJob.costUsd,
     toolsCount: metrics.toolsUsed.size,
     elapsedMs: elapsedTime,
@@ -325,6 +343,7 @@ async function updateJobMetrics(
     metrics: {
       inputTokens: updatedJob.inputTokens,
       outputTokens: updatedJob.outputTokens,
+      thinkingTokens: updatedJob.thinkingTokens,
       costUsd: updatedJob.costUsd,
     }
   }, { status: 200 });
@@ -373,6 +392,90 @@ function estimateMistralCost(model: string, inputTokens: number, outputTokens: n
   );
 }
 
+type GeminiPricing = {
+  input: number;
+  output: number;
+  thinking: number;
+  cacheRead: number;
+  cacheCreation: number;
+};
+
+const GEMINI_PRICING: Record<'gemini-2.5-pro' | 'gemini-2.5-flash' | 'gemini-2.0-flash', GeminiPricing> = {
+  'gemini-2.5-pro': {
+    input: 1.25,
+    output: 10,
+    thinking: 10,
+    cacheRead: 0.125,
+    cacheCreation: 0.125,
+  },
+  'gemini-2.5-flash': {
+    input: 0.3,
+    output: 2.5,
+    thinking: 2.5,
+    cacheRead: 0.03,
+    cacheCreation: 0.03,
+  },
+  'gemini-2.0-flash': {
+    input: 0.1,
+    output: 0.4,
+    thinking: 0.4,
+    cacheRead: 0.025,
+    cacheCreation: 0.025,
+  },
+};
+
+function normalizeGeminiModel(model: string | null | undefined): keyof typeof GEMINI_PRICING | null {
+  if (!model) {
+    return null;
+  }
+
+  const normalized = model.toLowerCase();
+  if (normalized.includes('gemini-2.5-pro')) {
+    return 'gemini-2.5-pro';
+  }
+  if (normalized.includes('gemini-2.5-flash')) {
+    return 'gemini-2.5-flash';
+  }
+  if (normalized.includes('gemini-2.0-flash')) {
+    return 'gemini-2.0-flash';
+  }
+
+  return null;
+}
+
+function estimateGeminiCost(
+  model: string | null | undefined,
+  metrics: Pick<
+    TelemetryMetrics,
+    'inputTokens' | 'outputTokens' | 'thinkingTokens' | 'cacheReadTokens' | 'cacheCreationTokens'
+  >
+): number | null {
+  const modelFamily = normalizeGeminiModel(model);
+  if (!modelFamily) {
+    return null;
+  }
+
+  const pricing = { ...GEMINI_PRICING[modelFamily] };
+  const totalPromptTokens =
+    metrics.inputTokens + metrics.cacheReadTokens + metrics.cacheCreationTokens;
+
+  if (modelFamily === 'gemini-2.5-pro' && totalPromptTokens > 200_000) {
+    pricing.input = 2.5;
+    pricing.output = 15;
+    pricing.thinking = 15;
+    pricing.cacheRead = 0.25;
+    pricing.cacheCreation = 0.25;
+  }
+
+  return (
+    (metrics.inputTokens / 1_000_000) * pricing.input +
+    (metrics.outputTokens / 1_000_000) * pricing.output +
+    (metrics.thinkingTokens / 1_000_000) * pricing.thinking +
+    (metrics.cacheReadTokens / 1_000_000) * pricing.cacheRead +
+    (metrics.cacheCreationTokens / 1_000_000) * pricing.cacheCreation
+  );
+}
+
 /**
  * Process batch telemetry payload (Mistral post-execution scrape).
  * Accepts a simple JSON object with pre-aggregated metrics.
@@ -399,6 +502,7 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
   const metrics = createEmptyMetrics();
   metrics.inputTokens = data.inputTokens ?? 0;
   metrics.outputTokens = data.outputTokens ?? 0;
+  metrics.thinkingTokens = data.thinkingTokens ?? 0;
   metrics.cacheReadTokens = data.cacheReadTokens ?? 0;
   metrics.cacheCreationTokens = data.cacheCreationTokens ?? 0;
   metrics.durationMs = data.durationMs ?? 0;
@@ -410,6 +514,8 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
 
   if (typeof data.costUsd === 'number') {
     metrics.costUsd = data.costUsd;
+  } else if (data.agent === 'GEMINI' && data.costStatus !== 'UNAVAILABLE') {
+    metrics.costUsd = estimateGeminiCost(data.model, metrics);
   } else if (
     data.agent !== 'GEMINI' &&
     data.costStatus !== 'UNAVAILABLE' &&
@@ -423,7 +529,9 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
     );
   }
 
-  return updateJobMetrics(data.jobId, metrics, startTime, 'Batch processed');
+  const mergeMode = data.usageSnapshotMode ?? (data.agent === 'GEMINI' ? 'CUMULATIVE' : 'DELTA');
+
+  return updateJobMetrics(data.jobId, metrics, startTime, 'Batch processed', mergeMode);
 }
 
 /**
