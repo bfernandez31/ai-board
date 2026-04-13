@@ -5,7 +5,7 @@ import {
   aiBoardCommentRequestSchema,
   type AIBoardCommentResponse,
 } from '@/app/lib/schemas/ai-board-comment';
-import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
 import { resolveTicket } from '@/app/lib/utils/ticket-resolver';
 import { extractMentionUserIds } from '@/app/lib/utils/mention-parser';
@@ -32,10 +32,10 @@ export async function POST(
 ): Promise<NextResponse<AIBoardCommentResponse | { error: string }>> {
   try {
     // Verify workflow token authentication
-    const isAuthorized = await verifyWorkflowToken(request);
-    if (!isAuthorized) {
+    const authResult = validateWorkflowAuth(request);
+    if (!authResult.isValid) {
       return NextResponse.json(
-        { error: 'Unauthorized - invalid or missing workflow token' },
+        { error: authResult.error ?? 'Unauthorized' },
         { status: 401 }
       );
     }

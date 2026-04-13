@@ -17,7 +17,9 @@ export function hasWorkflowToken(request: NextRequest): boolean {
  * Verify workflow token and return a boolean pass/fail.
  * Delegates to `validateWorkflowAuth` — use that directly when you need error details.
  */
-export function verifyWorkflowToken(request: NextRequest): boolean {
+export async function verifyWorkflowToken(
+  request: NextRequest
+): Promise<boolean> {
   return validateWorkflowAuth(request).isValid;
 }
 

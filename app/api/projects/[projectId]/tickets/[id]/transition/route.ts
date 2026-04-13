@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import type { Prisma } from '@prisma/client';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
-import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import {
   canRollbackToInbox,
   canRollbackToPlan,
@@ -72,7 +72,7 @@ export async function POST(
       );
     }
 
-    const isWorkflowAuth = await verifyWorkflowToken(request);
+    const isWorkflowAuth = validateWorkflowAuth(request).isValid;
     if (!isWorkflowAuth) {
       try {
         await verifyProjectAccess(projectId, request);

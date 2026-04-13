@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
-import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { prisma } from '@/lib/db/client';
 import { persistComparisonRecord } from '@/lib/comparison/comparison-record';
 import { normalizeComparisonPersistenceRequest } from '@/lib/comparison/comparison-payload';
@@ -76,9 +76,9 @@ export async function POST(
   context: { params: Promise<RouteParams> }
 ): Promise<NextResponse> {
   try {
-    const isAuthorized = await verifyWorkflowToken(request);
-    if (!isAuthorized) {
-      return jsonError(401, 'Unauthorized: Invalid workflow token', 'UNAUTHORIZED');
+    const authResult = validateWorkflowAuth(request);
+    if (!authResult.isValid) {
+      return jsonError(401, authResult.error ?? 'Unauthorized', 'UNAUTHORIZED');
     }
 
     const params = await parseRouteParams(context);

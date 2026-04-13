@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
-import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { prisma } from '@/lib/db/client';
 import { dispatchHealthScanWorkflow } from '@/lib/health/scan-dispatch';
 
@@ -30,7 +30,7 @@ export async function POST(
     }
 
     // Support workflow token auth (for scheduled/cron triggers) alongside session auth
-    if (!(await verifyWorkflowToken(request))) {
+    if (!validateWorkflowAuth(request).isValid) {
       await verifyProjectAccess(projectId, request);
     }
 
@@ -142,7 +142,7 @@ export async function GET(
     }
 
     // Support workflow token auth (for health scan commands) alongside session auth
-    if (!(await verifyWorkflowToken(request))) {
+    if (!validateWorkflowAuth(request).isValid) {
       await verifyProjectAccess(projectId, request);
     }
 
