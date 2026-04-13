@@ -52,7 +52,7 @@ const config = defineConfig({
     },
   ],
   webServer: {
-    command: 'TEST_MODE=true WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only npm run dev',
+    command: 'TEST_MODE=true WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only TEST_WORKFLOW_TOKEN=test-workflow-token-for-e2e-tests-only npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI || !!process.env.PLAYWRIGHT_REUSE_SERVER, // Reuse in dev or when server pre-started by test orchestrator
     timeout: 120000, // 2 minutes for server startup
@@ -61,6 +61,7 @@ const config = defineConfig({
     env: {
       TEST_MODE: 'true', // Custom env var for test mode (NODE_ENV is always 'development' with npm run dev)
       WORKFLOW_API_TOKEN: 'test-workflow-token-for-e2e-tests-only', // Required for workflow endpoints
+      TEST_WORKFLOW_TOKEN: 'test-workflow-token-for-e2e-tests-only', // Test-only token (not hardcoded in source)
     },
   },
 });

@@ -45,6 +45,7 @@ fi
 echo -e "${GREEN}Starting dev server with test configuration...${NC}"
 TEST_MODE=true \
 WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only \
+TEST_WORKFLOW_TOKEN=test-workflow-token-for-e2e-tests-only \
 NODE_ENV=test \
 VERCEL_ENV=preview \
 DEV_LOGIN_ENABLED=true \

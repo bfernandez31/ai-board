@@ -55,7 +55,7 @@ export default defineConfig({
     webServer: {
       ...baseWebServer,
       command: process.env.CI
-        ? 'TEST_MODE=true WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only npm run build && npm run start'
+        ? 'TEST_MODE=true WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only TEST_WORKFLOW_TOKEN=test-workflow-token-for-e2e-tests-only npm run build && npm run start'
         : baseWebServer.command,
       timeout: 180000, // 3 minutes for build + start
       reuseExistingServer: false, // Always fresh in CI

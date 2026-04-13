@@ -53,6 +53,7 @@ else
     echo -e "${GREEN}[2/3] Starting dev server...${NC}"
     TEST_MODE=true \
     WORKFLOW_API_TOKEN=test-workflow-token-for-e2e-tests-only \
+    TEST_WORKFLOW_TOKEN=test-workflow-token-for-e2e-tests-only \
     NODE_ENV=test \
     bun run dev > /tmp/dev-server.log 2>&1 &
     SERVER_PID=$!

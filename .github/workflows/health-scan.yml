@@ -371,6 +371,7 @@ jobs:
           # dev server and test files use the same value. The real secret is only
           # needed by workflow YAML steps (scan status updates), not by tests.
           WORKFLOW_API_TOKEN: test-workflow-token-for-e2e-tests-only
+          TEST_WORKFLOW_TOKEN: test-workflow-token-for-e2e-tests-only
         run: |
           SECONDS=0
 
