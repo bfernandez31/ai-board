@@ -7,10 +7,6 @@ import {
 } from '@/lib/auth/workflow-token';
 
 describe('workflow-token', () => {
-  beforeEach(() => {
-    vi.unstubAllEnvs();
-  });
-
   afterEach(() => {
     vi.unstubAllEnvs();
   });
