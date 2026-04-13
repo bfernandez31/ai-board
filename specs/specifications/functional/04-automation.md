@@ -109,7 +109,7 @@ Users can monitor job progress:
 
 ### Job Telemetry Metrics
 
-Each workflow job captures agent usage metrics via OTLP telemetry. Both Claude Code and Codex agents send telemetry to the same endpoint using their respective event name prefixes (`claude_code.*` and `codex.*`).
+Each workflow job captures agent usage metrics through the shared telemetry pipeline. Claude Code, Codex, and Gemini send OTLP log records to the same endpoint using their respective event name prefixes (`claude_code.*`, `codex.*`, and `gemini_cli.*`). Mistral sends a post-execution batch payload to that endpoint after the command finishes.
 
 **Key Format Normalization**:
 - The OTLP endpoint accepts both camelCase (Claude/JS) and snake_case (Codex/Rust) key formats
@@ -119,6 +119,7 @@ Each workflow job captures agent usage metrics via OTLP telemetry. Both Claude C
 **Event Name Resolution**:
 - Claude sends event names in `body.stringValue` (e.g., `claude_code.result`)
 - Codex sends event names in `attributes[event.name]` (e.g., `codex.result`)
+- Gemini sends event names in `body.stringValue` (e.g., `gemini_cli.api_response`)
 - The OTLP handler checks both locations to resolve the event name for any incoming log record
 
 **Token Usage**:
@@ -138,10 +139,15 @@ Each workflow job captures agent usage metrics via OTLP telemetry. Both Claude C
 | gpt-5-codex | $1.25 | $10.00 | $0.625 |
 | gpt-5.3-codex | $1.75 | $14.00 | $0.875 |
 
+- Gemini cumulative OTLP events may include cost directly; when they do not, cost is estimated from supported Gemini pricing tables based on merged token counts. Unsupported Gemini model identifiers preserve usage metrics while leaving cost unavailable.
+- Mistral batch telemetry is costed server-side from Mistral pricing data unless the batch explicitly marks cost as unavailable.
+
 **Performance**:
 - Total duration in milliseconds
   - Claude reports `duration_ms` per API request; values are summed across all telemetry batches
   - Codex does not report duration; when the job reaches a terminal state (COMPLETED/FAILED/CANCELLED), duration is backfilled from the job wall clock (`completedAt - startedAt`)
+  - Gemini reports cumulative `duration_ms` values in native `gemini_cli.api_response` events when available
+  - Failed or cancelled jobs keep their terminal status even when Gemini telemetry is partial, delayed, or absent; the status endpoint remains authoritative and can backfill wall-clock duration when telemetry did not persist one
 - Primary model used (e.g., claude-sonnet-4-5, claude-opus-4-6, gpt-5-codex)
 
 **Tool Usage**:
@@ -156,6 +162,8 @@ Each workflow job captures agent usage metrics via OTLP telemetry. Both Claude C
 - Metrics are aggregated across all agent commands in a single job
 - For example, a job running `plan` then `tasks` sums metrics from both
 - Multiple OTLP batches from the same job accumulate correctly
+- Gemini telemetry is treated as cumulative snapshots, so each persisted field keeps the highest known value from native Gemini events instead of summing duplicate totals
+- Batch JSON telemetry remains reserved for Mistral; Gemini batch payloads are rejected
 - Provides total resource usage for the complete workflow execution
 
 ### Quality Score Computation (All Workflow Types)

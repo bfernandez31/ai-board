@@ -587,6 +587,7 @@ sequenceDiagram
 - `GEMINI_OAUTH_JSON`: Alternative to `GEMINI_API_KEY` for Gemini cached OAuth auth
 - `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex and Gemini native telemetry when set; used by Mistral `collect_mistral_telemetry()` for batch POST target
 - `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config, Gemini native OTLP export, and Mistral batch POST auth
+- `OTEL_RESOURCE_ATTRIBUTES`: Optional; when present, `run-agent.sh` passes `job_id=<id>` so Gemini OTLP events can be correlated to the active workflow job
 
 **Usage in Workflows**:
 
