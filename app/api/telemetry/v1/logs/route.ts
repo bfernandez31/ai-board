@@ -378,23 +378,30 @@ function estimateMistralCost(model: string, inputTokens: number, outputTokens: n
   );
 }
 
-/**
- * Estimate Gemini API cost from token counts.
- * Prices are per-million tokens (source: Google AI pricing).
- * Uses prefix matching for model names to handle version suffixes (e.g., gemini-2.5-pro-preview-05-06).
- */
+/** Per-million-token pricing for Gemini models (source: Google AI pricing, April 2025). */
 const GEMINI_PRICING: Record<string, { input: number; output: number; thinking: number; cached: number }> = {
   'gemini-2.5-pro':   { input: 1.25, output: 10.00, thinking: 3.75, cached: 0.3125 },
   'gemini-2.5-flash': { input: 0.15, output: 0.60,  thinking: 0.45, cached: 0.0375 },
   'gemini-2.0-flash': { input: 0.10, output: 0.40,  thinking: 0.00, cached: 0.025  },
 };
 
+/**
+ * Estimate Gemini API cost from token counts.
+ *
+ * Prices are per-million tokens (source: Google AI pricing, April 2025).
+ * Uses prefix matching on model names to handle version suffixes
+ * (e.g., `gemini-2.5-pro-preview-05-06`). Cache creation tokens are billed
+ * at the standard input rate; cache read tokens use the discounted cached rate.
+ *
+ * @returns Estimated cost in USD, or `null` if the model is unrecognised.
+ */
 export function estimateGeminiCost(
   model: string,
   inputTokens: number,
   outputTokens: number,
   thinkingTokens: number,
-  cachedTokens: number
+  cachedTokens: number,
+  cacheCreationTokens: number = 0
 ): number | null {
   // Exact match first, then prefix match for version suffixes
   let pricing = GEMINI_PRICING[model];
@@ -408,7 +415,8 @@ export function estimateGeminiCost(
     (inputTokens / 1_000_000) * pricing.input +
     (outputTokens / 1_000_000) * pricing.output +
     (thinkingTokens / 1_000_000) * pricing.thinking +
-    (cachedTokens / 1_000_000) * pricing.cached
+    (cachedTokens / 1_000_000) * pricing.cached +
+    (cacheCreationTokens / 1_000_000) * pricing.input
   );
 }
 
@@ -451,7 +459,7 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
     metrics.costUsd = data.costUsd;
   } else if (
     data.agent === 'GEMINI' &&
-    (metrics.inputTokens > 0 || metrics.outputTokens > 0)
+    (metrics.inputTokens > 0 || metrics.outputTokens > 0 || metrics.thinkingTokens > 0 || metrics.cacheReadTokens > 0 || metrics.cacheCreationTokens > 0)
   ) {
     const cost = estimateGeminiCost(
       data.model ?? '',
@@ -459,6 +467,7 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
       metrics.outputTokens,
       metrics.thinkingTokens,
       metrics.cacheReadTokens,
+      metrics.cacheCreationTokens,
     );
     if (cost !== null) metrics.costUsd = cost;
   } else if (

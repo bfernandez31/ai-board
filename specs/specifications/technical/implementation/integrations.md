@@ -519,7 +519,7 @@ sequenceDiagram
         RS->>RS: collect_mistral_telemetry() — scrape session logs
         RS->>EP: POST /api/telemetry/v1/logs (batch JSON)
     else AGENT_TYPE = GEMINI
-        RS->>CLI: pip install gemini-cli (or bun install)
+        RS->>CLI: npm install -g @google/gemini-cli
         RS->>RS: auth_gemini() — write OAuth JSON or use API key
         RS->>CLI: gemini -p "$(cat prompt)" --output-format stream-json | tee stream.jsonl
         RS->>RS: collect_gemini_telemetry() — parse stream-json output
@@ -533,8 +533,8 @@ sequenceDiagram
 
 | Concern | CLAUDE | CODEX | MISTRAL | GEMINI |
 |---------|--------|-------|---------|--------|
-| Package | `@anthropic-ai/claude-code` | `@openai/codex` | `vibe-cli` (Python pip) | `gemini-cli` |
-| Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64) | `MISTRAL_API_KEY` | `GEMINI_API_KEY` or `GEMINI_OAUTH_JSON` (base64 JSON) |
+| Package | `@anthropic-ai/claude-code` | `@openai/codex` | `vibe-cli` (Python pip) | `@google/gemini-cli` |
+| Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_OAUTH_JSON` (base64) | `MISTRAL_API_KEY` | `GEMINI_API_KEY` or `GEMINI_OAUTH_JSON` (raw JSON) |
 | Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt injection via stdin from `.claude/commands/COMMAND.md` | `vibe --prompt "..." --agent auto-approve` | `gemini -p "$(cat prompt)" --output-format stream-json` |
 | Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section | Post-execution batch JSON via `collect_mistral_telemetry()`; datalake disabled | Post-execution batch JSON via `collect_gemini_telemetry()`; parses stream-json output |
 | Project context | `CLAUDE.md` (native) | `AGENTS.md` at project root, read automatically by Codex | `AGENTS.md` at project root, read via native filesystem walk | Standard prompt file passed via `-p` flag |

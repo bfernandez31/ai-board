@@ -84,4 +84,26 @@ describe('estimateGeminiCost', () => {
     expect(cost).not.toBeNull();
     expect(cost).toBeCloseTo(1.25 + 5.0 + 0.75 + 0.03125, 5);
   });
+
+  it('includes cacheCreationTokens at the input token rate', () => {
+    // 1000 input @ $1.25/M = $0.00125
+    // 500 output @ $10.00/M = $0.005
+    // 0 thinking
+    // 0 cached read
+    // 2000 cache creation @ $1.25/M (input rate) = $0.0025
+    const cost = estimateGeminiCost('gemini-2.5-pro', 1000, 500, 0, 0, 2000);
+    expect(cost).not.toBeNull();
+    expect(cost).toBeCloseTo(0.00125 + 0.005 + 0.0025, 8);
+  });
+
+  it('includes all token types in cost calculation', () => {
+    // 1000 input @ $1.25/M = $0.00125
+    // 500 output @ $10.00/M = $0.005
+    // 200 thinking @ $3.75/M = $0.00075
+    // 100 cached read @ $0.3125/M = $0.00003125
+    // 300 cache creation @ $1.25/M = $0.000375
+    const cost = estimateGeminiCost('gemini-2.5-pro', 1000, 500, 200, 100, 300);
+    expect(cost).not.toBeNull();
+    expect(cost).toBeCloseTo(0.00125 + 0.005 + 0.00075 + 0.00003125 + 0.000375, 8);
+  });
 });

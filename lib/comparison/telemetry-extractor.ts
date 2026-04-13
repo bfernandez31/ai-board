@@ -133,7 +133,7 @@ export function formatTelemetryDisplay(telemetry: TicketTelemetry): {
     };
   }
 
-  const totalTokens = telemetry.inputTokens + telemetry.outputTokens;
+  const totalTokens = telemetry.inputTokens + telemetry.outputTokens + telemetry.thinkingTokens;
 
   return {
     tokens: totalTokens.toLocaleString(),
@@ -157,15 +157,17 @@ export function calculateTotalTokens(
 ): { input: number; output: number; total: number } {
   let input = 0;
   let output = 0;
+  let thinking = 0;
 
   for (const t of Object.values(telemetry)) {
     if (t.hasData) {
       input += t.inputTokens;
       output += t.outputTokens;
+      thinking += t.thinkingTokens;
     }
   }
 
-  return { input, output, total: input + output };
+  return { input, output, total: input + output + thinking };
 }
 
 export function compareTelemetry(
@@ -179,8 +181,8 @@ export function compareTelemetry(
   durationDiff: number;
   durationDiffPercent: number;
 } {
-  const tokens1 = t1.inputTokens + t1.outputTokens;
-  const tokens2 = t2.inputTokens + t2.outputTokens;
+  const tokens1 = t1.inputTokens + t1.outputTokens + t1.thinkingTokens;
+  const tokens2 = t2.inputTokens + t2.outputTokens + t2.thinkingTokens;
 
   const costDiff = t2.costUsd - t1.costUsd;
   const tokensDiff = tokens2 - tokens1;
