@@ -125,18 +125,20 @@ export function AgentEditDialog({
               disabled={isSaving}
             >
               <SelectTrigger id="agent-select">
-                <span className="inline-flex items-center gap-1.5 truncate">
-                  {selectedAgent === 'project-default' ? (
-                    <>
-                      <AgentIcon agent={projectDefaultAgent} size={14} />
-                      Use project default
-                    </>
-                  ) : (
-                    <>
-                      <AgentIcon agent={selectedAgent as Agent} size={14} />
-                      {getAgentLabel(selectedAgent as Agent)}
-                    </>
-                  )}
+                <span className="truncate">
+                  <span className="inline-flex items-center gap-1.5">
+                    {selectedAgent === 'project-default' ? (
+                      <>
+                        <AgentIcon agent={projectDefaultAgent} size={14} />
+                        Use project default
+                      </>
+                    ) : (
+                      <>
+                        <AgentIcon agent={selectedAgent as Agent} size={14} />
+                        {getAgentLabel(selectedAgent as Agent)}
+                      </>
+                    )}
+                  </span>
                 </span>
               </SelectTrigger>
               <SelectContent>
