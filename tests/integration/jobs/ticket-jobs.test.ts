@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import { waitForLatestJobId } from '@/tests/helpers/job-helpers';
 import { createAPIClient, type APIClient } from '@/tests/fixtures/vitest/api-client';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 
@@ -53,11 +54,7 @@ describe('Ticket Jobs API', () => {
     });
 
     // Get the job ID
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-      include: { jobs: { orderBy: { id: 'desc' } } },
-    });
-    jobId = ticket!.jobs[0]!.id;
+    jobId = await waitForLatestJobId(prisma, ticketId);
   });
 
   describe('GET /api/projects/:projectId/tickets/:id/jobs', () => {
@@ -168,6 +165,44 @@ describe('Ticket Jobs API', () => {
       expect(response.data[0]!.command).toBe('specify');
       expect(response.data[1]!.command).toBe('plan');
       expect(response.data[0]!.id).toBeLessThan(response.data[1]!.id);
+    });
+
+    it('surfaces Gemini-native telemetry fields through the ticket jobs API', async () => {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: {
+          status: 'FAILED',
+          startedAt: new Date('2026-04-13T10:00:00Z'),
+          completedAt: new Date('2026-04-13T10:03:00Z'),
+          inputTokens: 1400,
+          outputTokens: 450,
+          thinkingTokens: 120,
+          cacheReadTokens: 90,
+          cacheCreationTokens: 20,
+          costUsd: 0.0089,
+          durationMs: 180000,
+          model: 'gemini-2.5-flash',
+          toolsUsed: ['read_file', 'shell'],
+        },
+      });
+
+      const response = await ctx.api.get<TicketJobWithTelemetry[]>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs`
+      );
+
+      expect(response.status).toBe(200);
+
+      const job = response.data.find((candidate) => candidate.id === jobId);
+      expect(job).toBeDefined();
+      expect(job!.status).toBe('FAILED');
+      expect(job!.model).toBe('gemini-2.5-flash');
+      expect(job!.inputTokens).toBe(1400);
+      expect(job!.outputTokens).toBe(450);
+      expect(job!.cacheReadTokens).toBe(90);
+      expect(job!.cacheCreationTokens).toBe(20);
+      expect(Number(job!.costUsd)).toBeCloseTo(0.0089, 4);
+      expect(job!.durationMs).toBe(180000);
+      expect(job!.toolsUsed).toEqual(['read_file', 'shell']);
     });
   });
 });

@@ -1,57 +1,48 @@
-# Workflow Artifact: Gemini Usage Ingestion and Cost Estimation
+# Workflow Artifact: Gemini Native Usage Ingestion and Cost Estimation
 
 ## Workflow Definition
 
 ### Input
 
-- streamed Gemini CLI headless events
-- `jobId`
+- native Gemini OTLP `gemini_cli.*` log events
+- `job_id`
 - selected Gemini model
 - optional pricing lookup table
 
 ### Phases
 
-1. Read stream-json events
-2. Aggregate:
+1. Receive native OTLP log records from Gemini CLI
+2. Correlate them to the workflow job using `job_id`
+3. Aggregate cumulative native metrics:
    - model
    - input/output/cache tokens
    - tool names
    - wall-clock duration
-3. Estimate cost when pricing exists
-4. Post batch payload to telemetry API
-5. Update analytics-visible job fields
+4. Estimate cost when pricing exists
+5. Update analytics-visible job fields on the correlated `Job`
 
 ### Environment requirements
 
 - `JOB_ID`
-- telemetry endpoint auth header
+- `OTEL_EXPORTER_OTLP_ENDPOINT`
+- `OTEL_EXPORTER_OTLP_HEADERS`
 - pricing metadata available to the runner or API layer
 
 ## Agent Command Specification
 
 ### Functional phases
 
-- `tool_use` / `tool_result` events populate `toolsUsed`
-- final `result` event populates usage summary
-- cost estimation happens outside the CLI using app-controlled pricing metadata
+- `gemini_cli.tool_call` / `gemini_cli.tool_result` events populate `toolsUsed`
+- `gemini_cli.api_response` events populate usage and duration fields
+- cost estimation happens inside the telemetry API when Gemini omits native cost
 
 ### Output format
 
-```json
-{
-  "jobId": 456,
-  "agent": "GEMINI",
-  "model": "gemini-3-pro",
-  "inputTokens": 1000,
-  "outputTokens": 500,
-  "toolsUsed": ["read_file", "shell"],
-  "durationMs": 4200,
-  "costStatus": "UNAVAILABLE"
-}
-```
+- Standard OTLP HTTP JSON payload sent to `/api/telemetry/v1/logs`
+- No reconstructed Gemini batch payload
 
 ## Callback / Reporting Contract
 
-- Telemetry post is non-blocking relative to the workflow result
+- Native telemetry delivery is non-authoritative relative to the workflow result
 - Missing pricing must preserve usage metrics and set unavailable-cost semantics
 - Job records stay analytics-visible even when cost is unavailable

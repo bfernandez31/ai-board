@@ -3,7 +3,9 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import {
   otlpLogsSchema,
+  type OTLPAttribute,
   findAttribute,
+  findFirstAttribute,
   parseIntAttribute,
   parseFloatAttribute,
 } from '@/lib/schemas/otlp';
@@ -11,7 +13,7 @@ import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 
 const batchPayloadSchema = z.object({
   jobId: z.number().int().positive().optional(),
-  agent: z.enum(['MISTRAL', 'GEMINI']).optional(),
+  agent: z.enum(['MISTRAL']).optional(),
   inputTokens: z.number().int().nonnegative().optional(),
   outputTokens: z.number().int().nonnegative().optional(),
   thinkingTokens: z.number().int().nonnegative().optional(),
@@ -118,7 +120,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const otlpData = validationResult.data;
 
     // Aggregate metrics from all resource logs
-    const metrics = createEmptyMetrics();
+    const deltaMetrics = createEmptyMetrics();
+    const cumulativeMetrics = createEmptyMetrics();
 
     // Process each resourceLog
     for (const resourceLog of otlpData.resourceLogs) {
@@ -147,19 +150,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           // Codex: token data in codex.sse_event with event.kind = "response.completed"
           const eventKind = String(findAttribute(attrs, 'event.kind') ?? '');
           const isCodexTokenEvent = eventName === 'codex.sse_event' && eventKind === 'response.completed';
-
-          const isToolEvent = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool_result', 'codex.tool_decision'].includes(eventName);
+          const isGeminiEvent = eventName.startsWith('gemini_cli.');
+          const isGeminiToolEvent = GEMINI_TOOL_EVENTS.includes(eventName);
+          const isToolEvent = DELTA_TOOL_EVENTS.includes(eventName);
 
           if (isClaudeApiRequest) {
-            metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
-            metrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
-            metrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
-            metrics.cacheCreationTokens += parseIntAttribute(findAttribute(attrs, 'cache_creation_tokens'));
-            metrics.costUsd =
-              (metrics.costUsd ?? 0) + parseFloatAttribute(findAttribute(attrs, 'cost_usd'));
-            metrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
+            deltaMetrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
+            deltaMetrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
+            deltaMetrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
+            deltaMetrics.cacheCreationTokens += parseIntAttribute(findAttribute(attrs, 'cache_creation_tokens'));
+            deltaMetrics.costUsd =
+              (deltaMetrics.costUsd ?? 0) + parseFloatAttribute(findAttribute(attrs, 'cost_usd'));
+            deltaMetrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
             const model = findAttribute(attrs, 'model');
-            if (model) metrics.model = String(model);
+            if (model) deltaMetrics.model = String(model);
           }
 
           if (isCodexTokenEvent) {
@@ -170,16 +174,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             const totalInputTokens = parseIntAttribute(findAttribute(attrs, 'input_token_count'));
             const outputTokens = parseIntAttribute(findAttribute(attrs, 'output_token_count'));
             const cachedTokens = parseIntAttribute(findAttribute(attrs, 'cached_token_count'));
-            const nonCachedInputTokens = totalInputTokens - cachedTokens;
-            metrics.inputTokens += nonCachedInputTokens;
-            metrics.outputTokens += outputTokens;
-            metrics.cacheReadTokens += cachedTokens;
+            const nonCachedInputTokens = Math.max(0, totalInputTokens - cachedTokens);
+            deltaMetrics.inputTokens += nonCachedInputTokens;
+            deltaMetrics.outputTokens += outputTokens;
+            deltaMetrics.cacheReadTokens += cachedTokens;
             const model = findAttribute(attrs, 'model');
-            if (model) metrics.model = String(model);
+            if (model) deltaMetrics.model = String(model);
 
             // Estimate cost from OpenAI API pricing (Codex doesn't report cost_usd)
-            metrics.costUsd =
-              (metrics.costUsd ?? 0) +
+            deltaMetrics.costUsd =
+              (deltaMetrics.costUsd ?? 0) +
               estimateOpenAICost(
                 String(model ?? 'gpt-5.4'),
                 nonCachedInputTokens,
@@ -190,7 +194,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
           if (isToolEvent) {
             const toolName = findAttribute(attrs, 'tool_name');
-            if (toolName) metrics.toolsUsed.add(String(toolName));
+            if (toolName) deltaMetrics.toolsUsed.add(String(toolName));
+          }
+
+          if (isGeminiEvent) {
+            mergeGeminiTelemetryRecord(cumulativeMetrics, attrs);
+
+            if (isGeminiToolEvent) {
+              const toolName = findFirstAttribute(attrs, ['tool_name', 'tool']);
+              if (toolName) cumulativeMetrics.toolsUsed.add(String(toolName));
+            }
           }
         }
       }
@@ -210,7 +223,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // All metrics are accumulated by summation.
     // Duration: Claude reports per-request duration_ms (accumulated here);
     // Codex doesn't — duration is backfilled from job wall clock on completion.
-    return updateJobMetrics(jobId, metrics, startTime, 'Success');
+    return persistOtlpMetrics(jobId, deltaMetrics, cumulativeMetrics, startTime);
 
   } catch (error: unknown) {
     const elapsedTime = Date.now() - startTime;
@@ -243,6 +256,8 @@ interface TelemetryMetrics {
   geminiCostModel?: string | null;
 }
 
+type TelemetryMergeMode = 'DELTA' | 'CUMULATIVE';
+
 function createEmptyMetrics(): TelemetryMetrics {
   return {
     inputTokens: 0,
@@ -257,10 +272,110 @@ function createEmptyMetrics(): TelemetryMetrics {
   };
 }
 
+function hasTelemetryData(metrics: TelemetryMetrics): boolean {
+  return metrics.inputTokens > 0
+    || metrics.outputTokens > 0
+    || metrics.thinkingTokens != null
+    || metrics.cacheReadTokens > 0
+    || metrics.cacheCreationTokens > 0
+    || metrics.costUsd != null
+    || metrics.durationMs > 0
+    || metrics.model != null
+    || metrics.toolsUsed.size > 0;
+}
+
+const GEMINI_INPUT_TOKEN_KEYS = [
+  'input_tokens',
+  'input_token_count',
+  'prompt_tokens',
+  'prompt_token_count',
+  'promptTokenCount',
+] as const;
+const GEMINI_OUTPUT_TOKEN_KEYS = [
+  'output_tokens',
+  'output_token_count',
+  'candidates_token_count',
+  'candidatesTokenCount',
+  'response_tokens',
+] as const;
+const GEMINI_THINKING_TOKEN_KEYS = [
+  'thinking_tokens',
+  'thinking_token_count',
+  'thoughts_token_count',
+  'thoughtsTokenCount',
+  'thought_token_count',
+  'thoughtTokenCount',
+] as const;
+const GEMINI_CACHE_READ_TOKEN_KEYS = [
+  'cache_read_tokens',
+  'cache_read_token_count',
+  'cached_content_token_count',
+  'cachedContentTokenCount',
+  'cached_token_count',
+  'cachedTokenCount',
+] as const;
+const GEMINI_CACHE_CREATION_TOKEN_KEYS = [
+  'cache_creation_tokens',
+  'cache_creation_token_count',
+  'cache_write_tokens',
+  'cacheWriteTokens',
+] as const;
+const GEMINI_DURATION_KEYS = ['duration_ms', 'durationMs'] as const;
+const GEMINI_COST_KEYS = ['cost_usd', 'costUsd'] as const;
+const DELTA_TOOL_EVENTS: readonly string[] = [
+  'claude_code.tool_result',
+  'claude_code.tool_decision',
+  'codex.tool_result',
+  'codex.tool_decision',
+] as const;
+const GEMINI_TOOL_EVENTS: readonly string[] = [
+  'gemini_cli.tool_call',
+  'gemini_cli.tool_result',
+  'gemini_cli.tool_decision',
+] as const;
+
+function mergeGeminiTelemetryRecord(
+  metrics: TelemetryMetrics,
+  attrs: OTLPAttribute[] | undefined
+): void {
+  const inputTokens = parseIntAttribute(findFirstAttribute(attrs, GEMINI_INPUT_TOKEN_KEYS));
+  const outputTokens = parseIntAttribute(findFirstAttribute(attrs, GEMINI_OUTPUT_TOKEN_KEYS));
+  const thinkingTokens = parseIntAttribute(findFirstAttribute(attrs, GEMINI_THINKING_TOKEN_KEYS));
+  const cacheReadTokens = parseIntAttribute(findFirstAttribute(attrs, GEMINI_CACHE_READ_TOKEN_KEYS));
+  const cacheCreationTokens = parseIntAttribute(findFirstAttribute(attrs, GEMINI_CACHE_CREATION_TOKEN_KEYS));
+  const durationMs = parseIntAttribute(findFirstAttribute(attrs, GEMINI_DURATION_KEYS));
+  const costUsd = parseFloatAttribute(findFirstAttribute(attrs, GEMINI_COST_KEYS));
+  const model = findAttribute(attrs, 'model');
+
+  metrics.inputTokens = Math.max(metrics.inputTokens, inputTokens);
+  metrics.outputTokens = Math.max(metrics.outputTokens, outputTokens);
+  metrics.cacheReadTokens = Math.max(metrics.cacheReadTokens, cacheReadTokens);
+  metrics.cacheCreationTokens = Math.max(metrics.cacheCreationTokens, cacheCreationTokens);
+  metrics.durationMs = Math.max(metrics.durationMs, durationMs);
+
+  if (thinkingTokens > 0) {
+    metrics.thinkingTokens = Math.max(metrics.thinkingTokens ?? 0, thinkingTokens);
+  }
+
+  if (costUsd > 0) {
+    metrics.costUsd = Math.max(metrics.costUsd ?? 0, costUsd);
+    // Native cost arrived — clear the estimation flag so updateJobMetrics
+    // won't overwrite the real value with an estimate
+    metrics.geminiCostModel = null;
+  }
+
+  if (model) {
+    metrics.model = String(model);
+    if (costUsd === 0 && !metrics.costUsd) {
+      metrics.geminiCostModel = String(model);
+    }
+  }
+}
+
 function mergeTelemetryValue(
   existing: number | null,
   incoming: number,
-  mergeMode: 'DELTA' | 'CUMULATIVE'
+  mergeMode: TelemetryMergeMode
 ): number {
   if (mergeMode === 'CUMULATIVE') {
     return Math.max(existing ?? 0, incoming);
@@ -277,7 +392,7 @@ async function updateJobMetrics(
   metrics: TelemetryMetrics,
   startTime: number,
   logLabel: string,
-  mergeMode: 'DELTA' | 'CUMULATIVE' = 'DELTA'
+  mergeMode: TelemetryMergeMode = 'DELTA'
 ): Promise<NextResponse> {
   const job = await prisma.job.findUnique({
     where: { id: jobId },
@@ -380,6 +495,38 @@ async function updateJobMetrics(
       costUsd: updatedJob.costUsd,
     },
   }, { status: 200 });
+}
+
+async function persistOtlpMetrics(
+  jobId: number,
+  deltaMetrics: TelemetryMetrics,
+  cumulativeMetrics: TelemetryMetrics,
+  startTime: number
+): Promise<NextResponse> {
+  const hasDeltaMetrics = hasTelemetryData(deltaMetrics);
+  const hasCumulativeMetrics = hasTelemetryData(cumulativeMetrics);
+
+  if (!hasDeltaMetrics && !hasCumulativeMetrics) {
+    return NextResponse.json({
+      status: 'accepted',
+      message: 'Telemetry received but no supported provider events were found',
+      jobId,
+    }, { status: 200 });
+  }
+
+  if (hasDeltaMetrics) {
+    const deltaResponse = await updateJobMetrics(jobId, deltaMetrics, startTime, 'Success');
+    if (!hasCumulativeMetrics || deltaResponse.status !== 200) {
+      return deltaResponse;
+    }
+  }
+
+  if (hasCumulativeMetrics) {
+    return updateJobMetrics(jobId, cumulativeMetrics, startTime, 'Gemini success', 'CUMULATIVE');
+  }
+
+  // All branches above are exhaustive; this is unreachable but satisfies the return type
+  return updateJobMetrics(jobId, deltaMetrics, startTime, 'Success');
 }
 
 /**
@@ -524,6 +671,13 @@ function estimateGeminiCost(
  * Accepts a simple JSON object with pre-aggregated metrics.
  */
 async function processBatchPayload(body: unknown, startTime: number): Promise<NextResponse> {
+  if (typeof body === 'object' && body && 'agent' in body && body.agent === 'GEMINI') {
+    return NextResponse.json(
+      { error: 'Gemini batch payloads are no longer supported; send native OTLP logs instead' },
+      { status: 400 }
+    );
+  }
+
   const validationResult = batchPayloadSchema.safeParse(body);
   if (!validationResult.success) {
     console.error('[Batch Telemetry] Schema validation failed:', {
@@ -555,18 +709,9 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
     metrics.toolsUsed.add(tool);
   }
 
-  // Gemini's promptTokenCount (mapped to inputTokens by the shell script) includes
-  // cached content. Normalize to non-cached only, consistent with the Codex OTLP path.
-  if (data.agent === 'GEMINI') {
-    metrics.inputTokens = Math.max(0, metrics.inputTokens - metrics.cacheReadTokens);
-  }
-
   if (typeof data.costUsd === 'number') {
     metrics.costUsd = data.costUsd;
-  } else if (data.agent === 'GEMINI' && data.costStatus !== 'UNAVAILABLE') {
-    metrics.geminiCostModel = data.model ?? null;
   } else if (
-    data.agent !== 'GEMINI' &&
     data.costStatus !== 'UNAVAILABLE' &&
     (metrics.inputTokens > 0 || metrics.outputTokens > 0)
   ) {

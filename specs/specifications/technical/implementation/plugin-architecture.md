@@ -257,7 +257,7 @@ The `run-agent.sh` script abstracts CLI differences:
 
 | Aspect | Claude Code | Codex CLI | Mistral vibe CLI | Gemini CLI |
 |--------|-------------|-----------|------------------|------------|
-| **Command invocation** | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Reads command markdown, injects structured invocation context, executes via `codex exec` | Reads command markdown, injects structured invocation context, executes via `vibe --prompt ... --agent auto-approve` | Reads command markdown, injects structured invocation context, executes via `gemini --prompt=... --output-format stream-json` |
+| **Command invocation** | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Reads command markdown, injects structured invocation context, executes via `codex exec` | Reads command markdown, injects structured invocation context, executes via `vibe --prompt ... --agent auto-approve` | Reads command markdown, injects structured invocation context, executes via `gemini --prompt=... --approval-mode=yolo` |
 | **Project context** | Reads `CLAUDE.md` natively | Reads `AGENTS.md` at project root via auto-discovery | Reads `AGENTS.md` at project root | Reads `AGENTS.md` at project root |
 | **Model** | `ANTHROPIC_MODEL` env var | `CODEX_MODEL` env var (default: `gpt-5.4`) | CLI default / configured by vibe | CLI default / configured by Gemini runtime |
 | **Reasoning** | N/A (built-in) | `CODEX_REASONING` env var (default: `high`) | N/A | N/A |
@@ -279,7 +279,8 @@ Some commands remain agent-specific or workflow-restricted. For example, `code-r
 Agents emit different telemetry shapes:
 
 - **Claude / Codex**: OTLP log events
-- **Mistral / Gemini**: normalized batch JSON after command execution
+- **Mistral**: normalized batch JSON after command execution
+- **Gemini**: native `gemini_cli.*` OTLP log events during command execution
 
 The job runner normalizes these into a common `agentMetrics` shape, falling back to `null` or unavailable-cost status for fields a provider does not expose directly.
 

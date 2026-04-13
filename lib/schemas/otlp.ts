@@ -99,6 +99,23 @@ export function findAttribute(
 }
 
 /**
+ * Find the first matching attribute by trying multiple keys in order.
+ */
+export function findFirstAttribute(
+  attributes: OTLPAttribute[] | undefined,
+  keys: readonly string[]
+): string | number | boolean | undefined {
+  for (const key of keys) {
+    const value = findAttribute(attributes, key);
+    if (value !== undefined) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Parse attribute value as integer, returning 0 if invalid
  */
 export function parseIntAttribute(value: string | number | boolean | undefined): number {

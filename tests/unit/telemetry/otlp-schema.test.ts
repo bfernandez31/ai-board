@@ -275,5 +275,53 @@ describe('OTLP Schema Validation', () => {
       const result = otlpLogsSchema.safeParse(payload);
       expect(result.success).toBe(true);
     });
+
+    it('accepts Gemini native OTLP payloads with mixed string and number token fields', () => {
+      const payload = {
+        resourceLogs: [{
+          resource: {
+            attributes: [
+              { key: 'job_id', value: { intValue: '321' } },
+            ],
+          },
+          scopeLogs: [{
+            logRecords: [
+              {
+                body: { stringValue: 'gemini_cli.api_response' },
+                attributes: [
+                  { key: 'model', value: { stringValue: 'gemini-2.5-pro' } },
+                  { key: 'input_tokens', value: { intValue: '1200' } },
+                  { key: 'output_tokens', value: { intValue: 350 } },
+                  { key: 'cache_read_tokens', value: { intValue: '80' } },
+                  { key: 'duration_ms', value: { intValue: 4300 } },
+                ],
+              },
+              {
+                attributes: [
+                  { key: 'event.name', value: { stringValue: 'gemini_cli.tool_call' } },
+                  { key: 'tool_name', value: { stringValue: 'shell' } },
+                ],
+              },
+            ],
+          }],
+        }],
+      };
+
+      const result = otlpLogsSchema.safeParse(payload);
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects Gemini batch payloads from the OTLP schema contract', () => {
+      const payload = {
+        jobId: 456,
+        agent: 'GEMINI',
+        model: 'gemini-2.5-flash',
+        inputTokens: 1500,
+        outputTokens: 800,
+      };
+
+      const result = otlpLogsSchema.safeParse(payload);
+      expect(result.success).toBe(false);
+    });
   });
 });

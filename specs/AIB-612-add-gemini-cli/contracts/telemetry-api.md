@@ -1,4 +1,4 @@
-# Contract: Gemini Batch Telemetry Ingestion
+# Contract: Gemini Native OTLP Telemetry Ingestion
 
 ## Endpoint Extended
 
@@ -9,53 +9,52 @@ Continue supporting:
 - batch JSON for Mistral
 
 Add:
-- batch JSON for Gemini aggregated from CLI `stream-json` output
+- OTLP logs for Gemini native `gemini_cli.*` provider events
 
-## Gemini batch payload
-
-```json
-{
-  "jobId": 456,
-  "agent": "GEMINI",
-  "model": "gemini-3-pro",
-  "inputTokens": 1500,
-  "outputTokens": 800,
-  "cacheReadTokens": 200,
-  "cacheCreationTokens": 0,
-  "toolsUsed": ["read_file", "write_file", "shell"],
-  "durationMs": 5234,
-  "costUsd": 0.0123,
-  "costStatus": "ESTIMATED"
-}
-```
-
-or, when pricing is unknown:
+## Gemini OTLP payload
 
 ```json
 {
-  "jobId": 456,
-  "agent": "GEMINI",
-  "model": "gemini-experimental-x",
-  "inputTokens": 1500,
-  "outputTokens": 800,
-  "toolsUsed": ["read_file", "shell"],
-  "durationMs": 5234,
-  "costStatus": "UNAVAILABLE"
+  "resourceLogs": [
+    {
+      "resource": {
+        "attributes": [
+          { "key": "job_id", "value": { "stringValue": "456" } }
+        ]
+      },
+      "scopeLogs": [
+        {
+          "logRecords": [
+            {
+              "body": { "stringValue": "gemini_cli.api_response" },
+              "attributes": [
+                { "key": "model", "value": { "stringValue": "gemini-2.5-flash" } },
+                { "key": "input_tokens", "value": { "intValue": "1500" } },
+                { "key": "output_tokens", "value": { "intValue": "800" } },
+                { "key": "cache_read_tokens", "value": { "intValue": "200" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
 ```
 
 ## Processing rules
 
-1. `jobId` is required to persist metrics
-2. `agent=GEMINI` selects Gemini-specific cost estimation logic
-3. `toolsUsed` is merged with existing job tools using set semantics
-4. Token and duration fields are accumulated using the same existing merge path
-5. `costStatus=UNAVAILABLE` must not be converted to `0`
+1. `job_id` in OTLP resource attributes is required to persist metrics
+2. `gemini_cli.*` event names select the Gemini-native processing path
+3. Tool usage is merged with existing job tools using set semantics
+4. Token and duration fields are merged cumulatively using native Gemini values
+5. Unsupported Gemini models preserve usage metrics with `costUsd = null`
+6. Gemini batch JSON is no longer a supported contract
 
 ## Responses
 
 - `200`: accepted and merged
-- `400`: invalid batch payload
+- `400`: invalid OTLP payload or rejected Gemini batch payload
 - `401`: unauthorized workflow callback
 - `404`: job not found
 - `500`: unexpected ingestion error
@@ -64,4 +63,3 @@ or, when pricing is unknown:
 
 - Existing Mistral batch payload remains valid
 - Existing Claude/Codex OTLP paths remain unchanged
-
