@@ -9,6 +9,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import { waitForLatestJobId } from '@/tests/helpers/job-helpers';
 import { createAPIClient, type APIClient } from '@/tests/fixtures/vitest/api-client';
 
 const WORKFLOW_TOKEN = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
@@ -54,24 +55,6 @@ function buildGeminiNativePayload(
   })));
 }
 
-async function waitForLatestJobId(prisma: ReturnType<typeof getPrismaClient>, ticketId: number): Promise<number> {
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-      include: { jobs: { orderBy: { createdAt: 'desc' } } },
-    });
-
-    const latestJobId = ticket?.jobs[0]?.id;
-    if (latestJobId) {
-      return latestJobId;
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-
-  throw new Error(`Timed out waiting for a job on ticket ${ticketId}`);
-}
-
 describe('Agent-Agnostic Telemetry', () => {
   let ctx: TestContext;
   let workflowApi: APIClient;
@@ -98,7 +81,7 @@ describe('Agent-Agnostic Telemetry', () => {
       targetStage: 'SPECIFY',
     });
 
-    jobId = await waitForLatestJobId(prisma, ticketId);
+    jobId = await waitForLatestJobId(prisma, ticketId, 'createdAt');
 
     // Set job to RUNNING so telemetry can be received
     await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });

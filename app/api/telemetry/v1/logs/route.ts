@@ -151,9 +151,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           const eventKind = String(findAttribute(attrs, 'event.kind') ?? '');
           const isCodexTokenEvent = eventName === 'codex.sse_event' && eventKind === 'response.completed';
           const isGeminiEvent = eventName.startsWith('gemini_cli.');
-          const isGeminiToolEvent = ['gemini_cli.tool_call', 'gemini_cli.tool_result', 'gemini_cli.tool_decision'].includes(eventName);
-
-          const isToolEvent = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool_result', 'codex.tool_decision'].includes(eventName);
+          const isGeminiToolEvent = GEMINI_TOOL_EVENTS.includes(eventName);
+          const isToolEvent = DELTA_TOOL_EVENTS.includes(eventName);
 
           if (isClaudeApiRequest) {
             deltaMetrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
@@ -224,31 +223,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // All metrics are accumulated by summation.
     // Duration: Claude reports per-request duration_ms (accumulated here);
     // Codex doesn't — duration is backfilled from job wall clock on completion.
-    const hasDeltaMetrics = hasTelemetryData(deltaMetrics);
-    const hasCumulativeMetrics = hasTelemetryData(cumulativeMetrics);
-
-    if (!hasDeltaMetrics && !hasCumulativeMetrics) {
-      return NextResponse.json({
-        status: 'accepted',
-        message: 'Telemetry received but no supported provider events were found',
-        jobId,
-      }, { status: 200 });
-    }
-
-    if (hasDeltaMetrics && hasCumulativeMetrics) {
-      const deltaResponse = await updateJobMetrics(jobId, deltaMetrics, startTime, 'Success');
-      if (deltaResponse.status !== 200) {
-        return deltaResponse;
-      }
-
-      return updateJobMetrics(jobId, cumulativeMetrics, startTime, 'Gemini success', 'CUMULATIVE');
-    }
-
-    if (hasCumulativeMetrics) {
-      return updateJobMetrics(jobId, cumulativeMetrics, startTime, 'Gemini success', 'CUMULATIVE');
-    }
-
-    return updateJobMetrics(jobId, deltaMetrics, startTime, 'Success');
+    return persistOtlpMetrics(jobId, deltaMetrics, cumulativeMetrics, startTime);
 
   } catch (error: unknown) {
     const elapsedTime = Date.now() - startTime;
@@ -280,6 +255,8 @@ interface TelemetryMetrics {
   /** When set, Gemini cost is estimated from merged token values using this model */
   geminiCostModel?: string | null;
 }
+
+type TelemetryMergeMode = 'DELTA' | 'CUMULATIVE';
 
 function createEmptyMetrics(): TelemetryMetrics {
   return {
@@ -345,18 +322,29 @@ const GEMINI_CACHE_CREATION_TOKEN_KEYS = [
 ] as const;
 const GEMINI_DURATION_KEYS = ['duration_ms', 'durationMs'] as const;
 const GEMINI_COST_KEYS = ['cost_usd', 'costUsd'] as const;
+const DELTA_TOOL_EVENTS: readonly string[] = [
+  'claude_code.tool_result',
+  'claude_code.tool_decision',
+  'codex.tool_result',
+  'codex.tool_decision',
+] as const;
+const GEMINI_TOOL_EVENTS: readonly string[] = [
+  'gemini_cli.tool_call',
+  'gemini_cli.tool_result',
+  'gemini_cli.tool_decision',
+] as const;
 
 function mergeGeminiTelemetryRecord(
   metrics: TelemetryMetrics,
   attrs: OTLPAttribute[] | undefined
 ): void {
-  const inputTokens = parseIntAttribute(findFirstAttribute(attrs, [...GEMINI_INPUT_TOKEN_KEYS]));
-  const outputTokens = parseIntAttribute(findFirstAttribute(attrs, [...GEMINI_OUTPUT_TOKEN_KEYS]));
-  const thinkingTokens = parseIntAttribute(findFirstAttribute(attrs, [...GEMINI_THINKING_TOKEN_KEYS]));
-  const cacheReadTokens = parseIntAttribute(findFirstAttribute(attrs, [...GEMINI_CACHE_READ_TOKEN_KEYS]));
-  const cacheCreationTokens = parseIntAttribute(findFirstAttribute(attrs, [...GEMINI_CACHE_CREATION_TOKEN_KEYS]));
-  const durationMs = parseIntAttribute(findFirstAttribute(attrs, [...GEMINI_DURATION_KEYS]));
-  const costUsd = parseFloatAttribute(findFirstAttribute(attrs, [...GEMINI_COST_KEYS]));
+  const inputTokens = parseIntAttribute(findFirstAttribute(attrs, GEMINI_INPUT_TOKEN_KEYS));
+  const outputTokens = parseIntAttribute(findFirstAttribute(attrs, GEMINI_OUTPUT_TOKEN_KEYS));
+  const thinkingTokens = parseIntAttribute(findFirstAttribute(attrs, GEMINI_THINKING_TOKEN_KEYS));
+  const cacheReadTokens = parseIntAttribute(findFirstAttribute(attrs, GEMINI_CACHE_READ_TOKEN_KEYS));
+  const cacheCreationTokens = parseIntAttribute(findFirstAttribute(attrs, GEMINI_CACHE_CREATION_TOKEN_KEYS));
+  const durationMs = parseIntAttribute(findFirstAttribute(attrs, GEMINI_DURATION_KEYS));
+  const costUsd = parseFloatAttribute(findFirstAttribute(attrs, GEMINI_COST_KEYS));
   const model = findAttribute(attrs, 'model');
 
   metrics.inputTokens = Math.max(metrics.inputTokens, inputTokens);
@@ -384,7 +372,7 @@ function mergeGeminiTelemetryRecord(
 function mergeTelemetryValue(
   existing: number | null,
   incoming: number,
-  mergeMode: 'DELTA' | 'CUMULATIVE'
+  mergeMode: TelemetryMergeMode
 ): number {
   if (mergeMode === 'CUMULATIVE') {
     return Math.max(existing ?? 0, incoming);
@@ -401,7 +389,7 @@ async function updateJobMetrics(
   metrics: TelemetryMetrics,
   startTime: number,
   logLabel: string,
-  mergeMode: 'DELTA' | 'CUMULATIVE' = 'DELTA'
+  mergeMode: TelemetryMergeMode = 'DELTA'
 ): Promise<NextResponse> {
   const job = await prisma.job.findUnique({
     where: { id: jobId },
@@ -504,6 +492,37 @@ async function updateJobMetrics(
       costUsd: updatedJob.costUsd,
     },
   }, { status: 200 });
+}
+
+async function persistOtlpMetrics(
+  jobId: number,
+  deltaMetrics: TelemetryMetrics,
+  cumulativeMetrics: TelemetryMetrics,
+  startTime: number
+): Promise<NextResponse> {
+  const hasDeltaMetrics = hasTelemetryData(deltaMetrics);
+  const hasCumulativeMetrics = hasTelemetryData(cumulativeMetrics);
+
+  if (!hasDeltaMetrics && !hasCumulativeMetrics) {
+    return NextResponse.json({
+      status: 'accepted',
+      message: 'Telemetry received but no supported provider events were found',
+      jobId,
+    }, { status: 200 });
+  }
+
+  if (hasDeltaMetrics) {
+    const deltaResponse = await updateJobMetrics(jobId, deltaMetrics, startTime, 'Success');
+    if (!hasCumulativeMetrics || deltaResponse.status !== 200) {
+      return deltaResponse;
+    }
+  }
+
+  if (hasCumulativeMetrics) {
+    return updateJobMetrics(jobId, cumulativeMetrics, startTime, 'Gemini success', 'CUMULATIVE');
+  }
+
+  return updateJobMetrics(jobId, deltaMetrics, startTime, 'Success');
 }
 
 /**

@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import { waitForLatestJobId } from '@/tests/helpers/job-helpers';
 import { createAPIClient, type APIClient } from '@/tests/fixtures/vitest/api-client';
 import { createToken } from '@/lib/db/tokens';
 import { generatePersonalAccessToken } from '@/lib/tokens/generate';
@@ -25,24 +26,6 @@ function createWorkflowClient(): APIClient {
       'Authorization': `Bearer ${WORKFLOW_TOKEN}`,
     },
   });
-}
-
-async function waitForLatestJobId(prisma: ReturnType<typeof getPrismaClient>, ticketId: number): Promise<number> {
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-      include: { jobs: { orderBy: { id: 'desc' } } },
-    });
-
-    const latestJobId = ticket?.jobs[0]?.id;
-    if (latestJobId) {
-      return latestJobId;
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-
-  throw new Error(`Timed out waiting for a job on ticket ${ticketId}`);
 }
 
 describe('Jobs Status', () => {

@@ -103,7 +103,7 @@ export function findAttribute(
  */
 export function findFirstAttribute(
   attributes: OTLPAttribute[] | undefined,
-  keys: string[]
+  keys: readonly string[]
 ): string | number | boolean | undefined {
   for (const key of keys) {
     const value = findAttribute(attributes, key);
