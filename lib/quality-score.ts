@@ -31,11 +31,11 @@ export interface DimensionConfig {
 
 /** Single source of truth for all code review dimensions */
 export const DIMENSION_CONFIG: DimensionConfig[] = [
-  { agentId: 'compliance', name: 'Compliance', weight: 0.40, order: 1 },
+  { agentId: 'compliance', name: 'Compliance', weight: 0.35, order: 1 },
   { agentId: 'bug-detection', name: 'Bug Detection', weight: 0.30, order: 2 },
-  { agentId: 'code-comments', name: 'Code Comments', weight: 0.20, order: 3 },
+  { agentId: 'spec-sync', name: 'Spec Sync', weight: 0.20, order: 3 },
   { agentId: 'historical-context', name: 'Historical Context', weight: 0.10, order: 4 },
-  { agentId: 'spec-sync', name: 'Spec Sync', weight: 0.00, order: 5 },
+  { agentId: 'code-comments', name: 'Code Comments', weight: 0.05, order: 5 },
 ];
 
 /** Derived dimension weights for backward compatibility */

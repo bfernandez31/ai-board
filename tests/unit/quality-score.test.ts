@@ -121,11 +121,11 @@ describe('DIMENSION_CONFIG', () => {
   });
 
   it('getDimensionWeight returns correct weights', () => {
-    expect(getDimensionWeight('compliance')).toBe(0.40);
+    expect(getDimensionWeight('compliance')).toBe(0.35);
     expect(getDimensionWeight('bug-detection')).toBe(0.30);
-    expect(getDimensionWeight('code-comments')).toBe(0.20);
+    expect(getDimensionWeight('spec-sync')).toBe(0.20);
     expect(getDimensionWeight('historical-context')).toBe(0.10);
-    expect(getDimensionWeight('spec-sync')).toBe(0.00);
+    expect(getDimensionWeight('code-comments')).toBe(0.05);
     expect(getDimensionWeight('unknown')).toBe(0);
   });
 });

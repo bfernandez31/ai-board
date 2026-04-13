@@ -144,10 +144,14 @@ describe('computeDimensionAverages', () => {
   it('returns dimensions in DIMENSION_CONFIG order with correct weights', () => {
     const result = computeDimensionAverages([]);
     expect(result[0].name).toBe('Compliance');
-    expect(result[0].weight).toBe(0.40);
+    expect(result[0].weight).toBe(0.35);
     expect(result[1].name).toBe('Bug Detection');
     expect(result[1].weight).toBe(0.30);
-    expect(result[4].name).toBe('Spec Sync');
-    expect(result[4].weight).toBe(0.00);
+    expect(result[2].name).toBe('Spec Sync');
+    expect(result[2].weight).toBe(0.20);
+    expect(result[3].name).toBe('Historical Context');
+    expect(result[3].weight).toBe(0.10);
+    expect(result[4].name).toBe('Code Comments');
+    expect(result[4].weight).toBe(0.05);
   });
 });

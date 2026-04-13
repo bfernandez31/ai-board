@@ -169,7 +169,7 @@ describe('Quality Gate Details GET Endpoint', () => {
     const data = await response.json();
 
     expect(data.dimensions).toHaveLength(5);
-    expect(data.dimensions[0]).toEqual({ name: 'Compliance', averageScore: 88, weight: 0.40 });
+    expect(data.dimensions[0]).toEqual({ name: 'Compliance', averageScore: 88, weight: 0.35 });
     expect(data.dimensions[1]).toEqual({ name: 'Bug Detection', averageScore: 79, weight: 0.30 });
   });
 
