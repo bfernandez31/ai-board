@@ -21,10 +21,10 @@ Migrate Gemini CLI telemetry from custom stdout scraping to native OTLP ingestio
 - [x] T012 [P] [US2] Verify error handling with integration tests: `npm test tests/integration/telemetry/agent-agnostic.test.ts`
 
 ## Phase 4: Refactor Batch Path (US3)
-- [ ] T013 [P] [US3] Add test case for Mistral batch telemetry to `tests/integration/telemetry/agent-agnostic.test.ts` to ensure no regression
-- [ ] T014 [US3] Remove Gemini-specific logic from `processBatchPayload` and `batchPayloadSchema` in `app/api/telemetry/v1/logs/route.ts`
-- [ ] T015 [US3] Add logic to reject Gemini payloads in `processBatchPayload` per spec.md decision
-- [ ] T016 [P] [US3] Verify Mistral preservation and Gemini batch rejection with integration tests
+- [x] T013 [P] [US3] Add test case for Mistral batch telemetry to `tests/integration/telemetry/agent-agnostic.test.ts` to ensure no regression
+- [x] T014 [US3] Remove Gemini-specific logic from `processBatchPayload` and `batchPayloadSchema` in `app/api/telemetry/v1/logs/route.ts`
+- [x] T015 [US3] Add logic to reject Gemini payloads in `processBatchPayload` per spec.md decision
+- [x] T016 [P] [US3] Verify Mistral preservation and Gemini batch rejection with integration tests
 
 ## Phase 5: Agent Runner Update
 - [ ] T017 Update `install_gemini` in `.github/scripts/run-agent.sh` to ensure latest version with OTLP support (if version pinning is required)

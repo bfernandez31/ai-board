@@ -11,7 +11,7 @@ import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 
 const batchPayloadSchema = z.object({
   jobId: z.number().int().positive().optional(),
-  agent: z.enum(['MISTRAL', 'GEMINI']).optional(),
+  agent: z.enum(['MISTRAL']).optional(),
   inputTokens: z.number().int().nonnegative().optional(),
   outputTokens: z.number().int().nonnegative().optional(),
   thinkingTokens: z.number().int().nonnegative().optional(),
@@ -599,18 +599,9 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
     metrics.toolsUsed.add(tool);
   }
 
-  // Gemini's promptTokenCount (mapped to inputTokens by the shell script) includes
-  // cached content. Normalize to non-cached only, consistent with the Codex OTLP path.
-  if (data.agent === 'GEMINI') {
-    metrics.inputTokens = Math.max(0, metrics.inputTokens - metrics.cacheReadTokens);
-  }
-
   if (typeof data.costUsd === 'number') {
     metrics.costUsd = data.costUsd;
-  } else if (data.agent === 'GEMINI' && data.costStatus !== 'UNAVAILABLE') {
-    metrics.geminiCostModel = data.model ?? null;
   } else if (
-    data.agent !== 'GEMINI' &&
     data.costStatus !== 'UNAVAILABLE' &&
     (metrics.inputTokens > 0 || metrics.outputTokens > 0)
   ) {
@@ -618,7 +609,7 @@ async function processBatchPayload(body: unknown, startTime: number): Promise<Ne
       data.model ?? 'mistral-large-latest',
       metrics.inputTokens,
       metrics.outputTokens,
-      metrics.cacheReadTokens,
+      metrics.cacheReadTokens
     );
   }
 
