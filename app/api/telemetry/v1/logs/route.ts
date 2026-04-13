@@ -148,7 +148,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           const eventKind = String(findAttribute(attrs, 'event.kind') ?? '');
           const isCodexTokenEvent = eventName === 'codex.sse_event' && eventKind === 'response.completed';
 
-          const isToolEvent = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool_result', 'codex.tool_decision'].includes(eventName);
+          // Gemini: token data in gemini_cli.api_response
+          const isGeminiApiResponse = eventName === 'gemini_cli.api_response';
+
+          const isToolEvent = [
+            'claude_code.tool_result',
+            'claude_code.tool_decision',
+            'codex.tool_result',
+            'codex.tool_decision',
+            'gemini_cli.tool_call'
+          ].includes(eventName);
 
           if (isClaudeApiRequest) {
             metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
@@ -188,8 +197,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               );
           }
 
+          if (isGeminiApiResponse) {
+            // Gemini CLI OTLP attributes use "gemini_cli." prefix
+            const totalInputTokens = parseIntAttribute(findAttribute(attrs, 'gemini_cli.usage.input_tokens'));
+            const outputTokens = parseIntAttribute(findAttribute(attrs, 'gemini_cli.usage.output_tokens'));
+            const cachedTokens = parseIntAttribute(findAttribute(attrs, 'gemini_cli.usage.cache_read_tokens'));
+            const creationTokens = parseIntAttribute(findAttribute(attrs, 'gemini_cli.usage.cache_creation_tokens'));
+            const thinkingTokens = parseIntAttribute(findAttribute(attrs, 'gemini_cli.usage.thinking_tokens'));
+
+            // Normalize: store non-cached in inputTokens for consistency
+            const nonCachedInputTokens = Math.max(0, totalInputTokens - cachedTokens);
+
+            metrics.inputTokens += nonCachedInputTokens;
+            metrics.outputTokens += outputTokens;
+            metrics.cacheReadTokens += cachedTokens;
+            metrics.cacheCreationTokens += creationTokens;
+            metrics.thinkingTokens = (metrics.thinkingTokens ?? 0) + thinkingTokens;
+            metrics.durationMs += parseIntAttribute(findAttribute(attrs, 'gemini_cli.duration_ms'));
+
+            const model = findAttribute(attrs, 'gemini_cli.model');
+            if (model) {
+              metrics.model = String(model);
+              metrics.geminiCostModel = String(model);
+            }
+          }
+
           if (isToolEvent) {
-            const toolName = findAttribute(attrs, 'tool_name');
+            // Claude/Codex use tool_name, Gemini uses gemini_cli.tool_name
+            const toolName = findAttribute(attrs, 'tool_name') || findAttribute(attrs, 'gemini_cli.tool_name');
             if (toolName) metrics.toolsUsed.add(String(toolName));
           }
         }
