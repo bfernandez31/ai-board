@@ -4,7 +4,7 @@ import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup'
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { PATCH } from '@/app/api/projects/[projectId]/health/scans/[scanId]/status/route';
 
-vi.mock('@/app/lib/workflow-auth', () => ({
+vi.mock('@/app/lib/auth/workflow-auth', () => ({
   validateWorkflowAuth: vi.fn(() => ({ isValid: true })),
 }));
 

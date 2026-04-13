@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { ProjectIdSchema } from '@/lib/validations/ticket';
 
 /**

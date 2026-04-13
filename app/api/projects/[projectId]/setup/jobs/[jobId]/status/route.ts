@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
-import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { syncProjectConfig } from '@/lib/config-sync';
 import { getGitHubAccessToken } from '@/lib/github/user-client';
 import type { SetupJobStatus, Prisma } from '@prisma/client';

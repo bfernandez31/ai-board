@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ProjectIdSchema } from '@/lib/validations/ticket';
 import { getProjectById } from '@/lib/db/projects';
 import { prisma } from '@/lib/db/client';
-import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { resolveTicket } from '@/app/lib/utils/ticket-resolver';
 import { previewUrlSchema } from '@/app/lib/schemas/deploy-preview';
 import { z } from 'zod';
