@@ -213,8 +213,8 @@ export async function dispatchWorkflow(params: {
 - **Inputs**: `project_id`, `job_id`, `githubRepository` (owner/repo), `agent`, `depth` (QUICK/STANDARD/COMPREHENSIVE), `docUrl` (optional), `context` (optional)
 - **Steps**: Report RUNNING → fetch AI credential → clone target repo → fetch external docs (if `docUrl`) → run `ai-board.retro-spec` agent command → commit `specs/specifications/` to target repository → report COMPLETED/FAILED
 - **Output**: `specs/specifications/` directory committed to the target repository with spec depth matching the selected level
-- **Security**: `docUrl` input is passed via an `env:` block (`DOC_URL`) rather than direct `${{ inputs.docUrl }}` interpolation in the `run:` block, preventing shell metacharacter injection
-- **Error behavior**: Reports FAILED with error message; partial results not committed; unreachable `docUrl` logs a warning and continues
+- **Security**: `docUrl` is validated at two layers: (1) the API enforces HTTPS-only via Zod (`.startsWith('https://')`); (2) the workflow validates the HTTPS scheme and resolves the hostname, blocking private/link-local IP ranges (RFC 1918: `10.x`, `172.16–31.x`, `192.168.x`; link-local: `169.254.x`; loopback: `127.x`) before the `curl` call to prevent SSRF. The input is also passed via an `env:` block (`DOC_URL`) rather than direct interpolation, preventing shell metacharacter injection.
+- **Error behavior**: Reports FAILED with error message; partial results not committed; unresolvable `docUrl` hostname logs a warning and continues without fetching docs
 - **Timeout**: 60 minutes
 
 ### Dynamic Service Inputs
