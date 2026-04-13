@@ -359,11 +359,14 @@ function mergeGeminiTelemetryRecord(
 
   if (costUsd > 0) {
     metrics.costUsd = Math.max(metrics.costUsd ?? 0, costUsd);
+    // Native cost arrived — clear the estimation flag so updateJobMetrics
+    // won't overwrite the real value with an estimate
+    metrics.geminiCostModel = null;
   }
 
   if (model) {
     metrics.model = String(model);
-    if (costUsd === 0) {
+    if (costUsd === 0 && !metrics.costUsd) {
       metrics.geminiCostModel = String(model);
     }
   }
@@ -522,6 +525,7 @@ async function persistOtlpMetrics(
     return updateJobMetrics(jobId, cumulativeMetrics, startTime, 'Gemini success', 'CUMULATIVE');
   }
 
+  // All branches above are exhaustive; this is unreachable but satisfies the return type
   return updateJobMetrics(jobId, deltaMetrics, startTime, 'Success');
 }
 
