@@ -522,9 +522,8 @@ sequenceDiagram
     else AGENT_TYPE = GEMINI
         RS->>CLI: npm install -g @google/gemini-cli
         RS->>RS: restore ~/.gemini/oauth.json or use GEMINI_API_KEY
-        RS->>CLI: gemini --prompt="..." --output-format stream-json --approval-mode=yolo
-        RS->>RS: collect_gemini_telemetry() — normalize stream-json events
-        RS->>EP: POST /api/telemetry/v1/logs (batch JSON)
+        RS->>CLI: gemini --prompt="..." --approval-mode=yolo
+        Note right of CLI: Emits gemini_cli.* OTLP events directly to telemetry endpoint
     end
     CLI-->>RS: exit code
     RS-->>WF: propagated exit code
@@ -536,8 +535,8 @@ sequenceDiagram
 |---------|--------|-------|---------|--------|
 | Package | `@anthropic-ai/claude-code` | `@openai/codex` | `vibe-cli` (Python pip) | `@google/gemini-cli` |
 | Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` | `MISTRAL_API_KEY` | `GEMINI_API_KEY` or `GEMINI_OAUTH_JSON` |
-| Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt from command markdown plus structured invocation context | `vibe --prompt "..." --agent auto-approve` | `gemini --prompt="..." --output-format stream-json --approval-mode=yolo` |
-| Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section | Post-execution batch JSON via `collect_mistral_telemetry()`; datalake disabled | Post-execution batch JSON via `collect_gemini_telemetry()` from stream-json capture |
+| Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt from command markdown plus structured invocation context | `vibe --prompt "..." --agent auto-approve` | `gemini --prompt="..." --approval-mode=yolo` |
+| Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section | Post-execution batch JSON via `collect_mistral_telemetry()`; datalake disabled | Native OTLP (`gemini_cli.*` events) emitted directly during execution via OTEL env vars |
 | Project context | `CLAUDE.md` (native) | `AGENTS.md` at project root, read automatically by Codex | `AGENTS.md` at project root, read via native filesystem walk | `AGENTS.md` at project root, read via native filesystem walk |
 | Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` / `CODEX_REASONING` env vars | Determined by vibe CLI defaults | Determined by Gemini CLI defaults or credential/runtime |
 
@@ -585,8 +584,8 @@ sequenceDiagram
 - `MISTRAL_API_KEY`: Required when `AGENT_TYPE=MISTRAL`
 - `GEMINI_API_KEY`: Required when `AGENT_TYPE=GEMINI` in API-key mode
 - `GEMINI_OAUTH_JSON`: Alternative to `GEMINI_API_KEY` for Gemini cached OAuth auth
-- `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex telemetry when set; used by Mistral `collect_mistral_telemetry()` for batch POST target
-- `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config and Mistral/Gemini batch POST auth
+- `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex and Gemini OTLP telemetry when set; used by Mistral `collect_mistral_telemetry()` for batch POST target
+- `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config, Gemini OTLP auth, and Mistral batch POST auth
 
 **Usage in Workflows**:
 
