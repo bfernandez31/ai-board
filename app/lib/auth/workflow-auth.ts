@@ -25,6 +25,21 @@ export function hasWorkflowToken(request: NextRequest): boolean {
   return authHeader?.startsWith('Bearer ') ?? false;
 }
 
+function getBearerToken(request: NextRequest): string | null {
+  const authHeader = request.headers.get('Authorization');
+
+  if (!authHeader) {
+    return null;
+  }
+
+  const [scheme, token] = authHeader.split(' ');
+  if (scheme !== 'Bearer' || !token) {
+    return null;
+  }
+
+  return token;
+}
+
 /**
  * Validate workflow authentication and return an explicit error state for routes
  * that need a sync auth guard plus a response-safe failure reason.
@@ -41,14 +56,15 @@ export function validateWorkflowAuth(request: NextRequest): WorkflowAuthResult {
     return { isValid: false, error: 'Workflow authentication not configured' };
   }
 
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader) {
-    console.warn('[Workflow Auth] Missing Authorization header');
-    return { isValid: false, error: 'Missing Authorization header' };
-  }
+  const token = getBearerToken(request);
+  if (!token) {
+    const authHeader = request.headers.get('Authorization');
 
-  const [scheme, token] = authHeader.split(' ');
-  if (scheme !== 'Bearer' || !token) {
+    if (!authHeader) {
+      console.warn('[Workflow Auth] Missing Authorization header');
+      return { isValid: false, error: 'Missing Authorization header' };
+    }
+
     console.warn('[Workflow Auth] Invalid Authorization header format');
     return { isValid: false, error: 'Invalid Authorization header format' };
   }
@@ -84,16 +100,7 @@ export async function verifyWorkflowToken(
     return true;
   }
 
-  const authHeader = request.headers.get('Authorization');
-
-  // Check for Bearer token format
-  if (!authHeader?.startsWith('Bearer ')) {
-    return false;
-  }
-
-  // Get expected token from environment
   const expectedTokens = getAcceptedWorkflowTokens();
-
   if (expectedTokens.length === 0) {
     console.error(
       '[workflow-auth] WORKFLOW_API_TOKEN not configured in environment'
@@ -101,6 +108,10 @@ export async function verifyWorkflowToken(
     return false;
   }
 
-  const token = authHeader.slice('Bearer '.length);
+  const token = getBearerToken(request);
+  if (!token) {
+    return false;
+  }
+
   return isAcceptedWorkflowToken(token, expectedTokens);
 }
