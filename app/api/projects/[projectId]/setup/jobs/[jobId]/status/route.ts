@@ -132,11 +132,29 @@ export async function PATCH(
         });
 
         if (project) {
-          getGitHubAccessToken(project.userId).then((ownerToken) => {
-            return syncProjectConfig(project, ownerToken ?? undefined);
-          }).catch((syncError) => {
+          try {
+            const ownerToken = await getGitHubAccessToken(project.userId);
+            const configSyncResult = await syncProjectConfig(project, ownerToken ?? undefined);
+
+            if (!configSyncResult.success) {
+              console.error('[setup-job-status] Config sync failed:', configSyncResult.error);
+              return NextResponse.json({
+                id: updatedJob.id,
+                status: updatedJob.status,
+                completedAt: updatedJob.completedAt,
+                configSyncError: configSyncResult.error || 'Config sync failed',
+                configSyncErrorCode: configSyncResult.code,
+              });
+            }
+          } catch (syncError) {
             console.error('[setup-job-status] Config sync failed:', syncError);
-          });
+            return NextResponse.json({
+              id: updatedJob.id,
+              status: updatedJob.status,
+              completedAt: updatedJob.completedAt,
+              configSyncError: syncError instanceof Error ? syncError.message : 'Config sync failed',
+            });
+          }
         }
       }
     }
