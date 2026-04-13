@@ -32,12 +32,12 @@ function getBearerToken(request: NextRequest): string | null {
     return null;
   }
 
-  const [scheme, token] = authHeader.split(' ');
-  if (scheme !== 'Bearer' || !token) {
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer' || !parts[1]) {
     return null;
   }
 
-  return token;
+  return parts[1];
 }
 
 /**
