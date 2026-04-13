@@ -168,7 +168,8 @@ jobs:
           fi
 
           # Extract hostname and resolve to IP to block private/link-local ranges
-          DOC_HOST=$(echo "${DOC_URL}" | sed -E 's|^https://([^/:]+).*|\1|')
+          DOC_HOST="${DOC_URL#https://}"
+          DOC_HOST="${DOC_HOST%%[/:]*}"
           RESOLVED_IPS=$(getent hosts "${DOC_HOST}" 2>/dev/null | awk '{print $1}' || true)
           if [ -z "$RESOLVED_IPS" ]; then
             echo "::warning::Cannot resolve hostname '${DOC_HOST}', proceeding with codebase only"
