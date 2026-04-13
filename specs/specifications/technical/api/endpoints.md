@@ -452,13 +452,18 @@ Update setup job status from the onboarding or retro-spec workflow.
 
 **Side effects**:
 - `RUNNING`: sets `startedAt` and `workflowRunId` (first-write-wins)
-- `COMPLETED` (ONBOARD jobs): sets `completedAt`, triggers `syncProjectConfig()` (non-blocking)
+- `COMPLETED` (ONBOARD jobs): sets `completedAt`, awaits `syncProjectConfig()`; if sync fails, returns 200 with `configSyncError`
 - `COMPLETED` (RETRO_SPEC jobs): sets `completedAt` only — no config sync (specs are committed to the repo by the workflow)
 - `FAILED`: sets `completedAt`, persists `errorMessage`
 
 **Response** (200 OK):
 ```json
 { "id": 1, "status": "COMPLETED", "completedAt": "2026-04-08T12:01:30.000Z" }
+```
+
+**Response** (200 OK — config sync failed, ONBOARD only):
+```json
+{ "id": 1, "status": "COMPLETED", "completedAt": "2026-04-08T12:01:30.000Z", "configSyncError": "Token expired" }
 ```
 
 **Errors**: `400` (`VALIDATION_ERROR` or `INVALID_TRANSITION`), `401` (invalid token), `404` (job/project not found)
