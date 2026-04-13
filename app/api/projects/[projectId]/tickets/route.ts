@@ -12,6 +12,7 @@ import formidable, { Fields, Files } from 'formidable';
 import { promises as fs } from 'fs';
 import { Readable } from 'stream';
 import { prisma } from '@/lib/db/client';
+import { Prisma } from '@prisma/client';
 import { requireAuth } from '@/lib/db/users';
 import { getUserSubscription } from '@/lib/billing/subscription';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
@@ -70,10 +71,12 @@ export async function GET(
 
     // If filters provided, query directly with Prisma for efficiency
     if (stageParam || workflowTypeParam || limitParam || updatedSince) {
-      const where: Record<string, unknown> = { projectId };
-      if (stageParam) where.stage = stageParam;
-      if (workflowTypeParam) where.workflowType = workflowTypeParam;
-      if (updatedSince) where.updatedAt = { gte: new Date(updatedSince) };
+      const where: Prisma.TicketWhereInput = {
+        projectId,
+        ...(stageParam && { stage: stageParam }),
+        ...(workflowTypeParam && { workflowType: workflowTypeParam }),
+        ...(updatedSince && { updatedAt: { gte: new Date(updatedSince) } }),
+      };
 
       const filtered = await prisma.ticket.findMany({
         where,

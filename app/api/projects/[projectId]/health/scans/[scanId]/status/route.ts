@@ -5,6 +5,7 @@ import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { calculateGlobalScore } from '@/lib/health/score-calculator';
 import { getQualityGateData } from '@/lib/health/quality-gate';
 import type { HealthScanStatus, HealthScanType } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 const statusUpdateSchema = z.object({
   status: z.enum(['RUNNING', 'COMPLETED', 'FAILED', 'SKIPPED']),
@@ -28,21 +29,35 @@ const VALID_TRANSITIONS: Record<string, HealthScanStatus[]> = {
   SKIPPED: [],
 };
 
-const SCAN_TYPE_TO_SCORE_FIELD: Record<HealthScanType, string> = {
-  SECURITY: 'securityScore',
-  COMPLIANCE: 'complianceScore',
-  TESTS: 'testsScore',
-  SPEC_SYNC: 'specSyncScore',
-  REVIEW_QUALITY: 'reviewQualityScore',
+type HealthScoreFields = {
+  securityScore?: number;
+  complianceScore?: number;
+  testsScore?: number;
+  specSyncScore?: number;
+  reviewQualityScore?: number;
+  qualityGate?: number;
+  lastSecurityScan?: Date;
+  lastComplianceScan?: Date;
+  lastTestsScan?: Date;
+  lastSpecSyncScan?: Date;
+  lastReviewQualityScan?: Date;
 };
 
-const SCAN_TYPE_TO_DATE_FIELD: Record<HealthScanType, string> = {
-  SECURITY: 'lastSecurityScan',
-  COMPLIANCE: 'lastComplianceScan',
-  TESTS: 'lastTestsScan',
-  SPEC_SYNC: 'lastSpecSyncScan',
-  REVIEW_QUALITY: 'lastReviewQualityScan',
-};
+function buildHealthScoreUpdate(
+  scanType: HealthScanType,
+  score: number,
+  scanDate: Date,
+  qualityGateScore: number | null
+): HealthScoreFields {
+  const qg = qualityGateScore !== null ? { qualityGate: qualityGateScore } : {};
+  switch (scanType) {
+    case 'SECURITY': return { ...qg, securityScore: score, lastSecurityScan: scanDate };
+    case 'COMPLIANCE': return { ...qg, complianceScore: score, lastComplianceScan: scanDate };
+    case 'TESTS': return { ...qg, testsScore: score, lastTestsScan: scanDate };
+    case 'SPEC_SYNC': return { ...qg, specSyncScore: score, lastSpecSyncScan: scanDate };
+    case 'REVIEW_QUALITY': return { ...qg, reviewQualityScore: score, lastReviewQualityScan: scanDate };
+  }
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -92,7 +107,7 @@ export async function PATCH(
     }
 
     // Defensive guard: COMPLIANCE and TESTS scans cannot be SKIPPED — coerce to COMPLETED
-    let effectiveStatus: HealthScanStatus = data.status as HealthScanStatus;
+    let effectiveStatus: HealthScanStatus = data.status;
     if (data.status === 'SKIPPED' && (scan.scanType === 'COMPLIANCE' || scan.scanType === 'TESTS')) {
       if (data.score == null) {
         return NextResponse.json(
@@ -129,39 +144,37 @@ export async function PATCH(
 
     // Build update data
     const now = new Date();
-    const updateData: Record<string, unknown> = {
-      status: effectiveStatus,
-    };
+    const isTerminal = effectiveStatus === 'COMPLETED' || effectiveStatus === 'FAILED' || effectiveStatus === 'SKIPPED';
 
-    if (effectiveStatus === 'RUNNING') {
-      updateData.startedAt = now;
-    }
-
-    if (effectiveStatus === 'COMPLETED' || effectiveStatus === 'FAILED' || effectiveStatus === 'SKIPPED') {
-      updateData.completedAt = now;
-    }
-
-    const optionalFields = [
-      'score', 'report', 'issuesFound', 'issuesFixed',
-      'headCommit', 'durationMs', 'tokensUsed', 'costUsd', 'errorMessage',
-    ] as const;
-    for (const field of optionalFields) {
-      if (data[field] !== undefined) updateData[field] = data[field];
-    }
-
+    let reportValue = data.report;
     // Persist skipReason inside the report JSON for SKIPPED scans
     if (effectiveStatus === 'SKIPPED' && data.skipReason) {
       let reportPayload: Record<string, unknown> = {};
-      if (typeof updateData.report === 'string') {
+      if (typeof reportValue === 'string') {
         try {
-          const parsed = JSON.parse(updateData.report);
+          const parsed = JSON.parse(reportValue);
           if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
             reportPayload = parsed as Record<string, unknown>;
           }
         } catch { /* ignore parse errors */ }
       }
-      updateData.report = JSON.stringify({ ...reportPayload, skipReason: data.skipReason });
+      reportValue = JSON.stringify({ ...reportPayload, skipReason: data.skipReason });
     }
+
+    const updateData: Prisma.HealthScanUpdateInput = {
+      status: effectiveStatus,
+      ...(effectiveStatus === 'RUNNING' && { startedAt: now }),
+      ...(isTerminal && { completedAt: now }),
+      ...(data.score !== undefined && { score: data.score }),
+      ...(reportValue !== undefined && { report: reportValue }),
+      ...(data.issuesFound !== undefined && { issuesFound: data.issuesFound }),
+      ...(data.issuesFixed !== undefined && { issuesFixed: data.issuesFixed }),
+      ...(data.headCommit !== undefined && { headCommit: data.headCommit }),
+      ...(data.durationMs !== undefined && { durationMs: data.durationMs }),
+      ...(data.tokensUsed !== undefined && { tokensUsed: data.tokensUsed }),
+      ...(data.costUsd !== undefined && { costUsd: data.costUsd }),
+      ...(data.errorMessage !== undefined && { errorMessage: data.errorMessage }),
+    };
 
     // Compute Quality Gate score before the transaction (read-only query)
     let qualityGateScore: number | null = null;
@@ -183,15 +196,8 @@ export async function PATCH(
       });
 
       // On COMPLETED: update HealthScore aggregate
-      if (effectiveStatus === 'COMPLETED' && data.score !== undefined) {
-        const scoreField = SCAN_TYPE_TO_SCORE_FIELD[scan.scanType];
-        const dateField = SCAN_TYPE_TO_DATE_FIELD[scan.scanType];
-
-        const scoreUpdate: Record<string, unknown> = {
-          [scoreField]: data.score,
-          [dateField]: now,
-          ...(qualityGateScore !== null ? { qualityGate: qualityGateScore } : {}),
-        };
+      if (effectiveStatus === 'COMPLETED' && data.score != null) {
+        const scoreUpdate = buildHealthScoreUpdate(scan.scanType, data.score, now, qualityGateScore);
 
         const healthScore = await tx.healthScore.upsert({
           where: { projectId },
