@@ -38,7 +38,7 @@ describe('resolveEffectiveAgent', () => {
   it('only allows Gemini on supported workflows', () => {
     expect(supportsWorkflowCommand('GEMINI', 'specify')).toBe(true);
     expect(supportsWorkflowCommand('GEMINI', 'quick-impl')).toBe(true);
-    expect(supportsWorkflowCommand('GEMINI', 'verify')).toBe(false);
+    expect(supportsWorkflowCommand('GEMINI', 'verify')).toBe(true);
     expect(supportsWorkflowCommand('CLAUDE', 'verify')).toBe(true);
   });
 });

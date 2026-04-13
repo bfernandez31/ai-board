@@ -34,6 +34,11 @@ export async function GET(
     const workflowAuth = validateWorkflowAuth(request);
     if (!workflowAuth.isValid) {
       await verifyProjectAccess(projectId, request);
+    } else {
+      const project = await prisma.project.findUnique({ where: { id: projectId }, select: { id: true } });
+      if (!project) {
+        return NextResponse.json({ error: 'Project not found', code: 'PROJECT_NOT_FOUND' }, { status: 404 });
+      }
     }
 
     // Optional filters: ?stage=SHIP&workflowType=FULL&limit=50&offset=0&updatedSince=2025-01-01T00:00:00Z
