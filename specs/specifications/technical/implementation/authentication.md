@@ -346,6 +346,48 @@ TEST_WORKFLOW_TOKEN=<test-only-workflow-token>
 
 `TEST_WORKFLOW_TOKEN` is accepted by `getAcceptedWorkflowTokens()` and returned by `getWorkflowToken()` only when `isWorkflowTokenTestContext()` is true (i.e. `NODE_ENV=test`, `TEST_MODE=true`, or `VITEST_INTEGRATION=1`). It is never accepted in production contexts.
 
+## Workflow Authentication
+
+**Primary file**: `app/lib/auth/workflow-auth.ts`
+
+Internal API endpoints called by GitHub Actions workflows require a Bearer token:
+
+```
+Authorization: Bearer <WORKFLOW_API_TOKEN>
+```
+
+### API
+
+| Function | Signature | Purpose |
+|----------|-----------|---------|
+| `validateWorkflowAuth` | `(request) → WorkflowAuthResult` | Full validation with error detail; use in route handlers that return error responses |
+| `verifyWorkflowToken` | `(request) → boolean` | Boolean pass/fail wrapper around `validateWorkflowAuth` |
+| `hasWorkflowToken` | `(request) → boolean` | Checks presence of a Bearer header without validating the token |
+
+```typescript
+export interface WorkflowAuthResult {
+  isValid: boolean;
+  error?: string;   // present only when isValid is false
+}
+```
+
+`validateWorkflowAuth` returns a structured error reason for each failure mode: missing `WORKFLOW_API_TOKEN` env var, missing `Authorization` header, malformed header format, or invalid token value.
+
+### Usage Pattern
+
+```typescript
+import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
+
+const auth = validateWorkflowAuth(request);
+if (!auth.isValid) {
+  return NextResponse.json({ error: auth.error }, { status: 401 });
+}
+```
+
+All functions are synchronous. Token comparison uses `timingSafeEqual` from `node:crypto` to prevent timing attacks; mismatched token lengths short-circuit before the byte comparison.
+
+The `WORKFLOW_API_TOKEN` environment variable must be set in all environments where workflow callbacks are expected.
+
 ## Security Notes
 
 - Preview login is excluded from production by environment gating
