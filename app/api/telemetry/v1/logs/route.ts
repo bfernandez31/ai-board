@@ -275,15 +275,7 @@ function createEmptyMetrics(): TelemetryMetrics {
   };
 }
 
-function mergeTelemetryValue(
-  existing: number | null,
-  incoming: number,
-  mergeMode: 'DELTA' | 'CUMULATIVE'
-): number {
-  if (mergeMode === 'CUMULATIVE') {
-    return Math.max(existing ?? 0, incoming);
-  }
-
+function mergeTelemetryValue(existing: number | null, incoming: number): number {
   return (existing ?? 0) + incoming;
 }
 
@@ -295,7 +287,6 @@ async function updateJobMetrics(
   metrics: TelemetryMetrics,
   startTime: number,
   logLabel: string,
-  mergeMode: 'DELTA' | 'CUMULATIVE' = 'DELTA'
 ): Promise<NextResponse> {
   const job = await prisma.job.findUnique({
     where: { id: jobId },
@@ -319,16 +310,12 @@ async function updateJobMetrics(
 
   const mergedTools = [...new Set([...job.toolsUsed, ...metrics.toolsUsed])].sort();
 
-  const mergedInputTokens = mergeTelemetryValue(job.inputTokens, metrics.inputTokens, mergeMode);
-  const mergedOutputTokens = mergeTelemetryValue(job.outputTokens, metrics.outputTokens, mergeMode);
-  const mergedCacheReadTokens = mergeTelemetryValue(job.cacheReadTokens, metrics.cacheReadTokens, mergeMode);
-  const mergedCacheCreationTokens = mergeTelemetryValue(
-    job.cacheCreationTokens,
-    metrics.cacheCreationTokens,
-    mergeMode
-  );
+  const mergedInputTokens = mergeTelemetryValue(job.inputTokens, metrics.inputTokens);
+  const mergedOutputTokens = mergeTelemetryValue(job.outputTokens, metrics.outputTokens);
+  const mergedCacheReadTokens = mergeTelemetryValue(job.cacheReadTokens, metrics.cacheReadTokens);
+  const mergedCacheCreationTokens = mergeTelemetryValue(job.cacheCreationTokens, metrics.cacheCreationTokens);
   const mergedThinkingTokens = metrics.thinkingTokens != null
-    ? mergeTelemetryValue(job.thinkingTokens, metrics.thinkingTokens, mergeMode)
+    ? mergeTelemetryValue(job.thinkingTokens, metrics.thinkingTokens)
     : null;
 
   const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
@@ -336,7 +323,7 @@ async function updateJobMetrics(
     outputTokens: mergedOutputTokens,
     cacheReadTokens: mergedCacheReadTokens,
     cacheCreationTokens: mergedCacheCreationTokens,
-    durationMs: mergeTelemetryValue(job.durationMs, metrics.durationMs, mergeMode),
+    durationMs: mergeTelemetryValue(job.durationMs, metrics.durationMs),
     toolsUsed: mergedTools,
   };
 
@@ -345,7 +332,7 @@ async function updateJobMetrics(
   }
 
   if (metrics.costUsd != null) {
-    updateData.costUsd = mergeTelemetryValue(job.costUsd, metrics.costUsd, mergeMode);
+    updateData.costUsd = mergeTelemetryValue(job.costUsd, metrics.costUsd);
   }
 
   if (metrics.geminiCostModel) {
