@@ -13,12 +13,12 @@ const querySchema = z.object({
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
-) {
+): Promise<NextResponse> {
   try {
     const { projectId: projectIdStr } = await params;
     const projectId = parseInt(projectIdStr, 10);
 
-    if (isNaN(projectId) || projectId <= 0) {
+    if (Number.isNaN(projectId) || projectId <= 0) {
       return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
     }
 

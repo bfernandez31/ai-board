@@ -23,7 +23,7 @@ const VALID_AGENTS = new Set<AgentFilter>(AGENT_FILTER_VALUES);
 function parseProjectId(projectIdString: string): number {
   const projectId = parseInt(projectIdString, 10);
 
-  if (isNaN(projectId) || projectId <= 0) {
+  if (Number.isNaN(projectId) || projectId <= 0) {
     notFound();
   }
 
@@ -39,7 +39,11 @@ function getSearchParamValue<T extends string>(
     return fallback;
   }
 
-  return validValues.has(value as T) ? (value as T) : fallback;
+  if (validValues.has(value as T)) {
+    return value as T;
+  }
+
+  return fallback;
 }
 
 export default async function AnalyticsPage({
@@ -48,7 +52,7 @@ export default async function AnalyticsPage({
 }: {
   params: Promise<{ projectId: string }>;
   searchParams: Promise<{ range?: string; outcome?: string; agent?: string }>;
-}) {
+}): Promise<JSX.Element> {
   const { projectId: projectIdString } = await params;
   const search = await searchParams;
   const projectId = parseProjectId(projectIdString);

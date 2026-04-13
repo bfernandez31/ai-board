@@ -119,7 +119,7 @@ export function getAgentLabel(agent: AgentFilter): string {
   return agent === 'all' ? 'All agents' : getSharedAgentLabel(agent);
 }
 
-export function getSupportedAnalyticsAgents() {
+export function getSupportedAnalyticsAgents(): readonly (typeof ALL_AGENTS)[number][] {
   return ALL_AGENTS;
 }
 

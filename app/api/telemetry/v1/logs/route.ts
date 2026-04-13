@@ -255,6 +255,18 @@ function createEmptyMetrics(): TelemetryMetrics {
   };
 }
 
+function mergeTelemetryValue(
+  existing: number | null,
+  incoming: number,
+  mergeMode: 'DELTA' | 'CUMULATIVE'
+): number {
+  if (mergeMode === 'CUMULATIVE') {
+    return Math.max(existing ?? 0, incoming);
+  }
+
+  return (existing ?? 0) + incoming;
+}
+
 /**
  * Look up the job, merge accumulated metrics, persist, and return the response.
  */
@@ -286,28 +298,23 @@ async function updateJobMetrics(
   }
 
   const mergedTools = [...new Set([...job.toolsUsed, ...metrics.toolsUsed])].sort();
-  const getMergedValue = (existing: number | null, incoming: number): number => {
-    if (mergeMode === 'CUMULATIVE') {
-      return Math.max(existing ?? 0, incoming);
-    }
-    return (existing ?? 0) + incoming;
-  };
 
   const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
-    inputTokens: getMergedValue(job.inputTokens, metrics.inputTokens),
-    outputTokens: getMergedValue(job.outputTokens, metrics.outputTokens),
-    thinkingTokens: getMergedValue(job.thinkingTokens, metrics.thinkingTokens),
-    cacheReadTokens: getMergedValue(job.cacheReadTokens, metrics.cacheReadTokens),
-    cacheCreationTokens: getMergedValue(job.cacheCreationTokens, metrics.cacheCreationTokens),
-    durationMs: getMergedValue(job.durationMs, metrics.durationMs),
+    inputTokens: mergeTelemetryValue(job.inputTokens, metrics.inputTokens, mergeMode),
+    outputTokens: mergeTelemetryValue(job.outputTokens, metrics.outputTokens, mergeMode),
+    thinkingTokens: mergeTelemetryValue(job.thinkingTokens, metrics.thinkingTokens, mergeMode),
+    cacheReadTokens: mergeTelemetryValue(job.cacheReadTokens, metrics.cacheReadTokens, mergeMode),
+    cacheCreationTokens: mergeTelemetryValue(
+      job.cacheCreationTokens,
+      metrics.cacheCreationTokens,
+      mergeMode
+    ),
+    durationMs: mergeTelemetryValue(job.durationMs, metrics.durationMs, mergeMode),
     toolsUsed: mergedTools,
   };
 
   if (metrics.costUsd != null) {
-    updateData.costUsd =
-      mergeMode === 'CUMULATIVE'
-        ? Math.max(job.costUsd ?? 0, metrics.costUsd)
-        : (job.costUsd ?? 0) + metrics.costUsd;
+    updateData.costUsd = mergeTelemetryValue(job.costUsd, metrics.costUsd, mergeMode);
   }
 
   if (metrics.model) {
@@ -345,7 +352,7 @@ async function updateJobMetrics(
       outputTokens: updatedJob.outputTokens,
       thinkingTokens: updatedJob.thinkingTokens,
       costUsd: updatedJob.costUsd,
-    }
+    },
   }, { status: 200 });
 }
 
@@ -361,7 +368,12 @@ const OPENAI_PRICING: Record<string, { input: number; output: number; cached: nu
   'gpt-5':         { input: 2.00, output: 8.00,  cached: 1.00 },
 };
 
-function estimateOpenAICost(model: string, inputTokens: number, outputTokens: number, cachedTokens: number): number {
+function estimateOpenAICost(
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  cachedTokens: number
+): number {
   const pricing = OPENAI_PRICING[model] ?? OPENAI_PRICING['gpt-5.4']!;
   return (
     (inputTokens / 1_000_000) * pricing.input +
@@ -383,7 +395,12 @@ const MISTRAL_PRICING: Record<string, { input: number; output: number; cached: n
   'devstral-medium-latest':  { input: 0.50, output: 1.50, cached: 0.25 },
 };
 
-function estimateMistralCost(model: string, inputTokens: number, outputTokens: number, cachedTokens: number): number {
+function estimateMistralCost(
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  cachedTokens: number
+): number {
   const pricing = MISTRAL_PRICING[model] ?? MISTRAL_PRICING['mistral-large-latest']!;
   return (
     (inputTokens / 1_000_000) * pricing.input +
