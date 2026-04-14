@@ -69,7 +69,7 @@ export const QualityZoom: React.FC<{
         }}
       >
         <div style={{ display: 'flex', gap: 28, alignItems: 'flex-start' }}>
-          <ScoreCircle score={score} size={160} color={color} delay={5} />
+          <ScoreCircle score={score} size={160} color={color} delay={delay + 5} />
 
           <div style={{ flex: 1 }}>
             <div style={{ marginBottom: 6 }}>

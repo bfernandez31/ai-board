@@ -79,7 +79,6 @@ function useCamera(frame: number) {
 
 export const KanbanBoard: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
   const initialFade = useZoomIn(0);
   const camera = useCamera(frame);
 
@@ -132,16 +131,16 @@ export const KanbanBoard: React.FC = () => {
   function getColumnCount(stageKey: string): number {
     const base = (INITIAL_TICKETS[stageKey] || []).length;
     if (stageKey === 'INBOX') {
-      return dragDone ? base - 1 : base;
+      return (isDragging || dragDone) ? base - 1 : base;
     }
     if (stageKey === 'SPECIFY') {
       return dragDone ? base + 1 : base;
     }
     if (stageKey === 'BUILD') {
-      return slideDone ? base - 1 : base;
+      return (isSliding || slideDone) ? base - 1 : base;
     }
     if (stageKey === 'VERIFY') {
-      if (shipDone) return base;
+      if (isShipping || shipDone) return base;
       if (slideDone) return base + 1;
       return base;
     }
