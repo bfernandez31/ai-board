@@ -97,10 +97,10 @@ export function HeatmapGrid({ cells, year }: HeatmapGridProps) {
   const maxCount = Math.max(1, ...cells.map((c) => c.jobCount));
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 min-w-max">
       {/* Month labels row */}
       <div className="flex gap-[3px]">
-        <div className="w-[30px] shrink-0" /> {/* Spacer for day labels */}
+        <div className="w-[30px] shrink-0 sticky left-0 z-10" /> {/* Spacer for day labels */}
         {weeks.map((_, weekIdx) => {
           const monthLabel = monthLabels.find((m) => m.weekIndex === weekIdx);
           return (
@@ -114,7 +114,7 @@ export function HeatmapGrid({ cells, year }: HeatmapGridProps) {
       {/* Grid rows (one per day of week: Sun=0 through Sat=6) */}
       {Array.from({ length: 7 }, (_, dayIdx) => (
         <div key={dayIdx} className="flex gap-[3px] items-center">
-          <div className="w-[30px] shrink-0 text-[10px] text-muted-foreground text-right pr-1">
+          <div className="w-[30px] shrink-0 text-[10px] text-muted-foreground text-right pr-1 sticky left-0 z-10">
             {DAY_LABELS[dayIdx]}
           </div>
           {weeks.map((week, weekIdx) => {

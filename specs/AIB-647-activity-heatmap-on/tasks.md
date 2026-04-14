@@ -143,9 +143,9 @@
 
 **Purpose**: Mobile responsiveness, accessibility, and edge cases
 
-- [ ] T027 [P] Verify mobile horizontal scroll with sticky day labels on narrow viewports (FR-017) in `components/heatmap/activity-heatmap.tsx`
-- [ ] T028 [P] Validate all 5 violet intensity levels meet WCAG AA contrast on dark theme (SC-003) in `components/heatmap/heatmap-grid.tsx`
-- [ ] T029 Verify combined year + agent filter interaction works correctly end-to-end
+- [x] T027 [P] Verify mobile horizontal scroll with sticky day labels on narrow viewports (FR-017) in `components/heatmap/activity-heatmap.tsx`
+- [x] T028 [P] Validate all 5 violet intensity levels meet WCAG AA contrast on dark theme (SC-003) in `components/heatmap/heatmap-grid.tsx`
+- [x] T029 Verify combined year + agent filter interaction works correctly end-to-end
 
 ---
 
