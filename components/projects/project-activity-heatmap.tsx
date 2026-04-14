@@ -1,5 +1,6 @@
 'use client';
 
+import type { Dispatch, JSX, ReactNode, SetStateAction } from 'react';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -22,6 +23,13 @@ import type {
 
 interface ProjectActivityHeatmapProps {
   initialData: ProjectActivityHeatmapData;
+}
+
+interface TooltipData {
+  title: string;
+  activity: string;
+  shipped: string;
+  cost: string;
 }
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
@@ -73,7 +81,7 @@ async function fetchProjectActivity(filters: ProjectActivityHeatmapFilters): Pro
   return response.json();
 }
 
-function formatTooltip(day: ProjectActivityDay): { title: string; activity: string; shipped: string; cost: string } {
+function formatTooltip(day: ProjectActivityDay): TooltipData {
   const date = new Date(`${day.date}T00:00:00.000Z`);
   return {
     title: DATE_FORMATTER.format(date),
@@ -88,7 +96,37 @@ function getCellClass(day: ProjectActivityDay): string {
   return day.isOutsidePeriod ? `${baseClass} opacity-30` : baseClass;
 }
 
-export function ProjectActivityHeatmap({ initialData }: ProjectActivityHeatmapProps) {
+function updateYearFilter(
+  setFilters: Dispatch<SetStateAction<ProjectActivityHeatmapFilters>>,
+  year: string
+): void {
+  setFilters((current) => ({
+    ...current,
+    year: year as ProjectActivityHeatmapFilters['year'],
+  }));
+}
+
+function updateAgentFilter(
+  setFilters: Dispatch<SetStateAction<ProjectActivityHeatmapFilters>>,
+  agent: string
+): void {
+  setFilters((current) => ({
+    ...current,
+    agent: agent as ProjectActivityHeatmapFilters['agent'],
+  }));
+}
+
+function renderMonthLabel(weekIndex: number, monthLabelByWeek: Map<number, string>): ReactNode {
+  return (
+    <div key={weekIndex} className="h-4">
+      {monthLabelByWeek.get(weekIndex) ?? ''}
+    </div>
+  );
+}
+
+export function ProjectActivityHeatmap({
+  initialData,
+}: ProjectActivityHeatmapProps): JSX.Element {
   const [filters, setFilters] = useState<ProjectActivityHeatmapFilters>(initialData.filters);
   const shouldUseInitialData =
     initialData.filters.year === filters.year && initialData.filters.agent === filters.agent;
@@ -115,7 +153,7 @@ export function ProjectActivityHeatmap({ initialData }: ProjectActivityHeatmapPr
         <div className="grid gap-3 sm:grid-cols-2">
           <Select
             value={filters.year}
-            onValueChange={(year) => setFilters((current) => ({ ...current, year: year as ProjectActivityHeatmapFilters['year'] }))}
+            onValueChange={(year) => updateYearFilter(setFilters, year)}
           >
             <SelectTrigger className="w-full min-w-[180px]" data-testid="projects-activity-year-filter">
               <SelectValue placeholder="Timeframe" />
@@ -132,7 +170,7 @@ export function ProjectActivityHeatmap({ initialData }: ProjectActivityHeatmapPr
 
           <Select
             value={filters.agent}
-            onValueChange={(agent) => setFilters((current) => ({ ...current, agent: agent as ProjectActivityHeatmapFilters['agent'] }))}
+            onValueChange={(agent) => updateAgentFilter(setFilters, agent)}
           >
             <SelectTrigger className="w-full min-w-[180px]" data-testid="projects-activity-agent-filter">
               <SelectValue placeholder="Agent" />
@@ -154,11 +192,9 @@ export function ProjectActivityHeatmap({ initialData }: ProjectActivityHeatmapPr
             className="ml-10 grid gap-1 text-xs text-muted-foreground"
             style={{ gridTemplateColumns: `repeat(${heatmap.weeks}, minmax(0, 1fr))` }}
           >
-            {Array.from({ length: heatmap.weeks }, (_, weekIndex) => (
-              <div key={weekIndex} className="h-4">
-                {monthLabelByWeek.get(weekIndex) ?? ''}
-              </div>
-            ))}
+            {Array.from({ length: heatmap.weeks }, (_, weekIndex) =>
+              renderMonthLabel(weekIndex, monthLabelByWeek)
+            )}
           </div>
 
           <div className="mt-2 flex gap-2">

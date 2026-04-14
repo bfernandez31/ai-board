@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import type { Metadata } from 'next';
 import { ProjectsContainer } from '@/components/projects/projects-container';
 import { ProjectQuotaGate } from '@/components/projects/project-quota-gate';
@@ -18,21 +19,25 @@ export const metadata: Metadata = {
 
 async function getProjects(): Promise<ProjectsListResponse> {
   try {
-    // Use data access layer directly instead of fetch
     const projects = await getUserProjects();
-
     return projects.map(toProjectWithCount);
   } catch (error) {
     console.error('Failed to fetch projects:', error);
-    return []; // Return empty array on error (graceful degradation)
+    return [];
   }
 }
 
-export default async function ProjectsPage() {
+async function getInitialActivityHeatmap(projectCount: number) {
+  if (projectCount === 0) {
+    return null;
+  }
+
+  return getProjectActivityHeatmap({ year: 'rolling', agent: 'all' });
+}
+
+export default async function ProjectsPage(): Promise<JSX.Element> {
   const projects = await getProjects();
-  const activityHeatmap = projects.length > 0
-    ? await getProjectActivityHeatmap({ year: 'rolling', agent: 'all' })
-    : null;
+  const activityHeatmap = await getInitialActivityHeatmap(projects.length);
 
   return (
     <div className="container mx-auto py-8 px-4">

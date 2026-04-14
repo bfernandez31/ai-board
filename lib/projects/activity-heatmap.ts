@@ -1,4 +1,4 @@
-import type { Agent } from '@prisma/client';
+import type { Agent, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import type { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/db/users';
@@ -138,7 +138,7 @@ function buildPeriodRange(filters: ProjectActivityHeatmapFilters, now: Date): Pe
   };
 }
 
-function buildAgentWhere(agent: AgentFilter) {
+function buildAgentWhere(agent: AgentFilter): Prisma.JobWhereInput {
   if (agent === 'all') {
     return {};
   }
@@ -162,15 +162,42 @@ function buildAgentWhere(agent: AgentFilter) {
   };
 }
 
+function buildTicketAgentWhere(agent: AgentFilter): Prisma.TicketWhereInput {
+  if (agent === 'all') {
+    return {};
+  }
+
+  return {
+    OR: [
+      { agent },
+      {
+        agent: null,
+        project: {
+          is: {
+            defaultAgent: agent,
+          },
+        },
+      },
+    ],
+  };
+}
+
 function getAvailableYears(
   now: Date,
   earliestJobAt: Date | null,
   earliestShipAt: Date | null
 ): number[] {
   const currentYear = now.getUTCFullYear();
-  const earliestAt = [earliestJobAt, earliestShipAt]
-    .filter((value): value is Date => value instanceof Date)
-    .sort((left, right) => left.getTime() - right.getTime())[0];
+  const candidateDates = [earliestJobAt, earliestShipAt].filter(
+    (value): value is Date => value instanceof Date
+  );
+  const earliestAt = candidateDates.reduce<Date | null>((earliest, current) => {
+    if (earliest === null || current.getTime() < earliest.getTime()) {
+      return current;
+    }
+
+    return earliest;
+  }, null);
 
   const earliestYear = earliestAt ? earliestAt.getUTCFullYear() : currentYear;
   const years: number[] = [];
@@ -210,6 +237,38 @@ function getMonthLabels(days: ProjectActivityDay[]): ProjectActivityMonthLabel[]
     weekIndex,
     label,
   }));
+}
+
+function getOrCreatePoint(points: Map<string, ActivityPoint>, date: string): ActivityPoint {
+  const existingPoint = points.get(date);
+  if (existingPoint) {
+    return existingPoint;
+  }
+
+  const nextPoint: ActivityPoint = { jobCount: 0, shippedCount: 0, totalCost: 0 };
+  points.set(date, nextPoint);
+  return nextPoint;
+}
+
+function addJobPoint(
+  points: Map<string, ActivityPoint>,
+  completedAt: Date | null,
+  costUsd: number | null
+): void {
+  if (!completedAt) {
+    return;
+  }
+
+  const date = formatIsoDate(toUtcDate(completedAt));
+  const point = getOrCreatePoint(points, date);
+  point.jobCount += 1;
+  point.totalCost += costUsd ?? 0;
+}
+
+function addShippedPoint(points: Map<string, ActivityPoint>, updatedAt: Date): void {
+  const date = formatIsoDate(toUtcDate(updatedAt));
+  const point = getOrCreatePoint(points, date);
+  point.shippedCount += 1;
 }
 
 function createHeatmapDays(
@@ -335,21 +394,7 @@ export async function getProjectActivityHeatmap(
           gte: range.start,
           lte: addUtcDays(range.end, 1),
         },
-        ...(filters.agent === 'all'
-          ? {}
-          : {
-              OR: [
-                { agent: filters.agent },
-                {
-                  agent: null,
-                  project: {
-                    is: {
-                      defaultAgent: filters.agent,
-                    },
-                  },
-                },
-              ],
-            }),
+        ...buildTicketAgentWhere(filters.agent),
       },
       select: {
         updatedAt: true,
@@ -406,21 +451,11 @@ export async function getProjectActivityHeatmap(
   const points = new Map<string, ActivityPoint>();
 
   for (const job of jobs) {
-    if (!job.completedAt) {
-      continue;
-    }
-    const date = formatIsoDate(toUtcDate(job.completedAt));
-    const existing = points.get(date) ?? { jobCount: 0, shippedCount: 0, totalCost: 0 };
-    existing.jobCount += 1;
-    existing.totalCost += job.costUsd ?? 0;
-    points.set(date, existing);
+    addJobPoint(points, job.completedAt, job.costUsd);
   }
 
   for (const ticket of shippedTickets) {
-    const date = formatIsoDate(toUtcDate(ticket.updatedAt));
-    const existing = points.get(date) ?? { jobCount: 0, shippedCount: 0, totalCost: 0 };
-    existing.shippedCount += 1;
-    points.set(date, existing);
+    addShippedPoint(points, ticket.updatedAt);
   }
 
   const heatmap = createHeatmapDays(range, points);
