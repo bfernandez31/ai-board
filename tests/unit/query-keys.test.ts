@@ -108,6 +108,21 @@ describe('Query Keys Factory', () => {
         'projects', 2, 'tickets', 'search', 'feature request'
       ]);
     });
+
+    it('should return correct key for workspace activity heatmap filters', () => {
+      expect(queryKeys.projects.activityHeatmap('rolling-12m', 'all')).toEqual([
+        'projects',
+        'activity-heatmap',
+        'rolling-12m',
+        'all',
+      ]);
+      expect(queryKeys.projects.activityHeatmap('year-2025', 'CODEX')).toEqual([
+        'projects',
+        'activity-heatmap',
+        'year-2025',
+        'CODEX',
+      ]);
+    });
   });
 
   describe('comments', () => {
