@@ -1,12 +1,8 @@
 'use client';
 
-const LEGEND_LEVELS = [
-  'bg-muted/50',
-  'bg-violet-900/40',
-  'bg-violet-700/50',
-  'bg-violet-500/60',
-  'bg-violet-400/80',
-];
+import { INTENSITY_CLASSES } from './heatmap-cell';
+
+const LEGEND_LEVELS = Object.values(INTENSITY_CLASSES);
 
 export function HeatmapLegend() {
   return (

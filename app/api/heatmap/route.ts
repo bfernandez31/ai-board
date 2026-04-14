@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/db/users';
 import { getHeatmapData } from '@/lib/heatmap/queries';
 import { AGENT_FILTER_VALUES } from '@/lib/analytics/types';
-import type { HeatmapFilters } from '@/lib/heatmap/types';
 
 const heatmapQuerySchema = z.object({
   year: z.union([
@@ -18,15 +17,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const userId = await requireAuth();
 
     const { searchParams } = new URL(request.url);
-    const parsed = heatmapQuerySchema.parse({
+    const filters = heatmapQuerySchema.parse({
       year: searchParams.get('year') || undefined,
       agent: searchParams.get('agent') || undefined,
     });
-
-    const filters: HeatmapFilters = {
-      year: parsed.year,
-      agent: parsed.agent,
-    };
 
     const data = await getHeatmapData(userId, filters);
     return NextResponse.json(data);

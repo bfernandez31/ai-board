@@ -3,7 +3,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { IntensityLevel } from '@/lib/heatmap/types';
 
-const INTENSITY_CLASSES: Record<IntensityLevel, string> = {
+export const INTENSITY_CLASSES: Record<IntensityLevel, string> = {
   0: 'bg-muted/50',
   1: 'bg-violet-900/40',
   2: 'bg-violet-700/50',

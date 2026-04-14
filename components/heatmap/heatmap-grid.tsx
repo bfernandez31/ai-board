@@ -1,8 +1,7 @@
 'use client';
 
 import { HeatmapCell } from './heatmap-cell';
-import { getIntensityLevel } from '@/lib/heatmap/types';
-import type { HeatmapDayCell } from '@/lib/heatmap/types';
+import { getIntensityLevel, type HeatmapDayCell } from '@/lib/heatmap/types';
 
 interface HeatmapGridProps {
   cells: HeatmapDayCell[];
@@ -12,15 +11,8 @@ interface HeatmapGridProps {
 const DAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''] as const;
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
 
-interface WeekDay {
-  date: string;
-  jobCount: number;
-  costUsd: number | null;
-  ticketsShipped: number;
-}
-
 interface Week {
-  days: (WeekDay | null)[];
+  days: (HeatmapDayCell | null)[];
 }
 
 function buildGrid(cells: HeatmapDayCell[], year: 'rolling' | number): { weeks: Week[]; monthLabels: { label: string; weekIndex: number }[] } {
