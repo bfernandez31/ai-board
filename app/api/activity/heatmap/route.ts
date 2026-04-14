@@ -1,12 +1,3 @@
-/**
- * Activity Heatmap API Route
- * Feature: AIB-648 - Activity Heatmap on Projects Page
- *
- * GET /api/activity/heatmap
- * Returns daily job counts and shipped ticket counts across all user projects
- * for heatmap visualization.
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
@@ -175,15 +166,14 @@ export async function GET(
       a.date.localeCompare(b.date)
     );
 
-    // Calculate available years
     const currentYear = new Date().getFullYear();
     const oldestYear = oldestJob
       ? oldestJob.startedAt.getFullYear()
       : currentYear;
-    const availableYears: number[] = [];
-    for (let y = currentYear; y >= oldestYear; y--) {
-      availableYears.push(y);
-    }
+    const availableYears = Array.from(
+      { length: currentYear - oldestYear + 1 },
+      (_, i) => currentYear - i
+    );
 
     const totalJobs = jobs.length;
     const totalShipped = shippedTickets.length;
@@ -197,17 +187,14 @@ export async function GET(
       availableYears,
     });
   } catch (error) {
-    console.error('[Heatmap API Error]', error);
-
-    if (error instanceof Error) {
-      if (error.message === 'Unauthorized') {
-        return NextResponse.json(
-          { error: 'Unauthorized: Please sign in' },
-          { status: 401 }
-        );
-      }
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized: Please sign in' },
+        { status: 401 }
+      );
     }
 
+    console.error('[Heatmap API Error]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -1,8 +1,3 @@
-/**
- * TanStack Query hook for activity heatmap data
- * Feature: AIB-648 - Activity Heatmap on Projects Page
- */
-
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/app/lib/query-keys';
 import type { HeatmapResponse } from '@/app/api/activity/heatmap/route';
