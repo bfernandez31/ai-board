@@ -98,6 +98,6 @@ export function useJobPolling(
     isPolling: isFetching || hasActiveJobs,
     lastPollTime: dataUpdatedAt || null,
     errorCount: failureCount,
-    error: error as Error | null,
+    error,
   };
 }
