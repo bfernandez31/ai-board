@@ -6,19 +6,19 @@ import { getHeatmapData } from '@/lib/activity-heatmap/queries';
 import { ALL_AGENTS } from '@/app/lib/utils/agent-resolution';
 import type { HeatmapFilters } from '@/lib/activity-heatmap/types';
 
-const currentYear = new Date().getFullYear();
-
-const querySchema = z.object({
-  year: z
-    .union([
-      z.literal('rolling'),
-      z.coerce.number().int().min(2020).max(currentYear),
-    ])
-    .default('rolling'),
-  agent: z
-    .union([z.literal('all'), z.enum(ALL_AGENTS as unknown as [string, ...string[]])])
-    .default('all'),
-});
+function buildQuerySchema() {
+  return z.object({
+    year: z
+      .union([
+        z.literal('rolling'),
+        z.coerce.number().int().min(2020).max(new Date().getFullYear()),
+      ])
+      .default('rolling'),
+    agent: z
+      .union([z.literal('all'), z.enum(ALL_AGENTS as unknown as [string, ...string[]])])
+      .default('all'),
+  });
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       agent: searchParams.get('agent') ?? undefined,
     };
 
-    const parsed = querySchema.safeParse(raw);
+    const parsed = buildQuerySchema().safeParse(raw);
     if (!parsed.success) {
       const firstError = parsed.error.issues[0];
       const field = String(firstError?.path[0] ?? 'parameter');

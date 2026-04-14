@@ -74,12 +74,6 @@ export async function getHeatmapData(
 
   const agentWhere = buildEffectiveAgentWhere(filters.agent);
 
-  const jobTicketFilter: Prisma.TicketWhereInput = {
-    projectId: { in: projectIds },
-    ...(agentWhere ?? {}),
-  };
-
-  // Fetch jobs in the date range
   const jobs = await prisma.job.findMany({
     where: {
       projectId: { in: projectIds },
@@ -93,10 +87,10 @@ export async function getHeatmapData(
     },
   });
 
-  // Fetch shipped tickets in the date range
   const shippedTickets = await prisma.ticket.findMany({
     where: {
-      ...jobTicketFilter,
+      projectId: { in: projectIds },
+      ...(agentWhere ?? {}),
       stage: 'SHIP',
       updatedAt: { gte: start, lte: end },
     },
@@ -140,8 +134,8 @@ export async function getHeatmapData(
   const totalTicketsShipped = days.reduce((sum, d) => sum + d.ticketsShipped, 0);
 
   const [availableYears, availableAgents] = await Promise.all([
-    getAvailableYears(userId, projectIds),
-    getAvailableAgents(userId, projectIds),
+    getAvailableYears(projectIds),
+    getAvailableAgents(projectIds),
   ]);
 
   return {
@@ -154,7 +148,7 @@ export async function getHeatmapData(
   };
 }
 
-async function getAvailableYears(_userId: string, projectIds: number[]): Promise<number[]> {
+async function getAvailableYears(projectIds: number[]): Promise<number[]> {
   if (projectIds.length === 0) return [];
 
   const jobs = await prisma.job.findMany({
@@ -177,7 +171,7 @@ async function getAvailableYears(_userId: string, projectIds: number[]): Promise
   return Array.from(years).sort((a, b) => a - b);
 }
 
-async function getAvailableAgents(_userId: string, projectIds: number[]): Promise<AgentOption[]> {
+async function getAvailableAgents(projectIds: number[]): Promise<AgentOption[]> {
   if (projectIds.length === 0) {
     return [{ value: 'all', label: 'All agents', jobCount: 0 }];
   }

@@ -12,12 +12,10 @@ export function ProjectsContainer({ projects }: ProjectsContainerProps) {
   }
 
   return (
-    <div>
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project) => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
-      </div>
+    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      {projects.map((project) => (
+        <ProjectCard key={project.id} project={project} />
+      ))}
     </div>
   );
 }

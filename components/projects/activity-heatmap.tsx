@@ -55,7 +55,6 @@ function formatCost(costUsd: number): string {
 
 function buildGrid(
   days: HeatmapDayData[],
-  _periodStart: string,
   periodEnd: string
 ): HeatmapCell[][] {
   const dayMap = new Map(days.map((d) => [d.date, d]));
@@ -105,41 +104,30 @@ function getMonthLabels(rows: HeatmapCell[][]): { label: string; col: number }[]
 }
 
 function HeatmapCellWithTooltip({ cell }: { cell: HeatmapCell }) {
-  if (cell.data) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div
-            data-testid="heatmap-cell-trigger"
-            className={`h-3 w-3 rounded-sm cursor-pointer ${INTENSITY_CLASSES[cell.level]}`}
-          />
-        </TooltipTrigger>
-        <TooltipContent>
-          <div className="text-xs space-y-0.5">
-            <p className="font-medium">{formatCellDate(cell.date)}</p>
-            <p>{cell.data.ticketsShipped} ticket{cell.data.ticketsShipped !== 1 ? 's' : ''} shipped</p>
-            <p>
-              {cell.data.jobCount} job{cell.data.jobCount !== 1 ? 's' : ''}
-              {cell.data.costUsd != null && ` · ${formatCost(cell.data.costUsd)}`}
-            </p>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
+  const hasData = cell.data !== null;
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <div
-          data-testid="heatmap-cell-empty"
-          className={`h-3 w-3 rounded-sm ${INTENSITY_CLASSES[0]}`}
+          data-testid={hasData ? 'heatmap-cell-trigger' : 'heatmap-cell-empty'}
+          className={`h-3 w-3 rounded-sm ${hasData ? 'cursor-pointer' : ''} ${INTENSITY_CLASSES[cell.level]}`}
         />
       </TooltipTrigger>
       <TooltipContent>
-        <div className="text-xs">
+        <div className="text-xs space-y-0.5">
           <p className="font-medium">{formatCellDate(cell.date)}</p>
-          <p>No activity</p>
+          {hasData ? (
+            <>
+              <p>{cell.data!.ticketsShipped} ticket{cell.data!.ticketsShipped !== 1 ? 's' : ''} shipped</p>
+              <p>
+                {cell.data!.jobCount} job{cell.data!.jobCount !== 1 ? 's' : ''}
+                {cell.data!.costUsd != null && ` · ${formatCost(cell.data!.costUsd)}`}
+              </p>
+            </>
+          ) : (
+            <p>No activity</p>
+          )}
         </div>
       </TooltipContent>
     </Tooltip>
@@ -156,7 +144,7 @@ export function ActivityHeatmap() {
 
   const grid = useMemo(() => {
     if (!data) return [];
-    return buildGrid(data.days, data.period.start, data.period.end);
+    return buildGrid(data.days, data.period.end);
   }, [data]);
 
   const monthLabels = useMemo(() => getMonthLabels(grid), [grid]);
