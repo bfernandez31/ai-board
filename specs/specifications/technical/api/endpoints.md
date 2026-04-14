@@ -4496,6 +4496,46 @@ Fetch unified activity feed for a project.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 
+### GET /api/activity/heatmap
+
+Fetch cross-project activity heatmap data for the authenticated user. Aggregates job counts, cost, and shipped ticket counts by calendar day across all projects the user owns or is a member of.
+
+**Authentication**: Required (session)
+
+**Query Parameters**:
+- `year` (number, optional): Calendar year (2020–2100). Omit for rolling 12-month view.
+- `agent` (string, optional): One of `all`, `CLAUDE`, `CODEX`, `MISTRAL`, `GEMINI`. Default: `all`.
+
+**Response** (200 OK):
+```json
+{
+  "days": [
+    {
+      "date": "2025-01-15",
+      "jobCount": 4,
+      "shippedCount": 1,
+      "totalCost": 0.12
+    }
+  ],
+  "totalJobs": 42,
+  "totalShipped": 8,
+  "yearStart": "2024-04-14T00:00:00.000Z",
+  "yearEnd": "2025-04-14T23:59:59.999Z",
+  "availableYears": [2025, 2024]
+}
+```
+
+**Response fields**:
+- `days`: Array of days that have at least one job or shipped ticket; days with no activity are omitted
+- `totalJobs`: Total job count across the returned period
+- `totalShipped`: Total shipped tickets across the returned period
+- `yearStart` / `yearEnd`: ISO timestamps of the queried range
+- `availableYears`: Calendar years with at least one job, descending (used to populate the year picker)
+
+**Errors**:
+- `400`: Invalid query parameters
+- `401`: Not authenticated
+
 ## Token Endpoints
 
 ### GET /api/tokens

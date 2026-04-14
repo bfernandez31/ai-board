@@ -58,6 +58,11 @@ export const queryKeys = {
     ticketJobs: (projectId: number, ticketId: number) =>
       [...queryKeys.projects.detail(projectId), 'tickets', ticketId, 'jobs'] as const,
   },
+
+  activity: {
+    heatmap: (year: number | null, agent: string) =>
+      ['activity', 'heatmap', year, agent] as const,
+  },
 };
 ```
 
@@ -443,6 +448,48 @@ sequenceDiagram
     S->>S: Toggle local isOpen state
     S-->>U: Show or hide dimension breakdown
 ```
+
+### Activity Heatmap Query Hook
+
+**Hook** (`app/lib/hooks/queries/use-activity-heatmap.ts`):
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/app/lib/query-keys';
+import type { HeatmapResponse } from '@/app/api/activity/heatmap/route';
+
+interface UseActivityHeatmapOptions {
+  year: number | null; // null = rolling 12 months
+  agent: string;       // 'all' | 'CLAUDE' | 'CODEX' | 'MISTRAL' | 'GEMINI'
+}
+
+export function useActivityHeatmap({ year, agent }: UseActivityHeatmapOptions) {
+  return useQuery({
+    queryKey: queryKeys.activity.heatmap(year, agent),
+    queryFn: async (): Promise<HeatmapResponse> => {
+      const url = new URL('/api/activity/heatmap', window.location.origin);
+      if (year !== null) url.searchParams.set('year', String(year));
+      if (agent !== 'all') url.searchParams.set('agent', agent);
+      const response = await fetch(url);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch heatmap data');
+      }
+      return response.json();
+    },
+    staleTime: 60000, // 1 minute
+    refetchOnWindowFocus: true,
+  });
+}
+```
+
+**Features**:
+- **Cross-Project Scope**: Aggregates activity across all projects the user owns or is a member of (not scoped to a single project)
+- **Dual Filter**: Supports year selection (specific calendar year or rolling 12-month) and agent filter
+- **1-Minute Stale Time**: Heatmap data changes infrequently; balances freshness with API cost
+- **Refetch on Focus**: Updates when the user returns to the tab
+
+**Query Key**: `['activity', 'heatmap', year, agent]` — cache busts automatically when either filter changes
 
 ### Constitution Hooks
 

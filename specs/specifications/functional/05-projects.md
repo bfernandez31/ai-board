@@ -393,6 +393,29 @@ Projects track activity across all tickets:
 - Ticket count shows total across all stages
 - Activity visible in project list view
 
+### Activity Heatmap
+
+The projects list page displays a cross-project activity heatmap that visualizes AI job activity and shipped tickets across all projects the user can access:
+
+**Display**:
+- GitHub-style calendar grid: columns are weeks, rows are days of the week (Monday–Sunday)
+- Each cell represents one calendar day; color intensity encodes job volume (lighter = fewer, darker = more)
+- Hovering a cell shows a tooltip with: formatted date, job count and cost (if any), and shipped ticket count for that day
+- Month labels appear above the grid; day-of-week labels appear to the left (Mon, Wed, Fri shown)
+- An intensity legend ("Less … More") appears below the grid
+
+**Filters**:
+- **Time range**: "Last 12 months" (rolling default) or a specific calendar year; available years are derived from the user's oldest job
+- **Agent**: All agents, or a specific AI agent (CLAUDE, CODEX, MISTRAL, GEMINI)
+
+**Summary line**:
+- Below the section heading, a subtitle shows total jobs and total shipped tickets for the active time range and agent filter
+
+**Visual design**:
+- Wrapped in an `aurora-bg-section` card with border and padding
+- Loading state shows a centered spinner
+- Empty days render as muted background cells
+
 ## Project Actions
 
 ### Project Analytics
