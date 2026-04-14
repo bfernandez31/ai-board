@@ -18,9 +18,9 @@
 
 **Purpose**: Create TypeScript types and query layer shared by all user stories.
 
-- [ ] T001 [P] Create heatmap TypeScript types (`HeatmapDayData`, `HeatmapResponse`, `HeatmapFilters`, `HeatmapCell`, `AgentOption`) in `lib/activity-heatmap/types.ts` per `data-model.md`
-- [ ] T002 [P] Create Prisma query functions (`getHeatmapData`, `getAvailableYears`, `getAvailableAgents`) in `lib/activity-heatmap/queries.ts` — use owner+member OR pattern from `lib/db/projects.ts:32-35`, `buildEffectiveAgentWhere` pattern from `lib/analytics/queries.ts:51-69`, aggregate Jobs with `status IN (COMPLETED, FAILED)` grouped by `DATE(completedAt)`
-- [ ] T003 Add `heatmap` key factory to `app/lib/query-keys.ts` following existing pattern (keys for filters: year, agent)
+- [x] T001 [P] Create heatmap TypeScript types (`HeatmapDayData`, `HeatmapResponse`, `HeatmapFilters`, `HeatmapCell`, `AgentOption`) in `lib/activity-heatmap/types.ts` per `data-model.md`
+- [x] T002 [P] Create Prisma query functions (`getHeatmapData`, `getAvailableYears`, `getAvailableAgents`) in `lib/activity-heatmap/queries.ts` — use owner+member OR pattern from `lib/db/projects.ts:32-35`, `buildEffectiveAgentWhere` pattern from `lib/analytics/queries.ts:51-69`, aggregate Jobs with `status IN (COMPLETED, FAILED)` grouped by `DATE(completedAt)`
+- [x] T003 Add `heatmap` key factory to `app/lib/query-keys.ts` following existing pattern (keys for filters: year, agent)
 
 ---
 
@@ -30,8 +30,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 Create API route `GET /api/activity-heatmap` in `app/api/activity-heatmap/route.ts` — auth via `requireAuth(request)` from `lib/db/users.ts`, Zod validation for `year` and `agent` query params, call query functions from `lib/activity-heatmap/queries.ts`, return `HeatmapResponse` shape per `contracts/activity-heatmap-api.md`
-- [ ] T005 Create TanStack Query hook `useActivityHeatmap(filters)` in `hooks/use-activity-heatmap.ts` — 15s `refetchInterval`, 10s `staleTime`, use `heatmap` query keys from `app/lib/query-keys.ts`, follow pattern from `hooks/use-usage.ts`
+- [x] T004 Create API route `GET /api/activity-heatmap` in `app/api/activity-heatmap/route.ts` — auth via `requireAuth(request)` from `lib/db/users.ts`, Zod validation for `year` and `agent` query params, call query functions from `lib/activity-heatmap/queries.ts`, return `HeatmapResponse` shape per `contracts/activity-heatmap-api.md`
+- [x] T005 Create TanStack Query hook `useActivityHeatmap(filters)` in `hooks/use-activity-heatmap.ts` — 15s `refetchInterval`, 10s `staleTime`, use `heatmap` query keys from `app/lib/query-keys.ts`, follow pattern from `hooks/use-usage.ts`
 
 **Checkpoint**: API and data layer ready — user story implementation can now begin.
 
@@ -45,14 +45,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T006 [P] [US1] Create integration test for heatmap API endpoint in `tests/integration/activity-heatmap/route.test.ts` — use `getTestContext()` + `ctx.api.get()` pattern from `tests/fixtures/vitest/setup.ts`. Test scenarios: (1) returns heatmap data for user with jobs across multiple projects, (2) returns empty data for user with no jobs, (3) returns 401 for unauthenticated requests, (4) includes jobs from member projects (not just owned)
-- [ ] T007 [P] [US1] Create component test for heatmap rendering in `tests/unit/components/activity-heatmap.test.tsx` — use `renderWithProviders()` from `tests/utils/component-test-utils.tsx`. Test scenarios: (1) renders 7 rows × 52 columns grid, (2) shows correct header metrics, (3) renders empty state with zero counts, (4) legend shows 5 intensity levels, (5) mobile horizontal scroll container present
+- [x] T006 [P] [US1] Create integration test for heatmap API endpoint in `tests/integration/activity-heatmap/route.test.ts` — use `getTestContext()` + `ctx.api.get()` pattern from `tests/fixtures/vitest/setup.ts`. Test scenarios: (1) returns heatmap data for user with jobs across multiple projects, (2) returns empty data for user with no jobs, (3) returns 401 for unauthenticated requests, (4) includes jobs from member projects (not just owned)
+- [x] T007 [P] [US1] Create component test for heatmap rendering in `tests/unit/components/activity-heatmap.test.tsx` — use `renderWithProviders()` from `tests/utils/component-test-utils.tsx`. Test scenarios: (1) renders 7 rows × 52 columns grid, (2) shows correct header metrics, (3) renders empty state with zero counts, (4) legend shows 5 intensity levels, (5) mobile horizontal scroll container present
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Create main heatmap client component in `components/projects/activity-heatmap.tsx` — `"use client"` component containing: header with aggregate metrics ("X jobs · Y tickets shipped in the last year"), 52-column × 7-row grid with month labels top and day-of-week labels left, cells as colored divs with 5 static violet intensity classes (`bg-ctp-surface0/50`, `bg-ctp-mauve/25`, `bg-ctp-mauve/40`, `bg-ctp-mauve/60`, `bg-ctp-mauve`), "Less"→"More" legend at bottom-right, empty state (all transparent, "0 jobs · 0 tickets shipped"), `overflow-x-auto` wrapper for mobile (FR-011), aurora Card styling with `border-ctp-mauve/15 aurora-bg-subtle`
-- [ ] T009 [US1] Remove `overflow-y-auto max-h-[calc(100vh-200px)]` from wrapper div in `components/projects/projects-container.tsx:15` to enable natural page scrolling (D5 in research)
-- [ ] T010 [US1] Mount `<ActivityHeatmap />` below `<ProjectsContainer />` in `app/projects/page.tsx`
+- [x] T008 [US1] Create main heatmap client component in `components/projects/activity-heatmap.tsx` — `"use client"` component containing: header with aggregate metrics ("X jobs · Y tickets shipped in the last year"), 52-column × 7-row grid with month labels top and day-of-week labels left, cells as colored divs with 5 static violet intensity classes (`bg-ctp-surface0/50`, `bg-ctp-mauve/25`, `bg-ctp-mauve/40`, `bg-ctp-mauve/60`, `bg-ctp-mauve`), "Less"→"More" legend at bottom-right, empty state (all transparent, "0 jobs · 0 tickets shipped"), `overflow-x-auto` wrapper for mobile (FR-011), aurora Card styling with `border-ctp-mauve/15 aurora-bg-subtle`
+- [x] T009 [US1] Remove `overflow-y-auto max-h-[calc(100vh-200px)]` from wrapper div in `components/projects/projects-container.tsx:15` to enable natural page scrolling (D5 in research)
+- [x] T010 [US1] Mount `<ActivityHeatmap />` below `<ProjectsContainer />` in `app/projects/page.tsx`
 
 **Checkpoint**: Heatmap is visible on `/projects` with correct grid, coloring, metrics, legend, and scroll behavior. MVP complete.
 
@@ -66,11 +66,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T011 [P] [US2] Extend component test in `tests/unit/components/activity-heatmap.test.tsx` with tooltip scenarios: (1) tooltip displays on cell hover with correct data (tickets shipped, job count, cost, date), (2) tooltip shows "No activity" for empty cells, (3) tooltip hides cost when `costUsd` is null
+- [x] T011 [P] [US2] Extend component test in `tests/unit/components/activity-heatmap.test.tsx` with tooltip scenarios: (1) tooltip displays on cell hover with correct data (tickets shipped, job count, cost, date), (2) tooltip shows "No activity" for empty cells, (3) tooltip hides cost when `costUsd` is null
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Add tooltip functionality to heatmap cells in `components/projects/activity-heatmap.tsx` — wrap cells with shadcn `TooltipProvider`/`Tooltip`/`TooltipTrigger`/`TooltipContent` per P4 pattern from research, display tickets shipped count, job count + formatted cost (when available), and formatted date (e.g., "Monday, March 15, 2026")
+- [x] T012 [US2] Add tooltip functionality to heatmap cells in `components/projects/activity-heatmap.tsx` — wrap cells with shadcn `TooltipProvider`/`Tooltip`/`TooltipTrigger`/`TooltipContent` per P4 pattern from research, display tickets shipped count, job count + formatted cost (when available), and formatted date (e.g., "Monday, March 15, 2026")
 
 **Checkpoint**: Hovering any cell shows accurate tooltip data.
 
@@ -84,12 +84,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T013 [P] [US3] Extend integration test in `tests/integration/activity-heatmap/route.test.ts` with year filter scenarios: (1) filters by specific year correctly, (2) validates invalid year param returns 400
-- [ ] T014 [P] [US3] Extend component test in `tests/unit/components/activity-heatmap.test.tsx` with year selector scenarios: (1) year selector defaults to "Last 12 months", (2) selecting a year changes displayed period and re-fetches data
+- [x] T013 [P] [US3] Extend integration test in `tests/integration/activity-heatmap/route.test.ts` with year filter scenarios: (1) filters by specific year correctly, (2) validates invalid year param returns 400
+- [x] T014 [P] [US3] Extend component test in `tests/unit/components/activity-heatmap.test.tsx` with year selector scenarios: (1) year selector defaults to "Last 12 months", (2) selecting a year changes displayed period and re-fetches data
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Add year selector control (shadcn `Select`) to heatmap header in `components/projects/activity-heatmap.tsx` — populate options from `availableYears` in API response plus "Last 12 months" default, update `HeatmapFilters.year` state on change, trigger re-fetch via `useActivityHeatmap` hook
+- [x] T015 [US3] Add year selector control (shadcn `Select`) to heatmap header in `components/projects/activity-heatmap.tsx` — populate options from `availableYears` in API response plus "Last 12 months" default, update `HeatmapFilters.year` state on change, trigger re-fetch via `useActivityHeatmap` hook
 
 **Checkpoint**: Year selector works — switching years updates the entire heatmap view.
 
@@ -103,12 +103,12 @@
 
 ### Tests for User Story 4
 
-- [ ] T016 [P] [US4] Extend integration test in `tests/integration/activity-heatmap/route.test.ts` with agent filter scenarios: (1) filters by agent correctly, (2) validates invalid agent param returns 400
-- [ ] T017 [P] [US4] Extend component test in `tests/unit/components/activity-heatmap.test.tsx` with agent filter scenarios: (1) agent filter defaults to "All", (2) selecting an agent changes displayed data
+- [x] T016 [P] [US4] Extend integration test in `tests/integration/activity-heatmap/route.test.ts` with agent filter scenarios: (1) filters by agent correctly, (2) validates invalid agent param returns 400
+- [x] T017 [P] [US4] Extend component test in `tests/unit/components/activity-heatmap.test.tsx` with agent filter scenarios: (1) agent filter defaults to "All", (2) selecting an agent changes displayed data
 
 ### Implementation for User Story 4
 
-- [ ] T018 [US4] Add agent filter control (shadcn `Select`) to heatmap header in `components/projects/activity-heatmap.tsx` — populate options from `availableAgents` in API response using `AGENT_LABELS` from `app/lib/utils/agent-resolution.ts`, update `HeatmapFilters.agent` state on change, trigger re-fetch
+- [x] T018 [US4] Add agent filter control (shadcn `Select`) to heatmap header in `components/projects/activity-heatmap.tsx` — populate options from `availableAgents` in API response using `AGENT_LABELS` from `app/lib/utils/agent-resolution.ts`, update `HeatmapFilters.agent` state on change, trigger re-fetch
 
 **Checkpoint**: Agent filter works — selecting an agent updates heatmap, metrics, and tooltips.
 
@@ -118,9 +118,9 @@
 
 **Purpose**: Final validation and hardening across all stories.
 
-- [ ] T019 Run `bun run type-check` and `bun run lint` — fix any errors in new/modified files
-- [ ] T020 Run `bun run test:unit tests/unit/components/activity-heatmap.test.tsx` and `bun run test:integration tests/integration/activity-heatmap/route.test.ts` — verify all tests pass
-- [ ] T021 Verify WCAG AA contrast for all 5 violet intensity levels against dark theme background in `components/projects/activity-heatmap.tsx`
+- [x] T019 Run `bun run type-check` and `bun run lint` — fix any errors in new/modified files
+- [x] T020 Run `bun run test:unit tests/unit/components/activity-heatmap.test.tsx` and `bun run test:integration tests/integration/activity-heatmap/route.test.ts` — verify all tests pass
+- [x] T021 Verify WCAG AA contrast for all 5 violet intensity levels against dark theme background in `components/projects/activity-heatmap.tsx`
 
 ---
 
