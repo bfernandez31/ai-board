@@ -3,6 +3,7 @@ import { ProjectsContainer } from '@/components/projects/projects-container';
 import { ProjectQuotaGate } from '@/components/projects/project-quota-gate';
 import { UsageBanner } from '@/components/billing/usage-banner';
 import { ProjectsHeaderActions } from '@/components/projects/projects-header-actions';
+import { ActivityHeatmap } from '@/components/heatmap/activity-heatmap';
 import { toProjectWithCount, type ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
 
@@ -42,6 +43,10 @@ export default async function ProjectsPage() {
 
       <div className="mt-6">
         <ProjectsContainer projects={projects} />
+      </div>
+
+      <div className="mt-6">
+        <ActivityHeatmap />
       </div>
     </div>
   );

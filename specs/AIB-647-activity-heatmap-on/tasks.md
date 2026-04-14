@@ -18,8 +18,8 @@
 
 **Purpose**: Create type definitions and shared query infrastructure for the heatmap feature
 
-- [ ] T001 [P] Create TypeScript interfaces (`HeatmapData`, `HeatmapDayCell`, `HeatmapFilters`, `IntensityLevel`) in `lib/heatmap/types.ts`
-- [ ] T002 [P] Add `heatmap` query key section to `app/lib/query-keys.ts`
+- [x] T001 [P] Create TypeScript interfaces (`HeatmapData`, `HeatmapDayCell`, `HeatmapFilters`, `IntensityLevel`) in `lib/heatmap/types.ts`
+- [x] T002 [P] Add `heatmap` query key section to `app/lib/query-keys.ts`
 
 ---
 
@@ -29,9 +29,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Implement Prisma query functions (daily jobs aggregation, daily shipped tickets, available years, available agents) in `lib/heatmap/queries.ts` — reuse `buildEffectiveAgentWhere` pattern from `lib/analytics/queries.ts`
-- [ ] T004 Implement `GET /api/heatmap` route with Zod validation, `requireAuth()`, and JSON response in `app/api/heatmap/route.ts` — follow pattern from `app/api/projects/[projectId]/analytics/route.ts`
-- [ ] T005 Create `useHeatmap()` TanStack Query hook with 15s polling in `app/lib/hooks/queries/use-heatmap.ts` — follow pattern from `app/lib/hooks/queries/use-project-activity.ts`
+- [x] T003 Implement Prisma query functions (daily jobs aggregation, daily shipped tickets, available years, available agents) in `lib/heatmap/queries.ts` — reuse `buildEffectiveAgentWhere` pattern from `lib/analytics/queries.ts`
+- [x] T004 Implement `GET /api/heatmap` route with Zod validation, `requireAuth()`, and JSON response in `app/api/heatmap/route.ts` — follow pattern from `app/api/projects/[projectId]/analytics/route.ts`
+- [x] T005 Create `useHeatmap()` TanStack Query hook with 15s polling in `app/lib/hooks/queries/use-heatmap.ts` — follow pattern from `app/lib/hooks/queries/use-project-activity.ts`
 
 **Checkpoint**: API endpoint and query hook ready — UI stories can now begin
 
@@ -46,17 +46,17 @@
 ### Tests for User Story 1
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T006 [P] [US1] Create API integration tests (response shape, daily aggregation accuracy, empty state, auth 401) in `tests/integration/heatmap/heatmap-route.test.ts` — follow pattern from `tests/integration/analytics/analytics-route.test.ts`
-- [ ] T007 [P] [US1] Create component tests (grid renders 7 rows, month labels, day labels, intensity legend, empty state message) in `tests/unit/components/activity-heatmap.test.tsx` — follow pattern from `tests/unit/components/analytics-dashboard.test.tsx`
+- [x] T006 [P] [US1] Create API integration tests (response shape, daily aggregation accuracy, empty state, auth 401) in `tests/integration/heatmap/heatmap-route.test.ts` — follow pattern from `tests/integration/analytics/analytics-route.test.ts`
+- [x] T007 [P] [US1] Create component tests (grid renders 7 rows, month labels, day labels, intensity legend, empty state message) in `tests/unit/components/activity-heatmap.test.tsx` — follow pattern from `tests/unit/components/analytics-dashboard.test.tsx`
 
 ### Implementation for User Story 1
 
-- [ ] T008 [P] [US1] Create `<HeatmapGrid />` — pure presentational CSS grid (52x7) with colored cells, month labels, day-of-week labels in `components/heatmap/heatmap-grid.tsx`
-- [ ] T009 [P] [US1] Create `<HeatmapCell />` — single cell div with intensity color class in `components/heatmap/heatmap-cell.tsx`
-- [ ] T010 [P] [US1] Create `<HeatmapLegend />` — intensity scale from "Less" to "More" in `components/heatmap/heatmap-legend.tsx`
-- [ ] T011 [US1] Create `<ActivityHeatmap />` — main client component orchestrating grid, legend, loading/empty states, mobile horizontal scroll in `components/heatmap/activity-heatmap.tsx`
-- [ ] T012 [US1] Add `<ActivityHeatmap />` section below `ProjectsContainer` in `app/projects/page.tsx`
-- [ ] T013 [US1] Remove `overflow-y-auto max-h-[calc(100vh-200px)]` scroll constraint from `components/projects/projects-container.tsx` (FR-015)
+- [x] T008 [P] [US1] Create `<HeatmapGrid />` — pure presentational CSS grid (52x7) with colored cells, month labels, day-of-week labels in `components/heatmap/heatmap-grid.tsx`
+- [x] T009 [P] [US1] Create `<HeatmapCell />` — single cell div with intensity color class in `components/heatmap/heatmap-cell.tsx`
+- [x] T010 [P] [US1] Create `<HeatmapLegend />` — intensity scale from "Less" to "More" in `components/heatmap/heatmap-legend.tsx`
+- [x] T011 [US1] Create `<ActivityHeatmap />` — main client component orchestrating grid, legend, loading/empty states, mobile horizontal scroll in `components/heatmap/activity-heatmap.tsx`
+- [x] T012 [US1] Add `<ActivityHeatmap />` section below `ProjectsContainer` in `app/projects/page.tsx`
+- [x] T013 [US1] Remove `overflow-y-auto max-h-[calc(100vh-200px)]` scroll constraint from `components/projects/projects-container.tsx` (FR-015)
 
 **Checkpoint**: Heatmap grid visible on projects page with correct colors — MVP complete
 
