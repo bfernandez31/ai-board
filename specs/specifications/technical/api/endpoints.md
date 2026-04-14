@@ -3515,6 +3515,95 @@ sequenceDiagram
 
 **Performance**: Optimized with database aggregation, <3s for projects with up to 1,000 jobs
 
+## Activity Heatmap Endpoints
+
+### GET /api/heatmap
+
+Fetch cross-project daily activity data for the authenticated user's heatmap.
+
+**Authentication**: Required (session)
+**Authorization**: Returns data for all projects owned by or accessible to the user (owner OR member)
+
+**Query Parameters**:
+- `year` (string, optional): Period selector — `rolling` (default, last 12 months) or a 4-digit calendar year (e.g., `2025`)
+- `agent` (string, optional): Agent filter — `all` (default), `CLAUDE`, `CODEX`, `MISTRAL`, or `GEMINI`
+
+**Behavior**:
+- `year=rolling` returns data from today back 365 days
+- A specific calendar year returns data for January 1 through December 31 of that year
+- `cells` is a sparse array — only days with activity are included; the client fills the remaining cells
+- Jobs are attributed to the day of their `startedAt` timestamp
+- "Tickets shipped" per day is determined by the `completedAt` of the ticket's most recent `ship` command job
+- The agent filter matches jobs by the effective agent resolved at ticket level (ticket agent overrides project default)
+
+**Sequence**:
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant R as Heatmap Route
+    participant Q as Heatmap Queries
+    participant DB as Database
+
+    C->>R: GET /api/heatmap?year&agent
+    R->>R: requireAuth(), Zod parse filters
+    R->>Q: getHeatmapData(userId, filters)
+    Q->>DB: Query jobs (daily counts, cost) across user's projects
+    Q->>DB: Query shipped tickets (by ship job completedAt)
+    Q->>DB: Query available years and agents
+    DB-->>Q: Aggregated rows
+    Q-->>R: HeatmapData payload
+    R-->>C: 200 JSON
+```
+
+**Response** (200 OK):
+```json
+{
+  "cells": [
+    {
+      "date": "2026-03-15",
+      "jobCount": 5,
+      "costUsd": 1.50,
+      "ticketsShipped": 1
+    },
+    {
+      "date": "2026-03-16",
+      "jobCount": 2,
+      "costUsd": null,
+      "ticketsShipped": 0
+    }
+  ],
+  "summary": {
+    "totalJobs": 150,
+    "totalTicketsShipped": 12
+  },
+  "filters": {
+    "year": "rolling",
+    "agent": "all"
+  },
+  "availableYears": [2024, 2025, 2026],
+  "availableAgents": [
+    { "value": "all", "label": "All agents" },
+    { "value": "CLAUDE", "label": "Claude" }
+  ]
+}
+```
+
+**Fields**:
+- `cells`: Sparse array of days with activity. Days with zero jobs are omitted; the client renders them as empty cells.
+  - `date`: ISO date string (`YYYY-MM-DD`)
+  - `jobCount`: Number of jobs started on that day
+  - `costUsd`: Total cost of jobs started on that day, or `null` if cost data is unavailable
+  - `ticketsShipped`: Number of tickets whose ship job completed on that day
+- `summary`: Aggregated totals for the entire displayed period
+- `filters`: Echoes the active filter values (after normalization and defaults)
+- `availableYears`: Calendar years that have at least one job, for populating the year selector
+- `availableAgents`: Agents with at least one job in any of the user's projects
+
+**Errors**:
+- `400`: Invalid filter values (non-numeric year, unknown agent)
+- `401`: Not authenticated
+- `500`: Database error
+
 ## Project Member Endpoints
 
 ### GET /api/projects/:projectId/members

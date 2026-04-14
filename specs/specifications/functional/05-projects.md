@@ -127,6 +127,45 @@ When no projects exist:
 - All text content uses `min-w-0` and `truncate` utilities to prevent horizontal scroll
 - Cards maintain fixed width boundaries on mobile viewports (375px minimum)
 
+### Activity Heatmap
+
+A GitHub-style contribution heatmap appears below the project cards grid, visualizing AI job activity across all user projects over the displayed period.
+
+**Layout**:
+- Full-width section below the project card grid (no scroll constraint on the project grid — the page scrolls naturally to reveal the heatmap)
+- Grid of 52 columns (weeks) × 7 rows (days of week)
+- Month labels along the top edge of the grid, aligned to the corresponding week columns
+- Abbreviated day-of-week labels (Mon, Wed, Fri) along the left edge
+- Intensity legend at the bottom right ("Less" → "More")
+
+**Color Scale**:
+- 5 discrete intensity levels — empty (no activity), low, medium, high, max — mapped to a violet palette coherent with the aurora theme
+- Level assigned proportionally to that day's job count relative to the period maximum
+
+**Header**:
+- Displays "X jobs · Y tickets shipped in the last year" (or the selected period label) with real aggregated totals
+
+**Tooltip**:
+- Hovering a cell shows: number of tickets shipped that day, job count and total cost, and formatted date (e.g., "Monday, March 15, 2026")
+- Cells with no activity show "No activity" and the date
+- When job cost is null the tooltip omits the cost value rather than showing $0.00
+
+**Filters**:
+- **Year selector**: Defaults to "Last 12 months" (rolling window). Additional options are specific calendar years with available data. Selecting a calendar year shows January 1 through December 31 of that year.
+- **Agent filter**: "All agents" (default) or a specific AI agent (Claude, Codex, Mistral, Gemini). Affects cells, header counters, and tooltips consistently.
+
+**Empty State**:
+- When no activity exists for the selected period and filters, the grid renders with all cells at the empty level plus a centered informational message (e.g., "No AI activity in this period")
+
+**Mobile**:
+- Horizontal scroll on viewports narrower than the full grid width; day-of-week labels remain sticky during scroll
+
+**Data**:
+- Aggregates job counts across all projects owned by or accessible to the authenticated user
+- Jobs attributed to the day of their `startedAt` timestamp in the user's local timezone
+- "Tickets shipped" per day based on when the ticket's ship command job completed
+- Polling-based refresh every 15 seconds
+
 ## Project Settings
 
 ### Settings Page Navigation

@@ -58,6 +58,11 @@ export const queryKeys = {
     ticketJobs: (projectId: number, ticketId: number) =>
       [...queryKeys.projects.detail(projectId), 'tickets', ticketId, 'jobs'] as const,
   },
+
+  heatmap: {
+    all: ['heatmap'] as const,
+    data: (year: string, agent: string) => ['heatmap', year, agent] as const,
+  },
 };
 ```
 
@@ -1458,6 +1463,33 @@ test('creates ticket with optimistic update', async () => {
   expect(result.current.data.title).toBe('Test');
 });
 ```
+
+### Activity Heatmap Query Hook
+
+**Hook** (`app/lib/hooks/queries/use-heatmap.ts`):
+
+```typescript
+export function useHeatmap({ year, agent, enabled = true }: {
+  year: string;   // 'rolling' or a 4-digit year string
+  agent: string;  // 'all' | 'CLAUDE' | 'CODEX' | 'MISTRAL' | 'GEMINI'
+  enabled?: boolean;
+}) {
+  return useQuery({
+    queryKey: queryKeys.heatmap.data(year, agent),
+    queryFn: () => fetchHeatmap(year, agent),   // GET /api/heatmap?year=&agent=
+    enabled,
+    staleTime: 10000,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+  });
+}
+```
+
+**Features**:
+- **Cross-project**: Aggregates across all projects accessible to the authenticated user — not scoped to a single project
+- **User-scoped key**: Cache key is `['heatmap', year, agent]` — independent of any project ID
+- **Polling**: Refreshes every 15 seconds to reflect new job completions
+- **Filter-driven**: `year` and `agent` are local React state in `ActivityHeatmap`; changing either produces a new cache key and triggers a fresh fetch
 
 ## Best Practices
 
