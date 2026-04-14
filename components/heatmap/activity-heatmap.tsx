@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { useHeatmap } from '@/app/lib/hooks/queries/use-heatmap';
+import { HeatmapFilters } from './heatmap-filters';
 import { HeatmapGrid } from './heatmap-grid';
+import { HeatmapHeader } from './heatmap-header';
 import { HeatmapLegend } from './heatmap-legend';
-import type { AgentFilter } from '@/lib/analytics/types';
 
 export function ActivityHeatmap() {
   const [year, setYear] = useState<string>('rolling');
-  const [agent, setAgent] = useState<AgentFilter>('all');
+  const [agent, setAgent] = useState<string>('all');
 
   const { data, isLoading, isError } = useHeatmap({
     year,
@@ -34,18 +35,19 @@ export function ActivityHeatmap() {
     <div className="aurora-bg-section rounded-lg border border-border/50 p-6">
       {/* Header + Filters row */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4">
-        <div className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">{data.summary.totalJobs.toLocaleString()}</span>
-          {' jobs '}
-          <span className="text-muted-foreground">&middot;</span>
-          {' '}
-          <span className="font-medium text-foreground">{data.summary.totalTicketsShipped.toLocaleString()}</span>
-          {' tickets shipped in the '}
-          {yearValue === 'rolling' ? 'last year' : `year ${yearValue}`}
-        </div>
-        {/* Filter controls — hidden inputs to satisfy state usage until Phase 6/7 */}
-        <input type="hidden" value={year} onChange={(e) => setYear(e.target.value)} />
-        <input type="hidden" value={agent} onChange={(e) => setAgent(e.target.value as AgentFilter)} />
+        <HeatmapHeader
+          totalJobs={data.summary.totalJobs}
+          totalTicketsShipped={data.summary.totalTicketsShipped}
+          periodLabel={yearValue === 'rolling' ? 'last year' : `year ${yearValue}`}
+        />
+        <HeatmapFilters
+          year={year}
+          onYearChange={setYear}
+          availableYears={data.availableYears}
+          agent={agent}
+          onAgentChange={setAgent}
+          availableAgents={data.availableAgents}
+        />
       </div>
 
       {isEmpty ? (

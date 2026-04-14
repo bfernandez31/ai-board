@@ -70,11 +70,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T014 [US2] Add tooltip component tests (hover shows correct content, no-activity tooltip, null-cost display) to `tests/unit/components/activity-heatmap.test.tsx`
+- [x] T014 [US2] Add tooltip component tests (hover shows correct content, no-activity tooltip, null-cost display) to `tests/unit/components/activity-heatmap.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Add shadcn `Tooltip` wrapping to `<HeatmapCell />` with tooltip content logic (tickets shipped, jobs + cost, formatted date, "No activity" for empty cells) in `components/heatmap/heatmap-cell.tsx`
+- [x] T015 [US2] Add shadcn `Tooltip` wrapping to `<HeatmapCell />` with tooltip content logic (tickets shipped, jobs + cost, formatted date, "No activity" for empty cells) in `components/heatmap/heatmap-cell.tsx`
 
 **Checkpoint**: Hovering any cell shows accurate tooltip — Stories 1+2 complete
 
@@ -88,12 +88,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T016 [US3] Add header component tests (correct summary text, updates with period change) to `tests/unit/components/activity-heatmap.test.tsx`
+- [x] T016 [US3] Add header component tests (correct summary text, updates with period change) to `tests/unit/components/activity-heatmap.test.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T017 [P] [US3] Create `<HeatmapHeader />` — summary line with total jobs and shipped tickets in `components/heatmap/heatmap-header.tsx`
-- [ ] T018 [US3] Integrate `<HeatmapHeader />` into `<ActivityHeatmap />` above the grid in `components/heatmap/activity-heatmap.tsx`
+- [x] T017 [P] [US3] Create `<HeatmapHeader />` — summary line with total jobs and shipped tickets in `components/heatmap/heatmap-header.tsx`
+- [x] T018 [US3] Integrate `<HeatmapHeader />` into `<ActivityHeatmap />` above the grid in `components/heatmap/activity-heatmap.tsx`
 
 **Checkpoint**: Summary metrics visible above heatmap
 
@@ -107,13 +107,13 @@
 
 ### Tests for User Story 4
 
-- [ ] T019 [P] [US4] Add year filter API tests (rolling vs specific year date ranges, empty year) to `tests/integration/heatmap/heatmap-route.test.ts`
-- [ ] T020 [P] [US4] Add year selector component tests (default "Last 12 months", year change updates view) to `tests/unit/components/activity-heatmap.test.tsx`
+- [x] T019 [P] [US4] Add year filter API tests (rolling vs specific year date ranges, empty year) to `tests/integration/heatmap/heatmap-route.test.ts`
+- [x] T020 [P] [US4] Add year selector component tests (default "Last 12 months", year change updates view) to `tests/unit/components/activity-heatmap.test.tsx`
 
 ### Implementation for User Story 4
 
-- [ ] T021 [P] [US4] Create `<HeatmapFilters />` with year selector dropdown (shadcn Select) in `components/heatmap/heatmap-filters.tsx` — follow pattern from `components/analytics/time-range-selector.tsx`
-- [ ] T022 [US4] Wire year filter state and query params into `<ActivityHeatmap />` in `components/heatmap/activity-heatmap.tsx`
+- [x] T021 [P] [US4] Create `<HeatmapFilters />` with year selector dropdown (shadcn Select) in `components/heatmap/heatmap-filters.tsx` — follow pattern from `components/analytics/time-range-selector.tsx`
+- [x] T022 [US4] Wire year filter state and query params into `<ActivityHeatmap />` in `components/heatmap/activity-heatmap.tsx`
 
 **Checkpoint**: Year selector functional, heatmap updates on year change
 
@@ -127,13 +127,13 @@
 
 ### Tests for User Story 5
 
-- [ ] T023 [P] [US5] Add agent filter API tests (filter by agent, agent with no activity) to `tests/integration/heatmap/heatmap-route.test.ts`
-- [ ] T024 [P] [US5] Add agent filter component tests (default "All agents", filter change updates view) to `tests/unit/components/activity-heatmap.test.tsx`
+- [x] T023 [P] [US5] Add agent filter API tests (filter by agent, agent with no activity) to `tests/integration/heatmap/heatmap-route.test.ts`
+- [x] T024 [P] [US5] Add agent filter component tests (default "All agents", filter change updates view) to `tests/unit/components/activity-heatmap.test.tsx`
 
 ### Implementation for User Story 5
 
-- [ ] T025 [US5] Add agent filter dropdown to `<HeatmapFilters />` in `components/heatmap/heatmap-filters.tsx`
-- [ ] T026 [US5] Wire agent filter state and query params into `<ActivityHeatmap />` in `components/heatmap/activity-heatmap.tsx`
+- [x] T025 [US5] Add agent filter dropdown to `<HeatmapFilters />` in `components/heatmap/heatmap-filters.tsx`
+- [x] T026 [US5] Wire agent filter state and query params into `<ActivityHeatmap />` in `components/heatmap/activity-heatmap.tsx`
 
 **Checkpoint**: Agent filter functional, all filters combine correctly
 
