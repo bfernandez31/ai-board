@@ -1,0 +1,280 @@
+openapi: 3.1.0
+info:
+  title: Projects Activity Heatmap API
+  version: 1.0.0
+  description: Workspace-wide daily activity aggregate for the `/projects` heatmap section.
+
+servers:
+  - url: /api
+    description: API base path
+
+paths:
+  /projects/activity:
+    get:
+      operationId: getProjectsActivityHeatmap
+      summary: Get workspace activity heatmap data
+      description: |
+        Returns a full-year daily activity grid aggregated across all projects the
+        authenticated user can access on the `/projects` page. Supports a rolling
+        last-12-month view and historical calendar-year views, plus effective-agent filtering.
+      tags:
+        - Projects
+        - Activity
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: view
+          in: query
+          required: false
+          description: Reporting period selector
+          schema:
+            type: string
+            default: rolling-12m
+            pattern: ^(rolling-12m|year-[0-9]{4})$
+            examples:
+              - rolling-12m
+              - year-2025
+        - name: agent
+          in: query
+          required: false
+          description: Effective agent filter
+          schema:
+            type: string
+            default: all
+            enum:
+              - all
+              - CLAUDE
+              - CODEX
+              - MISTRAL
+              - GEMINI
+      responses:
+        '200':
+          description: Heatmap data returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsActivityHeatmapResponse'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Invalid activity heatmap filters
+                code: VALIDATION_ERROR
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Unauthorized
+                code: AUTH_ERROR
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Failed to fetch activity heatmap
+                code: INTERNAL_ERROR
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie
+
+  schemas:
+    ProjectsActivityHeatmapResponse:
+      type: object
+      required:
+        - view
+        - availableViews
+        - filters
+        - availableAgents
+        - summary
+        - legend
+        - days
+        - generatedAt
+      properties:
+        view:
+          $ref: '#/components/schemas/YearViewOption'
+        availableViews:
+          type: array
+          items:
+            $ref: '#/components/schemas/YearViewOption'
+        filters:
+          type: object
+          required:
+            - agent
+          properties:
+            agent:
+              type: string
+              enum: [all, CLAUDE, CODEX, MISTRAL, GEMINI]
+        availableAgents:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentScopeOption'
+        summary:
+          $ref: '#/components/schemas/HeatmapSummary'
+        legend:
+          type: array
+          items:
+            $ref: '#/components/schemas/HeatmapLegendBucket'
+        days:
+          type: array
+          minItems: 365
+          items:
+            $ref: '#/components/schemas/HeatmapDay'
+        generatedAt:
+          type: string
+          format: date-time
+
+    YearViewOption:
+      type: object
+      required:
+        - value
+        - label
+        - startDate
+        - endDate
+        - isDefault
+      properties:
+        value:
+          type: string
+          examples: [rolling-12m, year-2025]
+        label:
+          type: string
+          examples: [Last 12 months, 2025]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        isDefault:
+          type: boolean
+
+    AgentScopeOption:
+      type: object
+      required:
+        - value
+        - label
+        - jobCount
+        - isDefault
+      properties:
+        value:
+          type: string
+          enum: [all, CLAUDE, CODEX, MISTRAL, GEMINI]
+        label:
+          type: string
+        jobCount:
+          type: integer
+          minimum: 0
+        isDefault:
+          type: boolean
+
+    HeatmapSummary:
+      type: object
+      required:
+        - jobCount
+        - ticketsShipped
+        - costUsd
+        - hasAnyActivity
+        - rangeLabel
+      properties:
+        jobCount:
+          type: integer
+          minimum: 0
+        ticketsShipped:
+          type: integer
+          minimum: 0
+        costUsd:
+          type: number
+          minimum: 0
+        hasAnyActivity:
+          type: boolean
+        rangeLabel:
+          type: string
+
+    HeatmapLegendBucket:
+      type: object
+      required:
+        - level
+        - label
+        - minJobs
+      properties:
+        level:
+          type: integer
+          minimum: 0
+          maximum: 4
+        label:
+          type: string
+        minJobs:
+          type: integer
+          minimum: 0
+        maxJobs:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+
+    HeatmapDay:
+      type: object
+      required:
+        - date
+        - weekday
+        - weekIndex
+        - monthLabel
+        - jobCount
+        - ticketsShipped
+        - costUsd
+        - intensityLevel
+        - isInPrimaryRange
+      properties:
+        date:
+          type: string
+          format: date
+        weekday:
+          type: integer
+          minimum: 0
+          maximum: 6
+        weekIndex:
+          type: integer
+          minimum: 0
+        monthLabel:
+          type:
+            - string
+            - 'null'
+        jobCount:
+          type: integer
+          minimum: 0
+        ticketsShipped:
+          type: integer
+          minimum: 0
+        costUsd:
+          type: number
+          minimum: 0
+        intensityLevel:
+          type: integer
+          minimum: 0
+          maximum: 4
+        isInPrimaryRange:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        code:
+          type:
+            - string
+            - 'null'
