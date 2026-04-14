@@ -4496,6 +4496,61 @@ Fetch unified activity feed for a project.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 
+### GET /api/activity-heatmap
+
+Fetch daily job and shipped-ticket aggregates across all user-accessible projects for the activity heatmap on the projects page.
+
+**Authentication**: Required (session or PAT — `requireAuth(request)`)
+**Authorization**: Cross-project; scoped to all projects the authenticated user owns or is a member of
+
+**Query Parameters**:
+- `year` (string, optional): `"rolling"` for the last 12 months (default) or a 4-digit calendar year (2020–current)
+- `agent` (string, optional): `"all"` (default), `"CLAUDE"`, `"CODEX"`, `"MISTRAL"`, or `"GEMINI"`
+
+**Response** (200 OK):
+```json
+{
+  "days": [
+    {
+      "date": "2026-03-15",
+      "jobCount": 5,
+      "costUsd": 1.23,
+      "ticketsShipped": 1
+    },
+    {
+      "date": "2026-03-16",
+      "jobCount": 2,
+      "costUsd": null,
+      "ticketsShipped": 0
+    }
+  ],
+  "totalJobs": 342,
+  "totalTicketsShipped": 47,
+  "availableYears": [2024, 2025, 2026],
+  "availableAgents": [
+    { "value": "all", "label": "All agents", "jobCount": 342 },
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 280 },
+    { "value": "GEMINI", "label": "Gemini", "jobCount": 62 }
+  ],
+  "period": {
+    "start": "2025-04-14",
+    "end": "2026-04-14"
+  }
+}
+```
+
+**Notes**:
+- Only terminal jobs (`status IN (COMPLETED, FAILED)`) are counted; `completedAt` determines the activity date
+- Agent filtering is applied via the ticket's effective agent (`ticket.agent ?? project.defaultAgent`)
+- `costUsd` is `null` for a day when no jobs in that day have cost data
+- `days` contains only dates with at least one job; empty days are omitted
+- Rolling window: 365 days back from today; calendar year: Jan 1 – Dec 31 (or today if current year)
+- Client-side TanStack Query polling: 15-second stale time, 15-second refetch interval
+
+**Errors**:
+- `400`: Invalid `year` or `agent` parameter
+- `401`: Not authenticated
+
 ## Token Endpoints
 
 ### GET /api/tokens

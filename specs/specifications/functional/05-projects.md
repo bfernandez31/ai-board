@@ -393,6 +393,37 @@ Projects track activity across all tickets:
 - Ticket count shows total across all stages
 - Activity visible in project list view
 
+### Activity Heatmap
+
+The projects page displays a GitHub-style activity heatmap below the project cards grid. The heatmap shows AI job activity aggregated across all projects the user has access to (owned and member projects) over a selected period.
+
+**Visualization**:
+- A grid of 52 columns (weeks) × 7 rows (days of the week), covering the selected period
+- Each cell represents one calendar day; its color reflects daily job count intensity using a violet (`ctp-mauve`) palette with 5 levels (empty, low, medium, high, max)
+- Intensity levels are percentile-based relative to the user's maximum daily count in the displayed period
+- Month labels appear along the top; day-of-week labels appear along the left side
+- An intensity legend ("Less" → "More") is displayed at the bottom-right
+
+**Header Metrics**:
+- Displays "X jobs · Y tickets shipped in the last year" (or selected period) with accurate aggregate totals
+- "Tickets shipped" counts tickets that have reached the SHIP stage
+
+**Tooltips**:
+- Hovering a cell shows a tooltip with: tickets shipped that day, job count and total cost (omitted when cost data is unavailable), and the formatted date
+- Days with no activity display "No activity" and the formatted date
+
+**Controls**:
+- **Year selector**: Defaults to "Last 12 months" (rolling 12-month window); calendar-year options appear for each year with recorded activity
+- **Agent filter**: Defaults to "All agents"; options for each agent (Claude, Gemini, etc.) that has recorded activity; derived from the parent ticket's `agent` field
+
+**Responsive behavior**:
+- On mobile viewports, the heatmap grid scrolls horizontally to preserve the full year view without data loss
+
+**Data scope**:
+- Aggregates all jobs with terminal status (COMPLETED or FAILED) from all projects the user owns or is a member of
+- No new database models — derived entirely from existing `Job` and `Ticket` records
+- Refreshes every 15 seconds via TanStack Query polling
+
 ## Project Actions
 
 ### Project Analytics
