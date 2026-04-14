@@ -6,6 +6,7 @@ import {
   DEFAULT_ACTIVITY_HEATMAP_VIEW,
 } from '@/lib/projects/activity-heatmap-types';
 import {
+  buildActivityHeatmapErrorResponse,
   getProjectsActivityHeatmap,
   isValidActivityHeatmapYearView,
 } from '@/lib/projects/activity-heatmap';
@@ -40,17 +41,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(data);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized', code: 'AUTH_ERROR' },
-        { status: 401 }
-      );
+    const errorResponse = buildActivityHeatmapErrorResponse(error);
+
+    if (errorResponse.code === 'AUTH_ERROR') {
+      return NextResponse.json(errorResponse, { status: 401 });
     }
 
     console.error('Projects activity heatmap API error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch activity heatmap', code: 'INTERNAL_ERROR' },
-      { status: 500 }
-    );
+
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

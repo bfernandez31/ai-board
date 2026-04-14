@@ -31,6 +31,25 @@ interface WorkspaceProject {
   defaultAgent: Agent;
 }
 
+interface JobActivityRow {
+  startedAt: Date;
+  costUsd: number | null;
+  ticket: {
+    agent: Agent | null;
+    project: {
+      defaultAgent: Agent;
+    };
+  };
+}
+
+interface ShippedTicketActivityRow {
+  updatedAt: Date;
+  agent: Agent | null;
+  project: {
+    defaultAgent: Agent;
+  };
+}
+
 interface ActivityHeatmapFilters {
   view?: ActivityHeatmapYearViewValue;
   agent?: ActivityHeatmapAgentScopeValue;
@@ -82,10 +101,7 @@ function getCalendarYearRange(year: number): DateRange {
   };
 }
 
-function resolveRange(
-  view: ActivityHeatmapYearViewValue,
-  now: Date
-): DateRange {
+function resolveRange(view: ActivityHeatmapYearViewValue, now: Date): DateRange {
   if (view === DEFAULT_ACTIVITY_HEATMAP_VIEW) {
     return getRollingRange(now);
   }
@@ -124,15 +140,6 @@ function createEmptyAggregate(): DailyAggregate {
 }
 
 function getBucketThresholds(maxCount: number): Array<{ min: number; max: number | null }> {
-  if (maxCount <= 0) {
-    return [
-      { min: 1, max: 1 },
-      { min: 2, max: 2 },
-      { min: 3, max: 3 },
-      { min: 4, max: null },
-    ];
-  }
-
   if (maxCount <= 4) {
     return [
       { min: 1, max: 1 },
@@ -333,16 +340,8 @@ async function fetchActivityRows(
   projects: WorkspaceProject[],
   range: DateRange
 ): Promise<{
-  jobs: Array<{
-    startedAt: Date;
-    costUsd: number | null;
-    ticket: { agent: Agent | null; project: { defaultAgent: Agent } };
-  }>;
-  shippedTickets: Array<{
-    updatedAt: Date;
-    agent: Agent | null;
-    project: { defaultAgent: Agent };
-  }>;
+  jobs: JobActivityRow[];
+  shippedTickets: ShippedTicketActivityRow[];
 }> {
   const projectIds = projects.map((project) => project.id);
   if (projectIds.length === 0) {
@@ -411,9 +410,7 @@ function matchesAgent(
 }
 
 function buildAvailableAgentOptions(
-  jobs: Array<{
-    ticket: { agent: Agent | null; project: { defaultAgent: Agent } };
-  }>,
+  jobs: JobActivityRow[],
   selectedAgent: ActivityHeatmapAgentScopeValue
 ): AgentScopeOption[] {
   const counts = new Map<Agent, number>();
@@ -467,16 +464,8 @@ function buildAvailableAgentOptions(
 
 function buildAggregates(
   range: DateRange,
-  jobs: Array<{
-    startedAt: Date;
-    costUsd: number | null;
-    ticket: { agent: Agent | null; project: { defaultAgent: Agent } };
-  }>,
-  shippedTickets: Array<{
-    updatedAt: Date;
-    agent: Agent | null;
-    project: { defaultAgent: Agent };
-  }>,
+  jobs: JobActivityRow[],
+  shippedTickets: ShippedTicketActivityRow[],
   selectedAgent: ActivityHeatmapAgentScopeValue
 ): Map<string, DailyAggregate> {
   const aggregates = createAggregateMap(range);
@@ -526,18 +515,14 @@ export async function getProjectsActivityHeatmap(
   const now = startOfUtcDay(new Date());
   const view = filters.view ?? DEFAULT_ACTIVITY_HEATMAP_VIEW;
   const agent = filters.agent ?? DEFAULT_ACTIVITY_HEATMAP_AGENT;
+  const selectedRange = resolveRange(view, now);
 
   const projects = await getWorkspaceProjects(request);
   const projectIds = projects.map((project) => project.id);
-  const [{ earliestYear }, selectedRange] = await Promise.all([
-    getHistoryBounds(projectIds),
-    Promise.resolve(resolveRange(view, now)),
-  ]);
+  const { earliestYear } = await getHistoryBounds(projectIds);
 
-  const [availableViews, { jobs, shippedTickets }] = await Promise.all([
-    Promise.resolve(buildAvailableViews(now, earliestYear)),
-    fetchActivityRows(projects, selectedRange),
-  ]);
+  const { jobs, shippedTickets } = await fetchActivityRows(projects, selectedRange);
+  const availableViews = buildAvailableViews(now, earliestYear);
 
   const aggregates = buildAggregates(selectedRange, jobs, shippedTickets, agent);
   const days = buildDayGrid(selectedRange, aggregates);

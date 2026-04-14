@@ -29,6 +29,11 @@ interface ProjectsActivityHeatmapProps {
   initialData: ProjectsActivityHeatmapResponse;
 }
 
+interface ActivityHeatmapFilters {
+  view: ActivityHeatmapYearViewValue;
+  agent: ActivityHeatmapAgentScopeValue;
+}
+
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
@@ -47,20 +52,19 @@ const intensityClassNames: Record<HeatmapDay['intensityLevel'], string> = {
 const weekdayLabels = ['', 'Mon', '', 'Wed', '', 'Fri', ''] as const;
 
 function filtersMatch(
-  view: ActivityHeatmapYearViewValue,
-  agent: ActivityHeatmapAgentScopeValue,
+  filters: ActivityHeatmapFilters,
   initialData: ProjectsActivityHeatmapResponse
 ): boolean {
-  return view === initialData.view.value && agent === initialData.filters.agent;
+  return (
+    filters.view === initialData.view.value &&
+    filters.agent === initialData.filters.agent
+  );
 }
 
 function getInitialState(
   searchParams: URLSearchParams,
   initialData: ProjectsActivityHeatmapResponse
-): {
-  view: ActivityHeatmapYearViewValue;
-  agent: ActivityHeatmapAgentScopeValue;
-} {
+): ActivityHeatmapFilters {
   const requestedView = searchParams.get('view');
   const requestedAgent = searchParams.get('agent');
 
@@ -113,12 +117,26 @@ function renderTooltip(day: HeatmapDay) {
   );
 }
 
-export function ProjectsActivityHeatmap({ initialData }: ProjectsActivityHeatmapProps) {
+function getRefreshStateLabel(isError: boolean, isFetching: boolean): string {
+  if (isError) {
+    return 'Refresh failed';
+  }
+
+  if (isFetching) {
+    return 'Refreshing activity…';
+  }
+
+  return 'Updated automatically every 15 seconds';
+}
+
+export function ProjectsActivityHeatmap({
+  initialData,
+}: ProjectsActivityHeatmapProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState(() => getInitialState(searchParams, initialData));
 
-  const shouldUseInitialData = filtersMatch(filters.view, filters.agent, initialData);
+  const shouldUseInitialData = filtersMatch(filters, initialData);
 
   const { data, isFetching, isError } = useQuery({
     queryKey: queryKeys.projects.activityHeatmap(filters.view, filters.agent),
@@ -133,12 +151,7 @@ export function ProjectsActivityHeatmap({ initialData }: ProjectsActivityHeatmap
   const weekCount = (heatmap.days.at(-1)?.weekIndex ?? -1) + 1;
   const monthMarkers = heatmap.days.filter((day) => day.monthLabel);
 
-  const updateFilters = (
-    next: Partial<{
-      view: ActivityHeatmapYearViewValue;
-      agent: ActivityHeatmapAgentScopeValue;
-    }>
-  ) => {
+  const updateFilters = (next: Partial<ActivityHeatmapFilters>) => {
     const nextFilters = {
       view: next.view ?? filters.view,
       agent: next.agent ?? filters.agent,
@@ -208,11 +221,7 @@ export function ProjectsActivityHeatmap({ initialData }: ProjectsActivityHeatmap
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           <span data-testid="projects-activity-refresh-state">
-            {isError
-              ? 'Refresh failed'
-              : isFetching
-                ? 'Refreshing activity…'
-                : 'Updated automatically every 15 seconds'}
+            {getRefreshStateLabel(isError, isFetching)}
           </span>
 
           <div className="flex flex-wrap items-center gap-2" data-testid="projects-activity-legend">
