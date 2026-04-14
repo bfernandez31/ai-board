@@ -168,21 +168,6 @@ After writing files, you MUST use Read tool to verify the changes were actually 
 **⚠️ NOTE**: BUILD stage support is planned but not yet implemented.
 Currently, @ai-board mentions in BUILD stage will return a message that this feature is not available.
 
-**Future Goal**: Provide guidance and clarification during implementation phase.
-
-<!-- Future implementation placeholder:
-**Process**:
-1. READ CONSTITUTION and specs
-2. ANALYZE REQUEST for guidance needed
-3. PROVIDE GUIDANCE with code examples
-4. UPDATE SPECS if clarifications affect requirements
-5. CREATE RESULT file
-6. OUTPUT helpful guidance
-
-Example: "@ai-board how should I handle database pooling?"
-Action: Provide examples and best practices
--->
-
 ### VERIFY Stage
 
 **Goal**: Handle issues discovered during testing with intelligent quantification and automated iteration for larger fixes.
@@ -198,7 +183,7 @@ Action: Provide examples and best practices
 - **ITERATE_REQUIRED**: Complex multi-file changes, changes that need spec synchronization
 
 **✅ VERIFY STAGE CAPABILITIES**:
-- ✅ **CAN FIX CODE DIRECTLY**: Edit source files (*.tsx, *.ts, *.js, *.css) - changes ARE committed
+- ✅ **CAN FIX CODE DIRECTLY**: Edit source files - changes ARE committed
 - ✅ **CAN UPDATE SPECS**: Update spec.md, plan.md, tasks.md directly
 - ✅ **CAN REQUEST ITERATE**: For complex multi-file changes needing spec sync
 - ❌ **CANNOT**: Make architectural changes, major refactoring, or changes exceeding 60% divergence
