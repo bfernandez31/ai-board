@@ -115,5 +115,5 @@ Follow the testing strategy defined in the project's constitution. Use the "Exis
 
 ## Key rules
 
-- Use absolute paths
+- Use paths relative to repository root (e.g. `specs/AIB-123/plan.md`, NOT absolute paths like `/home/runner/...`)
 - ERROR on gate failures or unresolved clarifications
