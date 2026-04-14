@@ -52,6 +52,7 @@ describe('useJobPolling - Cache Invalidation', () => {
     // Verify invalidateQueries was called with correct query key
     await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['projects', 1, 'tickets'],
+      exact: true,
     }), { timeout: 1000 });
   });
 
@@ -143,10 +144,11 @@ describe('useJobPolling - Cache Invalidation', () => {
     // Should invalidate tickets cache once
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['projects', 1, 'tickets'],
+      exact: true,
     });
   });
 
-  it('should invalidate ticketJobs cache when a job disappears', async () => {
+  it('should invalidate ticketJobs and individual ticket cache when a job disappears', async () => {
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
     let callCount = 0;
@@ -174,10 +176,19 @@ describe('useJobPolling - Cache Invalidation', () => {
     // Wait for second poll (job disappeared)
     await waitFor(() => expect(result.current.jobs.length).toBe(0), { timeout: 1000 });
 
-    // Verify ticketJobs cache was invalidated for the disappeared job's ticket
-    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({
+    // Verify all three caches were invalidated
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledTimes(3), { timeout: 1000 });
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets'],
+      exact: true,
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['projects', 1, 'tickets', 10, 'jobs'],
-    }), { timeout: 1000 });
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets', 10],
+    });
   });
 
   it('should invalidate ticketJobs for each disappeared job in multiple jobs scenario', async () => {
@@ -205,11 +216,12 @@ describe('useJobPolling - Cache Invalidation', () => {
       ),
     });
 
-    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledTimes(3), { timeout: 1000 });
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledTimes(5), { timeout: 1000 });
 
     // Should invalidate tickets once
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['projects', 1, 'tickets'],
+      exact: true,
     });
 
     // Should invalidate ticketJobs for ticket 10
@@ -220,6 +232,61 @@ describe('useJobPolling - Cache Invalidation', () => {
     // Should invalidate ticketJobs for ticket 20
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['projects', 1, 'tickets', 20, 'jobs'],
+    });
+
+    // Should invalidate individual ticket cache for ticket 10
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets', 10],
+    });
+
+    // Should invalidate individual ticket cache for ticket 20
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets', 20],
+    });
+  });
+
+  it('should invalidate caches when a tracked job transitions to COMPLETED (not disappeared)', async () => {
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    // Simulates the tracked-job-ID behaviour: job stays in response but status changes
+    let callCount = 0;
+    global.fetch = vi.fn(() => {
+      callCount++;
+      const jobs: JobStatusDto[] = callCount === 1
+        ? [{ id: 1, ticketId: 10, status: 'RUNNING', updatedAt: new Date().toISOString() }]
+        : [{ id: 1, ticketId: 10, status: 'COMPLETED', updatedAt: new Date().toISOString() }];
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ jobs }),
+      } as Response);
+    });
+
+    const { result } = renderHook(() => useJobPolling(1, 100), {
+      wrapper: ({ children }) => (
+        React.createElement(QueryClientProvider, { client: queryClient }, children)
+      ),
+    });
+
+    // Wait for first poll (RUNNING)
+    await waitFor(() => expect(result.current.jobs.length).toBe(1), { timeout: 1000 });
+    expect(result.current.jobs[0].status).toBe('RUNNING');
+
+    // Wait for second poll (COMPLETED — job still present but terminal)
+    await waitFor(() => expect(result.current.jobs[0]?.status).toBe('COMPLETED'), { timeout: 1000 });
+
+    // Should have invalidated: tickets, ticketJobs(10), ticket(10)
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledTimes(3), { timeout: 1000 });
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets'],
+      exact: true,
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets', 10, 'jobs'],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets', 10],
     });
   });
 });

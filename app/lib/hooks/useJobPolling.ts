@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useEffect, useMemo } from 'react';
 import { queryKeys } from '@/app/lib/query-keys';
+import { isTerminalStatus } from '@/app/lib/schemas/job-polling';
 import type { JobStatusDto } from '@/app/lib/schemas/job-polling';
 
 export interface UseJobPollingReturn {
@@ -63,31 +64,49 @@ export function useJobPolling(
   const jobs = useMemo(() => data || [], [data]);
   const hasActiveJobs = jobs.some((job) => job.status === 'PENDING' || job.status === 'RUNNING');
 
-  // Detect when previously seen jobs stop being returned. This should now be rare because
-  // tracked job IDs keep terminal jobs visible, but invalidation remains as a safety net
-  // and refreshes richer ticket/job payloads after workflow completion.
+  // With tracked job IDs, terminal jobs stay in the response instead of disappearing,
+  // so we detect transitions by comparing previous vs current status.
   useEffect(() => {
     if (previousJobsRef.current.length === 0 && jobs.length > 0) {
       previousJobsRef.current = jobs;
       return;
     }
 
+    const previousById = new Map(previousJobsRef.current.map(j => [j.id, j]));
+
+    const newlyTerminalJobs = jobs.filter(job => {
+      const prev = previousById.get(job.id);
+      return prev && !isTerminalStatus(prev.status) && isTerminalStatus(job.status);
+    });
+
+    // Safety net: rare with tracked IDs
     const currentIds = new Set(jobs.map(j => j.id));
     const disappearedJobs = previousJobsRef.current.filter(
       prev => !currentIds.has(prev.id)
     );
 
-    if (disappearedJobs.length > 0) {
-      console.log('[useJobPolling] Jobs completed:', disappearedJobs.map(j => j.id));
+    const jobsToInvalidate = [...newlyTerminalJobs, ...disappearedJobs];
+
+    if (jobsToInvalidate.length > 0) {
+      console.log('[useJobPolling] Jobs reached terminal state:', jobsToInvalidate.map(j => `${j.id}(${j.status})`));
       queryClient.invalidateQueries({
         queryKey: queryKeys.projects.tickets(projectId),
+        exact: true,
       });
 
-      for (const job of disappearedJobs) {
+      const ticketIds = new Set(jobsToInvalidate.map(j => j.ticketId));
+      for (const ticketId of ticketIds) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.projects.ticketJobs(projectId, job.ticketId),
+          queryKey: queryKeys.projects.ticketJobs(projectId, ticketId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.ticket(projectId, ticketId),
         });
       }
+    }
+
+    for (const job of jobsToInvalidate) {
+      trackedJobIdsRef.current.delete(job.id);
     }
 
     previousJobsRef.current = jobs;
