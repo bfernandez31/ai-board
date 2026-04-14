@@ -225,23 +225,25 @@ export async function POST(
         fields = parsed.fields;
         files = parsed.files;
       } catch (error: unknown) {
-        if ((error as { code?: number }).code === 1015) {
-          return NextResponse.json(
-            {
-              error: 'Maximum 5 images allowed per ticket',
-              code: 'VALIDATION_ERROR',
-            },
-            { status: 400 }
-          );
-        }
-        if ((error as { code?: number }).code === 1009) {
-          return NextResponse.json(
-            {
-              error: 'Total file size exceeds 10MB limit',
-              code: 'VALIDATION_ERROR',
-            },
-            { status: 400 }
-          );
+        if (typeof error === 'object' && error !== null && 'code' in error) {
+          if (error.code === 1015) {
+            return NextResponse.json(
+              {
+                error: 'Maximum 5 images allowed per ticket',
+                code: 'VALIDATION_ERROR',
+              },
+              { status: 400 }
+            );
+          }
+          if (error.code === 1009) {
+            return NextResponse.json(
+              {
+                error: 'Total file size exceeds 10MB limit',
+                code: 'VALIDATION_ERROR',
+              },
+              { status: 400 }
+            );
+          }
         }
         throw error;
       }
