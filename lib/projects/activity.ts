@@ -73,6 +73,13 @@ type ActivityJobRecord = {
   ticketId: number;
 };
 
+type DaySummary = {
+  jobCount: number;
+  shippedTicketIds: Set<number>;
+  totalCostUsd: number;
+  hasMissingCost: boolean;
+};
+
 const TERMINAL_JOB_STATUSES: JobStatus[] = [
   JobStatus.COMPLETED,
   JobStatus.FAILED,
@@ -192,6 +199,24 @@ function computeIntensity(jobCount: number, maxJobsPerDay: number): 0 | 1 | 2 | 
   return Math.max(1, Math.ceil((jobCount / maxJobsPerDay) * 4)) as 1 | 2 | 3 | 4;
 }
 
+function getDayTotalCost(summary: DaySummary | undefined): number | null {
+  if (summary == null) {
+    return 0;
+  }
+
+  if (summary.hasMissingCost) {
+    return null;
+  }
+
+  return Math.round(summary.totalCostUsd * 100) / 100;
+}
+
+function getMonthLabel(date: string): string {
+  return new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' }).format(
+    new Date(`${date}T00:00:00.000Z`)
+  );
+}
+
 async function getAccessibleProjectIds(userId: string): Promise<number[]> {
   const projects = await prisma.project.findMany({
     where: {
@@ -287,15 +312,7 @@ function buildHeatmap(
   jobs: ActivityJobRecord[],
   period: ActivityPeriod
 ): ProjectsActivityResponse['heatmap'] {
-  const daySummaries = new Map<
-    string,
-    {
-      jobCount: number;
-      shippedTicketIds: Set<number>;
-      totalCostUsd: number;
-      hasMissingCost: boolean;
-    }
-  >();
+  const daySummaries = new Map<string, DaySummary>();
 
   for (const job of jobs) {
     const dayKey = formatDate(job.completedAt);
@@ -347,26 +364,15 @@ function buildHeatmap(
         dayOfWeek: date.getUTCDay(),
         jobCount,
         shippedTickets: summary?.shippedTicketIds.size ?? 0,
-        totalCostUsd:
-          summary == null
-            ? 0
-            : summary.hasMissingCost
-              ? null
-              : Math.round(summary.totalCostUsd * 100) / 100,
+        totalCostUsd: getDayTotalCost(summary),
         intensity: computeIntensity(jobCount, maxJobsPerDay),
       });
     }
 
-    const monthAnchor = days.find(
-      (day) => day !== null && day.date.slice(8, 10) === '01'
-    );
+    const monthAnchor = days.find((day) => day !== null && day.date.slice(8, 10) === '01');
 
     weeks.push({
-      monthLabel: monthAnchor
-        ? new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' }).format(
-            new Date(`${monthAnchor.date}T00:00:00.000Z`)
-          )
-        : null,
+      monthLabel: monthAnchor ? getMonthLabel(monthAnchor.date) : null,
       days,
     });
   }
@@ -396,10 +402,8 @@ export async function getProjectsActivityData(
     throw new Error('Unauthorized');
   }
 
-  const [projectIds, periodOptions] = await Promise.all([
-    getAccessibleProjectIds(userId),
-    Promise.resolve(buildYearPeriods(user.createdAt, now)),
-  ]);
+  const periodOptions = buildYearPeriods(user.createdAt, now);
+  const projectIds = await getAccessibleProjectIds(userId);
   const availableAgents = await getAvailableAgents(projectIds);
 
   const period = normalizeYearFilter(filters.year, periodOptions);

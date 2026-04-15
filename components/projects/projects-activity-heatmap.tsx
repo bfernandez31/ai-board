@@ -32,6 +32,19 @@ interface ProjectsActivityHeatmapProps {
   initialData: ProjectsActivityResponse;
 }
 
+interface FiltersState {
+  year: string;
+  agent: string;
+}
+
+interface FilterSelectProps {
+  value: string;
+  options: ProjectsActivityFilterOption[];
+  onValueChange: (value: string) => void;
+  placeholder: string;
+  testId: string;
+}
+
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
 function getIntensityClass(intensity: ProjectsActivityDay['intensity']): string {
@@ -79,7 +92,7 @@ function formatCurrency(value: number): string {
 
 function buildSearchParams(
   searchParams: URLSearchParams,
-  filters: { year: string; agent: string }
+  filters: FiltersState
 ): URLSearchParams {
   const params = new URLSearchParams(searchParams.toString());
   params.set('year', filters.year);
@@ -87,11 +100,11 @@ function buildSearchParams(
   return params;
 }
 
-async function fetchProjectsActivity(filters: {
-  year: string;
-  agent: string;
-}): Promise<ProjectsActivityResponse> {
-  const params = new URLSearchParams(filters);
+async function fetchProjectsActivity(filters: FiltersState): Promise<ProjectsActivityResponse> {
+  const params = new URLSearchParams({
+    year: filters.year,
+    agent: filters.agent,
+  });
   const response = await fetch(`/api/projects/activity?${params.toString()}`);
 
   if (!response.ok) {
@@ -101,7 +114,26 @@ async function fetchProjectsActivity(filters: {
   return response.json();
 }
 
-function ActivityCell({ day }: { day: ProjectsActivityDay }) {
+function ActivityDetails({
+  day,
+  className,
+}: {
+  day: ProjectsActivityDay;
+  className: string;
+}): JSX.Element {
+  return (
+    <div className={className}>
+      <p className="font-medium text-foreground">{formatTooltipDate(day.date)}</p>
+      <p className="text-muted-foreground">{day.shippedTickets} tickets shipped</p>
+      <p className="text-muted-foreground">{day.jobCount} jobs</p>
+      {day.totalCostUsd !== null && (
+        <p className="text-muted-foreground">{formatCurrency(day.totalCostUsd)} total cost</p>
+      )}
+    </div>
+  );
+}
+
+function ActivityCell({ day }: { day: ProjectsActivityDay }): JSX.Element {
   const [open, setOpen] = useState(false);
 
   return (
@@ -119,26 +151,12 @@ function ActivityCell({ day }: { day: ProjectsActivityDay }) {
           </PopoverAnchor>
         </TooltipTrigger>
         <TooltipContent side="top" className="hidden sm:block">
-          <div className="space-y-1 text-xs">
-            <p className="font-medium text-foreground">{formatTooltipDate(day.date)}</p>
-            <p className="text-muted-foreground">{day.shippedTickets} tickets shipped</p>
-            <p className="text-muted-foreground">{day.jobCount} jobs</p>
-            {day.totalCostUsd !== null && (
-              <p className="text-muted-foreground">{formatCurrency(day.totalCostUsd)} total cost</p>
-            )}
-          </div>
+          <ActivityDetails day={day} className="space-y-1 text-xs" />
         </TooltipContent>
       </Tooltip>
 
       <PopoverContent side="top" className="w-56 sm:hidden">
-        <div className="space-y-1 text-sm">
-          <p className="font-medium text-foreground">{formatTooltipDate(day.date)}</p>
-          <p className="text-muted-foreground">{day.shippedTickets} tickets shipped</p>
-          <p className="text-muted-foreground">{day.jobCount} jobs</p>
-          {day.totalCostUsd !== null && (
-            <p className="text-muted-foreground">{formatCurrency(day.totalCostUsd)} total cost</p>
-          )}
-        </div>
+        <ActivityDetails day={day} className="space-y-1 text-sm" />
       </PopoverContent>
     </Popover>
   );
@@ -150,13 +168,7 @@ function FilterSelect({
   onValueChange,
   placeholder,
   testId,
-}: {
-  value: string;
-  options: ProjectsActivityFilterOption[];
-  onValueChange: (value: string) => void;
-  placeholder: string;
-  testId: string;
-}) {
+}: FilterSelectProps): JSX.Element {
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger className="w-full sm:w-[180px]" data-testid={testId}>
@@ -178,7 +190,7 @@ export function ProjectsActivityHeatmap({
 }: ProjectsActivityHeatmapProps): JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [filters, setFilters] = useState<ProjectsActivityResponse['filters']>(initialData.filters);
+  const [filters, setFilters] = useState<FiltersState>(initialData.filters);
 
   const shouldUseInitialData =
     filters.year === initialData.filters.year && filters.agent === initialData.filters.agent;
@@ -196,12 +208,13 @@ export function ProjectsActivityHeatmap({
   const showAgentFilter = activity.availableAgents.length > 2;
   const showYearFilter = activity.periodOptions.length > 1;
   const gridWidth = `${activity.heatmap.totalWeeks * 24}px`;
+  const gridTemplateColumns = `repeat(${activity.heatmap.totalWeeks}, minmax(0, 1fr))`;
 
-  const updateFilters = (nextFilters: typeof filters) => {
+  function updateFilters(nextFilters: FiltersState): void {
     setFilters(nextFilters);
     const params = buildSearchParams(searchParams, nextFilters);
     router.push(`?${params.toString()}`, { scroll: false });
-  };
+  }
 
   return (
     <Card className="aurora-card border-border/60 overflow-hidden" data-testid="projects-activity-heatmap">
@@ -225,11 +238,11 @@ export function ProjectsActivityHeatmap({
               />
             )}
 
-              <FilterSelect
-                value={filters.year}
-                options={activity.periodOptions}
-                onValueChange={(year) =>
-                  updateFilters({ ...filters, year: year as ProjectsActivityResponse['filters']['year'] })
+            <FilterSelect
+              value={filters.year}
+              options={activity.periodOptions}
+              onValueChange={(year) =>
+                updateFilters({ ...filters, year: year as ProjectsActivityResponse['filters']['year'] })
                 }
                 placeholder="Period"
                 testId="projects-activity-year-filter"
@@ -263,7 +276,7 @@ export function ProjectsActivityHeatmap({
             <div className="space-y-2" style={{ minWidth: gridWidth }}>
               <div
                 className="grid gap-1.5 text-[11px] text-muted-foreground"
-                style={{ gridTemplateColumns: `repeat(${activity.heatmap.totalWeeks}, minmax(0, 1fr))` }}
+                style={{ gridTemplateColumns }}
               >
                 {activity.heatmap.weeks.map((week, index) => (
                   <div key={`${week.monthLabel ?? 'blank'}-${index}`} className="h-5">
@@ -275,7 +288,7 @@ export function ProjectsActivityHeatmap({
               {activity.heatmap.hasActivity ? (
                 <div
                   className="grid gap-1.5"
-                  style={{ gridTemplateColumns: `repeat(${activity.heatmap.totalWeeks}, minmax(0, 1fr))` }}
+                  style={{ gridTemplateColumns }}
                 >
                   {activity.heatmap.weeks.map((week, weekIndex) => (
                     <div key={`week-${weekIndex}`} className="grid gap-1.5">

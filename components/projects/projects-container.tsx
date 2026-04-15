@@ -6,7 +6,7 @@ interface ProjectsContainerProps {
   projects: ProjectWithCount[];
 }
 
-export function ProjectsContainer({ projects }: ProjectsContainerProps) {
+export function ProjectsContainer({ projects }: ProjectsContainerProps): JSX.Element {
   if (projects.length === 0) {
     return <EmptyProjectsState />;
   }

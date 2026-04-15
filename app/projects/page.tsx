@@ -32,7 +32,7 @@ export default async function ProjectsPage({
   searchParams,
 }: {
   searchParams: Promise<{ year?: string; agent?: string }>;
-}) {
+}): Promise<JSX.Element> {
   const filters = await searchParams;
   const [projects, initialActivityData] = await Promise.all([
     getProjects(),
