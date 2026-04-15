@@ -2,17 +2,8 @@
 
 import { useMemo, useState, useRef, useCallback } from 'react';
 import type { HeatmapCell } from '@/lib/heatmap/types';
-import { getDayLabels, getMonthLabels } from '@/lib/heatmap/utils';
-import type { MonthLabel } from '@/lib/heatmap/utils';
+import { INTENSITY_CLASSES, getDayLabels, getMonthLabels } from '@/lib/heatmap/utils';
 import { HeatmapTooltip } from './heatmap-tooltip';
-
-const INTENSITY_CLASSES = [
-  'bg-muted',
-  'bg-primary/20',
-  'bg-primary/40',
-  'bg-primary/60',
-  'bg-primary/80',
-] as const;
 
 interface HeatmapGridProps {
   grid: (HeatmapCell | null)[][];
@@ -83,7 +74,7 @@ export function HeatmapGrid({ grid, periodStart, periodEnd }: HeatmapGridProps) 
                 <div
                   key={row}
                   data-testid={label ? 'day-label' : undefined}
-                  className={`h-[14px] mb-[2px] flex items-center text-[10px] text-muted-foreground pr-1 sticky left-0 bg-background z-10 ${label ? 'sticky' : ''}`}
+                  className="h-[14px] mb-[2px] flex items-center text-[10px] text-muted-foreground pr-1 sticky left-0 bg-background z-10"
                 >
                   {label?.text ?? ''}
                 </div>
@@ -95,7 +86,7 @@ export function HeatmapGrid({ grid, periodStart, periodEnd }: HeatmapGridProps) 
           <div className="relative">
             {/* Month labels */}
             <div className="flex h-[18px] relative">
-              {monthLabels.map((label: MonthLabel, i: number) => (
+              {monthLabels.map((label, i) => (
                 <span
                   key={`${label.text}-${i}`}
                   className="absolute text-[10px] text-muted-foreground"
@@ -117,7 +108,7 @@ export function HeatmapGrid({ grid, periodStart, periodEnd }: HeatmapGridProps) 
               {Array.from({ length: numCols }, (_, col) =>
                 Array.from({ length: 7 }, (_, row) => {
                   const cell = grid[row]?.[col];
-                  if (cell === null || cell === undefined) {
+                  if (cell == null) {
                     return (
                       <div
                         key={`${row}-${col}`}

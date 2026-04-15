@@ -1,16 +1,10 @@
-const LEGEND_CLASSES = [
-  'bg-muted',
-  'bg-primary/20',
-  'bg-primary/40',
-  'bg-primary/60',
-  'bg-primary/80',
-] as const;
+import { INTENSITY_CLASSES } from '@/lib/heatmap/utils';
 
 export function HeatmapLegend() {
   return (
     <div className="flex items-center gap-1 text-xs text-muted-foreground">
       <span>Less</span>
-      {LEGEND_CLASSES.map((cls, i) => (
+      {INTENSITY_CLASSES.map((cls, i) => (
         <div
           key={i}
           data-testid="legend-cell"

@@ -5,6 +5,7 @@ import { ALL_AGENTS } from '@/app/lib/utils/agent-resolution';
 import { getAgentLabel } from '@/lib/analytics/aggregations';
 import type { AgentOption, AgentFilter, NamedAgent } from '@/lib/analytics/types';
 import type { HeatmapData, HeatmapDay, HeatmapFilters } from './types';
+import { formatDateKey } from './utils';
 
 function buildEffectiveAgentWhere(agent: NamedAgent | 'all'): Prisma.TicketWhereInput | undefined {
   if (agent === 'all') {
@@ -50,13 +51,6 @@ function getDateRange(year: string, now: Date): { start: Date; end: Date } {
     start: new Date(yearNum, 0, 1, 0, 0, 0, 0),
     end: new Date(yearNum, 11, 31, 23, 59, 59, 999),
   };
-}
-
-function formatDateKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
 }
 
 export async function getHeatmapData(
@@ -124,12 +118,7 @@ export async function getHeatmapData(
   }));
 
   const totalJobs = jobs.length;
-  const totalShippedSet = new Set<string>();
-  for (const day of days) {
-    for (const key of day.shippedTickets) {
-      totalShippedSet.add(key);
-    }
-  }
+  const totalShippedSet = new Set(days.flatMap((d) => d.shippedTickets));
 
   // Available agents: query across all user projects (unfiltered by date/agent)
   const agentTickets = await prisma.ticket.findMany({
@@ -144,9 +133,9 @@ export async function getHeatmapData(
     },
   });
 
-  const agentCounts = new Map<string, number>([
-    ...ALL_AGENTS.map((a) => [a, 0] as const),
-  ]);
+  const agentCounts = new Map<string, number>(
+    ALL_AGENTS.map((a) => [a, 0] as const),
+  );
 
   for (const ticket of agentTickets) {
     const effective = (ticket.agent ?? ticket.project.defaultAgent) as NamedAgent;

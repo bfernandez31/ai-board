@@ -179,7 +179,15 @@ export function getDayLabels(): DayLabel[] {
   ];
 }
 
-function formatDateKey(date: Date): string {
+export const INTENSITY_CLASSES = [
+  'bg-muted',
+  'bg-primary/20',
+  'bg-primary/40',
+  'bg-primary/60',
+  'bg-primary/80',
+] as const;
+
+export function formatDateKey(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
