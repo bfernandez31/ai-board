@@ -132,6 +132,7 @@ export async function GET(
         id: true,
         command: true,
         status: true,
+        branch: true,
         startedAt: true,
         completedAt: true,
         inputTokens: true,

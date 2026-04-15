@@ -28,6 +28,7 @@ function createJob(overrides: Partial<TicketJobWithTelemetry> = {}): TicketJobWi
     id: 1,
     command: 'verify',
     status: 'COMPLETED',
+    branch: null,
     startedAt: '2026-03-17T10:00:00Z',
     completedAt: '2026-03-17T10:30:00Z',
     inputTokens: null,

@@ -52,6 +52,7 @@ export interface TicketJobWithTelemetry {
   id: number;
   command: string;
   status: string;
+  branch: string | null;
   startedAt: Date | string;
   completedAt: Date | string | null;
   inputTokens: number | null;

@@ -289,4 +289,58 @@ describe('useJobPolling - Cache Invalidation', () => {
       queryKey: ['projects', 1, 'tickets', 10],
     });
   });
+
+  it('should keep tracking a seeded pending job so a fast FAILED transition is still observed', async () => {
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    queryClient.setQueryData(['projects', 1, 'jobs', 'status'], [
+      {
+        id: 77,
+        ticketId: 12,
+        status: 'PENDING',
+        command: 'specify',
+        updatedAt: new Date().toISOString(),
+      },
+    ] satisfies JobStatusDto[]);
+
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      expect(url).toContain('/api/projects/1/jobs/status?jobIds=77');
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          jobs: [
+            {
+              id: 77,
+              ticketId: 12,
+              status: 'FAILED',
+              command: 'specify',
+              updatedAt: new Date().toISOString(),
+            },
+          ],
+        }),
+      } as Response);
+    });
+
+    const { result } = renderHook(() => useJobPolling(1, 100), {
+      wrapper: ({ children }) => (
+        React.createElement(QueryClientProvider, { client: queryClient }, children)
+      ),
+    });
+
+    await waitFor(() => expect(result.current.jobs[0]?.status).toBe('FAILED'), { timeout: 1000 });
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets'],
+      exact: true,
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets', 12, 'jobs'],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets', 12],
+    });
+  });
 });

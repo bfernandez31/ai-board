@@ -21,6 +21,22 @@ export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
   CLOSED: null, // Terminal state - no workflow
 };
 
+/**
+ * Resolve the workflow command triggered by a stage transition.
+ * INBOX → BUILD bypasses SPECIFY/PLAN and uses the dedicated quick-impl
+ * command instead of the regular `implement`. All other transitions defer
+ * to STAGE_COMMAND_MAP.
+ */
+export function getCommandForTransition(
+  sourceStage: Stage,
+  targetStage: Stage
+): string | null {
+  if (sourceStage === Stage.INBOX && targetStage === Stage.BUILD) {
+    return 'quick-impl';
+  }
+  return STAGE_COMMAND_MAP[targetStage];
+}
+
 export interface TransitionResult {
   success: boolean;
   jobId?: number;
@@ -145,7 +161,8 @@ export async function handleTicketTransition(
       };
     }
 
-    const isQuickImpl = currentStage === Stage.INBOX && targetStage === Stage.BUILD;
+    const command = getCommandForTransition(currentStage, targetStage);
+    const isQuickImpl = command === 'quick-impl';
 
     if (!isQuickImpl) {
       const jobValidation = await validateJobCompletion(ticket, targetStage);
@@ -153,8 +170,6 @@ export async function handleTicketTransition(
         return jobValidation;
       }
     }
-
-    const command = isQuickImpl ? 'quick-impl' : STAGE_COMMAND_MAP[targetStage];
 
     if (!command) {
       return {

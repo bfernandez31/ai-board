@@ -77,6 +77,7 @@ function createMockJob(
     id: 1,
     command: 'specify',
     status: 'COMPLETED',
+    branch: null,
     startedAt: new Date().toISOString(),
     completedAt: new Date().toISOString(),
     inputTokens: 1000,
@@ -87,6 +88,8 @@ function createMockJob(
     durationMs: 300000,
     model: 'claude-opus-4-5',
     toolsUsed: ['Read', 'Edit'],
+    qualityScore: null,
+    qualityScoreDetails: null,
     ...overrides,
   };
 }

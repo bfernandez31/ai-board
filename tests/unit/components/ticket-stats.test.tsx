@@ -21,6 +21,7 @@ function createMockJob(
     id: 1,
     command: 'specify',
     status: 'COMPLETED',
+    branch: null,
     startedAt: '2025-01-01T10:00:00Z',
     completedAt: '2025-01-01T10:05:00Z',
     inputTokens: 1000,

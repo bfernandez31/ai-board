@@ -2,6 +2,8 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/app/lib/query-keys';
+import type { JobStatusDto } from '@/app/lib/schemas/job-polling';
+import { seedPendingJobIntoStatusCache } from '@/lib/utils/job-cache';
 
 /**
  * Deploy Preview Response from API
@@ -12,7 +14,7 @@ interface DeployPreviewResponse {
     ticketId: number;
     projectId: number;
     command: string;
-    status: string;
+    status: JobStatusDto['status'];
     branch: string | null;
     completedAt: string | null;
     createdAt: string;
@@ -90,7 +92,15 @@ export function useDeployPreview(projectId: number) {
     },
 
     // Invalidate and refetch after success
-    onSuccess: () => {
+    onSuccess: (data) => {
+      seedPendingJobIntoStatusCache(queryClient, projectId, {
+        id: data.job.id,
+        ticketId: data.job.ticketId,
+        status: data.job.status,
+        command: data.job.command,
+        updatedAt: data.job.updatedAt,
+      });
+
       // Invalidate tickets to show cleared preview URLs (single-preview enforcement)
       queryClient.invalidateQueries({
         queryKey: queryKeys.projects.tickets(projectId),

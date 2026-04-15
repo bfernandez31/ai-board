@@ -42,6 +42,9 @@ import { Job, ClarificationPolicy } from '@prisma/client';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { DualJobState } from '@/lib/types/job-types';
 import { getWorkflowJob, getAIBoardJob, getDeployJob } from '@/lib/utils/job-filtering';
+import { createSnapshotJob, mergePolledIntoExistingJob, mergePolledJobsIntoSnapshots, pruneSnapshotsByTicketIds, replaceTicketJobSnapshot } from '@/lib/utils/job-snapshots';
+import { seedPendingJobIntoStatusCache } from '@/lib/utils/job-cache';
+import { getCommandForTransition } from '@/lib/workflows/transition';
 import {
   canRollbackToInbox,
   canRollbackToPlan,
@@ -106,6 +109,48 @@ function mergeTransitionFields(serverData: Record<string, unknown>, current: Tic
   };
 }
 
+function toBoardSnapshotJobs(
+  jobs: ReturnType<typeof useTicketJobs>['data'],
+  ticketId: number,
+  projectId: number
+): Job[] {
+  if (!jobs || jobs.length === 0) {
+    return [];
+  }
+
+  return jobs.map((job) => {
+    const startedAt = new Date(job.startedAt);
+    const completedAt = job.completedAt ? new Date(job.completedAt) : null;
+
+    return {
+      id: job.id,
+      ticketId,
+      projectId,
+      command: job.command,
+      status: job.status as Job['status'],
+      workflowRunId: null,
+      branch: job.branch,
+      commitSha: null,
+      logs: null,
+      startedAt,
+      completedAt,
+      createdAt: startedAt,
+      updatedAt: completedAt ?? startedAt,
+      inputTokens: job.inputTokens,
+      outputTokens: job.outputTokens,
+      cacheReadTokens: job.cacheReadTokens,
+      cacheCreationTokens: job.cacheCreationTokens,
+      costUsd: job.costUsd,
+      durationMs: job.durationMs,
+      model: job.model,
+      thinkingTokens: null,
+      toolsUsed: job.toolsUsed,
+      qualityScore: job.qualityScore,
+      qualityScoreDetails: job.qualityScoreDetails,
+    } as Job;
+  });
+}
+
 export function Board({
   ticketsByStage: initialTicketsByStage,
   projectId,
@@ -142,6 +187,8 @@ export function Board({
       }
     }
   }, [projectId, initialJobs, queryClient]);
+
+  const [jobSnapshots, setJobSnapshots] = useState(() => new Map(initialJobs));
 
   // Fetch tickets using TanStack Query (automatically updates on cache invalidation)
   const { data: ticketsByStage = initialTicketsByStage } = useTicketsByStage(projectId);
@@ -357,6 +404,33 @@ export function Board({
     isModalOpen
   );
 
+  useEffect(() => {
+    setJobSnapshots((current) => mergePolledJobsIntoSnapshots(current, polledJobs, projectId));
+  }, [polledJobs, projectId]);
+
+  // Drop snapshots for tickets that disappeared (deleted, closed, paginated out)
+  // so the in-memory map doesn't accumulate orphan entries across long sessions.
+  useEffect(() => {
+    const validIds = new Set(allTickets.map((ticket) => ticket.id));
+    setJobSnapshots((current) => pruneSnapshotsByTicketIds(current, validIds));
+  }, [allTickets]);
+
+  useEffect(() => {
+    if (!selectedTicketId || selectedTicketJobs.length === 0) {
+      return;
+    }
+
+    const snapshotJobs = toBoardSnapshotJobs(
+      selectedTicketJobs,
+      selectedTicketId,
+      projectId
+    );
+
+    setJobSnapshots((current) =>
+      replaceTicketJobSnapshot(current, selectedTicketId, snapshotJobs)
+    );
+  }, [projectId, selectedTicketId, selectedTicketJobs]);
+
   // Find the ticket with active preview URL (for single-preview warning)
   const activePreviewTicket = useMemo(() => {
     const ticketWithPreview = allTickets.find(t => t.previewUrl !== null && t.previewUrl !== undefined);
@@ -437,8 +511,10 @@ export function Board({
   // - Creates minimal Job objects for new jobs created during session
   const getTicketJobs = useCallback(
     (ticketId: number): DualJobState => {
-      // Get initial jobs array for this ticket
-      const ticketInitialJobs = initialJobs.get(ticketId) || [];
+      // Job snapshots are the board's live source of truth. They start with the
+      // server-fetched jobs, absorb polling updates in place, and preserve the
+      // last terminal workflow state even after /jobs/status drops it.
+      const ticketSnapshotJobs = jobSnapshots.get(ticketId) || [];
 
       // Get all polled jobs for this ticket
       const ticketPolledJobs = polledJobs.filter(job => job.ticketId === ticketId);
@@ -451,65 +527,25 @@ export function Board({
         return verifyJob?.qualityScore ?? null;
       };
 
-      // If no jobs at all, return null state
-      if (ticketInitialJobs.length === 0 && ticketPolledJobs.length === 0) {
+      if (ticketSnapshotJobs.length === 0 && ticketPolledJobs.length === 0) {
         return { workflow: null, aiBoard: null, deployJob: null, qualityScore: null };
       }
 
-      // If no polled jobs yet, use initial jobs (first render)
-      if (ticketPolledJobs.length === 0) {
-        const ticket = allTickets.find(t => t.id === ticketId);
-        return {
-          workflow: ticket ? getWorkflowJob(ticketInitialJobs, ticket.stage) : null,
-          aiBoard: ticket ? getAIBoardJob(ticketInitialJobs, ticket.stage) : null,
-          deployJob: getDeployJob(ticketInitialJobs),
-          qualityScore: getLatestQualityScore(ticketInitialJobs),
-        };
-      }
-
-      // Merge polled status updates with initial job data
+      // Merge active polled status updates with the latest known snapshot, keeping
+      // terminal history from the snapshot for jobs no longer returned by polling.
       const activeJobs: Job[] = ticketPolledJobs.map(polledJob => {
-        // Find matching initial job by ID
-        const matchingInitialJob = ticketInitialJobs.find(j => j.id === polledJob.id);
-
-        if (matchingInitialJob) {
-          // Update status from polling but keep other fields from initial
-          return {
-            ...matchingInitialJob,
-            status: polledJob.status,
-            command: polledJob.command, // Update command in case it changed
-            updatedAt: new Date(polledJob.updatedAt),
-          } as Job;
-        }
-
-        // Fallback: create minimal Job object from polled data (for new jobs created during session)
-        return {
-          id: polledJob.id,
-          ticketId: polledJob.ticketId,
-          projectId,
-          status: polledJob.status,
-          command: polledJob.command,
-          startedAt: new Date(polledJob.updatedAt),
-          completedAt: null,
-          branch: null,
-          commitSha: null,
-          logs: null,
-          createdAt: new Date(polledJob.updatedAt),
-          updatedAt: new Date(polledJob.updatedAt),
-        } as Job;
+        const matchingSnapshotJob = ticketSnapshotJobs.find(j => j.id === polledJob.id);
+        return matchingSnapshotJob
+          ? mergePolledIntoExistingJob(matchingSnapshotJob, polledJob)
+          : createSnapshotJob(polledJob, projectId);
       });
 
-      // Include historical (completed/terminal) jobs from initial data that are no
-      // longer returned by polling (which only sends PENDING/RUNNING). These are
-      // needed for quality score, completed workflow status, etc.
       const polledIds = new Set(ticketPolledJobs.map(j => j.id));
-      const historicalJobs = ticketInitialJobs.filter(j => !polledIds.has(j.id));
+      const historicalJobs = ticketSnapshotJobs.filter(j => !polledIds.has(j.id));
       const fullJobs = [...activeJobs, ...historicalJobs];
 
-      // Find the ticket to get current stage for AI-BOARD filtering
       const ticket = allTickets.find(t => t.id === ticketId);
 
-      // Use filtering functions to get workflow, AI-BOARD, and deploy jobs
       return {
         workflow: ticket ? getWorkflowJob(fullJobs, ticket.stage) : null,
         aiBoard: ticket ? getAIBoardJob(fullJobs, ticket.stage) : null,
@@ -517,7 +553,7 @@ export function Board({
         qualityScore: getLatestQualityScore(fullJobs),
       };
     },
-    [polledJobs, initialJobs, projectId, allTickets]
+    [polledJobs, jobSnapshots, projectId, allTickets]
   );
 
   // Find the ticket with active deployment (PENDING or RUNNING deploy job)
@@ -526,7 +562,7 @@ export function Board({
     // Get all unique ticket IDs from both sources
     const ticketIds = new Set([
       ...allTickets.map(t => t.id),
-      ...Array.from(initialJobs.keys())
+      ...Array.from(jobSnapshots.keys())
     ]);
 
     // Check each ticket for active deployment using merged job data
@@ -540,7 +576,7 @@ export function Board({
     }
 
     return null;
-  }, [allTickets, initialJobs, getTicketJobs]);
+  }, [allTickets, jobSnapshots, getTicketJobs]);
 
   // Handle drag start (T020 - Add drag state)
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -624,6 +660,26 @@ export function Board({
           t.id === ticket.id ? merge(serverData, t) : t
         );
         queryClient.setQueryData(queryKeys.projects.tickets(projectId), finalTickets);
+
+        const transitionCommand = getCommandForTransition(ticket.stage, targetStage);
+        const jobId =
+          typeof serverData === 'object' &&
+          serverData !== null &&
+          'jobId' in serverData &&
+          typeof serverData.jobId === 'number'
+            ? serverData.jobId
+            : null;
+
+        if (transitionCommand && jobId) {
+          seedPendingJobIntoStatusCache(queryClient, projectId, {
+            id: jobId,
+            ticketId: ticket.id,
+            status: 'PENDING',
+            command: transitionCommand,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+
         queryClient.invalidateQueries({ queryKey: queryKeys.projects.jobsStatus(projectId) });
         toast(config.successToast);
       } catch (err) {
@@ -1473,4 +1529,3 @@ export function Board({
     </div>
   );
 }
-

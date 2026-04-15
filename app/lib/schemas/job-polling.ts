@@ -57,3 +57,11 @@ export const TERMINAL_STATUSES = ['COMPLETED', 'FAILED', 'CANCELLED'] as const;
 export function isTerminalStatus(status: string): boolean {
   return TERMINAL_STATUSES.includes(status as typeof TERMINAL_STATUSES[number]);
 }
+
+/**
+ * Helper to check if a job status is active (still progressing — PENDING or RUNNING).
+ * Inverse of isTerminalStatus.
+ */
+export function isActiveStatus(status: string): boolean {
+  return !isTerminalStatus(status);
+}

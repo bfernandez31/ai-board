@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useEffect, useMemo } from 'react';
 import { queryKeys } from '@/app/lib/query-keys';
-import { isTerminalStatus } from '@/app/lib/schemas/job-polling';
+import { isActiveStatus, isTerminalStatus } from '@/app/lib/schemas/job-polling';
 import type { JobStatusDto } from '@/app/lib/schemas/job-polling';
 
 export interface UseJobPollingReturn {
@@ -25,6 +25,14 @@ export function useJobPolling(
   const { data, error, isFetching, dataUpdatedAt, failureCount } = useQuery({
     queryKey: queryKeys.projects.jobsStatus(projectId),
     queryFn: async () => {
+      const cachedJobs = queryClient.getQueryData<JobStatusDto[]>(
+        queryKeys.projects.jobsStatus(projectId)
+      ) || [];
+
+      for (const job of cachedJobs) {
+        trackedJobIdsRef.current.add(job.id);
+      }
+
       const trackedJobIds = Array.from(trackedJobIdsRef.current).sort((a, b) => a - b);
       const searchParams = new URLSearchParams();
       if (trackedJobIds.length > 0) {
@@ -54,7 +62,7 @@ export function useJobPolling(
     // Slow idle poll detects new jobs starting without wasting requests.
     refetchInterval: (query) => {
       const jobs = query.state.data || [];
-      const hasActiveJobs = jobs.some((job) => job.status === 'PENDING' || job.status === 'RUNNING');
+      const hasActiveJobs = jobs.some((job) => isActiveStatus(job.status));
       return hasActiveJobs ? pollingInterval : 30000;
     },
     refetchIntervalInBackground: true,
@@ -62,7 +70,7 @@ export function useJobPolling(
   });
 
   const jobs = useMemo(() => data || [], [data]);
-  const hasActiveJobs = jobs.some((job) => job.status === 'PENDING' || job.status === 'RUNNING');
+  const hasActiveJobs = jobs.some((job) => isActiveStatus(job.status));
 
   // With tracked job IDs, terminal jobs stay in the response instead of disappearing,
   // so we detect transitions by comparing previous vs current status.
