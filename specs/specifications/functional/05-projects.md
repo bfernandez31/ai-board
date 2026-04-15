@@ -127,6 +127,58 @@ When no projects exist:
 - All text content uses `min-w-0` and `truncate` utilities to prevent horizontal scroll
 - Cards maintain fixed width boundaries on mobile viewports (375px minimum)
 
+## Activity Heatmap
+
+A GitHub-style contribution heatmap appears below the project cards on the `/projects` page, visualizing AI activity across all of the user's projects over the selected period.
+
+### Display
+
+- Full-width heatmap grid with 7 rows (one per day of week) and columns corresponding to weeks in the selected period
+- Cell color intensity encodes the count of COMPLETED jobs for that day using a violet gradient scale (5 levels: empty → light → medium → strong → intense)
+- Month labels along the top of the grid; abbreviated day-of-week labels (Mon, Wed, Fri) on the left
+- "Chipped corners" — cells before the first day and after the last day of the selected period are invisible when those days don't align with week boundaries
+- Summary line in the heatmap header: "X jobs · Y tickets shipped in the last year" (or selected period)
+- Intensity legend at the bottom right showing "Less" → 5 colored squares → "More"
+
+### Tooltip
+
+Hovering (desktop) or tapping (mobile) a cell shows a tooltip containing:
+- Formatted date
+- Count of jobs for that day
+- Total cost in USD — displayed only when at least one job that day has a recorded cost; never shows "$0" or "$NaN"
+- List of ticket keys shipped that day (tickets with a successfully completed `ship` job)
+
+Tapping outside the tooltip on mobile dismisses it.
+
+### Filters
+
+**Year selector**: A dropdown offering "Last 12 months" (default) plus each calendar year from the user's account creation year to the current year. Hidden when the user's account was created in the current year.
+
+- "Last 12 months" = today minus 364 days (52 full weeks), aligned to start on Sunday — produces a consistent 53-column grid
+- Calendar year = Jan 1 – Dec 31 of that year
+
+**Agent filter**: A dropdown built dynamically from the distinct AI agents present in the user's job data, following effective agent resolution (tickets with no explicit agent inherit the project's default agent). Includes "All" (default) plus each distinct agent. Hidden entirely when 0 or 1 agents are present.
+
+When an agent filter is active, the grid period boundaries remain unchanged — only cell intensities change to reflect the filtered data.
+
+Filter selections are reflected in URL query parameters so the view is shareable and survives page refresh.
+
+### Data Refresh
+
+The heatmap renders immediately on page load using server-provided initial data (no loading spinner flash). TanStack Query refreshes the data silently in the background every 15 seconds without blanking the display.
+
+### Empty State
+
+When the selected period has zero activity (after any filters), the grid is replaced with a centered message: "No activity to show yet — your AI work will appear here." The legend and filters remain visible.
+
+### Mobile
+
+On mobile viewports, the heatmap grid scrolls horizontally. Day-of-week labels remain pinned (sticky) on the left edge during scroll. Cells maintain a tappable minimum size.
+
+### Shipped Ticket Counting
+
+A ticket counts as "shipped" on the day its `ship` command job completed with COMPLETED status. Stage transitions to SHIP without a completed ship job are not counted. Multiple ship jobs for the same ticket on the same day count the ticket once.
+
 ## Project Settings
 
 ### Settings Page Navigation

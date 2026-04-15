@@ -4496,6 +4496,59 @@ Fetch unified activity feed for a project.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 
+## Heatmap Endpoint
+
+### GET /api/heatmap
+
+Fetch aggregated cross-project heatmap data for the authenticated user.
+
+**Authentication**: Required (session)
+**Authorization**: User-scoped — returns data across all projects owned by the authenticated user
+
+**Query Parameters**:
+- `year` (string, optional): `"last-12-months"` (default) or a 4-digit calendar year (e.g., `"2025"`). Must be within the range [user account creation year, current year].
+- `agent` (string, optional): `"all"` (default) | `"CLAUDE"` | `"CODEX"` | `"MISTRAL"` | `"GEMINI"`. Filters by effective agent (tickets with no explicit agent inherit the project default).
+
+**Response** (200 OK):
+```json
+{
+  "days": [
+    {
+      "date": "2025-04-15",
+      "jobCount": 5,
+      "costUsd": 1.23,
+      "shippedTickets": ["AIB-123", "AIB-124"]
+    }
+  ],
+  "totalJobs": 342,
+  "totalShipped": 18,
+  "availableAgents": [
+    { "value": "all", "label": "All agents", "jobCount": 342, "isDefault": true },
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 280, "isDefault": false }
+  ],
+  "availableYears": [2024, 2025, 2026],
+  "userCreatedAt": "2024-03-01T00:00:00.000Z",
+  "generatedAt": "2026-04-15T10:00:00.000Z"
+}
+```
+
+**Response fields**:
+- `days`: Sparse array — only days with at least 1 COMPLETED job are included. Client fills missing days with `{ jobCount: 0, costUsd: null, shippedTickets: [] }`.
+- `days[].costUsd`: Sum of non-null `costUsd` values for that day, or `null` when no jobs have a recorded cost.
+- `days[].shippedTickets`: Ticket keys with a successfully completed `ship` job on that day; deduplicated.
+- `totalJobs`: Total COMPLETED jobs in the selected period (before agent filter for grid display).
+- `totalShipped`: Total distinct tickets shipped in the selected period.
+- `availableAgents`: Agents derived from distinct effective agents across all user projects for the selected period.
+- `availableYears`: Calendar years in which the user has at least one COMPLETED job.
+
+**Period boundaries**:
+- `"last-12-months"`: today minus 364 days (52 full weeks), start date aligned to the nearest preceding Sunday
+- Calendar year (e.g., `"2025"`): Jan 1 – Dec 31 of that year
+
+**Errors**:
+- `400`: Invalid filter parameters
+- `401`: Unauthorized
+
 ## Token Endpoints
 
 ### GET /api/tokens
