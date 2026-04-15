@@ -19,6 +19,7 @@ UI components follow shadcn/ui patterns; server logic follows Next.js convention
 - No custom component styling from scratch—compose shadcn/ui components instead
 - Server Components by default; Client Components only when interactivity requires it (`"use client"` directive)
 - Feature-based folder structure: `/components/[feature]/[component].tsx`
+- Extract a sub-component only when ONE is true: (a) reused in ≥2 places, (b) has its own state/effects/data fetching, (c) parent exceeds ~300 lines. Prefer cohesion over cosmetic splitting — inline JSX-only blocks <40 lines.
 - API routes in `/app/api/[resource]/route.ts` with standard HTTP methods
 - Shared utilities in `/lib/[utility].ts` with single responsibility
 
@@ -130,4 +131,4 @@ Auto-resolved specification decisions MUST preserve quality while avoiding unnec
 - Agent instruction files MUST NOT contradict constitution principles
 - Agent instruction files provide tactical guidance; constitution provides strategic rules
 
-**Version**: 1.7.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2026-04-03
+**Version**: 1.8.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2026-04-15
