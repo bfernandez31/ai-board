@@ -3,18 +3,13 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from '@/components/ui/tooltip';
+import { formatLongDate } from './heatmap-grid';
 import type { HeatmapDay } from '@/lib/heatmap/types';
 
 interface HeatmapTooltipProps {
   day: HeatmapDay | null;
   date: Date;
   level: number;
-}
-
-function formatLongDate(date: Date): string {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  return `${days[date.getUTCDay()]}, ${months[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
 }
 
 function formatCost(cost: number): string {

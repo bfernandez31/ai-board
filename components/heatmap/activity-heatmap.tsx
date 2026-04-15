@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { HeatmapData, HeatmapDay } from '@/lib/heatmap/types';
+import type { HeatmapData } from '@/lib/heatmap/types';
 import { computeQuartiles, getIntensityLevel } from '@/lib/heatmap/queries';
 import { formatDateKey } from './heatmap-grid';
 
@@ -75,15 +75,6 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
     const qs = params.toString();
     router.push(qs ? `?${qs}` : '/projects', { scroll: false });
   };
-
-  // Build day lookup and quartiles for tooltip rendering
-  const dayMap = useMemo(() => {
-    const map = new Map<string, HeatmapDay>();
-    for (const day of heatmapData.days) {
-      map.set(day.date, day);
-    }
-    return map;
-  }, [heatmapData.days]);
 
   const quartiles = useMemo(
     () => computeQuartiles(heatmapData.days.map((d) => d.jobCount)),
@@ -156,11 +147,9 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
               startDate={start}
               endDate={end}
               renderTooltip={(dayData, cellDate) => {
-                const dateKey = formatDateKey(cellDate);
-                const resolvedDay = dayData ?? dayMap.get(dateKey) ?? null;
-                const level = resolvedDay ? getIntensityLevel(resolvedDay.jobCount, quartiles) : 0;
+                const level = dayData ? getIntensityLevel(dayData.jobCount, quartiles) : 0;
                 return (
-                  <HeatmapTooltip key={dateKey} day={resolvedDay} date={cellDate} level={level} />
+                  <HeatmapTooltip key={formatDateKey(cellDate)} day={dayData} date={cellDate} level={level} />
                 );
               }}
             />

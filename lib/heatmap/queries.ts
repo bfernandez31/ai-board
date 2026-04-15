@@ -132,7 +132,6 @@ export async function getHeatmapData(
   const dayMap = new Map<string, {
     jobCount: number;
     costs: (number | null)[];
-    shippedTicketIds: Set<number>;
     shippedTickets: Map<number, ShippedTicketInfo>;
   }>();
 
@@ -144,7 +143,7 @@ export async function getHeatmapData(
 
     let dayData = dayMap.get(dateKey);
     if (!dayData) {
-      dayData = { jobCount: 0, costs: [], shippedTicketIds: new Set(), shippedTickets: new Map() };
+      dayData = { jobCount: 0, costs: [], shippedTickets: new Map() };
       dayMap.set(dateKey, dayData);
     }
 
@@ -156,11 +155,10 @@ export async function getHeatmapData(
       const shipDateKey = formatDateUTC(job.completedAt);
       let shipDayData = dayMap.get(shipDateKey);
       if (!shipDayData) {
-        shipDayData = { jobCount: 0, costs: [], shippedTicketIds: new Set(), shippedTickets: new Map() };
+        shipDayData = { jobCount: 0, costs: [], shippedTickets: new Map() };
         dayMap.set(shipDateKey, shipDayData);
       }
-      if (!shipDayData.shippedTicketIds.has(job.ticketId)) {
-        shipDayData.shippedTicketIds.add(job.ticketId);
+      if (!shipDayData.shippedTickets.has(job.ticketId)) {
         shipDayData.shippedTickets.set(job.ticketId, {
           ticketKey: job.ticket.ticketKey,
           title: job.ticket.title,
@@ -177,11 +175,10 @@ export async function getHeatmapData(
   const days: HeatmapDay[] = Array.from(dayMap.entries())
     .map(([date, data]) => {
       const nonNullCosts = data.costs.filter((c): c is number => c !== null);
-      const allCostsNull = nonNullCosts.length === 0 && data.costs.length > 0;
       return {
         date,
         jobCount: data.jobCount,
-        costUsd: allCostsNull || data.costs.length === 0 ? null : nonNullCosts.reduce((s, c) => s + c, 0),
+        costUsd: nonNullCosts.length === 0 ? null : nonNullCosts.reduce((s, c) => s + c, 0),
         shippedTickets: Array.from(data.shippedTickets.values()),
       };
     })

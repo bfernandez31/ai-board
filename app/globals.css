@@ -397,8 +397,8 @@
 
   /* Activity heatmap intensity levels */
   .heatmap-level-0 { background-color: hsl(var(--ctp-surface-0)); }
-  .heatmap-level-1 { background-color: hsl(258 90% 66% / 0.2); }
-  .heatmap-level-2 { background-color: hsl(258 90% 66% / 0.4); }
-  .heatmap-level-3 { background-color: hsl(258 90% 66% / 0.6); }
-  .heatmap-level-4 { background-color: hsl(258 90% 66% / 0.9); }
+  .heatmap-level-1 { background-color: hsl(var(--primary-violet) / 0.2); }
+  .heatmap-level-2 { background-color: hsl(var(--primary-violet) / 0.4); }
+  .heatmap-level-3 { background-color: hsl(var(--primary-violet) / 0.6); }
+  .heatmap-level-4 { background-color: hsl(var(--primary-violet) / 0.9); }
 }

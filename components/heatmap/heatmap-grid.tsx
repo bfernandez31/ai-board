@@ -132,12 +132,17 @@ export function HeatmapGrid({ days, startDate, endDate, renderTooltip }: Heatmap
 
                 const dateKey = formatDateUTC(cellDate);
                 const dayData = dayMap.get(dateKey) ?? null;
+
+                if (renderTooltip) {
+                  return renderTooltip(dayData, cellDate);
+                }
+
                 const level = dayData ? getIntensityLevel(dayData.jobCount, quartiles) : 0;
                 const ariaLabel = dayData
                   ? `${dayData.jobCount} jobs on ${formatLongDate(cellDate)}`
                   : `No activity on ${formatLongDate(cellDate)}`;
 
-                const cell = (
+                return (
                   <div
                     key={wi}
                     className={`heatmap-level-${level} rounded-sm`}
@@ -146,12 +151,6 @@ export function HeatmapGrid({ days, startDate, endDate, renderTooltip }: Heatmap
                     aria-label={ariaLabel}
                   />
                 );
-
-                if (renderTooltip) {
-                  return renderTooltip(dayData, cellDate);
-                }
-
-                return cell;
               })}
             </div>
           ))}
