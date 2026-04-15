@@ -151,11 +151,24 @@ All sections are server components except where client interactivity is required
 
 ### Video Section
 
-The video section (`components/landing/video-section.tsx`) displays a cinematic 50-second product demo between the hero and social proof sections.
+The video section (`components/landing/video-section.tsx`) displays a cinematic 40-second product demo between the hero and social proof sections.
 
 **Video Source**: Pre-rendered MP4 via Remotion (`video/` directory), served from `public/videos/ai-board-demo.mp4`. The Remotion project is isolated from the Next.js build with its own `package.json`.
 
-**Content**: 9 scenes covering the full product — Intro, Dashboard, Kanban Board, Ticket Detail (with cost/token metrics), Workflow Flow, Analytics, Health Dashboard, Comparisons, and Outro. Uses the Catppuccin Mocha palette and aurora gradients matching the landing page theme.
+**Content**: 5 scenes (40s total at 30fps, 1200 frames) focused on reliability and the "human on the loop" narrative:
+
+1. **Intro** (4s) — Logo, typewriter "Write a ticket...", subtitle "Specified. Planned. Built. Verified. Automatically."
+2. **Dashboard** (4s) — 2×2 project grid with shipped count and success rate counters
+3. **Kanban Enriched** (20s) — Hero scene in 5 acts with camera zooms per act:
+   - Act 1: Living board with tickets in all stages showing real job status icons
+   - Act 2: Human drags a ticket from INBOX to SPECIFY (caption: "You decide what to build, and when")
+   - Act 3: A BUILD ticket completes and auto-slides to VERIFY (caption: "You supervise, AI executes")
+   - Act 4: Quality gate zoom — score circle with dimension breakdown (Compliance, Bug Detection, Code Comments, Historical Context)
+   - Act 5: Ticket ships to SHIP column with glow effect
+4. **Results/Health** (8s) — Merged analytics + health: shipped/success rate counters, score circle (94/Excellent), 4 module cards (Security, Compliance, Tests, Quality Gate)
+5. **Outro** (4s) — "Built by AI. Verified by standards. Approved by you." + typewriter "Automatically." + CTA button
+
+Uses the Catppuccin Mocha palette and aurora gradients matching the landing page theme.
 
 **Playback Behavior**:
 - Autoplay (muted) when ≥40% of the section enters the viewport (IntersectionObserver)
@@ -170,9 +183,11 @@ The video section (`components/landing/video-section.tsx`) displays a cinematic 
 
 **Layout**:
 - `max-w-5xl` container, full-width video with `rounded-2xl` corners
-- Aurora glow border: `shadow-[0_0_40px_hsl(var(--ctp-mauve)/0.12)]`
-- Section heading: "See it in action" with subtitle
-- 16:9 aspect ratio (1920x1080 source)
+- Aurora animated gradient border (`video-gradient-border` CSS class): blue→violet→pink rotation, 4s cycle
+- Glow pulse during playback (`video-glow-pulse` CSS class): mauve/blue box-shadow breathing, 3s cycle
+- Both animations respect `prefers-reduced-motion`
+- Section heading: "See it in action" with subtitle "From ticket to production — automatically"
+- 16:9 aspect ratio (1920×1080 source)
 
 **Mobile**: Video autoplays muted. No poster image fallback currently — video loads with `preload="metadata"`.
 

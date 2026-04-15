@@ -197,6 +197,39 @@
     }
   }
 
+  /* Video player aurora gradient border */
+  .video-gradient-border {
+    background-image: linear-gradient(135deg, hsl(var(--ctp-blue) / 0.2), hsl(var(--ctp-mauve) / 0.2), hsl(var(--ctp-pink) / 0.2));
+    background-size: 100% 200%;
+    animation: gradient-shift 4s ease-in-out infinite;
+    padding: 1px;
+  }
+
+  /* Video player glow pulse */
+  .video-glow-pulse {
+    animation: video-glow 3s ease-in-out infinite;
+  }
+
+  @keyframes video-glow {
+    0%, 100% {
+      box-shadow:
+        0 0 30px hsl(var(--ctp-mauve) / 0.1),
+        0 0 60px hsl(var(--ctp-blue) / 0.05);
+    }
+    50% {
+      box-shadow:
+        0 0 40px hsl(var(--ctp-mauve) / 0.18),
+        0 0 80px hsl(var(--ctp-blue) / 0.1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .video-gradient-border,
+    .video-glow-pulse {
+      animation: none;
+    }
+  }
+
   /* Typewriter cursor blink */
   .animate-blink {
     animation: blink-cursor 0.75s step-end infinite;

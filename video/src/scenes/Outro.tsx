@@ -22,7 +22,7 @@ export const Outro: React.FC = () => {
       <AuroraBackground />
       <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, opacity: fadeIn, transform: `scale(${zoomOut})` }}>
         <span style={{ fontSize: 56, fontWeight: 700, color: colors.text, fontFamily: fonts.display, textAlign: 'center' as const }}>
-          From ticket to production.
+          Built by AI. Verified by standards. Approved by you.
         </span>
         <Typewriter text="Automatically." delay={25} speed={3} fontSize={56} fontFamily={fonts.display} color={colors.mauve} showCursor={true} />
         {frame >= ctaDelay && (

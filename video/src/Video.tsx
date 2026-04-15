@@ -4,11 +4,7 @@ import { colors, SCENES } from './theme';
 import { Intro } from './scenes/Intro';
 import { Dashboard } from './scenes/Dashboard';
 import { KanbanBoard } from './scenes/KanbanBoard';
-import { TicketDetail } from './scenes/TicketDetail';
-import { WorkflowFlow } from './scenes/WorkflowFlow';
-import { Analytics } from './scenes/Analytics';
-import { HealthDashboard } from './scenes/HealthDashboard';
-import { Comparisons } from './scenes/Comparisons';
+import { ResultsHealth } from './scenes/ResultsHealth';
 import { Outro } from './scenes/Outro';
 
 export const Video: React.FC = () => {
@@ -23,20 +19,8 @@ export const Video: React.FC = () => {
       <Sequence from={SCENES.KANBAN.from} durationInFrames={SCENES.KANBAN.duration}>
         <KanbanBoard />
       </Sequence>
-      <Sequence from={SCENES.TICKET.from} durationInFrames={SCENES.TICKET.duration}>
-        <TicketDetail />
-      </Sequence>
-      <Sequence from={SCENES.WORKFLOW.from} durationInFrames={SCENES.WORKFLOW.duration}>
-        <WorkflowFlow />
-      </Sequence>
-      <Sequence from={SCENES.ANALYTICS.from} durationInFrames={SCENES.ANALYTICS.duration}>
-        <Analytics />
-      </Sequence>
-      <Sequence from={SCENES.HEALTH.from} durationInFrames={SCENES.HEALTH.duration}>
-        <HealthDashboard />
-      </Sequence>
-      <Sequence from={SCENES.COMPARISONS.from} durationInFrames={SCENES.COMPARISONS.duration}>
-        <Comparisons />
+      <Sequence from={SCENES.RESULTS.from} durationInFrames={SCENES.RESULTS.duration}>
+        <ResultsHealth />
       </Sequence>
       <Sequence from={SCENES.OUTRO.from} durationInFrames={SCENES.OUTRO.duration}>
         <Outro />

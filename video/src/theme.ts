@@ -46,17 +46,27 @@ export const VIDEO = {
   WIDTH: 1920,
   HEIGHT: 1080,
   FPS: 30,
-  TOTAL_FRAMES: 1500,
+  TOTAL_FRAMES: 1200,
 } as const;
 
 export const SCENES = {
-  INTRO:       { from: 0,    duration: 120 },
-  DASHBOARD:   { from: 120,  duration: 150 },
-  KANBAN:      { from: 270,  duration: 180 },
-  TICKET:      { from: 450,  duration: 180 },
-  WORKFLOW:    { from: 630,  duration: 240 },
-  ANALYTICS:   { from: 870,  duration: 180 },
-  HEALTH:      { from: 1050, duration: 180 },
-  COMPARISONS: { from: 1230, duration: 150 },
-  OUTRO:       { from: 1380, duration: 120 },
+  INTRO:     { from: 0,   duration: 120 },  // 4s
+  DASHBOARD: { from: 120, duration: 120 },  // 4s
+  KANBAN:    { from: 240, duration: 600 },  // 20s
+  RESULTS:   { from: 840, duration: 240 },  // 8s
+  OUTRO:     { from: 1080, duration: 120 }, // 4s
 } as const;
+
+export function scoreColor(score: number): string {
+  if (score >= 90) return colors.green;
+  if (score >= 70) return colors.blue;
+  if (score >= 50) return colors.yellow;
+  return colors.red;
+}
+
+export function scoreLabel(score: number): string {
+  if (score >= 90) return 'Excellent';
+  if (score >= 70) return 'Good';
+  if (score >= 50) return 'Fair';
+  return 'Poor';
+}

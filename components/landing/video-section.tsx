@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 
-// TODO: Update after Cloudinary upload
 const VIDEO_URL = '/videos/ai-board-demo';
 
 export function VideoSection() {
@@ -64,26 +63,30 @@ export function VideoSection() {
             See it in action
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            From ticket to production in under a minute
+            From ticket to production — automatically
           </p>
         </div>
 
         <div
           ref={containerRef}
-          className="group relative overflow-hidden rounded-2xl border border-border shadow-[0_0_40px_hsl(var(--ctp-mauve)/0.12)]"
+          className={`group relative overflow-hidden rounded-2xl border border-ctp-mauve/30 video-gradient-border ${
+            isPlaying ? 'video-glow-pulse' : ''
+          }`}
         >
-          <video
-            ref={videoRef}
-            className="w-full"
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-          >
-            <source src={`${VIDEO_URL}.mp4`} type="video/mp4" />
-          </video>
+          <div className="overflow-hidden rounded-2xl">
+            <video
+              ref={videoRef}
+              className="w-full"
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+            >
+              <source src={`${VIDEO_URL}.mp4`} type="video/mp4" />
+            </video>
+          </div>
 
           {/* Minimal controls overlay */}
           <div className="absolute bottom-4 right-4 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
