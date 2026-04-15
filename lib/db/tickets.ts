@@ -398,7 +398,6 @@ export async function createTicket(
   projectId: number,
   input: CreateTicketInput
 ) {
-  // Fetch project to get key
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: { key: true },

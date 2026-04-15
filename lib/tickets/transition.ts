@@ -1,4 +1,4 @@
-import { Stage, type Job, type WorkflowType, type Prisma } from '@prisma/client';
+import { Stage, type Job, type Project, type Ticket, type WorkflowType, type Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import {
   canRollbackToInbox,
@@ -15,14 +15,8 @@ import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
 import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
 
-type TicketWithJobs = {
-  id: number;
-  stage: string;
-  workflowType: string;
-  ticketKey: string;
-  projectId: number;
-  branch: string | null;
-  version: number;
+type TicketWithJobsAndProject = Ticket & {
+  project: Project;
   jobs?: Job[];
 };
 
@@ -33,7 +27,7 @@ export type TransitionExecutionResult =
 
 /** Validate a rollback attempt; return null when allowed, or the error body when denied. */
 function validateRollback(
-  ticket: TicketWithJobs,
+  ticket: TicketWithJobsAndProject,
   targetStage: Stage,
   validator: (
     stage: Stage,
@@ -43,12 +37,7 @@ function validateRollback(
   ) => RollbackValidation
 ): { denied: { status: number; body: Record<string, unknown> } } | { mostRecentJob: Job | null } {
   const mostRecentJob = ticket.jobs?.[0] || null;
-  const validation = validator(
-    ticket.stage as Stage,
-    targetStage,
-    ticket.workflowType as WorkflowType,
-    mostRecentJob
-  );
+  const validation = validator(ticket.stage, targetStage, ticket.workflowType, mostRecentJob);
   if (!validation.allowed) {
     return { denied: { status: 400, body: { error: validation.reason } } };
   }
@@ -71,6 +60,71 @@ async function rollbackTransaction(
 }
 
 /**
+ * Rollback to PLAN with a git-reset workflow dispatch.
+ *
+ * Shared between VERIFY→PLAN and BUILD→PLAN which run the same sequence:
+ * transaction (update ticket + delete most recent job) → dispatch rollback-reset.
+ * Dispatch failures after a successful mutation return DISPATCH_FAILED_AFTER_MUTATION.
+ */
+async function rollbackToPlanWithReset(
+  ticket: TicketWithJobsAndProject,
+  mostRecentJob: Job | null,
+  resetStage: 'build' | undefined,
+  logLabel: string
+): Promise<TransitionExecutionResult> {
+  const updatedTicket = await rollbackTransaction(
+    ticket.id,
+    { stage: 'PLAN', previewUrl: null, version: { increment: 1 } },
+    mostRecentJob
+  );
+
+  let resetJobId: number | undefined;
+  if (updatedTicket.branch) {
+    try {
+      const effectiveAgent = resolveEffectiveAgent(ticket);
+      const dispatchResult = await dispatchRollbackResetWorkflow({
+        ticketId: updatedTicket.id,
+        ticketKey: ticket.ticketKey,
+        projectId: ticket.projectId,
+        branch: updatedTicket.branch,
+        githubOwner: ticket.project.githubOwner,
+        githubRepo: ticket.project.githubRepo,
+        ...(resetStage && { stage: resetStage }),
+        provider: AGENT_PROVIDER_MAP[effectiveAgent],
+      });
+      resetJobId = dispatchResult.jobId;
+    } catch (dispatchError) {
+      console.error(`[Transition] ${logLabel}:`, dispatchError);
+      return {
+        ok: false,
+        status: 500,
+        body: {
+          error: 'Rollback-reset workflow dispatch failed after stage transition to PLAN',
+          code: 'DISPATCH_FAILED_AFTER_MUTATION',
+          stage: updatedTicket.stage,
+          ticketId: updatedTicket.id,
+        },
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    body: {
+      id: updatedTicket.id,
+      stage: updatedTicket.stage,
+      workflowType: updatedTicket.workflowType,
+      branch: updatedTicket.branch,
+      version: updatedTicket.version,
+      previewUrl: updatedTicket.previewUrl,
+      updatedAt: updatedTicket.updatedAt.toISOString(),
+      resetJobId,
+    },
+  };
+}
+
+/**
  * Execute a stage transition (forward or rollback) for a ticket.
  *
  * Resolves the ticket by id or ticketKey, classifies the requested
@@ -84,6 +138,7 @@ export async function executeTicketTransition(
   targetStage: Stage
 ): Promise<TransitionExecutionResult> {
   const ticket = (await resolveTicketWithRelations(projectId, ticketIdentifier, {
+    project: true,
     jobs: {
       where: {
         command: {
@@ -97,27 +152,20 @@ export async function executeTicketTransition(
       },
       take: 1,
     },
-  })) as TicketWithJobs | null;
+  })) as TicketWithJobsAndProject | null;
 
   if (!ticket) {
     return { ok: false, status: 404, body: { error: 'Ticket not found' } };
   }
 
-  const isRollbackToInboxAttempt = ticket.stage === 'BUILD' && targetStage === 'INBOX';
-  const isRollbackToPlanAttempt = ticket.stage === 'VERIFY' && targetStage === 'PLAN';
-  const isSpecifyToInbox = ticket.stage === 'SPECIFY' && targetStage === 'INBOX';
-  const isPlanToSpecify = ticket.stage === 'PLAN' && targetStage === 'SPECIFY';
-  const isBuildToPlan = ticket.stage === 'BUILD' && targetStage === 'PLAN';
-  const isVerifyToBuild = ticket.stage === 'VERIFY' && targetStage === 'BUILD';
-
   // BUILD → INBOX rollback (QUICK workflow)
-  if (isRollbackToInboxAttempt) {
+  if (ticket.stage === Stage.BUILD && targetStage === Stage.INBOX) {
     const result = validateRollback(ticket, targetStage, canRollbackToInbox);
     if ('denied' in result) return { ok: false, ...result.denied };
 
     const updatedTicket = await rollbackTransaction(
       ticket.id,
-      { stage: 'INBOX', workflowType: 'FULL', branch: null, version: 1 },
+      { stage: Stage.INBOX, workflowType: 'FULL', branch: null, version: 1 },
       result.mostRecentJob
     );
 
@@ -136,93 +184,36 @@ export async function executeTicketTransition(
   }
 
   // VERIFY → PLAN rollback (FULL workflow, dispatches rollback-reset)
-  if (isRollbackToPlanAttempt) {
+  if (ticket.stage === Stage.VERIFY && targetStage === Stage.PLAN) {
     const result = validateRollback(ticket, targetStage, canRollbackToPlan);
     if ('denied' in result) return { ok: false, ...result.denied };
 
-    const ticketWithProject = await prisma.ticket.findUnique({
-      where: { id: ticket.id },
-      include: { project: true },
-    });
-    if (!ticketWithProject) {
-      return { ok: false, status: 404, body: { error: 'Ticket not found' } };
-    }
-
-    const updatedTicket = await rollbackTransaction(
-      ticket.id,
-      { stage: 'PLAN', previewUrl: null, version: { increment: 1 } },
-      result.mostRecentJob
+    return rollbackToPlanWithReset(
+      ticket,
+      result.mostRecentJob,
+      undefined,
+      'Failed to dispatch rollback-reset workflow'
     );
-
-    let resetJobId: number | undefined;
-    if (updatedTicket.branch) {
-      try {
-        const effectiveAgent = resolveEffectiveAgent(ticketWithProject);
-        const dispatchResult = await dispatchRollbackResetWorkflow({
-          ticketId: updatedTicket.id,
-          ticketKey: ticket.ticketKey,
-          projectId: ticket.projectId,
-          branch: updatedTicket.branch,
-          githubOwner: ticketWithProject.project.githubOwner,
-          githubRepo: ticketWithProject.project.githubRepo,
-          provider: AGENT_PROVIDER_MAP[effectiveAgent],
-        });
-        resetJobId = dispatchResult.jobId;
-      } catch (dispatchError) {
-        console.error('[Transition] Failed to dispatch rollback-reset workflow:', dispatchError);
-        return {
-          ok: false,
-          status: 500,
-          body: {
-            error: 'Rollback-reset workflow dispatch failed after stage transition to PLAN',
-            code: 'DISPATCH_FAILED_AFTER_MUTATION',
-            stage: updatedTicket.stage,
-            ticketId: updatedTicket.id,
-          },
-        };
-      }
-    }
-
-    return {
-      ok: true,
-      status: 200,
-      body: {
-        id: updatedTicket.id,
-        stage: updatedTicket.stage,
-        workflowType: updatedTicket.workflowType,
-        branch: updatedTicket.branch,
-        version: updatedTicket.version,
-        previewUrl: updatedTicket.previewUrl,
-        updatedAt: updatedTicket.updatedAt.toISOString(),
-        resetJobId,
-      },
-    };
   }
 
   // SPECIFY → INBOX: Delete branch (if exists), reset ticket to INBOX
-  if (isSpecifyToInbox) {
+  if (ticket.stage === Stage.SPECIFY && targetStage === Stage.INBOX) {
     const result = validateRollback(ticket, targetStage, canRollbackSpecifyToInbox);
     if ('denied' in result) return { ok: false, ...result.denied };
 
     if (ticket.branch) {
       try {
-        const ticketWithProject = await prisma.ticket.findUnique({
-          where: { id: ticket.id },
-          include: { project: true },
-        });
-        if (ticketWithProject) {
-          const { deleteBranchAndPRs } = await import('@/lib/github/delete-branch-and-prs');
-          const { Octokit } = await import('@octokit/rest');
-          const githubToken = process.env.GITHUB_TOKEN;
-          if (githubToken) {
-            const octokit = new Octokit({ auth: githubToken });
-            await deleteBranchAndPRs(
-              octokit,
-              ticketWithProject.project.githubOwner,
-              ticketWithProject.project.githubRepo,
-              ticket.branch
-            );
-          }
+        const { deleteBranchAndPRs } = await import('@/lib/github/delete-branch-and-prs');
+        const { Octokit } = await import('@octokit/rest');
+        const githubToken = process.env.GITHUB_TOKEN;
+        if (githubToken) {
+          const octokit = new Octokit({ auth: githubToken });
+          await deleteBranchAndPRs(
+            octokit,
+            ticket.project.githubOwner,
+            ticket.project.githubRepo,
+            ticket.branch
+          );
         }
       } catch (branchError) {
         console.error('[Transition] Failed to delete branch for SPECIFY→INBOX:', branchError);
@@ -231,7 +222,7 @@ export async function executeTicketTransition(
 
     const updatedTicket = await rollbackTransaction(
       ticket.id,
-      { stage: 'INBOX', branch: null, workflowType: 'FULL', version: 1 },
+      { stage: Stage.INBOX, branch: null, workflowType: 'FULL', version: 1 },
       result.mostRecentJob
     );
 
@@ -250,13 +241,13 @@ export async function executeTicketTransition(
   }
 
   // PLAN → SPECIFY: Stage change only
-  if (isPlanToSpecify) {
+  if (ticket.stage === Stage.PLAN && targetStage === Stage.SPECIFY) {
     const result = validateRollback(ticket, targetStage, canRollbackPlanToSpecify);
     if ('denied' in result) return { ok: false, ...result.denied };
 
     const updatedTicket = await rollbackTransaction(
       ticket.id,
-      { stage: 'SPECIFY', version: { increment: 1 } },
+      { stage: Stage.SPECIFY, version: { increment: 1 } },
       result.mostRecentJob
     );
 
@@ -273,78 +264,26 @@ export async function executeTicketTransition(
   }
 
   // BUILD → PLAN: Backup tag + git reset via rollback-reset workflow
-  if (isBuildToPlan) {
+  if (ticket.stage === Stage.BUILD && targetStage === Stage.PLAN) {
     const result = validateRollback(ticket, targetStage, canRollbackBuildToPlan);
     if ('denied' in result) return { ok: false, ...result.denied };
 
-    const ticketWithProject = await prisma.ticket.findUnique({
-      where: { id: ticket.id },
-      include: { project: true },
-    });
-    if (!ticketWithProject) {
-      return { ok: false, status: 404, body: { error: 'Ticket not found' } };
-    }
-
-    const updatedTicket = await rollbackTransaction(
-      ticket.id,
-      { stage: 'PLAN', previewUrl: null, version: { increment: 1 } },
-      result.mostRecentJob
+    return rollbackToPlanWithReset(
+      ticket,
+      result.mostRecentJob,
+      'build',
+      'Failed to dispatch rollback-reset for BUILD→PLAN'
     );
-
-    let resetJobId: number | undefined;
-    if (updatedTicket.branch) {
-      try {
-        const effectiveAgent = resolveEffectiveAgent(ticketWithProject);
-        const dispatchResult = await dispatchRollbackResetWorkflow({
-          ticketId: updatedTicket.id,
-          ticketKey: ticket.ticketKey,
-          projectId: ticket.projectId,
-          branch: updatedTicket.branch,
-          githubOwner: ticketWithProject.project.githubOwner,
-          githubRepo: ticketWithProject.project.githubRepo,
-          stage: 'build',
-          provider: AGENT_PROVIDER_MAP[effectiveAgent],
-        });
-        resetJobId = dispatchResult.jobId;
-      } catch (dispatchError) {
-        console.error('[Transition] Failed to dispatch rollback-reset for BUILD→PLAN:', dispatchError);
-        return {
-          ok: false,
-          status: 500,
-          body: {
-            error: 'Rollback-reset workflow dispatch failed after stage transition to PLAN',
-            code: 'DISPATCH_FAILED_AFTER_MUTATION',
-            stage: updatedTicket.stage,
-            ticketId: updatedTicket.id,
-          },
-        };
-      }
-    }
-
-    return {
-      ok: true,
-      status: 200,
-      body: {
-        id: updatedTicket.id,
-        stage: updatedTicket.stage,
-        workflowType: updatedTicket.workflowType,
-        branch: updatedTicket.branch,
-        version: updatedTicket.version,
-        previewUrl: updatedTicket.previewUrl,
-        updatedAt: updatedTicket.updatedAt.toISOString(),
-        resetJobId,
-      },
-    };
   }
 
   // VERIFY → BUILD: Stage change only
-  if (isVerifyToBuild) {
+  if (ticket.stage === Stage.VERIFY && targetStage === Stage.BUILD) {
     const result = validateRollback(ticket, targetStage, canRollbackVerifyToBuild);
     if ('denied' in result) return { ok: false, ...result.denied };
 
     const updatedTicket = await rollbackTransaction(
       ticket.id,
-      { stage: 'BUILD', version: { increment: 1 } },
+      { stage: Stage.BUILD, version: { increment: 1 } },
       result.mostRecentJob
     );
 
@@ -361,18 +300,9 @@ export async function executeTicketTransition(
   }
 
   // Forward transition
-  const ticketWithProject = await prisma.ticket.findUnique({
-    where: { id: ticket.id },
-    include: { project: true },
-  });
+  const isQuickImpl = ticket.stage === Stage.INBOX && targetStage === Stage.BUILD;
 
-  if (!ticketWithProject) {
-    return { ok: false, status: 404, body: { error: 'Ticket not found' } };
-  }
-
-  const isQuickImpl = ticket.stage === 'INBOX' && targetStage === 'BUILD';
-
-  const transitionResult = await handleTicketTransition(ticketWithProject, targetStage);
+  const transitionResult = await handleTicketTransition(ticket, targetStage);
 
   if (!transitionResult.success) {
     return {

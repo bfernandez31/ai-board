@@ -118,29 +118,31 @@ export async function createTicketWithAttachments(
       );
     }
 
-    for (const { file, buffer, validation, filename } of validatedFiles) {
-      try {
-        const cloudinaryResult = await uploadImageToCloudinary(buffer, {
-          folder: `ai-board/tickets/${ticket.id}`,
-          filename: filename.replace(/\.[^/.]+$/, ''),
-          resourceType: 'image',
-        });
-
-        attachments.push({
-          type: 'uploaded',
-          url: cloudinaryResult.url,
-          filename,
-          mimeType: validation.mimeType || file.mimetype || 'application/octet-stream',
-          sizeBytes: file.size,
-          uploadedAt: new Date().toISOString(),
-          cloudinaryPublicId: cloudinaryResult.publicId,
-        });
-      } catch (error) {
-        await cleanupFiles(uploadedFiles);
-        throw new Error(
-          `Failed to upload image to Cloudinary: ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
-      }
+    try {
+      const uploaded = await Promise.all(
+        validatedFiles.map(async ({ file, buffer, validation, filename }) => {
+          const cloudinaryResult = await uploadImageToCloudinary(buffer, {
+            folder: `ai-board/tickets/${ticket.id}`,
+            filename: filename.replace(/\.[^/.]+$/, ''),
+            resourceType: 'image',
+          });
+          return {
+            type: 'uploaded' as const,
+            url: cloudinaryResult.url,
+            filename,
+            mimeType: validation.mimeType || file.mimetype || 'application/octet-stream',
+            sizeBytes: file.size,
+            uploadedAt: new Date().toISOString(),
+            cloudinaryPublicId: cloudinaryResult.publicId,
+          };
+        })
+      );
+      attachments.push(...uploaded);
+    } catch (error) {
+      await cleanupFiles(uploadedFiles);
+      throw new Error(
+        `Failed to upload image to Cloudinary: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
 
     await cleanupFiles(uploadedFiles);

@@ -29,12 +29,20 @@ export async function deleteTicketWithCleanup(
     };
   }
 
-  const hasActiveJob = await prisma.job.findFirst({
-    where: {
-      ticketId: ticket.id,
-      status: { in: [JobStatus.PENDING, JobStatus.RUNNING] },
-    },
-  });
+  const [hasActiveJob, project] = await Promise.all([
+    prisma.job.findFirst({
+      where: {
+        ticketId: ticket.id,
+        status: { in: [JobStatus.PENDING, JobStatus.RUNNING] },
+      },
+    }),
+    ticket.branch
+      ? prisma.project.findUnique({
+          where: { id: ticket.projectId },
+          select: { githubOwner: true, githubRepo: true },
+        })
+      : Promise.resolve(null),
+  ]);
 
   if (hasActiveJob) {
     return {
@@ -47,11 +55,6 @@ export async function deleteTicketWithCleanup(
   let prsClosed = 0;
 
   if (ticket.branch) {
-    const project = await prisma.project.findUnique({
-      where: { id: ticket.projectId },
-      select: { githubOwner: true, githubRepo: true },
-    });
-
     if (!project) {
       return {
         ok: false,

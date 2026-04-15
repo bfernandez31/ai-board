@@ -77,12 +77,6 @@ export async function uploadTicketImage(
       stage: true,
       version: true,
       attachments: true,
-      project: {
-        select: {
-          githubOwner: true,
-          githubRepo: true,
-        },
-      },
     },
   });
 
