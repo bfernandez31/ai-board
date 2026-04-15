@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import { ProjectsContainer } from '@/components/projects/projects-container';
+import { ProjectsActivityHeatmap } from '@/components/projects/projects-activity-heatmap';
 import { ProjectQuotaGate } from '@/components/projects/project-quota-gate';
 import { UsageBanner } from '@/components/billing/usage-banner';
 import { ProjectsHeaderActions } from '@/components/projects/projects-header-actions';
 import { toProjectWithCount, type ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
+import { getProjectsActivityData } from '@/lib/projects/activity';
 
 // Force dynamic rendering - this page uses headers() for auth
 export const dynamic = 'force-dynamic';
@@ -26,8 +28,16 @@ async function getProjects(): Promise<ProjectsListResponse> {
   }
 }
 
-export default async function ProjectsPage() {
-  const projects = await getProjects();
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string; agent?: string }>;
+}) {
+  const filters = await searchParams;
+  const [projects, initialActivityData] = await Promise.all([
+    getProjects(),
+    getProjectsActivityData(filters),
+  ]);
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -42,6 +52,10 @@ export default async function ProjectsPage() {
 
       <div className="mt-6">
         <ProjectsContainer projects={projects} />
+      </div>
+
+      <div className="mt-8">
+        <ProjectsActivityHeatmap initialData={initialActivityData} />
       </div>
     </div>
   );
