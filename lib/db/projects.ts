@@ -38,7 +38,9 @@ interface MutableProjectsActivityDayCell extends Omit<ProjectsActivityDayCell, '
   shippedTicketIds: Set<number>;
 }
 
-function getProjectsAccessWhere(userId: string) {
+function getProjectsAccessWhere(userId: string): {
+  OR: Array<{ userId: string } | { members: { some: { userId: string } } }>;
+} {
   return {
     OR: [
       { userId },
@@ -52,10 +54,11 @@ function buildSummaryLabel(
   totalShippedTickets: number,
   period: ProjectsActivityHeatmapResponse['filters']
 ): string {
-  const periodLabel =
-    period.period === 'year' && period.year !== null
-      ? `in ${period.year}`
-      : 'in the last 12 months';
+  let periodLabel = 'in the last 12 months';
+
+  if (period.period === 'year' && period.year !== null) {
+    periodLabel = `in ${period.year}`;
+  }
 
   return `${totalJobs} jobs · ${totalShippedTickets} tickets shipped ${periodLabel}`;
 }
@@ -63,15 +66,15 @@ function buildSummaryLabel(
 function createEmptyDayCells(start: Date, end: Date): MutableProjectsActivityDayCell[] {
   const intervalDays = eachDayOfInterval({ start, end });
   const firstWeekStart = startOfWeek(start, { weekStartsOn: 0 });
+  const startDateKey = format(start, 'yyyy-MM-dd');
 
   return intervalDays.map((day) => ({
     date: format(day, 'yyyy-MM-dd'),
     weekIndex: differenceInCalendarWeeks(day, firstWeekStart, { weekStartsOn: 0 }),
     weekdayIndex: getDay(day),
-    monthLabel:
-      day.getUTCDate() === 1 || format(day, 'yyyy-MM-dd') === format(start, 'yyyy-MM-dd')
-        ? format(day, 'MMM')
-        : null,
+    monthLabel: day.getUTCDate() === 1 || format(day, 'yyyy-MM-dd') === startDateKey
+      ? format(day, 'MMM')
+      : null,
     jobCount: 0,
     shippedTicketCount: 0,
     costUsd: null,
@@ -81,20 +84,16 @@ function createEmptyDayCells(start: Date, end: Date): MutableProjectsActivityDay
   }));
 }
 
-function applyIntensityLevels(days: MutableProjectsActivityDayCell[]): ProjectsActivityDayCell[] {
-  const uniquePositiveJobCounts = Array.from(
-    new Set(days.map((day) => day.jobCount).filter((count) => count > 0))
-  ).sort((left, right) => left - right);
-
-  let getIntensityLevel = (jobCount: number): 0 | 1 | 2 | 3 | 4 => (jobCount > 0 ? 1 : 0);
-
+function createIntensityLevelResolver(
+  uniquePositiveJobCounts: number[]
+): (jobCount: number) => 0 | 1 | 2 | 3 | 4 {
   if (uniquePositiveJobCounts.length > 4) {
     const lastIndex = uniquePositiveJobCounts.length - 1;
     const q1 = uniquePositiveJobCounts[Math.floor(lastIndex * 0.25)]!;
     const q2 = uniquePositiveJobCounts[Math.floor(lastIndex * 0.5)]!;
     const q3 = uniquePositiveJobCounts[Math.floor(lastIndex * 0.75)]!;
 
-    getIntensityLevel = (jobCount: number): 0 | 1 | 2 | 3 | 4 => {
+    return function getQuantileIntensityLevel(jobCount: number): 0 | 1 | 2 | 3 | 4 {
       if (jobCount <= 0) {
         return 0;
       }
@@ -109,8 +108,10 @@ function applyIntensityLevels(days: MutableProjectsActivityDayCell[]): ProjectsA
       }
       return 4;
     };
-  } else if (uniquePositiveJobCounts.length > 0) {
-    getIntensityLevel = (jobCount: number): 0 | 1 | 2 | 3 | 4 => {
+  }
+
+  if (uniquePositiveJobCounts.length > 0) {
+    return function getIndexedIntensityLevel(jobCount: number): 0 | 1 | 2 | 3 | 4 {
       if (jobCount <= 0) {
         return 0;
       }
@@ -118,6 +119,17 @@ function applyIntensityLevels(days: MutableProjectsActivityDayCell[]): ProjectsA
       return (uniquePositiveJobCounts.indexOf(jobCount) + 1) as 1 | 2 | 3 | 4;
     };
   }
+
+  return function getDefaultIntensityLevel(jobCount: number): 0 | 1 | 2 | 3 | 4 {
+    return jobCount > 0 ? 1 : 0;
+  };
+}
+
+function applyIntensityLevels(days: MutableProjectsActivityDayCell[]): ProjectsActivityDayCell[] {
+  const uniquePositiveJobCounts = Array.from(
+    new Set(days.map((day) => day.jobCount).filter((count) => count > 0))
+  ).sort((left, right) => left - right);
+  const getIntensityLevel = createIntensityLevelResolver(uniquePositiveJobCounts);
 
   return days.map(({ shippedTicketIds, ...day }) => ({
     ...day,
@@ -131,6 +143,63 @@ function isDateInRange(date: Date | null, start: Date, end: Date): boolean {
   }
 
   return isWithinInterval(date, { start, end });
+}
+
+function createProjectsActivityResponse(
+  filters: ProjectsActivityHeatmapResponse['filters'],
+  periodOptions: ProjectsActivityHeatmapResponse['periodOptions'],
+  agentOptions: ProjectsActivityHeatmapResponse['agentOptions'],
+  days: ProjectsActivityDayCell[],
+  now: Date
+): ProjectsActivityHeatmapResponse {
+  const totalJobs = days.reduce((total, day) => total + day.jobCount, 0);
+  const totalShippedTickets = days.reduce(
+    (total, day) => total + day.shippedTicketCount,
+    0
+  );
+
+  return {
+    filters,
+    periodOptions,
+    agentOptions,
+    summary: {
+      totalJobs,
+      totalShippedTickets,
+      summaryLabel: buildSummaryLabel(totalJobs, totalShippedTickets, filters),
+    },
+    days,
+    legendLevels: LEGEND_LEVELS,
+    hasActivity: totalJobs > 0,
+    generatedAt: now.toISOString(),
+  };
+}
+
+function addJobActivityToDay(
+  dayCell: MutableProjectsActivityDayCell | undefined,
+  costUsd: number | null
+): void {
+  if (!dayCell) {
+    return;
+  }
+
+  dayCell.jobCount += 1;
+
+  if (costUsd !== null) {
+    dayCell.costUsd = (dayCell.costUsd ?? 0) + costUsd;
+  }
+}
+
+function addShippedTicketToDay(
+  dayCell: MutableProjectsActivityDayCell | undefined,
+  ticket: ProjectsActivityShippedTicket
+): void {
+  if (!dayCell || dayCell.shippedTicketIds.has(ticket.ticketId)) {
+    return;
+  }
+
+  dayCell.shippedTicketIds.add(ticket.ticketId);
+  dayCell.shippedTicketCount += 1;
+  dayCell.shippedTickets.push(ticket);
 }
 
 /**
@@ -263,7 +332,6 @@ export async function getProjectsActivityHeatmap(
     where: getProjectsAccessWhere(userId),
     select: {
       id: true,
-      defaultAgent: true,
     },
   });
 
@@ -271,22 +339,13 @@ export async function getProjectsActivityHeatmap(
   const dayCellMap = new Map(dayCells.map((day) => [day.date, day]));
 
   if (accessibleProjects.length === 0) {
-    const days = applyIntensityLevels(dayCells);
-
-    return {
+    return createProjectsActivityResponse(
       filters,
       periodOptions,
-      agentOptions: ensureProjectsActivityAgentOptions([], filters.agent),
-      summary: {
-        totalJobs: 0,
-        totalShippedTickets: 0,
-        summaryLabel: buildSummaryLabel(0, 0, filters),
-      },
-      days,
-      legendLevels: LEGEND_LEVELS,
-      hasActivity: false,
-      generatedAt: now.toISOString(),
-    };
+      ensureProjectsActivityAgentOptions([], filters.agent),
+      applyIntensityLevels(dayCells),
+      now
+    );
   }
 
   const projectIds = accessibleProjects.map((project) => project.id);
@@ -311,7 +370,6 @@ export async function getProjectsActivityHeatmap(
       ],
     },
     select: {
-      id: true,
       command: true,
       status: true,
       startedAt: true,
@@ -342,13 +400,13 @@ export async function getProjectsActivityHeatmap(
     );
     const matchesSelectedAgent =
       filters.agent === 'all' || effectiveAgent === filters.agent;
+    const startedInRange = isDateInRange(job.startedAt, start, end);
+    const shippedInRange =
+      job.command === 'ship' &&
+      job.status === 'COMPLETED' &&
+      isDateInRange(job.completedAt, start, end);
 
-    if (
-      isDateInRange(job.startedAt, start, end) ||
-      (job.command === 'ship' &&
-        job.status === 'COMPLETED' &&
-        isDateInRange(job.completedAt, start, end))
-    ) {
+    if (startedInRange || shippedInRange) {
       seenAgents.add(effectiveAgent);
     }
 
@@ -356,37 +414,18 @@ export async function getProjectsActivityHeatmap(
       continue;
     }
 
-    if (isDateInRange(job.startedAt, start, end)) {
+    if (startedInRange && job.startedAt) {
       const dayKey = format(job.startedAt, 'yyyy-MM-dd');
-      const dayCell = dayCellMap.get(dayKey);
-
-      if (dayCell) {
-        dayCell.jobCount += 1;
-
-        if (job.costUsd !== null) {
-          dayCell.costUsd = (dayCell.costUsd ?? 0) + job.costUsd;
-        }
-      }
+      addJobActivityToDay(dayCellMap.get(dayKey), job.costUsd);
     }
 
-    if (
-      job.command === 'ship' &&
-      job.status === 'COMPLETED' &&
-      isDateInRange(job.completedAt, start, end) &&
-      job.completedAt
-    ) {
+    if (shippedInRange && job.completedAt) {
       const shipDayKey = format(job.completedAt, 'yyyy-MM-dd');
-      const dayCell = dayCellMap.get(shipDayKey);
-
-      if (dayCell && !dayCell.shippedTicketIds.has(job.ticket.id)) {
-        dayCell.shippedTicketIds.add(job.ticket.id);
-        dayCell.shippedTicketCount += 1;
-        dayCell.shippedTickets.push({
-          ticketId: job.ticket.id,
-          ticketKey: job.ticket.ticketKey,
-          title: job.ticket.title,
-        });
-      }
+      addShippedTicketToDay(dayCellMap.get(shipDayKey), {
+        ticketId: job.ticket.id,
+        ticketKey: job.ticket.ticketKey,
+        title: job.ticket.title,
+      });
     }
   }
 
@@ -394,29 +433,17 @@ export async function getProjectsActivityHeatmap(
     ...day,
     costUsd: day.costUsd === null ? null : Number(day.costUsd.toFixed(2)),
   }));
-  const totalJobs = normalizedDays.reduce((total, day) => total + day.jobCount, 0);
-  const totalShippedTickets = normalizedDays.reduce(
-    (total, day) => total + day.shippedTicketCount,
-    0
-  );
 
-  return {
+  return createProjectsActivityResponse(
     filters,
     periodOptions,
-    agentOptions: ensureProjectsActivityAgentOptions(
+    ensureProjectsActivityAgentOptions(
       Array.from(seenAgents).sort(),
       filters.agent
     ),
-    summary: {
-      totalJobs,
-      totalShippedTickets,
-      summaryLabel: buildSummaryLabel(totalJobs, totalShippedTickets, filters),
-    },
-    days: normalizedDays,
-    legendLevels: LEGEND_LEVELS,
-    hasActivity: normalizedDays.some((day) => day.jobCount > 0),
-    generatedAt: now.toISOString(),
-  };
+    normalizedDays,
+    now
+  );
 }
 
 /**

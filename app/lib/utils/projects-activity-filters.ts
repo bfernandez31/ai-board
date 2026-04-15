@@ -9,6 +9,7 @@ import { ALL_AGENTS, getAgentLabel, isSupportedAgent } from '@/app/lib/utils/age
 
 const ROLLING_PERIOD = 'last-12-months' as const;
 const PERIOD_VALUES = [ROLLING_PERIOD, 'year'] as const;
+const ALL_AGENTS_FILTER = 'all' as const;
 
 const looseQuerySchema = z.object({
   period: z.string().optional(),
@@ -36,6 +37,48 @@ export interface ProjectsActivityFilterParseResult {
 export interface ProjectsActivityDateRange {
   start: Date;
   end: Date;
+}
+
+type ProjectsActivityPeriodFilter = Pick<ProjectsActivityFilters, 'period' | 'year'>;
+
+function createProjectsActivityFilters(
+  period: ProjectsActivityFilters['period'],
+  year: number | null,
+  agent: ProjectsActivityAgentFilter
+): ProjectsActivityFilters {
+  return {
+    period,
+    year,
+    agent,
+  };
+}
+
+function parseProjectsActivityYear(
+  rawYear: string | undefined,
+  minYear: number,
+  maxYear: number
+): number | null {
+  if (!rawYear) {
+    return null;
+  }
+
+  const numericYear = Number(rawYear);
+
+  if (!Number.isInteger(numericYear) || numericYear < minYear || numericYear > maxYear) {
+    return null;
+  }
+
+  return numericYear;
+}
+
+function parseProjectsActivityAgent(
+  rawAgent: string | undefined
+): ProjectsActivityAgentFilter {
+  if (rawAgent && isSupportedAgent(rawAgent)) {
+    return rawAgent;
+  }
+
+  return ALL_AGENTS_FILTER;
 }
 
 export function getProjectsActivityPeriodOptions(
@@ -111,56 +154,43 @@ export function parseProjectsActivityFilters(
   const currentYear = now.getUTCFullYear();
   const createdYear = userCreatedAt.getUTCFullYear();
   const periodOptions = getProjectsActivityPeriodOptions(userCreatedAt, now);
+  const fallbackFilters = createProjectsActivityFilters(
+    ROLLING_PERIOD,
+    null,
+    parseProjectsActivityAgent(input.agent)
+  );
 
   if (options?.strict) {
     const parsed = createStrictFilterSchema(createdYear, currentYear).parse(input);
-    const year =
-      parsed.period === 'year' && parsed.year ? Number(parsed.year) : null;
+    const period = parsed.period ?? ROLLING_PERIOD;
+    const year = period === 'year' ? Number(parsed.year) : null;
 
     return {
-      filters: {
-        period: parsed.period ?? ROLLING_PERIOD,
-        year,
-        agent: parsed.agent ?? 'all',
-      },
+      filters: createProjectsActivityFilters(period, year, parsed.agent ?? ALL_AGENTS_FILTER),
       periodOptions,
     };
   }
 
   const parsed = looseQuerySchema.parse(input);
   const period = parsed.period === 'year' ? 'year' : ROLLING_PERIOD;
-  const rawYear = parsed.year ? Number(parsed.year) : null;
-  const validYear =
-    rawYear !== null &&
-    Number.isInteger(rawYear) &&
-    rawYear >= createdYear &&
-    rawYear <= currentYear;
-  const agent: ProjectsActivityAgentFilter =
-    parsed.agent && isSupportedAgent(parsed.agent) ? parsed.agent : 'all';
+  const year = parseProjectsActivityYear(parsed.year, createdYear, currentYear);
+  const agent = parseProjectsActivityAgent(parsed.agent);
 
-  if (period === 'year' && validYear) {
+  if (period === 'year' && year !== null) {
     return {
-      filters: {
-        period,
-        year: rawYear,
-        agent,
-      },
+      filters: createProjectsActivityFilters(period, year, agent),
       periodOptions,
     };
   }
 
   return {
-    filters: {
-      period: ROLLING_PERIOD,
-      year: null,
-      agent,
-    },
+    filters: fallbackFilters,
     periodOptions,
   };
 }
 
 export function getProjectsActivityDateRange(
-  filters: Pick<ProjectsActivityFilters, 'period' | 'year'>,
+  filters: ProjectsActivityPeriodFilter,
   now: Date = new Date()
 ): ProjectsActivityDateRange {
   if (filters.period === 'year' && filters.year !== null) {
@@ -178,7 +208,7 @@ export function getProjectsActivityDateRange(
 }
 
 export function serializeProjectsActivityPeriod(
-  filters: Pick<ProjectsActivityFilters, 'period' | 'year'>
+  filters: ProjectsActivityPeriodFilter
 ): string {
   if (filters.period === 'year' && filters.year !== null) {
     return `year:${filters.year}`;

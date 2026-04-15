@@ -24,6 +24,12 @@ function filtersMatch(
   );
 }
 
+function getActivityHeatmapQueryKey(filters: ProjectsActivityFilters) {
+  const yearKey = filters.year === null ? 'null' : String(filters.year);
+
+  return queryKeys.projects.activityHeatmap(filters.period, yearKey, filters.agent);
+}
+
 async function fetchProjectsActivityHeatmap(
   filters: ProjectsActivityFilters
 ): Promise<ProjectsActivityHeatmapResponse> {
@@ -45,11 +51,7 @@ export function useProjectsActivityHeatmap({
     initialData !== undefined && filtersMatch(filters, initialData.filters);
 
   return useQuery({
-    queryKey: queryKeys.projects.activityHeatmap(
-      filters.period,
-      filters.year === null ? 'null' : String(filters.year),
-      filters.agent
-    ),
+    queryKey: getActivityHeatmapQueryKey(filters),
     queryFn: () => fetchProjectsActivityHeatmap(filters),
     initialData: shouldUseInitialData ? initialData : undefined,
     placeholderData: (previousData) => previousData,

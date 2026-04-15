@@ -25,6 +25,10 @@ import {
 } from '@/components/ui/select';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+const COST_FORMATTER = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+});
 
 const intensityClasses: Record<ProjectsActivityDayCell['intensityLevel'], string> = {
   0: 'bg-muted hover:bg-muted',
@@ -42,14 +46,11 @@ function buildWeeks(days: ProjectsActivityDayCell[]): ProjectsActivityDayCell[][
   const weeks = new Map<number, ProjectsActivityDayCell[]>();
 
   for (const day of days) {
-    const existingWeek = weeks.get(day.weekIndex);
-
-    if (existingWeek) {
-      existingWeek.push(day);
-      continue;
+    if (!weeks.has(day.weekIndex)) {
+      weeks.set(day.weekIndex, []);
     }
 
-    weeks.set(day.weekIndex, [day]);
+    weeks.get(day.weekIndex)?.push(day);
   }
 
   return Array.from(weeks.values());
@@ -68,13 +69,23 @@ function formatCost(costUsd: number | null): string | null {
     return null;
   }
 
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(costUsd);
+  return COST_FORMATTER.format(costUsd);
 }
 
-function DayDetails({ day }: { day: ProjectsActivityDayCell }) {
+function getDayAriaLabel(day: ProjectsActivityDayCell): string {
+  return `${day.date}: ${formatJobLabel(day.jobCount)}, ${formatShippedLabel(
+    day.shippedTicketCount
+  )}`;
+}
+
+function shouldKeepHoveredDate(
+  selectedDate: string | null,
+  dayDate: string
+): boolean {
+  return selectedDate === dayDate;
+}
+
+function DayDetails({ day }: { day: ProjectsActivityDayCell }): JSX.Element {
   const formattedCost = formatCost(day.costUsd);
 
   return (
@@ -104,7 +115,7 @@ function DayDetails({ day }: { day: ProjectsActivityDayCell }) {
 
 export function ProjectsActivityHeatmap({
   initialData,
-}: ProjectsActivityHeatmapProps) {
+}: ProjectsActivityHeatmapProps): JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<ProjectsActivityFilters>(initialData.filters);
@@ -272,21 +283,19 @@ export function ProjectsActivityHeatmap({
                             <PopoverTrigger asChild>
                               <button
                                 type="button"
-                                aria-label={`${day.date}: ${formatJobLabel(day.jobCount)}, ${formatShippedLabel(
-                                  day.shippedTicketCount
-                                )}`}
+                                aria-label={getDayAriaLabel(day)}
                                 data-testid={`projects-activity-cell-${day.date}`}
                                 className={`h-5 w-5 rounded-[4px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${intensityClasses[day.intensityLevel]}`}
                                 style={{ gridRowStart: day.weekdayIndex + 1 }}
                                 onMouseEnter={() => setHoveredDate(day.date)}
                                 onMouseLeave={() => {
-                                  if (selectedDate !== day.date) {
+                                  if (!shouldKeepHoveredDate(selectedDate, day.date)) {
                                     setHoveredDate(null);
                                   }
                                 }}
                                 onFocus={() => setHoveredDate(day.date)}
                                 onBlur={() => {
-                                  if (selectedDate !== day.date) {
+                                  if (!shouldKeepHoveredDate(selectedDate, day.date)) {
                                     setHoveredDate(null);
                                   }
                                 }}
