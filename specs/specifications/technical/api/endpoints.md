@@ -4496,6 +4496,74 @@ Fetch unified activity feed for a project.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 
+## Heatmap Endpoints
+
+### GET /api/heatmap
+
+Fetch cross-project activity heatmap data for the authenticated user.
+
+**Authentication**: Required (session)
+**Authorization**: Scoped to projects owned by or accessible to the authenticated user
+
+**Query Parameters**:
+- `year` (string, optional): Time period — `rolling` (last 365 days) or a 4-digit calendar year (default: `rolling`)
+- `agent` (string, optional): Agent filter — `all` or one of `CLAUDE`, `CODEX`, `MISTRAL`, `GEMINI` (default: `all`)
+
+**Behavior**:
+- Aggregates job data across ALL projects where the user is owner or member
+- Rolling period: last 365 days from the current UTC date
+- Calendar year: January 1 00:00:00 UTC through December 31 23:59:59 UTC
+- Agent filtering uses effective agent resolution: tickets with no explicit `agent` fall back to their project's `defaultAgent`
+- Shipped ticket counting: only `command='ship'`, `status='COMPLETED'` jobs qualify; attributed to `completedAt`; deduplicated per ticket (first completed ship job only)
+
+**Response** (200 OK):
+```json
+{
+  "days": [
+    {
+      "date": "2026-03-15",
+      "jobCount": 5,
+      "costUsd": 1.23,
+      "shippedTickets": [
+        { "ticketKey": "AIB-42", "title": "Add dark mode toggle" }
+      ]
+    },
+    {
+      "date": "2026-03-16",
+      "jobCount": 3,
+      "costUsd": null,
+      "shippedTickets": []
+    }
+  ],
+  "totalJobs": 150,
+  "totalShipped": 12,
+  "agents": [
+    { "value": "all", "label": "All agents", "jobCount": 150, "isDefault": true },
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 120, "isDefault": false }
+  ],
+  "periodLabel": "in the last year",
+  "userCreatedYear": 2024
+}
+```
+
+**Response Fields**:
+- `days`: Sparse array — only days with at least one job; days with zero activity are omitted
+- `days[].date`: ISO date string `YYYY-MM-DD` in UTC
+- `days[].jobCount`: Count of jobs with `startedAt` on this day
+- `days[].costUsd`: Sum of non-null `costUsd` values; `null` when ALL jobs on that day have null cost — never `0` for missing data
+- `days[].shippedTickets`: Tickets shipped on this day (deduplicated; first completed `ship` job per ticket only)
+- `totalJobs`: Sum of all `jobCount` values across the period
+- `totalShipped`: Count of unique tickets shipped in the period
+- `agents`: Available filter options; `"all"` always first; only agents with `jobCount > 0` included; returns only `["all"]` when 0–1 distinct agents
+- `periodLabel`: Human-readable: `"in the last year"` for rolling, `"in 2025"` for calendar year
+- `userCreatedYear`: User's account creation year; used by the client to populate year selector options
+
+**Errors**:
+- `400`: Invalid `year` parameter (not `rolling` or a valid in-range 4-digit year)
+- `400`: Invalid `agent` parameter (not `all` or a recognized Agent enum value)
+- `401`: Not authenticated
+- `500`: Internal server error
+
 ## Token Endpoints
 
 ### GET /api/tokens

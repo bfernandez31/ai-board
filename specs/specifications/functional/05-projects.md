@@ -127,6 +127,69 @@ When no projects exist:
 - All text content uses `min-w-0` and `truncate` utilities to prevent horizontal scroll
 - Cards maintain fixed width boundaries on mobile viewports (375px minimum)
 
+## Activity Heatmap
+
+### Overview
+
+The projects page displays a GitHub-style contribution heatmap below the project cards grid, providing an at-a-glance view of AI job activity across all of the user's projects over the selected time period.
+
+### Visualization
+
+**Grid Layout**:
+- 7 rows, one per day of the week (Sunday through Saturday)
+- Columns span one week each, covering the selected period
+- Cells colored by job count on that calendar day using a violet intensity gradient (empty for no activity, progressively darker for higher counts)
+- "Chipped corners": cells before the period start date and after the period end date in partial weeks are not rendered (GitHub-style)
+- Month labels appear above the grid columns; day-of-week labels (Mon, Wed, Fri) appear to the left of rows
+- An intensity legend at the bottom-right shows the gradient scale (Less → More)
+
+**Header Summary**:
+- Displays "X jobs · Y tickets shipped {period}" above the grid
+- A ticket counts as "shipped" only when its `ship` command job has a `COMPLETED` status; stage transitions to SHIP without a completed job do not qualify
+- Shipped tickets are attributed to the date the `ship` job completed (`completedAt`)
+
+### Filters
+
+**Year Selector**:
+- Dropdown with "Last 12 months" (rolling 365-day default) and each calendar year from the user's account creation year to the current year
+- Hidden when the user's account was created in the current calendar year
+- Calendar year view spans January 1 through December 31 of the selected year
+
+**Agent Filter**:
+- Displayed only when the user's jobs span 2 or more distinct effective agents
+- Options: "All" plus each agent with activity in the period
+- Effective agent: tickets with no explicit agent use their parent project's `defaultAgent`
+- When a filter is applied, grid date boundaries and chipped corners remain unchanged; only cell intensities change
+
+**URL Persistence**:
+- Active filter state is stored in URL query parameters (`year`, `agent`)
+- Copying and sharing the URL reproduces the same view in a new session
+
+### Empty State
+
+When the selected period has no job activity, a centered message "No activity to show yet — your AI work will appear here" replaces the grid while the legend and any visible filters remain.
+
+### Tooltip
+
+Hovering (desktop) or tapping (mobile) a cell shows a tooltip with:
+- Tickets shipped that day (ticket key + title), if any
+- Job count and total cost (cost line omitted entirely when no jobs on that day have recorded costs)
+- Formatted date (e.g., "Tuesday, March 15, 2026")
+
+Cost values never show "$NaN" or "$0" for missing data.
+
+### Mobile Behavior
+
+- The heatmap grid scrolls horizontally on mobile viewports
+- Day-of-week labels remain pinned (sticky) on the left edge during horizontal scroll
+- Cells maintain a minimum tappable size; horizontal scrolling accommodates the full grid
+- Tapping a cell shows its tooltip; tapping outside dismisses it
+
+### Data Loading
+
+- Initial data is server-rendered — no loading spinner or blank flash on first page load
+- Background refetches silently update the grid without clearing the existing display
+
 ## Project Settings
 
 ### Settings Page Navigation
