@@ -18,9 +18,9 @@
 
 **Purpose**: Types, query keys, and CSS utilities shared across all user stories
 
-- [ ] T001 [P] Create heatmap type definitions (`HeatmapDay`, `ShippedTicketInfo`, `HeatmapData`, `HeatmapFilters`) in `lib/heatmap/types.ts`
-- [ ] T002 [P] Add `heatmap: { data: (year, agent) => ['heatmap', year, agent] as const }` to `app/lib/query-keys.ts`
-- [ ] T003 [P] Add heatmap intensity CSS utility classes (`.heatmap-level-0` through `.heatmap-level-4`) under `@layer utilities` in `app/globals.css`
+- [x] T001 [P] Create heatmap type definitions (`HeatmapDay`, `ShippedTicketInfo`, `HeatmapData`, `HeatmapFilters`) in `lib/heatmap/types.ts`
+- [x] T002 [P] Add `heatmap: { data: (year, agent) => ['heatmap', year, agent] as const }` to `app/lib/query-keys.ts`
+- [x] T003 [P] Add heatmap intensity CSS utility classes (`.heatmap-level-0` through `.heatmap-level-4`) under `@layer utilities` in `app/globals.css`
 
 ---
 
@@ -30,11 +30,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Implement `getHeatmapData(userId, filters)` in `lib/heatmap/queries.ts`: fetch user's project IDs (owner OR member), query jobs grouped by `DATE(startedAt)`, aggregate `jobCount`/`costUsd` per day, query shipped tickets (`command='ship'`, `status='COMPLETED'`, dedupe by ticket ID), build agent options via `buildEffectiveAgentWhere` pattern from `lib/analytics/queries.ts`, fetch `user.createdAt` for year range
-- [ ] T005 Create `GET /api/heatmap` route in `app/api/heatmap/route.ts`: auth check (401), Zod validation for `year`/`agent` query params (400), call `getHeatmapData`, return JSON per contract in `contracts/heatmap-api.md`
-- [ ] T006 Create `useHeatmap(initialData, filters)` hook in `app/lib/hooks/queries/use-heatmap.ts`: TanStack Query with `queryKeys.heatmap.data(year, agent)`, `refetchInterval: 60_000`, `staleTime: 30_000`, `initialData` prop — follow pattern from `hooks/use-usage.ts`
-- [ ] T007 Extend `app/projects/page.tsx`: parse `year`/`agent` from `searchParams`, call `getHeatmapData(userId, filters)` server-side alongside existing `getProjects()`, pass `heatmapData` as `initialData` prop to new `<ActivityHeatmap>` component rendered below `<ProjectsContainer>`
-- [ ] T008 Remove `overflow-y-auto max-h-[calc(100vh-200px)]` scroll constraint from `components/projects/projects-container.tsx` to allow natural page scrolling (FR-026)
+- [x] T004 Implement `getHeatmapData(userId, filters)` in `lib/heatmap/queries.ts`: fetch user's project IDs (owner OR member), query jobs grouped by `DATE(startedAt)`, aggregate `jobCount`/`costUsd` per day, query shipped tickets (`command='ship'`, `status='COMPLETED'`, dedupe by ticket ID), build agent options via `buildEffectiveAgentWhere` pattern from `lib/analytics/queries.ts`, fetch `user.createdAt` for year range
+- [x] T005 Create `GET /api/heatmap` route in `app/api/heatmap/route.ts`: auth check (401), Zod validation for `year`/`agent` query params (400), call `getHeatmapData`, return JSON per contract in `contracts/heatmap-api.md`
+- [x] T006 Create `useHeatmap(initialData, filters)` hook in `app/lib/hooks/queries/use-heatmap.ts`: TanStack Query with `queryKeys.heatmap.data(year, agent)`, `refetchInterval: 60_000`, `staleTime: 30_000`, `initialData` prop — follow pattern from `hooks/use-usage.ts`
+- [x] T007 Extend `app/projects/page.tsx`: parse `year`/`agent` from `searchParams`, call `getHeatmapData(userId, filters)` server-side alongside existing `getProjects()`, pass `heatmapData` as `initialData` prop to new `<ActivityHeatmap>` component rendered below `<ProjectsContainer>`
+- [x] T008 Remove `overflow-y-auto max-h-[calc(100vh-200px)]` scroll constraint from `components/projects/projects-container.tsx` to allow natural page scrolling (FR-026)
 
 **Checkpoint**: Foundation ready — data layer returns correct heatmap data, API route is functional, server-side integration passes data to client
 
@@ -48,14 +48,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T009 [P] [US1] Create unit tests for heatmap query helpers in `tests/unit/lib/heatmap-queries.test.ts`: date range calculation (rolling vs calendar year), cost aggregation (null handling, partial nulls), shipped ticket deduplication (first completed ship job per ticket), intensity level mapping (quartile calculation)
-- [ ] T010 [P] [US1] Create RTL component tests in `tests/unit/components/heatmap/activity-heatmap.test.tsx`: grid renders correct cell count for date range, chipped corners for partial weeks, month labels in correct positions, empty state message when `totalJobs === 0`, legend renders with graduated color blocks. Mock `useSearchParams`, `useRouter`, `useHeatmap` hook
-- [ ] T011 [P] [US1] Create integration tests in `tests/integration/heatmap/heatmap-route.test.ts`: 401 when unauthenticated, valid data structure with correct field types, empty `days` for user with no jobs, filters by calendar year, returns correct `userCreatedYear`. Use `x-test-user-id` auth pattern from `tests/integration/projects/projects-with-health.test.ts`
+- [x] T009 [P] [US1] Create unit tests for heatmap query helpers in `tests/unit/lib/heatmap-queries.test.ts`: date range calculation (rolling vs calendar year), cost aggregation (null handling, partial nulls), shipped ticket deduplication (first completed ship job per ticket), intensity level mapping (quartile calculation)
+- [x] T010 [P] [US1] Create RTL component tests in `tests/unit/components/heatmap/activity-heatmap.test.tsx`: grid renders correct cell count for date range, chipped corners for partial weeks, month labels in correct positions, empty state message when `totalJobs === 0`, legend renders with graduated color blocks. Mock `useSearchParams`, `useRouter`, `useHeatmap` hook
+- [x] T011 [P] [US1] Create integration tests in `tests/integration/heatmap/heatmap-route.test.ts`: 401 when unauthenticated, valid data structure with correct field types, empty `days` for user with no jobs, filters by calendar year, returns correct `userCreatedYear`. Use `x-test-user-id` auth pattern from `tests/integration/projects/projects-with-health.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Create heatmap grid component in `components/heatmap/heatmap-grid.tsx`: 7 rows (Sun–Sat), week columns for period, `<div>` cells with `heatmap-level-*` classes for intensity (quartile mapping), month labels above columns, day-of-week labels (Mon, Wed, Fri) on left, chipped corners for partial weeks, cell size 12px with 3px gap
-- [ ] T013 [US1] Create main `ActivityHeatmap` client component in `components/heatmap/activity-heatmap.tsx`: `"use client"`, wire `useHeatmap` hook with `initialData`, render `<HeatmapGrid>` with day data, intensity legend ("Less" → graduated blocks → "More" at bottom-right), empty state message when `totalJobs === 0` ("No activity to show yet — your AI work will appear here"), wrap grid in `<TooltipProvider>`, `aurora-bg-section` container styling
+- [x] T012 [P] [US1] Create heatmap grid component in `components/heatmap/heatmap-grid.tsx`: 7 rows (Sun–Sat), week columns for period, `<div>` cells with `heatmap-level-*` classes for intensity (quartile mapping), month labels above columns, day-of-week labels (Mon, Wed, Fri) on left, chipped corners for partial weeks, cell size 12px with 3px gap
+- [x] T013 [US1] Create main `ActivityHeatmap` client component in `components/heatmap/activity-heatmap.tsx`: `"use client"`, wire `useHeatmap` hook with `initialData`, render `<HeatmapGrid>` with day data, intensity legend ("Less" → graduated blocks → "More" at bottom-right), empty state message when `totalJobs === 0` ("No activity to show yet — your AI work will appear here"), wrap grid in `<TooltipProvider>`, `aurora-bg-section` container styling
 
 **Checkpoint**: Heatmap grid visible on `/projects` with correct data, intensity colors, legend, and empty state — User Story 1 is independently testable
 
@@ -69,12 +69,12 @@
 
 ### Tests for User Story 2
 
-- [ ] T014 [P] [US2] Extend component tests in `tests/unit/components/heatmap/activity-heatmap.test.tsx`: header counter displays correct "X jobs · Y tickets shipped" text, year selector shows options from `userCreatedYear` to current year plus "Last 12 months", year selector hidden when `userCreatedYear` equals current year, selecting year updates URL params
-- [ ] T015 [P] [US2] Extend integration tests in `tests/integration/heatmap/heatmap-route.test.ts`: validate `year` param returns 400 for invalid values, calendar year filtering returns correct date-bounded data, `periodLabel` returns `"in the last year"` for rolling and `"in 2025"` for calendar year
+- [x] T014 [P] [US2] Extend component tests in `tests/unit/components/heatmap/activity-heatmap.test.tsx`: header counter displays correct "X jobs · Y tickets shipped" text, year selector shows options from `userCreatedYear` to current year plus "Last 12 months", year selector hidden when `userCreatedYear` equals current year, selecting year updates URL params
+- [x] T015 [P] [US2] Extend integration tests in `tests/integration/heatmap/heatmap-route.test.ts`: validate `year` param returns 400 for invalid values, calendar year filtering returns correct date-bounded data, `periodLabel` returns `"in the last year"` for rolling and `"in 2025"` for calendar year
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Add header section to `components/heatmap/activity-heatmap.tsx`: counter displaying `"{totalJobs} jobs · {totalShipped} tickets shipped {periodLabel}"`, year selector `<Select>` dropdown with "Last 12 months" (value: `rolling`) + calendar years from `userCreatedYear` to current year, hide year selector when user created in current year (FR-012), read/write `year` URL query param via `useSearchParams` + `useRouter` (FR-019)
+- [x] T016 [US2] Add header section to `components/heatmap/activity-heatmap.tsx`: counter displaying `"{totalJobs} jobs · {totalShipped} tickets shipped {periodLabel}"`, year selector `<Select>` dropdown with "Last 12 months" (value: `rolling`) + calendar years from `userCreatedYear` to current year, hide year selector when user created in current year (FR-012), read/write `year` URL query param via `useSearchParams` + `useRouter` (FR-019)
 
 **Checkpoint**: Header counter and year selector functional — switching years updates grid and counter; URL reflects filter state
 
@@ -88,12 +88,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T017 [P] [US3] Extend component tests in `tests/unit/components/heatmap/activity-heatmap.test.tsx`: tooltip shows shipped ticket key + title, tooltip shows job count + cost, tooltip omits cost line when all costs null, tooltip shows partial cost when some jobs have cost, date formatted correctly in tooltip
+- [x] T017 [P] [US3] Extend component tests in `tests/unit/components/heatmap/activity-heatmap.test.tsx`: tooltip shows shipped ticket key + title, tooltip shows job count + cost, tooltip omits cost line when all costs null, tooltip shows partial cost when some jobs have cost, date formatted correctly in tooltip
 
 ### Implementation for User Story 3
 
-- [ ] T018 [P] [US3] Create tooltip content component in `components/heatmap/heatmap-tooltip.tsx`: display shipped tickets (ticketKey + title), job count + formatted cost (`$X.XX`, only when at least one job has cost), formatted date (e.g., "Tuesday, March 15, 2026"), uses shadcn/ui `<Tooltip>` wrapping each grid cell
-- [ ] T019 [US3] Integrate tooltip into `components/heatmap/heatmap-grid.tsx`: wrap each cell `<div>` with `<Tooltip>` + `<HeatmapTooltip>` content, pass day data to tooltip component
+- [x] T018 [P] [US3] Create tooltip content component in `components/heatmap/heatmap-tooltip.tsx`: display shipped tickets (ticketKey + title), job count + formatted cost (`$X.XX`, only when at least one job has cost), formatted date (e.g., "Tuesday, March 15, 2026"), uses shadcn/ui `<Tooltip>` wrapping each grid cell
+- [x] T019 [US3] Integrate tooltip into `components/heatmap/heatmap-grid.tsx`: wrap each cell `<div>` with `<Tooltip>` + `<HeatmapTooltip>` content, pass day data to tooltip component
 
 **Checkpoint**: Tooltips display correct data on hover — cost handling and shipped ticket display verified
 
@@ -107,12 +107,12 @@
 
 ### Tests for User Story 4
 
-- [ ] T020 [P] [US4] Extend component tests in `tests/unit/components/heatmap/activity-heatmap.test.tsx`: agent filter visible when `agents.length > 2` (more than just "all"), agent filter hidden when 0-1 distinct agents, selecting agent updates URL params
-- [ ] T021 [P] [US4] Extend integration tests in `tests/integration/heatmap/heatmap-route.test.ts`: filters by agent correctly (including effective agent resolution via project `defaultAgent`), validates `agent` param returns 400 for invalid values, `agents` array includes only agents with jobs
+- [x] T020 [P] [US4] Extend component tests in `tests/unit/components/heatmap/activity-heatmap.test.tsx`: agent filter visible when `agents.length > 2` (more than just "all"), agent filter hidden when 0-1 distinct agents, selecting agent updates URL params
+- [x] T021 [P] [US4] Extend integration tests in `tests/integration/heatmap/heatmap-route.test.ts`: filters by agent correctly (including effective agent resolution via project `defaultAgent`), validates `agent` param returns 400 for invalid values, `agents` array includes only agents with jobs
 
 ### Implementation for User Story 4
 
-- [ ] T022 [US4] Add agent filter to `components/heatmap/activity-heatmap.tsx`: `<Select>` dropdown with agent options from `data.agents`, shown only when `agents.length > 2` (i.e., "all" + 2+ agents) per FR-015, read/write `agent` URL query param via `useSearchParams` + `useRouter` (FR-019), grid boundaries unchanged when filtering (FR-018)
+- [x] T022 [US4] Add agent filter to `components/heatmap/activity-heatmap.tsx`: `<Select>` dropdown with agent options from `data.agents`, shown only when `agents.length > 2` (i.e., "all" + 2+ agents) per FR-015, read/write `agent` URL query param via `useSearchParams` + `useRouter` (FR-019), grid boundaries unchanged when filtering (FR-018)
 
 **Checkpoint**: Agent filter functional — filtering shows correct per-agent data, hidden when single agent, URL reflects filter state
 
@@ -126,11 +126,11 @@
 
 ### Tests for User Story 5
 
-- [ ] T023 [US5] Extend component tests in `tests/unit/components/heatmap/activity-heatmap.test.tsx`: verify grid container has `overflow-x-auto` class, day-of-week labels have sticky positioning classes
+- [x] T023 [US5] Extend component tests in `tests/unit/components/heatmap/activity-heatmap.test.tsx`: verify grid container has `overflow-x-auto` class, day-of-week labels have sticky positioning classes
 
 ### Implementation for User Story 5
 
-- [ ] T024 [US5] Add mobile responsive styles to `components/heatmap/heatmap-grid.tsx`: outer container `overflow-x-auto`, day-of-week labels `sticky left-0 z-10` with background, ensure minimum cell size for touch targets, test tap-to-show tooltip behavior (Radix Tooltip handles this natively)
+- [x] T024 [US5] Add mobile responsive styles to `components/heatmap/heatmap-grid.tsx`: outer container `overflow-x-auto`, day-of-week labels `sticky left-0 z-10` with background, ensure minimum cell size for touch targets, test tap-to-show tooltip behavior (Radix Tooltip handles this natively)
 
 **Checkpoint**: Mobile experience verified — horizontal scroll, sticky labels, tappable cells
 
@@ -140,8 +140,8 @@
 
 **Purpose**: Accessibility and final integration quality
 
-- [ ] T025 [P] Add ARIA attributes to heatmap components: grid container `role="grid"` + `aria-label="Activity heatmap"`, each cell `role="gridcell"` + `aria-label="{jobCount} jobs on {date}"`, legend `aria-hidden="true"` — in `components/heatmap/heatmap-grid.tsx` and `components/heatmap/activity-heatmap.tsx`
-- [ ] T026 Verify cost aggregation edge cases in `tests/integration/heatmap/heatmap-route.test.ts`: all costs null → `costUsd: null` in response, partial null → sum of non-null only, shipped ticket deduplication (multiple completed ship jobs → counted once)
+- [x] T025 [P] Add ARIA attributes to heatmap components: grid container `role="grid"` + `aria-label="Activity heatmap"`, each cell `role="gridcell"` + `aria-label="{jobCount} jobs on {date}"`, legend `aria-hidden="true"` — in `components/heatmap/heatmap-grid.tsx` and `components/heatmap/activity-heatmap.tsx`
+- [x] T026 Verify cost aggregation edge cases in `tests/integration/heatmap/heatmap-route.test.ts`: all costs null → `costUsd: null` in response, partial null → sum of non-null only, shipped ticket deduplication (multiple completed ship jobs → counted once)
 
 ---
 
