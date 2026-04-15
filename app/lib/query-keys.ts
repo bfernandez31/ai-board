@@ -70,6 +70,11 @@ export const queryKeys = {
     trends: (projectId: number) => ['health', projectId, 'trends'] as const,
   },
 
+  heatmap: {
+    data: (year: string, agent: string) =>
+      ['heatmap', year, agent] as const,
+  },
+
   tokens: {
     all: ['tokens'] as const,
   },
