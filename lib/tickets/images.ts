@@ -100,6 +100,9 @@ export async function uploadTicketImage(
     };
   }
 
+  // Pre-check the version to fail fast with the same 409 contract before doing
+  // expensive work (file read, Cloudinary upload). The atomic check happens at the
+  // final updateMany below to close the TOCTOU window between this read and the write.
   if (ticket.version !== version) {
     return {
       ok: false,
@@ -166,16 +169,31 @@ export async function uploadTicketImage(
 
   const updatedAttachments = [...existingAttachments, newAttachment];
 
-  const updatedTicket = await prisma.ticket.update({
-    where: { id: ticketId },
+  // Atomic conditional update closes the TOCTOU race between the version pre-check above
+  // and the write. updateMany returns a count instead of throwing P2025, which is why we
+  // gate on count === 0 rather than try/catch.
+  const updateResult = await prisma.ticket.updateMany({
+    where: { id: ticketId, projectId, version },
     data: {
       attachments: updatedAttachments as unknown as Prisma.InputJsonValue,
       version: { increment: 1 },
     },
-    select: {
-      attachments: true,
-      version: true,
-    },
+  });
+
+  if (updateResult.count === 0) {
+    return {
+      ok: false,
+      status: 409,
+      body: {
+        error: 'Ticket was modified by another user. Please refresh and try again.',
+        code: 'CONFLICT',
+      },
+    };
+  }
+
+  const updatedTicket = await prisma.ticket.findUniqueOrThrow({
+    where: { id: ticketId },
+    select: { attachments: true, version: true },
   });
 
   return {

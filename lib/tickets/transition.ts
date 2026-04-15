@@ -302,7 +302,24 @@ export async function executeTicketTransition(
   // Forward transition
   const isQuickImpl = ticket.stage === Stage.INBOX && targetStage === Stage.BUILD;
 
-  const transitionResult = await handleTicketTransition(ticket, targetStage);
+  // Re-read ticket immediately before dispatch to avoid dispatching a workflow with a
+  // stale snapshot. Without this, concurrent transitions could dispatch GitHub workflows
+  // built from outdated stage/workflowType/branch/attachments while the local optimistic
+  // update only cleans up the DB job row — leaving the external workflow running untracked.
+  const freshTicket = await prisma.ticket.findUnique({
+    where: { id: ticket.id },
+    include: { project: true },
+  });
+
+  if (!freshTicket || freshTicket.version !== ticket.version || freshTicket.stage !== ticket.stage) {
+    return {
+      ok: false,
+      status: 409,
+      body: { error: 'Ticket was modified by another request. Please refresh and try again.' },
+    };
+  }
+
+  const transitionResult = await handleTicketTransition(freshTicket, targetStage);
 
   if (!transitionResult.success) {
     return {
@@ -317,13 +334,15 @@ export async function executeTicketTransition(
     };
   }
 
-  let currentVersion = ticket.version;
+  // QUICK_IMPL bumps version inside handleTicketTransition (workflowType update),
+  // so we must re-read before the final optimistic update.
+  let currentVersion = freshTicket.version;
   if (isQuickImpl) {
     const refreshedTicket = await prisma.ticket.findUnique({
       where: { id: ticket.id },
       select: { version: true },
     });
-    currentVersion = refreshedTicket?.version || ticket.version;
+    currentVersion = refreshedTicket?.version || freshTicket.version;
   }
 
   try {

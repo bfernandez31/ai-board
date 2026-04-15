@@ -19,7 +19,7 @@ export type DeleteTicketResult =
  *    calls deleteBranchAndPRs and surfaces failures as 500 GITHUB_API_ERROR
  */
 export async function deleteTicketWithCleanup(
-  ticket: { id: number; projectId: number; stage: string; branch: string | null }
+  ticket: { id: number; projectId: number; stage: Stage; branch: string | null }
 ): Promise<DeleteTicketResult> {
   if (ticket.stage === Stage.SHIP) {
     return {
