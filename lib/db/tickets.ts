@@ -3,7 +3,7 @@ import { Stage, getAllStages } from '../stage-transitions';
 import { TicketWithVersion } from '../types';
 import type { CreateTicketInput } from '../validations/ticket';
 import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
-import type { Ticket, Job } from '@prisma/client';
+import type { Ticket, Job, Prisma } from '@prisma/client';
 
 type TicketRow = {
   id: number;
@@ -180,6 +180,64 @@ export async function getMoreShipTickets(
   });
 
   return tickets.map(toTicketWithVersion);
+}
+
+/**
+ * Filters for the direct ticket list query (GET /api/projects/:projectId/tickets).
+ */
+export interface TicketListFilters {
+  stage?: 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY' | 'SHIP' | 'CLOSED';
+  workflowType?: 'FULL' | 'QUICK' | 'CLEAN';
+  limit?: number;
+  updatedSince?: Date;
+}
+
+/**
+ * Query tickets with arbitrary filters, ordered by updatedAt desc.
+ */
+export async function listTicketsFiltered(
+  projectId: number,
+  filters: TicketListFilters
+): Promise<Ticket[]> {
+  const where: Prisma.TicketWhereInput = {
+    projectId,
+    ...(filters.stage && { stage: filters.stage }),
+    ...(filters.workflowType && { workflowType: filters.workflowType }),
+    ...(filters.updatedSince && { updatedAt: { gte: filters.updatedSince } }),
+  };
+
+  return prisma.ticket.findMany({
+    where,
+    orderBy: { updatedAt: 'desc' },
+    ...(filters.limit && { take: filters.limit }),
+  });
+}
+
+/**
+ * Count tickets created by a user in the current month (for plan-limit checks).
+ */
+export async function countTicketsThisMonthForUser(userId: string): Promise<number> {
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  return prisma.ticket.count({
+    where: {
+      project: { userId },
+      createdAt: { gte: startOfMonth },
+    },
+  });
+}
+
+/**
+ * Returns true when a project with the given id exists.
+ */
+export async function projectExists(projectId: number): Promise<boolean> {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true },
+  });
+  return project !== null;
 }
 
 /**

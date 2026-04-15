@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { getTicketsByStage, getMoreShipTickets, createTicket } from '@/lib/db/tickets';
+import {
+  getTicketsByStage,
+  getMoreShipTickets,
+  listTicketsFiltered,
+  countTicketsThisMonthForUser,
+  projectExists,
+} from '@/lib/db/tickets';
+import { createTicketWithAttachments } from '@/lib/tickets/creation';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { CreateTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
-import { TicketAttachmentsArraySchema } from '@/app/lib/schemas/ticket';
-import { validateImageFile } from '@/app/lib/validations/image';
-import { extractImageUrls } from '@/app/lib/parsers/markdown';
-import type { TicketAttachment } from '@/app/lib/types/ticket';
 import { z, ZodError } from 'zod';
 import formidable, { Fields, Files } from 'formidable';
-import { promises as fs } from 'fs';
 import { Readable } from 'stream';
-import { prisma } from '@/lib/db/client';
-import { Prisma } from '@prisma/client';
 import { requireAuth } from '@/lib/db/users';
 import { getUserSubscription } from '@/lib/billing/subscription';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
@@ -36,8 +36,7 @@ export async function GET(
     if (!workflowAuth.isValid) {
       await verifyProjectAccess(projectId, request);
     } else {
-      const project = await prisma.project.findUnique({ where: { id: projectId }, select: { id: true } });
-      if (!project) {
+      if (!(await projectExists(projectId))) {
         return NextResponse.json({ error: 'Project not found', code: 'PROJECT_NOT_FOUND' }, { status: 404 });
       }
     }
@@ -69,19 +68,13 @@ export async function GET(
       return NextResponse.json({ tickets }, { status: 200 });
     }
 
-    // If filters provided, query directly with Prisma for efficiency
+    // If filters provided, query directly for efficiency
     if (stageParam || workflowTypeParam || limitParam || updatedSince) {
-      const where: Prisma.TicketWhereInput = {
-        projectId,
+      const filtered = await listTicketsFiltered(projectId, {
         ...(stageParam && { stage: stageParam }),
         ...(workflowTypeParam && { workflowType: workflowTypeParam }),
-        ...(updatedSince && { updatedAt: { gte: new Date(updatedSince) } }),
-      };
-
-      const filtered = await prisma.ticket.findMany({
-        where,
-        orderBy: { updatedAt: 'desc' },
-        ...(limitParam && { take: limitParam }),
+        ...(limitParam && { limit: limitParam }),
+        ...(updatedSince && { updatedSince: new Date(updatedSince) }),
       });
       return NextResponse.json(filtered, { status: 200 });
     }
@@ -190,15 +183,7 @@ export async function POST(
       const userId = await requireAuth(request);
       const subscription = await getUserSubscription(userId);
       if (subscription.limits.maxTicketsPerMonth !== null) {
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
-        const ticketCount = await prisma.ticket.count({
-          where: {
-            project: { userId },
-            createdAt: { gte: startOfMonth },
-          },
-        });
+        const ticketCount = await countTicketsThisMonthForUser(userId);
         if (ticketCount >= subscription.limits.maxTicketsPerMonth) {
           return NextResponse.json(
             { error: `Monthly ticket limit reached. Your ${subscription.plan} plan allows ${subscription.limits.maxTicketsPerMonth} tickets per month. Upgrade for unlimited tickets.`, code: 'PLAN_LIMIT' },
@@ -208,8 +193,7 @@ export async function POST(
       }
     } else {
       // For workflow requests, verify the project exists
-      const project = await prisma.project.findUnique({ where: { id: projectId } });
-      if (!project) {
+      if (!(await projectExists(projectId))) {
         return NextResponse.json({ error: 'Project not found', code: 'PROJECT_NOT_FOUND' }, { status: 404 });
       }
     }
@@ -309,159 +293,13 @@ export async function POST(
       );
     }
 
-    const externalImages = extractImageUrls(result.data.description);
+    const creation = await createTicketWithAttachments(projectId, result.data, uploadedFiles);
 
-    if (uploadedFiles.length > 5) {
-      return NextResponse.json(
-        {
-          error: 'Maximum 5 uploaded images allowed per ticket',
-          code: 'VALIDATION_ERROR',
-        },
-        { status: 400 }
-      );
+    if (!creation.ok) {
+      return NextResponse.json(creation.error, { status: creation.status });
     }
 
-    const validatedFiles: Array<{
-      file: formidable.File;
-      buffer: Buffer;
-      validation: { valid: true; mimeType: string };
-      filename: string;
-    }> = [];
-
-    if (uploadedFiles.length > 0) {
-      for (const file of uploadedFiles) {
-        const buffer = await fs.readFile(file.filepath);
-        const validation = await validateImageFile(
-          buffer,
-          file.mimetype || 'application/octet-stream',
-          file.size
-        );
-
-        if (!validation.valid) {
-          // Clean up uploaded files on validation failure
-          for (const f of uploadedFiles) {
-            try {
-              await fs.unlink(f.filepath);
-            } catch (cleanupError) {
-              console.error('Error cleaning up file:', cleanupError);
-            }
-          }
-
-          return NextResponse.json(
-            {
-              error: `Image validation failed: ${validation.error}`,
-              code: 'VALIDATION_ERROR',
-            },
-            { status: 400 }
-          );
-        }
-
-        const timestamp = Date.now();
-        const safeFilename = file.originalFilename
-          ?.replace(/\.\./g, '_')  // Replace .. first
-          ?.replace(/[^a-zA-Z0-9._-]/g, '_')
-          || `image_${timestamp}`;
-        const filename = `${timestamp}_${safeFilename}`;
-
-        validatedFiles.push({
-          file,
-          buffer,
-          validation: validation as { valid: true; mimeType: string },
-          filename,
-        });
-      }
-    }
-
-    const ticket = await createTicket(projectId, {
-      ...result.data,
-      attachments: undefined,
-    });
-
-    const attachments: TicketAttachment[] = [];
-
-    if (validatedFiles.length > 0) {
-      const { uploadImageToCloudinary, isCloudinaryConfigured } = await import('@/app/lib/cloudinary/client');
-
-      if (!isCloudinaryConfigured()) {
-        for (const file of uploadedFiles) {
-          try {
-            await fs.unlink(file.filepath);
-          } catch (error) {
-            console.error('Error cleaning up temporary file:', error);
-          }
-        }
-        throw new Error('Cloudinary not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.');
-      }
-
-      for (const { file, buffer, validation, filename } of validatedFiles) {
-        try {
-          const cloudinaryResult = await uploadImageToCloudinary(buffer, {
-            folder: `ai-board/tickets/${ticket.id}`,
-            filename: filename.replace(/\.[^/.]+$/, ''),
-            resourceType: 'image',
-          });
-
-          attachments.push({
-            type: 'uploaded',
-            url: cloudinaryResult.url,
-            filename,
-            mimeType: validation.mimeType || file.mimetype || 'application/octet-stream',
-            sizeBytes: file.size,
-            uploadedAt: new Date().toISOString(),
-            cloudinaryPublicId: cloudinaryResult.publicId,
-          });
-        } catch (error) {
-          for (const f of uploadedFiles) {
-            try {
-              await fs.unlink(f.filepath);
-            } catch (cleanupError) {
-              console.error('Error cleaning up file:', cleanupError);
-            }
-          }
-
-          throw new Error(`Failed to upload image to Cloudinary: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-      }
-
-      for (const file of uploadedFiles) {
-        try {
-          await fs.unlink(file.filepath);
-        } catch (error) {
-          console.error('Error cleaning up temporary file:', error);
-        }
-      }
-    }
-
-    for (const { alt, url } of externalImages) {
-      if (attachments.length >= 5) break;
-      attachments.push({
-        type: 'external',
-        url,
-        filename: alt || 'External Image',
-        mimeType: 'image/png',
-        sizeBytes: 0,
-        uploadedAt: new Date().toISOString(),
-      });
-    }
-
-    const attachmentsValidation = TicketAttachmentsArraySchema.safeParse(attachments);
-    if (!attachmentsValidation.success) {
-      return NextResponse.json(
-        {
-          error: `Attachments validation failed: ${attachmentsValidation.error.message}`,
-          code: 'VALIDATION_ERROR',
-        },
-        { status: 400 }
-      );
-    }
-
-    let finalTicket = ticket;
-    if (attachments.length > 0) {
-      finalTicket = await prisma.ticket.update({
-        where: { id: ticket.id },
-        data: { attachments: attachments as unknown as import('@prisma/client').Prisma.InputJsonValue },
-      });
-    }
+    const finalTicket = creation.ticket;
 
     revalidatePath(`/projects/${projectId}/board`);
 
