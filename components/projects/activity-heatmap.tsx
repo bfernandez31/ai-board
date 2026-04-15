@@ -188,7 +188,7 @@ function HeatmapLegend() {
       {INTENSITY_COLORS.map((color, i) => (
         <div
           key={i}
-          className={`h-[${CELL_SIZE}px] w-[${CELL_SIZE}px] rounded-sm ${color}`}
+          className={`rounded-sm ${color}`}
           style={{ width: CELL_SIZE, height: CELL_SIZE }}
         />
       ))}
@@ -272,8 +272,7 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
     return max;
   }, [heatmapData.days]);
 
-  const totalActivity = heatmapData.summary.totalJobs;
-  const hasActivity = totalActivity > 0;
+  const hasActivity = heatmapData.summary.totalJobs > 0;
 
   // Month labels positioned above their starting column
   const monthLabels = useMemo(() => {

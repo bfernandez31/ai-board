@@ -135,10 +135,7 @@ export async function getHeatmapData(
 
   // Summary
   const totalJobs = jobs.length;
-  const allShippedKeys = new Set<string>();
-  for (const shipJob of shipJobs) {
-    allShippedKeys.add(shipJob.ticket.ticketKey);
-  }
+  const allShippedKeys = new Set(shipJobs.map((j) => j.ticket.ticketKey));
 
   // Available agents across all user's projects (unfiltered by agent)
   const agentTickets = await prisma.ticket.findMany({
@@ -152,11 +149,7 @@ export async function getHeatmapData(
     },
   });
 
-  const agentSet = new Set<string>();
-  for (const ticket of agentTickets) {
-    const effective = ticket.agent ?? ticket.project.defaultAgent;
-    agentSet.add(effective);
-  }
+  const agentSet = new Set(agentTickets.map((t) => t.agent ?? t.project.defaultAgent));
 
   const availableAgents = [
     { value: 'all' as const, label: 'All' },
