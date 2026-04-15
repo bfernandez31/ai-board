@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/db/client';
 import { verifyTicketAccess } from '@/lib/db/auth-helpers';
-import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
-import type { TicketAttachment } from '@/app/lib/types/ticket';
 import { imageFileSchema } from '@/lib/schemas/ticket-image';
+import { listTicketImages, uploadTicketImage } from '@/lib/tickets/images';
 
 /**
  * GET /api/projects/[projectId]/tickets/[id]/images
@@ -43,43 +40,13 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
     }
 
-    // Fetch ticket with attachments
-    const ticket = await prisma.ticket.findFirst({
-      where: {
-        id: ticketId,
-        projectId,
-      },
-      select: {
-        attachments: true,
-      },
-    });
+    const result = await listTicketImages(projectId, ticketId);
 
-    if (!ticket) {
-      return NextResponse.json(
-        { error: 'Ticket not found', code: 'TICKET_NOT_FOUND' },
-        { status: 404 }
-      );
+    if (!result.ok) {
+      return NextResponse.json(result.body, { status: result.status });
     }
 
-    // Parse attachments from JSON field
-    const attachments = ticket.attachments ?? [];
-
-    // Validate attachments structure
-    if (!isTicketAttachmentArray(attachments)) {
-      console.error('Invalid attachments structure for ticket', ticketId, attachments);
-      return NextResponse.json(
-        { error: 'Invalid attachments data', code: 'DATA_ERROR' },
-        { status: 500 }
-      );
-    }
-
-    // Add index field to each attachment for frontend reference
-    const imagesWithIndex = attachments.map((attachment, index) => ({
-      index,
-      ...attachment,
-    }));
-
-    return NextResponse.json({ images: imagesWithIndex }, { status: 200 });
+    return NextResponse.json({ images: result.images }, { status: 200 });
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
@@ -190,129 +157,16 @@ export async function POST(
       );
     }
 
-    // Fetch ticket with current attachments and stage
-    const ticket = await prisma.ticket.findFirst({
-      where: {
-        id: ticketId,
-        projectId,
-      },
-      select: {
-        id: true,
-        stage: true,
-        version: true,
-        attachments: true,
-        project: {
-          select: {
-            githubOwner: true,
-            githubRepo: true,
-          },
-        },
-      },
-    });
+    const result = await uploadTicketImage(projectId, ticketId, file, version);
 
-    if (!ticket) {
-      return NextResponse.json(
-        { error: 'Ticket not found', code: 'TICKET_NOT_FOUND' },
-        { status: 404 }
-      );
+    if (!result.ok) {
+      return NextResponse.json(result.body, { status: result.status });
     }
-
-    // Check permission: images can only be edited in SPECIFY and PLAN stages
-    const { canEdit } = await import('@/components/ticket/edit-permission-guard');
-    if (!canEdit(ticket.stage, 'images')) {
-      return NextResponse.json(
-        {
-          error: `Cannot edit images in ${ticket.stage} stage. Images can only be edited in SPECIFY and PLAN stages.`,
-          code: 'FORBIDDEN',
-        },
-        { status: 403 }
-      );
-    }
-
-    // Verify version (optimistic concurrency control)
-    if (ticket.version !== version) {
-      return NextResponse.json(
-        {
-          error: 'Ticket was modified by another user. Please refresh and try again.',
-          code: 'CONFLICT',
-        },
-        { status: 409 }
-      );
-    }
-
-    // Parse existing attachments
-    const existingAttachments = ticket.attachments ?? [];
-    if (!isTicketAttachmentArray(existingAttachments)) {
-      console.error('Invalid attachments structure for ticket', ticketId, existingAttachments);
-      return NextResponse.json(
-        { error: 'Invalid attachments data', code: 'DATA_ERROR' },
-        { status: 500 }
-      );
-    }
-
-    // Check max attachments limit (5 total)
-    if (existingAttachments.length >= 5) {
-      return NextResponse.json(
-        { error: 'Maximum 5 images per ticket', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
-    }
-
-    // Convert File to Buffer for Cloudinary upload
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // Upload to Cloudinary
-    const { uploadImageToCloudinary, isCloudinaryConfigured } = await import('@/app/lib/cloudinary/client');
-
-    if (!isCloudinaryConfigured()) {
-      return NextResponse.json(
-        { error: 'Cloudinary not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.', code: 'CONFIG_ERROR' },
-        { status: 500 }
-      );
-    }
-
-    // Upload to Cloudinary with folder structure: ai-board/tickets/{ticketId}/
-    const cloudinaryResult = await uploadImageToCloudinary(buffer, {
-      folder: `ai-board/tickets/${ticketId}`,
-      filename: file.name.replace(/\.[^/.]+$/, ''), // Remove extension (Cloudinary adds it)
-      resourceType: 'image',
-    });
-
-    // Cloudinary URL is publicly accessible
-    const downloadUrl = cloudinaryResult.url;
-
-    // Create new attachment object
-    const newAttachment: TicketAttachment = {
-      type: 'uploaded',
-      url: downloadUrl,
-      filename: file.name,
-      mimeType: file.type,
-      sizeBytes: file.size,
-      uploadedAt: new Date().toISOString(),
-      cloudinaryPublicId: cloudinaryResult.publicId, // Store for deletion
-    };
-
-    // Append to attachments array
-    const updatedAttachments = [...existingAttachments, newAttachment];
-
-    // Update ticket in database
-    const updatedTicket = await prisma.ticket.update({
-      where: { id: ticketId },
-      data: {
-        attachments: updatedAttachments as unknown as Prisma.InputJsonValue,
-        version: { increment: 1 },
-      },
-      select: {
-        attachments: true,
-        version: true,
-      },
-    });
 
     return NextResponse.json(
       {
-        attachments: updatedTicket.attachments,
-        version: updatedTicket.version,
+        attachments: result.attachments,
+        version: result.version,
       },
       { status: 200 }
     );

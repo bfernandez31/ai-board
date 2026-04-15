@@ -3,7 +3,8 @@ import { Stage, getAllStages } from '../stage-transitions';
 import { TicketWithVersion } from '../types';
 import type { CreateTicketInput } from '../validations/ticket';
 import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
-import type { Ticket, Job } from '@prisma/client';
+import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
+import type { Ticket, Job, Prisma, ClarificationPolicy, Agent } from '@prisma/client';
 
 type TicketRow = {
   id: number;
@@ -183,13 +184,220 @@ export async function getMoreShipTickets(
 }
 
 /**
+ * Filters for the direct ticket list query (GET /api/projects/:projectId/tickets).
+ */
+export interface TicketListFilters {
+  stage?: 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY' | 'SHIP' | 'CLOSED';
+  workflowType?: 'FULL' | 'QUICK' | 'CLEAN';
+  limit?: number;
+  updatedSince?: Date;
+}
+
+/**
+ * Query tickets with arbitrary filters, ordered by updatedAt desc.
+ */
+export async function listTicketsFiltered(
+  projectId: number,
+  filters: TicketListFilters
+): Promise<Ticket[]> {
+  const where: Prisma.TicketWhereInput = {
+    projectId,
+    ...(filters.stage && { stage: filters.stage }),
+    ...(filters.workflowType && { workflowType: filters.workflowType }),
+    ...(filters.updatedSince && { updatedAt: { gte: filters.updatedSince } }),
+  };
+
+  return prisma.ticket.findMany({
+    where,
+    orderBy: { updatedAt: 'desc' },
+    ...(filters.limit && { take: filters.limit }),
+  });
+}
+
+/**
+ * Count tickets created by a user in the current month (for plan-limit checks).
+ */
+export async function countTicketsThisMonthForUser(userId: string): Promise<number> {
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  return prisma.ticket.count({
+    where: {
+      project: { userId },
+      createdAt: { gte: startOfMonth },
+    },
+  });
+}
+
+/**
+ * Returns true when a project with the given id exists.
+ */
+export async function projectExists(projectId: number): Promise<boolean> {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true },
+  });
+  return project !== null;
+}
+
+/** Project select used by the GET /tickets/:id view. */
+const VIEW_PROJECT_SELECT = {
+  id: true,
+  name: true,
+  clarificationPolicy: true,
+  defaultAgent: true,
+  githubOwner: true,
+  githubRepo: true,
+} as const;
+
+/**
+ * Find a ticket by numeric id or ticketKey within a project, including
+ * the project fields required by the ticket detail view.
+ */
+export async function findTicketForView(
+  projectId: number,
+  idOrKey: string
+) {
+  const isNumeric = /^\d+$/.test(idOrKey);
+  if (isNumeric) {
+    return prisma.ticket.findFirst({
+      where: { id: parseInt(idOrKey, 10), projectId },
+      include: { project: { select: VIEW_PROJECT_SELECT } },
+    });
+  }
+  return prisma.ticket.findFirst({
+    where: { ticketKey: idOrKey, projectId },
+    include: { project: { select: VIEW_PROJECT_SELECT } },
+  });
+}
+
+/** Resolve a ticketKey to a numeric id within a project (or null when missing). */
+export async function resolveTicketIdByKey(
+  projectId: number,
+  ticketKey: string
+): Promise<number | null> {
+  const ticket = await prisma.ticket.findFirst({
+    where: { ticketKey, projectId },
+    select: { id: true },
+  });
+  return ticket?.id ?? null;
+}
+
+/** Inline edit patch payload accepted by patchTicketInline. */
+export interface TicketInlinePatch {
+  title?: string;
+  description?: string;
+  branch?: string | null;
+  autoMode?: boolean;
+  clarificationPolicy?: ClarificationPolicy | null;
+  agent?: Agent | null;
+}
+
+/** Discriminated result for inline PATCH. */
+export type PatchTicketInlineResult =
+  | { ok: true; ticket: Ticket }
+  | { ok: false; status: number; body: Record<string, unknown> };
+
+/**
+ * Apply an inline edit to a ticket with version-conflict handling.
+ *
+ * Enforces:
+ *  - Ticket must exist within the project (404 / 403 otherwise)
+ *  - Optimistic concurrency via `version` (409 on mismatch)
+ *  - description/clarificationPolicy/agent only editable in INBOX stage
+ */
+export async function patchTicketInline(
+  ticketId: number,
+  projectId: number,
+  requestVersion: number,
+  patch: TicketInlinePatch
+): Promise<PatchTicketInlineResult> {
+  const currentTicket = await prisma.ticket.findFirst({
+    where: { id: ticketId, projectId },
+  });
+
+  if (!currentTicket) {
+    const ticketExists = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { id: true, projectId: true },
+    });
+    if (!ticketExists) {
+      return { ok: false, status: 404, body: { error: 'Ticket not found' } };
+    }
+    return { ok: false, status: 403, body: { error: 'Forbidden' } };
+  }
+
+  if (currentTicket.version !== requestVersion) {
+    return {
+      ok: false,
+      status: 409,
+      body: {
+        error: 'Conflict: Ticket was modified by another user',
+        currentVersion: currentTicket.version,
+      },
+    };
+  }
+
+  const { title, description, branch, autoMode, clarificationPolicy, agent } = patch;
+
+  if (
+    (description !== undefined || clarificationPolicy !== undefined || agent !== undefined) &&
+    !canEditDescriptionAndPolicy(currentTicket.stage)
+  ) {
+    return {
+      ok: false,
+      status: 400,
+      body: {
+        error:
+          'Description, clarification policy, and agent can only be updated in INBOX stage',
+        code: 'INVALID_STAGE_FOR_EDIT',
+      },
+    };
+  }
+
+  try {
+    const updatedTicket = await prisma.ticket.update({
+      where: { id: ticketId, version: requestVersion },
+      data: {
+        ...(title !== undefined && { title: title.trim() }),
+        ...(description !== undefined && { description: description.trim() }),
+        ...(branch !== undefined && { branch }),
+        ...(autoMode !== undefined && { autoMode }),
+        ...(clarificationPolicy !== undefined && { clarificationPolicy }),
+        ...(agent !== undefined && { agent }),
+        version: { increment: 1 },
+        updatedAt: new Date(),
+      },
+    });
+    return { ok: true, ticket: updatedTicket };
+  } catch (updateError) {
+    if (
+      updateError instanceof Error &&
+      'code' in updateError &&
+      (updateError as { code: string }).code === 'P2025'
+    ) {
+      const latestTicket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+      return {
+        ok: false,
+        status: 409,
+        body: {
+          error: 'Conflict: Ticket was modified by another user',
+          currentVersion: latestTicket?.version || 0,
+        },
+      };
+    }
+    throw updateError;
+  }
+}
+
+/**
  * Create a new ticket in INBOX stage
  */
 export async function createTicket(
   projectId: number,
   input: CreateTicketInput
 ) {
-  // Fetch project to get key
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: { key: true },

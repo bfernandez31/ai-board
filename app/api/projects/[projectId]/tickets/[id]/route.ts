@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { patchTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { verifyTicketAccess, verifyProjectAccess } from '@/lib/db/auth-helpers';
-import { prisma } from '@/lib/db/client';
-import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
+import {
+  findTicketForView,
+  resolveTicketIdByKey,
+  patchTicketInline,
+} from '@/lib/db/tickets';
+import { deleteTicketWithCleanup } from '@/lib/tickets/deletion';
 import { deleteTicketParamsSchema } from '@/lib/schemas/ticket-delete';
-import { deleteBranchAndPRs } from '@/lib/github/delete-branch-and-prs';
-import { Octokit } from '@octokit/rest';
-import { Stage, JobStatus } from '@prisma/client';
 
 export async function GET(
   request: NextRequest,
@@ -16,7 +17,6 @@ export async function GET(
     const params = await context.params;
     const { projectId: projectIdString, id: ticketIdString } = params;
 
-    // Validate projectId format
     const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
     if (!projectIdResult.success) {
       return NextResponse.json(
@@ -29,36 +29,17 @@ export async function GET(
 
     await verifyProjectAccess(projectId, request);
 
-    const isNumericId = /^\d+$/.test(ticketIdString);
-    const projectSelect = {
-      id: true,
-      name: true,
-      clarificationPolicy: true,
-      defaultAgent: true,
-      githubOwner: true,
-      githubRepo: true,
-    };
-
-    let ticket;
-
-    if (isNumericId) {
+    // For numeric ids, also run the ticket-level auth check so scoped
+    // tokens cannot bypass project membership by hitting the ticket directly.
+    if (/^\d+$/.test(ticketIdString)) {
       const ticketId = parseInt(ticketIdString, 10);
       const ticketAuth = await verifyTicketAccess(ticketId, request);
-
       if (ticketAuth.projectId !== projectId) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
-
-      ticket = await prisma.ticket.findFirst({
-        where: { id: ticketId, projectId },
-        include: { project: { select: projectSelect } },
-      });
-    } else {
-      ticket = await prisma.ticket.findFirst({
-        where: { ticketKey: ticketIdString, projectId },
-        include: { project: { select: projectSelect } },
-      });
     }
+
+    const ticket = await findTicketForView(projectId, ticketIdString);
 
     if (!ticket) {
       return NextResponse.json(
@@ -130,14 +111,11 @@ export async function PATCH(
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     } else {
-      const ticket = await prisma.ticket.findFirst({
-        where: { ticketKey: ticketIdString, projectId },
-        select: { id: true },
-      });
-      if (!ticket) {
+      const resolved = await resolveTicketIdByKey(projectId, ticketIdString);
+      if (resolved === null) {
         return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
       }
-      ticketId = ticket.id;
+      ticketId = resolved;
     }
 
     const body = await request.json();
@@ -168,92 +146,40 @@ export async function PATCH(
         version: requestVersion,
       } = parseResult.data;
 
-      const currentTicket = await prisma.ticket.findFirst({
-        where: { id: ticketId, projectId },
+      const result = await patchTicketInline(ticketId, projectId, requestVersion, {
+        ...(title !== undefined && { title }),
+        ...(description !== undefined && { description }),
+        ...(branch !== undefined && { branch }),
+        ...(autoMode !== undefined && { autoMode }),
+        ...(clarificationPolicy !== undefined && { clarificationPolicy }),
+        ...(agent !== undefined && { agent }),
       });
 
-      if (!currentTicket) {
-        const ticketExists = await prisma.ticket.findUnique({
-          where: { id: ticketId },
-          select: { id: true, projectId: true },
-        });
-        if (!ticketExists) {
-          return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
-        }
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      if (!result.ok) {
+        return NextResponse.json(result.body, { status: result.status });
       }
 
-      if (currentTicket.version !== requestVersion) {
-        return NextResponse.json(
-          {
-            error: 'Conflict: Ticket was modified by another user',
-            currentVersion: currentTicket.version,
-          },
-          { status: 409 }
-        );
-      }
-
-      if (
-        (description !== undefined || clarificationPolicy !== undefined || agent !== undefined) &&
-        !canEditDescriptionAndPolicy(currentTicket.stage)
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              'Description, clarification policy, and agent can only be updated in INBOX stage',
-            code: 'INVALID_STAGE_FOR_EDIT',
-          },
-          { status: 400 }
-        );
-      }
-
-      try {
-        const updatedTicket = await prisma.ticket.update({
-          where: {
-            id: ticketId,
-            version: requestVersion,
-          },
-          data: {
-            ...(title !== undefined && { title: title.trim() }),
-            ...(description !== undefined && {
-              description: description.trim(),
-            }),
-            ...(branch !== undefined && { branch }),
-            ...(autoMode !== undefined && { autoMode }),
-            ...(clarificationPolicy !== undefined && { clarificationPolicy }),
-            ...(agent !== undefined && { agent }),
-            version: { increment: 1 },
-            updatedAt: new Date(),
-          },
-        });
-
-        return NextResponse.json(
-          {
-            id: updatedTicket.id,
-            ticketNumber: updatedTicket.ticketNumber,
-            ticketKey: updatedTicket.ticketKey,
-            title: updatedTicket.title,
-            description: updatedTicket.description,
-            stage: updatedTicket.stage,
-            version: updatedTicket.version,
-            projectId: updatedTicket.projectId,
-            branch: updatedTicket.branch,
-            autoMode: updatedTicket.autoMode,
-            clarificationPolicy: updatedTicket.clarificationPolicy,
-            agent: updatedTicket.agent,
-            workflowType: updatedTicket.workflowType,
-            createdAt: updatedTicket.createdAt.toISOString(),
-            updatedAt: updatedTicket.updatedAt.toISOString(),
-          },
-          { status: 200 }
-        );
-      } catch (updateError) {
-        if (updateError instanceof Error && 'code' in updateError && (updateError as { code: string }).code === 'P2025') {
-          const latestTicket = await prisma.ticket.findUnique({ where: { id: ticketId } });
-          return NextResponse.json({ error: 'Conflict: Ticket was modified by another user', currentVersion: latestTicket?.version || 0 }, { status: 409 });
-        }
-        throw updateError;
-      }
+      const updatedTicket = result.ticket;
+      return NextResponse.json(
+        {
+          id: updatedTicket.id,
+          ticketNumber: updatedTicket.ticketNumber,
+          ticketKey: updatedTicket.ticketKey,
+          title: updatedTicket.title,
+          description: updatedTicket.description,
+          stage: updatedTicket.stage,
+          version: updatedTicket.version,
+          projectId: updatedTicket.projectId,
+          branch: updatedTicket.branch,
+          autoMode: updatedTicket.autoMode,
+          clarificationPolicy: updatedTicket.clarificationPolicy,
+          agent: updatedTicket.agent,
+          workflowType: updatedTicket.workflowType,
+          createdAt: updatedTicket.createdAt.toISOString(),
+          updatedAt: updatedTicket.updatedAt.toISOString(),
+        },
+        { status: 200 }
+      );
     }
 
     if (isStageUpdate) {
@@ -324,91 +250,16 @@ export async function DELETE(
       );
     }
 
-    if (ticket.stage === Stage.SHIP) {
-      return NextResponse.json(
-        {
-          error: 'Cannot delete SHIP stage tickets',
-          code: 'INVALID_STAGE',
-        },
-        { status: 400 }
-      );
-    }
-
-    const hasActiveJob = await prisma.job.findFirst({
-      where: {
-        ticketId: ticket.id,
-        status: { in: [JobStatus.PENDING, JobStatus.RUNNING] },
-      },
+    const result = await deleteTicketWithCleanup({
+      id: ticket.id,
+      projectId: ticket.projectId,
+      stage: ticket.stage,
+      branch: ticket.branch,
     });
 
-    if (hasActiveJob) {
-      return NextResponse.json(
-        {
-          error: 'Cannot delete ticket while job is in progress',
-          code: 'ACTIVE_JOB',
-        },
-        { status: 400 }
-      );
+    if (!result.ok) {
+      return NextResponse.json(result.body, { status: result.status });
     }
-
-    let prsClosed = 0;
-
-    if (ticket.branch) {
-      const project = await prisma.project.findUnique({
-        where: { id: projectId },
-        select: {
-          githubOwner: true,
-          githubRepo: true,
-        },
-      });
-
-      if (!project) {
-        return NextResponse.json(
-          { error: 'Project not found', code: 'NOT_FOUND' },
-          { status: 404 }
-        );
-      }
-
-      const githubToken = process.env.GITHUB_TOKEN;
-      if (!githubToken) {
-        return NextResponse.json(
-          {
-            error: 'GitHub integration not configured',
-            code: 'GITHUB_CONFIG_ERROR',
-          },
-          { status: 500 }
-        );
-      }
-
-      const octokit = new Octokit({ auth: githubToken });
-
-      try {
-        const result = await deleteBranchAndPRs(
-          octokit,
-          project.githubOwner,
-          project.githubRepo,
-          ticket.branch
-        );
-
-        prsClosed = result.prsClosed;
-      } catch (error) {
-        console.error('GitHub cleanup failed:', error);
-
-        return NextResponse.json(
-          {
-            error: 'Failed to delete GitHub artifacts. Please try again.',
-            code: 'GITHUB_API_ERROR',
-            details: {
-              operation: 'delete_branch_and_prs',
-              message: error instanceof Error ? error.message : 'Unknown error',
-            },
-          },
-          { status: 500 }
-        );
-      }
-    }
-
-    await prisma.ticket.delete({ where: { id: ticketId } });
 
     return NextResponse.json(
       {
@@ -417,7 +268,7 @@ export async function DELETE(
           ticketId: ticket.id,
           ticketKey: ticket.ticketKey,
           branch: ticket.branch,
-          prsClosed,
+          prsClosed: result.prsClosed,
         },
       },
       { status: 200 }
