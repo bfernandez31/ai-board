@@ -117,6 +117,44 @@ When no projects exist:
 - **Tablet** (640px - 1023px): 2-column grid layout (grid-cols-2)
 - **Mobile** (<640px): 1-column layout (grid-cols-1, full width cards)
 - Cards maintain consistent spacing and visual hierarchy across all breakpoints
+
+### Activity Heatmap
+
+A GitHub-style contribution heatmap appears below the project cards grid, showing AI activity across all of the user's projects over the selected time period.
+
+**Layout**:
+- 7-row grid (rows = days of week, Sunday–Saturday)
+- Each cell represents one calendar day; cells are square with violet gradient intensity based on job count
+- Month labels appear above the grid; alternate day-of-week labels (Mon, Wed, Fri) appear on the left as sticky labels
+- Partial weeks at start and end of the range use GitHub-style chipped corners (null cells rendered as empty space)
+- Mobile: grid scrolls horizontally; day-of-week labels are sticky on the left
+
+**Filters (URL-shareable)**:
+- **Year selector**: "Last 12 months" (rolling) or a specific calendar year; shows only when the account has data spanning multiple years
+- **Agent filter**: filters displayed activity to a specific AI agent; shows only when 2 or more named agents have completed jobs
+- Filter changes update the URL (`heatmap_year`, `heatmap_agent` query parameters) so the current view persists across refreshes and can be shared
+
+**Summary Header**:
+- Displays total job count and shipped ticket count for the active period and agent filter
+- Format: "{N} jobs · {M} tickets shipped in {period}"
+
+**Tooltips**:
+- Hovering a cell (desktop) or tapping a cell (mobile) shows a tooltip with:
+  - Full date (e.g., "Wednesday, April 15, 2026")
+  - Job count for that day
+  - Total cost in USD (if cost data is available and > $0)
+  - Shipped ticket count (if any ship jobs completed that day), highlighted in violet
+- Mobile tap dismisses by tapping outside the tooltip
+
+**Intensity Scale**:
+- Level 0 (no activity): muted zinc background
+- Levels 1–4: violet gradient from dark to bright, scaled relative to the maximum daily job count in the current view
+
+**Legend**: "Less → [5 sample cells] → More" appears bottom-right of the heatmap
+
+**Empty State**: When no jobs have been completed, the grid is hidden and a message reads "No activity to show yet — your AI work will appear here"
+
+**Data Refresh**: Polling every 15 seconds to reflect new job completions
 - Scrollable container supports 50+ projects without performance degradation
 
 **Text Overflow Handling**:

@@ -58,6 +58,10 @@ export const queryKeys = {
     ticketJobs: (projectId: number, ticketId: number) =>
       [...queryKeys.projects.detail(projectId), 'tickets', ticketId, 'jobs'] as const,
   },
+
+  heatmap: {
+    data: (year: string, agent: string) => ['heatmap', year, agent] as const,
+  },
 };
 ```
 

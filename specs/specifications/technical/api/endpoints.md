@@ -4496,6 +4496,63 @@ Fetch unified activity feed for a project.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 
+## Heatmap Endpoints
+
+### GET /api/heatmap
+
+Fetch aggregated daily activity data for the authenticated user across all their projects.
+
+**Authentication**: Required (session or PAT)
+
+**Query Parameters**:
+- `year` (string, optional): `"rolling"` for the last 12 months (default), or a 4-digit calendar year (e.g., `"2025"`)
+- `agent` (string, optional): Agent filter — `"all"` (default) or a named agent value (e.g., `"CLAUDE"`)
+
+**Response** (200 OK):
+```json
+{
+  "days": {
+    "2026-04-15": {
+      "jobCount": 5,
+      "costUsd": 1.23,
+      "ticketsShipped": ["AIB-42", "AIB-43"]
+    }
+  },
+  "summary": {
+    "totalJobs": 182,
+    "ticketsShipped": 27
+  },
+  "availableAgents": [
+    { "value": "all", "label": "All" },
+    { "value": "CLAUDE", "label": "Claude" }
+  ],
+  "availableYears": [2025, 2026],
+  "userCreatedAt": "2025-01-10T00:00:00.000Z",
+  "filters": {
+    "year": "rolling",
+    "agent": "all"
+  }
+}
+```
+
+**Fields**:
+- `days`: Map of ISO date strings (`YYYY-MM-DD`) to per-day aggregates. Only days with at least one event are included; missing days have zero activity.
+  - `jobCount`: Number of COMPLETED jobs on that day
+  - `costUsd`: Summed job cost in USD (rounded to 2 decimal places), or `null` if no cost data is available
+  - `ticketsShipped`: Deduplicated list of ticket keys whose `ship` job completed on that day
+- `summary.totalJobs`: Total COMPLETED jobs across the filtered period
+- `summary.ticketsShipped`: Count of distinct tickets shipped (across the full period, deduplicated by ticket key)
+- `availableAgents`: Agent options available for the filter dropdown, derived from the user's projects
+- `availableYears`: Calendar years from account creation year to current year (for the year selector)
+- `userCreatedAt`: User's account creation date (ISO string; used to bound the year selector)
+- `filters`: Active filter values echoed back
+
+**Authorization**: Response is scoped to projects the authenticated user owns or is a member of.
+
+**Errors**:
+- `401`: Not authenticated
+- `500`: Internal server error
+
 ## Token Endpoints
 
 ### GET /api/tokens
