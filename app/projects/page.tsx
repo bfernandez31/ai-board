@@ -3,8 +3,12 @@ import { ProjectsContainer } from '@/components/projects/projects-container';
 import { ProjectQuotaGate } from '@/components/projects/project-quota-gate';
 import { UsageBanner } from '@/components/billing/usage-banner';
 import { ProjectsHeaderActions } from '@/components/projects/projects-header-actions';
-import { toProjectWithCount, type ProjectsListResponse } from '@/app/lib/types/project';
-import { getUserProjects } from '@/lib/db/projects';
+import {
+  toProjectWithCount,
+  type ProjectsActivityHeatmapResponse,
+  type ProjectsListResponse,
+} from '@/app/lib/types/project';
+import { getProjectsActivityHeatmap, getUserProjects } from '@/lib/db/projects';
 
 // Force dynamic rendering - this page uses headers() for auth
 export const dynamic = 'force-dynamic';
@@ -26,8 +30,28 @@ async function getProjects(): Promise<ProjectsListResponse> {
   }
 }
 
-export default async function ProjectsPage() {
-  const projects = await getProjects();
+async function getInitialProjectsActivityHeatmap(searchParams: {
+  period?: string;
+  year?: string;
+  agent?: string;
+}): Promise<ProjectsActivityHeatmapResponse> {
+  return getProjectsActivityHeatmap(searchParams).catch((error) => {
+    console.error('Failed to fetch projects activity heatmap:', error);
+
+    return getProjectsActivityHeatmap();
+  });
+}
+
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string; year?: string; agent?: string }>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const [projects, activityHeatmap] = await Promise.all([
+    getProjects(),
+    getInitialProjectsActivityHeatmap(resolvedSearchParams),
+  ]);
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -41,7 +65,7 @@ export default async function ProjectsPage() {
       <ProjectQuotaGate />
 
       <div className="mt-6">
-        <ProjectsContainer projects={projects} />
+        <ProjectsContainer projects={projects} activityHeatmap={activityHeatmap} />
       </div>
     </div>
   );

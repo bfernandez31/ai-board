@@ -11,8 +11,8 @@
 
 **Purpose**: Establish shared types and filter parsing utilities used across the page, API route, and client heatmap.
 
-- [ ] T001 Extend `app/lib/types/project.ts` with projects heatmap response, summary, day-cell, period option, and agent option types shared by the page, API route, and client component.
-- [ ] T002 [P] Create `app/lib/utils/projects-activity-filters.ts` with Zod-backed parsing and normalization helpers for `period`, `year`, and `agent` search params used by the projects heatmap.
+- [X] T001 Extend `app/lib/types/project.ts` with projects heatmap response, summary, day-cell, period option, and agent option types shared by the page, API route, and client component.
+- [X] T002 [P] Create `app/lib/utils/projects-activity-filters.ts` with Zod-backed parsing and normalization helpers for `period`, `year`, and `agent` search params used by the projects heatmap.
 
 ---
 
@@ -22,9 +22,9 @@
 
 **⚠️ CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T003 Extend `tests/unit/agent-resolution.test.ts` with regression coverage for effective-agent behavior relied on by cross-project heatmap aggregation.
-- [ ] T004 Extend `lib/db/projects.ts` with shared authenticated projects heatmap aggregation helpers, day bucketing utilities, and owner-or-member scoping reused by the page and API route.
-- [ ] T005 Create `app/api/projects/activity/route.ts` with authenticated query parsing, contract-aligned `400/401/500` responses, and delegation to the shared heatmap query in `lib/db/projects.ts`.
+- [X] T003 Extend `tests/unit/agent-resolution.test.ts` with regression coverage for effective-agent behavior relied on by cross-project heatmap aggregation.
+- [X] T004 Extend `lib/db/projects.ts` with shared authenticated projects heatmap aggregation helpers, day bucketing utilities, and owner-or-member scoping reused by the page and API route.
+- [X] T005 Create `app/api/projects/activity/route.ts` with authenticated query parsing, contract-aligned `400/401/500` responses, and delegation to the shared heatmap query in `lib/db/projects.ts`.
 
 **Checkpoint**: Shared contracts, validation, and aggregation infrastructure are ready for story implementation.
 
@@ -38,15 +38,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T006 [P] [US1] Extend `tests/integration/projects/crud.test.ts` with `/api/projects/activity` assertions for default payload shape, shipped-ticket counting from successful `ship` jobs, and empty-state responses.
-- [ ] T007 [P] [US1] Create `tests/unit/components/projects/projects-activity-heatmap.test.tsx` for first-render summary text, legend levels, in-period day-cell rendering, and empty-state rendering because no existing unit test file covers the projects heatmap component.
+- [X] T006 [P] [US1] Extend `tests/integration/projects/crud.test.ts` with `/api/projects/activity` assertions for default payload shape, shipped-ticket counting from successful `ship` jobs, and empty-state responses.
+- [X] T007 [P] [US1] Create `tests/unit/components/projects/projects-activity-heatmap.test.tsx` for first-render summary text, legend levels, in-period day-cell rendering, and empty-state rendering because no existing unit test file covers the projects heatmap component.
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Extend `lib/db/projects.ts` to compute default rolling 12-month day aggregates, intensity levels, shipped ticket details, and optional daily cost totals for the projects heatmap.
-- [ ] T009 [US1] Extend `app/projects/page.tsx` to fetch the initial projects heatmap payload on the server and pass it alongside the existing projects list.
-- [ ] T010 [US1] Extend `components/projects/projects-container.tsx` to remove the fixed-height inner scroll region and render the heatmap section below the project cards grid.
-- [ ] T011 [US1] Create `components/projects/projects-activity-heatmap.tsx` to render the summary header, month labels, weekday labels, legend, day grid, and empty state from the initial server-provided heatmap payload.
+- [X] T008 [US1] Extend `lib/db/projects.ts` to compute default rolling 12-month day aggregates, intensity levels, shipped ticket details, and optional daily cost totals for the projects heatmap.
+- [X] T009 [US1] Extend `app/projects/page.tsx` to fetch the initial projects heatmap payload on the server and pass it alongside the existing projects list.
+- [X] T010 [US1] Extend `components/projects/projects-container.tsx` to remove the fixed-height inner scroll region and render the heatmap section below the project cards grid.
+- [X] T011 [US1] Create `components/projects/projects-activity-heatmap.tsx` to render the summary header, month labels, weekday labels, legend, day grid, and empty state from the initial server-provided heatmap payload.
 
 **Checkpoint**: User Story 1 is independently functional as a server-rendered projects-page heatmap MVP.
 
@@ -60,15 +60,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T012 [P] [US2] Extend `tests/integration/projects/crud.test.ts` with `/api/projects/activity` validation for period parsing, year bounds, period option generation, and chipped first/last week columns without out-of-period cells.
-- [ ] T013 [P] [US2] Create `tests/e2e/projects-activity-heatmap.spec.ts` for projects-page period selection, URL restoration, and refresh persistence because `tests/e2e/activity.spec.ts` covers the per-project activity feed, not the shared projects heatmap.
+- [X] T012 [P] [US2] Extend `tests/integration/projects/crud.test.ts` with `/api/projects/activity` validation for period parsing, year bounds, period option generation, and chipped first/last week columns without out-of-period cells.
+- [X] T013 [P] [US2] Create `tests/e2e/projects-activity-heatmap.spec.ts` for projects-page period selection, URL restoration, and refresh persistence because `tests/e2e/activity.spec.ts` covers the per-project activity feed, not the shared projects heatmap.
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Extend `app/lib/utils/projects-activity-filters.ts` to derive valid period options from `User.createdAt` through the current year and serialize the selected period state into URL-safe values.
-- [ ] T015 [US2] Create `app/lib/hooks/queries/use-projects-activity-heatmap.ts` to fetch `/api/projects/activity` with TanStack Query 15-second polling while retaining prior heatmap data during refetch.
-- [ ] T016 [US2] Extend `app/projects/page.tsx` to validate `period`, `year`, and `agent` search params for initial server render fallback behavior and correct initial heatmap selection.
-- [ ] T017 [US2] Extend `components/projects/projects-activity-heatmap.tsx` to add period controls, URL-synced filter updates, and background refresh behavior that preserves visible content until fresh data arrives.
+- [X] T014 [US2] Extend `app/lib/utils/projects-activity-filters.ts` to derive valid period options from `User.createdAt` through the current year and serialize the selected period state into URL-safe values.
+- [X] T015 [US2] Create `app/lib/hooks/queries/use-projects-activity-heatmap.ts` to fetch `/api/projects/activity` with TanStack Query 15-second polling while retaining prior heatmap data during refetch.
+- [X] T016 [US2] Extend `app/projects/page.tsx` to validate `period`, `year`, and `agent` search params for initial server render fallback behavior and correct initial heatmap selection.
+- [X] T017 [US2] Extend `components/projects/projects-activity-heatmap.tsx` to add period controls, URL-synced filter updates, and background refresh behavior that preserves visible content until fresh data arrives.
 
 **Checkpoint**: User Story 2 independently restores and shares an exact projects heatmap view through the page URL.
 
@@ -82,13 +82,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T018 [P] [US3] Extend `tests/integration/projects/crud.test.ts` with `/api/projects/activity` assertions for supported-agent validation, distinct agent option generation, inherited-agent matches, and zero-count filtered responses that keep the selected period boundaries.
-- [ ] T019 [P] [US3] Extend `tests/unit/agent-resolution.test.ts` with projects-heatmap cases that prove inherited project defaults remain selectable and filterable when ticket agents are unset.
+- [X] T018 [P] [US3] Extend `tests/integration/projects/crud.test.ts` with `/api/projects/activity` assertions for supported-agent validation, distinct agent option generation, inherited-agent matches, and zero-count filtered responses that keep the selected period boundaries.
+- [X] T019 [P] [US3] Extend `tests/unit/agent-resolution.test.ts` with projects-heatmap cases that prove inherited project defaults remain selectable and filterable when ticket agents are unset.
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Extend `lib/db/projects.ts` to derive distinct effective agent options from in-period activity and apply agent filtering using `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`.
-- [ ] T021 [US3] Extend `components/projects/projects-activity-heatmap.tsx` to show or hide the agent selector appropriately, keep the selected period in the URL, and preserve the existing grid boundaries while filtered.
+- [X] T020 [US3] Extend `lib/db/projects.ts` to derive distinct effective agent options from in-period activity and apply agent filtering using `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`.
+- [X] T021 [US3] Extend `components/projects/projects-activity-heatmap.tsx` to show or hide the agent selector appropriately, keep the selected period in the URL, and preserve the existing grid boundaries while filtered.
 
 **Checkpoint**: User Story 3 independently supports effective-agent filtering without changing the visible time range.
 
@@ -102,12 +102,12 @@
 
 ### Tests for User Story 4
 
-- [ ] T022 [P] [US4] Extend `tests/unit/components/projects/projects-activity-heatmap.test.tsx` with tooltip interaction coverage for desktop hover, touch dismiss, shipped-ticket detail rendering, and omission of the cost line when daily cost is absent.
-- [ ] T023 [P] [US4] Extend `tests/e2e/projects-activity-heatmap.spec.ts` with mobile horizontal scrolling, pinned weekday labels, and tappable heatmap-cell behavior on the projects page.
+- [X] T022 [P] [US4] Extend `tests/unit/components/projects/projects-activity-heatmap.test.tsx` with tooltip interaction coverage for desktop hover, touch dismiss, shipped-ticket detail rendering, and omission of the cost line when daily cost is absent.
+- [X] T023 [P] [US4] Extend `tests/e2e/projects-activity-heatmap.spec.ts` with mobile horizontal scrolling, pinned weekday labels, and tappable heatmap-cell behavior on the projects page.
 
 ### Implementation for User Story 4
 
-- [ ] T024 [US4] Extend `components/projects/projects-activity-heatmap.tsx` to add accessible hover/tap day details, outside-tap dismissal, optional cost display, pinned weekday labels, and mobile-safe horizontal scrolling without shrinking cell targets.
+- [X] T024 [US4] Extend `components/projects/projects-activity-heatmap.tsx` to add accessible hover/tap day details, outside-tap dismissal, optional cost display, pinned weekday labels, and mobile-safe horizontal scrolling without shrinking cell targets.
 
 **Checkpoint**: User Story 4 independently supports day-level inspection on pointer and touch devices.
 
@@ -117,8 +117,8 @@
 
 **Purpose**: Final pass across shared UX, accessibility, and regression protection spanning multiple stories.
 
-- [ ] T025 [P] Extend `tests/integration/projects/crud.test.ts`, `tests/unit/components/projects/projects-activity-heatmap.test.tsx`, and `tests/e2e/projects-activity-heatmap.spec.ts` with final regression coverage for first-render stability and background refresh retention.
-- [ ] T026 Extend `app/projects/page.tsx` and `components/projects/projects-activity-heatmap.tsx` with final summary-label wording, responsive spacing, accessibility polish, and no-regression cleanup across all heatmap states.
+- [X] T025 [P] Extend `tests/integration/projects/crud.test.ts`, `tests/unit/components/projects/projects-activity-heatmap.test.tsx`, and `tests/e2e/projects-activity-heatmap.spec.ts` with final regression coverage for first-render stability and background refresh retention.
+- [X] T026 Extend `app/projects/page.tsx` and `components/projects/projects-activity-heatmap.tsx` with final summary-label wording, responsive spacing, accessibility polish, and no-regression cleanup across all heatmap states.
 
 ---
 

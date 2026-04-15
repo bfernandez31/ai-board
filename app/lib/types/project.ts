@@ -38,6 +38,63 @@ export interface ShippedTicketDisplay {
   hasShipped: boolean;
 }
 
+export type ProjectsActivityPeriod = 'last-12-months' | 'year';
+export type ProjectsActivityAgentFilter = 'all' | 'CLAUDE' | 'CODEX' | 'MISTRAL' | 'GEMINI';
+
+export interface ProjectsActivityFilters {
+  period: ProjectsActivityPeriod;
+  year: number | null;
+  agent: ProjectsActivityAgentFilter;
+}
+
+export interface ProjectsActivityPeriodOption {
+  value: string;
+  label: string;
+  rangeStart: string;
+  rangeEnd: string;
+  kind: 'rolling' | 'calendar-year';
+}
+
+export interface ProjectsActivityAgentOption {
+  value: ProjectsActivityAgentFilter;
+  label: string;
+}
+
+export interface ProjectsActivityShippedTicket {
+  ticketId: number;
+  ticketKey: string;
+  title: string;
+}
+
+export interface ProjectsActivityDayCell {
+  date: string;
+  weekIndex: number;
+  weekdayIndex: number;
+  monthLabel: string | null;
+  jobCount: number;
+  shippedTicketCount: number;
+  costUsd: number | null;
+  intensityLevel: 0 | 1 | 2 | 3 | 4;
+  shippedTickets: ProjectsActivityShippedTicket[];
+}
+
+export interface ProjectsActivitySummary {
+  totalJobs: number;
+  totalShippedTickets: number;
+  summaryLabel: string;
+}
+
+export interface ProjectsActivityHeatmapResponse {
+  filters: ProjectsActivityFilters;
+  periodOptions: ProjectsActivityPeriodOption[];
+  agentOptions: ProjectsActivityAgentOption[];
+  summary: ProjectsActivitySummary;
+  days: ProjectsActivityDayCell[];
+  legendLevels: readonly [0, 1, 2, 3, 4];
+  hasActivity: boolean;
+  generatedAt: string;
+}
+
 /**
  * API response for GET /api/projects
  */

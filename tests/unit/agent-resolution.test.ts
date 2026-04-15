@@ -51,4 +51,25 @@ describe('resolveEffectiveAgent', () => {
   it('keeps every supported agent selectable during project setup', () => {
     expect(ALL_AGENTS.every((agent) => supportsSetupAgentSelection(agent))).toBe(true);
   });
+
+  it('supports filtering inherited project-default activity when ticket agent is unset', () => {
+    const effectiveAgents = [
+      resolveEffectiveAgent(null, 'CLAUDE'),
+      resolveEffectiveAgent(null, 'CLAUDE'),
+      resolveEffectiveAgent(null, 'CODEX'),
+    ];
+
+    expect(effectiveAgents.filter((agent) => agent === 'CLAUDE')).toHaveLength(2);
+    expect(effectiveAgents.filter((agent) => agent === 'CODEX')).toHaveLength(1);
+  });
+
+  it('keeps explicit ticket agents overriding inherited defaults during mixed aggregation', () => {
+    const effectiveAgents = [
+      resolveEffectiveAgent(null, 'CLAUDE'),
+      resolveEffectiveAgent('CODEX', 'CLAUDE'),
+      resolveEffectiveAgent('GEMINI', 'MISTRAL'),
+    ];
+
+    expect(effectiveAgents).toEqual(['CLAUDE', 'CODEX', 'GEMINI']);
+  });
 });

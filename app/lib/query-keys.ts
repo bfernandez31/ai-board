@@ -38,6 +38,8 @@ export const queryKeys = {
       cursor
         ? (['projects', projectId, 'activity', cursor] as const)
         : (['projects', projectId, 'activity'] as const),
+    activityHeatmap: (period: string, year: string, agent: string) =>
+      ['projects', 'activity-heatmap', period, year, agent] as const,
   },
 
   comments: {
