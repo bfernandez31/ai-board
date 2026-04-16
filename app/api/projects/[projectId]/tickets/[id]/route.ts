@@ -279,6 +279,6 @@ export async function DELETE(
       if (error.message === 'Unauthorized') return NextResponse.json({ error: 'Unauthorized. Please sign in.', code: 'UNAUTHORIZED' }, { status: 401 });
       if (error.message === 'Ticket not found') return NextResponse.json({ error: 'Ticket not found', code: 'NOT_FOUND' }, { status: 404 });
     }
-    return NextResponse.json({ error: 'Failed to delete ticket', code: 'DATABASE_ERROR', message: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete ticket', code: 'DATABASE_ERROR' }, { status: 500 });
   }
 }
