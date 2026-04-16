@@ -58,7 +58,6 @@ function isYearPeriod(period: HeatmapPeriod): period is `${number}` {
  */
 export function getPeriodBounds(
   period: HeatmapPeriod,
-  _userCreatedAt: Date,
   now: Date
 ): HeatmapPeriodBounds {
   let startDate: Date;

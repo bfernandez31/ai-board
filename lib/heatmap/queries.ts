@@ -94,7 +94,7 @@ export async function getHeatmapData(
   const agentFilter = normalizeAgent(rawFilters.agent);
   const filters: HeatmapFilters = { period, agent: agentFilter };
 
-  const bounds = getPeriodBounds(period, userCreatedAt, now);
+  const bounds = getPeriodBounds(period, now);
   const projectIds = await getAccessibleProjectIdsForUser(userId);
 
   const jobs = projectIds.length

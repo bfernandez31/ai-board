@@ -27,7 +27,6 @@ import {
 
 interface ActivityHeatmapProps {
   initialData: HeatmapData;
-  userCreatedYear: number;
 }
 
 const DOW_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -38,15 +37,6 @@ const MONTH_LABELS = [
 
 function filtersMatch(left: HeatmapFilters, right: HeatmapFilters): boolean {
   return left.period === right.period && left.agent === right.agent;
-}
-
-function getInitialFilters(
-  searchParams: URLSearchParams,
-  initialData: HeatmapData
-): HeatmapFilters {
-  const period = (searchParams.get('period') as HeatmapPeriod | null) ?? initialData.filters.period;
-  const agent = (searchParams.get('agent') as HeatmapAgentFilter | null) ?? initialData.filters.agent;
-  return { period, agent };
 }
 
 async function fetchHeatmap(filters: HeatmapFilters): Promise<HeatmapData> {
@@ -99,13 +89,16 @@ function computeMonthLabels(weeks: HeatmapDayCell[][]): MonthLabel[] {
   return labels;
 }
 
-export function ActivityHeatmap({ initialData, userCreatedYear }: ActivityHeatmapProps) {
+export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [filters, setFilters] = useState<HeatmapFilters>(() =>
-    getInitialFilters(searchParams as unknown as URLSearchParams, initialData)
-  );
+  const [filters, setFilters] = useState<HeatmapFilters>(() => ({
+    period:
+      (searchParams?.get('period') as HeatmapPeriod | null) ?? initialData.filters.period,
+    agent:
+      (searchParams?.get('agent') as HeatmapAgentFilter | null) ?? initialData.filters.agent,
+  }));
 
   const shouldUseInitialData = filtersMatch(filters, initialData.filters);
 
@@ -132,8 +125,7 @@ export function ActivityHeatmap({ initialData, userCreatedYear }: ActivityHeatma
   const isEmpty = heatmap.totals.jobCount === 0;
 
   const hasAgentFilter = heatmap.availableAgents.length > 0;
-  const hasYearOptions = heatmap.periodOptions.some((opt) => !opt.isDefault);
-  const showPeriodSelector = hasYearOptions && userCreatedYear < new Date().getFullYear() + 1;
+  const showPeriodSelector = heatmap.periodOptions.some((opt) => !opt.isDefault);
 
   return (
     <section className="space-y-3">

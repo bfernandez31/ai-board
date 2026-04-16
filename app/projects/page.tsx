@@ -7,7 +7,6 @@ import { ActivityHeatmap } from '@/components/projects/activity-heatmap';
 import { toProjectWithCount, type ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
 import { requireAuth } from '@/lib/db/users';
-import { prisma } from '@/lib/db/client';
 import { getHeatmapData } from '@/lib/heatmap/queries';
 import type { HeatmapData } from '@/lib/heatmap/types';
 
@@ -31,24 +30,13 @@ async function getProjects(): Promise<ProjectsListResponse> {
   }
 }
 
-interface HeatmapPageData {
-  data: HeatmapData;
-  userCreatedYear: number;
-}
-
 async function getHeatmapForPage(
   period: string | null,
   agent: string | null
-): Promise<HeatmapPageData | null> {
+): Promise<HeatmapData | null> {
   try {
     const userId = await requireAuth();
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { createdAt: true },
-    });
-    const data = await getHeatmapData(userId, { period, agent });
-    const userCreatedYear = (user?.createdAt ?? new Date()).getFullYear();
-    return { data, userCreatedYear };
+    return await getHeatmapData(userId, { period, agent });
   } catch (error) {
     console.error('Failed to load heatmap:', error);
     return null;
@@ -88,10 +76,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
       {heatmap ? (
         <section className="mt-8">
-          <ActivityHeatmap
-            initialData={heatmap.data}
-            userCreatedYear={heatmap.userCreatedYear}
-          />
+          <ActivityHeatmap initialData={heatmap} />
         </section>
       ) : null}
     </div>

@@ -125,7 +125,7 @@ describe('ActivityHeatmap', () => {
   it('renders cells from initialData without fetching and without a spinner', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     renderWithProviders(
-      <ActivityHeatmap initialData={makeHeatmapData()} userCreatedYear={2023} />
+      <ActivityHeatmap initialData={makeHeatmapData()} />
     );
 
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -140,7 +140,6 @@ describe('ActivityHeatmap', () => {
           totals: { jobCount: 0, shippedTicketCount: 0 },
           days: [makeCell({ date: '2026-04-15', intensityLevel: 0 })],
         })}
-        userCreatedYear={2023}
       />
     );
 
@@ -149,7 +148,7 @@ describe('ActivityHeatmap', () => {
 
   it('includes a 5-swatch legend (Less ... More)', () => {
     renderWithProviders(
-      <ActivityHeatmap initialData={makeHeatmapData()} userCreatedYear={2023} />
+      <ActivityHeatmap initialData={makeHeatmapData()} />
     );
 
     expect(screen.getByText('Less')).toBeInTheDocument();
@@ -162,13 +161,12 @@ describe('ActivityHeatmap', () => {
     renderWithProviders(
       <ActivityHeatmap
         initialData={makeHeatmapData({ availableAgents: [] })}
-        userCreatedYear={2023}
       />
     );
     expect(screen.queryByTestId('heatmap-agent-filter')).not.toBeInTheDocument();
   });
 
-  it('shows period selector with descending years from userCreatedYear to current year', () => {
+  it('shows period selector with descending years when multiple options are available', () => {
     renderWithProviders(
       <ActivityHeatmap
         initialData={makeHeatmapData({
@@ -179,7 +177,6 @@ describe('ActivityHeatmap', () => {
             { value: '2024', label: '2024', isDefault: false },
           ],
         })}
-        userCreatedYear={2024}
       />
     );
 
@@ -204,7 +201,6 @@ describe('ActivityHeatmap', () => {
             { value: '2024', label: '2024', isDefault: false },
           ],
         })}
-        userCreatedYear={2024}
       />
     );
 
@@ -228,7 +224,6 @@ describe('ActivityHeatmap', () => {
             { value: 'CODEX', label: 'Codex', jobCount: 5 },
           ],
         })}
-        userCreatedYear={2023}
       />
     );
 
@@ -257,7 +252,6 @@ describe('ActivityHeatmap', () => {
             { value: 'CODEX', label: 'Codex', jobCount: 5 },
           ],
         })}
-        userCreatedYear={2023}
       />
     );
 
@@ -277,7 +271,7 @@ describe('ActivityHeatmap', () => {
 
   it('renders day-of-week labels with sticky positioning for mobile', () => {
     const { container } = renderWithProviders(
-      <ActivityHeatmap initialData={makeHeatmapData()} userCreatedYear={2023} />
+      <ActivityHeatmap initialData={makeHeatmapData()} />
     );
     const labels = container.querySelector('[data-testid="heatmap-dow-labels"]');
     expect(labels?.className ?? '').toContain('sticky');
@@ -286,7 +280,7 @@ describe('ActivityHeatmap', () => {
 
   it('renders scroll wrapper for mobile horizontal overflow', () => {
     const { container } = renderWithProviders(
-      <ActivityHeatmap initialData={makeHeatmapData()} userCreatedYear={2023} />
+      <ActivityHeatmap initialData={makeHeatmapData()} />
     );
     const wrapper = container.querySelector('[data-testid="heatmap-scroll"]');
     expect(wrapper?.className ?? '').toContain('overflow-x-auto');
@@ -300,7 +294,6 @@ describe('ActivityHeatmap', () => {
             makeCell({ date: '2026-04-15', inPeriod: true, jobCount: 5, totalCost: 1.25 }),
           ],
         })}
-        userCreatedYear={2023}
       />
     );
     expect(screen.getByRole('button', { name: /2026-04-15: 5 jobs/ })).toBeInTheDocument();
@@ -312,7 +305,6 @@ describe('ActivityHeatmap', () => {
         initialData={makeHeatmapData({
           days: [makeCell({ date: '2026-04-15', inPeriod: true, jobCount: 0 })],
         })}
-        userCreatedYear={2023}
       />
     );
     expect(screen.queryByRole('button')).not.toBeInTheDocument();

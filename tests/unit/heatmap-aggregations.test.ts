@@ -13,9 +13,8 @@ import {
 describe('getPeriodBounds', () => {
   it('returns a 365-day window for last-12-months anchored to now', () => {
     const now = new Date(2026, 3, 16, 10, 0, 0); // 2026-04-16 local
-    const userCreatedAt = new Date(2024, 0, 10);
 
-    const bounds = getPeriodBounds('last-12-months', userCreatedAt, now);
+    const bounds = getPeriodBounds('last-12-months', now);
 
     expect(bounds.endDate.getFullYear()).toBe(2026);
     expect(bounds.endDate.getMonth()).toBe(3);
@@ -32,9 +31,8 @@ describe('getPeriodBounds', () => {
 
   it('returns full-year bounds for a specific year including leap year 2024', () => {
     const now = new Date(2026, 3, 16);
-    const userCreatedAt = new Date(2023, 0, 1);
 
-    const bounds = getPeriodBounds('2024', userCreatedAt, now);
+    const bounds = getPeriodBounds('2024', now);
 
     expect(bounds.startDate.getFullYear()).toBe(2024);
     expect(bounds.startDate.getMonth()).toBe(0);
@@ -49,18 +47,16 @@ describe('getPeriodBounds', () => {
 
   it('returns 365 in-period days for a non-leap year', () => {
     const now = new Date(2026, 3, 16);
-    const userCreatedAt = new Date(2023, 0, 1);
 
-    const bounds = getPeriodBounds('2025', userCreatedAt, now);
+    const bounds = getPeriodBounds('2025', now);
     const keys = enumerateDateKeys(bounds.startDate, bounds.endDate);
     expect(keys).toHaveLength(365);
   });
 
   it('grid bounds always snap to Sunday..Saturday for year periods', () => {
     const now = new Date(2026, 3, 16);
-    const userCreatedAt = new Date(2020, 0, 1);
 
-    const bounds = getPeriodBounds('2024', userCreatedAt, now);
+    const bounds = getPeriodBounds('2024', now);
     expect(bounds.gridStart.getDay()).toBe(0);
     expect(bounds.gridEnd.getDay()).toBe(6);
   });
