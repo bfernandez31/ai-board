@@ -554,7 +554,7 @@ interface SuccessResponse<T> {
 ```typescript
 interface ErrorResponse {
   error: string;           // Short error message
-  message: string;         // Detailed explanation
+  message?: string;        // Human-readable explanation (omitted on server errors to prevent information disclosure)
   code?: string;           // Error code (e.g., 'JOB_NOT_COMPLETED')
   details?: Record<string, any>;  // Additional context
 }

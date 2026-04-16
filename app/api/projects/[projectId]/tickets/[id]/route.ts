@@ -120,7 +120,6 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const isStageUpdate = 'stage' in body && !('title' in body || 'description' in body || 'branch' in body || 'autoMode' in body);
     const isInlineEdit = 'title' in body || 'description' in body || 'branch' in body || 'autoMode' in body || 'clarificationPolicy' in body || 'agent' in body;
 
     if (isInlineEdit) {
@@ -178,11 +177,10 @@ export async function PATCH(
           createdAt: updatedTicket.createdAt.toISOString(),
           updatedAt: updatedTicket.updatedAt.toISOString(),
         },
-        { status: 200 }
       );
     }
 
-    if (isStageUpdate) {
+    if ('stage' in body) {
       return NextResponse.json(
         {
           error: 'Invalid request',
@@ -271,7 +269,6 @@ export async function DELETE(
           prsClosed: result.prsClosed,
         },
       },
-      { status: 200 }
     );
   } catch (error) {
     console.error('Ticket deletion failed:', error);
@@ -279,6 +276,6 @@ export async function DELETE(
       if (error.message === 'Unauthorized') return NextResponse.json({ error: 'Unauthorized. Please sign in.', code: 'UNAUTHORIZED' }, { status: 401 });
       if (error.message === 'Ticket not found') return NextResponse.json({ error: 'Ticket not found', code: 'NOT_FOUND' }, { status: 404 });
     }
-    return NextResponse.json({ error: 'Failed to delete ticket', code: 'DATABASE_ERROR', message: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete ticket', code: 'DATABASE_ERROR' }, { status: 500 });
   }
 }
