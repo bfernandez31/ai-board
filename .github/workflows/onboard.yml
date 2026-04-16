@@ -24,7 +24,7 @@ env:
   APP_URL: ${{ vars.APP_URL || 'https://ai-board.vercel.app' }}
   WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
   CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-  ANTHROPIC_MODEL: "claude-opus-4-6"
+  ANTHROPIC_MODEL: "claude-opus-4-7"
   # Claude Code telemetry
   CLAUDE_CODE_ENABLE_TELEMETRY: "1"
   OTEL_LOGS_EXPORTER: "otlp"

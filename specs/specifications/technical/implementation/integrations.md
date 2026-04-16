@@ -637,7 +637,7 @@ env:
 
 agent:
   cli: claude-code      # claude-code | codex
-  model: claude-opus-4-6
+  model: claude-opus-4-7
 ```
 
 **Phase `lightweight`** (specify, plan, clarify, iterate, assist):
