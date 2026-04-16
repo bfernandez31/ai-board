@@ -147,7 +147,7 @@ function toBoardSnapshotJobs(
       toolsUsed: job.toolsUsed,
       qualityScore: job.qualityScore,
       qualityScoreDetails: job.qualityScoreDetails,
-    } as Job;
+    } satisfies Job;
   });
 }
 
