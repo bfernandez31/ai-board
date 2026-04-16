@@ -17,9 +17,9 @@
 
 **Purpose**: No new dependencies or tooling; this phase only creates the `lib/heatmap/` module folder and test folder skeletons so subsequent tasks have a home.
 
-- [ ] T001 Create directory `lib/heatmap/` at `/home/runner/work/ai-board/ai-board/target/lib/heatmap/` (will hold `queries.ts`, `aggregations.ts`, `types.ts`)
-- [ ] T002 [P] Create directory `tests/integration/heatmap/` at `/home/runner/work/ai-board/ai-board/target/tests/integration/heatmap/` (will hold `heatmap-route.test.ts`, `heatmap-queries.test.ts`)
-- [ ] T003 [P] Verify no Prisma migration is required (FR-018) by confirming `prisma/schema.prisma` already exposes `Job.completedAt`, `Job.command`, `Job.costUsd`, `Ticket.agent`, `Project.defaultAgent`, `User.createdAt`; no task-level action needed if all fields present — record finding in PR description
+- [X] T001 ✅ DONE Create directory `lib/heatmap/` at `/home/runner/work/ai-board/ai-board/target/lib/heatmap/` (will hold `queries.ts`, `aggregations.ts`, `types.ts`)
+- [X] T002 ✅ DONE [P] Create directory `tests/integration/heatmap/` at `/home/runner/work/ai-board/ai-board/target/tests/integration/heatmap/` (will hold `heatmap-route.test.ts`, `heatmap-queries.test.ts`)
+- [X] T003 ✅ DONE [P] Verify no Prisma migration is required (FR-018) by confirming `prisma/schema.prisma` already exposes `Job.completedAt`, `Job.command`, `Job.costUsd`, `Ticket.agent`, `Project.defaultAgent`, `User.createdAt`; no task-level action needed if all fields present — record finding in PR description
 
 ---
 
@@ -31,31 +31,31 @@
 
 ### Types
 
-- [ ] T004 Create TypeScript types in `lib/heatmap/types.ts` per `data-model.md` §Derived Read Types: `HeatmapPeriod`, `HeatmapAgentFilter`, `HeatmapFilters`, `HeatmapDayCell`, `HeatmapAgentOption`, `HeatmapPeriodOption`, `HeatmapData`
+- [X] T004 ✅ DONE Create TypeScript types in `lib/heatmap/types.ts` per `data-model.md` §Derived Read Types: `HeatmapPeriod`, `HeatmapAgentFilter`, `HeatmapFilters`, `HeatmapDayCell`, `HeatmapAgentOption`, `HeatmapPeriodOption`, `HeatmapData`
 
 ### Pure aggregations (TDD — tests first)
 
-- [ ] T005 [P] Create `tests/unit/heatmap-aggregations.test.ts` covering: `getPeriodBounds` for `last-12-months` and specific years (including leap year 2024), `buildPeriodOptions` when `createdAt.getFullYear() === currentYear` (single option) and earlier years (descending), `computeIntensityThresholds` for all-zero / single-day / uniform / skewed distributions, `getIntensityLevel` boundary inclusiveness (quartile edges), `getIntensityClass` returns complete literal strings, `formatHeaderCopy` wording variants ("in the last year" vs "in 2024")
-- [ ] T006 Create `lib/heatmap/aggregations.ts` implementing pure functions per `plan.md` §Phase A: `getPeriodBounds(period, userCreatedAt, now)`, `buildPeriodOptions(userCreatedAt, now)`, `computeIntensityThresholds(nonZeroDailyCounts)`, `getIntensityLevel(count, thresholds)`, `getIntensityClass(level)` (returns one of 5 literal Tailwind strings per `research.md` Pattern 5), `formatHeaderCopy(period, totals)`; must make T005 pass
+- [X] T005 ✅ DONE [P] Create `tests/unit/heatmap-aggregations.test.ts` covering: `getPeriodBounds` for `last-12-months` and specific years (including leap year 2024), `buildPeriodOptions` when `createdAt.getFullYear() === currentYear` (single option) and earlier years (descending), `computeIntensityThresholds` for all-zero / single-day / uniform / skewed distributions, `getIntensityLevel` boundary inclusiveness (quartile edges), `getIntensityClass` returns complete literal strings, `formatHeaderCopy` wording variants ("in the last year" vs "in 2024")
+- [X] T006 ✅ DONE Create `lib/heatmap/aggregations.ts` implementing pure functions per `plan.md` §Phase A: `getPeriodBounds(period, userCreatedAt, now)`, `buildPeriodOptions(userCreatedAt, now)`, `computeIntensityThresholds(nonZeroDailyCounts)`, `getIntensityLevel(count, thresholds)`, `getIntensityClass(level)` (returns one of 5 literal Tailwind strings per `research.md` Pattern 5), `formatHeaderCopy(period, totals)`; must make T005 pass
 
 ### Authorization helper (extracted from existing clause)
 
-- [ ] T007 Extend `lib/db/projects.ts` by adding exported `getAccessibleProjectIdsForUser(userId: string): Promise<number[]>` using the same `{ OR: [{ userId }, { members: { some: { userId } } }] }` clause already present in `getUserProjects` — do NOT modify `getUserProjects` behaviour
-- [ ] T008 Create `tests/integration/projects/accessible-ids.test.ts` verifying `getAccessibleProjectIdsForUser` returns project ids where the user is owner OR member, and excludes projects where they are neither
+- [X] T007 ✅ DONE Extend `lib/db/projects.ts` by adding exported `getAccessibleProjectIdsForUser(userId: string): Promise<number[]>` using the same `{ OR: [{ userId }, { members: { some: { userId } } }] }` clause already present in `getUserProjects` — do NOT modify `getUserProjects` behaviour
+- [X] T008 ✅ DONE Create `tests/integration/projects/accessible-ids.test.ts` verifying `getAccessibleProjectIdsForUser` returns project ids where the user is owner OR member, and excludes projects where they are neither
 
 ### Query layer
 
-- [ ] T009 Create `tests/integration/heatmap/heatmap-queries.test.ts` covering data-model.md rules 1–9: access scoping (seed a job on a project the user is NOT a member of and assert its absence), effective-agent resolution via `ticket.agent ?? project.defaultAgent`, cost null-safety (all-null day → `totalCost === null`, mixed → sum of non-null), ship counting (DISTINCT on `ticketId`, excludes `status=FAILED` ship jobs), period bounds with leap year, `availableAgents` computed from UNFILTERED dataset, grid boundaries unchanged when agent filter is applied, intensity thresholds as quartiles
-- [ ] T010 Create `lib/heatmap/queries.ts` exporting `getHeatmapData(userId, filters): Promise<HeatmapData>` per `plan.md` §Phase C: resolve `user.createdAt`, call `getAccessibleProjectIdsForUser`, derive period bounds, run single `prisma.job.findMany` over accessible project ids with `completedAt` in `[startDate, endDate]` selecting `{ completedAt, command, status, costUsd, ticketId, ticket: { agent, project: { defaultAgent } } }`, bucket by date in server TZ, compute `availableAgents` from UNFILTERED data, apply agent filter LAST via `resolveEffectiveAgent` from `app/lib/utils/agent-resolution.ts`, compute distinct `shippedTicketCount` per day (command='ship' AND status=COMPLETED), compute null-safe `totalCost`, compute `intensityThresholds`, build contiguous `days[]` from Sunday gridStart to Saturday gridEnd with `inPeriod` flag; must make T009 pass
+- [X] T009 ✅ DONE Create `tests/integration/heatmap/heatmap-queries.test.ts` covering data-model.md rules 1–9: access scoping (seed a job on a project the user is NOT a member of and assert its absence), effective-agent resolution via `ticket.agent ?? project.defaultAgent`, cost null-safety (all-null day → `totalCost === null`, mixed → sum of non-null), ship counting (DISTINCT on `ticketId`, excludes `status=FAILED` ship jobs), period bounds with leap year, `availableAgents` computed from UNFILTERED dataset, grid boundaries unchanged when agent filter is applied, intensity thresholds as quartiles
+- [X] T010 ✅ DONE Create `lib/heatmap/queries.ts` exporting `getHeatmapData(userId, filters): Promise<HeatmapData>` per `plan.md` §Phase C: resolve `user.createdAt`, call `getAccessibleProjectIdsForUser`, derive period bounds, run single `prisma.job.findMany` over accessible project ids with `completedAt` in `[startDate, endDate]` selecting `{ completedAt, command, status, costUsd, ticketId, ticket: { agent, project: { defaultAgent } } }`, bucket by date in server TZ, compute `availableAgents` from UNFILTERED data, apply agent filter LAST via `resolveEffectiveAgent` from `app/lib/utils/agent-resolution.ts`, compute distinct `shippedTicketCount` per day (command='ship' AND status=COMPLETED), compute null-safe `totalCost`, compute `intensityThresholds`, build contiguous `days[]` from Sunday gridStart to Saturday gridEnd with `inPeriod` flag; must make T009 pass
 
 ### API route
 
-- [ ] T011 Create `tests/integration/heatmap/heatmap-route.test.ts` implementing the 14-scenario test matrix in `contracts/heatmap-api.md` (default call, specific year, invalid period silent fallback, year before account, agent filter, invalid agent silent fallback, access scoping, ship-FAILED excluded, cost null, mixed cost, leap year 2024 → 366 in-period days, empty data, 1-agent user → `availableAgents === []`, unauthenticated → 401)
-- [ ] T012 Create `app/api/heatmap/route.ts` GET handler per `plan.md` §Phase D: Zod schema with `period: z.string().regex(/^(last-12-months|\d{4})$/).catch('last-12-months')` and `agent: z.enum(['all', ...ALL_AGENTS]).catch('all')`, `requireAuth(request)` → userId, call `getHeatmapData`, return `NextResponse.json`; error branches: `Error.message === 'Unauthorized'` → 401, else `console.error` + 500 (no 400/403/404 branches per contract); must make T011 pass
+- [X] T011 ✅ DONE Create `tests/integration/heatmap/heatmap-route.test.ts` implementing the 14-scenario test matrix in `contracts/heatmap-api.md` (default call, specific year, invalid period silent fallback, year before account, agent filter, invalid agent silent fallback, access scoping, ship-FAILED excluded, cost null, mixed cost, leap year 2024 → 366 in-period days, empty data, 1-agent user → `availableAgents === []`, unauthenticated → 401)
+- [X] T012 ✅ DONE Create `app/api/heatmap/route.ts` GET handler per `plan.md` §Phase D: Zod schema with `period: z.string().regex(/^(last-12-months|\d{4})$/).catch('last-12-months')` and `agent: z.enum(['all', ...ALL_AGENTS]).catch('all')`, `requireAuth(request)` → userId, call `getHeatmapData`, return `NextResponse.json`; error branches: `Error.message === 'Unauthorized'` → 401, else `console.error` + 500 (no 400/403/404 branches per contract); must make T011 pass
 
 ### Query keys
 
-- [ ] T013 Extend `app/lib/query-keys.ts` by adding `heatmap: { data: (period: string, agent: string) => ['heatmap', period, agent] as const }` alongside the existing `analytics` keys
+- [X] T013 ✅ DONE Extend `app/lib/query-keys.ts` by adding `heatmap: { data: (period: string, agent: string) => ['heatmap', period, agent] as const }` alongside the existing `analytics` keys
 
 **Checkpoint**: Foundation ready — every user story below depends on T004, T006, T007, T010, T012, T013.
 

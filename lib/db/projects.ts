@@ -78,6 +78,24 @@ export async function getUserProjects(request?: NextRequest) {
 }
 
 /**
+ * Return the project ids the given user can access (owner OR member).
+ * Mirrors the `OR` clause used by `getUserProjects` so callers never
+ * reinvent authorization scope.
+ */
+export async function getAccessibleProjectIdsForUser(userId: string): Promise<number[]> {
+  const projects = await prisma.project.findMany({
+    where: {
+      OR: [
+        { userId },
+        { members: { some: { userId } } },
+      ],
+    },
+    select: { id: true },
+  });
+  return projects.map((project) => project.id);
+}
+
+/**
  * Get a single project by ID
  * Ensures the current user has access (owner OR member)
  * Supports both session auth and Bearer token (PAT) authentication.
