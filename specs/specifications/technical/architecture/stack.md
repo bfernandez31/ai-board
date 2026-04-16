@@ -361,7 +361,7 @@
 
 ### Claude Code CLI
 - **Version**: Latest stable
-- **Model**: Claude Opus 4.6 (`claude-opus-4-6`)
+- **Model**: Claude Opus 4.7 (`claude-opus-4-7`)
 - **Installation**: Global via npm (`npm install -g @anthropic-ai/claude-code`)
 - **Purpose**: AI-powered code generation and specification
 - **Commands**:
