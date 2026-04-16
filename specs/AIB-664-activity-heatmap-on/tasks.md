@@ -69,12 +69,12 @@
 
 ### Tests for User Story 1
 
-- [ ] T014 [P] [US1] Create `tests/unit/components/activity-heatmap.test.tsx` with initial-data render case (renders cells from `initialData` without fetching, no spinner), header-copy assertion matching `formatHeaderCopy('last-12-months', totals)`, and empty-state substitution when `data.totals.jobCount === 0` (FR-015) — the file will be extended in later stories; no existing component test covers this domain so new file is justified
+- [X] T014 ✅ DONE [P] [US1] Create `tests/unit/components/activity-heatmap.test.tsx` with initial-data render case (renders cells from `initialData` without fetching, no spinner), header-copy assertion matching `formatHeaderCopy('last-12-months', totals)`, and empty-state substitution when `data.totals.jobCount === 0` (FR-015) — the file will be extended in later stories; no existing component test covers this domain so new file is justified
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Create `components/projects/activity-heatmap.tsx` (Client Component, `'use client'`) per `plan.md` §Phase E: props `{ initialData: HeatmapData; userCreatedYear: number }`, `useQuery({ queryKey: queryKeys.heatmap.data(filters.period, filters.agent), queryFn: () => fetch('/api/heatmap?...'), initialData: shouldUseInitialData ? initialData : undefined, refetchInterval: 15000, staleTime: 10000 })`, render header via `formatHeaderCopy`, render CSS grid with `grid-rows-7 grid-flow-col auto-cols-max`, cells positioned deterministically by `dayOfWeek` and `weekIndex` (out-of-period cells omitted → chipped corners), month labels row, day-of-week labels column, 5-step legend "Less □□□□■ More" with `getIntensityClass(level)` for each swatch, empty-state swap when `data.totals.jobCount === 0`
-- [ ] T016 [US1] Extend `app/projects/page.tsx` per `plan.md` §Phase F: parse `period`/`agent` from `searchParams` with the same permissive coercion as the route, resolve authenticated user id (mirror existing auth pattern used for `getUserProjects()`), `await getHeatmapData(userId, filters)`, compute `userCreatedYear = new Date(user.createdAt).getFullYear()`, render `<ActivityHeatmap initialData={...} userCreatedYear={...} />` inside a `<section className="mt-8">` below `<ProjectsContainer />`
+- [X] T015 ✅ DONE [US1] Create `components/projects/activity-heatmap.tsx` (Client Component, `'use client'`) per `plan.md` §Phase E: props `{ initialData: HeatmapData; userCreatedYear: number }`, `useQuery({ queryKey: queryKeys.heatmap.data(filters.period, filters.agent), queryFn: () => fetch('/api/heatmap?...'), initialData: shouldUseInitialData ? initialData : undefined, refetchInterval: 15000, staleTime: 10000 })`, render header via `formatHeaderCopy`, render CSS grid with `grid-rows-7 grid-flow-col auto-cols-max`, cells positioned deterministically by `dayOfWeek` and `weekIndex` (out-of-period cells omitted → chipped corners), month labels row, day-of-week labels column, 5-step legend "Less □□□□■ More" with `getIntensityClass(level)` for each swatch, empty-state swap when `data.totals.jobCount === 0`
+- [X] T016 ✅ DONE [US1] Extend `app/projects/page.tsx` per `plan.md` §Phase F: parse `period`/`agent` from `searchParams` with the same permissive coercion as the route, resolve authenticated user id (mirror existing auth pattern used for `getUserProjects()`), `await getHeatmapData(userId, filters)`, compute `userCreatedYear = new Date(user.createdAt).getFullYear()`, render `<ActivityHeatmap initialData={...} userCreatedYear={...} />` inside a `<section className="mt-8">` below `<ProjectsContainer />`
 
 **Checkpoint**: MVP — `/projects` renders a working heatmap with the default "Last 12 months" period and no agent filter interaction.
 
@@ -88,13 +88,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T017 [P] [US2] Extend `tests/unit/components/activity-heatmap.test.tsx` (from T014) with: period selector lists "Last 12 months" + descending years from `userCreatedYear` to current year, selecting a year calls `router.push('?period=YYYY', { scroll: false })` and triggers a fetch for that period, URL-arrival with `?period=2024` renders the 2024 grid from `useSearchParams`, user whose `createdAt` is in current year sees only "Last 12 months" (single option or disabled)
-- [ ] T018 [P] [US2] Extend `tests/integration/heatmap/heatmap-route.test.ts` (from T011) only if the test matrix rows #2 (specific year), #4 (year before account), and #11 (leap year) are not already asserted — skip if T011 already covers them per contract
+- [X] T017 ✅ DONE [P] [US2] Extend `tests/unit/components/activity-heatmap.test.tsx` (from T014) with: period selector lists "Last 12 months" + descending years from `userCreatedYear` to current year, selecting a year calls `router.push('?period=YYYY', { scroll: false })` and triggers a fetch for that period, URL-arrival with `?period=2024` renders the 2024 grid from `useSearchParams`, user whose `createdAt` is in current year sees only "Last 12 months" (single option or disabled)
+- [X] T018 ✅ DONE [P] [US2] Extend `tests/integration/heatmap/heatmap-route.test.ts` (from T011) only if the test matrix rows #2 (specific year), #4 (year before account), and #11 (leap year) are not already asserted — skip if T011 already covers them per contract (already covered by T011)
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] In `components/projects/activity-heatmap.tsx` (extending T015), add the period `<Select>` (shadcn/ui) populated from `data.periodOptions`, wire `updateFilters({ period: next })` to `setFilters` + `router.push('?period=...&agent=...', { scroll: false })`, and update header copy via `formatHeaderCopy(filters.period, totals)` so it reads "… in 2024" when a year is selected
-- [ ] T020 [US2] Verify `buildPeriodOptions` (already implemented in T006) handles the `createdAt.getFullYear() === currentYear` case by returning only `[{ value: 'last-12-months', isDefault: true }]`; add the test case in T005 if missing — no additional implementation if T006 already conforms
+- [X] T019 ✅ DONE [US2] In `components/projects/activity-heatmap.tsx` (extending T015), add the period `<Select>` (shadcn/ui) populated from `data.periodOptions`, wire `updateFilters({ period: next })` to `setFilters` + `router.push('?period=...&agent=...', { scroll: false })`, and update header copy via `formatHeaderCopy(filters.period, totals)` so it reads "… in 2024" when a year is selected
+- [X] T020 ✅ DONE [US2] Verify `buildPeriodOptions` (already implemented in T006) handles the `createdAt.getFullYear() === currentYear` case by returning only `[{ value: 'last-12-months', isDefault: true }]`; add the test case in T005 if missing — no additional implementation if T006 already conforms (covered by T005)
 
 **Checkpoint**: Period selection and URL round-trip work independently of the agent filter.
 
@@ -108,12 +108,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T021 [P] [US3] Extend `tests/unit/components/activity-heatmap.test.tsx` (from T014) with: agent filter hidden entirely when `data.availableAgents.length === 0` (FR-008, US3 scenario 2), agent filter visible with "All" + one option per agent when `availableAgents.length >= 1`, selecting an agent calls `router.push('?period=...&agent=CLAUDE', { scroll: false })` and triggers a fetch, URL-arrival with `?agent=CLAUDE` applies the filter on mount, grid column count unchanged across agent filter toggle
-- [ ] T022 [P] [US3] Extend `tests/integration/heatmap/heatmap-route.test.ts` (from T011) only if test matrix rows #5 (agent filter), #6 (invalid agent), #13 (1-agent user → `availableAgents===[]`) are not already asserted — skip if T011 already covers them
+- [X] T021 ✅ DONE [P] [US3] Extend `tests/unit/components/activity-heatmap.test.tsx` (from T014) with: agent filter hidden entirely when `data.availableAgents.length === 0` (FR-008, US3 scenario 2), agent filter visible with "All" + one option per agent when `availableAgents.length >= 1`, selecting an agent calls `router.push('?period=...&agent=CLAUDE', { scroll: false })` and triggers a fetch, URL-arrival with `?agent=CLAUDE` applies the filter on mount, grid column count unchanged across agent filter toggle
+- [X] T022 ✅ DONE [P] [US3] Extend `tests/integration/heatmap/heatmap-route.test.ts` (from T011) only if test matrix rows #5 (agent filter), #6 (invalid agent), #13 (1-agent user → `availableAgents===[]`) are not already asserted — skip if T011 already covers them (already covered by T011)
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] In `components/projects/activity-heatmap.tsx` (extending T015/T019), add the agent `<Select>` rendered conditionally on `data.availableAgents.length > 0`, options built from `[{value:'all', label:'All'}, ...data.availableAgents]`, wire `updateFilters({ agent: next })` to push `?period=...&agent=...` to the URL; confirm grid and period boundaries are unaffected by agent changes (only cell intensities and header counts change — implementation in T010 already guarantees boundaries remain stable)
+- [X] T023 ✅ DONE [US3] In `components/projects/activity-heatmap.tsx` (extending T015/T019), add the agent `<Select>` rendered conditionally on `data.availableAgents.length > 0`, options built from `[{value:'all', label:'All'}, ...data.availableAgents]`, wire `updateFilters({ agent: next })` to push `?period=...&agent=...` to the URL; confirm grid and period boundaries are unaffected by agent changes (only cell intensities and header counts change — implementation in T010 already guarantees boundaries remain stable)
 
 **Checkpoint**: Agent filter works end-to-end with URL sync; combined with US2 gives the full filter surface.
 
@@ -127,11 +127,11 @@
 
 ### Tests for User Story 4
 
-- [ ] T024 [P] [US4] Extend `tests/unit/components/activity-heatmap.test.tsx` (from T014) with: tooltip opens on hover over a cell with `jobCount > 0`, tooltip body shows formatted date + job count + shipped ticket count, cost line present when `totalCost !== null` and formatted with 2 decimals + `$` prefix, cost line omitted entirely when `totalCost === null` (assert via absence of the cost DOM node — never "$NaN" or "$0"), mobile: click (pointerdown) on a cell opens tooltip, pointerdown outside the cell ref closes tooltip (controlled `open`/`onOpenChange` pattern)
+- [X] T024 ✅ DONE [P] [US4] Extend `tests/unit/components/activity-heatmap.test.tsx` (from T014) with: tooltip opens on hover over a cell with `jobCount > 0`, tooltip body shows formatted date + job count + shipped ticket count, cost line present when `totalCost !== null` and formatted with 2 decimals + `$` prefix, cost line omitted entirely when `totalCost === null` (assert via absence of the cost DOM node — never "$NaN" or "$0"), mobile: click (pointerdown) on a cell opens tooltip, pointerdown outside the cell ref closes tooltip (controlled `open`/`onOpenChange` pattern)
 
 ### Implementation for User Story 4
 
-- [ ] T025 [US4] Decide inline-vs-extracted cell rendering per constitution II: if `components/projects/activity-heatmap.tsx` exceeds ~300 lines or the cell needs its own tooltip state, create `components/projects/activity-heatmap-cell.tsx` with props `{ cell: HeatmapDayCell }`, Radix `Tooltip` primitives from `components/ui/tooltip.tsx`, controlled `open`/`onOpenChange` state, `useEffect` listening to `document` `pointerdown` for outside-tap dismiss on mobile, and render: formatted date line, `"<N> jobs"`, `"<M> tickets shipped"` (omitted if 0), `"$X.XX"` (omitted entirely when `cell.totalCost === null`) — otherwise implement tooltip inline in `activity-heatmap.tsx`
+- [X] T025 ✅ DONE [US4] Decide inline-vs-extracted cell rendering per constitution II: if `components/projects/activity-heatmap.tsx` exceeds ~300 lines or the cell needs its own tooltip state, create `components/projects/activity-heatmap-cell.tsx` with props `{ cell: HeatmapDayCell }`, Radix `Tooltip` primitives from `components/ui/tooltip.tsx`, controlled `open`/`onOpenChange` state, `useEffect` listening to `document` `pointerdown` for outside-tap dismiss on mobile, and render: formatted date line, `"<N> jobs"`, `"<M> tickets shipped"` (omitted if 0), `"$X.XX"` (omitted entirely when `cell.totalCost === null`) — otherwise implement tooltip inline in `activity-heatmap.tsx` (inline `HeatmapCell` used; under 300 lines)
 
 **Checkpoint**: Tooltips convey per-day detail with the cost-null guarantee; cost never renders as "$NaN" or "$0".
 
@@ -145,12 +145,12 @@
 
 ### Tests for User Story 5
 
-- [ ] T026 [P] [US5] Extend `tests/unit/components/activity-heatmap.test.tsx` (from T014) with: day-of-week labels column uses `sticky left-0 z-10 bg-background` classes, grid wrapper uses `overflow-x-auto` (or equivalent) and does not shrink cells below the chosen minimum tappable size (assert class list or computed min-width), grid never wraps (no `flex-wrap` or grid `auto-rows-min` that would cause row wrap)
+- [X] T026 ✅ DONE [P] [US5] Extend `tests/unit/components/activity-heatmap.test.tsx` (from T014) with: day-of-week labels column uses `sticky left-0 z-10 bg-background` classes, grid wrapper uses `overflow-x-auto` (or equivalent) and does not shrink cells below the chosen minimum tappable size (assert class list or computed min-width), grid never wraps (no `flex-wrap` or grid `auto-rows-min` that would cause row wrap)
 
 ### Implementation for User Story 5
 
-- [ ] T027 [US5] In `components/projects/activity-heatmap.tsx` (extending T015), confirm grid wrapper has `overflow-x-auto`, the day-of-week column has `sticky left-0 z-10 bg-background`, cells use a fixed minimum size meeting SC-007 tap target (e.g. `w-3 h-3 md:w-3.5 md:h-3.5` or project-equivalent tap-sized values — never dynamic Tailwind class construction per CLAUDE.md)
-- [ ] T028 [US5] Inspect `components/projects/projects-container.tsx`: if it sets `overflow-y-*` or a `max-h-*` that traps the page scroll and prevents the heatmap below from being reachable, relax it to `overflow-visible` (FR-017); otherwise leave untouched. Document the observation (either "adjusted" or "no change required") in the PR description
+- [X] T027 ✅ DONE [US5] In `components/projects/activity-heatmap.tsx` (extending T015), confirm grid wrapper has `overflow-x-auto`, the day-of-week column has `sticky left-0 z-10 bg-background`, cells use a fixed minimum size meeting SC-007 tap target (e.g. `w-3 h-3 md:w-3.5 md:h-3.5` or project-equivalent tap-sized values — never dynamic Tailwind class construction per CLAUDE.md)
+- [X] T028 ✅ DONE [US5] Inspect `components/projects/projects-container.tsx`: if it sets `overflow-y-*` or a `max-h-*` that traps the page scroll and prevents the heatmap below from being reachable, relax it to `overflow-visible` (FR-017); otherwise leave untouched. Document the observation (either "adjusted" or "no change required") in the PR description
 
 **Checkpoint**: All 5 user stories complete, mobile experience validated.
 
