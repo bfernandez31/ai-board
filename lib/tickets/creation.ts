@@ -207,9 +207,12 @@ export async function createTicketWithAttachments(
 
     let finalTicket = ticket;
     if (attachments.length > 0) {
+      // Cast required: TicketAttachment[] is Zod-validated plain JSON (strings, numbers, booleans)
+      // but TypeScript cannot structurally prove assignability to Prisma's recursive InputJsonValue type.
+      const validatedAttachments = attachmentsValidation.data as unknown as Prisma.InputJsonValue;
       finalTicket = await prisma.ticket.update({
         where: { id: ticket.id },
-        data: { attachments: attachments as unknown as Prisma.InputJsonValue },
+        data: { attachments: validatedAttachments },
       });
     }
 
