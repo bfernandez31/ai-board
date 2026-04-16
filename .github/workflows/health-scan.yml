@@ -150,7 +150,7 @@ jobs:
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      ANTHROPIC_MODEL: "claude-opus-4-6"
+      ANTHROPIC_MODEL: "claude-opus-4-7"
       # Inputs passed as env vars to prevent script injection (shell metacharacters
       # in workflow_dispatch values would be interpolated into run: scripts).
       INPUT_SCAN_ID: ${{ inputs.scan_id }}
