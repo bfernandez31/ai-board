@@ -1389,6 +1389,58 @@ import { createCommentSchema } from '@/app/lib/schemas/comment';
 import type { CreateCommentInput } from '@/app/lib/schemas/comment';
 ```
 
+## Heatmap Schemas
+
+### HeatmapData
+
+Wire format returned by `GET /api/heatmap` (see `lib/heatmap/types.ts`).
+
+```typescript
+interface HeatmapDayCell {
+  date: string;              // "YYYY-MM-DD"
+  inPeriod: boolean;         // false for grid-padding days outside the selected period
+  jobCount: number;
+  shippedTicketCount: number;
+  totalCost: number | null;  // null iff every job on this day has costUsd = null
+  intensityLevel: 0 | 1 | 2 | 3 | 4;
+}
+
+interface HeatmapAgentOption {
+  value: string;   // Agent enum code, e.g. "CLAUDE"
+  label: string;   // Display name, e.g. "Claude"
+  jobCount: number;
+}
+
+interface HeatmapPeriodOption {
+  value: string;   // "last-12-months" or 4-digit year string
+  label: string;
+  isDefault: boolean;
+}
+
+interface HeatmapData {
+  filters: { period: string; agent: string };
+  periodOptions: HeatmapPeriodOption[];
+  availableAgents: HeatmapAgentOption[];  // [] when ≤ 1 distinct agent (UI hides filter)
+  days: HeatmapDayCell[];                 // Sunday-aligned, Saturday-terminated grid window
+  totals: { jobCount: number; shippedTicketCount: number };
+  intensityThresholds: [number, number, number, number];  // quartile-style breakpoints for levels 1–4
+  generatedAt: string;  // ISO 8601
+}
+```
+
+### HeatmapQuerySchema
+
+Input validation for `GET /api/heatmap` query parameters (Zod, in `app/api/heatmap/route.ts`):
+
+```typescript
+const heatmapQuerySchema = z.object({
+  period: z.string().catch('last-12-months'),  // any invalid value → default
+  agent: z.string().catch('all'),              // any invalid value → default
+});
+```
+
+Validation is intentionally permissive — invalid values are silently coerced to defaults rather than rejected, so the route never returns a 400 for filter inputs.
+
 ## Optimistic Concurrency Control
 
 ### Version Field Pattern

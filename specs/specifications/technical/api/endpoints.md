@@ -4496,6 +4496,64 @@ Fetch unified activity feed for a project.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 
+## Heatmap Endpoints
+
+### GET /api/heatmap
+
+Returns the authenticated user's activity heatmap for the selected period, optionally filtered by agent. Scoped to all projects the user owns or is a member of.
+
+**Authentication**: Required (session cookie or Bearer PAT via `requireAuth(request)`)
+**Authorization**: User-scoped — no project-level gate; scope is always "accessible projects"
+
+**Query Parameters**:
+
+| Name | Type | Default | Valid values | Behavior on invalid |
+|------|------|---------|--------------|---------------------|
+| `period` | string | `"last-12-months"` | `"last-12-months"` or a 4-digit year ≥ account creation year and ≤ current year | Silently falls back to `"last-12-months"` |
+| `agent` | string | `"all"` | `"all"`, `"CLAUDE"`, `"CODEX"`, `"MISTRAL"`, `"GEMINI"` | Silently falls back to `"all"` |
+
+Filter values are validated via Zod with `.catch(defaultValue)` — the route **never returns 400** for filter values.
+
+**Response** (200 OK):
+```json
+{
+  "filters": { "period": "last-12-months", "agent": "all" },
+  "periodOptions": [
+    { "value": "last-12-months", "label": "Last 12 months", "isDefault": true },
+    { "value": "2025", "label": "2025", "isDefault": false }
+  ],
+  "availableAgents": [
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 142 },
+    { "value": "CODEX",  "label": "Codex",  "jobCount": 17  }
+  ],
+  "days": [
+    {
+      "date": "2025-04-13",
+      "inPeriod": true,
+      "jobCount": 3,
+      "shippedTicketCount": 1,
+      "totalCost": 0.42,
+      "intensityLevel": 2
+    }
+  ],
+  "totals": { "jobCount": 387, "shippedTicketCount": 21 },
+  "intensityThresholds": [1, 3, 6, 14],
+  "generatedAt": "2026-04-16T10:00:00.000Z"
+}
+```
+
+**Semantic guarantees**:
+- `days[]` is a contiguous list of calendar dates; `days[0].date` is always a Sunday and `days[last].date` is always a Saturday
+- `totals` reflect only `inPeriod` days, respecting the active agent filter
+- `availableAgents` is computed from the **unfiltered** dataset and is `[]` when the user has ≤ 1 distinct agent (client hides the filter)
+- `totalCost` is `null` if and only if every qualifying job for that day has no recorded cost
+
+**Errors**:
+- `401`: `{ "error": "Unauthorized" }` — no valid session or PAT
+- `500`: `{ "error": "Internal server error" }` — unexpected server error
+
+**Caching**: No HTTP cache headers (dynamic per-user). Client polls every 15 seconds (`refetchInterval: 15000`, `staleTime: 10000`).
+
 ## Token Endpoints
 
 ### GET /api/tokens

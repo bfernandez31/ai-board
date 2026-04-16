@@ -77,6 +77,54 @@ Users access projects through a dedicated projects list page:
 - Full ticket title visible via tooltip on hover for truncated titles
 - Relative timestamps update on page refresh
 
+### Activity Heatmap
+
+A GitHub-style contribution heatmap is displayed below the project cards grid on the `/projects` page, full-width, showing the authenticated user's AI work across all accessible projects (owned and member-of).
+
+**Grid Layout**:
+- 7 rows (Sunday–Saturday), one column per week in the selected period
+- Cells outside the period's first/last week are omitted, producing chipped corners when the period does not start on Sunday or end on Saturday
+- Month labels appear above the grid; day-of-week labels appear on the left
+- 5-step intensity legend ("Less … More") at the bottom-right
+
+**Header**:
+- Displays "X jobs · Y tickets shipped in the last year" (wording updates to match the selected period)
+- Only tickets whose `ship` workflow job completed successfully count toward the shipped total
+
+**Period Selector**:
+- Default: "Last 12 months" (rolling)
+- Additional options: one per calendar year from the user's account creation year to the current year, in descending order
+- When the account was created in the current calendar year, only "Last 12 months" is available
+
+**Agent Filter**:
+- Built dynamically from distinct effective agents in the user's data (explicit `ticket.agent` combined with `project.defaultAgent` fallback)
+- Includes an "All" option, selected by default
+- Hidden entirely when the user's data contains zero or one distinct agent
+
+**Intensity**:
+- Cell color uses the product's aurora violet gradient, driven by the count of jobs for that day
+- Thresholds derived from the non-zero job-count distribution (quartile-style) so the gradient scales to each user's personal volume
+
+**Tooltip**:
+- On hover (desktop) or tap (mobile): shows the formatted date, tickets shipped, job count, and total cost
+- Cost line is omitted entirely when no job on that day has a recorded cost (never "$NaN" or "$0")
+- On mobile, tapping outside the tooltip dismisses it
+
+**Empty State**:
+- When the selected period has zero activity, the grid area is replaced by "No activity to show yet — your AI work will appear here"; the legend, header counter, period selector, and agent filter remain visible
+
+**URL Persistence**:
+- Selected period and agent filter are reflected in the URL query string (`?period=…&agent=…`)
+- Opening the URL in a new session reproduces the same view; invalid parameters fall back silently to defaults
+
+**Data Freshness**:
+- Initial data is server-rendered so no loading spinner flashes on first paint
+- Background refreshes every 15 seconds update cells silently
+
+**Responsive Behavior**:
+- On narrow viewports the grid scrolls horizontally (cells never shrink below a tappable size) while day-of-week labels remain pinned on the left
+- The page scrolls naturally so the heatmap is reachable without interference from an inner scroll container above
+
 ### Empty State
 
 When no projects exist:
