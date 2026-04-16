@@ -120,7 +120,6 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const isStageUpdate = 'stage' in body && !('title' in body || 'description' in body || 'branch' in body || 'autoMode' in body);
     const isInlineEdit = 'title' in body || 'description' in body || 'branch' in body || 'autoMode' in body || 'clarificationPolicy' in body || 'agent' in body;
 
     if (isInlineEdit) {
@@ -178,11 +177,10 @@ export async function PATCH(
           createdAt: updatedTicket.createdAt.toISOString(),
           updatedAt: updatedTicket.updatedAt.toISOString(),
         },
-        { status: 200 }
       );
     }
 
-    if (isStageUpdate) {
+    if ('stage' in body) {
       return NextResponse.json(
         {
           error: 'Invalid request',
@@ -271,7 +269,6 @@ export async function DELETE(
           prsClosed: result.prsClosed,
         },
       },
-      { status: 200 }
     );
   } catch (error) {
     console.error('Ticket deletion failed:', error);
