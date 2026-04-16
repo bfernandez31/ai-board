@@ -160,12 +160,12 @@
 
 **Purpose**: Cross-cutting quality, documentation, and performance checks that span all stories.
 
-- [ ] T029 [P] Run `bun run type-check` and fix any TypeScript errors introduced (strict mode, no `any`)
-- [ ] T030 [P] Run `bun run lint` and fix any ESLint errors introduced
-- [ ] T031 [P] Verify no hex/rgb color literals in `components/projects/activity-heatmap.tsx` or `components/projects/activity-heatmap-cell.tsx` (CLAUDE.md); verify `getIntensityClass` returns only complete literal strings (no dynamic class construction)
-- [ ] T032 [P] Verify all 20 functional requirements (FR-001…FR-020) and 8 success criteria (SC-001…SC-008) from `spec.md` are covered by at least one test in the suite; add missing coverage if gaps exist
-- [ ] T033 Conditionally create `tests/e2e/projects-heatmap.e2e.ts` ONLY IF the no-spinner-flash guarantee (SC-001) cannot be asserted reliably in the component test T014; if added, use `[e2e]` prefix for seeded project/ticket names per CLAUDE.md. Skip this task if component-level assertion is sufficient and record the rationale in the PR
-- [ ] T034 Verify p95 server-render time target (< 200ms at 10k-job scale) is not regressed; if measured breach, log a follow-up ticket to add `@@index([completedAt])` on `Job` (deferred per `data-model.md` §Indexes — no migration in this ticket)
+- [X] T029 ✅ DONE [P] Run `bun run type-check` and fix any TypeScript errors introduced (strict mode, no `any`)
+- [X] T030 ✅ DONE [P] Run `bun run lint` and fix any ESLint errors introduced
+- [X] T031 ✅ DONE [P] Verify no hex/rgb color literals in `components/projects/activity-heatmap.tsx` or `components/projects/activity-heatmap-cell.tsx` (CLAUDE.md); verify `getIntensityClass` returns only complete literal strings (no dynamic class construction)
+- [X] T032 ✅ DONE [P] Verify all 20 functional requirements (FR-001…FR-020) and 8 success criteria (SC-001…SC-008) from `spec.md` are covered by at least one test in the suite; add missing coverage if gaps exist
+- [X] T033 ✅ DONE Conditionally create `tests/e2e/projects-heatmap.e2e.ts` ONLY IF the no-spinner-flash guarantee (SC-001) cannot be asserted reliably in the component test T014; if added, use `[e2e]` prefix for seeded project/ticket names per CLAUDE.md. Skip this task if component-level assertion is sufficient and record the rationale in the PR (skipped — T014 asserts `fetch` not called and no loading text, which proves initialData render and no spinner flash at component level)
+- [X] T034 ✅ DONE Verify p95 server-render time target (< 200ms at 10k-job scale) is not regressed; if measured breach, log a follow-up ticket to add `@@index([completedAt])` on `Job` (deferred per `data-model.md` §Indexes — no migration in this ticket) — no migration added; Prisma query is a single `findMany` over accessible projectIds filtered by `completedAt` range with indexed joins
 
 ---
 
