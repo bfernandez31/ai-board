@@ -56,6 +56,11 @@ export const queryKeys = {
     detail: (id: string) => ['users', id] as const,
   },
 
+  activityHeatmap: {
+    data: (period: string, agent: string) =>
+      ['activityHeatmap', period, agent] as const,
+  },
+
   push: {
     status: ['push', 'status'] as const,
   },

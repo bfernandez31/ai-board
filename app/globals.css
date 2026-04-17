@@ -360,6 +360,13 @@
   .aurora-cell-mixed { background: linear-gradient(135deg, hsl(var(--ctp-yellow) / 0.25), hsl(var(--ctp-peach) / 0.15)); border: 1px solid hsl(var(--ctp-yellow) / 0.3); box-shadow: 0 0 8px hsl(var(--ctp-yellow) / 0.08); }
   .aurora-cell-fail  { background: linear-gradient(135deg, hsl(var(--ctp-red) / 0.25), hsl(var(--ctp-maroon) / 0.15)); border: 1px solid hsl(var(--ctp-red) / 0.3); box-shadow: 0 0 8px hsl(var(--ctp-red) / 0.08); }
 
+  /* Activity heatmap cells — violet gradient intensity scale */
+  .aurora-heatmap-cell-0 { background: hsl(var(--ctp-surface0) / 0.5); border: 1px solid hsl(var(--ctp-surface1) / 0.5); }
+  .aurora-heatmap-cell-1 { background: linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.15), hsl(var(--ctp-pink) / 0.08)); border: 1px solid hsl(var(--ctp-mauve) / 0.25); }
+  .aurora-heatmap-cell-2 { background: linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.30), hsl(var(--ctp-pink) / 0.20)); border: 1px solid hsl(var(--ctp-mauve) / 0.40); }
+  .aurora-heatmap-cell-3 { background: linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.55), hsl(var(--ctp-pink) / 0.40)); border: 1px solid hsl(var(--ctp-mauve) / 0.60); box-shadow: 0 0 6px hsl(var(--ctp-mauve) / 0.20); }
+  .aurora-heatmap-cell-4 { background: linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.85), hsl(var(--ctp-pink) / 0.70)); border: 1px solid hsl(var(--ctp-mauve) / 0.85); box-shadow: 0 0 10px hsl(var(--ctp-mauve) / 0.35); }
+
   /* Glow orbs (ambient light effects) */
   .aurora-orb-blue { background: radial-gradient(circle, hsl(var(--ctp-sapphire) / 0.12) 0%, transparent 70%); }
   .aurora-orb-pink { background: radial-gradient(circle, hsl(var(--ctp-pink) / 0.08) 0%, transparent 70%); }
