@@ -115,12 +115,12 @@ description: "Task list for AIB-667 — Activity Heatmap on Projects Page"
 
 **Purpose**: Verification pass across the feature.
 
-- [ ] T026 [P] Run `bun run type-check` from repo root — fix any TypeScript errors introduced
-- [ ] T027 [P] Run `bun run lint` from repo root — fix any ESLint errors introduced
-- [ ] T028 [P] Run `bun run test:unit tests/unit/activity/heatmap-bucketing.test.ts` and `bun run test:unit tests/unit/components/activity-heatmap.test.tsx` — all green
-- [ ] T029 Run `bun run test:integration tests/integration/activity/heatmap-route.test.ts` — all green including the p95 <150ms performance sentinel
-- [ ] T030 Manual viewport verification at 375px width — horizontal scroll works, day-of-week labels stay pinned, cells ≥14px on short side, no row wrapping (SC-005)
-- [ ] T031 Manual verify `prisma/schema.prisma` diff is empty (SC-010 / FR-028 — zero schema changes)
+- [X] T026 ✅ DONE [P] Run `bun run type-check` from repo root — fix any TypeScript errors introduced
+- [X] T027 ✅ DONE [P] Run `bun run lint` from repo root — fix any ESLint errors introduced
+- [X] T028 ✅ DONE [P] Run `bun run test:unit tests/unit/activity/heatmap-bucketing.test.ts` and `bun run test:unit tests/unit/components/activity-heatmap.test.tsx` — all green
+- [X] T029 ✅ DONE Run `bun run test:integration tests/integration/activity/heatmap-route.test.ts` — all green including the p95 <150ms performance sentinel
+- [ ] T030 Manual viewport verification at 375px width — horizontal scroll works, day-of-week labels stay pinned, cells ≥14px on short side, no row wrapping (SC-005) — MANUAL-ONLY (requires browser; AI agent cannot perform visual verification)
+- [X] T031 ✅ DONE Manual verify `prisma/schema.prisma` diff is empty (SC-010 / FR-028 — zero schema changes)
 
 ---
 
