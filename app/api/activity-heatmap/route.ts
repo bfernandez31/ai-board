@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { prisma } from '@/lib/db/client';
 import { requireAuth } from '@/lib/db/users';
 import {
   getHeatmapData,
@@ -43,7 +44,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
 
     const now = new Date();
-    const { prisma } = await import('@/lib/db/client');
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { createdAt: true },

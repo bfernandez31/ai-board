@@ -131,33 +131,27 @@ export async function getHeatmapData(
     },
   });
 
+  function effectiveAgentOf(job: {
+    projectId: number;
+    ticket: { agent: Agent | null } | null;
+  }): Agent {
+    return resolveEffectiveAgent(
+      job.ticket?.agent ?? null,
+      defaultAgentByProjectId.get(job.projectId) ?? 'CLAUDE'
+    );
+  }
+
   const availableAgentSet = new Set<Agent>();
   for (const j of jobs) {
-    const effective = resolveEffectiveAgent(
-      j.ticket?.agent ?? null,
-      defaultAgentByProjectId.get(j.projectId) ?? 'CLAUDE'
-    );
-    availableAgentSet.add(effective);
+    availableAgentSet.add(effectiveAgentOf(j));
   }
   const availableAgents: Agent[] = ALL_AGENTS.filter((a) => availableAgentSet.has(a));
 
-  const filteredJobs = jobs.filter((j) => {
-    if (agent === 'all') return true;
-    const effective = resolveEffectiveAgent(
-      j.ticket?.agent ?? null,
-      defaultAgentByProjectId.get(j.projectId) ?? 'CLAUDE'
-    );
-    return effective === agent;
-  });
+  const matchesAgent = (j: { projectId: number; ticket: { agent: Agent | null } | null }) =>
+    agent === 'all' || effectiveAgentOf(j) === agent;
 
-  const filteredShipJobs = shipJobs.filter((j) => {
-    if (agent === 'all') return true;
-    const effective = resolveEffectiveAgent(
-      j.ticket?.agent ?? null,
-      defaultAgentByProjectId.get(j.projectId) ?? 'CLAUDE'
-    );
-    return effective === agent;
-  });
+  const filteredJobs = jobs.filter(matchesAgent);
+  const filteredShipJobs = shipJobs.filter(matchesAgent);
 
   const bucketed = bucketJobsByLocalDay(filteredJobs, timezone);
 

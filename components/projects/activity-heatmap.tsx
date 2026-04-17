@@ -3,7 +3,6 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Agent } from '@prisma/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Tooltip,
@@ -161,9 +160,7 @@ export function ActivityHeatmap({ initialData, errored }: ActivityHeatmapProps) 
   const initialA = searchParams?.get('a') || 'all';
   const [y, setY] = useState<string>(initialY);
   const [a, setA] = useState<string>(initialA);
-  const [tz] = useState<string>(
-    () => resolveBrowserTimezone() || initialData?.period.timezone || 'UTC'
-  );
+  const [tz] = useState<string>(resolveBrowserTimezone);
 
   const isDefaultFilters =
     y === (initialData?.period.kind === 'rolling12m' ? '12m' : String(initialData?.period.year ?? '12m')) &&
@@ -342,26 +339,13 @@ export function ActivityHeatmap({ initialData, errored }: ActivityHeatmapProps) 
           data-testid="activity-heatmap-legend"
         >
           <span>Less</span>
-          <span
-            className="inline-block h-3 w-3 rounded-sm aurora-heatmap-cell-empty"
-            aria-hidden
-          />
-          <span
-            className="inline-block h-3 w-3 rounded-sm aurora-heatmap-cell-1"
-            aria-hidden
-          />
-          <span
-            className="inline-block h-3 w-3 rounded-sm aurora-heatmap-cell-2"
-            aria-hidden
-          />
-          <span
-            className="inline-block h-3 w-3 rounded-sm aurora-heatmap-cell-3"
-            aria-hidden
-          />
-          <span
-            className="inline-block h-3 w-3 rounded-sm aurora-heatmap-cell-4"
-            aria-hidden
-          />
+          {([0, 1, 2, 3, 4] as const).map((level) => (
+            <span
+              key={level}
+              className={`inline-block h-3 w-3 rounded-sm ${INTENSITY_CLASSES[level]}`}
+              aria-hidden
+            />
+          ))}
           <span>More</span>
         </div>
       </CardContent>
@@ -410,9 +394,10 @@ function renderTooltip(cell: HeatmapDayCell) {
   const namedTickets = cell.shippedTickets.filter((t) => t.title !== null);
   const deletedCount = cell.shippedTickets.length - namedTickets.length;
 
+  const jobWord = cell.jobCount === 1 ? 'job' : 'jobs';
   const jobsLine = cell.costUsd === null
-    ? `${cell.jobCount} ${cell.jobCount === 1 ? 'job' : 'jobs'}`
-    : `${cell.jobCount} ${cell.jobCount === 1 ? 'job' : 'jobs'} · ${formatCost(cell.costUsd)}`;
+    ? `${cell.jobCount} ${jobWord}`
+    : `${cell.jobCount} ${jobWord} · ${formatCost(cell.costUsd)}`;
 
   return (
     <>
@@ -433,5 +418,3 @@ function renderTooltip(cell: HeatmapDayCell) {
     </>
   );
 }
-
-export type { Agent };
