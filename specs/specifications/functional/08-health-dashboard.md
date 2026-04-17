@@ -142,7 +142,7 @@ Issues from the latest scan are displayed in groups according to the module's gr
 | Compliance | By constitution principle violated |
 | Tests | Two categories: "Auto-fixed" and "Non-fixable" |
 | Spec Sync | By sync status (synced / drifted) with drift summary |
-| Quality Gate | Dimension breakdown (Compliance, Bug Detection, Code Comments, Historical Context, Spec Sync) with average scores; threshold distribution; trend chart (score per ticket over time); list of recent SHIP tickets with individual scores |
+| Quality Gate | Dimension breakdown (Compliance, Bug Detection, Product Contract Sync, Edge Cases & Failure Modes, Historical Context) with average scores; threshold distribution; trend chart (score per ticket over time); list of recent SHIP tickets with individual scores |
 | Review Quality | Missed findings grouped by category (with severity badges); cumulative recurring patterns with suggested constitution rules; links to generated `[Review Gap]` tickets |
 
 Each issue entry shows severity/category, description, and affected file with line number when available. Malformed or missing report data renders a fallback message ("Report data unavailable") instead of an error.

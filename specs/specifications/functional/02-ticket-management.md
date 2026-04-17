@@ -289,11 +289,11 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
 - **Expandable Details**: When dimension details are available, selecting the score card expands or collapses the detailed breakdown
 - **Detail Cue**: The card shows a directional icon and a "View details" or "Hide details" label when the breakdown can be toggled
 - **Dimension Breakdown**: The expanded state shows all five dimensions with individual scores, weights, and a colored progress bar indicating the score relative to 100:
+  - Compliance (30%)
   - Bug Detection (30%)
-  - Compliance (40%)
-  - Code Comments (20%)
-  - Historical Context (10%)
-  - Spec Sync (0%)
+  - Product Contract Sync (20%)
+  - Edge Cases & Failure Modes (15%)
+  - Historical Context (5%)
 - **No Empty Breakdown**: If the verify job does not include dimension details, the score card remains non-expandable and only the summary is shown
 - **Score Source**: Taken from the latest COMPLETED verify job when multiple exist (rollback-reset scenarios)
 - **Absence**: No quality score section appears for QUICK workflow tickets, or if the verify job failed or was cancelled
@@ -395,7 +395,7 @@ The viewer is a modal dialog with two sections:
 
 **Quality Score Breakdown Popover**:
 - Triggered by clicking an eligible quality score cell in the Operational Metrics grid
-- Shows 5 evaluated dimensions: Compliance, Bug Detection, Code Comments, Historical Context, Spec Sync
+- Shows 5 evaluated dimensions: Compliance, Bug Detection, Product Contract Sync, Edge Cases & Failure Modes, Historical Context
 - Each dimension shows name, score, weight, and a visual progress bar
 - Overall score with threshold label shown at the bottom
 

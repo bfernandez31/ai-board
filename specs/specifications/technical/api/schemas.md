@@ -1238,9 +1238,9 @@ Response types returned by the passive module detail endpoint (`/health/quality-
 
 ```typescript
 interface QualityGateDimension {
-  name: string;              // "Compliance" | "Bug Detection" | "Code Comments" | "Historical Context" | "Spec Sync"
+  name: string;              // "Compliance" | "Bug Detection" | "Product Contract Sync" | "Edge Cases & Failure Modes" | "Historical Context"
   averageScore: number | null; // 0–100 or null when no data for dimension
-  weight: number;            // 0.00–1.00 (Spec Sync = 0.00)
+  weight: number;            // 0.00–1.00 (Compliance=0.30, Bug Detection=0.30, Product Contract Sync=0.20, Edge Cases & Failure Modes=0.15, Historical Context=0.05)
 }
 
 interface QualityGateTicket {
