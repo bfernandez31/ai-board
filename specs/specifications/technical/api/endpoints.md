@@ -3311,6 +3311,70 @@ sequenceDiagram
     EP-->>OT: 200 { status: "accepted", metrics }
 ```
 
+## Activity Heatmap Endpoint
+
+### GET /api/activity-heatmap
+
+Fetch aggregated daily job activity for the authenticated user across all accessible projects, structured as a calendar heatmap.
+
+**Authentication**: Required (session or Bearer PAT)
+**Authorization**: Scoped to projects the user owns or is a member of — no cross-user data
+
+**Query Parameters**:
+- `period` (string, optional): `last-12-months` (rolling 365-day window ending today) or a 4-digit calendar year (e.g., `2025`). Defaults to `last-12-months`. A year not in `availableYears` falls back to `last-12-months`.
+- `agent` (string, optional): `all`, `CLAUDE`, `CODEX`, `MISTRAL`, or `GEMINI`. Defaults to `all`.
+
+**Server-side behavior**:
+1. Authenticate user via session or PAT
+2. Validate `period` and `agent` via Zod schema; unrecognized values return 400
+3. Resolve the user's accessible project IDs (owned + member)
+4. Determine `availableYears` from the user's account creation year to the current year
+5. Normalize filters — year outside `availableYears` silently falls back to `last-12-months`
+6. Query `COMPLETED` jobs in the period, bucketed by UTC calendar day
+7. Aggregate per-day job counts, cost totals, and shipped ticket summaries (deduped by ticket key)
+8. Build `availableAgents` from the **unfiltered** period (so the dropdown always shows all active agents regardless of the current agent filter)
+9. Round per-day cost totals to the nearest cent
+
+**Response** (200 OK):
+```json
+{
+  "startDate": "2025-04-17",
+  "endDate": "2026-04-17",
+  "totalJobs": 142,
+  "totalTicketsShipped": 23,
+  "days": [
+    {
+      "date": "2025-04-17",
+      "jobCount": 3,
+      "totalCostUsd": 0.12,
+      "hasCost": true,
+      "shippedTickets": [
+        { "ticketKey": "AIB-100", "title": "Fix login bug", "projectKey": "AIB" }
+      ]
+    }
+  ],
+  "availableAgents": [
+    { "value": "all", "label": "All agents", "jobCount": 142 },
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 120 }
+  ],
+  "availableYears": [2025, 2026],
+  "filters": { "period": "last-12-months", "agent": "all" },
+  "generatedAt": "2026-04-17T12:00:00.000Z"
+}
+```
+
+**Notes**:
+- `days` contains one entry per calendar day in [`startDate`, `endDate`], sorted ascending (no gaps)
+- Day boundaries use UTC midnight; `completedAt` is bucketed by UTC date
+- `hasCost` is `true` when at least one job in that day recorded a `costUsd`; otherwise `totalCostUsd` is `0`
+- `availableAgents` always includes the `all` sentinel; named agents appear only when they have at least one job in the period
+
+**Errors**:
+- `400`: `{ "error": "Invalid heatmap filters" }` — unrecognized `period` format (e.g., non-numeric string)
+- `401`: `{ "error": "Unauthorized" }` — not authenticated
+
+---
+
 ## Analytics Endpoints
 
 ### GET /api/projects/:projectId/analytics

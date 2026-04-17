@@ -127,6 +127,40 @@ When no projects exist:
 - All text content uses `min-w-0` and `truncate` utilities to prevent horizontal scroll
 - Cards maintain fixed width boundaries on mobile viewports (375px minimum)
 
+### Activity Heatmap
+
+The projects page displays a GitHub-style contribution heatmap above the project card grid, visualizing the user's AI job activity across all accessible projects (owned and member).
+
+**Grid Layout**:
+- One small cell per calendar day, arranged in week columns (Sunday–Saturday)
+- Month labels appear above the corresponding week columns
+- Day-of-week labels (Sun–Sat) appear on the left
+
+**Cell Color**:
+- Four-level violet aurora intensity scale reflects completed job count for that day
+- Empty days show a muted background (no activity)
+
+**Summary Statistics**:
+- Total completed jobs in the selected period
+- Total tickets shipped in the selected period
+
+**Filters**:
+- **Period**: "Last 12 months" (rolling 365-day window) or a specific calendar year selectable from account creation year to current year; years in progress are clipped to today
+- **Agent**: Displayed only when 2 or more distinct agents have activity in the selected period; options are "All agents" plus each named agent with its job count for the period
+
+**Filter State**:
+- Selections are reflected in the URL as `heatmapPeriod` and `heatmapAgent` query parameters, persisting across refreshes and enabling shareable links
+
+**Cell Tooltip**:
+- Hovering any cell shows: date, job count, total cost (if at least one job recorded a cost), and a list of shipped ticket keys and titles
+
+**Data Freshness**:
+- Initial data is server-rendered (no loading flash on first paint)
+- Client auto-refreshes every 60 seconds; data is considered stale after 30 seconds
+
+**Empty State**:
+- When the selected period has no activity, all cells appear empty and summary statistics show zero
+
 ## Project Settings
 
 ### Settings Page Navigation
