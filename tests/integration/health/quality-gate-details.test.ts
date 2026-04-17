@@ -152,11 +152,11 @@ describe('Quality Gate Details GET Endpoint', () => {
   it('computes per-dimension averages from qualityScoreDetails', async () => {
     const details = JSON.stringify({
       dimensions: [
-        { agentId: 'compliance', name: 'Compliance', score: 88, weight: 0.40, weightedScore: 35.2 },
+        { agentId: 'compliance', name: 'Compliance', score: 88, weight: 0.30, weightedScore: 26.4 },
         { agentId: 'bug-detection', name: 'Bug Detection', score: 79, weight: 0.30, weightedScore: 23.7 },
-        { agentId: 'code-comments', name: 'Code Comments', score: 75, weight: 0.20, weightedScore: 15 },
-        { agentId: 'historical-context', name: 'Historical Context', score: 70, weight: 0.10, weightedScore: 7 },
-        { agentId: 'spec-sync', name: 'Spec Sync', score: 65, weight: 0.00, weightedScore: 0 },
+        { agentId: 'product-contract-sync', name: 'Product Contract Sync', score: 75, weight: 0.20, weightedScore: 15 },
+        { agentId: 'edge-cases-failure-modes', name: 'Edge Cases & Failure Modes', score: 70, weight: 0.15, weightedScore: 10.5 },
+        { agentId: 'historical-context', name: 'Historical Context', score: 65, weight: 0.05, weightedScore: 3.25 },
       ],
       threshold: 'Good',
       computedAt: new Date().toISOString(),
@@ -169,7 +169,7 @@ describe('Quality Gate Details GET Endpoint', () => {
     const data = await response.json();
 
     expect(data.dimensions).toHaveLength(5);
-    expect(data.dimensions[0]).toEqual({ name: 'Compliance', averageScore: 88, weight: 0.35 });
+    expect(data.dimensions[0]).toEqual({ name: 'Compliance', averageScore: 88, weight: 0.30 });
     expect(data.dimensions[1]).toEqual({ name: 'Bug Detection', averageScore: 79, weight: 0.30 });
   });
 

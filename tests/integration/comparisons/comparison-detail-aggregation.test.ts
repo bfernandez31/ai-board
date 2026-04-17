@@ -122,11 +122,11 @@ describe('Comparison detail aggregation', () => {
           qualityScore: 87,
           qualityScoreDetails: JSON.stringify({
             dimensions: [
-              { name: 'Compliance', agentId: 'compliance', score: 92, weight: 0.4, weightedScore: 36.8 },
+              { name: 'Compliance', agentId: 'compliance', score: 92, weight: 0.3, weightedScore: 27.6 },
               { name: 'Bug Detection', agentId: 'bug-detection', score: 85, weight: 0.3, weightedScore: 25.5 },
-              { name: 'Code Comments', agentId: 'code-comments', score: 80, weight: 0.2, weightedScore: 16.0 },
-              { name: 'Historical Context', agentId: 'historical-context', score: 75, weight: 0.1, weightedScore: 7.5 },
-              { name: 'Spec Sync', agentId: 'spec-sync', score: 90, weight: 0.0, weightedScore: 0.0 },
+              { name: 'Product Contract Sync', agentId: 'product-contract-sync', score: 80, weight: 0.2, weightedScore: 16.0 },
+              { name: 'Edge Cases & Failure Modes', agentId: 'edge-cases-failure-modes', score: 75, weight: 0.15, weightedScore: 11.25 },
+              { name: 'Historical Context', agentId: 'historical-context', score: 90, weight: 0.05, weightedScore: 4.5 },
             ],
             threshold: 'Good',
             computedAt: '2026-03-20T12:00:00.000Z',
@@ -362,11 +362,11 @@ describe('Comparison detail aggregation', () => {
         qualityScore: 87,
         qualityScoreDetails: JSON.stringify({
           dimensions: [
-            { name: 'Compliance', agentId: 'compliance', score: 92, weight: 0.4, weightedScore: 36.8 },
+            { name: 'Compliance', agentId: 'compliance', score: 92, weight: 0.3, weightedScore: 27.6 },
             { name: 'Bug Detection', agentId: 'bug-detection', score: 85, weight: 0.3, weightedScore: 25.5 },
-            { name: 'Code Comments', agentId: 'code-comments', score: 80, weight: 0.2, weightedScore: 16.0 },
-            { name: 'Historical Context', agentId: 'historical-context', score: 75, weight: 0.1, weightedScore: 7.5 },
-            { name: 'Spec Sync', agentId: 'spec-sync', score: 90, weight: 0.0, weightedScore: 0.0 },
+            { name: 'Product Contract Sync', agentId: 'product-contract-sync', score: 80, weight: 0.2, weightedScore: 16.0 },
+            { name: 'Edge Cases & Failure Modes', agentId: 'edge-cases-failure-modes', score: 75, weight: 0.15, weightedScore: 11.25 },
+            { name: 'Historical Context', agentId: 'historical-context', score: 90, weight: 0.05, weightedScore: 4.5 },
           ],
           threshold: 'Good',
           computedAt: '2026-03-20T12:00:00.000Z',

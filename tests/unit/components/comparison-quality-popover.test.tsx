@@ -6,11 +6,11 @@ import type { ComparisonEnrichmentValue } from '@/lib/types/comparison';
 
 const sampleBreakdown: QualityScoreDetails = {
   dimensions: [
-    { name: 'Compliance', agentId: 'compliance', score: 92, weight: 0.4, weightedScore: 36.8 },
+    { name: 'Compliance', agentId: 'compliance', score: 92, weight: 0.3, weightedScore: 27.6 },
     { name: 'Bug Detection', agentId: 'bug-detection', score: 85, weight: 0.3, weightedScore: 25.5 },
-    { name: 'Code Comments', agentId: 'code-comments', score: 80, weight: 0.2, weightedScore: 16.0 },
-    { name: 'Historical Context', agentId: 'historical-context', score: 75, weight: 0.1, weightedScore: 7.5 },
-    { name: 'Spec Sync', agentId: 'spec-sync', score: 90, weight: 0.0, weightedScore: 0.0 },
+    { name: 'Product Contract Sync', agentId: 'product-contract-sync', score: 80, weight: 0.2, weightedScore: 16.0 },
+    { name: 'Edge Cases & Failure Modes', agentId: 'edge-cases-failure-modes', score: 75, weight: 0.15, weightedScore: 11.25 },
+    { name: 'Historical Context', agentId: 'historical-context', score: 90, weight: 0.05, weightedScore: 4.5 },
   ],
   threshold: 'Good',
   computedAt: '2026-03-24T12:00:00.000Z',
@@ -49,20 +49,19 @@ describe('ComparisonQualityPopover', () => {
     // All 5 dimensions should be visible
     expect(screen.getByText('Compliance')).toBeInTheDocument();
     expect(screen.getByText('Bug Detection')).toBeInTheDocument();
-    expect(screen.getByText('Code Comments')).toBeInTheDocument();
+    expect(screen.getByText('Product Contract Sync')).toBeInTheDocument();
+    expect(screen.getByText('Edge Cases & Failure Modes')).toBeInTheDocument();
     expect(screen.getByText('Historical Context')).toBeInTheDocument();
-    expect(screen.getByText('Spec Sync')).toBeInTheDocument();
 
     // Scores should be visible
     expect(screen.getByText(/92/)).toBeInTheDocument();
     expect(screen.getByText(/85/)).toBeInTheDocument();
 
     // Weights should be visible (as percentages)
-    expect(screen.getByText('(40%)')).toBeInTheDocument();
-    expect(screen.getByText('(30%)')).toBeInTheDocument();
+    expect(screen.getAllByText('(30%)')).toHaveLength(2);
     expect(screen.getByText('(20%)')).toBeInTheDocument();
-    expect(screen.getByText('(10%)')).toBeInTheDocument();
-    expect(screen.getByText('(0%)')).toBeInTheDocument();
+    expect(screen.getByText('(15%)')).toBeInTheDocument();
+    expect(screen.getByText('(5%)')).toBeInTheDocument();
   });
 
   it('displays overall score with threshold label at bottom', async () => {

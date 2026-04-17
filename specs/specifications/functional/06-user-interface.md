@@ -163,7 +163,7 @@ The video section (`components/landing/video-section.tsx`) displays a cinematic 
    - Act 1: Living board with tickets in all stages showing real job status icons
    - Act 2: Human drags a ticket from INBOX to SPECIFY (caption: "You decide what to build, and when")
    - Act 3: A BUILD ticket completes and auto-slides to VERIFY (caption: "You supervise, AI executes")
-   - Act 4: Quality gate zoom — score circle with dimension breakdown (Compliance, Bug Detection, Code Comments, Historical Context)
+   - Act 4: Quality gate zoom — score circle with dimension breakdown (Compliance, Bug Detection, Product Contract Sync, Edge Cases & Failure Modes, Historical Context)
    - Act 5: Ticket ships to SHIP column with glow effect
 4. **Results/Health** (8s) — Merged analytics + health: shipped/success rate counters, score circle (94/Excellent), 4 module cards (Security, Compliance, Tests, Quality Gate)
 5. **Outro** (4s) — "Built by AI. Verified by standards. Approved by you." + typewriter "Automatically." + CTA button

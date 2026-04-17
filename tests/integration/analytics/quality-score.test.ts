@@ -25,9 +25,9 @@ describe('Analytics Route - Quality Score', () => {
     dimensions: [
       { name: 'Bug Detection', score: 85, weight: 0.3 },
       { name: 'Compliance', score: 90, weight: 0.3 },
-      { name: 'Code Comments', score: 70, weight: 0.2 },
-      { name: 'Historical Context', score: 60, weight: 0.1 },
-      { name: 'PR Comments', score: 80, weight: 0.1 },
+      { name: 'Product Contract Sync', score: 70, weight: 0.2 },
+      { name: 'Edge Cases & Failure Modes', score: 60, weight: 0.15 },
+      { name: 'Historical Context', score: 80, weight: 0.05 },
     ],
   });
 
@@ -35,9 +35,9 @@ describe('Analytics Route - Quality Score', () => {
     dimensions: [
       { name: 'Bug Detection', score: 75, weight: 0.3 },
       { name: 'Compliance', score: 80, weight: 0.3 },
-      { name: 'Code Comments', score: 60, weight: 0.2 },
-      { name: 'Historical Context', score: 50, weight: 0.1 },
-      { name: 'PR Comments', score: 70, weight: 0.1 },
+      { name: 'Product Contract Sync', score: 60, weight: 0.2 },
+      { name: 'Edge Cases & Failure Modes', score: 50, weight: 0.15 },
+      { name: 'Historical Context', score: 70, weight: 0.05 },
     ],
   });
 

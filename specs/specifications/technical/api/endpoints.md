@@ -2612,11 +2612,11 @@ Fetch full comparison detail with enriched data.
         "state": "available",
         "value": {
           "dimensions": [
-            { "name": "Compliance", "agentId": "compliance", "score": 90, "weight": 0.40, "weightedScore": 36 },
+            { "name": "Compliance", "agentId": "compliance", "score": 90, "weight": 0.30, "weightedScore": 27 },
             { "name": "Bug Detection", "agentId": "bug-detection", "score": 80, "weight": 0.30, "weightedScore": 24 },
-            { "name": "Code Comments", "agentId": "code-comments", "score": 85, "weight": 0.20, "weightedScore": 17 },
-            { "name": "Historical Context", "agentId": "historical-context", "score": 88, "weight": 0.10, "weightedScore": 8.8 },
-            { "name": "Spec Sync", "agentId": "spec-sync", "score": 82, "weight": 0.00, "weightedScore": 0 }
+            { "name": "Product Contract Sync", "agentId": "product-contract-sync", "score": 82, "weight": 0.20, "weightedScore": 16.4 },
+            { "name": "Edge Cases & Failure Modes", "agentId": "edge-cases-failure-modes", "score": 85, "weight": 0.15, "weightedScore": 12.75 },
+            { "name": "Historical Context", "agentId": "historical-context", "score": 88, "weight": 0.05, "weightedScore": 4.4 }
           ],
           "threshold": "Good",
           "computedAt": "2025-01-15T10:30:00.000Z"
@@ -3424,10 +3424,10 @@ sequenceDiagram
     ],
     "dimensionAverages": [
       { "dimension": "bugDetection", "label": "Bug Detection", "weight": 0.30, "averageScore": 82 },
-      { "dimension": "compliance", "label": "Compliance", "weight": 0.40, "averageScore": 79 },
-      { "dimension": "codeComments", "label": "Code Comments", "weight": 0.20, "averageScore": 71 },
-      { "dimension": "historicalContext", "label": "Historical Context", "weight": 0.10, "averageScore": 75 },
-      { "dimension": "specSync", "label": "Spec Sync", "weight": 0.00, "averageScore": 88 }
+      { "dimension": "compliance", "label": "Compliance", "weight": 0.30, "averageScore": 79 },
+      { "dimension": "productContractSync", "label": "Product Contract Sync", "weight": 0.20, "averageScore": 88 },
+      { "dimension": "edgeCasesFailureModes", "label": "Edge Cases & Failure Modes", "weight": 0.15, "averageScore": 71 },
+      { "dimension": "historicalContext", "label": "Historical Context", "weight": 0.05, "averageScore": 75 }
     ],
     "hasData": true
   },
@@ -4415,11 +4415,11 @@ Returns aggregated Quality Gate data for the Health Dashboard drawer.
     "poor": 0
   },
   "dimensions": [
-    { "name": "Compliance", "averageScore": 88, "weight": 0.40 },
+    { "name": "Compliance", "averageScore": 88, "weight": 0.30 },
     { "name": "Bug Detection", "averageScore": 79, "weight": 0.30 },
-    { "name": "Code Comments", "averageScore": 75, "weight": 0.20 },
-    { "name": "Historical Context", "averageScore": 70, "weight": 0.10 },
-    { "name": "Spec Sync", "averageScore": 65, "weight": 0.00 }
+    { "name": "Product Contract Sync", "averageScore": 65, "weight": 0.20 },
+    { "name": "Edge Cases & Failure Modes", "averageScore": 75, "weight": 0.15 },
+    { "name": "Historical Context", "averageScore": 70, "weight": 0.05 }
   ],
   "recentTickets": [
     {

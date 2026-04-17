@@ -31,24 +31,50 @@ export interface DimensionConfig {
 
 /** Single source of truth for all code review dimensions */
 export const DIMENSION_CONFIG: DimensionConfig[] = [
-  { agentId: 'compliance', name: 'Compliance', weight: 0.35, order: 1 },
+  { agentId: 'compliance', name: 'Compliance', weight: 0.30, order: 1 },
   { agentId: 'bug-detection', name: 'Bug Detection', weight: 0.30, order: 2 },
-  { agentId: 'spec-sync', name: 'Spec Sync', weight: 0.20, order: 3 },
-  { agentId: 'historical-context', name: 'Historical Context', weight: 0.10, order: 4 },
-  { agentId: 'code-comments', name: 'Code Comments', weight: 0.05, order: 5 },
+  { agentId: 'product-contract-sync', name: 'Product Contract Sync', weight: 0.20, order: 3 },
+  { agentId: 'edge-cases-failure-modes', name: 'Edge Cases & Failure Modes', weight: 0.15, order: 4 },
+  { agentId: 'historical-context', name: 'Historical Context', weight: 0.05, order: 5 },
 ];
+
+const LEGACY_DIMENSION_AGENT_ALIASES: Record<string, string> = {
+  'spec-sync': 'product-contract-sync',
+  'code-comments': 'edge-cases-failure-modes',
+};
+
+const DIMENSION_NAME_TO_AGENT_ID: Record<string, string> = {
+  'Compliance': 'compliance',
+  'Bug Detection': 'bug-detection',
+  'Product Contract Sync': 'product-contract-sync',
+  'Edge Cases & Failure Modes': 'edge-cases-failure-modes',
+  'Historical Context': 'historical-context',
+  'Spec Sync': 'spec-sync',
+  'Code Comments': 'code-comments',
+  'PR Comments': 'pr-comments',
+};
 
 /** Derived dimension weights for backward compatibility */
 export const DIMENSION_WEIGHTS: Record<string, number> = Object.fromEntries(
   DIMENSION_CONFIG.map(d => [d.agentId, d.weight])
 );
 
+export function normalizeDimensionAgentId(agentId: string): string {
+  return LEGACY_DIMENSION_AGENT_ALIASES[agentId] ?? agentId;
+}
+
+export function inferDimensionAgentId(name: string): string | null {
+  return DIMENSION_NAME_TO_AGENT_ID[name] ?? null;
+}
+
 export function getDimensionName(agentId: string): string {
-  return DIMENSION_CONFIG.find(d => d.agentId === agentId)?.name ?? agentId;
+  const normalizedAgentId = normalizeDimensionAgentId(agentId);
+  return DIMENSION_CONFIG.find(d => d.agentId === normalizedAgentId)?.name ?? agentId;
 }
 
 export function getDimensionWeight(agentId: string): number {
-  return DIMENSION_CONFIG.find(d => d.agentId === agentId)?.weight ?? 0;
+  const normalizedAgentId = normalizeDimensionAgentId(agentId);
+  return DIMENSION_CONFIG.find(d => d.agentId === normalizedAgentId)?.weight ?? 0;
 }
 
 /**

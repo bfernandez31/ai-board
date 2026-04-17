@@ -114,50 +114,55 @@ describe('DIMENSION_CONFIG', () => {
   it('getDimensionName returns correct display names', () => {
     expect(getDimensionName('compliance')).toBe('Compliance');
     expect(getDimensionName('bug-detection')).toBe('Bug Detection');
-    expect(getDimensionName('code-comments')).toBe('Code Comments');
+    expect(getDimensionName('product-contract-sync')).toBe('Product Contract Sync');
+    expect(getDimensionName('edge-cases-failure-modes')).toBe('Edge Cases & Failure Modes');
     expect(getDimensionName('historical-context')).toBe('Historical Context');
-    expect(getDimensionName('spec-sync')).toBe('Spec Sync');
+    expect(getDimensionName('spec-sync')).toBe('Product Contract Sync');
+    expect(getDimensionName('code-comments')).toBe('Edge Cases & Failure Modes');
     expect(getDimensionName('unknown')).toBe('unknown');
   });
 
   it('getDimensionWeight returns correct weights', () => {
-    expect(getDimensionWeight('compliance')).toBe(0.35);
+    expect(getDimensionWeight('compliance')).toBe(0.30);
     expect(getDimensionWeight('bug-detection')).toBe(0.30);
+    expect(getDimensionWeight('product-contract-sync')).toBe(0.20);
+    expect(getDimensionWeight('edge-cases-failure-modes')).toBe(0.15);
+    expect(getDimensionWeight('historical-context')).toBe(0.05);
     expect(getDimensionWeight('spec-sync')).toBe(0.20);
-    expect(getDimensionWeight('historical-context')).toBe(0.10);
-    expect(getDimensionWeight('code-comments')).toBe(0.05);
+    expect(getDimensionWeight('code-comments')).toBe(0.15);
     expect(getDimensionWeight('unknown')).toBe(0);
   });
 });
 
 describe('computeQualityScore', () => {
   const makeDimensions = (scores: number[]): DimensionScore[] => [
-    { name: 'Compliance', agentId: 'compliance', score: scores[0], weight: 0.40, weightedScore: scores[0] * 0.40 },
+    { name: 'Compliance', agentId: 'compliance', score: scores[0], weight: 0.30, weightedScore: scores[0] * 0.30 },
     { name: 'Bug Detection', agentId: 'bug-detection', score: scores[1], weight: 0.30, weightedScore: scores[1] * 0.30 },
-    { name: 'Code Comments', agentId: 'code-comments', score: scores[2], weight: 0.20, weightedScore: scores[2] * 0.20 },
-    { name: 'Historical Context', agentId: 'historical-context', score: scores[3], weight: 0.10, weightedScore: scores[3] * 0.10 },
-    { name: 'Spec Sync', agentId: 'spec-sync', score: scores[4], weight: 0.00, weightedScore: 0 },
+    { name: 'Product Contract Sync', agentId: 'product-contract-sync', score: scores[2], weight: 0.20, weightedScore: scores[2] * 0.20 },
+    { name: 'Edge Cases & Failure Modes', agentId: 'edge-cases-failure-modes', score: scores[3], weight: 0.15, weightedScore: scores[3] * 0.15 },
+    { name: 'Historical Context', agentId: 'historical-context', score: scores[4], weight: 0.05, weightedScore: scores[4] * 0.05 },
   ];
 
   it('computes weighted sum correctly', () => {
-    // 90*0.40 + 80*0.30 + 70*0.20 + 85*0.10 + 95*0.00 = 36 + 24 + 14 + 8.5 + 0 = 82.5 → 83
+    // 90*0.30 + 80*0.30 + 70*0.20 + 85*0.15 + 95*0.05 = 27 + 24 + 14 + 12.75 + 4.75 = 82.5 → 83
     const result = computeQualityScore(makeDimensions([90, 80, 70, 85, 95]));
     expect(result).toBe(83);
   });
 
   it('rounds 83.5 to 84', () => {
-    // 90*0.40 + 80*0.30 + 72*0.20 + 85*0.10 + 95*0.00 = 36 + 24 + 14.4 + 8.5 + 0 = 82.9
+    // 90*0.30 + 80*0.30 + 72*0.20 + 85*0.15 + 95*0.05 = 27 + 24 + 14.4 + 12.75 + 4.75 = 82.9
     const dims = makeDimensions([90, 80, 72, 85, 95]);
     expect(computeQualityScore(dims)).toBe(83);
 
     // For exact 83.5: use direct dimensions
     const exactDims: DimensionScore[] = [
-      { name: 'A', agentId: 'a', score: 90, weight: 0.4, weightedScore: 36 },
+      { name: 'A', agentId: 'a', score: 90, weight: 0.3, weightedScore: 27 },
       { name: 'B', agentId: 'b', score: 80, weight: 0.3, weightedScore: 24 },
-      { name: 'C', agentId: 'c', score: 75, weight: 0.2, weightedScore: 15 },
-      { name: 'D', agentId: 'd', score: 85, weight: 0.1, weightedScore: 8.5 },
+      { name: 'C', agentId: 'c', score: 80, weight: 0.2, weightedScore: 16 },
+      { name: 'D', agentId: 'd', score: 90, weight: 0.1, weightedScore: 9 },
+      { name: 'E', agentId: 'e', score: 75, weight: 0.1, weightedScore: 7.5 },
     ];
-    // 36 + 24 + 15 + 8.5 = 83.5 → rounds to 84
+    // 27 + 24 + 16 + 9 + 7.5 = 83.5 → rounds to 84
     expect(computeQualityScore(exactDims)).toBe(84);
   });
 
@@ -169,9 +174,10 @@ describe('computeQualityScore', () => {
     expect(computeQualityScore(makeDimensions([0, 0, 0, 0, 0]))).toBe(0);
   });
 
-  it('spec-sync at weight 0.00 does not affect global score', () => {
-    const withLowSpecSync = computeQualityScore(makeDimensions([80, 80, 80, 80, 50]));
-    const withHighSpecSync = computeQualityScore(makeDimensions([80, 80, 80, 80, 100]));
-    expect(withLowSpecSync).toBe(withHighSpecSync);
+  it('historical context has the lowest impact on the global score', () => {
+    const withLowHistoricalContext = computeQualityScore(makeDimensions([80, 80, 80, 80, 40]));
+    const withHighHistoricalContext = computeQualityScore(makeDimensions([80, 80, 80, 80, 100]));
+    expect(withLowHistoricalContext).toBe(78);
+    expect(withHighHistoricalContext).toBe(81);
   });
 });

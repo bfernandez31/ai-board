@@ -95,11 +95,11 @@ describe('computeDimensionAverages', () => {
   it('computes averages from valid dimension data', () => {
     const details1 = JSON.stringify({
       dimensions: [
-        { agentId: 'compliance', name: 'Compliance', score: 80, weight: 0.40, weightedScore: 32 },
+        { agentId: 'compliance', name: 'Compliance', score: 80, weight: 0.30, weightedScore: 24 },
         { agentId: 'bug-detection', name: 'Bug Detection', score: 70, weight: 0.30, weightedScore: 21 },
         { agentId: 'code-comments', name: 'Code Comments', score: 60, weight: 0.20, weightedScore: 12 },
         { agentId: 'historical-context', name: 'Historical Context', score: 50, weight: 0.10, weightedScore: 5 },
-        { agentId: 'spec-sync', name: 'Spec Sync', score: 40, weight: 0.00, weightedScore: 0 },
+        { agentId: 'spec-sync', name: 'Spec Sync', score: 40, weight: 0.10, weightedScore: 4 },
       ],
       threshold: 'Good',
       computedAt: '2026-03-20T10:00:00Z',
@@ -107,11 +107,11 @@ describe('computeDimensionAverages', () => {
 
     const details2 = JSON.stringify({
       dimensions: [
-        { agentId: 'compliance', name: 'Compliance', score: 90, weight: 0.40, weightedScore: 36 },
+        { agentId: 'compliance', name: 'Compliance', score: 90, weight: 0.30, weightedScore: 27 },
         { agentId: 'bug-detection', name: 'Bug Detection', score: 80, weight: 0.30, weightedScore: 24 },
-        { agentId: 'code-comments', name: 'Code Comments', score: 70, weight: 0.20, weightedScore: 14 },
-        { agentId: 'historical-context', name: 'Historical Context', score: 60, weight: 0.10, weightedScore: 6 },
-        { agentId: 'spec-sync', name: 'Spec Sync', score: 50, weight: 0.00, weightedScore: 0 },
+        { agentId: 'edge-cases-failure-modes', name: 'Edge Cases & Failure Modes', score: 70, weight: 0.15, weightedScore: 10.5 },
+        { agentId: 'historical-context', name: 'Historical Context', score: 60, weight: 0.05, weightedScore: 3 },
+        { agentId: 'product-contract-sync', name: 'Product Contract Sync', score: 50, weight: 0.20, weightedScore: 10 },
       ],
       threshold: 'Good',
       computedAt: '2026-03-25T10:00:00Z',
@@ -121,15 +121,15 @@ describe('computeDimensionAverages', () => {
 
     expect(result.find((d) => d.name === 'Compliance')?.averageScore).toBe(85);
     expect(result.find((d) => d.name === 'Bug Detection')?.averageScore).toBe(75);
-    expect(result.find((d) => d.name === 'Code Comments')?.averageScore).toBe(65);
+    expect(result.find((d) => d.name === 'Edge Cases & Failure Modes')?.averageScore).toBe(65);
     expect(result.find((d) => d.name === 'Historical Context')?.averageScore).toBe(55);
-    expect(result.find((d) => d.name === 'Spec Sync')?.averageScore).toBe(45);
+    expect(result.find((d) => d.name === 'Product Contract Sync')?.averageScore).toBe(45);
   });
 
   it('skips entries with missing dimensions field', () => {
     const valid = JSON.stringify({
       dimensions: [
-        { agentId: 'compliance', name: 'Compliance', score: 80, weight: 0.40, weightedScore: 32 },
+        { agentId: 'compliance', name: 'Compliance', score: 80, weight: 0.30, weightedScore: 24 },
       ],
       threshold: 'Good',
       computedAt: '2026-03-20T10:00:00Z',
@@ -144,14 +144,14 @@ describe('computeDimensionAverages', () => {
   it('returns dimensions in DIMENSION_CONFIG order with correct weights', () => {
     const result = computeDimensionAverages([]);
     expect(result[0].name).toBe('Compliance');
-    expect(result[0].weight).toBe(0.35);
+    expect(result[0].weight).toBe(0.30);
     expect(result[1].name).toBe('Bug Detection');
     expect(result[1].weight).toBe(0.30);
-    expect(result[2].name).toBe('Spec Sync');
+    expect(result[2].name).toBe('Product Contract Sync');
     expect(result[2].weight).toBe(0.20);
-    expect(result[3].name).toBe('Historical Context');
-    expect(result[3].weight).toBe(0.10);
-    expect(result[4].name).toBe('Code Comments');
+    expect(result[3].name).toBe('Edge Cases & Failure Modes');
+    expect(result[3].weight).toBe(0.15);
+    expect(result[4].name).toBe('Historical Context');
     expect(result[4].weight).toBe(0.05);
   });
 });

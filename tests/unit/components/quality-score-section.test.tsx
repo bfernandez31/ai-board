@@ -13,11 +13,11 @@ import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 
 const MOCK_DETAILS = JSON.stringify({
   dimensions: [
-    { name: 'Compliance', agentId: 'compliance', score: 80, weight: 0.4, weightedScore: 32 },
+    { name: 'Compliance', agentId: 'compliance', score: 80, weight: 0.3, weightedScore: 24 },
     { name: 'Bug Detection', agentId: 'bug-detection', score: 90, weight: 0.3, weightedScore: 27 },
-    { name: 'Code Comments', agentId: 'code-comments', score: 70, weight: 0.2, weightedScore: 14 },
-    { name: 'Historical Context', agentId: 'historical-context', score: 85, weight: 0.1, weightedScore: 8.5 },
-    { name: 'Spec Sync', agentId: 'spec-sync', score: 95, weight: 0.0, weightedScore: 0 },
+    { name: 'Product Contract Sync', agentId: 'product-contract-sync', score: 70, weight: 0.2, weightedScore: 14 },
+    { name: 'Edge Cases & Failure Modes', agentId: 'edge-cases-failure-modes', score: 85, weight: 0.15, weightedScore: 12.75 },
+    { name: 'Historical Context', agentId: 'historical-context', score: 95, weight: 0.05, weightedScore: 4.75 },
   ],
   threshold: 'Good',
   computedAt: '2026-03-17T10:30:00Z',
@@ -68,9 +68,9 @@ describe('QualityScoreSection', () => {
     renderWithProviders(<QualityScoreSection jobs={[createJob()]} />);
     expect(screen.queryByTestId('dimension-bug-detection')).not.toBeInTheDocument();
     expect(screen.queryByTestId('dimension-compliance')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('dimension-code-comments')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dimension-product-contract-sync')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dimension-edge-cases-failure-modes')).not.toBeInTheDocument();
     expect(screen.queryByTestId('dimension-historical-context')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('dimension-spec-sync')).not.toBeInTheDocument();
   });
 
   it('shows dimension weights as percentages after expanding the section', async () => {
