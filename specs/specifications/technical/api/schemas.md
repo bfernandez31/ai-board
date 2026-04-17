@@ -1449,4 +1449,56 @@ const mutation = useMutation({
     }
   }
 });
+
+## Activity Heatmap Schemas
+
+### HeatmapPeriod
+
+```typescript
+type HeatmapPeriod = 'last-12-months' | `year-${number}`;
+```
+
+### HeatmapAgentFilter
+
+```typescript
+type HeatmapAgentFilter = 'all' | Agent; // Agent from @prisma/client
+```
+
+### HeatmapDay
+
+Per-day activity entry returned in the `days` array:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `date` | `string` | ISO 8601 date (`YYYY-MM-DD`) |
+| `jobCount` | `number` | Total jobs started on this day |
+| `totalCost` | `number` | Sum of `costUsd` for jobs on this day (0 when no cost recorded) |
+| `hasCost` | `boolean` | `true` when at least one job on this day has a recorded cost |
+| `ticketsShipped` | `number` | Distinct tickets shipped on this day (deduplicated by ticketId) |
+
+### HeatmapAgentOption
+
+Entry in the `availableAgents` array:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `value` | `HeatmapAgentFilter` | Agent identifier or `"all"` |
+| `label` | `string` | Display name |
+| `jobCount` | `number` | Job count for this agent in the user's projects |
+
+### HeatmapData (Response)
+
+Top-level response from `GET /api/activity-heatmap`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `days` | `HeatmapDay[]` | Activity entries (only days with activity; gaps are filled client-side) |
+| `startDate` | `string` | Period start (`YYYY-MM-DD`) |
+| `endDate` | `string` | Period end (`YYYY-MM-DD`) |
+| `totalJobs` | `number` | Total jobs in the period |
+| `totalShipped` | `number` | Distinct tickets shipped in the period |
+| `availableAgents` | `HeatmapAgentOption[]` | Selectable agent filters; always includes `"all"` |
+| `availablePeriods` | `HeatmapPeriod[]` | Selectable periods; always includes `"last-12-months"` |
+| `filters` | `HeatmapFilters` | Normalized filters actually applied |
+| `generatedAt` | `string` | ISO 8601 timestamp of data generation |
 ```

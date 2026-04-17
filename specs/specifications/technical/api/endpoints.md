@@ -4916,6 +4916,62 @@ The `token` field is base64-encoded. Callers must decode before use (e.g., `echo
 
 ---
 
+## Activity Heatmap Endpoints
+
+### GET /api/activity-heatmap
+
+Fetch daily job activity data for the authenticated user across all their projects, used to render the projects-page activity heatmap.
+
+**Authentication**: Required (session)
+**Authorization**: Scoped to the authenticated user — returns only activity for projects the user owns or is a member of
+
+**Query Parameters**:
+- `period` (string, optional): Time window — `last-12-months` (default) or `year-{YYYY}`
+- `agent` (string, optional): Agent filter — `all` (default) or a specific agent value (e.g., `CLAUDE`, `CODEX`, `MISTRAL`, `GEMINI`)
+
+**Behavior**:
+- Invalid `period` or `agent` values are silently replaced with defaults
+- Available periods are computed from the user's account creation date to the current date
+- Available agents contain only agents that have at least one recorded job in the user's projects
+- `ticketsShipped` per day counts distinct tickets shipped (deduplicated by `ticketId` within the same day)
+- Returns an empty `days` array when the user has no projects
+
+**Response** (200 OK):
+```json
+{
+  "days": [
+    {
+      "date": "2026-04-01",
+      "jobCount": 5,
+      "totalCost": 0.42,
+      "hasCost": true,
+      "ticketsShipped": 2
+    }
+  ],
+  "startDate": "2025-04-17",
+  "endDate": "2026-04-16",
+  "totalJobs": 120,
+  "totalShipped": 18,
+  "availableAgents": [
+    { "value": "all", "label": "All agents", "jobCount": 120 },
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 120 }
+  ],
+  "availablePeriods": ["last-12-months", "year-2026", "year-2025"],
+  "filters": {
+    "period": "last-12-months",
+    "agent": "all"
+  },
+  "generatedAt": "2026-04-17T10:00:00.000Z"
+}
+```
+
+**Errors**:
+- `401`: Unauthorized (no session)
+- `404`: `{ "error": "User not found" }`
+- `500`: `{ "error": "Internal server error" }`
+
+---
+
 ## Pagination
 
 Scan history (`GET /api/projects/[projectId]/health/scans`) and activity feed (`GET /api/projects/:projectId/activity`) use cursor-based pagination. All other endpoints return complete result sets.

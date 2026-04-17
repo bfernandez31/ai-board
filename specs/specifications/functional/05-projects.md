@@ -77,6 +77,27 @@ Users access projects through a dedicated projects list page:
 - Full ticket title visible via tooltip on hover for truncated titles
 - Relative timestamps update on page refresh
 
+### Activity Heatmap
+
+Below the project grid, a GitHub-style activity heatmap displays the user's AI job history across all their projects:
+
+**Display**:
+- Calendar grid with one cell per day, colored by job intensity (5 levels: none, low, medium-low, medium-high, high)
+- Month labels across the top; Mon/Wed/Fri row labels on the left side
+- Summary line: "N jobs · M tickets shipped in [period]"
+- Hovering a cell shows a tooltip with date, job count, cost (when available), and tickets shipped that day
+
+**Filters**:
+- **Period**: "Last 12 months" (default) or a specific calendar year, shown when the user account spans more than one calendar year
+- **Agent**: Visible only when jobs from 2 or more distinct agents are present; defaults to "All agents"
+- Filter selections persist in the URL (`heatmapPeriod`, `heatmapAgent` query params) and survive page refresh
+
+**Visibility**:
+- Rendered only when the user is authenticated and has at least one project
+- Shows an empty state ("No activity to show yet") when no jobs exist for the selected period/agent
+
+**Data refresh**: Polls every 30 seconds; initial data is server-rendered for instant display.
+
 ### Empty State
 
 When no projects exist:
