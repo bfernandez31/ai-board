@@ -1459,6 +1459,51 @@ test('creates ticket with optimistic update', async () => {
 });
 ```
 
+### Activity Heatmap Hook
+
+**Hook** (`hooks/use-activity-heatmap.ts`):
+
+Fetches account-wide AI job activity for the projects-page heatmap. Initial data is server-rendered (SSR) and passed as `initialData` so the first paint shows real data with no spinner. Subsequent refreshes run every 15 seconds with `placeholderData: keepPreviousData` so cells never blank during a refetch. Polling pauses automatically when the browser tab is not visible.
+
+```typescript
+export function useActivityHeatmap(
+  filters: HeatmapFilters,
+  initialData: HeatmapResponse
+) {
+  return useQuery({
+    queryKey: queryKeys.activityHeatmap(filters),
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        year: filters.year,
+        agent: filters.agent,
+        tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+      const res = await fetch(`/api/activity/heatmap?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json() as Promise<HeatmapResponse>;
+    },
+    initialData,
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
+  });
+}
+```
+
+**Query key** (registered in `app/lib/query-keys.ts`):
+```typescript
+activityHeatmap: (filters: HeatmapFilters) =>
+  ['activityHeatmap', filters.year, filters.agent] as const,
+```
+
+**Features**:
+- **SSR Hydration**: `initialData` from `app/projects/page.tsx` server fetch eliminates first-paint loading state
+- **Continuity on Refetch**: `placeholderData: keepPreviousData` keeps current cells visible while the next poll loads
+- **Visibility-Aware Polling**: `refetchIntervalInBackground: false` pauses polling when the tab is hidden
+- **15-Second Cadence**: Aligned with analytics dashboard polling
+- **URL-Backed Filters**: `filters` are derived from `useSearchParams()`; changing a filter pushes a new URL and triggers a fresh query key
+
 ## Best Practices
 
 ### Query Keys

@@ -632,6 +632,70 @@ After the banner is dismissed, spec generation can be triggered from the board m
 
 Only one active retro-spec job is permitted per project at a time. A second request while one is active is rejected with a `409 JOB_ACTIVE` error.
 
+## Activity Heatmap
+
+### Overview
+
+The projects page displays a GitHub-style contribution heatmap below the project cards grid, giving users an ambient view of their AI work across all owned and member projects over time.
+
+### Appearance and Layout
+
+- Positioned full-width below the project card grid on `/projects`
+- A headline counter above the grid reads "X jobs · Y tickets shipped {period label}" where the period label adapts to the active filter (e.g., "in the last year" vs. "in 2025")
+- The grid has exactly 7 rows (days of the week), columns of weeks, and month labels across the top with day-of-week labels pinned on the left
+- A legend at the bottom right reads "Less □□■■■ More" with five intensity levels (zero + four populated buckets)
+- When no activity exists for the selected period, the grid area is replaced by the centered message "No activity to show yet — your AI work will appear here"; the legend and filters remain visible
+
+### Intensity and Color Scale
+
+Cell shading uses a five-level violet gradient aligned with the aurora theme:
+- Level 0: no jobs that day (empty / background color)
+- Levels 1–4: increasing violet saturation based on job count thresholds
+
+All cells remain readable in the dark theme and comply with WCAG AA contrast requirements.
+
+### Calendar Grid
+
+- Default period is the rolling **Last 12 months**
+- The grid respects exact calendar boundaries: the first week may have a chipped top-left corner (when the period does not start on a Sunday) and the last week may have a chipped bottom-right corner (when it does not end on a Saturday), matching GitHub's behavior
+- Day bucketing uses the **viewer's local timezone** (supplied by the browser), so cells align with the user's sense of a calendar day
+
+### Tooltip
+
+Hovering a cell (or tapping on touch devices) shows a tooltip containing:
+- Formatted date
+- Number of tickets shipped that day
+- Number of jobs that day
+- Total cost for that day — only if at least one job on that day recorded a cost; the line is omitted entirely when no cost exists (never "$0" or "$NaN")
+
+Tapping outside any cell on a touch device dismisses the open tooltip.
+
+### Filters
+
+**Year selector**: A dropdown with "Last 12 months" (default, rolling) plus one entry per calendar year from the viewer's account-creation year through the current year. When the viewer's account was created in the current calendar year, the selector is disabled (only "Last 12 months" is available).
+
+**Agent filter**: Shown only when the viewer's full historical job data contains 2 or more distinct effective agents. Options are derived from the actual job history (not limited to the active period) and include an "All agents" default. Filtering to a specific agent includes tickets whose effective agent resolves to that value via project default inheritance.
+
+Active filters are encoded in the page URL (`?year=…&agent=…`), making filtered views shareable and reproducible.
+
+### Data Scope
+
+- Aggregates AI job activity across every project the viewer **owns or is a member of**
+- The "tickets shipped" counter counts only tickets whose `ship` workflow job completed successfully on that day; a manual stage transition to SHIP without a completed ship job does not increment the counter
+- Cell intensities and the counter both reflect the active year and agent filters; the grid boundary (visible week range) never changes when only the agent filter changes
+
+### Performance and Updates
+
+- The heatmap is **server-rendered on first paint** — no spinner or empty flash is visible when the page loads
+- Subsequent background refreshes run silently every 15 seconds (aligned with analytics polling), updating cell intensities and the counter without blanking the grid or showing a loader
+- A failed background refresh is silent; last-known-good data remains on screen; polling pauses when the tab is hidden
+
+### Mobile Behavior
+
+- On viewports narrower than the grid width, the grid scrolls horizontally without wrapping rows
+- Day-of-week labels remain pinned to the left edge during horizontal scroll
+- Cells are never smaller than 14px on their shortest side (tappable minimum)
+
 ## External Repository Support
 
 ### Multi-Repository Architecture

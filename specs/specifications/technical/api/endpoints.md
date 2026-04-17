@@ -4496,6 +4496,76 @@ Fetch unified activity feed for a project.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 
+### GET /api/activity/heatmap
+
+Fetch account-wide AI job activity aggregated by calendar day, for the GitHub-style contribution heatmap on the projects page.
+
+**Authentication**: Required (session cookie or Bearer PAT)
+**Authorization**: Self-scoped — returns activity only for projects owned by or accessible to the authenticated viewer
+
+**Query Parameters**:
+- `year` (string, optional): `"last-12-months"` (default, rolling) or a 4-digit calendar year from the viewer's account-creation year through the current year. Values outside the valid range return 400.
+- `agent` (string, optional): `"all"` (default) | `"CLAUDE"` | `"CODEX"` | `"MISTRAL"` | `"GEMINI"`. Invalid values return 400.
+- `tz` (string, optional): IANA timezone string (e.g., `"America/Los_Angeles"`). Invalid values fall back to `"UTC"` — request still succeeds.
+
+**Response** (200 OK):
+```json
+{
+  "filters": {
+    "year": "last-12-months",
+    "agent": "all",
+    "timezone": "America/Los_Angeles"
+  },
+  "range": {
+    "startDate": "2025-04-17",
+    "endDate": "2026-04-17",
+    "gridStart": "2025-04-13",
+    "gridEnd": "2026-04-18"
+  },
+  "days": [
+    {
+      "date": "2025-04-17",
+      "jobCount": 3,
+      "ticketsShipped": 1,
+      "intensity": 2,
+      "totalCostUsd": 1.42
+    },
+    {
+      "date": "2025-04-18",
+      "jobCount": 2,
+      "ticketsShipped": 0,
+      "intensity": 2
+    }
+  ],
+  "counters": {
+    "totalJobs": 5,
+    "ticketsShipped": 1,
+    "periodLabel": "in the last year"
+  },
+  "agentOptions": [
+    { "value": "all",    "label": "All agents", "historicalJobCount": 127 },
+    { "value": "CLAUDE", "label": "Claude",     "historicalJobCount": 98 }
+  ],
+  "yearOptions": [
+    { "value": "last-12-months", "label": "Last 12 months", "isDefault": true },
+    { "value": "2026",           "label": "2026",           "isDefault": false }
+  ],
+  "generatedAt": "2026-04-17T14:22:08.123Z"
+}
+```
+
+**Response Guarantees**:
+- `days` is contiguous from `range.startDate` through `range.endDate` inclusive (one entry per calendar day). Zero-activity days appear with `jobCount: 0`, `intensity: 0`, and no `totalCostUsd` field.
+- `days[].totalCostUsd` is **absent** (never `null` or `0`) when no jobs on that day recorded a cost.
+- `agentOptions` reflects the viewer's **full job history**, not just the active period.
+- `Cache-Control: private, no-store` — response is per-viewer and changes on every poll.
+
+**Errors**:
+- `400 { "error": "Invalid heatmap filters" }`: Malformed `agent` or overlong `tz`
+- `400 { "error": "Invalid year" }`: `year` outside the viewer's valid range
+- `401 { "error": "Unauthorized" }`: No valid session or token
+- `500 { "error": "Internal server error" }`: Unexpected exception
+
 ## Token Endpoints
 
 ### GET /api/tokens
