@@ -33,12 +33,13 @@ This command implements simple features directly from ticket context without for
      }
      ```
    - Parse JSON: extract `TICKET_KEY`, `TITLE`, and `DESCRIPTION`
-   - Combine `TITLE` and `DESCRIPTION` into `FEATURE_DESCRIPTION` for spec content
-   - Run `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/scripts/bash/create-new-feature.sh --json --mode=quick-impl --ticket-key="$TICKET_KEY" "$TITLE"` from repo root
+   - Preserve `DESCRIPTION` exactly as written in the ticket. Do not summarize, rewrite, normalize, or drop bullet points/line breaks when writing `spec.md`.
+   - Write the raw `DESCRIPTION` to a temporary file and run `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/scripts/bash/create-new-feature.sh --json --mode=quick-impl --ticket-key="$TICKET_KEY" --title="$TITLE" --description-file="$DESCRIPTION_FILE" "$TITLE"` from repo root
    - Script generates branch name: `{ticketKey}-{3-words}` (e.g., `ABC-123-fix-login-bug`)
-   - Script creates: branch, specs/{branch}/ directory, and spec.md with feature description
+   - Script creates: branch, specs/{branch}/ directory, and spec.md with the exact ticket description in the `Description` section
    - Parse JSON output for BRANCH_NAME and SPEC_FILE (absolute paths)
    - Verify branch was created and spec.md exists
+   - Verify `spec.md` contains the exact ticket description text verbatim
 
 2. **Load ticket context from spec.md**:
    - Read `spec.md` from SPEC_FILE path to extract:

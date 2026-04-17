@@ -5,13 +5,17 @@ set -e
 JSON_MODE=false
 MODE="specify"  # Default mode: full spec template
 TICKET_KEY=""   # Optional: ticket key for branch naming (e.g., ABC-123)
+TITLE_OVERRIDE=""
+DESCRIPTION_FILE=""
 ARGS=()
 for arg in "$@"; do
     case "$arg" in
         --json) JSON_MODE=true ;;
         --mode=*) MODE="${arg#--mode=}" ;;
         --ticket-key=*) TICKET_KEY="${arg#--ticket-key=}" ;;
-        --help|-h) echo "Usage: $0 [--json] [--mode=specify|quick-impl|cleanup] [--ticket-key=ABC-123] <feature_description>"; exit 0 ;;
+        --title=*) TITLE_OVERRIDE="${arg#--title=}" ;;
+        --description-file=*) DESCRIPTION_FILE="${arg#--description-file=}" ;;
+        --help|-h) echo "Usage: $0 [--json] [--mode=specify|quick-impl|cleanup] [--ticket-key=ABC-123] [--title=TITLE] [--description-file=PATH] <feature_description>"; exit 0 ;;
         *) ARGS+=("$arg") ;;
     esac
 done
@@ -24,8 +28,22 @@ fi
 
 FEATURE_DESCRIPTION="${ARGS[*]}"
 if [ -z "$FEATURE_DESCRIPTION" ]; then
-    echo "Usage: $0 [--json] [--mode=specify|quick-impl|cleanup] <feature_description>" >&2
+    echo "Usage: $0 [--json] [--mode=specify|quick-impl|cleanup] [--title=TITLE] [--description-file=PATH] <feature_description>" >&2
     exit 1
+fi
+
+if [ -n "$DESCRIPTION_FILE" ] && [ ! -f "$DESCRIPTION_FILE" ]; then
+    echo "Error: Description file '$DESCRIPTION_FILE' does not exist" >&2
+    exit 1
+fi
+
+SPEC_TITLE="$FEATURE_DESCRIPTION"
+SPEC_DESCRIPTION="$FEATURE_DESCRIPTION"
+if [ -n "$TITLE_OVERRIDE" ]; then
+    SPEC_TITLE="$TITLE_OVERRIDE"
+fi
+if [ -n "$DESCRIPTION_FILE" ]; then
+    SPEC_DESCRIPTION="$(cat "$DESCRIPTION_FILE")"
 fi
 
 # Function to find the repository root by searching for existing project markers
@@ -167,7 +185,7 @@ EOF
 elif [ "$MODE" = "quick-impl" ]; then
     # Quick-impl mode: Create minimal spec.md with only title and description
     cat > "$SPEC_FILE" <<EOF
-# Quick Implementation: ${FEATURE_DESCRIPTION}
+# Quick Implementation: ${SPEC_TITLE}
 
 **Feature Branch**: \`${BRANCH_NAME}\`
 **Created**: $(date +%Y-%m-%d)
@@ -175,7 +193,7 @@ elif [ "$MODE" = "quick-impl" ]; then
 
 ## Description
 
-${FEATURE_DESCRIPTION}
+${SPEC_DESCRIPTION}
 
 ## Implementation Notes
 
