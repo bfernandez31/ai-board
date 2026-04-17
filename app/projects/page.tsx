@@ -5,6 +5,11 @@ import { UsageBanner } from '@/components/billing/usage-banner';
 import { ProjectsHeaderActions } from '@/components/projects/projects-header-actions';
 import { toProjectWithCount, type ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
+import { ActivityHeatmap } from '@/components/activity/activity-heatmap';
+import { getHeatmapData } from '@/lib/activity/heatmap-queries';
+import { requireAuth } from '@/lib/db/users';
+import { prisma } from '@/lib/db/client';
+import type { HeatmapResponse } from '@/lib/activity/heatmap-types';
 
 // Force dynamic rendering - this page uses headers() for auth
 export const dynamic = 'force-dynamic';
@@ -26,8 +31,27 @@ async function getProjects(): Promise<ProjectsListResponse> {
   }
 }
 
+async function getInitialHeatmap(): Promise<HeatmapResponse | null> {
+  try {
+    const viewerId = await requireAuth();
+    const user = await prisma.user.findUnique({
+      where: { id: viewerId },
+      select: { createdAt: true },
+    });
+    if (!user) return null;
+    return await getHeatmapData(viewerId, user.createdAt, {
+      year: 'last-12-months',
+      agent: 'all',
+      timezone: 'UTC',
+    });
+  } catch (error) {
+    console.error('Failed to fetch initial heatmap:', error);
+    return null;
+  }
+}
+
 export default async function ProjectsPage() {
-  const projects = await getProjects();
+  const [projects, initialHeatmap] = await Promise.all([getProjects(), getInitialHeatmap()]);
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -43,6 +67,8 @@ export default async function ProjectsPage() {
       <div className="mt-6">
         <ProjectsContainer projects={projects} />
       </div>
+
+      {initialHeatmap && <ActivityHeatmap initialData={initialHeatmap} />}
     </div>
   );
 }
