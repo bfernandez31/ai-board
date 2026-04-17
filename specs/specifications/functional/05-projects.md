@@ -393,6 +393,58 @@ Projects track activity across all tickets:
 - Ticket count shows total across all stages
 - Activity visible in project list view
 
+## Activity Heatmap
+
+The projects page displays a GitHub-style contribution heatmap below the project cards grid, visualizing AI activity (jobs + shipped tickets) across all of the user's projects.
+
+### Grid Layout
+
+- 7 rows (days of week, Sun–Sat), one column per day in the selected period
+- Month labels along the top; day-of-week labels pinned on the left
+- Cell intensity reflects job count for that day using a violet gradient (aurora theme)
+- Intensity legend in the bottom-right: "Less □□■■■ More"
+- When the period does not start on Sunday or end on Saturday, cells outside the boundary are not rendered, producing a "chipped" top-left / bottom-right corner (matches GitHub's contribution graph)
+- When the entire period has zero activity, a centered empty-state message replaces the grid; the legend and filters remain visible
+
+### Header
+
+- Summary counter: "X jobs · Y tickets shipped in the last year"
+- A ticket counts as shipped on the day its `ship` workflow job completed with `COMPLETED` status — stage changes alone do not count
+- Period selector dropdown:
+  - Default: "Last 12 months" (rolling 12-month window)
+  - Additional options: each calendar year from the user's account creation year through the current year
+  - If the user signed up this calendar year, only "Last 12 months" is available (no dropdown shown)
+
+### Tooltip
+
+Hovering (or tapping on mobile) a day cell shows:
+- Tickets shipped that day
+- Job count and total cost (cost line omitted when no job recorded a cost — never shows "$NaN" or "$0")
+- Formatted date
+- On mobile: tap to open, tap outside to dismiss
+
+### Filters
+
+- **Agent filter** built dynamically from the user's job history across all projects, following the same effective-agent resolution pattern as the analytics dashboard
+- Includes an "All" option selected by default
+- Hidden when only 0 or 1 distinct effective agents exist in the user's data
+- Filter honors effective-agent inheritance: a ticket with no explicit agent uses its project's `defaultAgent`
+- Grid boundaries do not change when filtering — the full period is always rendered
+
+### URL State
+
+Active filter values (`period`, `agent`) are reflected in the URL as query parameters (`hm-period`, `hm-agent`). Sharing the URL reproduces the exact same view.
+
+### Loading Behavior
+
+- Initial data is server-rendered so the heatmap is visible on first paint with no spinner flash
+- Background refetches (via TanStack Query) update the data silently without blanking the UI
+
+### Mobile
+
+- Grid scrolls horizontally; cells are never wrapped or shrunk below tappable size
+- Day-of-week labels stay pinned on the left during horizontal scroll
+
 ## Project Actions
 
 ### Project Analytics

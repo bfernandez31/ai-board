@@ -4450,6 +4450,59 @@ Returns aggregated Quality Gate data for the Health Dashboard drawer.
 
 ## Activity Endpoints
 
+### GET /api/activity-heatmap
+
+Fetch per-day AI activity aggregated across all of the authenticated user's projects (owned and member) for the heatmap on the projects page.
+
+**Authentication**: Required (session or PAT)
+**Authorization**: User-scoped — returns data for the authenticated user only
+
+**Query Parameters**:
+- `period` (string, optional): `"last-12-months"` (default rolling window) or a 4-digit calendar year (e.g., `"2024"`)
+- `agent` (string, optional): Effective agent filter (`all`|`CLAUDE`|`CODEX`|`MISTRAL`|`GEMINI`, default: `all`)
+
+**Behavior**:
+- Returns daily buckets for every day in the resolved period, including days with zero activity
+- "Shipped" count for a day is the number of distinct tickets whose `ship` job completed (`COMPLETED`) on that day — stage changes alone do not count
+- `totalCost` for a day is `null` when no completed job that day recorded a cost, preventing "$NaN" / "$0" display in tooltips
+- Effective-agent resolution mirrors the analytics endpoint: a ticket with no explicit agent inherits its project's `defaultAgent`
+- If the requested `agent` has no jobs in the user's data, the response falls back to `all`
+- `availableYears` is empty when the user signed up in the current calendar year (no selectable year options besides the default rolling window)
+
+**Response** (200 OK):
+```json
+{
+  "period": {
+    "start": "2025-04-17",
+    "end": "2026-04-17",
+    "label": "Last 12 months",
+    "kind": "rolling"
+  },
+  "totals": {
+    "jobs": 142,
+    "ticketsShipped": 28
+  },
+  "days": [
+    { "date": "2025-04-17", "jobCount": 3, "totalCost": 1.25, "ticketsShipped": 1 },
+    { "date": "2025-04-18", "jobCount": 0, "totalCost": null, "ticketsShipped": 0 }
+  ],
+  "availableAgents": [
+    { "value": "all", "label": "All agents", "jobCount": 142, "isDefault": true },
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 120, "isDefault": false }
+  ],
+  "availableYears": [2025, 2024],
+  "filters": { "period": "last-12-months", "agent": "all" },
+  "generatedAt": "2026-04-17T10:00:00.000Z"
+}
+```
+
+**Errors**:
+- `400`: Invalid `period` or `agent` value
+- `401`: Unauthorized
+- `404`: Authenticated user record not found
+
+---
+
 ### GET /api/projects/:projectId/activity
 
 Fetch unified activity feed for a project.
