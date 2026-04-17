@@ -36,59 +36,20 @@ function buildEffectiveAgentTicketWhere(
   if (agent === 'all') return undefined;
   return {
     OR: [
-      { agent: agent as NamedAgent },
-      { agent: null, project: { is: { defaultAgent: agent as NamedAgent } } },
+      { agent },
+      { agent: null, project: { is: { defaultAgent: agent } } },
     ],
   };
 }
 
-interface UserProjectAccess {
-  ownedProjectIds: number[];
-  memberProjectIds: number[];
-  allProjectIds: number[];
-}
-
-async function getUserProjectIds(userId: string): Promise<UserProjectAccess> {
+async function getAccessibleProjectIds(userId: string): Promise<number[]> {
   const projects = await prisma.project.findMany({
     where: {
       OR: [{ userId }, { members: { some: { userId } } }],
     },
-    select: { id: true, userId: true },
+    select: { id: true },
   });
-  const owned = projects.filter((p) => p.userId === userId).map((p) => p.id);
-  const member = projects.filter((p) => p.userId !== userId).map((p) => p.id);
-  return {
-    ownedProjectIds: owned,
-    memberProjectIds: member,
-    allProjectIds: projects.map((p) => p.id),
-  };
-}
-
-interface JobRow {
-  completedAt: Date | null;
-  costUsd: number | null;
-  ticket: {
-    id: number;
-    agent: NamedAgent | null;
-    project: { defaultAgent: NamedAgent };
-  };
-}
-
-interface ShipJobRow {
-  completedAt: Date | null;
-  ticket: {
-    ticketKey: string;
-    title: string;
-    agent: NamedAgent | null;
-    project: { key: string; defaultAgent: NamedAgent };
-  };
-}
-
-function effectiveAgent(
-  ticketAgent: NamedAgent | null,
-  projectDefault: NamedAgent
-): NamedAgent {
-  return ticketAgent ?? projectDefault;
+  return projects.map((p) => p.id);
 }
 
 function normalizeFilters(
@@ -96,12 +57,9 @@ function normalizeFilters(
   availableYears: number[]
 ): HeatmapFilters {
   const period = raw.period ?? 'last-12-months';
-  let resolvedPeriod = period;
-  if (typeof period === 'number' && !availableYears.includes(period)) {
-    resolvedPeriod = 'last-12-months';
-  }
+  const isInvalidYear = typeof period === 'number' && !availableYears.includes(period);
   return {
-    period: resolvedPeriod,
+    period: isInvalidYear ? 'last-12-months' : period,
     agent: raw.agent ?? 'all',
   };
 }
@@ -164,8 +122,8 @@ export async function getActivityHeatmapForUser(
   const availableYears = getAvailableYears(accountCreatedYear, now);
   const filters = normalizeFilters(rawFilters, availableYears);
 
-  const access = await getUserProjectIds(userId);
-  if (access.allProjectIds.length === 0) {
+  const projectIds = await getAccessibleProjectIds(userId);
+  if (projectIds.length === 0) {
     return emptyData(filters, availableYears);
   }
 
@@ -176,14 +134,14 @@ export async function getActivityHeatmapForUser(
   for (const day of days) dayIndex.set(day.date, day);
 
   const baseJobWhere: Prisma.JobWhereInput = {
-    projectId: { in: access.allProjectIds },
+    projectId: { in: projectIds },
     status: JobStatus.COMPLETED,
     completedAt: { gte: start, lt: rangeEnd },
   };
 
   // Available agents — built BEFORE the user's filter is applied so the dropdown
   // reflects the full set of agents represented in the period.
-  const availableAgents = await getHeatmapAvailableAgents(access.allProjectIds, start, rangeEnd);
+  const availableAgents = await getHeatmapAvailableAgents(projectIds, start, rangeEnd);
 
   const ticketWhere = buildEffectiveAgentTicketWhere(filters.agent);
   const filteredJobWhere: Prisma.JobWhereInput = ticketWhere
@@ -193,35 +151,21 @@ export async function getActivityHeatmapForUser(
   const [jobRows, shipRows] = await Promise.all([
     prisma.job.findMany({
       where: filteredJobWhere,
-      select: {
-        completedAt: true,
-        costUsd: true,
-        ticket: {
-          select: {
-            id: true,
-            agent: true,
-            project: { select: { defaultAgent: true } },
-          },
-        },
-      },
-    }) as Promise<JobRow[]>,
+      select: { completedAt: true, costUsd: true },
+    }),
     prisma.job.findMany({
-      where: {
-        ...filteredJobWhere,
-        command: 'ship',
-      },
+      where: { ...filteredJobWhere, command: 'ship' },
       select: {
         completedAt: true,
         ticket: {
           select: {
             ticketKey: true,
             title: true,
-            agent: true,
-            project: { select: { key: true, defaultAgent: true } },
+            project: { select: { key: true } },
           },
         },
       },
-    }) as Promise<ShipJobRow[]>,
+    }),
   ]);
 
   let totalJobs = 0;
@@ -285,7 +229,7 @@ async function getHeatmapAvailableAgents(
   rangeEndExclusive: Date
 ): Promise<HeatmapAgentOption[]> {
   // Aggregate by effective agent across the user's jobs in the period.
-  const rows = (await prisma.job.findMany({
+  const rows = await prisma.job.findMany({
     where: {
       projectId: { in: projectIds },
       status: JobStatus.COMPLETED,
@@ -299,11 +243,11 @@ async function getHeatmapAvailableAgents(
         },
       },
     },
-  })) as Array<{ ticket: { agent: NamedAgent | null; project: { defaultAgent: NamedAgent } } }>;
+  });
 
   const counts = new Map<NamedAgent, number>();
   for (const row of rows) {
-    const agent = effectiveAgent(row.ticket.agent, row.ticket.project.defaultAgent);
+    const agent = row.ticket.agent ?? row.ticket.project.defaultAgent;
     counts.set(agent, (counts.get(agent) ?? 0) + 1);
   }
 

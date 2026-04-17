@@ -67,7 +67,6 @@ export function HeatmapGrid({ data }: HeatmapGridProps) {
               <div
                 key={`m-${i}`}
                 className={`${CELL_SIZE} text-[10px] leading-none text-muted-foreground`}
-                style={{ width: undefined }}
               >
                 {label ? <span className="block -translate-y-2">{label}</span> : null}
               </div>
