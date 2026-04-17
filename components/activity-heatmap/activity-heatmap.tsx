@@ -98,8 +98,7 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
     staleTime: 10000,
   });
 
-  const heatmap = data ?? (shouldUseInitialData ? initialData : undefined);
-  const workingData = heatmap ?? initialData;
+  const workingData = data ?? initialData;
 
   const updateFilters = (next: HeatmapFilters) => {
     setFilters(next);
@@ -117,10 +116,10 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
     [workingData.days]
   );
 
-  const dayDataMap = useMemo(() => {
-    const map = new Map(workingData.days.map((day) => [day.date, day]));
-    return map;
-  }, [workingData.days]);
+  const dayDataMap = useMemo(
+    () => new Map(workingData.days.map((day) => [day.date, day])),
+    [workingData.days]
+  );
 
   const showAgentFilter = workingData.availableAgents.length > 2;
   const showPeriodSelector = workingData.availablePeriods.length > 1;
@@ -383,7 +382,7 @@ function HeatmapTooltipBody({
       <div>
         {jobCount} {jobCount === 1 ? 'job' : 'jobs'}
         {totalCost != null && (
-          <span className="ml-1 text-muted">· ${totalCost.toFixed(2)}</span>
+          <span className="ml-1 text-muted-foreground">· ${totalCost.toFixed(2)}</span>
         )}
       </div>
       {ticketsShipped > 0 && (

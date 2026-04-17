@@ -76,9 +76,8 @@ async function getAvailableAgents(projectIds: number[]): Promise<HeatmapAgentOpt
     counts.set(effective, (counts.get(effective) ?? 0) + 1);
   }
 
-  const total = Array.from(counts.values()).reduce((sum, c) => sum + c, 0);
   const options: HeatmapAgentOption[] = [
-    { value: 'all', label: 'All agents', jobCount: total },
+    { value: 'all', label: 'All agents', jobCount: jobs.length },
   ];
 
   for (const agent of ALL_AGENTS) {
