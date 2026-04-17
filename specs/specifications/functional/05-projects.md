@@ -393,6 +393,55 @@ Projects track activity across all tickets:
 - Ticket count shows total across all stages
 - Activity visible in project list view
 
+### Activity Heatmap
+
+Below the project cards grid, the projects page displays a GitHub-style contribution heatmap that visualises AI job activity across all the user's projects for the selected period.
+
+**Grid layout**:
+- 7 rows (Sunday → Saturday), column count matches the selected period in weeks
+- Month labels appear on top of each column where a new month begins
+- Day-of-week labels (Mon, Wed, Fri, Sun) appear pinned on the left and stay fixed during horizontal scroll on mobile
+- Each cell represents one calendar day; cell colour intensity is proportional to the number of jobs that started or completed that day
+- Colour scale: violet gradient (no activity = zinc, low → violet-900 → violet-700 → violet-500 → violet-400)
+- Intensity legend ("Less □□□□□ More") at bottom right of the grid
+- Days outside the period are not rendered, producing a "chipped corner" look when the period doesn't start on Sunday or end on Saturday
+
+**Header**:
+- Counter: "{N} jobs · {M} tickets shipped in the last year / in {YEAR}"
+- A ticket counts as "shipped" on the day its `ship` workflow job reached COMPLETED status — not when the stage changed to SHIP
+
+**Period selection (year selector)**:
+- Default: "Last 12 months" (rolling 365-day window ending today)
+- Additional options: each calendar year from the user's account creation year up to the current year, in descending order
+- If the user created their account in the current year, only "Last 12 months" is shown (no dropdown)
+
+**Agent filter**:
+- Derived from agents that appear in the user's actual job history (combining explicit ticket agent and the effective agent inherited from project default)
+- Always includes "All agents" selected by default
+- Hidden when fewer than 2 distinct agents are present in the user's data
+- Filtering honours effective agent resolution: a ticket with no explicit agent on a project whose default is the selected agent is included
+
+**Tooltip on hover**:
+- Displays formatted date, job count (and total cost if any jobs recorded cost), and tickets shipped that day
+- Cost is omitted entirely when no jobs in that cell have a recorded cost (no "$0" or "$NaN")
+- On mobile: tap to show, tap outside to dismiss
+
+**URL state**:
+- Active period and agent filters are reflected in URL query params (`heatmapYear`, `heatmapAgent`)
+- Copying the URL and opening it elsewhere reproduces the exact same view
+
+**Empty state**:
+- When the selected period has zero jobs and zero shipped tickets, the grid is replaced by the message "No activity to show yet — your AI work will appear here"
+- Filters and legend remain visible during empty state
+
+**First render**:
+- Initial data is server-rendered; the heatmap is immediately visible with no loading spinner
+- Background refetches update the grid silently (no blank flash)
+
+**Mobile**:
+- Grid scrolls horizontally; cells never wrap or shrink below tappable size
+- Day-of-week labels remain pinned to the left during horizontal scroll
+
 ## Project Actions
 
 ### Project Analytics

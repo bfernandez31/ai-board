@@ -4450,6 +4450,63 @@ Returns aggregated Quality Gate data for the Health Dashboard drawer.
 
 ## Activity Endpoints
 
+### GET /api/user/activity
+
+Fetch aggregated heatmap data for the authenticated user across all their projects.
+
+**Authentication**: Required (session)
+**Authorization**: Returns data only for the authenticated user's own projects (owned or member)
+
+**Query Parameters**:
+- `agent` (string, optional): Filter by agent. One of `all`, `CLAUDE`, `CODEX`, `MISTRAL`, `GEMINI`. Default: `all`.
+- `year` (4-digit string, optional): Restrict to a specific calendar year. Omit for the default rolling 12-month window.
+
+**Response** (200 OK):
+```json
+{
+  "startDate": "2025-04-17",
+  "endDate": "2026-04-17",
+  "cells": [
+    {
+      "date": "2025-04-17",
+      "jobCount": 3,
+      "totalCost": 0.12,
+      "ticketsShipped": 1
+    }
+  ],
+  "totalJobs": 142,
+  "totalShipped": 18,
+  "availableAgents": [
+    { "value": "all", "label": "All agents", "jobCount": 142 },
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 142 }
+  ],
+  "availableYears": [2026, 2025],
+  "filters": {
+    "agent": "all",
+    "period": { "kind": "rolling", "months": 12 }
+  },
+  "generatedAt": "2026-04-17T12:00:00.000Z"
+}
+```
+
+**Field descriptions**:
+- `startDate` / `endDate`: Inclusive UTC date boundaries for the period (YYYY-MM-DD)
+- `cells`: One entry per calendar day in the period. `totalCost` is `null` when no jobs in that day recorded a cost.
+- `totalJobs`: Job count across the full period (after agent filter)
+- `totalShipped`: Unique tickets whose `ship` job completed in the period (after agent filter)
+- `availableAgents`: Agents present in the user's job history; only shown when ≥2 distinct agents exist (client hides the filter otherwise)
+- `availableYears`: Calendar years available for the year selector, descending. Empty when the user created their account in the current year.
+- `filters.period`: Either `{ kind: "rolling", months: 12 }` or `{ kind: "year", year: 2025 }`
+
+**Agent filter semantics**: Effective agent resolution applies — a ticket with `agent: null` on a project whose `defaultAgent` matches the filter is included.
+
+**Errors**:
+- `400`: Invalid `agent` value or `year` out of allowed range (before account creation year or after current year)
+- `401`: Unauthorized
+- `404`: User not found
+
+---
+
 ### GET /api/projects/:projectId/activity
 
 Fetch unified activity feed for a project.
