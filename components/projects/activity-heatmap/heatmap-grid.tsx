@@ -89,13 +89,12 @@ export function HeatmapGrid({ data }: HeatmapGridProps) {
                 className={`sticky left-0 z-10 mr-1 flex flex-col bg-background ${CELL_GAP}`}
                 aria-hidden="true"
               >
-                {DAY_LABELS.map((label, i) => (
+                {DAY_LABELS.map((label) => (
                   <div
                     key={label}
                     className={`${CELL_SIZE} text-[10px] leading-none text-muted-foreground`}
                   >
-                    {/* Show every other label to avoid crowding */}
-                    {i % 2 === 1 ? <span className="block">{label}</span> : null}
+                    <span className="block">{label}</span>
                   </div>
                 ))}
               </div>

@@ -3338,13 +3338,13 @@ Fetch aggregated daily job activity for the authenticated user across all access
 **Response** (200 OK):
 ```json
 {
-  "startDate": "2025-04-17",
+  "startDate": "2025-04-18",
   "endDate": "2026-04-17",
   "totalJobs": 142,
   "totalTicketsShipped": 23,
   "days": [
     {
-      "date": "2025-04-17",
+      "date": "2025-04-18",
       "jobCount": 3,
       "totalCostUsd": 0.12,
       "hasCost": true,
@@ -3364,7 +3364,7 @@ Fetch aggregated daily job activity for the authenticated user across all access
 ```
 
 **Notes**:
-- `days` contains one entry per calendar day in [`startDate`, `endDate`], sorted ascending (no gaps)
+- `days` contains one entry per calendar day in [`startDate`, `endDate`], sorted ascending (no gaps) — the example above only shows the first entry; a real rolling-year response contains 365 entries
 - Day boundaries use UTC midnight; `completedAt` is bucketed by UTC date
 - `hasCost` is `true` when at least one job in that day recorded a `costUsd`; otherwise `totalCostUsd` is `0`
 - `availableAgents` always includes the `all` sentinel; named agents appear only when they have at least one job in the period

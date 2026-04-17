@@ -39,10 +39,12 @@ export function HeatmapFilters({
   availableAgents,
   onChange,
 }: HeatmapFiltersProps) {
-  // Hide the agent filter entirely when 0 or 1 distinct agents have activity.
-  // availableAgents always includes the "All" entry, so we look at the named ones.
+  // Hide the agent filter entirely when 0 or 1 distinct agents have activity — but keep
+  // it visible whenever a non-default agent is currently selected, so users can recover
+  // from a stale/period-mismatched `agent` param (which would otherwise produce an empty
+  // dataset the user couldn't clear from the UI).
   const namedAgents = availableAgents.filter((a) => a.value !== 'all');
-  const showAgentFilter = namedAgents.length > 1;
+  const showAgentFilter = namedAgents.length > 1 || filters.agent !== 'all';
 
   const showYearSelector = availableYears.length > 0;
 

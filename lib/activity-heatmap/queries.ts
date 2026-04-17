@@ -64,8 +64,12 @@ function normalizeFilters(
   };
 }
 
-function emptyData(filters: HeatmapFilters, availableYears: number[]): HeatmapData {
-  const { start, end } = getPeriodBoundaries(filters.period);
+function emptyData(
+  filters: HeatmapFilters,
+  availableYears: number[],
+  now: Date
+): HeatmapData {
+  const { start, end } = getPeriodBoundaries(filters.period, now);
   const days = buildDayBuckets(start, end);
   return {
     startDate: toIsoDate(start),
@@ -76,7 +80,7 @@ function emptyData(filters: HeatmapFilters, availableYears: number[]): HeatmapDa
     availableAgents: [{ value: 'all', label: 'All agents', jobCount: 0 }],
     availableYears,
     filters,
-    generatedAt: new Date().toISOString(),
+    generatedAt: now.toISOString(),
   };
 }
 
@@ -124,7 +128,7 @@ export async function getActivityHeatmapForUser(
 
   const projectIds = await getAccessibleProjectIds(userId);
   if (projectIds.length === 0) {
-    return emptyData(filters, availableYears);
+    return emptyData(filters, availableYears, now);
   }
 
   const { start, end } = getPeriodBoundaries(filters.period, now);
@@ -182,7 +186,9 @@ export async function getActivityHeatmapForUser(
     totalJobs += 1;
   }
 
-  let totalTicketsShipped = 0;
+  // Dedupe shipped tickets globally so re-ships after a rollback don't inflate the total.
+  // Per-day lists still dedupe within a day so the tooltip shows each ticket once per cell.
+  const shippedSeenGlobal = new Set<string>();
   const shippedSeenPerDay = new Map<string, Set<string>>();
   for (const row of shipRows) {
     if (!row.completedAt) continue;
@@ -202,8 +208,9 @@ export async function getActivityHeatmapForUser(
       projectKey: row.ticket.project.key,
     };
     day.shippedTickets.push(summary);
-    totalTicketsShipped += 1;
+    shippedSeenGlobal.add(row.ticket.ticketKey);
   }
+  const totalTicketsShipped = shippedSeenGlobal.size;
 
   // Round per-day cost to cents for clean display.
   for (const day of days) {

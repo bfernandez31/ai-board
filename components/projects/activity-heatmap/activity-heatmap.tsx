@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { queryKeys } from '@/app/lib/query-keys';
 import type {
   HeatmapAgentFilter,
@@ -64,23 +64,37 @@ function filtersMatch(a: HeatmapFilters, b: HeatmapFilters): boolean {
   return a.period === b.period && a.agent === b.agent;
 }
 
+function getBrowserTimezone(): string {
+  if (typeof Intl === 'undefined') return 'UTC';
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+}
+
 export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<HeatmapFilters>(() =>
     getInitialFilters(searchParams, initialData)
   );
 
   const useInitial = filtersMatch(filters, initialData.filters);
+  const tz = useMemo(() => getBrowserTimezone(), []);
   const { data } = useQuery({
-    queryKey: queryKeys.activityHeatmap.data(periodToParam(filters.period), filters.agent),
+    queryKey: queryKeys.activityHeatmap.data(periodToParam(filters.period), filters.agent, tz),
     queryFn: () => fetchHeatmap(filters),
-    initialData: useInitial ? initialData : undefined,
     refetchInterval: 60_000,
     staleTime: 30_000,
+    ...(useInitial
+      ? {
+          initialData,
+          initialDataUpdatedAt: new Date(initialData.generatedAt).getTime(),
+        }
+      : {}),
   });
 
-  const heatmap = data ?? initialData;
+  // Only fall back to initialData when the active filters still match it — otherwise
+  // we'd flash stale SSR data while the new query is in flight after a filter change.
+  const heatmap = data ?? (useInitial ? initialData : undefined);
 
   const updateFilters = (next: HeatmapFilters) => {
     setFilters(next);
@@ -96,15 +110,22 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
       params.set('heatmapAgent', next.agent);
     }
     const queryString = params.toString();
-    router.replace(queryString ? `?${queryString}` : '?', { scroll: false });
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
   };
 
   const headerLabel = useMemo(() => {
+    if (!heatmap) return 'Loading activity…';
     const period = heatmap.filters.period;
     const periodLabel =
       period === 'last-12-months' ? 'in the last year' : `in ${period}`;
     return `${heatmap.totalJobs.toLocaleString('en-US')} job${heatmap.totalJobs === 1 ? '' : 's'} · ${heatmap.totalTicketsShipped.toLocaleString('en-US')} ticket${heatmap.totalTicketsShipped === 1 ? '' : 's'} shipped ${periodLabel}`;
-  }, [heatmap.totalJobs, heatmap.totalTicketsShipped, heatmap.filters.period]);
+  }, [heatmap]);
+
+  // Filter metadata (available years/agents) is computed from the user's account and
+  // accessible projects, not the active filter, so initialData is a safe fallback here
+  // even while the filtered query is in flight.
+  const availableYears = heatmap?.availableYears ?? initialData.availableYears;
+  const availableAgents = heatmap?.availableAgents ?? initialData.availableAgents;
 
   return (
     <section
@@ -126,13 +147,22 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
         </div>
         <HeatmapFiltersBar
           filters={filters}
-          availableYears={heatmap.availableYears}
-          availableAgents={heatmap.availableAgents}
+          availableYears={availableYears}
+          availableAgents={availableAgents}
           onChange={updateFilters}
         />
       </div>
 
-      <HeatmapGrid data={heatmap} />
+      {heatmap ? (
+        <HeatmapGrid data={heatmap} />
+      ) : (
+        <div
+          className="flex min-h-[140px] items-center justify-center"
+          data-testid="activity-heatmap-loading"
+        >
+          <p className="text-sm text-muted-foreground">Loading activity…</p>
+        </div>
+      )}
     </section>
   );
 }

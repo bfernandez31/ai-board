@@ -159,7 +159,7 @@ The projects page displays a GitHub-style contribution heatmap above the project
 - Client auto-refreshes every 60 seconds; data is considered stale after 30 seconds
 
 **Empty State**:
-- When the selected period has no activity, all cells appear empty and summary statistics show zero
+- When the selected period has no activity, the heatmap grid is replaced by a centered empty-state message ("No activity to show yet — your AI work will appear here") and summary statistics show zero
 
 ## Project Settings
 

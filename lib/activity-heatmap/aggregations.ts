@@ -63,11 +63,10 @@ export function getPeriodBoundaries(period: HeatmapPeriod, now: Date = new Date(
 /** Years available in the dropdown, given the user's account creation year. */
 export function getAvailableYears(accountCreatedYear: number, now: Date = new Date()): number[] {
   const currentYear = now.getUTCFullYear();
-  if (accountCreatedYear >= currentYear) {
-    return [];
-  }
+  // Clamp below current year in case a bogus future creation year leaks in.
+  const startYear = Math.min(accountCreatedYear, currentYear);
   const years: number[] = [];
-  for (let y = currentYear; y >= accountCreatedYear; y -= 1) {
+  for (let y = currentYear; y >= startYear; y -= 1) {
     years.push(y);
   }
   return years;
@@ -180,6 +179,12 @@ export function computeIntensityThresholds(counts: number[]): number[] {
   if (max <= 4) {
     // For tiny datasets, use the value directly so 1 → bucket 1, 2 → 2, etc.
     return [1, 2, 3, 4];
+  }
+  const min = nonZero[0] ?? 1;
+  if (min === max) {
+    // Uniform distribution: every active day shares the same count. Put them all in the
+    // top bucket rather than collapsing to the faintest shade.
+    return [max - 1, max - 1, max - 1, max];
   }
   const q = (p: number) => {
     const idx = Math.min(nonZero.length - 1, Math.floor(p * nonZero.length));

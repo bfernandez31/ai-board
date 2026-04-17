@@ -79,8 +79,8 @@ export const queryKeys = {
   },
 
   activityHeatmap: {
-    data: (period: string, agent: string) =>
-      ['activity-heatmap', period, agent] as const,
+    data: (period: string, agent: string, tz: string) =>
+      ['activity-heatmap', period, agent, tz] as const,
   },
 } as const;
 

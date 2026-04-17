@@ -33,8 +33,8 @@ describe('activity-heatmap aggregations — date utilities', () => {
 describe('getAvailableYears', () => {
   const now = new Date(Date.UTC(2026, 3, 17));
 
-  it('returns empty list when account was created in the current year', () => {
-    expect(getAvailableYears(2026, now)).toEqual([]);
+  it('returns just the current year when account was created in the current year', () => {
+    expect(getAvailableYears(2026, now)).toEqual([2026]);
   });
 
   it('returns descending years from current down to account creation', () => {
@@ -43,6 +43,10 @@ describe('getAvailableYears', () => {
 
   it('handles single previous year', () => {
     expect(getAvailableYears(2025, now)).toEqual([2026, 2025]);
+  });
+
+  it('clamps bogus future creation years to the current year', () => {
+    expect(getAvailableYears(2030, now)).toEqual([2026]);
   });
 });
 

@@ -17,6 +17,7 @@ vi.mock('next/navigation', () => ({
     prefetch: vi.fn(),
   }),
   useSearchParams: () => mockSearchParams,
+  usePathname: () => '/projects',
 }));
 
 // Replace shadcn Select with a native select so we can drive it from tests.

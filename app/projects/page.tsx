@@ -89,11 +89,11 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
       <ProjectQuotaGate />
 
+      {heatmapData && <ActivityHeatmap initialData={heatmapData} />}
+
       <div className="mt-6">
         <ProjectsContainer projects={projects} />
       </div>
-
-      {heatmapData && <ActivityHeatmap initialData={heatmapData} />}
     </div>
   );
 }

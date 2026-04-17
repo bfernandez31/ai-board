@@ -25,7 +25,7 @@ export interface HeatmapTicketSummary {
 }
 
 export interface HeatmapDayCell {
-  /** ISO date in YYYY-MM-DD form (calendar day, in user's local timezone bucket — see queries.ts). */
+  /** ISO date in YYYY-MM-DD form (calendar day bucketed by UTC day boundaries). */
   date: string;
   jobCount: number;
   /** Sum of costUsd for jobs that have a recorded cost. */
