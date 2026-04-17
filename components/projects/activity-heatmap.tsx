@@ -26,7 +26,6 @@ import {
   buildGrid,
   formatHeatmapDate,
   getIntensityBucket,
-  resolvePeriod,
 } from '@/lib/activity-heatmap/period';
 import type {
   HeatmapData,
@@ -64,13 +63,15 @@ async function fetchHeatmap(filters: HeatmapFilters): Promise<HeatmapData> {
 }
 
 function getInitialFilters(
-  searchParams: URLSearchParams,
+  searchParams: ReturnType<typeof useSearchParams>,
   initialData: HeatmapData
 ): HeatmapFilters {
-  const period = searchParams.get('hm-period') ?? initialData.filters.period;
-  const agentParam = searchParams.get('hm-agent');
-  const agent = (agentParam as AgentFilter | null) ?? initialData.filters.agent;
-  return { period, agent };
+  return {
+    period: searchParams.get('hm-period') ?? initialData.filters.period,
+    agent:
+      (searchParams.get('hm-agent') as AgentFilter | null) ??
+      initialData.filters.agent,
+  };
 }
 
 function filtersMatch(a: HeatmapFilters, b: HeatmapFilters): boolean {
@@ -79,7 +80,6 @@ function filtersMatch(a: HeatmapFilters, b: HeatmapFilters): boolean {
 
 function formatCost(cost: number): string {
   if (cost >= 1000) return `$${(cost / 1000).toFixed(1)}k`;
-  if (cost >= 1) return `$${cost.toFixed(2)}`;
   return `$${cost.toFixed(2)}`;
 }
 
@@ -115,21 +115,23 @@ function HeatmapCell({ day, bucket }: HeatmapCellProps) {
     </div>
   );
 
+  const triggerButton = (
+    <button
+      type="button"
+      aria-label={`${dateLabel}: ${day.jobCount} jobs, ${day.ticketsShipped} shipped`}
+      className={className}
+      data-testid="heatmap-cell"
+      data-date={day.date}
+      data-job-count={day.jobCount}
+    />
+  );
+
   // Desktop hover tooltip + mobile tap popover. Both wrap the same cell.
   return (
     <>
       <div className="hidden sm:block">
         <Tooltip delayDuration={100}>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label={`${dateLabel}: ${day.jobCount} jobs, ${day.ticketsShipped} shipped`}
-              className={className}
-              data-testid="heatmap-cell"
-              data-date={day.date}
-              data-job-count={day.jobCount}
-            />
-          </TooltipTrigger>
+          <TooltipTrigger asChild>{triggerButton}</TooltipTrigger>
           <TooltipContent className="bg-popover text-popover-foreground border">
             {tooltipBody}
           </TooltipContent>
@@ -137,16 +139,7 @@ function HeatmapCell({ day, bucket }: HeatmapCellProps) {
       </div>
       <div className="sm:hidden">
         <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-label={`${dateLabel}: ${day.jobCount} jobs, ${day.ticketsShipped} shipped`}
-              className={className}
-              data-testid="heatmap-cell"
-              data-date={day.date}
-              data-job-count={day.jobCount}
-            />
-          </PopoverTrigger>
+          <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
           <PopoverContent className="w-auto p-2">{tooltipBody}</PopoverContent>
         </Popover>
       </div>
@@ -158,7 +151,7 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<HeatmapFilters>(() =>
-    getInitialFilters(new URLSearchParams(searchParams.toString()), initialData)
+    getInitialFilters(searchParams, initialData)
   );
 
   const shouldUseInitialData = filtersMatch(filters, initialData.filters);
@@ -368,11 +361,3 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
   );
 }
 
-/** Convenience helper for tests / callers that want defaults. */
-export function buildDefaultHeatmapFilters(): HeatmapFilters {
-  return { period: 'last-12-months', agent: 'all' };
-}
-
-// Re-export so callers can detect period parsing without importing from
-// the deeper module path.
-export { resolvePeriod };

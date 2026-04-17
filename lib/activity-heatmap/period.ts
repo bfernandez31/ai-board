@@ -11,13 +11,21 @@ import type { HeatmapPeriod, HeatmapPeriodInfo } from './types';
 
 /** YYYY-MM-DD in UTC */
 export function toIsoDate(date: Date): string {
-  const parts = date.toISOString().split('T');
-  return parts[0] ?? '';
+  return date.toISOString().slice(0, 10);
 }
 
 /** Construct a UTC Date at 00:00 from year/month/day. */
 export function utcDate(year: number, month: number, day: number): Date {
   return new Date(Date.UTC(year, month, day));
+}
+
+/** Parse a YYYY-MM-DD string to a midnight-aligned UTC Date. */
+export function parseIsoDate(iso: string): Date {
+  return utcDate(
+    Number.parseInt(iso.slice(0, 4), 10),
+    Number.parseInt(iso.slice(5, 7), 10) - 1,
+    Number.parseInt(iso.slice(8, 10), 10)
+  );
 }
 
 /** Add `days` to a UTC date and return a new Date (does not mutate). */
@@ -121,16 +129,8 @@ const MONTH_NAMES = [
  * producing the "chipped" corners.
  */
 export function buildGrid(period: HeatmapPeriodInfo): HeatmapGrid {
-  const start = utcDate(
-    Number.parseInt(period.start.slice(0, 4), 10),
-    Number.parseInt(period.start.slice(5, 7), 10) - 1,
-    Number.parseInt(period.start.slice(8, 10), 10)
-  );
-  const end = utcDate(
-    Number.parseInt(period.end.slice(0, 4), 10),
-    Number.parseInt(period.end.slice(5, 7), 10) - 1,
-    Number.parseInt(period.end.slice(8, 10), 10)
-  );
+  const start = parseIsoDate(period.start);
+  const end = parseIsoDate(period.end);
 
   // Sunday before or on start
   const gridStart = addUtcDays(start, -start.getUTCDay());
@@ -193,15 +193,11 @@ export function getIntensityBucket(jobCount: number, maxJobCount: number): 0 | 1
  * Example: "2024-04-17" -> "Wed, Apr 17, 2024".
  */
 export function formatHeatmapDate(isoDate: string): string {
-  const year = Number.parseInt(isoDate.slice(0, 4), 10);
-  const month = Number.parseInt(isoDate.slice(5, 7), 10) - 1;
-  const day = Number.parseInt(isoDate.slice(8, 10), 10);
-  const date = utcDate(year, month, day);
   return new Intl.DateTimeFormat('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     timeZone: 'UTC',
-  }).format(date);
+  }).format(parseIsoDate(isoDate));
 }

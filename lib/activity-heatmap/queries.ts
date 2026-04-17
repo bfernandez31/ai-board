@@ -12,8 +12,8 @@ import { prisma } from '@/lib/db/client';
 import { ALL_AGENTS, getAgentLabel } from '@/app/lib/utils/agent-resolution';
 import type { AgentFilter, AgentOption, NamedAgent } from '@/lib/analytics/types';
 import {
-  buildGrid,
   getAvailableYears,
+  parseIsoDate,
   resolvePeriod,
   toIsoDate,
   utcDate,
@@ -79,17 +79,7 @@ function emptyBuckets(start: Date, end: Date): Map<string, DayBucket> {
 }
 
 function periodBoundsToDates(period: HeatmapPeriodInfo): { start: Date; end: Date } {
-  const start = utcDate(
-    Number.parseInt(period.start.slice(0, 4), 10),
-    Number.parseInt(period.start.slice(5, 7), 10) - 1,
-    Number.parseInt(period.start.slice(8, 10), 10)
-  );
-  const end = utcDate(
-    Number.parseInt(period.end.slice(0, 4), 10),
-    Number.parseInt(period.end.slice(5, 7), 10) - 1,
-    Number.parseInt(period.end.slice(8, 10), 10)
-  );
-  return { start, end };
+  return { start: parseIsoDate(period.start), end: parseIsoDate(period.end) };
 }
 
 /** End of day in UTC for the given midnight-aligned date. */
@@ -228,8 +218,8 @@ export async function getHeatmapData(
   let totalJobs = 0;
   let totalShipped = 0;
 
-  // Iterate buckets in date order to preserve calendar order.
-  // Need to ensure consistent traversal — re-derive sorted keys.
+  // Buckets were inserted in calendar order, but sort explicitly so the
+  // response contract does not depend on Map iteration order.
   const sortedKeys = Array.from(buckets.keys()).sort();
   for (const key of sortedKeys) {
     const bucket = buckets.get(key)!;
@@ -243,10 +233,6 @@ export async function getHeatmapData(
     totalJobs += bucket.jobCount;
     totalShipped += shippedCount;
   }
-
-  // Touch the grid once to ensure period bounds are coherent (also lets
-  // the API surface any boundary error eagerly rather than at render).
-  buildGrid(period);
 
   return {
     period,
