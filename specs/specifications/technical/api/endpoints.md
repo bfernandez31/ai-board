@@ -3515,6 +3515,84 @@ sequenceDiagram
 
 **Performance**: Optimized with database aggregation, <3s for projects with up to 1,000 jobs
 
+### GET /api/activity-heatmap
+
+Fetch cross-project AI activity heatmap for the signed-in user, bucketed by calendar day in the viewer's timezone. Used both for SSR initial data on `/projects` (via shared `getHeatmapData()` helper, no HTTP hop) and for client-side filter changes.
+
+**Authentication**: Required (session or Bearer PAT)
+**Authorization**: User-scoped — aggregates all projects the user owns or is a member of
+
+**Query Parameters**:
+- `y` (string, optional): Period. `12m` = rolling 12 months ending today inclusive (default). `YYYY` = calendar year within `[user.createdAt.year .. currentYear]`; out-of-range values silently coerce to `12m`.
+- `a` (string, optional): Effective-agent filter (`all` | `CLAUDE` | `CODEX` | `MISTRAL` | `GEMINI`, default: `all`). Counts only jobs whose effective agent (`ticket.agent ?? project.defaultAgent`) matches.
+- `tz` (string, optional): IANA timezone string for day bucketing (e.g. `America/New_York`). Invalid values fall back to `UTC` without returning a 400.
+
+**Behavior**:
+- Every job (regardless of status or command) counts toward its day's intensity unless excluded by the agent filter.
+- Shipped counter counts `Job` rows where `command = 'ship' AND status = 'COMPLETED'` and `completedAt` falls in the period, deduped per `ticketId`.
+- When the user has zero accessible projects or zero jobs in the period, the response still returns a fully-shaped payload with all-zero cells and `intensityThresholds: [0,0,0,0]`; the UI renders the empty-state message without a second request.
+- `availableAgents` is always computed from the unfiltered job set so the filter does not disappear after selection.
+- `costUsd` on a cell is `null` only when every job that day has `costUsd === null`; otherwise it is the sum of the non-null entries.
+
+**Response** (200 OK):
+```json
+{
+  "period": {
+    "kind": "calendarYear",
+    "year": 2025,
+    "startDate": "2025-01-01",
+    "endDate": "2025-12-31",
+    "timezone": "America/New_York"
+  },
+  "counters": { "jobCount": 412, "shippedTicketCount": 27 },
+  "cells": [
+    {
+      "date": "2025-01-01",
+      "jobCount": 0,
+      "costUsd": null,
+      "nullCostJobCount": 0,
+      "shippedTickets": [],
+      "intensity": 0
+    },
+    {
+      "date": "2025-06-12",
+      "jobCount": 8,
+      "costUsd": 1.24,
+      "nullCostJobCount": 1,
+      "shippedTickets": [{ "ticketId": 431, "title": "Add login" }],
+      "intensity": 3
+    }
+  ],
+  "intensityThresholds": [3, 6, 9, 12],
+  "availableAgents": ["CLAUDE", "CODEX"],
+  "yearSelector": {
+    "calendarYears": [2023, 2024, 2025, 2026],
+    "currentYear": 2026
+  }
+}
+```
+
+**Fields**:
+- `period.kind`: `rolling12m` for the default or `calendarYear` for a selected year
+- `period.startDate` / `period.endDate`: inclusive bounds in `YYYY-MM-DD` format, in the resolved timezone
+- `period.timezone`: IANA tz actually used (may differ from request when fallback to UTC occurred)
+- `counters.jobCount`: total jobs in period matching the agent filter
+- `counters.shippedTicketCount`: distinct tickets with a successful `ship` job completing in period, matching the agent filter
+- `cells[].date`: calendar day in `YYYY-MM-DD` in the resolved timezone
+- `cells[].intensity`: 0–4; 0 = no activity, 1–4 = non-zero intensity steps derived from `intensityThresholds`
+- `cells[].costUsd`: sum of non-null job costs for the day; `null` when all jobs that day have no recorded cost
+- `cells[].nullCostJobCount`: number of jobs on that day with no recorded cost
+- `cells[].shippedTickets[].ticketId`: `null` for deleted tickets
+- `cells[].shippedTickets[].title`: `null` for deleted tickets
+- `intensityThresholds`: four thresholds `[t1, t2, t3, t4]`; a cell's intensity = 1 if `jobCount >= t1`, 2 if `>= t2`, etc.
+- `availableAgents`: distinct effective agents found in the user's unfiltered job set for the period
+- `yearSelector.calendarYears`: sorted list of selectable calendar years (`[]` when account was created in the current year)
+
+**Errors**:
+- `400`: `{ "error": "Invalid heatmap filters" }` — Zod validation failure on `y` or `a`; `tz` never triggers 400
+- `401`: `{ "error": "Unauthorized" }` — no session and no valid Bearer token
+- `500`: `{ "error": "Internal server error" }` — unexpected exception; logged with `console.error('Activity heatmap API error:', …)`
+
 ## Project Member Endpoints
 
 ### GET /api/projects/:projectId/members

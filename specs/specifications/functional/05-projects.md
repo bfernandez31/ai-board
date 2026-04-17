@@ -393,6 +393,58 @@ Projects track activity across all tickets:
 - Ticket count shows total across all stages
 - Activity visible in project list view
 
+## Activity Heatmap
+
+A GitHub-style contribution heatmap appears on the `/projects` page, below the project cards grid, summarising AI activity across every project the signed-in user owns or is a member of.
+
+### Heatmap Grid
+
+The heatmap renders a 7-row grid (one row per day of week, Sunday first) with one cell per calendar day in the selected period. Month labels appear along the top; day-of-week labels are pinned to the left edge. Each cell is coloured by job intensity across 5 levels (empty + 4 non-zero steps) using the aurora violet gradient from the application theme. Days that fall outside the selected period's boundaries are omitted (chipped corners), matching GitHub's contribution graph convention.
+
+**Period options**:
+- **Last 12 months** (default): rolling window ending today, inclusive; same coverage as GitHub's rolling contribution graph
+- **Calendar year**: any year from the user's account-creation year through the current year; grid spans Jan 1–Dec 31 with chipped corners where the first/last week extends beyond the period
+
+**Intensity scale**: thresholds are derived from the active period's maximum job count so the distribution is readable for both low-volume and high-volume users.
+
+**Empty state**: when the selected period contains zero job activity the grid is replaced by a centred message "No activity to show yet — your AI work will appear here". The legend and filter controls remain visible.
+
+### Header Counter
+
+Above the grid, a counter reads "X jobs · Y tickets shipped in {period phrase}". The period phrase is "the last year" for the rolling default and the 4-digit year for a selected calendar year. Counter values update immediately when the user changes the year or agent filter.
+
+A ticket is counted as shipped on the day its `ship` workflow job completed successfully. Stage transitions to SHIP without a successful `ship` job are never counted.
+
+### Year Selector
+
+A year selector above the grid defaults to "Last 12 months". Additional options list each calendar year from the user's account-creation year through the current year. When the user's account was created in the current calendar year, the selector is hidden or disabled (only the rolling default is reachable).
+
+### Tooltip
+
+Hovering (desktop) or tapping (mobile) any cell — including empty cells — reveals a tooltip showing:
+- Formatted date
+- List of tickets shipped that day (by title; deleted tickets are collapsed into a count, e.g., "2 more tickets shipped")
+- Job count
+- Total cost for that day's jobs (omitted entirely when every job that day has no recorded cost; never "$NaN" or "$0" as a placeholder)
+
+On touch devices, tapping anywhere outside the tooltip dismisses it.
+
+### Agent Filter
+
+When the user's jobs span two or more distinct effective agents, an agent filter appears alongside the year selector. The filter always includes "All" (default). Selecting a specific agent updates cell intensities and the header counter without changing the grid boundaries or chipped corners. Effective agent is resolved as `ticket.agent ?? project.defaultAgent`; tickets with a null `ticket.agent` on a project whose `defaultAgent` matches the selected agent are included. The filter is hidden when the user's data contains 0 or 1 distinct agents.
+
+### URL State
+
+Non-default year and agent selections are reflected in the page URL as query parameters so the exact view can be reproduced by copying and opening the URL. Default values (rolling period, "All" agents) are omitted from the URL to keep clean-state links short.
+
+### Loading and Layout
+
+The heatmap is rendered server-side with initial data on the first page load — no loading spinner or blank placeholder appears before the grid. Background refetches (on filter change or query invalidation) update the grid in place without blanking the UI. On narrow viewports, the grid scrolls horizontally; the day-of-week labels remain pinned to the left throughout the scroll, and all cells maintain a tappable minimum touch target.
+
+### Data Source
+
+The heatmap is a read-only projection of existing `Job`, `Ticket`, and `Project` records — no new database models are introduced. Every job (regardless of status or command) counts toward its day's intensity unless excluded by the agent filter.
+
 ## Project Actions
 
 ### Project Analytics
