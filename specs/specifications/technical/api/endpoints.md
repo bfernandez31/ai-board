@@ -1944,6 +1944,68 @@ Delivery handled by:
 - Service worker at `/public/sw.js` handles push events and notification clicks in browser
 - VAPID authentication configured via environment variables (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT)
 
+## User Endpoints
+
+### GET /api/user/activity-heatmap
+
+Fetch aggregated AI activity data for the authenticated user, suitable for rendering a GitHub-style contribution heatmap across all owned and member projects.
+
+**Authentication**: Required (session)
+**Authorization**: User can only access their own activity data
+
+**Query Parameters**:
+- `period` (optional): `"last-12-months"` (default) or a 4-digit year string (e.g., `"2025"`). Invalid values return 400.
+- `agent` (optional): `"all"` (default) or a named agent value (e.g., `"CLAUDE"`, `"CODEX"`). Invalid values return 400.
+
+**Response** (200 OK):
+```json
+{
+  "filters": { "period": "last-12-months", "agent": "all" },
+  "periodStart": "2025-04-17",
+  "periodEnd": "2026-04-17",
+  "days": [
+    {
+      "date": "2026-04-10",
+      "jobCount": 5,
+      "totalCost": 0.12,
+      "ticketsShipped": 2
+    }
+  ],
+  "totalJobs": 42,
+  "totalTicketsShipped": 10,
+  "availableAgents": [
+    { "value": "all", "label": "All agents", "jobCount": 42 },
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 38 }
+  ],
+  "availablePeriods": [
+    { "value": "last-12-months", "label": "Last 12 months" },
+    { "value": "2025", "label": "2025" }
+  ],
+  "generatedAt": "2026-04-17T10:00:00.000Z"
+}
+```
+
+**Fields**:
+- `filters`: The normalized filters applied (period and agent may differ from query params if invalid values were coerced to defaults)
+- `periodStart` / `periodEnd`: Inclusive period boundaries in `YYYY-MM-DD` format
+- `days`: Non-zero activity days only (zero-activity days are omitted); each entry has `date` (ISO `YYYY-MM-DD`), `jobCount` (completed jobs), `totalCost` (sum of `costUsd`; `null` when no cost data exists for any job that day), and `ticketsShipped` (distinct tickets with a completed `ship` job)
+- `totalJobs`: Sum of `jobCount` across all days in the period
+- `totalTicketsShipped`: Sum of `ticketsShipped` across all days in the period
+- `availableAgents`: Agents that have completed jobs across the user's projects; includes `"all"` as the first entry; agents with zero jobs are excluded
+- `availablePeriods`: Calendar years from user account creation to current year, plus the always-present `"last-12-months"` option
+- `generatedAt`: ISO 8601 timestamp of response generation
+
+**Errors**:
+- `400`: Invalid `period` or `agent` query parameter
+- `401`: Not authenticated
+- `500`: Internal server error
+
+**Behavior**:
+- Aggregates `Job` rows with `status = COMPLETED` across all projects the user owns or is a member of
+- Effective agent is resolved per ticket: `ticket.agent ?? project.defaultAgent`
+- `ship` jobs with a non-null `ticketId` count toward `ticketsShipped` for the day they completed
+- Projects with no jobs return empty `days` arrays; `totalJobs` and `totalTicketsShipped` are 0
+
 ## Timeline Endpoints
 
 ### GET /api/projects/:projectId/tickets/:id/jobs

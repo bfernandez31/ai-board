@@ -393,6 +393,44 @@ Projects track activity across all tickets:
 - Ticket count shows total across all stages
 - Activity visible in project list view
 
+## Activity Heatmap
+
+The projects page displays a GitHub-style contribution heatmap below the project cards grid, visualizing AI workflow activity across all of the user's owned and member projects.
+
+### Layout
+
+- Rendered below the project cards grid on the `/projects` page
+- The page uses full-page scrolling (no fixed-height container) so the heatmap reveals via natural scroll
+- The grid is 7 rows (days of week) × N columns (weeks in the selected period)
+- Day-of-week labels are sticky on the left edge
+- On mobile the grid scrolls horizontally via `overflow-x-auto`
+
+### Visual Design
+
+- Cell color intensity reflects the number of completed jobs on that day using violet gradient classes (`aurora-heatmap-cell-*` defined in `globals.css`)
+- Days with no activity render as empty/background cells
+- Tooltip on hover shows: job count, total cost (omitted when no cost data was recorded that day), and tickets shipped count
+
+### Filters
+
+**Period selector**:
+- Options: "Last 12 months" (default) and one entry per calendar year from the user's account creation year to the current year
+- Hidden when only the default option is available (no completed year in history)
+
+**Agent selector**:
+- Options: "All agents" plus one entry per distinct effective agent with completed jobs
+- Hidden when 0 or 1 distinct agents exist (selector would add no value)
+
+Filter selections push `heatmapPeriod` and `heatmapAgent` query parameters so the selected view is shareable via URL.
+
+### Data
+
+- Aggregates `Job` rows with `status = COMPLETED` across all projects the user owns or is a member of
+- Effective agent per job resolved as `ticket.agent ?? project.defaultAgent`
+- Tickets shipped counts distinct tickets with a completed `ship` job on a given day
+- Zero-activity days are not included in the API payload (omitted for payload size)
+- Initial data is server-rendered and hydrated into TanStack Query to avoid a loading flash on first render
+
 ## Project Actions
 
 ### Project Analytics
