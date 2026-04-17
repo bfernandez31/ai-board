@@ -25,11 +25,11 @@ const mockData = {
   trendDelta: 4,
   distribution: { excellent: 1, good: 3, fair: 1, poor: 0 },
   dimensions: [
-    { name: 'Compliance', averageScore: 88, weight: 0.40 },
+    { name: 'Compliance', averageScore: 88, weight: 0.30 },
     { name: 'Bug Detection', averageScore: 79, weight: 0.30 },
-    { name: 'Code Comments', averageScore: 75, weight: 0.20 },
-    { name: 'Historical Context', averageScore: 70, weight: 0.10 },
-    { name: 'Spec Sync', averageScore: 65, weight: 0.00 },
+    { name: 'Product Contract Sync', averageScore: 75, weight: 0.20 },
+    { name: 'Edge Cases & Failure Modes', averageScore: 70, weight: 0.15 },
+    { name: 'Historical Context', averageScore: 65, weight: 0.05 },
   ],
   recentTickets: [
     { ticketKey: 'AIB-120', title: 'Add user preferences', score: 85, completedAt: '2026-03-25T14:30:00.000Z' },
@@ -70,9 +70,9 @@ describe('QualityGateDrawer', () => {
       expect(screen.getByText('Compliance')).toBeInTheDocument();
     });
     expect(screen.getByText('Bug Detection')).toBeInTheDocument();
-    expect(screen.getByText('Code Comments')).toBeInTheDocument();
+    expect(screen.getByText('Product Contract Sync')).toBeInTheDocument();
+    expect(screen.getByText('Edge Cases & Failure Modes')).toBeInTheDocument();
     expect(screen.getByText('Historical Context')).toBeInTheDocument();
-    expect(screen.getByText('Spec Sync')).toBeInTheDocument();
   });
 
   it('renders recent tickets list with keys and scores', async () => {

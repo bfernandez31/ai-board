@@ -1,5 +1,10 @@
 import { prisma } from '@/lib/db/client';
-import { DIMENSION_CONFIG, parseQualityScoreDetails } from '@/lib/quality-score';
+import {
+  DIMENSION_CONFIG,
+  inferDimensionAgentId,
+  normalizeDimensionAgentId,
+  parseQualityScoreDetails,
+} from '@/lib/quality-score';
 import type { ThresholdDistribution } from './types';
 import type { Stage, WorkflowType } from '@prisma/client';
 
@@ -76,10 +81,18 @@ export function computeDimensionAverages(
     const parsed = parseQualityScoreDetails(raw);
     if (!parsed?.dimensions) continue;
     for (const dim of parsed.dimensions) {
-      const existing = sums.get(dim.agentId) ?? { total: 0, count: 0 };
+      const agentId = typeof dim.agentId === 'string' && dim.agentId.length > 0
+        ? normalizeDimensionAgentId(dim.agentId)
+        : inferDimensionAgentId(dim.name);
+
+      if (!agentId) {
+        continue;
+      }
+
+      const existing = sums.get(agentId) ?? { total: 0, count: 0 };
       existing.total += dim.score;
       existing.count += 1;
-      sums.set(dim.agentId, existing);
+      sums.set(agentId, existing);
     }
   }
 
