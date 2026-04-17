@@ -4496,6 +4496,63 @@ Fetch unified activity feed for a project.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 
+## Heatmap Endpoints
+
+### GET /api/heatmap
+
+Fetch activity heatmap data for the authenticated user across all projects they own or are a member of.
+
+**Authentication**: Required (session)
+
+**Query Parameters**:
+- `period` (string, optional): `last-12-months` (rolling) or a 4-digit calendar year (e.g., `2025`). Default: `last-12-months`.
+- `agent` (string, optional): `all`, `CLAUDE`, `CODEX`, `MISTRAL`, or `GEMINI`. Default: `all`.
+
+**Response** (200 OK):
+```json
+{
+  "days": [
+    {
+      "date": "2025-01-15",
+      "jobCount": 5,
+      "totalCost": 0.42,
+      "ticketsShipped": 2
+    }
+  ],
+  "periodStart": "2025-01-01",
+  "periodEnd": "2025-12-31",
+  "totalJobs": 120,
+  "totalShipped": 18,
+  "filters": {
+    "period": "last-12-months",
+    "agent": "all"
+  },
+  "periodOptions": [
+    { "value": "last-12-months", "label": "Last 12 months" },
+    { "value": "2025", "label": "2025" }
+  ],
+  "agentOptions": [
+    { "value": "all", "label": "All agents" },
+    { "value": "CLAUDE", "label": "Claude" }
+  ],
+  "generatedAt": "2025-01-15T10:10:00.000Z"
+}
+```
+
+**Field Notes**:
+- `days`: One entry per calendar day in the period; days with no activity have `jobCount: 0`, `totalCost: null`, `ticketsShipped: 0`
+- `totalCost`: Sum of `costUsd` for jobs with non-null cost for that day; `null` when no job has a recorded cost
+- `ticketsShipped`: Count of `ship` jobs with `status: COMPLETED` on that day
+- `periodOptions`: "Last 12 months" plus one entry per calendar year from account creation year to current year
+- `agentOptions`: Only agents present in the user's actual job history; always includes "All agents"
+
+**Agent filter semantics**: Honors effective agent resolution — a ticket with `agent: null` inherits the project's `defaultAgent`. Filtering for `CLAUDE` matches tickets with `agent=CLAUDE` OR tickets with `agent=null` on a project with `defaultAgent=CLAUDE`.
+
+**Errors**:
+- `401`: Not authenticated
+- `404`: User not found
+- `500`: Internal server error
+
 ## Token Endpoints
 
 ### GET /api/tokens

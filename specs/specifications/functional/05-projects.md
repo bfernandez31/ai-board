@@ -127,6 +127,55 @@ When no projects exist:
 - All text content uses `min-w-0` and `truncate` utilities to prevent horizontal scroll
 - Cards maintain fixed width boundaries on mobile viewports (375px minimum)
 
+## Activity Heatmap
+
+The projects page includes a GitHub-style activity heatmap below the project card grid, showing AI job activity across all of the user's projects over the selected period.
+
+### Grid Layout
+
+- 7 rows (days of week), columns span the selected period
+- Month labels along the top, day-of-week labels pinned to the left
+- Cell intensity reflects job count for that day using a violet gradient (aurora theme)
+- Intensity legend in the bottom right: Less □□■■■ More
+- The grid matches GitHub's contribution calendar behavior: when a period does not start on Sunday, cells before the first active day are not rendered ("chipped" top-left corner); same applies to the bottom-right
+- When the entire period has zero activity, the grid is replaced by a centered message: "No activity to show yet — your AI work will appear here"; legend and filters remain visible
+
+### Header
+
+- Summary counter: "X jobs · Y tickets shipped in the last year"
+- A ticket counts as **shipped** on the day its `ship` workflow job completed with `status: COMPLETED`; a stage transition to SHIP without a completed ship job does not count
+- Year selector dropdown built dynamically from the user's account history:
+  - Default option: "Last 12 months" (rolling 365-day window)
+  - Additional options: each calendar year from account creation year to the current year
+  - If the user created their account in the current year, only "Last 12 months" is shown
+
+### Tooltip on Hover
+
+Each cell shows a tooltip on hover (tap to show on mobile, tap outside to dismiss):
+- Tickets shipped that day
+- Job count and total cost; cost line is omitted when no job has a recorded cost (never "$NaN" or "$0" for missing data)
+- Formatted date
+
+### Filters
+
+- **Agent filter**: built dynamically from the user's actual job history across all projects, following the same effective-agent resolution used by the analytics dashboard
+  - Always includes an "All" option selected by default
+  - Hidden entirely when only 0 or 1 distinct agent is present in the data
+  - Honors effective agent resolution: tickets with no explicit agent inherit the project's `defaultAgent`
+- The heatmap always renders the full period grid regardless of which filter is active
+- Active filter state is reflected in URL query parameters so links reproduce the exact same view
+
+### Layout and Performance
+
+- Positioned below the project card grid on `/projects`, full width
+- Server-rendered initial data: the heatmap is visible on first render with no spinner flash
+- Background refetches update silently without blanking the UI
+
+### Mobile
+
+- The grid scrolls horizontally; cells never wrap or shrink below a tappable size
+- Day-of-week labels stay pinned to the left during horizontal scroll
+
 ## Project Settings
 
 ### Settings Page Navigation
