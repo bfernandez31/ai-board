@@ -83,10 +83,7 @@ export function buildHeatmapGrid(cells: HeatmapCell[]): HeatmapGrid {
     }
   }
 
-  const lastDow = (firstDow + cells.length - 1) % 7;
-  const lastCol = Math.floor((firstDow + cells.length - 1) / 7);
-  const columns = lastCol + 1;
-  void lastDow;
+  const columns = Math.floor((firstDow + cells.length - 1) / 7) + 1;
 
   return { cells: gridCells, columns, months, maxJobCount };
 }

@@ -113,10 +113,6 @@ function buildEffectiveAgentWhere(agent: AgentFilter): Prisma.TicketWhereInput |
   };
 }
 
-interface ProjectMembership {
-  id: number;
-}
-
 async function getAccessibleProjectIds(userId: string): Promise<number[]> {
   const projects = await prisma.project.findMany({
     where: {
@@ -124,19 +120,14 @@ async function getAccessibleProjectIds(userId: string): Promise<number[]> {
     },
     select: { id: true },
   });
-  return projects.map((p: ProjectMembership) => p.id);
+  return projects.map((p) => p.id);
 }
 
-async function getAvailableAgents(
-  userId: string,
-  projectIds: number[]
-): Promise<HeatmapAgentOption[]> {
+async function getAvailableAgents(projectIds: number[]): Promise<HeatmapAgentOption[]> {
   if (projectIds.length === 0) {
     return [{ value: 'all', label: 'All agents', jobCount: 0 }];
   }
 
-  // Count jobs grouped by effective agent across *all* user projects
-  // (no date range — "distinct agents actually present in the user's jobs")
   const tickets = await prisma.ticket.findMany({
     where: {
       projectId: { in: projectIds },
@@ -167,7 +158,6 @@ async function getAvailableAgents(
     }
   }
 
-  void userId; // accessible via projects — kept for clarity
   return options;
 }
 
@@ -303,7 +293,7 @@ export async function getUserHeatmapData(
   const [totalJobs, totalShipped, availableAgents] = await Promise.all([
     aggregateJobs(projectIds, agent, start, end, cells),
     aggregateShipped(projectIds, agent, start, end, cells),
-    getAvailableAgents(userId, projectIds),
+    getAvailableAgents(projectIds),
   ]);
 
   return {
