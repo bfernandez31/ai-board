@@ -50,6 +50,12 @@ export const queryKeys = {
       ['analytics', projectId, range, outcome, agent] as const,
   },
 
+  activityHeatmap: {
+    all: ['activity-heatmap'] as const,
+    data: (year: string, agent: string, tz: string) =>
+      ['activity-heatmap', year, agent, tz] as const,
+  },
+
   users: {
     all: ['users'] as const,
     current: ['users', 'current'] as const,

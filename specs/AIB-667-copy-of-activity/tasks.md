@@ -22,9 +22,9 @@ description: "Task list for AIB-667 — Activity Heatmap on Projects Page"
 
 **Purpose**: Prepare the directory scaffolding and shared CSS/utility classes the feature depends on.
 
-- [ ] T001 Create new source directory `lib/activity/` (module for heatmap domain) at repo root
-- [ ] T002 [P] Add aurora-cell utility classes `aurora-cell-0` through `aurora-cell-4` in `app/globals.css` under `@layer utilities` (violet gradient per FR-005; full literal class names only — no dynamic interpolation)
-- [ ] T003 [P] Register `activityHeatmap` query-key factory in `app/lib/query-keys.ts` with signature `{ data: (year, agent, tz) => [...] }`
+- [X] T001 ✅ DONE Create new source directory `lib/activity/` (module for heatmap domain) at repo root
+- [X] T002 ✅ DONE [P] Add aurora-cell utility classes `aurora-cell-0` through `aurora-cell-4` in `app/globals.css` under `@layer utilities` (violet gradient per FR-005; full literal class names only — no dynamic interpolation)
+- [X] T003 ✅ DONE [P] Register `activityHeatmap` query-key factory in `app/lib/query-keys.ts` with signature `{ data: (year, agent, tz) => [...] }`
 
 ---
 
@@ -34,9 +34,9 @@ description: "Task list for AIB-667 — Activity Heatmap on Projects Page"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 [P] Create runtime DTO types (`HeatmapFilters`, `HeatmapDay`, `HeatmapGridRange`, `HeatmapAgentOption`, `HeatmapYearOption`, `HeatmapResponse`, `HeatmapYearSelection`, `HeatmapAgentFilter`) in `lib/activity/heatmap-types.ts` per data-model.md
-- [ ] T005 [P] Create pure bucketing helpers `bucketJobsByLocalDay`, `buildGridSkeleton`, `getIntensityLevel`, `getIntensityClass`, `buildYearOptions`, `buildAgentOptions` in `lib/activity/heatmap-bucketing.ts` (depends on T004 for types; `totalCostUsd` MUST be omitted — never zero-filled — when no job had cost data per FR-015/SC-008; `getIntensityClass` returns full literal class strings per CLAUDE.md Tailwind rule)
-- [ ] T006 [P] Create unit tests for bucketing helpers in `tests/unit/activity/heatmap-bucketing.test.ts` (new file — no existing coverage). Cases: tz day boundaries (PST vs EST), null-cost day omits `totalCostUsd`, 2024 (Monday start) → top-left chipped, year ending mid-week → bottom-right chipped, intensity thresholds at 0/1/3/7/100, `buildYearOptions` for current-year-only account vs multi-year account. Tests MUST be written and FAIL before T005 implementation is complete (TDD per constitution §III)
+- [X] T004 ✅ DONE [P] Create runtime DTO types (`HeatmapFilters`, `HeatmapDay`, `HeatmapGridRange`, `HeatmapAgentOption`, `HeatmapYearOption`, `HeatmapResponse`, `HeatmapYearSelection`, `HeatmapAgentFilter`) in `lib/activity/heatmap-types.ts` per data-model.md
+- [X] T005 ✅ DONE [P] Create pure bucketing helpers `bucketJobsByLocalDay`, `buildGridSkeleton`, `getIntensityLevel`, `getIntensityClass`, `buildYearOptions`, `buildAgentOptions` in `lib/activity/heatmap-bucketing.ts` (depends on T004 for types; `totalCostUsd` MUST be omitted — never zero-filled — when no job had cost data per FR-015/SC-008; `getIntensityClass` returns full literal class strings per CLAUDE.md Tailwind rule)
+- [X] T006 ✅ DONE [P] Create unit tests for bucketing helpers in `tests/unit/activity/heatmap-bucketing.test.ts` (new file — no existing coverage). Cases: tz day boundaries (PST vs EST), null-cost day omits `totalCostUsd`, 2024 (Monday start) → top-left chipped, year ending mid-week → bottom-right chipped, intensity thresholds at 0/1/3/7/100, `buildYearOptions` for current-year-only account vs multi-year account. Tests MUST be written and FAIL before T005 implementation is complete (TDD per constitution §III)
 
 **Checkpoint**: Shared types + tested pure helpers + CSS tokens ready. User story phases can now begin.
 
