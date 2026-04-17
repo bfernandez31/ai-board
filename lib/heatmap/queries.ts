@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { ALL_AGENTS, getAgentLabel } from '@/app/lib/utils/agent-resolution';
 import {
+  DAY_MS,
   DEFAULT_HEATMAP_FILTERS,
   buildPeriodOptions,
   fillDateRange,
@@ -103,7 +104,7 @@ export async function getHeatmapData(
   const { start, end } = getPeriodBounds(normalizedFilters.period, now);
 
   // End-exclusive upper bound for range comparisons: start of the day after `end`.
-  const rangeEndExclusive = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+  const rangeEndExclusive = new Date(end.getTime() + DAY_MS);
 
   const ticketAgentWhere = buildEffectiveAgentWhere(normalizedFilters.agent);
   const ticketWhere: Prisma.TicketWhereInput = {

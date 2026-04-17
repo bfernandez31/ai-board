@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { queryKeys } from '@/app/lib/query-keys';
@@ -99,7 +99,7 @@ export function ProjectsActivityHeatmap({ initialData }: ProjectsActivityHeatmap
     refetchOnWindowFocus: false,
   });
 
-  const heatmap = data ?? (shouldUseInitial ? initialData : undefined);
+  const heatmap = data;
 
   const updateFilters = (next: HeatmapFilters) => {
     setFilters(next);
@@ -112,14 +112,15 @@ export function ProjectsActivityHeatmap({ initialData }: ProjectsActivityHeatmap
   const showAgentFilter = agentOptions.length > 2;
   const showPeriodFilter = periodOptions.length > 1;
 
-  const headerText = useMemo(() => {
-    if (!heatmap) return '';
-    return buildHeaderText(heatmap.totalJobs, heatmap.totalShipped, heatmap.filters.period);
-  }, [heatmap]);
-
   if (!heatmap) {
     return null;
   }
+
+  const headerText = buildHeaderText(
+    heatmap.totalJobs,
+    heatmap.totalShipped,
+    heatmap.filters.period
+  );
 
   return (
     <section

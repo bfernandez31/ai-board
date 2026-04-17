@@ -77,9 +77,11 @@ export function buildPeriodOptions(
   const currentYear = now.getUTCFullYear();
   const firstYear = Math.min(accountCreatedAt.getUTCFullYear(), currentYear);
 
-  for (let year = currentYear; year >= firstYear; year--) {
-    if (year === currentYear && firstYear === currentYear) continue;
-    options.push({ value: String(year) as HeatmapPeriod, label: String(year) });
+  // Only add calendar-year options when the account has history before this year.
+  if (firstYear < currentYear) {
+    for (let year = currentYear; year >= firstYear; year--) {
+      options.push({ value: String(year) as HeatmapPeriod, label: String(year) });
+    }
   }
   return options;
 }
