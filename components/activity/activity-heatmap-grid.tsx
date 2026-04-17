@@ -9,13 +9,12 @@ interface ActivityHeatmapGridProps {
   range: HeatmapGridRange;
 }
 
-interface GridSlot {
-  kind: 'data' | 'skeleton';
-  day?: HeatmapDay;
-  isoDate: string;
-}
+type GridSlot =
+  | { kind: 'data'; day: HeatmapDay; isoDate: string }
+  | { kind: 'skeleton'; isoDate: string };
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_FORMATTER = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short' });
 
 function parseIsoDate(iso: string): Date {
   const [y, m, d] = iso.split('-').map((part) => Number.parseInt(part, 10));
@@ -55,29 +54,17 @@ function buildColumns(range: HeatmapGridRange, days: HeatmapDay[]): {
     const week: GridSlot[] = [];
     for (let i = 0; i < 7; i += 1) {
       const iso = addDays(cursor, i);
-      const isInRange = iso >= range.startDate && iso <= range.endDate;
-      if (isInRange) {
-        const day = dayMap.get(iso);
-        if (day) {
-          week.push({ kind: 'data', day, isoDate: iso });
-        } else {
-          week.push({ kind: 'skeleton', isoDate: iso });
-        }
-      } else {
-        week.push({ kind: 'skeleton', isoDate: iso });
-      }
+      const inRange = iso >= range.startDate && iso <= range.endDate;
+      const day = inRange ? dayMap.get(iso) : undefined;
+      week.push(day ? { kind: 'data', day, isoDate: iso } : { kind: 'skeleton', isoDate: iso });
     }
     // Month label: pulled from first in-range day of this column
     const firstInRange = week.find((s) => s.kind === 'data');
     if (firstInRange) {
-      const month = parseIsoDate(firstInRange.isoDate).getUTCMonth();
+      const date = parseIsoDate(firstInRange.isoDate);
+      const month = date.getUTCMonth();
       if (month !== lastMonth) {
-        monthLabels.push({
-          label: new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short' }).format(
-            parseIsoDate(firstInRange.isoDate)
-          ),
-          weekIndex,
-        });
+        monthLabels.push({ label: MONTH_FORMATTER.format(date), weekIndex });
         lastMonth = month;
       }
     }
@@ -129,7 +116,7 @@ export function ActivityHeatmapGrid({ days, range }: ActivityHeatmapGridProps) {
             {columns.map((week, wIdx) => (
               <div key={wIdx} className="flex flex-col gap-1">
                 {week.map((slot) =>
-                  slot.kind === 'data' && slot.day ? (
+                  slot.kind === 'data' ? (
                     <ActivityHeatmapCell key={slot.isoDate} day={slot.day} />
                   ) : (
                     <span

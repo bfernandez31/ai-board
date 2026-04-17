@@ -25,8 +25,8 @@ function formatReadableDate(iso: string): string {
 
 export function ActivityHeatmapCell({ day }: ActivityHeatmapCellProps) {
   const intensityClass = getIntensityClass(day.intensity);
-  const ariaLabel = `${formatReadableDate(day.date)}: ${day.jobCount} jobs, ${day.ticketsShipped} tickets shipped`;
   const dateLabel = formatReadableDate(day.date);
+  const ariaLabel = `${dateLabel}: ${day.jobCount} jobs, ${day.ticketsShipped} tickets shipped`;
 
   return (
     <Tooltip delayDuration={100}>
