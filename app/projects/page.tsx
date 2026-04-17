@@ -3,8 +3,13 @@ import { ProjectsContainer } from '@/components/projects/projects-container';
 import { ProjectQuotaGate } from '@/components/projects/project-quota-gate';
 import { UsageBanner } from '@/components/billing/usage-banner';
 import { ProjectsHeaderActions } from '@/components/projects/projects-header-actions';
+import { ActivityHeatmap } from '@/components/projects/activity-heatmap';
 import { toProjectWithCount, type ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
+import { getCurrentUserOrNull } from '@/lib/db/users';
+import { prisma } from '@/lib/db/client';
+import { getHeatmapData } from '@/lib/activity-heatmap/queries';
+import type { HeatmapData } from '@/lib/activity-heatmap/types';
 
 // Force dynamic rendering - this page uses headers() for auth
 export const dynamic = 'force-dynamic';
@@ -26,8 +31,30 @@ async function getProjects(): Promise<ProjectsListResponse> {
   }
 }
 
+async function getInitialHeatmap(): Promise<HeatmapData | null> {
+  try {
+    const user = await getCurrentUserOrNull();
+    if (!user) return null;
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { createdAt: true },
+    });
+    if (!dbUser) return null;
+    return await getHeatmapData(user.id, dbUser.createdAt, {
+      period: 'last-12-months',
+      agent: 'all',
+    });
+  } catch (error) {
+    console.error('Failed to fetch initial activity heatmap:', error);
+    return null;
+  }
+}
+
 export default async function ProjectsPage() {
-  const projects = await getProjects();
+  const [projects, initialHeatmap] = await Promise.all([
+    getProjects(),
+    getInitialHeatmap(),
+  ]);
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -43,6 +70,12 @@ export default async function ProjectsPage() {
       <div className="mt-6">
         <ProjectsContainer projects={projects} />
       </div>
+
+      {initialHeatmap && projects.length > 0 && (
+        <div className="mt-8">
+          <ActivityHeatmap initialData={initialHeatmap} />
+        </div>
+      )}
     </div>
   );
 }
