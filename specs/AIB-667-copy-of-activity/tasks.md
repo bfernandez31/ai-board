@@ -80,11 +80,11 @@ description: "Task list for AIB-667 — Activity Heatmap on Projects Page"
 
 ### Tests for User Story 2
 
-- [ ] T019 [US2] Extend `tests/unit/components/activity-heatmap.test.tsx` with tooltip scenarios: tooltip text matches spec wording for a full-data day; tooltip DOES NOT contain `$0` or `$NaN` on a null-cost day; touch tap opens tooltip, tap outside dismisses (Cases 2, 3 from plan.md §Testing Strategy)
+- [X] T019 ✅ DONE [US2] Extend `tests/unit/components/activity-heatmap.test.tsx` with tooltip scenarios: tooltip text matches spec wording for a full-data day; tooltip DOES NOT contain `$0` or `$NaN` on a null-cost day; touch tap opens tooltip, tap outside dismisses (Cases 2, 3 from plan.md §Testing Strategy)
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Enhance `components/activity/activity-heatmap-cell.tsx` to wrap the cell in a shadcn `Tooltip` (`components/ui/tooltip.tsx`) with content built from `HeatmapDay`: formatted date, "N ticket(s) shipped", "M jobs · $X.YY" where the `· $X.YY` segment is included only when `totalCostUsd !== undefined` (guard strictly on presence of the optional field, never on `> 0`). Tap-to-open / tap-outside-to-dismiss behavior for touch devices
+- [X] T020 ✅ DONE [US2] Enhance `components/activity/activity-heatmap-cell.tsx` to wrap the cell in a shadcn `Tooltip` (`components/ui/tooltip.tsx`) with content built from `HeatmapDay`: formatted date, "N ticket(s) shipped", "M jobs · $X.YY" where the `· $X.YY` segment is included only when `totalCostUsd !== undefined` (guard strictly on presence of the optional field, never on `> 0`). Tap-to-open / tap-outside-to-dismiss behavior for touch devices
 
 **Checkpoint**: User Stories 1 AND 2 work together — the heatmap is informative and interactive.
 

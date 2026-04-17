@@ -20,6 +20,16 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => currentSearchParams,
 }));
 
+// Mock shadcn Tooltip to always render content inline (Radix uses a Portal + pointer events).
+vi.mock('@/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { asChild?: boolean; children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="activity-heatmap-cell-tooltip">{children}</div>
+  ),
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 // Mock shadcn Select with a native <select> so the DOM is testable.
 vi.mock('@/components/ui/select', () => {
   const SelectItem = ({ value, children }: { value: string; children: React.ReactNode }) => (
@@ -210,5 +220,50 @@ describe('ActivityHeatmap', () => {
     // 2025-06-02 is the active day with 3 jobs
     const active = cells.find((c) => c.getAttribute('data-date') === '2025-06-02')!;
     expect(active.getAttribute('aria-label')).toMatch(/3 jobs/);
+  });
+
+  describe('tooltip (US2)', () => {
+    it('renders date, ticket count, and cost when totalCostUsd is present', () => {
+      renderWithProviders(<ActivityHeatmap initialData={makeHeatmap()} />);
+      const tooltips = screen.getAllByTestId('activity-heatmap-cell-tooltip');
+      const withCost = tooltips.find((t) => t.textContent?.includes('$1.42'));
+      expect(withCost).toBeTruthy();
+      expect(withCost!.textContent).toMatch(/Jun 2, 2025/);
+      expect(withCost!.textContent).toMatch(/1 ticket shipped/);
+      expect(withCost!.textContent).toMatch(/3 jobs/);
+      expect(withCost!.textContent).toMatch(/\$1\.42/);
+    });
+
+    it('omits the cost segment when totalCostUsd is undefined (no $0 / $NaN)', () => {
+      renderWithProviders(<ActivityHeatmap initialData={makeHeatmap()} />);
+      const tooltips = screen.getAllByTestId('activity-heatmap-cell-tooltip');
+      // 2025-06-03 has 2 jobs, 0 tickets shipped, and no totalCostUsd
+      const nullCost = tooltips.find((t) => t.textContent?.match(/Jun 3, 2025/));
+      expect(nullCost).toBeTruthy();
+      expect(nullCost!.textContent).toMatch(/2 jobs/);
+      expect(nullCost!.textContent).not.toMatch(/\$0/);
+      expect(nullCost!.textContent).not.toMatch(/\$NaN/);
+      expect(nullCost!.textContent).not.toMatch(/\$\d/);
+    });
+
+    it('pluralizes "tickets" correctly (0 tickets, 1 ticket, 2 tickets)', () => {
+      renderWithProviders(<ActivityHeatmap initialData={makeHeatmap()} />);
+      const tooltips = screen.getAllByTestId('activity-heatmap-cell-tooltip');
+      const oneTicket = tooltips.find((t) => t.textContent?.match(/Jun 2, 2025/));
+      expect(oneTicket!.textContent).toMatch(/1 ticket shipped/);
+      const twoTickets = tooltips.find((t) => t.textContent?.match(/Jun 5, 2025/));
+      expect(twoTickets!.textContent).toMatch(/2 tickets shipped/);
+      const zeroTickets = tooltips.find((t) => t.textContent?.match(/Jun 1, 2025/));
+      expect(zeroTickets!.textContent).toMatch(/0 tickets shipped/);
+    });
+
+    it('cell trigger is a button for touch-tap support', () => {
+      renderWithProviders(<ActivityHeatmap initialData={makeHeatmap()} />);
+      const cells = screen.getAllByTestId('activity-heatmap-cell');
+      cells.forEach((cell) => {
+        expect(cell.tagName).toBe('BUTTON');
+        expect(cell.getAttribute('type')).toBe('button');
+      });
+    });
   });
 });
