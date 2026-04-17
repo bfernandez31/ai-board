@@ -98,14 +98,14 @@ description: "Task list for AIB-667 — Activity Heatmap on Projects Page"
 
 ### Tests for User Story 3
 
-- [ ] T021 [US3] Extend `tests/integration/activity/heatmap-route.test.ts` with filter scenarios: `?agent=CLAUDE` reduces counter to Claude-only totals; `agentOptions` still reflects full account history; effective-agent rule — ticket with `agent=null` on a `defaultAgent=CLAUDE` project IS counted when `?agent=CLAUDE`; year filter respects `user.createdAt` bounds and rejects out-of-range years with 400 (Cases 6, 7 from plan.md §Testing Strategy)
-- [ ] T022 [US3] Extend `tests/unit/components/activity-heatmap.test.tsx` with filter scenarios: mount with `?year=2025&agent=CLAUDE` → selects reflect both values; changing year calls `router.push` with `scroll: false`; agent filter hidden when `agentOptions` has ≤1 non-all entry; agent filter rendered when ≥2 non-all entries; year Select disabled when `user.createdAt` is in the current year (Cases 4, 5, 6, 7, 9 from plan.md §Testing Strategy)
+- [X] T021 ✅ DONE [US3] Extend `tests/integration/activity/heatmap-route.test.ts` with filter scenarios: `?agent=CLAUDE` reduces counter to Claude-only totals; `agentOptions` still reflects full account history; effective-agent rule — ticket with `agent=null` on a `defaultAgent=CLAUDE` project IS counted when `?agent=CLAUDE`; year filter respects `user.createdAt` bounds and rejects out-of-range years with 400 (Cases 6, 7 from plan.md §Testing Strategy)
+- [X] T022 ✅ DONE [US3] Extend `tests/unit/components/activity-heatmap.test.tsx` with filter scenarios: mount with `?year=2025&agent=CLAUDE` → selects reflect both values; changing year calls `router.push` with `scroll: false`; agent filter hidden when `agentOptions` has ≤1 non-all entry; agent filter rendered when ≥2 non-all entries; year Select disabled when `user.createdAt` is in the current year (Cases 4, 5, 6, 7, 9 from plan.md §Testing Strategy)
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] Create `ActivityHeatmapFilters` in `components/activity/activity-heatmap-filters.tsx` — shadcn `Select` for year (built from `yearOptions`) + shadcn `Select` for agent (built from `agentOptions`, hidden when <2 non-all entries); on change calls `router.push(\`?${params.toString()}\`, { scroll: false })`; reads initial values from `useSearchParams` mirroring `components/analytics/analytics-dashboard.tsx:60,105-109`
-- [ ] T024 [US3] Wire `ActivityHeatmapFilters` into `components/activity/activity-heatmap.tsx`, pass current `filters`, `yearOptions`, `agentOptions`; when filters change, invalidate via the query key (not via a full reload) so cells never blank (depends on T023, T016)
-- [ ] T025 [US3] Update `components/activity/activity-heatmap-counter.tsx` to render the adapted `periodLabel` ("in 2025", "in the last year") and reflect filter-aware totals from the response (depends on T012)
+- [X] T023 ✅ DONE [US3] Create `ActivityHeatmapFilters` in `components/activity/activity-heatmap-filters.tsx` — shadcn `Select` for year (built from `yearOptions`) + shadcn `Select` for agent (built from `agentOptions`, hidden when <2 non-all entries); on change calls `router.push(\`?${params.toString()}\`, { scroll: false })`; reads initial values from `useSearchParams` mirroring `components/analytics/analytics-dashboard.tsx:60,105-109`
+- [X] T024 ✅ DONE [US3] Wire `ActivityHeatmapFilters` into `components/activity/activity-heatmap.tsx`, pass current `filters`, `yearOptions`, `agentOptions`; when filters change, invalidate via the query key (not via a full reload) so cells never blank (depends on T023, T016)
+- [X] T025 ✅ DONE [US3] Update `components/activity/activity-heatmap-counter.tsx` to render the adapted `periodLabel` ("in 2025", "in the last year") and reflect filter-aware totals from the response (depends on T012)
 
 **Checkpoint**: All three user stories independently functional. Users can glance, drill, and scope.
 
