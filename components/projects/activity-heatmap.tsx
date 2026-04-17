@@ -24,10 +24,10 @@ import {
   getIntensityLevel,
   getMaxJobCount,
   getPeriodLabel,
+  isValidAgentFilter,
   isValidPeriod,
   parseIsoDate,
 } from '@/lib/activity-heatmap/aggregations';
-import { ALL_AGENTS } from '@/app/lib/utils/agent-resolution';
 import type {
   HeatmapAgentFilter,
   HeatmapData,
@@ -82,14 +82,9 @@ function getInitialFilters(
       ? rawPeriod
       : initialData.filters.period;
 
-  const agentCandidate: HeatmapAgentFilter | null =
-    rawAgent === 'all' || (rawAgent && ALL_AGENTS.includes(rawAgent as typeof ALL_AGENTS[number]))
-      ? (rawAgent as HeatmapAgentFilter)
-      : null;
-
   const agent: HeatmapAgentFilter =
-    agentCandidate && availableAgents.has(agentCandidate)
-      ? agentCandidate
+    isValidAgentFilter(rawAgent) && availableAgents.has(rawAgent)
+      ? rawAgent
       : initialData.filters.agent;
 
   return { period, agent };

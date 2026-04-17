@@ -9,8 +9,7 @@ import { getUserProjects } from '@/lib/db/projects';
 import { getCurrentUserOrNull } from '@/lib/db/users';
 import { prisma } from '@/lib/db/client';
 import { getHeatmapData } from '@/lib/activity-heatmap/queries';
-import { isValidPeriod } from '@/lib/activity-heatmap/aggregations';
-import { ALL_AGENTS } from '@/app/lib/utils/agent-resolution';
+import { isValidAgentFilter, isValidPeriod } from '@/lib/activity-heatmap/aggregations';
 import type { HeatmapAgentFilter, HeatmapData, HeatmapPeriod } from '@/lib/activity-heatmap/types';
 
 // Force dynamic rendering - this page uses headers() for auth
@@ -55,11 +54,8 @@ async function getInitialHeatmap(
     if (periodValue && isValidPeriod(periodValue)) {
       filters.period = periodValue;
     }
-    if (
-      agentValue === 'all' ||
-      (agentValue && ALL_AGENTS.includes(agentValue as typeof ALL_AGENTS[number]))
-    ) {
-      filters.agent = agentValue as HeatmapAgentFilter;
+    if (isValidAgentFilter(agentValue)) {
+      filters.agent = agentValue;
     }
 
     return await getHeatmapData(user.id, userRecord.createdAt, filters);

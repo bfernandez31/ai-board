@@ -2,6 +2,7 @@ import { JobStatus, type Agent } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { ALL_AGENTS, AGENT_LABELS } from '@/app/lib/utils/agent-resolution';
 import {
+  addDays,
   DEFAULT_HEATMAP_PERIOD,
   formatIsoDate,
   getAvailablePeriods,
@@ -16,14 +17,6 @@ import type {
   HeatmapFilters,
   HeatmapPeriod,
 } from './types';
-
-function addDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-}
-
-function startOfUtcDay(date: Date): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-}
 
 export function normalizeHeatmapFilters(
   input: Partial<HeatmapFilters> | undefined,
@@ -212,7 +205,7 @@ export async function getHeatmapData(
   };
 
   for (const job of jobs) {
-    const dateStr = formatIsoDate(startOfUtcDay(job.startedAt));
+    const dateStr = formatIsoDate(job.startedAt);
     const day = ensureDay(dateStr);
     day.jobCount += 1;
     if (job.costUsd != null) {
@@ -226,7 +219,7 @@ export async function getHeatmapData(
   let totalShipped = 0;
   for (const job of shipJobs) {
     if (!job.completedAt) continue;
-    const dateStr = formatIsoDate(startOfUtcDay(job.completedAt));
+    const dateStr = formatIsoDate(job.completedAt);
     const key = `${job.ticketId}:${dateStr}`;
     if (shippedSeen.has(key)) continue;
     shippedSeen.add(key);

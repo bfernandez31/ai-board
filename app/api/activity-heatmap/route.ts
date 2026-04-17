@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/db/users';
 import { prisma } from '@/lib/db/client';
 import { getHeatmapData } from '@/lib/activity-heatmap/queries';
-import { isValidPeriod } from '@/lib/activity-heatmap/aggregations';
-import { ALL_AGENTS } from '@/app/lib/utils/agent-resolution';
+import { isValidAgentFilter, isValidPeriod } from '@/lib/activity-heatmap/aggregations';
 import type { HeatmapAgentFilter, HeatmapPeriod } from '@/lib/activity-heatmap/types';
 
 export const dynamic = 'force-dynamic';
@@ -18,10 +17,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const period: HeatmapPeriod | undefined =
       rawPeriod && isValidPeriod(rawPeriod) ? rawPeriod : undefined;
-    const agent: HeatmapAgentFilter | undefined =
-      rawAgent === 'all' || (rawAgent && ALL_AGENTS.includes(rawAgent as typeof ALL_AGENTS[number]))
-        ? (rawAgent as HeatmapAgentFilter)
-        : undefined;
+    const agent: HeatmapAgentFilter | undefined = isValidAgentFilter(rawAgent)
+      ? rawAgent
+      : undefined;
 
     const userRecord = await prisma.user.findUnique({
       where: { id: user.id },

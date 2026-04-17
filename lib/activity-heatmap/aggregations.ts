@@ -1,4 +1,5 @@
-import type { HeatmapDay, HeatmapPeriod } from './types';
+import { isSupportedAgent } from '@/app/lib/utils/agent-resolution';
+import type { HeatmapAgentFilter, HeatmapDay, HeatmapPeriod } from './types';
 
 export const DEFAULT_HEATMAP_PERIOD: HeatmapPeriod = 'last-12-months';
 
@@ -20,6 +21,14 @@ export function parseIsoDate(value: string): Date {
 
 export function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * MS_PER_DAY);
+}
+
+export function isValidAgentFilter(
+  value: string | null | undefined
+): value is HeatmapAgentFilter {
+  if (!value) return false;
+  if (value === 'all') return true;
+  return isSupportedAgent(value);
 }
 
 export function isValidPeriod(value: string): value is HeatmapPeriod {
