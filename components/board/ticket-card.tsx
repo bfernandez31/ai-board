@@ -27,6 +27,12 @@ import { X } from 'lucide-react';
 import { Stage } from '@/lib/stage-transitions';
 import { STAGE_MODEL_KEYS, STAGE_MODEL_LABELS } from '@/lib/models/claude-models';
 
+const AUTO_MODE_STAGES: ReadonlySet<string> = new Set([
+  Stage.INBOX,
+  Stage.SPECIFY,
+  Stage.PLAN,
+]);
+
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
   workflowJob?: Job | null; // User Story 1: Workflow job display
@@ -122,10 +128,8 @@ export const TicketCard = React.memo(
     const isCancellableJob = workflowJob && (workflowJob.status === 'PENDING' || workflowJob.status === 'RUNNING');
 
     // Auto-transition toggle: only on FULL-workflow tickets in INBOX, SPECIFY, or PLAN
-    const autoModeStages: Stage[] = [Stage.INBOX, Stage.SPECIFY, Stage.PLAN];
     const showAutoModeToggle =
-      ticket.workflowType === 'FULL' &&
-      autoModeStages.includes(ticket.stage as Stage);
+      ticket.workflowType === 'FULL' && AUTO_MODE_STAGES.has(ticket.stage);
     const isAutoModeOn = ticket.autoMode === true;
     const hasRunningWorkflowJob = workflowJob ? isRunningJob(workflowJob.status) : false;
 
