@@ -17,9 +17,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
-  DEFAULT_HEATMAP_FILTERS,
-  HEATMAP_AGENT_FILTER_VALUES,
   HEATMAP_ROLLING_PERIOD,
+  isHeatmapAgentFilter,
   type ActivityHeatmapData,
   type HeatmapAgentFilter,
   type HeatmapFilters,
@@ -71,14 +70,8 @@ function getInitialFilters(
 ): HeatmapFilters {
   const period = normalizePeriodValue(searchParams.get('heatmap-period'));
   const rawAgent = searchParams.get('heatmap-agent');
-  const agent =
-    rawAgent && (HEATMAP_AGENT_FILTER_VALUES as readonly string[]).includes(rawAgent)
-      ? (rawAgent as HeatmapAgentFilter)
-      : initial.filters.agent;
-  return {
-    period: period || initial.filters.period || DEFAULT_HEATMAP_FILTERS.period,
-    agent: agent || DEFAULT_HEATMAP_FILTERS.agent,
-  };
+  const agent = rawAgent && isHeatmapAgentFilter(rawAgent) ? rawAgent : initial.filters.agent;
+  return { period, agent };
 }
 
 function formatLongDate(iso: string): string {
@@ -114,7 +107,7 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
     staleTime: 30_000,
   });
 
-  const heatmap = data ?? (usesInitialData ? initialData : initialData);
+  const heatmap = data ?? initialData;
 
   const weeks = useMemo(
     () =>

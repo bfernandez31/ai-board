@@ -3,10 +3,7 @@ import { z } from 'zod';
 import { getCurrentUserOrToken } from '@/lib/db/users';
 import { prisma } from '@/lib/db/client';
 import { getActivityHeatmapData } from '@/lib/activity-heatmap/queries';
-import {
-  HEATMAP_AGENT_FILTER_VALUES,
-  HEATMAP_ROLLING_PERIOD,
-} from '@/lib/activity-heatmap/types';
+import { HEATMAP_AGENT_FILTER_VALUES } from '@/lib/activity-heatmap/types';
 import { normalizePeriodValue } from '@/lib/activity-heatmap/period';
 
 const querySchema = z.object({
@@ -24,7 +21,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       agent: searchParams.get('agent') || undefined,
     });
 
-    const period = normalizePeriodValue(parsed.period ?? HEATMAP_ROLLING_PERIOD);
+    const period = normalizePeriodValue(parsed.period);
 
     const userRow = await prisma.user.findUnique({
       where: { id: user.id },
