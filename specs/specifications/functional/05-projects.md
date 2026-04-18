@@ -127,6 +127,62 @@ When no projects exist:
 - All text content uses `min-w-0` and `truncate` utilities to prevent horizontal scroll
 - Cards maintain fixed width boundaries on mobile viewports (375px minimum)
 
+## Activity Heatmap
+
+The projects page displays a GitHub-style activity heatmap below the project cards grid, showing AI activity across all user projects.
+
+### Heatmap Grid
+
+- 7 rows (days of week) by N columns (one per week in the selected period)
+- Month labels on top, day-of-week labels on left (odd rows only: Mon, Wed, Fri)
+- Cell intensity based on job count for that day, using a violet gradient color scale (`aurora-heatmap-*` CSS classes)
+- Intensity is relative: the day with the most jobs gets the highest level (4), other days scale proportionally in quartiles
+- Grid boundaries match the selected period exactly — when a period doesn't start on Sunday or end on Saturday, those cells are not rendered (GitHub-style "chipped corners")
+- Intensity legend at bottom right: Less [ ][ ][ ][ ][ ] More
+
+### Header
+
+- Counter text: "{X} jobs · {Y} tickets shipped in {period label}"
+- A ticket counts as shipped on the day its `ship` workflow job completed successfully; stage changes alone do not count
+- Year selector dropdown:
+  - Default option: "Last 12 months" (rolling window)
+  - Additional options: each calendar year from the user's account creation year to the current year (newest first)
+  - If the user created their account in the current year, only "Last 12 months" is shown (static text, no dropdown)
+
+### Tooltip
+
+Hovering (desktop) or tapping (mobile) a cell shows a tooltip:
+- Formatted date (e.g., "Friday, April 17, 2026")
+- Job count and total cost (cost line omitted when no recorded cost exists for the day)
+- Shipped tickets listed by ticket key and title (if any shipped that day)
+- On mobile: tap outside the tooltip to dismiss
+
+### Filters
+
+- **Agent filter**: built dynamically from the user's job data, following the same effective agent resolution as the analytics dashboard
+  - Options derived from distinct agents present in the user's jobs (combining explicit `ticket.agent` values and inherited `project.defaultAgent`)
+  - Always includes an "All agents" option, selected by default
+  - Hidden entirely when 0 or 1 distinct agents exist
+  - When filtering by a specific agent, tickets with no explicit agent on a project whose default is that agent are included
+- The heatmap grid boundaries are unchanged by filters (always shows the full period)
+- Active filters are reflected in URL query parameters (`heatmap_period`, `heatmap_agent`) — default values are omitted from the URL
+- Copying the URL reproduces the exact same view
+
+### Empty State
+
+When the selected period has zero activity, the grid is replaced with a centered message: "No activity to show yet — your AI work will appear here". The legend and filters remain visible.
+
+### Layout & Loading
+
+- Placed below the project cards grid on `/projects`, full-width
+- The page scrolls naturally to reveal the heatmap below the cards
+- Uses server-rendered initial data to avoid loading flash on first render; background refetches update silently (30s stale time, 60s refetch interval)
+
+### Mobile
+
+- Grid scrolls horizontally — cells never wrap or shrink below tappable size (13×13px)
+- Day-of-week labels stay pinned on the left (`sticky left-0`) during horizontal scroll
+
 ## Project Settings
 
 ### Settings Page Navigation

@@ -659,6 +659,42 @@ function TicketStats({ jobs, polledJobs }: {
 - No additional API calls required
 - The quality score disclosure re-evaluates the latest scored verify job whenever refreshed job data changes
 
+### Heatmap Query Hook
+
+**Hook** (`app/lib/hooks/queries/use-heatmap.ts`):
+
+```typescript
+export function useHeatmap({ period, agent, initialData }: UseHeatmapOptions) {
+  return useQuery({
+    queryKey: queryKeys.heatmap.data(period, agent),
+    queryFn: () => fetchHeatmap(period, agent),
+    initialData,
+    staleTime: 30000,       // 30 seconds
+    refetchInterval: 60000, // 60 seconds
+  });
+}
+```
+
+**Features**:
+- **Server-Rendered Initial Data**: Accepts `initialData` from SSR to avoid loading flash on first render
+- **Background Refetch**: Silently updates data every 60 seconds without blanking the UI
+- **Filter-Keyed Cache**: Query key includes `period` and `agent`, so changing filters fetches fresh data
+- **User-Scoped**: Endpoint aggregates across all projects the user owns or is a member of
+
+**Query Key** (`app/lib/query-keys.ts`):
+
+```typescript
+heatmap: {
+  data: (period: string, agent: string) =>
+    ['heatmap', period, agent] as const,
+},
+```
+
+**Integration with Projects Page** (`components/projects/activity-heatmap.tsx`):
+- URL state drives filters via `heatmap_period` and `heatmap_agent` query parameters
+- Default values (`last-12-months`, `all`) are omitted from the URL
+- Filter changes call `router.push` with updated query string (no scroll)
+
 ## Mutation Hooks
 
 ### Create Ticket Mutation

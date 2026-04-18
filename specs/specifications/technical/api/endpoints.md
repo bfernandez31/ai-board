@@ -3614,6 +3614,66 @@ sequenceDiagram
 
 **Performance**: Optimized with database aggregation, <3s for projects with up to 1,000 jobs
 
+## Heatmap Endpoints
+
+### GET /api/heatmap
+
+Fetch activity heatmap data aggregated across all projects the authenticated user owns or is a member of.
+
+**Authentication**: Required (session)
+
+**Query Parameters**:
+- `period` (string, optional): Time period — `last-12-months` (default) or a 4-digit year (e.g., `2025`)
+- `agent` (string, optional): Agent filter — `all` (default), `CLAUDE`, `CODEX`, `MISTRAL`, or `GEMINI`
+
+**Validation**:
+- `period` must be `last-12-months` or match `/^\d{4}$/`
+- `agent` must be one of the allowed values
+
+**Behavior**:
+- Aggregates completed jobs across all projects accessible to the user within the period bounds
+- Identifies shipped tickets by finding `ship` command jobs with `COMPLETED` status
+- Computes available agents dynamically using effective agent resolution (ticket agent with project default fallback); returns an empty array when ≤1 distinct agents exist (filter should be hidden)
+- Period bounds: `last-12-months` uses a rolling 365-day window ending today; year values use January 1 to December 31
+- Returns the user's account creation date for building the year selector on the client
+
+**Response** (200 OK):
+```json
+{
+  "days": {
+    "2026-04-17": {
+      "date": "2026-04-17",
+      "jobCount": 5,
+      "costUsd": 1.23,
+      "shippedTickets": ["AIB-42: Fix login bug"]
+    }
+  },
+  "totalJobs": 142,
+  "totalShipped": 8,
+  "availableAgents": [
+    { "value": "all", "label": "All agents" },
+    { "value": "CLAUDE", "label": "Claude" }
+  ],
+  "periodStart": "2025-04-18",
+  "periodEnd": "2026-04-17",
+  "userCreatedAt": "2025-01-15T00:00:00.000Z",
+  "filters": {
+    "period": "last-12-months",
+    "agent": "all"
+  }
+}
+```
+
+**Notes**:
+- `days` is a sparse record — only dates with activity are included
+- `costUsd` is `null` when no job on that day has recorded cost
+- `shippedTickets` contains formatted strings: `"{ticketKey}: {title}"`
+
+**Error Responses**:
+- `400`: Invalid period or agent parameter
+- `401`: Not authenticated
+- `500`: Internal server error
+
 ## Project Member Endpoints
 
 ### GET /api/projects/:projectId/members
