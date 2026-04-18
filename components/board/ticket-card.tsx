@@ -166,41 +166,39 @@ export const TicketCard = React.memo(
                   Clean
                 </Badge>
               )}
-              {/* Agent Badge */}
+              {/* Agent Badge (with optional custom-models halo ring) */}
               {effectiveAgent && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span data-testid="agent-badge" className="shrink-0">
-                      <AgentIcon agent={effectiveAgent} size={16} />
+                    <span data-testid="agent-badge" className="inline-flex shrink-0">
+                      {hasModelOverride ? (
+                        <span
+                          data-testid="custom-models-badge"
+                          data-dormant={isModelOverrideDormant ? 'true' : 'false'}
+                          aria-label="Custom models configured"
+                          className={`inline-flex items-center justify-center rounded-full p-0.5 ${
+                            isModelOverrideDormant
+                              ? 'ring-1 ring-muted-foreground/40'
+                              : 'ring-2 ring-indigo-500 dark:ring-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.5)]'
+                          }`}
+                        >
+                          <AgentIcon agent={effectiveAgent} size={16} />
+                        </span>
+                      ) : (
+                        <AgentIcon agent={effectiveAgent} size={16} />
+                      )}
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {getAgentLabel(effectiveAgent)}{isAgentInherited ? ' (default)' : ''}
-                  </TooltipContent>
-                </Tooltip>
-              )}
-              {/* Custom Models Badge */}
-              {hasModelOverride && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge
-                      variant="outline"
-                      data-testid="custom-models-badge"
-                      data-dormant={isModelOverrideDormant ? 'true' : 'false'}
-                      className={`text-xs shrink-0 px-1.5 py-0.5 font-semibold ${
-                        isModelOverrideDormant
-                          ? 'bg-muted text-muted-foreground opacity-60'
-                          : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
-                      }`}
-                    >
-                      Custom models
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {`Overridden stages: ${overriddenStageLabels.join(', ')}`}
-                    {isModelOverrideDormant
-                      ? ' (inactive — effective agent is not Claude)'
-                      : ''}
+                    <div className="font-medium">
+                      {getAgentLabel(effectiveAgent)}{isAgentInherited ? ' (default)' : ''}
+                    </div>
+                    {hasModelOverride && (
+                      <div className="text-[11px] opacity-90 mt-0.5">
+                        {`Custom models: ${overriddenStageLabels.join(', ')}`}
+                        {isModelOverrideDormant ? ' (inactive — agent is not Claude)' : ''}
+                      </div>
+                    )}
                   </TooltipContent>
                 </Tooltip>
               )}

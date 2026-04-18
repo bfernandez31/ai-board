@@ -869,14 +869,15 @@ Users can open a per-stage model override dialog from the ticket detail modal to
 - Shows an informational message (e.g., "Using Codex's latest default model. Per-stage selection is only available for Claude today.")
 - No selectors rendered
 
-### Custom Models Badge
+### Custom Models Indicator
 
-When any of the 5 stage fields on a ticket has a non-`null` value, the ticket card (in all board and list views) displays a compact "Custom models" badge adjacent to the agent badge.
+When any of the 5 stage fields on a ticket has a non-`null` value, the ticket card (in all board and list views) decorates the agent badge with a halo ring to signal that custom models are configured.
 
-**Badge behavior**:
+**Indicator behavior**:
 - **Visible** when at least one stage has a stored model override, regardless of the effective agent
-- **Tooltip** enumerates the overridden stages by human-readable name (e.g., "VERIFY, IMPLEMENT")
-- **Dormant state**: when the ticket's effective agent is not Claude but overrides exist, the badge uses a muted style and the tooltip notes that overrides are currently dormant — so users are not misled into thinking the overrides will be applied
+- **Visual treatment**: an indigo ring with a soft glow wraps the agent icon — no separate badge element, the icon itself becomes the indicator
+- **Tooltip** (on hover of the agent icon) shows the agent label and a secondary line enumerating the overridden stages by human-readable name (e.g., "Custom models: VERIFY, IMPLEMENT")
+- **Dormant state**: when the ticket's effective agent is not Claude but overrides exist, the ring switches to a muted gray (no glow) and the tooltip notes that overrides are currently dormant — so users are not misled into thinking the overrides will be applied
 
 - **Preview URL**: Vercel deployment URL for testing
   - Set when manual deployment is triggered from VERIFY stage
