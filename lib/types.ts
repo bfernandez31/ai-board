@@ -28,6 +28,11 @@ export interface TicketWithVersion {
   autoMode: boolean;
   clarificationPolicy: ClarificationPolicy | null;
   agent: Agent | null;
+  specifyModel: string | null;
+  planModel: string | null;
+  implementModel: string | null;
+  quickImplModel: string | null;
+  verifyModel: string | null;
   workflowType: WorkflowType;
   attachments: Prisma.JsonValue;
   createdAt: string;

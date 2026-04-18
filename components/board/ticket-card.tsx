@@ -22,6 +22,8 @@ import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
 import { useHasMounted } from '@/lib/hooks/use-has-mounted';
 import { QualityScoreBadge } from '@/components/ticket/quality-score-badge';
 import { X } from 'lucide-react';
+import { Agent } from '@prisma/client';
+import { STAGE_MODEL_KEYS, STAGE_MODEL_LABELS } from '@/lib/models/claude-models';
 
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
@@ -99,6 +101,14 @@ export const TicketCard = React.memo(
     const effectiveAgent = ticket.agent ?? ticket.project?.defaultAgent;
     const isAgentInherited = ticket.agent == null;
 
+    const overriddenStageLabels = React.useMemo(() => {
+      return STAGE_MODEL_KEYS
+        .filter((key) => ticket[key] != null)
+        .map((key) => STAGE_MODEL_LABELS[key]);
+    }, [ticket]);
+    const hasModelOverride = overriddenStageLabels.length > 0;
+    const isModelOverrideDormant = hasModelOverride && effectiveAgent != null && effectiveAgent !== Agent.CLAUDE;
+
     const isDeployJobActive = deployJob != null && (deployJob.status === 'PENDING' || deployJob.status === 'RUNNING');
     const showDeployButton = (!deployJob && isDeployable) || (deployJob != null && !isDeployJobActive && ticket.stage === 'VERIFY');
 
@@ -167,6 +177,31 @@ export const TicketCard = React.memo(
                   </TooltipTrigger>
                   <TooltipContent>
                     {getAgentLabel(effectiveAgent)}{isAgentInherited ? ' (default)' : ''}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {/* Custom Models Badge */}
+              {hasModelOverride && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      data-testid="custom-models-badge"
+                      data-dormant={isModelOverrideDormant ? 'true' : 'false'}
+                      className={`text-xs shrink-0 px-1.5 py-0.5 font-semibold ${
+                        isModelOverrideDormant
+                          ? 'bg-muted text-muted-foreground opacity-60'
+                          : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+                      }`}
+                    >
+                      Custom models
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {`Overridden stages: ${overriddenStageLabels.join(', ')}`}
+                    {isModelOverrideDormant
+                      ? ' (inactive — effective agent is not Claude)'
+                      : ''}
                   </TooltipContent>
                 </Tooltip>
               )}

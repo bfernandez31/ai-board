@@ -83,6 +83,11 @@ model Project {
   config              Json?
   configSyncedAt      DateTime?
   defaultBranch       String              @default("main") @db.VarChar(100)
+  specifyModel        String?             @db.VarChar(50)
+  planModel           String?             @db.VarChar(50)
+  implementModel      String?             @db.VarChar(50)
+  quickImplModel      String?             @db.VarChar(50)
+  verifyModel         String?             @db.VarChar(50)
   hasSpecs            Boolean             @default(false)
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
@@ -140,6 +145,11 @@ model Ticket {
   updatedAt              DateTime                  @default(now()) @updatedAt
   clarificationPolicy    ClarificationPolicy?
   agent                  Agent?
+  specifyModel           String?                   @db.VarChar(50)
+  planModel              String?                   @db.VarChar(50)
+  implementModel         String?                   @db.VarChar(50)
+  quickImplModel         String?                   @db.VarChar(50)
+  verifyModel            String?                   @db.VarChar(50)
   closedAt               DateTime?
   comments               Comment[]
   jobs                   Job[]

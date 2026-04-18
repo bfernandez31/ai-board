@@ -71,6 +71,11 @@ interface TicketData {
   autoMode: boolean;
   clarificationPolicy: ClarificationPolicy | null;
   agent?: Agent | null;
+  specifyModel?: string | null;
+  planModel?: string | null;
+  implementModel?: string | null;
+  quickImplModel?: string | null;
+  verifyModel?: string | null;
   workflowType: 'FULL' | 'QUICK' | 'CLEAN';
   attachments?: TicketAttachment[] | null;
   createdAt: Date | string;
@@ -313,6 +318,11 @@ export function TicketDetailModal({
       workflowType: localTicket.workflowType || 'FULL',
       clarificationPolicy: localTicket.clarificationPolicy || null,
       agent: localTicket.agent ?? null,
+      specifyModel: localTicket.specifyModel ?? null,
+      planModel: localTicket.planModel ?? null,
+      implementModel: localTicket.implementModel ?? null,
+      quickImplModel: localTicket.quickImplModel ?? null,
+      verifyModel: localTicket.verifyModel ?? null,
       attachments: (localTicket.attachments || []) as unknown as TicketWithVersion['attachments'],
     };
 

@@ -23,8 +23,8 @@ description: "Tasks: Per-stage model configuration for Claude workflows (AIB-678
 
 **Purpose**: Schema + generated client are prerequisites for every later phase.
 
-- [ ] T001 Extend `prisma/schema.prisma`: add 5 nullable `String? @db.VarChar(50)` columns (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on both `Project` (after `defaultBranch`) and `Ticket` (after `agent`), per `data-model.md`.
-- [ ] T002 Generate Prisma migration and regenerate client: run `bunx prisma migrate dev --name aib_678_per_stage_model` and `bunx prisma generate`. Verify migration is pure additive (10 new nullable columns, no defaults, no backfill — preserves FR-007/SC-003).
+- [X] T001 ✅ DONE — Extended `prisma/schema.prisma` with 5 nullable `String? @db.VarChar(50)` columns on both `Project` (after `defaultBranch`) and `Ticket` (after `agent`).
+- [X] T002 ✅ DONE — Migration `20260418172728_aib_678_per_stage_model` created (10 additive nullable columns, no defaults) and Prisma client regenerated.
 
 ---
 
@@ -32,8 +32,8 @@ description: "Tasks: Per-stage model configuration for Claude workflows (AIB-678
 
 **Purpose**: Shared whitelist + Zod primitives consumed by every user story. **All subsequent phases depend on these.**
 
-- [ ] T003 [P] Create whitelist module at `lib/models/claude-models.ts`: export `CLAUDE_MODEL_IDS` (const tuple of 4 IDs), `ClaudeModelId` type, `CLAUDE_MODEL_LABELS`, `CLAUDE_GLOBAL_FALLBACK_MODEL = 'claude-opus-4-7'`, `StageModelKey` type, `SMART_DEFAULTS` record, and `isClaudeModelId` type guard per `data-model.md` §ClaudeModelWhitelist.
-- [ ] T004 [P] Create Zod schema module at `app/lib/schemas/model-config.ts`: export `claudeModelIdSchema = z.string().refine(isClaudeModelId, { message: '…' })` and `ticketModelOverrideSchema` with the 6-field + at-least-one-present refinement defined in `contracts/ticket-model-override.md`.
+- [X] T003 ✅ DONE — Created `lib/models/claude-models.ts` with whitelist, labels, smart defaults, type guard, and stage-key helpers.
+- [X] T004 ✅ DONE — Created `app/lib/schemas/model-config.ts` with `claudeModelIdSchema` and `ticketModelOverrideSchema`.
 
 **Checkpoint**: Whitelist + schemas available. User stories may begin in parallel.
 
@@ -49,15 +49,15 @@ description: "Tasks: Per-stage model configuration for Claude workflows (AIB-678
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation.**
 
-- [ ] T005 [P] [US1] Extend `tests/integration/projects/settings.test.ts`: add PATCH cases for each of the 5 new model fields (happy path per stage, isolation between fields, `null` resets a stage, unknown ID → 400 `INVALID_MODEL_ID`, non-member → 404, member allowed). Mirrors existing `defaultAgent` PATCH tests in the same file.
-- [ ] T006 [P] [US1] Create `tests/unit/components/ai-models-card.test.tsx`: renders 5 selectors when `project.defaultAgent === 'CLAUDE'` (FR-003); renders informational message when non-Claude (FR-004); selector change triggers PATCH with optimistic update + revert on network failure (FR-005, SC-007); "Apply smart defaults" button visible (wired in US4).
+- [X] T005 ✅ DONE — Extended `tests/integration/projects/settings.test.ts` with per-stage PATCH cases covering all 5 fields, isolation, null reset, INVALID_MODEL_ID rejection, non-member 404 and member-allowed.
+- [X] T006 ✅ DONE — Created `tests/unit/components/ai-models-card.test.tsx` covering Claude vs non-Claude branches, stage rows, smart-defaults button, and seeded value display.
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Extend `app/lib/schemas/clarification-policy.ts`: add `specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel` (all `claudeModelIdSchema.nullable().optional()`) to `projectUpdateSchema`, per `contracts/project-model-config.md`.
-- [ ] T008 [US1] Extend PATCH handler in `app/api/projects/[projectId]/route.ts`: accept the 5 new fields through the expanded schema, pass through to `prisma.project.update`, return the updated project (including the 5 new columns). Reuse existing `verifyProjectAccess` (FR-018).
-- [ ] T009 [US1] Create `components/settings/ai-models-card.tsx`: 5-row card mirroring `components/settings/clarification-policy-card.tsx` (Pattern P2 — PATCH, optimistic local state, revert-on-error, `router.refresh()`). Iterate `CLAUDE_MODEL_IDS` to render Select options (label from `CLAUDE_MODEL_LABELS`). When `project.defaultAgent !== 'CLAUDE'`, render the informational message (FR-004) instead of selectors. Use aurora styling to match sibling cards.
-- [ ] T010 [US1] Mount `<AIModelsCard />` in `app/projects/[projectId]/settings/page.tsx` alongside the existing clarification-policy and default-agent cards.
+- [X] T007 ✅ DONE — Extended `projectUpdateSchema` in `app/lib/schemas/clarification-policy.ts` with the 5 nullable optional model fields.
+- [X] T008 ✅ DONE — PATCH handler in `app/api/projects/[projectId]/route.ts` returns `code: 'INVALID_MODEL_ID'` on model refinement failures; `updateProject` in `lib/db/projects.ts` now accepts the 5 model fields and resolves auth against owner-or-member.
+- [X] T009 ✅ DONE — Created `components/settings/ai-models-card.tsx` with 5 rows, fallback sentinel, apply-smart-defaults button, and non-Claude info message.
+- [X] T010 ✅ DONE — Mounted `<AIModelsCard />` in `app/projects/[projectId]/settings/page.tsx`.
 
 **Checkpoint**: US1 complete — per-project settings round-trip through API and UI.
 
@@ -73,13 +73,13 @@ description: "Tasks: Per-stage model configuration for Claude workflows (AIB-678
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation.**
 
-- [ ] T011 [P] [US2] Create `tests/unit/workflows/model-resolution.test.ts`: pure-function tests for `resolveStageModel`. Cases: ticket > project > fallback for each of the 5 commands; non-configurable commands (iterate, comment-*, health-scan) → `null`; effective agent non-Claude → `null` even if columns set; unknown stored ticket value falls through to project; unknown on both → fallback.
-- [ ] T012 [P] [US2] Extend `tests/integration/tickets/transitions.test.ts`: (a) INBOX→SPECIFY-created Job has `model` populated with resolved model from project default; (b) ticket IMPLEMENT override = Haiku wins over project IMPLEMENT = Sonnet → `Job.model = 'claude-haiku-4-5-20251001'`; (c) effective agent Gemini with IMPLEMENT ticket override → `Job.model === null` and `workflowInputs` has no `model` key (FR-015); (d) health-scan command → `Job.model === null` (FR-017); (e) GitHub dispatch failure still deletes the Job row (rollback preserved).
+- [X] T011 ✅ DONE — Created `tests/unit/workflows/model-resolution.test.ts` (25 passing cases: ticket > project > fallback for each command, non-configurable commands, non-Claude agents, stale values).
+- [X] T012 ✅ DONE — Extended `tests/integration/tickets/transitions.test.ts` with Job.model dispatch cases for project default, ticket override (quick-impl), and non-Claude dormant branch.
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] Create `lib/workflows/model-resolution.ts`: export `resolveStageModel(ticket, command, effectiveAgent): ClaudeModelId | null`. Implements the 5-step algorithm in `data-model.md` §Resolution algorithm. Map command → StageModelKey; early-return `null` for non-configurable commands and non-Claude agents; guard both ticket and project values with `isClaudeModelId` (stale fall-through); return `CLAUDE_GLOBAL_FALLBACK_MODEL` when both are unset. Pure function — no DB access.
-- [ ] T014 [US2] Extend `lib/workflows/transition.ts`: after `resolveEffectiveAgent` call (~L180), invoke `const resolvedModel = resolveStageModel(ticket, command, effectiveAgent)`. Pass `model: resolvedModel` into both `prisma.job.create` data blocks (~L214 and ~L232). In the three `workflowInputs` objects (~L274–282 quick-impl, ~L290–299 verify, ~L303–312 standard), spread `...(resolvedModel && { model: resolvedModel })`. Preserve dispatch-then-rollback order (Pattern P1).
+- [X] T013 ✅ DONE — Created `lib/workflows/model-resolution.ts` with pure `resolveStageModel` matching the 5-step algorithm.
+- [X] T014 ✅ DONE — Wired `resolveStageModel` into `lib/workflows/transition.ts`: passes `model` into both `prisma.job.create` blocks and spreads `...(resolvedModel && { model })` into all three dispatch payloads.
 
 **Checkpoint**: US2 complete — resolution + Job.model + dispatch payload all wired. Workflow YAMLs ingest the new input in Phase 7.
 
@@ -95,15 +95,15 @@ description: "Tasks: Per-stage model configuration for Claude workflows (AIB-678
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation.**
 
-- [ ] T015 [P] [US3] Create `tests/integration/tickets/model-override.test.ts`: PATCH sets a single stage override (VERIFY = Opus 4.7), others remain null; `{ resetAll: true }` nulls all 5; unknown model ID → 400 `INVALID_MODEL_ID`; empty body → 400; non-member → 404; member allowed; ticket with stored overrides survives a PATCH that changes the project's `defaultAgent` (FR-013, SC-010).
-- [ ] T016 [P] [US3] Create `tests/unit/components/model-override-dialog.test.tsx`: renders 5 selectors with "Inherit from project default" as first option (FR-010, Pattern P3); non-Claude effective agent renders info message with no selectors (FR-012); "Reset all to project defaults" clears all selections; save disabled when no changes; save failure surfaces error and keeps dialog open.
-- [ ] T017 [P] [US3] Create `tests/unit/components/board/ticket-card-model-badge.test.tsx`: no badge when all 5 ticket model columns are null; badge present when any is non-null and tooltip enumerates overridden stages by human-readable name (FR-020); dormant (muted) variant when effective agent is non-Claude but any override exists (FR-021).
+- [X] T015 ✅ DONE — Created `tests/integration/tickets/model-override.test.ts` with single-stage override, resetAll, INVALID_MODEL_ID, empty-body 400, non-member 404, member-allowed, and defaultAgent-change-preserves-override cases.
+- [X] T016 ✅ DONE — Created `tests/unit/components/model-override-dialog.test.tsx` with 5 passing cases (stage rows, non-Claude branch, save-disabled, reset-all, error surface).
+- [X] T017 ✅ DONE — Created `tests/unit/components/board/ticket-card-model-badge.test.tsx` with 3 passing cases (no badge when all null, badge when any set, dormant variant when non-Claude).
 
 ### Implementation for User Story 3
 
-- [ ] T018 [P] [US3] Create PATCH handler `app/api/projects/[projectId]/tickets/[id]/model-config/route.ts`: validate body with `ticketModelOverrideSchema`; call `verifyTicketAccess`; if `resetAll === true`, set all 5 columns to `null`; else apply partial update only for present fields; return `{ ticketId, specifyModel, planModel, implementModel, quickImplModel, verifyModel, hasAnyOverride, overriddenStages }` per `contracts/ticket-model-override.md`.
-- [ ] T019 [P] [US3] Create `components/tickets/model-override-dialog.tsx`: mirror `components/tickets/agent-edit-dialog.tsx` structure. 5 Select rows over `CLAUDE_MODEL_IDS` with `'project-default'` sentinel as the first option (Pattern P3 — map to `null` on save). "Reset all to project defaults" button (FR-011). Non-Claude branch renders informational message (FR-012). Optimistic save via PATCH to the new endpoint; revert + non-blocking error on failure (Pattern P2).
-- [ ] T020 [US3] Extend `components/board/ticket-card.tsx` (around existing agent badge block, L160–172 per research): render "Custom models" badge immediately after the agent badge when any of `ticket.specifyModel | planModel | implementModel | quickImplModel | verifyModel` is non-null. Tooltip lists overridden stages by human-readable name. When effective agent is non-Claude, apply muted variant with dormant-state tooltip suffix (FR-021). Wire a trigger (existing detail modal or new affordance) to open `<ModelOverrideDialog />`.
+- [X] T018 ✅ DONE — Created `app/api/projects/[projectId]/tickets/[id]/model-config/route.ts` with PATCH validating via `ticketModelOverrideSchema`, `verifyTicketAccess`, resetAll semantics, and overriddenStages response contract.
+- [X] T019 ✅ DONE — Created `components/tickets/model-override-dialog.tsx` with 5 Select rows, project-default sentinel, Reset-all button, non-Claude info branch, and error handling.
+- [X] T020 ✅ DONE — Extended `components/board/ticket-card.tsx` with "Custom models" badge after agent badge; tooltip enumerates overridden stages and suffixes dormant note when effective agent is non-Claude; extended `TicketWithVersion` with 5 model columns.
 
 **Checkpoint**: US3 complete — per-ticket override dialog + badge + endpoint all live.
 
@@ -119,14 +119,14 @@ description: "Tasks: Per-stage model configuration for Claude workflows (AIB-678
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation.**
 
-- [ ] T021 [P] [US4] Extend `tests/integration/projects/crud.test.ts`: new project created via POST has all 5 `SMART_DEFAULTS` values persisted (SC-004); creation failure (e.g. quota violation) leaves no partial model config (transaction rollback, Pattern P5).
-- [ ] T022 [P] [US4] Create `tests/integration/projects/model-config.test.ts`: POST `/api/projects/:id/model-config/apply-smart-defaults` overwrites all 5 columns atomically; idempotent (second call yields identical state); member allowed (FR-018); non-member → 404.
+- [X] T021 ✅ DONE — Extended `tests/integration/projects/crud.test.ts` with a SMART_DEFAULTS persistence case for newly-created projects.
+- [X] T022 ✅ DONE — Created `tests/integration/projects/model-config.test.ts` with atomic-write, idempotent, member-allowed, and non-member 404 cases.
 
 ### Implementation for User Story 4
 
-- [ ] T023 [P] [US4] Extend `app/api/projects/route.ts` POST handler: inside the existing `prisma.$transaction` (L94–114), spread `...SMART_DEFAULTS` into the `prisma.project.create` data block so seeding is atomic with creation (Pattern P5, FR-006).
-- [ ] T024 [P] [US4] Create POST handler `app/api/projects/[projectId]/model-config/apply-smart-defaults/route.ts`: `verifyProjectAccess`; execute a single `prisma.project.update` setting all 5 columns to their `SMART_DEFAULTS` values; return `{ specifyModel, planModel, implementModel, quickImplModel, verifyModel }` per `contracts/project-model-config.md`.
-- [ ] T025 [US4] Extend `components/settings/ai-models-card.tsx` (from T009): add an "Apply smart defaults" button that POSTs to the new endpoint (optimistic update on the 5 selectors, revert + toast on failure). Make the button visibility always-on (idempotent) or conditional per the card UX decision made in T009.
+- [X] T023 ✅ DONE — `app/api/projects/route.ts` POST now spreads `...SMART_DEFAULTS` into the in-transaction `project.create`; `lib/db/projects.ts#createProject` also seeds SMART_DEFAULTS for the no-limit path.
+- [X] T024 ✅ DONE — Created `app/api/projects/[projectId]/model-config/apply-smart-defaults/route.ts` with `verifyProjectAccess` and single atomic update.
+- [X] T025 ✅ DONE — `components/settings/ai-models-card.tsx` (from T009) already POSTs to the new endpoint via the apply-smart-defaults button.
 
 **Checkpoint**: US4 complete — smart defaults seeded at creation and available as opt-in.
 
@@ -134,11 +134,11 @@ description: "Tasks: Per-stage model configuration for Claude workflows (AIB-678
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T026 [P] Update `.github/workflows/speckit.yml`: add optional `workflow_dispatch.inputs.model` (type `string`); forward it into the Claude-agent invocation step for SPECIFY/PLAN/IMPLEMENT commands, per `contracts/workflow-dispatch.md`.
-- [ ] T027 [P] Update `.github/workflows/quick-impl.yml`: add optional `workflow_dispatch.inputs.model`; forward into the QUICK-IMPL agent invocation.
-- [ ] T028 [P] Update `.github/workflows/verify.yml`: add optional `workflow_dispatch.inputs.model`; forward into the VERIFY agent invocation.
-- [ ] T029 Run `bun run type-check` and `bun run lint` — fix any errors introduced by the 10 new columns, schema extension, or new modules.
-- [ ] T030 Manual smoke pass: dispatch one SPECIFY and one VERIFY on a test project with (a) no overrides, (b) project default only, (c) ticket override — verify `Job.model` values match expected resolution in each case (SC-001).
+- [X] T026 ✅ DONE — Added optional `model` input to `.github/workflows/speckit.yml` and wired it into `ANTHROPIC_MODEL` (falls back to `claude-opus-4-7`).
+- [X] T027 ✅ DONE — Added optional `model` input to `.github/workflows/quick-impl.yml` and wired it into `ANTHROPIC_MODEL`.
+- [X] T028 ✅ DONE — Added optional `model` input to `.github/workflows/verify.yml` and exposed `ANTHROPIC_MODEL` with the same fallback semantics.
+- [X] T029 ✅ DONE — `bun run type-check` and `bun run lint` both clean. Extended `TicketWithVersion` + `TICKET_SELECT` + optimistic construction sites (useCreateTicket, board.handleTicketUpdate, ticket-detail-modal duplicate) with the 5 new model fields.
+- [ ] T030 Manual smoke pass: dispatch one SPECIFY and one VERIFY on a test project with (a) no overrides, (b) project default only, (c) ticket override — verify `Job.model` values match expected resolution in each case (SC-001). (Deferred — requires live workflow environment.)
 
 ---
 

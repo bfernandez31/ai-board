@@ -881,6 +881,11 @@ export function Board({
         autoMode: updatedTicket.autoMode,
         clarificationPolicy: updatedTicket.clarificationPolicy,
         agent: updatedTicket.agent ?? existingTicket?.agent ?? null,
+        specifyModel: existingTicket?.specifyModel ?? null,
+        planModel: existingTicket?.planModel ?? null,
+        implementModel: existingTicket?.implementModel ?? null,
+        quickImplModel: existingTicket?.quickImplModel ?? null,
+        verifyModel: existingTicket?.verifyModel ?? null,
         // Preserve workflowType from existing ticket if not in update (defensive)
         workflowType: updatedTicket.workflowType || existingTicket?.workflowType || 'FULL',
         // Preserve attachments from existing ticket or use empty array

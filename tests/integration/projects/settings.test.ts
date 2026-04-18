@@ -267,6 +267,113 @@ describe('Project Settings - clarificationPolicy', () => {
     });
   });
 
+  describe('PATCH /api/projects/:id - per-stage model updates (AIB-678)', () => {
+    const STAGES = ['specifyModel', 'planModel', 'implementModel', 'quickImplModel', 'verifyModel'] as const;
+
+    beforeEach(async () => {
+      // Reset all 5 columns to null before each test
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: {
+          specifyModel: null,
+          planModel: null,
+          implementModel: null,
+          quickImplModel: null,
+          verifyModel: null,
+        },
+      });
+    });
+
+    it.each(STAGES)('should update %s to a whitelisted Claude model', async (stage) => {
+      const response = await ctx.api.patch<Record<string, string | null>>(
+        `/api/projects/${ctx.projectId}`,
+        { [stage]: 'claude-sonnet-4-6' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data[stage]).toBe('claude-sonnet-4-6');
+
+      const dbProject = await prisma.project.findUnique({ where: { id: ctx.projectId } });
+      expect(dbProject?.[stage]).toBe('claude-sonnet-4-6');
+    });
+
+    it('should leave other stage columns unchanged when only one is updated', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { specifyModel: 'claude-opus-4-7', planModel: 'claude-opus-4-7' },
+      });
+
+      const response = await ctx.api.patch<Record<string, string | null>>(
+        `/api/projects/${ctx.projectId}`,
+        { implementModel: 'claude-sonnet-4-6' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.specifyModel).toBe('claude-opus-4-7');
+      expect(response.data.planModel).toBe('claude-opus-4-7');
+      expect(response.data.implementModel).toBe('claude-sonnet-4-6');
+    });
+
+    it('should reset a stage column to null', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { verifyModel: 'claude-haiku-4-5-20251001' },
+      });
+
+      const response = await ctx.api.patch<Record<string, string | null>>(
+        `/api/projects/${ctx.projectId}`,
+        { verifyModel: null }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.verifyModel).toBeNull();
+    });
+
+    it('should return 400 INVALID_MODEL_ID for an unknown model ID', async () => {
+      const response = await ctx.api.patch<{ error: string; code: string }>(
+        `/api/projects/${ctx.projectId}`,
+        { planModel: 'claude-opus-5-mystery' }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.code).toBe('INVALID_MODEL_ID');
+    });
+
+    it('should allow a member (non-owner) to update per-stage models', async () => {
+      const memberEmail = `member-${Date.now()}@project${ctx.projectId}.e2e.test`;
+      const member = await ctx.createUser(memberEmail);
+
+      await prisma.projectMember.create({
+        data: {
+          projectId: ctx.projectId,
+          userId: member.id,
+          role: 'member',
+        },
+      });
+
+      const response = await ctx.api.patch<Record<string, string | null>>(
+        `/api/projects/${ctx.projectId}`,
+        { specifyModel: 'claude-opus-4-6' },
+        { headers: { 'x-test-user-id': member.id } }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.specifyModel).toBe('claude-opus-4-6');
+    });
+
+    it('should return 404 for a non-member unrelated user', async () => {
+      const outsider = await ctx.createUser(`outsider-${Date.now()}@e2e.local`);
+
+      const response = await ctx.api.patch<{ error: string }>(
+        `/api/projects/${ctx.projectId}`,
+        { planModel: 'claude-sonnet-4-6' },
+        { headers: { 'x-test-user-id': outsider.id } }
+      );
+
+      expect(response.status).toBe(404);
+    });
+  });
+
   describe('PATCH /api/projects/:id - Response Format', () => {
     it('should include all expected project fields in response', async () => {
       const response = await ctx.api.get<{

@@ -81,6 +81,18 @@ export async function PATCH(
     return NextResponse.json(updatedProject);
   } catch (error) {
     if (error instanceof ZodError) {
+      const modelFieldIssue = error.issues.find((issue) =>
+        typeof issue.path[0] === 'string' &&
+        ['specifyModel', 'planModel', 'implementModel', 'quickImplModel', 'verifyModel'].includes(
+          issue.path[0] as string
+        )
+      );
+      if (modelFieldIssue) {
+        return NextResponse.json(
+          { error: modelFieldIssue.message, code: 'INVALID_MODEL_ID', issues: error.issues },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
         { error: 'Validation failed', issues: error.issues },
         { status: 400 }

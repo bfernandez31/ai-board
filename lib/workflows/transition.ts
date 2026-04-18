@@ -9,6 +9,7 @@ import { getProjectServiceInputs } from '@/lib/workflows/service-inputs';
 import { ensureFreshConfig } from '@/lib/config-sync';
 import { prisma } from '@/lib/db/client';
 import { supportsWorkflowCommand } from '@/app/lib/utils/agent-resolution';
+import { resolveStageModel } from '@/lib/workflows/model-resolution';
 
 /** Stage-to-command mapping (null = manual/no workflow) */
 export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
@@ -178,6 +179,7 @@ export async function handleTicketTransition(
     }
 
     const effectiveAgent = resolveEffectiveAgent(ticket);
+    const resolvedModel = resolveStageModel(ticket, command, effectiveAgent);
     if (!supportsWorkflowCommand(effectiveAgent, command)) {
       return {
         success: false,
@@ -218,6 +220,7 @@ export async function handleTicketTransition(
             projectId: ticket.projectId,
             command,
             status: JobStatus.PENDING,
+            model: resolvedModel,
             startedAt: new Date(),
             updatedAt: new Date(),
           },
@@ -235,6 +238,7 @@ export async function handleTicketTransition(
           projectId: ticket.projectId,
           command,
           status: JobStatus.PENDING,
+          model: resolvedModel,
           startedAt: new Date(),
           updatedAt: new Date(),
         },
@@ -278,6 +282,7 @@ export async function handleTicketTransition(
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            ...(resolvedModel && { model: resolvedModel }),
             ...getProjectServiceInputs(ticket.project),
           };
 
@@ -295,6 +300,7 @@ export async function handleTicketTransition(
             workflowType: ticket.workflowType,
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            ...(resolvedModel && { model: resolvedModel }),
             ...getProjectServiceInputs(ticket.project),
           };
 
@@ -308,6 +314,7 @@ export async function handleTicketTransition(
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            ...(resolvedModel && { model: resolvedModel }),
             ...(command === 'implement' && getProjectServiceInputs(ticket.project)),
           };
 

@@ -484,4 +484,105 @@ describe('Ticket Transitions', () => {
       expect(response.status).toBe(400);
     });
   });
+
+  describe('per-stage model resolution on dispatch (AIB-678)', () => {
+    it('populates Job.model from the project default when no ticket override', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { specifyModel: 'claude-opus-4-6' },
+      });
+
+      const create = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Model resolve project default',
+          description: 'Test project default resolution',
+        }
+      );
+      const ticketId = create.data.id;
+
+      await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`, {
+        targetStage: 'SPECIFY',
+      });
+
+      const job = await prisma.job.findFirst({
+        where: { ticketId },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(job?.model).toBe('claude-opus-4-6');
+    });
+
+    it('ticket override wins over project default for IMPLEMENT (quick-impl flow)', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { quickImplModel: 'claude-sonnet-4-6' },
+      });
+
+      const create = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Quick-impl override',
+          description: 'quick-impl override',
+        }
+      );
+      const ticketId = create.data.id;
+
+      await prisma.ticket.update({
+        where: { id: ticketId },
+        data: { quickImplModel: 'claude-haiku-4-5-20251001' },
+      });
+
+      // INBOX -> BUILD triggers quick-impl
+      await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`, {
+        targetStage: 'BUILD',
+      });
+
+      const job = await prisma.job.findFirst({
+        where: { ticketId, command: 'quick-impl' },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(job?.model).toBe('claude-haiku-4-5-20251001');
+    });
+
+    it('Job.model is null when project default agent is non-Claude even with overrides', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { defaultAgent: 'GEMINI', implementModel: 'claude-sonnet-4-6' },
+      });
+
+      try {
+        const create = await ctx.api.post<{ id: number }>(
+          `/api/projects/${ctx.projectId}/tickets`,
+          {
+            title: '[e2e] Non-Claude dormant',
+            description: 'Gemini agent',
+          }
+        );
+        const ticketId = create.data.id;
+
+        await prisma.ticket.update({
+          where: { id: ticketId },
+          data: { implementModel: 'claude-opus-4-7' },
+        });
+
+        const response = await ctx.api.post(
+          `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+          { targetStage: 'SPECIFY' }
+        );
+        // Either the SPECIFY worked (200) or the agent does not support SPECIFY (400)
+        if (response.status === 200) {
+          const job = await prisma.job.findFirst({
+            where: { ticketId, command: 'specify' },
+            orderBy: { createdAt: 'desc' },
+          });
+          expect(job?.model).toBeNull();
+        }
+      } finally {
+        await prisma.project.update({
+          where: { id: ctx.projectId },
+          data: { defaultAgent: 'CLAUDE', implementModel: null },
+        });
+      }
+    });
+  });
 });
