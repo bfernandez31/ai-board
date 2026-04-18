@@ -23,21 +23,11 @@ export interface AutoModeHookInput {
 
 async function findTicket(projectId: number, identifier: string) {
   const numericId = parseInt(identifier, 10);
-  if (!isNaN(numericId)) {
-    return prisma.ticket.findFirst({
-      where: { id: numericId, projectId },
-      select: {
-        id: true,
-        stage: true,
-        workflowType: true,
-        autoMode: true,
-        projectId: true,
-        ticketKey: true,
-      },
-    });
-  }
+  const where = !isNaN(numericId)
+    ? { id: numericId, projectId }
+    : { ticketKey: identifier, projectId };
   return prisma.ticket.findFirst({
-    where: { ticketKey: identifier, projectId },
+    where,
     select: {
       id: true,
       stage: true,
@@ -46,6 +36,13 @@ async function findTicket(projectId: number, identifier: string) {
       projectId: true,
       ticketKey: true,
     },
+  });
+}
+
+async function disengageAutoMode(ticketId: number): Promise<void> {
+  await prisma.ticket.update({
+    where: { id: ticketId },
+    data: { autoMode: false },
   });
 }
 
@@ -78,7 +75,7 @@ export async function enableAutoMode(
     };
   }
 
-  if (ticket.autoMode === true) {
+  if (ticket.autoMode) {
     return {
       ok: true,
       status: 200,
@@ -119,10 +116,7 @@ export async function enableAutoMode(
 
   const nextStage = getNextStage(ticket.stage as unknown as ValidationStage);
   if (!nextStage) {
-    await prisma.ticket.update({
-      where: { id: ticket.id },
-      data: { autoMode: false },
-    });
+    await disengageAutoMode(ticket.id);
     return {
       ok: false,
       status: 400,
@@ -140,10 +134,7 @@ export async function enableAutoMode(
   );
 
   if (!dispatchResult.ok) {
-    await prisma.ticket.update({
-      where: { id: ticket.id },
-      data: { autoMode: false },
-    });
+    await disengageAutoMode(ticket.id);
     return {
       ok: false,
       status: dispatchResult.status,
@@ -180,7 +171,7 @@ export async function disableAutoMode(
     return { ok: false, status: 404, body: { error: 'Ticket not found' } };
   }
 
-  if (ticket.autoMode === false) {
+  if (!ticket.autoMode) {
     return {
       ok: true,
       status: 200,
@@ -188,10 +179,7 @@ export async function disableAutoMode(
     };
   }
 
-  await prisma.ticket.update({
-    where: { id: ticket.id },
-    data: { autoMode: false },
-  });
+  await disengageAutoMode(ticket.id);
 
   return {
     ok: true,
@@ -244,10 +232,7 @@ export async function handleJobCompletionAutoTransition(
 
   if (terminalStatus === 'FAILED' || terminalStatus === 'CANCELLED') {
     if (ticket.autoMode) {
-      await prisma.ticket.update({
-        where: { id: ticket.id },
-        data: { autoMode: false },
-      });
+      await disengageAutoMode(ticket.id);
       console.log('[AutoMode] Disengaged after terminal status', {
         ticketId: ticket.id,
         terminalStatus,
@@ -270,10 +255,7 @@ export async function handleJobCompletionAutoTransition(
   );
 
   if (!result.ok) {
-    await prisma.ticket.update({
-      where: { id: ticket.id },
-      data: { autoMode: false },
-    });
+    await disengageAutoMode(ticket.id);
     console.error('[AutoMode] Dispatch failed during auto-chain; disengaged.', {
       ticketId: ticket.id,
       status: result.status,
