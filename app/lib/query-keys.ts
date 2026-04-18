@@ -77,6 +77,11 @@ export const queryKeys = {
   credentials: {
     all: ['credentials'] as const,
   },
+
+  heatmap: {
+    data: (period: string, agent: string) =>
+      ['heatmap', period, agent] as const,
+  },
 } as const;
 
 export type QueryKeys = typeof queryKeys;
