@@ -127,6 +127,47 @@ When no projects exist:
 - All text content uses `min-w-0` and `truncate` utilities to prevent horizontal scroll
 - Cards maintain fixed width boundaries on mobile viewports (375px minimum)
 
+### Activity Heatmap
+
+A GitHub-style contribution heatmap appears below the project cards grid on the `/projects` page, showing AI job activity across all the user's projects for the selected period.
+
+**Grid Layout**:
+- 7 rows (Sunday–Saturday), columns spanning the selected period
+- Month labels above the grid, day-of-week labels pinned to the left
+- Cell intensity derived from job count for that day, rendered using a violet aurora gradient
+- Partial first/last weeks produce a "chipped" corner effect (cells before the period start or after its end are not rendered), matching GitHub's contribution graph behavior
+- Intensity legend at the bottom right: Less □□■■■ More
+
+**Header**:
+- Summary counter: "X jobs · Y tickets shipped in the last year"
+- A ticket counts as shipped on the day its `ship` workflow job completed successfully; a stage transition to SHIP without a completed ship job does not count
+- Year selector dropdown built from the user's account creation year to the current year, with "Last 12 months" (rolling) as the default; if the user created their account in the current year, only "Last 12 months" is available
+
+**Filters**:
+- Agent filter built dynamically from distinct agents present in the user's job history (combining explicit `ticket.agent` values and the effective agent inherited from `project.defaultAgent`)
+- Always includes an "All" option selected by default; hidden when 0 or 1 distinct agents exist across the user's data
+- When a specific agent is selected, effective agent resolution is honored: tickets with no explicit agent on a project whose default matches are included
+- Grid boundaries remain unchanged when filters are applied
+- Active filter values are reflected in the URL as query parameters (`period`, `agent`) so the view is shareable and survives refresh
+
+**Tooltip on Hover**:
+- Tickets shipped that day (key + title)
+- Job count and total cost; cost line is omitted entirely when cost data is missing for any job in that day (never displays "$NaN" or "$0.00" for missing data)
+- Formatted date
+- On mobile: tap to show, tap outside to dismiss
+
+**Empty State**:
+- When the selected period has no activity, a centered message is shown in place of the grid: "No activity to show yet — your AI work will appear here"
+- Legend and filters remain visible during empty state
+
+**Loading Behavior**:
+- Initial data is server-rendered so the heatmap is visible immediately on first render without a spinner flash
+- Background refetches update the grid silently without blanking the UI
+
+**Mobile**:
+- Grid scrolls horizontally; cells never wrap and never shrink below a tappable size
+- Day-of-week labels remain pinned to the left during horizontal scroll
+
 ## Project Settings
 
 ### Settings Page Navigation

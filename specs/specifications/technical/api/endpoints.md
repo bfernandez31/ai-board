@@ -4496,6 +4496,70 @@ Fetch unified activity feed for a project.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 
+### GET /api/activity-heatmap
+
+Fetch cross-project activity heatmap data for the authenticated user.
+
+**Authentication**: Required (session or Bearer PAT)
+**Authorization**: Returns data scoped to the authenticated user's jobs across all their projects (owned or member of)
+
+**Query Parameters**:
+- `period` (string, optional): `"last-12m"` for rolling 12 months (default), or a 4-digit calendar year (e.g. `"2025"`)
+- `agent` (string, optional): `"all"` (default), or a specific agent value (e.g. `"CLAUDE"`, `"CODEX"`)
+
+**Response** (200 OK):
+```json
+{
+  "period": {
+    "value": "last-12m",
+    "label": "Last 12 months",
+    "startDate": "2025-04-18",
+    "endDate": "2026-04-18"
+  },
+  "periodOptions": [
+    { "value": "last-12m", "label": "Last 12 months" },
+    { "value": "2025", "label": "2025" }
+  ],
+  "availableAgents": [
+    { "value": "all", "label": "All", "jobCount": 142 },
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 142 }
+  ],
+  "days": [
+    {
+      "date": "2026-04-17",
+      "jobCount": 5,
+      "totalCost": 0.42,
+      "costIncomplete": false,
+      "shippedTickets": [
+        { "ticketKey": "AIB-123", "title": "Add login flow", "projectKey": "AIB" }
+      ]
+    }
+  ],
+  "totals": {
+    "jobCount": 142,
+    "ticketsShipped": 18
+  },
+  "filters": {
+    "period": "last-12m",
+    "agent": "all"
+  },
+  "generatedAt": "2026-04-18T10:00:00.000Z"
+}
+```
+
+**Response Fields**:
+- `period`: Resolved date range for the selected period
+- `periodOptions`: All selectable period options (based on user account creation year)
+- `availableAgents`: Distinct agents present in the user's job history; includes `"all"` plus one entry per distinct agent. Hidden from UI when ≤1 named agents are present
+- `days`: One entry per calendar day in the period where `jobCount > 0`. Days with no activity are omitted
+- `totals.ticketsShipped`: Count of tickets whose `ship` job completed successfully within the period (not mere stage transitions)
+- `costIncomplete`: `true` when at least one job in that day has no recorded cost — callers should omit the cost line rather than displaying `$0.00` or `$NaN`
+
+**Errors**:
+- `400`: Invalid filter values — `{ "error": "Invalid heatmap filters" }`
+- `401`: Not authenticated
+- `404`: User record not found
+
 ## Token Endpoints
 
 ### GET /api/tokens
