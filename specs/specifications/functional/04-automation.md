@@ -861,6 +861,54 @@ Re-triggering onboarding on an already-onboarded repository behaves predictably:
 
 ---
 
+## Auto-Transition Mode
+
+A per-ticket "fire and forget" mode that chains the manual forward transitions of a FULL-workflow ticket (INBOX → SPECIFY → PLAN → BUILD) without further user action. Stages that already auto-progress (BUILD → VERIFY, VERIFY → SHIP) are unaffected.
+
+### Scope
+
+- Applies only to tickets with `workflowType=FULL`. Quick-workflow tickets never expose the toggle.
+- Toggle visible only when the ticket is in INBOX, SPECIFY, or PLAN. Not shown in BUILD, VERIFY, SHIP, or CLOSED.
+- Auto-dispatch fires only after successful jobs whose stage is SPECIFY or PLAN — i.e., the system extends auto-progression backwards into the documentation stages.
+
+### Activation
+
+1. User clicks the auto-transition toggle while it is off.
+2. A confirmation modal lists the chained stages from the current stage (e.g., from INBOX: "SPECIFY → PLAN → BUILD will run automatically").
+3. On confirm, `autoMode` is set to `true` on the ticket. If no workflow job is currently PENDING or RUNNING, the next stage transition is dispatched immediately by the client.
+4. On cancel, nothing changes.
+
+If a workflow job is already running at the moment auto mode is enabled, no immediate dispatch happens; the chain starts when that job reaches COMPLETED.
+
+### Deactivation
+
+- Clicking the toggle while auto mode is on disables it immediately, with no modal.
+- Any job already running continues to completion; it simply will not trigger the next transition.
+
+### Auto-Dispatch on Job Completion
+
+When a workflow job reaches a terminal state on a ticket with `autoMode=true` and `workflowType=FULL`:
+
+- **COMPLETED in SPECIFY or PLAN** with the stage's expected command (`specify` or `plan`): the next forward stage transition is dispatched server-side, mirroring the existing BUILD → VERIFY auto-progression.
+- **COMPLETED in any other stage**, or for non-stage commands (`comment-*`, `iterate`, `health-scan`, etc.): no auto-dispatch.
+- **FAILED or CANCELLED** (any stage, any non-comment command): `autoMode` is cleared. The ticket stays on its current stage so the user can address the failure (ambiguous spec, broken test, missing credential, quota exhausted) before re-enabling auto mode manually.
+- **Dispatch failure** of the next stage transition (e.g., quota exhausted, missing credential): `autoMode` is also cleared, mirroring the failure rule.
+
+`comment-*` jobs are background AI-BOARD work and never trigger or interrupt the chain.
+
+### Rollback Interaction
+
+If a user rolls a ticket back from VERIFY to PLAN while auto mode is on, `autoMode` is cleared as part of the rollback. This prevents an infinite loop where auto mode would re-dispatch PLAN → BUILD → VERIFY immediately after the rollback. The user re-enables auto mode manually to resume.
+
+### Persistence and Edge Cases
+
+- `autoMode` is stored on the ticket and persists across page reloads and sessions.
+- Toggling auto mode while a job is running is allowed; the chain takes effect at the next successful completion.
+- Manually dragging the card while auto mode is on does not turn it off; the next eligible job completion still triggers an auto-dispatch.
+- Auto mode is per ticket and never shared between tickets.
+
+---
+
 ## AI-BOARD Assistant
 
 ```mermaid

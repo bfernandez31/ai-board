@@ -136,6 +136,7 @@ Users move tickets between stages using drag-and-drop:
   - Spec files in `specs/{branch}/` folder are preserved automatically
   - Preview URL will be cleared
   - Original implement job record will be deleted
+  - Auto-transition mode (if on) is turned off so the chain does not immediately re-dispatch the rolled-back stages
 - Triggers rollback-reset workflow that:
   - Identifies the last commit before BUILD phase began
   - Backs up spec files using git stash

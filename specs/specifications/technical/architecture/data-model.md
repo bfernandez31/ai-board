@@ -230,7 +230,7 @@ model Ticket {
 - `stage`: Current workflow stage (enum: INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP, CLOSED)
 - `projectId`: Parent project (required foreign key)
 - `branch`: Git branch name (max 200 chars, nullable, set by workflow)
-- `autoMode`: Boolean flag for automated ticket processing (default: false)
+- `autoMode`: When `true`, successful workflow jobs in SPECIFY or PLAN auto-dispatch the next stage transition (see Auto-Transition Mode in functional/04-automation.md). Cleared automatically on FAILED/CANCELLED jobs, on dispatch failure, and on VERIFY→PLAN rollback. Only meaningful for `workflowType=FULL`. Default: false.
 - `workflowType`: Workflow path used (enum: FULL, QUICK, CLEAN; default: FULL). CLEAN is historical only -- creation path removed; retained for existing tickets.
 - `clarificationPolicy`: Optional policy override (nullable, inherits from project when null)
 - `agent`: Optional AI agent override (nullable, inherits from project `defaultAgent` when null)

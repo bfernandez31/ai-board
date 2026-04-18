@@ -131,6 +131,23 @@ Users can cancel a RUNNING or PENDING job directly from the board without naviga
 - PENDING jobs (no workflow run started yet): marked CANCELLED directly without calling GitHub API; if the workflow starts afterward, its first status callback is rejected with 409, causing it to self-abort
 - If the job reaches a terminal state before the cancel request is processed, the UI updates to reflect the current status without showing an error
 
+### Auto-Transition Toggle
+
+A double-right-chevron icon ("fast forward") appears on the ticket card next to the cancel button on FULL-workflow tickets in INBOX, SPECIFY, or PLAN. The icon toggles the ticket's auto-transition mode (see functional/04-automation.md → Auto-Transition Mode).
+
+**Visibility**:
+- **Off** state: icon visible only on card hover, in muted color, matching the cancel button pattern.
+- **On** state: icon stays visible permanently in accent color, so the chained state is obvious at a glance on the board.
+- Icon is hidden on QUICK-workflow tickets and on tickets in BUILD, VERIFY, SHIP, or CLOSED.
+
+**Tooltips**:
+- Off: "Enable auto-transition".
+- On: "Auto-transition on — click to disable".
+
+**Activation**: Clicking the off-state icon opens a confirmation modal listing the stages that will be chained from the current stage (e.g., "SPECIFY → PLAN → BUILD will run automatically"). Confirming enables auto mode and, if no workflow job is currently running, dispatches the next stage transition immediately.
+
+**Deactivation**: Clicking the on-state icon disables auto mode immediately without a modal. Any running job is allowed to complete but will no longer trigger the next stage.
+
 ### Visual Feedback
 
 **Hover States**:

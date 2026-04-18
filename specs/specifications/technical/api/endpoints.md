@@ -910,6 +910,7 @@ Update ticket fields with optimistic concurrency control.
   "title": "Updated title",
   "description": "Updated description",
   "clarificationPolicy": "CONSERVATIVE",
+  "autoMode": true,
   "version": 3
 }
 ```
@@ -918,6 +919,7 @@ Update ticket fields with optimistic concurrency control.
 - `title`: Optional, 1-100 characters, alphanumeric + basic punctuation
 - `description`: Optional, 1-10000 characters (editable only in INBOX stage)
 - `clarificationPolicy`: Optional, enum or null (editable only in INBOX stage)
+- `autoMode`: Optional boolean. When toggled on by the client, the ticket card UI separately POSTs `/transition` to the next stage if no workflow job is currently running. Server-side, the field is also auto-cleared on FAILED/CANCELLED job completion and on VERIFY→PLAN rollback (see Auto-Transition Mode in functional/04-automation.md).
 - `version`: Required for concurrency control
 
 **Response** (200 OK):
