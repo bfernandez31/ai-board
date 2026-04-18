@@ -701,6 +701,7 @@ Workflows execute on GitHub Actions infrastructure:
 - Branch name (empty for new branches)
 - WorkflowType (FULL or QUICK) - controls verify.yml test execution
 - Agent selection - resolved from ticket override or project default (see Agent Selection below)
+- Claude model ID - resolved from ticket/project per-stage config or global fallback (see Claude Model Selection above); omitted for non-Claude agents
 - User information (for AI-BOARD mentions)
 - Comment content (for AI-BOARD requests)
 
@@ -1229,6 +1230,31 @@ Automated GitHub Actions workflow handles deployment:
 - All credentials stored securely in GitHub secrets
 
 ## Agent Selection
+
+### Claude Model Selection
+
+For workflows dispatched to the Claude agent, the system resolves a specific Claude model ID per stage using a priority chain.
+
+**Model Resolution**:
+1. **Ticket override** — `ticket.{stageModel}` (set individually per stage in the override dialog)
+2. **Project default** — `project.{stageModel}` (configured in the AI Models card in project settings)
+3. **Global fallback** — `claude-opus-4-7` (hard-coded; ensures pre-existing projects are byte-for-byte identical to before this feature)
+
+**Configurable stages**: SPECIFY, PLAN, IMPLEMENT, QUICK-IMPL, VERIFY.
+
+**Non-configurable stages** (`iterate`, `comment-*`, `health-scan`, `retro-spec`, `onboard`): always use the global fallback regardless of project or ticket settings.
+
+**Non-Claude agents**: when the effective agent is not Claude, per-stage model configuration is ignored entirely; the agent uses its own current default.
+
+The resolved model ID is:
+- Passed to the workflow as the `model` dispatch input
+- Written to `Job.model` at job creation for per-stage cost analytics
+
+**Model Whitelist** (closed set; unknown values on read fall through to the next resolution layer):
+- `claude-opus-4-7` — Claude Opus 4.7 (global fallback)
+- `claude-opus-4-6` — Claude Opus 4.6
+- `claude-sonnet-4-6` — Claude Sonnet 4.6
+- `claude-haiku-4-5-20251001` — Claude Haiku 4.5
 
 ### Per-Workflow Agent Routing
 

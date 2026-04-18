@@ -3,6 +3,7 @@ import type { Project, ClarificationPolicy, Agent } from '@prisma/client';
 import type { NextRequest } from 'next/server';
 import { requireAuth } from './users';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
+import { SMART_DEFAULTS } from '@/lib/models/claude-models';
 
 /**
  * Retrieve a project by its ID
@@ -130,6 +131,7 @@ export async function createProject(data: {
     const newProject = await tx.project.create({
       data: {
         ...data,
+        ...SMART_DEFAULTS,
         userId, // ← CRITICAL: inject userId
         updatedAt: new Date(), // Required field
       },
@@ -166,13 +168,24 @@ export async function updateProject(
     clarificationPolicy?: ClarificationPolicy | undefined;
     defaultAgent?: Agent | undefined;
     deploymentUrl?: string | null | undefined;
+    specifyModel?: string | null | undefined;
+    planModel?: string | null | undefined;
+    implementModel?: string | null | undefined;
+    quickImplModel?: string | null | undefined;
+    verifyModel?: string | null | undefined;
   }
 ) {
   const userId = await requireAuth();
 
-  // Verify ownership first
+  // Owner OR member may update (FR-018)
   const project = await prisma.project.findFirst({
-    where: { id: projectId, userId },
+    where: {
+      id: projectId,
+      OR: [
+        { userId },
+        { members: { some: { userId } } },
+      ],
+    },
   });
 
   if (!project) {
@@ -188,6 +201,11 @@ export async function updateProject(
   if (data.clarificationPolicy !== undefined) updateData.clarificationPolicy = data.clarificationPolicy;
   if (data.defaultAgent !== undefined) updateData.defaultAgent = data.defaultAgent;
   if (data.deploymentUrl !== undefined) updateData.deploymentUrl = data.deploymentUrl;
+  if (data.specifyModel !== undefined) updateData.specifyModel = data.specifyModel;
+  if (data.planModel !== undefined) updateData.planModel = data.planModel;
+  if (data.implementModel !== undefined) updateData.implementModel = data.implementModel;
+  if (data.quickImplModel !== undefined) updateData.quickImplModel = data.quickImplModel;
+  if (data.verifyModel !== undefined) updateData.verifyModel = data.verifyModel;
 
   return prisma.project.update({
     where: { id: projectId },

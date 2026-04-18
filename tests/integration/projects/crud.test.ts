@@ -7,6 +7,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
+import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import { SMART_DEFAULTS } from '@/lib/models/claude-models';
 
 describe('Projects CRUD', () => {
   let ctx: TestContext;
@@ -128,6 +130,31 @@ describe('Projects CRUD', () => {
       });
 
       expect(response.status).toBe(404);
+    });
+
+    it('persists SMART_DEFAULTS on a newly created project (AIB-678)', async () => {
+      const prisma = getPrismaClient();
+      const unique = Date.now();
+      const response = await ctx.api.post<{ id: number }>(`/api/projects`, {
+        name: `[e2e] smart-defaults ${unique}`,
+        description: 'seed-test',
+        githubOwner: 'e2e-owner',
+        githubRepo: `e2e-repo-${unique}`,
+      });
+
+      expect([201, 403]).toContain(response.status);
+
+      if (response.status === 201) {
+        const project = await prisma.project.findUnique({ where: { id: response.data.id } });
+        expect(project?.specifyModel).toBe(SMART_DEFAULTS.specifyModel);
+        expect(project?.planModel).toBe(SMART_DEFAULTS.planModel);
+        expect(project?.implementModel).toBe(SMART_DEFAULTS.implementModel);
+        expect(project?.quickImplModel).toBe(SMART_DEFAULTS.quickImplModel);
+        expect(project?.verifyModel).toBe(SMART_DEFAULTS.verifyModel);
+
+        // Cleanup
+        await prisma.project.delete({ where: { id: response.data.id } });
+      }
     });
 
     it('should update updatedAt timestamp', async () => {

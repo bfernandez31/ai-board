@@ -73,6 +73,11 @@ export function useCreateTicket() {
         workflowType: 'FULL',
         clarificationPolicy: variables.clarificationPolicy || null,
         agent: null,
+        specifyModel: null,
+        planModel: null,
+        implementModel: null,
+        quickImplModel: null,
+        verifyModel: null,
         attachments: [],
       };
 

@@ -9,6 +9,7 @@ import { getUserSubscription } from '@/lib/billing/subscription';
 import { prisma } from '@/lib/db/client';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
 import { syncProjectConfig } from '@/lib/config-sync';
+import { SMART_DEFAULTS } from '@/lib/models/claude-models';
 
 // Validation schema for project creation
 const createProjectSchema = z.object({
@@ -104,6 +105,7 @@ export async function POST(request: NextRequest) {
               githubRepo: validated.githubRepo,
               key: projectKey,
               userId,
+              ...SMART_DEFAULTS,
               updatedAt: new Date(),
             },
           });

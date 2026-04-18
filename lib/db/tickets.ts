@@ -20,6 +20,11 @@ type TicketRow = {
   autoMode: boolean;
   clarificationPolicy: import('@prisma/client').ClarificationPolicy | null;
   agent: import('@prisma/client').Agent | null;
+  specifyModel: string | null;
+  planModel: string | null;
+  implementModel: string | null;
+  quickImplModel: string | null;
+  verifyModel: string | null;
   workflowType: import('@prisma/client').WorkflowType;
   attachments: import('@prisma/client').Prisma.JsonValue;
   createdAt: Date;
@@ -47,6 +52,11 @@ function toTicketWithVersion(ticket: TicketRow): TicketWithVersion {
     autoMode: ticket.autoMode,
     clarificationPolicy: ticket.clarificationPolicy,
     agent: ticket.agent,
+    specifyModel: ticket.specifyModel,
+    planModel: ticket.planModel,
+    implementModel: ticket.implementModel,
+    quickImplModel: ticket.quickImplModel,
+    verifyModel: ticket.verifyModel,
     workflowType: ticket.workflowType,
     attachments: ticket.attachments,
     createdAt: ticket.createdAt.toISOString(),
@@ -101,6 +111,11 @@ const TICKET_SELECT = {
   autoMode: true,
   clarificationPolicy: true,
   agent: true,
+  specifyModel: true,
+  planModel: true,
+  implementModel: true,
+  quickImplModel: true,
+  verifyModel: true,
   workflowType: true,
   attachments: true,
   createdAt: true,

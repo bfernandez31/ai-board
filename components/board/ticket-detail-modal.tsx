@@ -32,6 +32,7 @@ import { CharacterCounter } from '@/components/ui/character-counter';
 import { PolicyBadge } from '@/components/ui/policy-badge';
 import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
 import { AgentEditDialog } from '@/components/tickets/agent-edit-dialog';
+import { ModelOverrideDialog } from '@/components/tickets/model-override-dialog';
 import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { AgentIcon } from '@/components/ui/agent-icon';
 import DocumentationViewer from './documentation-viewer';
@@ -71,6 +72,11 @@ interface TicketData {
   autoMode: boolean;
   clarificationPolicy: ClarificationPolicy | null;
   agent?: Agent | null;
+  specifyModel?: string | null;
+  planModel?: string | null;
+  implementModel?: string | null;
+  quickImplModel?: string | null;
+  verifyModel?: string | null;
   workflowType: 'FULL' | 'QUICK' | 'CLEAN';
   attachments?: TicketAttachment[] | null;
   createdAt: Date | string;
@@ -186,6 +192,7 @@ export function TicketDetailModal({
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
   const [policyEditOpen, setPolicyEditOpen] = useState(false);
   const [agentEditOpen, setAgentEditOpen] = useState(false);
+  const [modelOverrideOpen, setModelOverrideOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
@@ -313,6 +320,11 @@ export function TicketDetailModal({
       workflowType: localTicket.workflowType || 'FULL',
       clarificationPolicy: localTicket.clarificationPolicy || null,
       agent: localTicket.agent ?? null,
+      specifyModel: localTicket.specifyModel ?? null,
+      planModel: localTicket.planModel ?? null,
+      implementModel: localTicket.implementModel ?? null,
+      quickImplModel: localTicket.quickImplModel ?? null,
+      verifyModel: localTicket.verifyModel ?? null,
       attachments: (localTicket.attachments || []) as unknown as TicketWithVersion['attachments'],
     };
 
@@ -676,6 +688,100 @@ export function TicketDetailModal({
     }
   };
 
+  const handleSaveModelOverrides = async (input: {
+    specifyModel?: string | null;
+    planModel?: string | null;
+    implementModel?: string | null;
+    quickImplModel?: string | null;
+    verifyModel?: string | null;
+    resetAll?: boolean;
+  }): Promise<void> => {
+    if (!localTicket) return;
+
+    const originalTicket = { ...localTicket };
+
+    const optimistic: TicketData = input.resetAll
+      ? {
+          ...localTicket,
+          specifyModel: null,
+          planModel: null,
+          implementModel: null,
+          quickImplModel: null,
+          verifyModel: null,
+        }
+      : {
+          ...localTicket,
+          specifyModel:
+            input.specifyModel !== undefined ? input.specifyModel : localTicket.specifyModel ?? null,
+          planModel:
+            input.planModel !== undefined ? input.planModel : localTicket.planModel ?? null,
+          implementModel:
+            input.implementModel !== undefined
+              ? input.implementModel
+              : localTicket.implementModel ?? null,
+          quickImplModel:
+            input.quickImplModel !== undefined
+              ? input.quickImplModel
+              : localTicket.quickImplModel ?? null,
+          verifyModel:
+            input.verifyModel !== undefined ? input.verifyModel : localTicket.verifyModel ?? null,
+        };
+
+    setLocalTicket(optimistic);
+
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${localTicket.id}/model-config`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        setLocalTicket(originalTicket);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: error?.error || 'Failed to update model overrides',
+        });
+        throw new Error('Update error');
+      }
+
+      const updated = await response.json();
+      const normalizedTicket: TicketData = {
+        ...optimistic,
+        specifyModel: updated.specifyModel ?? null,
+        planModel: updated.planModel ?? null,
+        implementModel: updated.implementModel ?? null,
+        quickImplModel: updated.quickImplModel ?? null,
+        verifyModel: updated.verifyModel ?? null,
+      };
+      setLocalTicket(normalizedTicket);
+
+      toast({
+        title: 'Success',
+        description: 'Model overrides updated',
+      });
+
+      if (onUpdate) {
+        onUpdate(normalizedTicket);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message !== 'Update error') {
+        setLocalTicket(originalTicket);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to save model overrides. Changes reverted.',
+        });
+      }
+      throw error;
+    }
+  };
+
   const handleSaveDescription = (newDescription: string) => saveTicketField('description', newDescription, 'Ticket updated');
 
   // Initialize inline edit hooks
@@ -861,6 +967,15 @@ export function TicketDetailModal({
                       >
                         <Settings2 className="mr-2 h-4 w-4" />
                         Edit Agent
+                      </DropdownMenuItem>
+                    )}
+                    {localTicket?.project?.defaultAgent && (
+                      <DropdownMenuItem
+                        onClick={() => setModelOverrideOpen(true)}
+                        data-testid="edit-models-button"
+                      >
+                        <Settings2 className="mr-2 h-4 w-4" />
+                        Edit Models
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
@@ -1303,6 +1418,23 @@ export function TicketDetailModal({
           currentAgent={localTicket.agent ?? null}
           projectDefaultAgent={localTicket.project.defaultAgent}
           onSave={handleSaveAgent}
+        />
+      )}
+
+      {/* ModelOverrideDialog - only render when parent dialog is open */}
+      {localTicket?.project?.defaultAgent && open && (
+        <ModelOverrideDialog
+          open={modelOverrideOpen}
+          onOpenChange={setModelOverrideOpen}
+          effectiveAgent={localTicket.agent ?? localTicket.project.defaultAgent}
+          current={{
+            specifyModel: localTicket.specifyModel ?? null,
+            planModel: localTicket.planModel ?? null,
+            implementModel: localTicket.implementModel ?? null,
+            quickImplModel: localTicket.quickImplModel ?? null,
+            verifyModel: localTicket.verifyModel ?? null,
+          }}
+          onSave={handleSaveModelOverrides}
         />
       )}
 

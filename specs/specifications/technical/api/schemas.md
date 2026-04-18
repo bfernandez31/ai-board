@@ -248,6 +248,60 @@ export type CloseTicketParams = z.infer<typeof closeTicketParamsSchema>;
 - All open GitHub PRs for ticket branch will be closed
 - Git branch preserved (not deleted)
 
+## Model Config Schemas
+
+### ClaudeModelIdSchema
+
+```typescript
+// app/lib/schemas/model-config.ts
+import { CLAUDE_MODEL_IDS } from '@/lib/models/claude-models';
+import { z } from 'zod';
+
+export const claudeModelIdSchema = z
+  .string()
+  .refine((v) => (CLAUDE_MODEL_IDS as readonly string[]).includes(v), {
+    message: `Model must be one of: ${CLAUDE_MODEL_IDS.join(', ')}`,
+  });
+```
+
+**Whitelisted model IDs**:
+| ID | Display Name |
+|----|-------------|
+| `claude-opus-4-7` | Claude Opus 4.7 |
+| `claude-opus-4-6` | Claude Opus 4.6 |
+| `claude-sonnet-4-6` | Claude Sonnet 4.6 |
+| `claude-haiku-4-5-20251001` | Claude Haiku 4.5 |
+
+Any value not in this list is rejected with `INVALID_MODEL_ID` at every write boundary (project PATCH, ticket model-config PATCH, project creation).
+
+### TicketModelOverrideSchema
+
+```typescript
+// app/lib/schemas/model-config.ts
+const nullableModelId = claudeModelIdSchema.nullable().optional();
+
+export const ticketModelOverrideSchema = z
+  .object({
+    specifyModel: nullableModelId,
+    planModel: nullableModelId,
+    implementModel: nullableModelId,
+    quickImplModel: nullableModelId,
+    verifyModel: nullableModelId,
+    resetAll: z.boolean().optional(),
+  })
+  .refine(
+    (v) => !(v.resetAll && Object.keys(v).some((k) => k !== 'resetAll' && v[k as keyof typeof v] !== undefined)),
+    { message: 'resetAll cannot be combined with individual model fields' }
+  );
+
+export type TicketModelOverrideInput = z.infer<typeof ticketModelOverrideSchema>;
+```
+
+**Usage**:
+- Validates the request body for `PATCH /api/projects/:projectId/tickets/:id/model-config`
+- `resetAll: true` nulls all 5 stage fields atomically; individual fields update only the specified stages
+- Empty body (no recognized keys) returns `400`
+
 ## AI-BOARD Command Schemas
 
 ### AIBoardCommandSchema
