@@ -842,6 +842,42 @@ Timestamps display in user-friendly formats:
   - Effective agent resolved at workflow dispatch time
   - Follows the same inheritance and editability rules as `clarificationPolicy`
 
+- **Per-Stage Claude Models**: Optional per-ticket Claude model overrides for each of the 5 configurable job types
+  - 5 nullable fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`)
+  - `null` means inherit from the project's per-stage model default (which itself falls back to `claude-opus-4-7`)
+  - Editable via the per-stage model override dialog accessible from the ticket detail modal
+  - Stored overrides are preserved when the ticket's agent is switched to a non-Claude provider; they become active again if the agent is switched back to Claude
+
+### Per-Stage Model Override Dialog
+
+Users can open a per-stage model override dialog from the ticket detail modal to set or clear Claude model overrides for each of the 5 workflow stages independently.
+
+**Access**:
+- Available to project owners and members
+- Opens from an edit action in the ticket detail view (modeled on the agent edit dialog)
+
+**UI States**:
+
+**Claude agent (active)**:
+- Displays 5 rows (SPECIFY, PLAN, IMPLEMENT, QUICK-IMPL, VERIFY)
+- Each row has a selector with "Inherit from project default" as the first option, followed by the 4 whitelisted models
+- "Reset all to project defaults" button clears all 5 overrides atomically
+- Save button disabled when no changes have been made
+- On save failure, the dialog stays open and surfaces an error (no silent swallow)
+
+**Non-Claude agent**:
+- Shows an informational message (e.g., "Using Codex's latest default model. Per-stage selection is only available for Claude today.")
+- No selectors rendered
+
+### Custom Models Badge
+
+When any of the 5 stage fields on a ticket has a non-`null` value, the ticket card (in all board and list views) displays a compact "Custom models" badge adjacent to the agent badge.
+
+**Badge behavior**:
+- **Visible** when at least one stage has a stored model override, regardless of the effective agent
+- **Tooltip** enumerates the overridden stages by human-readable name (e.g., "VERIFY, IMPLEMENT")
+- **Dormant state**: when the ticket's effective agent is not Claude but overrides exist, the badge uses a muted style and the tooltip notes that overrides are currently dormant — so users are not misled into thinking the overrides will be applied
+
 - **Preview URL**: Vercel deployment URL for testing
   - Set when manual deployment is triggered from VERIFY stage
   - Accessible via clickable icon on ticket card

@@ -265,6 +265,52 @@ Each project reads its runtime and service configuration from `.ai-board/config.
 - Example: a project declaring PostgreSQL 14 results in `needs_postgres: true` and `postgres_version: 14` in the dispatch
 - Projects without config receive the same defaults as before this feature was introduced
 
+### AI Models Configuration
+
+Projects have a configurable Claude model for each of the 5 automated job types. This allows cost-conscious tuning without affecting non-Claude agents.
+
+**Purpose**:
+- Assign a specific Claude model per workflow stage to balance cost and capability
+- New projects are pre-populated with smart defaults optimized for cost
+- Existing project owners can opt in to smart defaults with a single action
+
+**Available Models** (closed whitelist):
+
+| ID | Display Name |
+|----|-------------|
+| `claude-opus-4-7` | Claude Opus 4.7 |
+| `claude-opus-4-6` | Claude Opus 4.6 |
+| `claude-sonnet-4-6` | Claude Sonnet 4.6 |
+| `claude-haiku-4-5-20251001` | Claude Haiku 4.5 |
+
+**Configurable Stages**:
+
+| Stage | Default (new projects) |
+|-------|------------------------|
+| SPECIFY | Claude Opus 4.7 |
+| PLAN | Claude Opus 4.7 |
+| IMPLEMENT | Claude Sonnet 4.6 |
+| QUICK-IMPL | Claude Sonnet 4.6 |
+| VERIFY | Claude Sonnet 4.6 |
+
+**Configuration UI**:
+- Accessible from project Settings page as an "AI Models" card
+- Renders a 5-row table (one per stage) with a model selector when the project's default agent is Claude
+- Each selector change is persisted immediately with an optimistic update; on failure the previous value is restored and a non-blocking error is shown
+- "Apply Smart Defaults" action overwrites all 5 stages atomically with the cost-conscious set
+
+**Non-Claude projects**:
+- When the project's default agent is not Claude, the AI Models card shows an informational message and no selectors are rendered
+- Stored configuration is preserved for when the agent is switched back to Claude
+
+**Resolution at dispatch**:
+- When a Claude workflow job is dispatched, the effective model resolves as: ticket override → project default → global fallback `claude-opus-4-7`
+- Only the 5 configurable stages are affected; other job types (`iterate`, `comment-*`, `health-scan`, etc.) always use the global fallback
+
+**Authorization**:
+- Project owners and members can read and update the AI Models configuration
+- API enforces the same "owner or member" rule as the clarification policy
+
 ### Clarification Policy Configuration
 
 Projects have a configurable default clarification policy:

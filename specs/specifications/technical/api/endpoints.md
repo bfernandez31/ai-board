@@ -151,11 +151,16 @@ Fetch project details including clarification policy.
     "agent": { "cli": "claude-code" }
   },
   "configSyncedAt": "2026-04-02T12:00:00.000Z",
-  "defaultBranch": "main"
+  "defaultBranch": "main",
+  "specifyModel": "claude-opus-4-7",
+  "planModel": "claude-opus-4-7",
+  "implementModel": "claude-sonnet-4-6",
+  "quickImplModel": "claude-sonnet-4-6",
+  "verifyModel": "claude-sonnet-4-6"
 }
 ```
 
-`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync.
+`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync. Per-stage model fields are `null` for pre-existing projects without explicit configuration (resolves to `claude-opus-4-7` at dispatch time).
 
 **Errors**:
 - `401`: Not authenticated
@@ -215,7 +220,12 @@ Update project details including clarification policy.
   "key": "UPD",
   "description": "Updated description",
   "deploymentUrl": "https://my-app.vercel.app",
-  "clarificationPolicy": "CONSERVATIVE"
+  "clarificationPolicy": "CONSERVATIVE",
+  "specifyModel": "claude-opus-4-7",
+  "planModel": "claude-opus-4-7",
+  "implementModel": "claude-sonnet-4-6",
+  "quickImplModel": "claude-sonnet-4-6",
+  "verifyModel": "claude-sonnet-4-6"
 }
 ```
 
@@ -225,6 +235,7 @@ Update project details including clarification policy.
 - `description`: Optional, string or null
 - `deploymentUrl`: Optional, string or null (valid URL format)
 - `clarificationPolicy`: Optional, enum (AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE)
+- `specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`: Optional, nullable — must be one of the whitelisted Claude model IDs (`claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise
 
 **Response** (200 OK):
 ```json
@@ -241,10 +252,48 @@ Update project details including clarification policy.
 **Note**: Project key is immutable after creation and cannot be changed via PATCH.
 
 **Errors**:
-- `400`: Invalid request body, URL format, or clarification policy enum
+- `400`: Invalid request body, URL format, clarification policy enum, or `INVALID_MODEL_ID` (unknown model ID supplied for a model field)
 - `401`: Not authenticated
 - `403`: User is not project owner (members cannot update project settings)
 - `404`: Project not found
+
+### POST /api/projects/:projectId/model-config/apply-smart-defaults
+
+Apply the cost-conscious smart default model set to all 5 per-stage model fields atomically.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (`verifyProjectAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**: None
+
+**Smart defaults applied**:
+| Stage | Model |
+|-------|-------|
+| SPECIFY | `claude-opus-4-7` |
+| PLAN | `claude-opus-4-7` |
+| IMPLEMENT | `claude-sonnet-4-6` |
+| QUICK-IMPL | `claude-sonnet-4-6` |
+| VERIFY | `claude-sonnet-4-6` |
+
+**Response** (200 OK):
+```json
+{
+  "specifyModel": "claude-opus-4-7",
+  "planModel": "claude-opus-4-7",
+  "implementModel": "claude-sonnet-4-6",
+  "quickImplModel": "claude-sonnet-4-6",
+  "verifyModel": "claude-sonnet-4-6"
+}
+```
+
+Operation is idempotent — calling it twice produces the same result.
+
+**Errors**:
+- `401`: Not authenticated
+- `404`: Project not found or no access
 
 ### POST /api/projects/import
 
@@ -1269,6 +1318,56 @@ Update ticket preview URL (workflow-only endpoint).
 - `404`: Ticket or project not found
 
 **Note**: This endpoint does NOT use optimistic concurrency control (no version checking).
+
+### PATCH /api/projects/:projectId/tickets/:id/model-config
+
+Set or clear per-stage Claude model overrides on a ticket.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (`verifyTicketAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body** (set individual overrides):
+```json
+{
+  "specifyModel": "claude-opus-4-7",
+  "verifyModel": "claude-haiku-4-5-20251001"
+}
+```
+
+**Request Body** (clear all overrides):
+```json
+{
+  "resetAll": true
+}
+```
+
+**Validation**:
+- Each model field is optional, nullable — accepted values are the whitelisted Claude model IDs or `null` to clear that stage
+- `resetAll: true` sets all 5 stage fields to `null` in a single atomic operation; cannot be combined with individual field values
+- Empty body returns `400`
+- Unknown model ID returns `400` with `INVALID_MODEL_ID` error code
+
+**Response** (200 OK):
+```json
+{
+  "specifyModel": "claude-opus-4-7",
+  "planModel": null,
+  "implementModel": null,
+  "quickImplModel": null,
+  "verifyModel": "claude-haiku-4-5-20251001"
+}
+```
+
+All 5 fields are always returned; `null` means "inherit from project default" at dispatch time.
+
+**Errors**:
+- `400`: Empty body, `INVALID_MODEL_ID`, or `resetAll` combined with field values
+- `401`: Not authenticated
+- `404`: Ticket or project not found, or no access
 
 ### GET /api/projects/:projectId/tickets/search
 

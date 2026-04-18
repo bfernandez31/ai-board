@@ -81,6 +81,11 @@ model Project {
   config               Json?
   configSyncedAt       DateTime?
   defaultBranch        String               @default("main")
+  specifyModel         String?              @db.VarChar(50)
+  planModel            String?              @db.VarChar(50)
+  implementModel       String?              @db.VarChar(50)
+  quickImplModel       String?              @db.VarChar(50)
+  verifyModel          String?              @db.VarChar(50)
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
 
@@ -119,6 +124,11 @@ model Project {
 - `config`: Parsed `.ai-board/config.yml` content stored as JSON (nullable — null means no config synced)
 - `configSyncedAt`: Timestamp of the last successful config fetch from GitHub (nullable)
 - `defaultBranch`: The repository's default branch name (default: `"main"`), auto-updated during config sync
+- `specifyModel`: Claude model ID for SPECIFY jobs (max 50 chars, nullable — null resolves to global fallback `claude-opus-4-7`)
+- `planModel`: Claude model ID for PLAN jobs (max 50 chars, nullable)
+- `implementModel`: Claude model ID for IMPLEMENT jobs (max 50 chars, nullable)
+- `quickImplModel`: Claude model ID for QUICK-IMPL jobs (max 50 chars, nullable)
+- `verifyModel`: Claude model ID for VERIFY jobs (max 50 chars, nullable)
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
 
@@ -149,6 +159,11 @@ model Project {
 - `config` stores the parsed config without the `env` section (secrets excluded from DB)
 - `configSyncedAt` drives staleness checks: config older than 1 hour is auto-refreshed before workflow dispatch
 - Config sync fails explicitly rather than silently using stale data — dispatch is blocked if auto-refresh fails
+- Per-stage model fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) are nullable; null means the stage resolves to the global fallback (`claude-opus-4-7`)
+- New projects are seeded with smart defaults: SPECIFY=`claude-opus-4-7`, PLAN=`claude-opus-4-7`, IMPLEMENT=`claude-sonnet-4-6`, QUICK-IMPL=`claude-sonnet-4-6`, VERIFY=`claude-sonnet-4-6` (set inside the project creation transaction)
+- Pre-existing projects (null values) resolve to `claude-opus-4-7` on every stage — identical behavior to before the feature shipped
+- Only values from the closed whitelist (`claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`) are accepted on write; invalid values are rejected with `INVALID_MODEL_ID`
+- Per-stage model configuration is only active when the effective agent is Claude; non-Claude dispatches ignore these fields entirely
 
 ### Ticket
 
@@ -174,6 +189,11 @@ model Ticket {
   clarificationPolicy    ClarificationPolicy?
   agent                  Agent?
   closedAt               DateTime?
+  specifyModel           String?                   @db.VarChar(50)
+  planModel              String?                   @db.VarChar(50)
+  implementModel         String?                   @db.VarChar(50)
+  quickImplModel         String?                   @db.VarChar(50)
+  verifyModel            String?                   @db.VarChar(50)
   comments               Comment[]
   jobs                   Job[]
   notifications          Notification[]
@@ -214,6 +234,11 @@ model Ticket {
 - `workflowType`: Workflow path used (enum: FULL, QUICK, CLEAN; default: FULL). CLEAN is historical only -- creation path removed; retained for existing tickets.
 - `clarificationPolicy`: Optional policy override (nullable, inherits from project when null)
 - `agent`: Optional AI agent override (nullable, inherits from project `defaultAgent` when null)
+- `specifyModel`: Optional Claude model override for SPECIFY jobs (max 50 chars, nullable — null means inherit project default)
+- `planModel`: Optional Claude model override for PLAN jobs (max 50 chars, nullable)
+- `implementModel`: Optional Claude model override for IMPLEMENT jobs (max 50 chars, nullable)
+- `quickImplModel`: Optional Claude model override for QUICK-IMPL jobs (max 50 chars, nullable)
+- `verifyModel`: Optional Claude model override for VERIFY jobs (max 50 chars, nullable)
 - `attachments`: Image attachments (JSON array of TicketAttachment objects, default: empty array)
 - `previewUrl`: Vercel preview deployment URL (max 500 chars, nullable, HTTPS-only, Vercel domain pattern)
   - Set when manual deployment triggered from VERIFY stage
@@ -259,6 +284,9 @@ model Ticket {
 - Clarification policy overrides project default when set
 - Agent overrides project default when set; null means inherit from project `defaultAgent`
 - Effective agent resolved at dispatch time via `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`
+- Per-stage model overrides (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) are nullable; null means inherit the project's value for that stage, which itself falls back to the global fallback `claude-opus-4-7`
+- Stored per-stage overrides are preserved (not cleared) when the ticket's agent is switched to a non-Claude provider; they become active again if the agent is switched back to Claude
+- Resolution at dispatch: `ticket.{stageModel}` → `project.{stageModel}` → `claude-opus-4-7` (only when effective agent is Claude)
 - Ticket lookup supports both internal ID (backward compatibility) and ticket key (user-facing)
 - **Deletion**:
   - Tickets can be deleted from INBOX, SPECIFY, PLAN, BUILD, VERIFY stages (not SHIP or CLOSED)
@@ -1576,6 +1604,16 @@ type Attachments = TicketAttachment[];  // Max 5 items
 | Job.commitSha | 40 | VARCHAR(40) |
 | Job.logs | Unlimited | TEXT |
 | Job.model | 50 | VARCHAR(50) |
+| Project.specifyModel | 50 | VARCHAR(50) |
+| Project.planModel | 50 | VARCHAR(50) |
+| Project.implementModel | 50 | VARCHAR(50) |
+| Project.quickImplModel | 50 | VARCHAR(50) |
+| Project.verifyModel | 50 | VARCHAR(50) |
+| Ticket.specifyModel | 50 | VARCHAR(50) |
+| Ticket.planModel | 50 | VARCHAR(50) |
+| Ticket.implementModel | 50 | VARCHAR(50) |
+| Ticket.quickImplModel | 50 | VARCHAR(50) |
+| Ticket.verifyModel | 50 | VARCHAR(50) |
 | Comment.content | 2000 | TEXT |
 
 ### Character Validation
