@@ -99,6 +99,20 @@ export type TransitionRequest = z.infer<typeof TransitionRequestSchema>;
 - **targetStage**: Must be valid Stage enum value (includes CLOSED)
 - Additional business logic validation in API route (sequential progression, job completion)
 
+### AutoModeToggleSchema
+
+```typescript
+export const AutoModeToggleSchema = z.object({
+  enabled: z.boolean(),
+});
+
+export type AutoModeToggleInput = z.infer<typeof AutoModeToggleSchema>;
+```
+
+**Validation**:
+- **enabled**: Required boolean — target state of `Ticket.autoMode`
+- Eligibility enforced in the API route: `enabled=true` rejected with `AUTO_MODE_INELIGIBLE` when `workflowType !== 'FULL'` or `stage ∉ {INBOX, SPECIFY, PLAN}`
+
 ### UpdateBranchSchema
 
 ```typescript

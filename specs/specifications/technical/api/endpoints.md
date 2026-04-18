@@ -1545,6 +1545,78 @@ Close ticket from VERIFY stage (transition to CLOSED).
 - CLOSED is terminal state (no further transitions)
 - Branch preserved for audit trail
 
+### PATCH /api/projects/:projectId/tickets/:id/auto-mode
+
+Toggle the `autoMode` flag on a ticket. When enabling on a ticket with no running workflow job, the server also dispatches the next stage transition in the same request.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (same authorization as `/transition`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number | string, required): Ticket ID (numeric) or ticket key (e.g., `"AIB-123"`)
+
+**Request Body**:
+```json
+{ "enabled": true }
+```
+
+**Validation** (Zod): `z.object({ enabled: z.boolean() })`
+
+**Response** (200 OK — enabled with immediate dispatch):
+```json
+{
+  "autoMode": true,
+  "ticketId": 42,
+  "stage": "SPECIFY",
+  "jobId": 1234
+}
+```
+
+**Response** (200 OK — enabled without dispatch, job already running):
+```json
+{
+  "autoMode": true,
+  "ticketId": 42,
+  "stage": "SPECIFY"
+}
+```
+
+`jobId` is present only when an immediate dispatch occurred. It is absent when a workflow job was already running on the ticket at the time of enable.
+
+**Response** (200 OK — disabled):
+```json
+{ "autoMode": false, "ticketId": 42, "stage": "SPECIFY" }
+```
+
+Any running job is untouched.
+
+**Side effects**:
+
+| Case | Effects |
+|------|---------|
+| Enable, no running job | `autoMode=true` persisted; new PENDING Job created; GitHub workflow dispatched; on dispatch failure `autoMode` is reverted to `false` and the upstream error is propagated |
+| Enable, running job present (PENDING or RUNNING, non `comment-*`) | `autoMode=true` persisted; no Job touched; the chain starts on the running job's successful completion |
+| Disable | `autoMode=false` persisted; no Job touched |
+
+**Idempotency**:
+- Enabling a ticket already `autoMode=true` returns 200 with the current state and no `jobId` (no re-dispatch)
+- Disabling a ticket already `autoMode=false` returns 200 with the current state (no-op)
+
+**Errors**:
+- `400`: Zod validation failure, or attempt to enable on an ineligible ticket (QUICK workflow, or stage ∈ {BUILD, VERIFY, SHIP, CLOSED})
+  ```json
+  {
+    "error": "Auto-mode is only available on FULL-workflow tickets in INBOX, SPECIFY, or PLAN.",
+    "code": "AUTO_MODE_INELIGIBLE"
+  }
+  ```
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket not found
+- `409`: Underlying optimistic-concurrency check failed during immediate dispatch
+- `500`: `{ "error": "Auto-mode dispatch failed; auto-mode reverted to off.", "code": "AUTO_MODE_DISPATCH_FAILED" }` — enable succeeded but the follow-up dispatch failed and could not be rolled back cleanly
+
 ### POST /api/projects/:projectId/tickets/:id/transition
 
 Transition ticket to target stage with workflow dispatch.
@@ -1586,7 +1658,7 @@ Transition ticket to target stage with workflow dispatch.
   1. Validates latest job is COMPLETED, FAILED, or CANCELLED
   2. Clears previewUrl on ticket
   3. Deletes most recent job record (ordered by startedAt desc)
-  4. Updates ticket stage to PLAN
+  4. Updates ticket stage to PLAN and sets `autoMode=false` atomically (prevents PLAN → BUILD → VERIFY loop)
   5. Dispatches rollback-reset workflow (git reset to pre-BUILD state, preserves spec files)
   6. Creates rollback-reset job to track the git reset operation
 - **VERIFY → SHIP**: Manual transition (no workflow)
@@ -3201,6 +3273,14 @@ Invalid transitions return 400 error
 ```
 
 **Workflow self-abort on cancel**: When a workflow sends a RUNNING status update for a job that has already been marked CANCELLED (e.g., user cancelled a PENDING job before it started), the endpoint returns 409. Workflows must check the response status and abort if they receive 409.
+
+**Auto-transition hook** (terminal statuses only): After the job row is persisted and the push notification is dispatched, the endpoint invokes a fire-and-log side effect that drives ticket auto-mode:
+- Loads `job.command` and the parent ticket's `stage`, `workflowType`, `autoMode`, `projectId`
+- Short-circuits on `comment-*` commands (they never drive stage chaining)
+- On `FAILED` or `CANCELLED` + `autoMode=true`: sets `Ticket.autoMode=false` and returns
+- On `COMPLETED` + `autoMode=true` + `workflowType='FULL'` + stage ∈ {SPECIFY, PLAN}: computes `nextStage` and calls the shared `executeTicketTransition(projectId, ticketId, nextStage)` — the same function used by `POST /tickets/:id/transition`, inheriting its authorization parity, optimistic concurrency, orphaned-job cleanup, and GitHub dispatch
+- If the auto-dispatch returns a non-OK result, sets `Ticket.autoMode=false` and logs with the `[AutoMode]` prefix
+- Any hook error is caught and logged; it never fails the outer 200 response (the job row is already persisted)
 
 ## Telemetry Endpoints
 

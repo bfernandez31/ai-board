@@ -112,6 +112,52 @@ Tickets are ordered differently depending on their stage:
   - Helps teams focus on active work
   - Provides visibility into stale tickets at the bottom
 
+### Auto-Transition Mode
+
+Users can enable a per-ticket "auto mode" that automatically chains the SPECIFY → PLAN → BUILD workflow after each successful job, removing the need to drag the card between stages manually.
+
+**Toggle icon**:
+- A fast-forward icon appears on FULL-workflow ticket cards in INBOX, SPECIFY, or PLAN
+- Never rendered on QUICK-workflow tickets in any stage
+- Never rendered on full-workflow tickets in BUILD, VERIFY, SHIP, or CLOSED
+- Off state: hidden by default, visible only on card hover (matches the cancel-X pattern)
+- On state: permanently visible with accent halo styling so the state is obvious across the board without hovering
+- Tooltip: "Enable auto-transition" when off, "Auto-transition on — click to disable" when on
+
+**Enabling auto-mode** (from off):
+- Clicking the icon opens a confirmation modal listing the stages that will run automatically (e.g., from INBOX: "SPECIFY → PLAN → BUILD will run automatically")
+- Confirming turns auto-mode on and persists the state for the ticket
+- If no workflow job is currently running, the next-stage transition is dispatched immediately
+- If a workflow job is currently running, no new transition is dispatched — the chain starts when that job completes successfully
+- Cancelling the modal leaves auto-mode off and dispatches nothing
+
+**Disabling auto-mode** (from on):
+- A single click on the icon disables auto-mode immediately — no confirmation modal
+- Any running job is not interrupted, cancelled, or otherwise affected
+- The icon reverts to hover-only visibility
+
+**Automatic chaining on success**:
+- When a workflow job on an auto-mode ticket completes successfully, the ticket auto-advances to the next stage (SPECIFY → PLAN, PLAN → BUILD) using the same authorization and dispatch path as a manual drag
+- BUILD → VERIFY continues to be driven by the existing post-BUILD auto-transition (auto-mode's icon is not shown from BUILD onward)
+- Manually dragging a card forward while auto-mode is on keeps auto-mode on; the next successful job completion still triggers the next transition
+
+**Safety: auto-disengage on failure**:
+- If any workflow job on an auto-mode ticket reaches FAILED or CANCELLED, auto-mode turns itself off automatically
+- The ticket stays on its current stage; no further transition is dispatched
+- Re-enabling auto-mode after a failure requires an explicit user action (the same activation flow)
+- If the immediate dispatch triggered on activation fails (missing credential, quota exhausted, etc.), auto-mode is reverted to off
+- Failures surface through the existing job-failure notification path
+
+**Rollback interaction**:
+- When a ticket is rolled back from VERIFY to PLAN, auto-mode is turned off as part of the rollback
+- This prevents the PLAN → BUILD → VERIFY → PLAN infinite loop
+
+**Persistence and scope**:
+- Auto-mode state is stored per ticket and persists across page reloads and user sessions
+- All users viewing a ticket see the same on/off state (property of the ticket, not a per-user preference)
+- Auto-mode on one ticket does not affect any other ticket
+- Any user permitted to advance the ticket manually (project owner or member) is permitted to toggle auto-mode
+
 ### Cancel Running Jobs
 
 Users can cancel a RUNNING or PENDING job directly from the board without navigating to the ticket detail:

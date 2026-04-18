@@ -249,6 +249,82 @@ The cancel button is disabled after the first click to prevent duplicate request
 - Race condition protection prevents concurrent job creation
 - Optimistic concurrency control ensures data consistency
 
+## Auto-Transition Mode
+
+FULL-workflow tickets can opt into automatic stage chaining so that SPECIFY → PLAN → BUILD run back-to-back without requiring a manual drag after each successful job. The toggle is scoped per ticket and persists server-side.
+
+### Eligibility
+
+- Only FULL-workflow tickets in stage INBOX, SPECIFY, or PLAN can enable auto-mode
+- QUICK-workflow tickets are never eligible
+- Tickets in BUILD, VERIFY, SHIP, or CLOSED are never eligible (BUILD → VERIFY is handled by the existing post-BUILD auto-transition)
+- Authorization matches manual stage advance: project owner or member
+
+### Activation
+
+1. User clicks the fast-forward icon on an eligible ticket card
+2. Confirmation modal lists the stages that will run automatically (e.g., from SPECIFY: "PLAN → BUILD will run automatically")
+3. On confirm:
+   - `autoMode` is persisted as `true` for the ticket
+   - If no workflow job is currently running, the next-stage transition is dispatched immediately via the same path as a manual advance
+   - If a workflow job is currently running, no new dispatch happens — the chain starts after that job's successful completion
+
+### Automatic chain driver
+
+After every terminal job status update (`COMPLETED`, `FAILED`, or `CANCELLED`), a server-side hook inspects the ticket's `autoMode` flag:
+
+- `COMPLETED` + `autoMode=true` + ticket stage ∈ {SPECIFY, PLAN} + ticket is FULL: dispatch the transition to the next stage using the same function used for manual advance (inherits optimistic concurrency, orphaned-job cleanup, and workflow dispatch)
+- `FAILED` or `CANCELLED` + `autoMode=true`: flip `autoMode` to `false`; do not dispatch anything; ticket stays on its current stage
+- `comment-*`, `deploy-preview`, and `rollback-reset` job completions are ignored — they do not drive the stage chain
+- The hook never advances past BUILD
+- The hook is fire-and-log: any error during the hook is caught and logged, never failing the outer job-status update
+
+### Deactivation
+
+- Clicking the icon while auto-mode is on turns it off instantly without a confirmation modal
+- Disabling never interrupts, cancels, or otherwise affects a running job
+- After disable, the icon reverts to hover-only visibility
+
+### Self-disengage conditions
+
+Auto-mode automatically flips to `false` in any of:
+- A workflow job on the ticket reaches `FAILED` or `CANCELLED`
+- An activation-time immediate dispatch fails (missing credential, quota exhausted, dispatch-layer error)
+- The ticket is rolled back from VERIFY to PLAN (done inside the rollback transaction)
+
+After a self-disengage, re-enabling requires the explicit activation flow again. The user is notified of failures through the existing job-failure notification path.
+
+### Persistence and scope
+
+- State is stored on the ticket row (`Ticket.autoMode`) and persists across page reloads and sessions
+- All users viewing the ticket see the same on/off state (not a per-user preference)
+- Auto-mode on one ticket does not affect any other ticket
+
+### Sequence — SPECIFY → PLAN auto-advance
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Board UI
+    participant API as API
+    participant WF as GitHub Actions
+    participant DB as Database
+
+    U->>UI: Click fast-forward icon (INBOX ticket)
+    UI->>API: PATCH /auto-mode { enabled: true }
+    API->>DB: autoMode=true
+    API->>WF: Dispatch speckit.yml (SPECIFY)
+    API-->>UI: { autoMode: true, jobId }
+    WF->>API: PATCH /jobs/:id/status { status: COMPLETED }
+    API->>DB: Update job + ticket stage=SPECIFY
+    API->>API: handleJobCompletionAutoTransition
+    API->>WF: Dispatch speckit.yml (PLAN)
+    WF-->>API: Job COMPLETED
+    API->>WF: Dispatch speckit.yml (BUILD)
+    WF-->>API: Job COMPLETED
+    Note over UI,DB: Ticket lands in BUILD without further user input
+```
+
 ## Specification Generation
 
 ### Automatic Trigger
