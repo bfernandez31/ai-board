@@ -360,6 +360,13 @@
   .aurora-cell-mixed { background: linear-gradient(135deg, hsl(var(--ctp-yellow) / 0.25), hsl(var(--ctp-peach) / 0.15)); border: 1px solid hsl(var(--ctp-yellow) / 0.3); box-shadow: 0 0 8px hsl(var(--ctp-yellow) / 0.08); }
   .aurora-cell-fail  { background: linear-gradient(135deg, hsl(var(--ctp-red) / 0.25), hsl(var(--ctp-maroon) / 0.15)); border: 1px solid hsl(var(--ctp-red) / 0.3); box-shadow: 0 0 8px hsl(var(--ctp-red) / 0.08); }
 
+  /* Activity heatmap cells — violet intensity scale (GitHub contribution style) */
+  .aurora-heat-0 { background: hsl(var(--ctp-surface-0) / 0.45); border: 1px solid hsl(var(--ctp-surface-1) / 0.6); }
+  .aurora-heat-1 { background: linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.20), hsl(var(--ctp-sapphire) / 0.12)); border: 1px solid hsl(var(--ctp-mauve) / 0.25); }
+  .aurora-heat-2 { background: linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.40), hsl(var(--ctp-sapphire) / 0.25)); border: 1px solid hsl(var(--ctp-mauve) / 0.40); }
+  .aurora-heat-3 { background: linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.65), hsl(var(--ctp-pink) / 0.40)); border: 1px solid hsl(var(--ctp-mauve) / 0.55); box-shadow: 0 0 6px hsl(var(--ctp-mauve) / 0.15); }
+  .aurora-heat-4 { background: linear-gradient(135deg, hsl(var(--ctp-mauve) / 0.90), hsl(var(--ctp-pink) / 0.70)); border: 1px solid hsl(var(--ctp-mauve) / 0.80); box-shadow: 0 0 10px hsl(var(--ctp-mauve) / 0.30); }
+
   /* Glow orbs (ambient light effects) */
   .aurora-orb-blue { background: radial-gradient(circle, hsl(var(--ctp-sapphire) / 0.12) 0%, transparent 70%); }
   .aurora-orb-pink { background: radial-gradient(circle, hsl(var(--ctp-pink) / 0.08) 0%, transparent 70%); }
