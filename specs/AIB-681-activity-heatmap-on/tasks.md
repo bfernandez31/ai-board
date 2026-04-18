@@ -71,12 +71,12 @@
 
 ### Tests for User Story 2
 
-- [ ] T016 [P] [US2] Add tooltip component tests to `tests/unit/components/activity-heatmap.test.tsx` — tooltip appears on hover with correct data (job count, shipped count, cost), tooltip shows "No activity" for empty cells, cost line omitted when `totalCost` is null (never shows "$0" or "$NaN"), tooltip shows formatted date
+- [x] T016 [P] [US2] Add tooltip component tests to `tests/unit/components/activity-heatmap.test.tsx` — tooltip appears on hover with correct data (job count, shipped count, cost), tooltip shows "No activity" for empty cells, cost line omitted when `totalCost` is null (never shows "$0" or "$NaN"), tooltip shows formatted date
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Create tooltip component in `components/heatmap/heatmap-tooltip.tsx` — absolute positioned tooltip showing formatted date ("March 15, 2025"), "X tickets shipped" (if any), "Y jobs" or "Y jobs · $Z.ZZ" (cost only when non-null), "No activity" for empty cells. Desktop: show on hover. Mobile: tap-to-show, tap-outside-to-dismiss (only one tooltip visible at a time). Clamp position to viewport.
-- [ ] T018 [US2] Wire tooltip into heatmap grid in `components/heatmap/heatmap-grid.tsx` — add hover/click handlers to cells, pass cell data to `HeatmapTooltip`, manage active tooltip state
+- [x] T017 [US2] Create tooltip component in `components/heatmap/heatmap-tooltip.tsx` — absolute positioned tooltip showing formatted date ("March 15, 2025"), "X tickets shipped" (if any), "Y jobs" or "Y jobs · $Z.ZZ" (cost only when non-null), "No activity" for empty cells. Desktop: show on hover. Mobile: tap-to-show, tap-outside-to-dismiss (only one tooltip visible at a time). Clamp position to viewport.
+- [x] T018 [US2] Wire tooltip into heatmap grid in `components/heatmap/heatmap-grid.tsx` — add hover/click handlers to cells, pass cell data to `HeatmapTooltip`, manage active tooltip state
 
 **Checkpoint**: Tooltip shows correct data on hover/tap for all cell states (active, empty, with/without cost).
 
@@ -90,13 +90,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T019 [P] [US3] Add year selector tests to `tests/unit/components/activity-heatmap.test.tsx` — year selector shows correct options based on `accountCreatedYear`, year selector hidden (static label) when `accountCreatedYear === currentYear`, selecting a year updates the grid period and summary counter
-- [ ] T020 [P] [US3] Add year filter integration tests to `tests/integration/heatmap/heatmap-route.test.ts` — API filters by rolling window vs specific calendar year, returns correct `availableYears` based on user creation date
+- [x] T019 [P] [US3] Add year selector tests to `tests/unit/components/activity-heatmap.test.tsx` — year selector shows correct options based on `accountCreatedYear`, year selector hidden (static label) when `accountCreatedYear === currentYear`, selecting a year updates the grid period and summary counter
+- [x] T020 [P] [US3] Add year filter integration tests to `tests/integration/heatmap/heatmap-route.test.ts` — API filters by rolling window vs specific calendar year, returns correct `availableYears` based on user creation date
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Add year selector to `components/heatmap/heatmap-header.tsx` — shadcn `Select` dropdown with "Last 12 months" as default + year options from `availableYears`. Hide dropdown (render static label) when `accountCreatedYear === currentYear`. Follow pattern from `components/analytics/time-range-selector.tsx`.
-- [ ] T022 [US3] Wire year selector to filter state in `components/heatmap/activity-heatmap.tsx` — on year change, update local state and refetch via query key change, update summary counter period label
+- [x] T021 [US3] Add year selector to `components/heatmap/heatmap-header.tsx` — shadcn `Select` dropdown with "Last 12 months" as default + year options from `availableYears`. Hide dropdown (render static label) when `accountCreatedYear === currentYear`. Follow pattern from `components/analytics/time-range-selector.tsx`.
+- [x] T022 [US3] Wire year selector to filter state in `components/heatmap/activity-heatmap.tsx` — on year change, update local state and refetch via query key change, update summary counter period label
 
 **Checkpoint**: Year selector works with correct options, hidden for new users, updates grid on selection.
 
@@ -110,13 +110,13 @@
 
 ### Tests for User Story 4
 
-- [ ] T023 [P] [US4] Add agent filter tests to `tests/unit/components/activity-heatmap.test.tsx` — agent filter hidden when ≤1 distinct agent, agent filter shows correct options when multiple agents exist, selecting agent updates grid
-- [ ] T024 [P] [US4] Add agent filter integration tests to `tests/integration/heatmap/heatmap-route.test.ts` — API filters by agent using effective agent resolution (ticket agent AND project default), returns correct `availableAgents` list with job counts
+- [x] T023 [P] [US4] Add agent filter tests to `tests/unit/components/activity-heatmap.test.tsx` — agent filter hidden when ≤1 distinct agent, agent filter shows correct options when multiple agents exist, selecting agent updates grid
+- [x] T024 [P] [US4] Add agent filter integration tests to `tests/integration/heatmap/heatmap-route.test.ts` — API filters by agent using effective agent resolution (ticket agent AND project default), returns correct `availableAgents` list with job counts
 
 ### Implementation for User Story 4
 
-- [ ] T025 [US4] Add agent filter to `components/heatmap/heatmap-header.tsx` — shadcn `Select` dropdown with "All" default + agent options from `availableAgents`. Hide filter entirely when `availableAgents.length <= 2` (only "all" + one agent).
-- [ ] T026 [US4] Wire agent filter to filter state in `components/heatmap/activity-heatmap.tsx` — on agent change, update local state and refetch
+- [x] T025 [US4] Add agent filter to `components/heatmap/heatmap-header.tsx` — shadcn `Select` dropdown with "All" default + agent options from `availableAgents`. Hide filter entirely when `availableAgents.length <= 2` (only "all" + one agent).
+- [x] T026 [US4] Wire agent filter to filter state in `components/heatmap/activity-heatmap.tsx` — on agent change, update local state and refetch
 
 **Checkpoint**: Agent filter shows/hides correctly, filters data with effective agent resolution.
 
@@ -130,11 +130,11 @@
 
 ### Tests for User Story 5
 
-- [ ] T027 [P] [US5] Add URL sync tests to `tests/unit/components/activity-heatmap.test.tsx` — default filters produce no query params (clean URL), non-default filters add correct query params, filters restore from URL params on mount
+- [x] T027 [P] [US5] Add URL sync tests to `tests/unit/components/activity-heatmap.test.tsx` — default filters produce no query params (clean URL), non-default filters add correct query params, filters restore from URL params on mount
 
 ### Implementation for User Story 5
 
-- [ ] T028 [US5] Implement URL filter sync in `components/heatmap/activity-heatmap.tsx` — on filter change push URL params via `router.replace()`, read initial filters from `useSearchParams()` on mount. Default values ("rolling", "all") produce NO query params. Follow `buildFilterSearchParams` / `getInitialFilters` pattern from `components/analytics/analytics-dashboard.tsx`.
+- [x] T028 [US5] Implement URL filter sync in `components/heatmap/activity-heatmap.tsx` — on filter change push URL params via `router.replace()`, read initial filters from `useSearchParams()` on mount. Default values ("rolling", "all") produce NO query params. Follow `buildFilterSearchParams` / `getInitialFilters` pattern from `components/analytics/analytics-dashboard.tsx`.
 
 **Checkpoint**: URL reflects filter state; shared URLs reproduce identical views; default state has clean URL.
 
@@ -148,11 +148,11 @@
 
 ### Tests for User Story 6
 
-- [ ] T029 [P] [US6] Add empty state tests to `tests/unit/components/activity-heatmap.test.tsx` — empty state message shown when cells array is empty, counter shows "0 jobs · 0 tickets shipped", legend and filters remain visible, switching to a year with data replaces empty state with grid
+- [x] T029 [P] [US6] Add empty state tests to `tests/unit/components/activity-heatmap.test.tsx` — empty state message shown when cells array is empty, counter shows "0 jobs · 0 tickets shipped", legend and filters remain visible, switching to a year with data replaces empty state with grid
 
 ### Implementation for User Story 6
 
-- [ ] T030 [US6] Refine empty state rendering in `components/heatmap/activity-heatmap.tsx` — ensure "No activity to show yet — your AI work will appear here" centered message replaces ONLY the grid, header (counter + filters) and legend remain visible and interactive, counter shows "0 jobs · 0 tickets shipped"
+- [x] T030 [US6] Refine empty state rendering in `components/heatmap/activity-heatmap.tsx` — ensure "No activity to show yet — your AI work will appear here" centered message replaces ONLY the grid, header (counter + filters) and legend remain visible and interactive, counter shows "0 jobs · 0 tickets shipped"
 
 **Checkpoint**: Empty state displays correctly; filters/legend remain functional; switching periods toggles between empty and grid states.
 
@@ -166,11 +166,11 @@
 
 ### Tests for User Story 7
 
-- [ ] T031 [P] [US7] Add mobile layout tests to `tests/unit/components/activity-heatmap.test.tsx` — grid container has `overflow-x-auto`, day-of-week labels have sticky positioning, cells maintain minimum size
+- [x] T031 [P] [US7] Add mobile layout tests to `tests/unit/components/activity-heatmap.test.tsx` — grid container has `overflow-x-auto`, day-of-week labels have sticky positioning, cells maintain minimum size
 
 ### Implementation for User Story 7
 
-- [ ] T032 [US7] Implement mobile scroll behavior in `components/heatmap/heatmap-grid.tsx` — outer container with `overflow-x-auto`, day-of-week labels with `position: sticky; left: 0` and `z-index` to stay pinned during scroll, cells maintain minimum 11px size with 44px touch target area via padding/spacing, tooltip clamped to viewport on mobile
+- [x] T032 [US7] Implement mobile scroll behavior in `components/heatmap/heatmap-grid.tsx` — outer container with `overflow-x-auto`, day-of-week labels with `position: sticky; left: 0` and `z-index` to stay pinned during scroll, cells maintain minimum 11px size with 44px touch target area via padding/spacing, tooltip clamped to viewport on mobile
 
 **Checkpoint**: Grid scrolls horizontally on mobile with sticky labels and tappable cells.
 
@@ -184,11 +184,11 @@
 
 ### Tests for User Story 8
 
-- [ ] T033 [P] [US8] Add SSR initial data tests to `tests/unit/components/activity-heatmap.test.tsx` — component renders with `initialData` without showing loading state, background refetch does not cause visual blank
+- [x] T033 [P] [US8] Add SSR initial data tests to `tests/unit/components/activity-heatmap.test.tsx` — component renders with `initialData` without showing loading state, background refetch does not cause visual blank
 
 ### Implementation for User Story 8
 
-- [ ] T034 [US8] Verify SSR data flow in `app/projects/page.tsx` and `components/heatmap/activity-heatmap.tsx` — ensure `initialData` is passed from server component to client component, `useHeatmap` hook uses `initialData` to render immediately, no loading/skeleton state exists, background refetches silently replace data without blanking the grid
+- [x] T034 [US8] Verify SSR data flow in `app/projects/page.tsx` and `components/heatmap/activity-heatmap.tsx` — ensure `initialData` is passed from server component to client component, `useHeatmap` hook uses `initialData` to render immediately, no loading/skeleton state exists, background refetches silently replace data without blanking the grid
 
 **Checkpoint**: No loading flash on initial render; background updates are seamless.
 
@@ -198,8 +198,8 @@
 
 **Purpose**: Accessibility, contrast verification, and cross-story refinements.
 
-- [ ] T035 [P] Verify WCAG AA 4.5:1 contrast for all 5 violet intensity levels against dark theme background (`--background`) and ensure empty cell color is distinguishable from page background in `components/heatmap/heatmap-grid.tsx`
-- [ ] T036 [P] Add keyboard accessibility to heatmap cells in `components/heatmap/heatmap-grid.tsx` — cells focusable via `tabIndex`, tooltip shown on Enter/Space, focus ring visible
+- [x] T035 [P] Verify WCAG AA 4.5:1 contrast for all 5 violet intensity levels against dark theme background (`--background`) and ensure empty cell color is distinguishable from page background in `components/heatmap/heatmap-grid.tsx`
+- [x] T036 [P] Add keyboard accessibility to heatmap cells in `components/heatmap/heatmap-grid.tsx` — cells focusable via `tabIndex`, tooltip shown on Enter/Space, focus ring visible
 
 ---
 
