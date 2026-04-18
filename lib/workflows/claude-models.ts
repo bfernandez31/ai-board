@@ -52,8 +52,6 @@ export interface ClaudeStageDescriptor {
   key: ClaudeStageKey;
   label: string;
   description: string;
-  /** Workflow command(s) that resolve to this stage key */
-  commands: string[];
 }
 
 export const CLAUDE_STAGES: readonly ClaudeStageDescriptor[] = [
@@ -61,31 +59,26 @@ export const CLAUDE_STAGES: readonly ClaudeStageDescriptor[] = [
     key: 'specify',
     label: 'Specify',
     description: 'Transform a ticket into a detailed feature spec.',
-    commands: ['specify'],
   },
   {
     key: 'plan',
     label: 'Plan',
     description: 'Break the spec into tasks and architecture notes.',
-    commands: ['plan'],
   },
   {
     key: 'implement',
     label: 'Implement',
     description: 'Full BUILD stage — writes production code from the plan.',
-    commands: ['implement'],
   },
   {
     key: 'quickImpl',
     label: 'Quick-impl',
     description: 'Fast-track INBOX→BUILD for small, well-scoped tickets.',
-    commands: ['quick-impl'],
   },
   {
     key: 'verify',
     label: 'Verify',
     description: 'Run tests, fix regressions, and open a PR.',
-    commands: ['verify'],
   },
 ];
 

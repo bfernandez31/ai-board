@@ -369,12 +369,12 @@ export async function patchTicketInline(
     };
   }
 
-  const claudeOverridesUpdate: Prisma.InputJsonValue | typeof Prisma.DbNull | undefined =
-    claudeModelOverrides === undefined
-      ? undefined
-      : claudeModelOverrides === null
-        ? Prisma.DbNull
-        : (sanitizeClaudeModelMap(claudeModelOverrides) as Prisma.InputJsonValue);
+  let claudeOverridesUpdate: Prisma.InputJsonValue | typeof Prisma.DbNull | undefined;
+  if (claudeModelOverrides === null) {
+    claudeOverridesUpdate = Prisma.DbNull;
+  } else if (claudeModelOverrides !== undefined) {
+    claudeOverridesUpdate = sanitizeClaudeModelMap(claudeModelOverrides) as Prisma.InputJsonValue;
+  }
 
   try {
     const updatedTicket = await prisma.ticket.update({
