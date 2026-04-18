@@ -7,7 +7,12 @@ import { ActivityHeatmap } from '@/components/projects/activity-heatmap';
 import { toProjectWithCount, type ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
 import { getActivityHeatmapData } from '@/lib/activity-heatmap/queries';
-import type { ActivityHeatmapData } from '@/lib/activity-heatmap/types';
+import { normalizePeriodValue } from '@/lib/activity-heatmap/period';
+import {
+  isHeatmapAgentFilter,
+  type ActivityHeatmapData,
+  type HeatmapFilters,
+} from '@/lib/activity-heatmap/types';
 import { getCurrentUserOrNull } from '@/lib/db/users';
 import { prisma } from '@/lib/db/client';
 
@@ -31,7 +36,7 @@ async function getProjects(): Promise<ProjectsListResponse> {
   }
 }
 
-async function getInitialHeatmap(): Promise<ActivityHeatmapData | null> {
+async function getInitialHeatmap(filters: HeatmapFilters): Promise<ActivityHeatmapData | null> {
   try {
     const user = await getCurrentUserOrNull();
     if (!user) return null;
@@ -43,6 +48,7 @@ async function getInitialHeatmap(): Promise<ActivityHeatmapData | null> {
     return await getActivityHeatmapData({
       userId: user.id,
       userCreatedAt: userRow.createdAt,
+      filters,
     });
   } catch (error) {
     console.error('Failed to fetch activity heatmap:', error);
@@ -50,8 +56,31 @@ async function getInitialHeatmap(): Promise<ActivityHeatmapData | null> {
   }
 }
 
-export default async function ProjectsPage() {
-  const [projects, heatmapData] = await Promise.all([getProjects(), getInitialHeatmap()]);
+function parseHeatmapFilters(
+  searchParams: Record<string, string | string[] | undefined>
+): HeatmapFilters {
+  const rawPeriod = searchParams['period'];
+  const period = normalizePeriodValue(
+    Array.isArray(rawPeriod) ? rawPeriod[0] : rawPeriod
+  );
+  const rawAgent = searchParams['agent'];
+  const agentValue = Array.isArray(rawAgent) ? rawAgent[0] : rawAgent;
+  const agent =
+    agentValue && isHeatmapAgentFilter(agentValue) ? agentValue : 'all';
+  return { period, agent };
+}
+
+interface ProjectsPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const heatmapFilters = parseHeatmapFilters(resolvedSearchParams);
+  const [projects, heatmapData] = await Promise.all([
+    getProjects(),
+    getInitialHeatmap(heatmapFilters),
+  ]);
 
   return (
     <div className="container mx-auto py-8 px-4">

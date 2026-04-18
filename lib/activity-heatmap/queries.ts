@@ -132,9 +132,18 @@ export async function getActivityHeatmapData({
   filters,
   now = new Date(),
 }: HeatmapQueryInput): Promise<ActivityHeatmapData> {
+  // Resolve available agents first so we can reset unknown agent filters to
+  // 'all' — otherwise e.g. a shared URL with agent=GEMINI would return an
+  // empty dataset when the user only has CLAUDE activity.
+  const availableAgents = await getAvailableAgentsForUser(userId);
+  const availableAgentValues = new Set(availableAgents.map((a) => a.value));
+
+  const requestedAgent = filters?.agent ?? DEFAULT_HEATMAP_FILTERS.agent;
   const normalized: HeatmapFilters = {
     period: filters?.period ?? DEFAULT_HEATMAP_FILTERS.period,
-    agent: filters?.agent ?? DEFAULT_HEATMAP_FILTERS.agent,
+    agent: availableAgentValues.has(requestedAgent)
+      ? requestedAgent
+      : DEFAULT_HEATMAP_FILTERS.agent,
   };
 
   const period = resolvePeriodRange(normalized.period, now);
@@ -181,9 +190,8 @@ export async function getActivityHeatmapData({
     orderBy: { completedAt: 'asc' },
   });
 
-  // --- 3) Available agent options (unfiltered by period, so the dropdown
-  //       reflects the user's full data, matching analytics behavior)
-  const availableAgents = await getAvailableAgentsForUser(userId);
+  // --- 3) Available agent options already resolved above (used to normalize
+  //       unknown agent filters before querying).
 
   // Initialize days array with zeros for every day in the range
   const dayMap = new Map<string, HeatmapDay>();

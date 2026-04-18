@@ -81,8 +81,9 @@ export function buildHeatmapGrid(
 
 /**
  * Compute the month labels positioned above each week column.
- * A label is placed on the first week whose first in-range day lands in a
- * previously-unlabeled month.
+ * A label is placed on the first week containing any in-range day that lands
+ * in a previously-unlabeled month — so "Feb" appears on the Jan 28–Feb 3
+ * column when the month changes mid-week, not on the following Feb 4 column.
  */
 export function buildMonthLabels(weeks: HeatmapWeek[]): HeatmapMonthLabel[] {
   const labels: HeatmapMonthLabel[] = [];
@@ -90,16 +91,15 @@ export function buildMonthLabels(weeks: HeatmapWeek[]): HeatmapMonthLabel[] {
   for (const week of weeks) {
     for (const cell of week.cells) {
       if (!cell.date) continue;
-      const date = parseIsoDate(cell.date);
-      const month = date.getUTCMonth();
+      const month = parseIsoDate(cell.date).getUTCMonth();
       if (month !== lastMonth) {
         labels.push({
           weekIndex: week.index,
           label: MONTH_NAMES_SHORT[month]!,
         });
         lastMonth = month;
+        break; // one label per week max
       }
-      break; // one label per week max
     }
   }
   return labels;

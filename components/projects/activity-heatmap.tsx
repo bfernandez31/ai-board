@@ -68,8 +68,8 @@ function getInitialFilters(
   searchParams: URLSearchParams,
   initial: ActivityHeatmapData
 ): HeatmapFilters {
-  const period = normalizePeriodValue(searchParams.get('heatmap-period'));
-  const rawAgent = searchParams.get('heatmap-agent');
+  const period = normalizePeriodValue(searchParams.get('period'));
+  const rawAgent = searchParams.get('agent');
   const agent = rawAgent && isHeatmapAgentFilter(rawAgent) ? rawAgent : initial.filters.agent;
   return { period, agent };
 }
@@ -120,22 +120,23 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
     setFilters(next);
     const params = new URLSearchParams(searchParams.toString());
     if (next.period === HEATMAP_ROLLING_PERIOD) {
-      params.delete('heatmap-period');
+      params.delete('period');
     } else {
-      params.set('heatmap-period', next.period);
+      params.set('period', next.period);
     }
     if (next.agent === 'all') {
-      params.delete('heatmap-agent');
+      params.delete('agent');
     } else {
-      params.set('heatmap-agent', next.agent);
+      params.set('agent', next.agent);
     }
     const qs = params.toString();
-    router.push(qs ? `?${qs}` : '?', { scroll: false });
+    router.push(qs ? `?${qs}` : '', { scroll: false });
   };
 
   const showAgentFilter = heatmap.availableAgents.length > 2; // 'all' + at least 2 agents
   const showPeriodSelect = heatmap.periodOptions.length > 1;
-  const hasActivity = heatmap.totals.jobCount > 0;
+  const hasActivity =
+    heatmap.totals.jobCount > 0 || heatmap.totals.ticketsShipped > 0;
 
   return (
     <section

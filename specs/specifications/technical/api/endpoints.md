@@ -4551,7 +4551,7 @@ Fetch cross-project activity heatmap data for the authenticated user.
 - `period`: Resolved date range for the selected period
 - `periodOptions`: All selectable period options (based on user account creation year)
 - `availableAgents`: Distinct agents present in the user's job history; includes `"all"` plus one entry per distinct agent. Hidden from UI when ≤1 named agents are present
-- `days`: One entry per calendar day in the period where `jobCount > 0`. Days with no activity are omitted
+- `days`: One entry per calendar day in the selected period, including days with no activity. For inactive days, `jobCount` is `0`
 - `totals.ticketsShipped`: Count of tickets whose `ship` job completed successfully within the period (not mere stage transitions)
 - `costIncomplete`: `true` when at least one job in that day has no recorded cost — callers should omit the cost line rather than displaying `$0.00` or `$NaN`
 

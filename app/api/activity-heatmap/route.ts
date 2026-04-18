@@ -3,25 +3,36 @@ import { z } from 'zod';
 import { getCurrentUserOrToken } from '@/lib/db/users';
 import { prisma } from '@/lib/db/client';
 import { getActivityHeatmapData } from '@/lib/activity-heatmap/queries';
-import { HEATMAP_AGENT_FILTER_VALUES } from '@/lib/activity-heatmap/types';
-import { normalizePeriodValue } from '@/lib/activity-heatmap/period';
+import {
+  HEATMAP_AGENT_FILTER_VALUES,
+  HEATMAP_ROLLING_PERIOD,
+} from '@/lib/activity-heatmap/types';
+
+const periodSchema = z
+  .string()
+  .refine((v) => v === HEATMAP_ROLLING_PERIOD || /^\d{4}$/.test(v), {
+    message: 'period must be "last-12m" or a four-digit year',
+  });
 
 const querySchema = z.object({
-  period: z.string().optional(),
+  period: periodSchema.optional().default(HEATMAP_ROLLING_PERIOD),
   agent: z.enum(HEATMAP_AGENT_FILTER_VALUES).default('all'),
 });
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  let user;
   try {
-    const user = await getCurrentUserOrToken(request);
+    user = await getCurrentUserOrToken(request);
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
+  try {
     const { searchParams } = new URL(request.url);
     const parsed = querySchema.parse({
       period: searchParams.get('period') || undefined,
       agent: searchParams.get('agent') || undefined,
     });
-
-    const period = normalizePeriodValue(parsed.period);
 
     const userRow = await prisma.user.findUnique({
       where: { id: user.id },
@@ -34,16 +45,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const data = await getActivityHeatmapData({
       userId: user.id,
       userCreatedAt: userRow.createdAt,
-      filters: { period, agent: parsed.agent },
+      filters: { period: parsed.period, agent: parsed.agent },
     });
 
     return NextResponse.json(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid heatmap filters' }, { status: 400 });
-    }
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     console.error('Activity heatmap error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

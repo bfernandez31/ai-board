@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithProviders, screen, waitFor } from '@/tests/utils/component-test-utils';
 import { ActivityHeatmap } from '@/components/projects/activity-heatmap';
 import type { ActivityHeatmapData } from '@/lib/activity-heatmap/types';
@@ -229,45 +229,44 @@ describe('ActivityHeatmap', () => {
   });
 
   it('updates URL query params when the agent filter changes', async () => {
+    const user = userEvent.setup();
     renderWithProviders(<ActivityHeatmap initialData={makeHeatmapData()} />);
 
-    await act(async () => {
-      const agentSelect = screen.getByTestId('activity-heatmap-agent-filter');
-      fireEvent.change(agentSelect, { target: { value: 'CODEX' } });
-    });
+    const agentSelect = screen.getByTestId('activity-heatmap-agent-filter');
+    await user.selectOptions(agentSelect, 'CODEX');
 
     await waitFor(() =>
-      expect(pushMock).toHaveBeenCalledWith('?heatmap-agent=CODEX', { scroll: false })
+      expect(pushMock).toHaveBeenCalledWith('?agent=CODEX', { scroll: false })
     );
   });
 
-  it('updates URL query params with heatmap-period prefix when the period changes', async () => {
+  it('updates URL query params when the period changes', async () => {
+    const user = userEvent.setup();
     renderWithProviders(<ActivityHeatmap initialData={makeHeatmapData()} />);
 
-    await act(async () => {
-      const periodSelect = screen.getByTestId('activity-heatmap-period-filter');
-      fireEvent.change(periodSelect, { target: { value: '2025' } });
-    });
+    const periodSelect = screen.getByTestId('activity-heatmap-period-filter');
+    await user.selectOptions(periodSelect, '2025');
 
     await waitFor(() =>
-      expect(pushMock).toHaveBeenCalledWith('?heatmap-period=2025', { scroll: false })
+      expect(pushMock).toHaveBeenCalledWith('?period=2025', { scroll: false })
     );
   });
 
   it('omits the rolling period from the URL (default state)', async () => {
-    mockSearchParams.set('heatmap-period', '2025');
+    mockSearchParams.set('period', '2025');
 
+    const user = userEvent.setup();
     renderWithProviders(<ActivityHeatmap initialData={makeHeatmapData()} />);
 
-    await act(async () => {
-      const periodSelect = screen.getByTestId('activity-heatmap-period-filter');
-      fireEvent.change(periodSelect, { target: { value: 'last-12m' } });
-    });
+    const periodSelect = screen.getByTestId('activity-heatmap-period-filter');
+    await user.selectOptions(periodSelect, 'last-12m');
 
     await waitFor(() => expect(pushMock).toHaveBeenCalled());
-    // Rolling is the default, so heatmap-period must NOT leak into the URL
+    // Rolling is the default and should NOT leak into the URL. When no filters
+    // are set, the router receives an empty string (no trailing "?").
     const lastCall = pushMock.mock.calls.at(-1)?.[0] as string;
-    expect(lastCall).not.toMatch(/heatmap-period/);
+    expect(lastCall).not.toMatch(/period/);
+    expect(lastCall).toBe('');
   });
 
   it('renders grid cells with intensity level derived from job count', () => {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Agent, JobStatus, Stage, WorkflowType } from '@prisma/client';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { getActivityHeatmapData } from '@/lib/activity-heatmap/queries';
@@ -47,6 +47,12 @@ describe('getActivityHeatmapData', () => {
       },
     });
     projectId = project.id;
+  });
+
+  // Shared cleanupDatabase() only targets per-worker test projects (@project{N}.e2e.test),
+  // so we clean up the isolated user + cascaded project/ticket/job rows ourselves.
+  afterEach(async () => {
+    await prisma.user.deleteMany({ where: { id: userId } });
   });
 
   async function createTicket(params: {
