@@ -78,9 +78,11 @@ model Project {
   userId               String
   clarificationPolicy  ClarificationPolicy  @default(AUTO)
   defaultAgent         Agent                @default(CLAUDE)
+  claudeModels         Json?
   config               Json?
   configSyncedAt       DateTime?
   defaultBranch        String               @default("main")
+  hasSpecs             Boolean              @default(false)
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
 
@@ -116,9 +118,11 @@ model Project {
 - `userId`: Owner of the project (required foreign key)
 - `clarificationPolicy`: Default policy for spec generation (enum, default: AUTO)
 - `defaultAgent`: Default AI agent for all tickets in the project (enum, default: CLAUDE)
+- `claudeModels`: Per-stage default Claude model map stored as JSON (nullable — null means all stages use the global fallback Opus 4.7). Shape: `{ specify?, plan?, implement?, quickImpl?, verify? }` where each value is a whitelisted model ID string.
 - `config`: Parsed `.ai-board/config.yml` content stored as JSON (nullable — null means no config synced)
 - `configSyncedAt`: Timestamp of the last successful config fetch from GitHub (nullable)
 - `defaultBranch`: The repository's default branch name (default: `"main"`), auto-updated during config sync
+- `hasSpecs`: Whether project specifications have been generated (boolean, default: false; set to true when a RETRO_SPEC job completes)
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
 
@@ -142,6 +146,8 @@ model Project {
 - User can only access their own projects
 - Default clarification policy AUTO (context-aware)
 - Default agent CLAUDE (backward-compatible; existing projects automatically get CLAUDE)
+- `claudeModels` is null for existing projects (all stages fall back to Opus 4.7); new projects receive smart defaults: Opus 4.7 for specify/plan, Sonnet 4.6 for implement/quick-impl/verify
+- `claudeModels` is ignored when the effective agent is not Claude
 - Deployment URL displayed on project cards when configured (hidden when null)
 - Project description stored but not displayed on list view cards
 - Project key generation: derived from first 3 characters of name (uppercase), padded/disambiguated if needed
@@ -173,6 +179,7 @@ model Ticket {
   updatedAt              DateTime                  @default(now()) @updatedAt
   clarificationPolicy    ClarificationPolicy?
   agent                  Agent?
+  claudeModelOverrides   Json?
   closedAt               DateTime?
   comments               Comment[]
   jobs                   Job[]
@@ -214,6 +221,7 @@ model Ticket {
 - `workflowType`: Workflow path used (enum: FULL, QUICK, CLEAN; default: FULL). CLEAN is historical only -- creation path removed; retained for existing tickets.
 - `clarificationPolicy`: Optional policy override (nullable, inherits from project when null)
 - `agent`: Optional AI agent override (nullable, inherits from project `defaultAgent` when null)
+- `claudeModelOverrides`: Per-stage Claude model overrides stored as JSON (nullable — null means inherit all stages from the project's `claudeModels`). Shape: `{ specify?, plan?, implement?, quickImpl?, verify? }`. Only applicable when the effective agent is Claude; ignored otherwise.
 - `attachments`: Image attachments (JSON array of TicketAttachment objects, default: empty array)
 - `previewUrl`: Vercel preview deployment URL (max 500 chars, nullable, HTTPS-only, Vercel domain pattern)
   - Set when manual deployment triggered from VERIFY stage
@@ -259,6 +267,7 @@ model Ticket {
 - Clarification policy overrides project default when set
 - Agent overrides project default when set; null means inherit from project `defaultAgent`
 - Effective agent resolved at dispatch time via `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`
+- `claudeModelOverrides` applies only when effective agent is Claude; ignored otherwise — resolution: ticket override → project default → Opus 4.7 fallback
 - Ticket lookup supports both internal ID (backward compatibility) and ticket key (user-facing)
 - **Deletion**:
   - Tickets can be deleted from INBOX, SPECIFY, PLAN, BUILD, VERIFY stages (not SHIP or CLOSED)

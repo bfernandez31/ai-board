@@ -1251,3 +1251,22 @@ The effective agent is determined by a priority chain:
 - Core ticket workflows receive the resolved agent: SPECIFY, PLAN, BUILD, VERIFY, QUICK, iterate
 - Some workflows remain explicitly agent-restricted even when ticket/project resolution returns a different default. For example, ai-board-assist code review remains Claude-only, and setup / retro-spec / health-scan may reject unsupported agents before dispatch.
 - Agent selection is read-only during dispatch — it flows from the database into workflow inputs without changing ticket state
+
+### Per-Stage Claude Model Resolution
+
+When the effective agent is Claude, the workflow also receives a resolved Claude model for the specific stage being executed.
+
+**Configurable Stages**: `specify`, `plan`, `implement`, `quick-impl`, `verify`
+
+**Resolution chain** (first match wins):
+1. `ticket.claudeModelOverrides[stage]` — per-ticket per-stage override (if set and valid)
+2. `project.claudeModels[stage]` — project-level per-stage default (if set and valid)
+3. `claude-opus-4-7` — global fallback
+
+**Whitelisted model IDs**: `claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5`
+
+Unknown or invalid model IDs at any layer are silently skipped (treated as unset); the next layer in the chain is tried.
+
+**Non-Claude agents**: Resolution returns `null`; no model override is applied — each agent uses its own default.
+
+**Job record**: The `model` field on the `Job` record stores the model actually used, providing per-stage cost analytics regardless of which layer supplied the value.

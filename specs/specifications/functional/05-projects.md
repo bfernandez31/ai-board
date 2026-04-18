@@ -305,6 +305,47 @@ Projects have a configurable default clarification policy:
 - Provides reasonable defaults without configuration
 - Users can change at any time
 
+### Claude Model Configuration
+
+Project owners can select which Claude model runs each of the five configurable workflow stages:
+
+**Configurable Stages**: SPECIFY, PLAN, IMPLEMENT, QUICK-IMPL, VERIFY
+
+(`iterate`, `comment-*`, `health-scan`, `retro-spec`, and `onboard` are not configurable — they use the global default.)
+
+**Available Models** (whitelisted):
+| Model ID | Label |
+|----------|-------|
+| `claude-opus-4-7` | Claude Opus 4.7 |
+| `claude-opus-4-6` | Claude Opus 4.6 |
+| `claude-sonnet-4-6` | Claude Sonnet 4.6 |
+| `claude-haiku-4-5` | Claude Haiku 4.5 |
+
+**Configuration**:
+- Dedicated "AI Models" card on the project Settings page, alongside the Clarification Policy card
+- Shows a 5-row table (one row per stage) with a model selector and a short stage description
+- Changes apply immediately with optimistic UI update (revert on error)
+- Only project owners can modify (authorization: `verifyProjectOwnership`)
+
+**Non-Claude Agents**:
+When the project's default agent is not Claude, the card shows an informational message instead of the selectors: "Using {Agent}'s latest default model. Per-stage selection is only available for Claude today." No overrides are stored or applied for non-Claude agents.
+
+**Smart Defaults for New Projects**:
+| Stage | Default |
+|-------|---------|
+| SPECIFY | Claude Opus 4.7 |
+| PLAN | Claude Opus 4.7 |
+| IMPLEMENT | Claude Sonnet 4.6 |
+| QUICK-IMPL | Claude Sonnet 4.6 |
+| VERIFY | Claude Sonnet 4.6 |
+
+Existing projects retain Claude Opus 4.7 for all stages after migration (no regression). Owners can opt into the smart defaults manually.
+
+**Model Resolution at Dispatch**:
+Effective model = ticket-level override → project default → global fallback (Opus 4.7)
+
+Stored Claude configuration is dormant while a non-Claude agent is active and reactivates when the agent switches back to Claude.
+
 ## User-Project Relationship
 
 ### Project Ownership

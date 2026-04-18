@@ -827,6 +827,7 @@ Timestamps display in user-friendly formats:
   - Immutable after being set
   - Visual badges distinguish workflow types on ticket cards:
     - QUICK: ⚡ Quick badge (amber styling)
+    - When any stage has a Claude model override, a compact "Custom models" badge appears next to the agent badge, with a tooltip listing the overridden stages
 
 ### Optional Configuration
 
@@ -841,6 +842,15 @@ Timestamps display in user-friendly formats:
   - Values: `CLAUDE` (Anthropic), `CODEX` (OpenAI)
   - Effective agent resolved at workflow dispatch time
   - Follows the same inheritance and editability rules as `clarificationPolicy`
+
+- **Claude Model Overrides**: Per-stage Claude model selection for this specific ticket
+  - Nullable JSON — `null` or absent stage key means inherit from the project's `claudeModels` defaults
+  - Each of the five configurable stages (specify, plan, implement, quickImpl, verify) can be set independently to any whitelisted Claude model or left unset to inherit
+  - Accessible via a dialog in the ticket detail view, mirroring the project-level "AI Models" card layout
+  - Each stage selector has "Inherit from project default" as the first option (stores no override for that stage)
+  - "Reset all to project defaults" action clears the entire override map in one click
+  - Not applicable when the effective agent is not Claude — the dialog shows an informational message instead
+  - Effective model at dispatch = ticket override → project default → Opus 4.7 fallback
 
 - **Preview URL**: Vercel deployment URL for testing
   - Set when manual deployment is triggered from VERIFY stage

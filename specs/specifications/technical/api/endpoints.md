@@ -151,11 +151,19 @@ Fetch project details including clarification policy.
     "agent": { "cli": "claude-code" }
   },
   "configSyncedAt": "2026-04-02T12:00:00.000Z",
-  "defaultBranch": "main"
+  "defaultBranch": "main",
+  "claudeModels": {
+    "specify": "claude-opus-4-7",
+    "plan": "claude-opus-4-7",
+    "implement": "claude-sonnet-4-6",
+    "quickImpl": "claude-sonnet-4-6",
+    "verify": "claude-sonnet-4-6"
+  },
+  "hasSpecs": false
 }
 ```
 
-`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync.
+`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync. `claudeModels` is `null` for projects that have never configured per-stage models (all stages fall back to Opus 4.7 at dispatch). `hasSpecs` is `false` until a RETRO_SPEC job completes.
 
 **Errors**:
 - `401`: Not authenticated
@@ -215,7 +223,11 @@ Update project details including clarification policy.
   "key": "UPD",
   "description": "Updated description",
   "deploymentUrl": "https://my-app.vercel.app",
-  "clarificationPolicy": "CONSERVATIVE"
+  "clarificationPolicy": "CONSERVATIVE",
+  "claudeModels": {
+    "specify": "claude-opus-4-7",
+    "implement": "claude-sonnet-4-6"
+  }
 }
 ```
 
@@ -225,6 +237,7 @@ Update project details including clarification policy.
 - `description`: Optional, string or null
 - `deploymentUrl`: Optional, string or null (valid URL format)
 - `clarificationPolicy`: Optional, enum (AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE)
+- `claudeModels`: Optional, object with any subset of stage keys (`specify`, `plan`, `implement`, `quickImpl`, `verify`) mapped to whitelisted model IDs; unknown model IDs rejected with 400
 
 **Response** (200 OK):
 ```json
@@ -828,16 +841,28 @@ Fetch single ticket with nested project data.
     }
   ],
   "version": 3,
+  "claudeModelOverrides": {
+    "implement": "claude-haiku-4-5"
+  },
   "project": {
     "id": 1,
     "name": "AI Board Development",
     "key": "ABC",
-    "clarificationPolicy": "AUTO"
+    "clarificationPolicy": "AUTO",
+    "claudeModels": {
+      "specify": "claude-opus-4-7",
+      "plan": "claude-opus-4-7",
+      "implement": "claude-sonnet-4-6",
+      "quickImpl": "claude-sonnet-4-6",
+      "verify": "claude-sonnet-4-6"
+    }
   },
   "createdAt": "2025-01-10T14:00:00.000Z",
   "updatedAt": "2025-01-15T10:30:00.000Z"
 }
 ```
+
+`claudeModelOverrides` is `null` when no ticket-level overrides are set. `project.claudeModels` is `null` when the project has no per-stage defaults configured.
 
 **Errors**:
 - `401`: Not authenticated
@@ -869,6 +894,7 @@ Update ticket fields with optimistic concurrency control.
 - `title`: Optional, 1-100 characters, alphanumeric + basic punctuation
 - `description`: Optional, 1-10000 characters (editable only in INBOX stage)
 - `clarificationPolicy`: Optional, enum or null (editable only in INBOX stage)
+- `claudeModelOverrides`: Optional, object with any subset of stage keys (`specify`, `plan`, `implement`, `quickImpl`, `verify`) mapped to whitelisted model IDs, or `null` to clear all overrides; unknown model IDs rejected with 400
 - `version`: Required for concurrency control
 
 **Response** (200 OK):
