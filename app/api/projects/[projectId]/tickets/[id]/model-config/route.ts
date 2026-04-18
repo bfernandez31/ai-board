@@ -26,16 +26,12 @@ export async function PATCH(
     const validated = ticketModelOverrideSchema.parse(body);
 
     const updateData: Record<string, string | null> = {};
-    if (validated.resetAll) {
-      for (const key of STAGE_MODEL_KEYS) {
+    for (const key of STAGE_MODEL_KEYS) {
+      if (validated.resetAll) {
         updateData[key] = null;
+      } else if (validated[key] !== undefined) {
+        updateData[key] = validated[key] ?? null;
       }
-    } else {
-      if (validated.specifyModel !== undefined) updateData.specifyModel = validated.specifyModel;
-      if (validated.planModel !== undefined) updateData.planModel = validated.planModel;
-      if (validated.implementModel !== undefined) updateData.implementModel = validated.implementModel;
-      if (validated.quickImplModel !== undefined) updateData.quickImplModel = validated.quickImplModel;
-      if (validated.verifyModel !== undefined) updateData.verifyModel = validated.verifyModel;
     }
 
     const updated = await prisma.ticket.update({
@@ -55,13 +51,10 @@ export async function PATCH(
       .filter((key) => updated[key] != null)
       .map((key) => STAGE_MODEL_LABELS[key]);
 
+    const { id: updatedId, ...models } = updated;
     return NextResponse.json({
-      ticketId: updated.id,
-      specifyModel: updated.specifyModel,
-      planModel: updated.planModel,
-      implementModel: updated.implementModel,
-      quickImplModel: updated.quickImplModel,
-      verifyModel: updated.verifyModel,
+      ticketId: updatedId,
+      ...models,
       hasAnyOverride: overriddenStages.length > 0,
       overriddenStages,
     });
