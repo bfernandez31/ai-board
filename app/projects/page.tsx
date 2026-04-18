@@ -20,13 +20,11 @@ export const metadata: Metadata = {
 
 async function getProjects(): Promise<ProjectsListResponse> {
   try {
-    // Use data access layer directly instead of fetch
     const projects = await getUserProjects();
-
     return projects.map(toProjectWithCount);
   } catch (error) {
     console.error('Failed to fetch projects:', error);
-    return []; // Return empty array on error (graceful degradation)
+    return [];
   }
 }
 

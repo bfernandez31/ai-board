@@ -50,35 +50,22 @@ function buildGrid(periodStart: string, periodEnd: string): WeekColumn[] {
   const end = new Date(periodEnd + 'T00:00:00');
   const columns: WeekColumn[] = [];
   let currentWeek: (string | null)[] = [];
-  const startDow = start.getDay();
 
-  for (let i = 0; i < startDow; i++) {
+  for (let i = 0; i < start.getDay(); i++) {
     currentWeek.push(null);
   }
 
   const cursor = new Date(start);
-  let lastMonth = -1;
-
   while (cursor <= end) {
-    const dow = cursor.getDay();
-    if (dow === 0 && currentWeek.length > 0) {
+    if (cursor.getDay() === 0 && currentWeek.length > 0) {
       columns.push({ days: currentWeek });
       currentWeek = [];
     }
 
     const y = cursor.getFullYear();
-    const m = cursor.getMonth();
-    const d = cursor.getDate();
-    const key = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    currentWeek.push(key);
-
-    if (m !== lastMonth && columns.length >= 0) {
-      const colIndex = columns.length;
-      if (!columns[colIndex]) {
-        // Will set on the column when it's pushed
-      }
-      lastMonth = m;
-    }
+    const m = String(cursor.getMonth() + 1).padStart(2, '0');
+    const d = String(cursor.getDate()).padStart(2, '0');
+    currentWeek.push(`${y}-${m}-${d}`);
 
     cursor.setDate(cursor.getDate() + 1);
   }
@@ -90,19 +77,14 @@ function buildGrid(periodStart: string, periodEnd: string): WeekColumn[] {
     columns.push({ days: currentWeek });
   }
 
-  // Assign month labels to first column of each month
   let prevMonth = -1;
   for (const col of columns) {
-    for (const day of col.days) {
-      if (day) {
-        const month = parseInt(day.split('-')[1]!, 10) - 1;
-        if (month !== prevMonth) {
-          col.monthLabel = MONTH_LABELS[month] ?? '';
-          prevMonth = month;
-          break;
-        }
-        break;
-      }
+    const firstDay = col.days.find((day): day is string => day !== null);
+    if (!firstDay) continue;
+    const month = parseInt(firstDay.split('-')[1]!, 10) - 1;
+    if (month !== prevMonth) {
+      col.monthLabel = MONTH_LABELS[month] ?? '';
+      prevMonth = month;
     }
   }
 
@@ -193,13 +175,11 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
   const handleCellInteraction = useCallback(
     (dateKey: string, event: React.MouseEvent | React.TouchEvent) => {
       event.preventDefault();
-      const dayData = heatmap.days[dateKey];
-      if (!dayData && !dateKey) return;
-
-      const target = event.currentTarget as HTMLElement;
-      const rect = target.getBoundingClientRect();
       const gridRect = gridRef.current?.getBoundingClientRect();
       if (!gridRect) return;
+
+      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+      const dayData = heatmap.days[dateKey];
 
       setTooltip({
         x: rect.left - gridRect.left + rect.width / 2,
