@@ -439,6 +439,58 @@ Projects track activity across all tickets:
 - Ticket count shows total across all stages
 - Activity visible in project list view
 
+### Activity Heatmap
+
+The projects page displays a GitHub-style activity heatmap below the project cards grid, showing AI job activity across all of the user's projects over a selected time period.
+
+**Heatmap Grid**:
+- CSS Grid with 7 rows (Sunday through Saturday) and columns matching the number of weeks in the selected period
+- Month labels along the top, day-of-week labels (Mon, Wed, Fri) on the left
+- Cell intensity based on total job count for each day, using a 5-level violet color gradient aligned with the aurora theme tokens
+- "Chipped corners" — cells before the first day and after the last day of the period are omitted when those days don't fall on a week boundary
+- Intensity legend at the bottom-right showing the scale from "Less" to "More" with 5 color swatches
+
+**Summary Counter**:
+- Header displays "X jobs · Y tickets shipped in the last year" (or the selected period label)
+- A ticket counts as "shipped" only when its `ship` command job reaches COMPLETED status — counted on the day the job completed (via `completedAt`)
+- Running jobs count toward activity on their `createdAt` date
+
+**Year Selector**:
+- Dropdown defaults to "Last 12 months" (rolling 365-day window from today)
+- Additional options for each calendar year from the user's account creation year to the current year
+- Hidden (rendered as a static label) when the user's account was created in the current year
+
+**Agent Filter**:
+- Allows filtering by AI agent (CLAUDE, CODEX, MISTRAL, GEMINI) with "All" as the default
+- Honors effective agent resolution: tickets with no explicit agent inherit their project's default agent
+- Hidden when 0 or 1 distinct agents exist in the user's data
+
+**URL-Shareable Filters**:
+- Active filter selections (year, agent) are reflected as URL query parameters (`?year=2025&agent=CLAUDE`)
+- Default values produce no query params (clean URL)
+- Filters survive page refresh and are shareable
+
+**Empty State**:
+- When the selected period has zero activity, a centered message "No activity to show yet — your AI work will appear here" replaces the grid
+- Header (counter, year selector, agent filter) and legend remain visible and interactive
+- Counter shows "0 jobs · 0 tickets shipped"
+
+**Mobile Behavior**:
+- Grid scrolls horizontally with day-of-week labels pinned on the left
+- Cells maintain a minimum tappable size
+- Tooltip on tap (tap outside to dismiss; one tooltip at a time)
+
+**Tooltip**:
+- Desktop: appears on hover; mobile: appears on tap
+- Shows formatted date, tickets shipped (if any), job count, and total cost (only when cost data exists for that day)
+- Cost line omitted entirely when no cost data is available — never displays "$0" or "$NaN"
+- Empty cells show "No activity" with the formatted date
+
+**Data Loading**:
+- Heatmap renders with server-provided initial data to avoid a loading flash on first render
+- Background refetches update silently without blanking the UI (1-minute refresh interval)
+- The projects page scrolls naturally to reveal the heatmap below the project cards grid
+
 ## Project Actions
 
 ### Project Analytics

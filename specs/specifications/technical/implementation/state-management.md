@@ -58,6 +58,11 @@ export const queryKeys = {
     ticketJobs: (projectId: number, ticketId: number) =>
       [...queryKeys.projects.detail(projectId), 'tickets', ticketId, 'jobs'] as const,
   },
+
+  heatmap: {
+    all: ['heatmap'] as const,
+    data: (year: string, agent: string) => ['heatmap', year, agent] as const,
+  },
 };
 ```
 
@@ -658,6 +663,54 @@ function TicketStats({ jobs, polledJobs }: {
 - Existing 2-second job polling provides real-time status updates
 - No additional API calls required
 - The quality score disclosure re-evaluates the latest scored verify job whenever refreshed job data changes
+
+### Heatmap Query Hook
+
+**Hook** (`app/lib/hooks/queries/use-heatmap.ts`):
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/app/lib/query-keys';
+import type { HeatmapData, HeatmapFilters } from '@/lib/heatmap/types';
+
+export function useHeatmap(filters: HeatmapFilters, initialData?: HeatmapData) {
+  return useQuery({
+    queryKey: queryKeys.heatmap.data(filters.year, filters.agent),
+    queryFn: () => fetchHeatmap(filters),
+    initialData,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+}
+```
+
+**Features**:
+- **SSR Initial Data**: Accepts `initialData` from the server component to render immediately without a loading flash
+- **1-Minute Stale Time**: Heatmap data changes slowly; avoids unnecessary refetches
+- **Background Polling**: Refetches every 60 seconds to pick up new activity
+- **Filter-Keyed Cache**: Query key includes `year` and `agent` — changing filters triggers a fresh fetch
+- **Clean URL Fetch**: Default filters (`rolling`, `all`) produce no query params; non-default filters append `?year=...&agent=...`
+
+**Query Key**:
+```typescript
+heatmap: {
+  all: ['heatmap'] as const,
+  data: (year: string, agent: string) => ['heatmap', year, agent] as const,
+},
+```
+
+**Usage in Orchestrator** (`components/heatmap/activity-heatmap.tsx`):
+```typescript
+function ActivityHeatmap({ initialData }: { initialData: HeatmapData }) {
+  const searchParams = useSearchParams();
+  const [filters, setFilters] = useState<HeatmapFilters>(getInitialFilters(searchParams));
+  const { data } = useHeatmap(filters, initialData);
+
+  // Renders HeatmapHeader, HeatmapGrid (or empty state), HeatmapLegend
+  // Filter changes update local state + push URL params via router.replace()
+}
+```
 
 ## Mutation Hooks
 

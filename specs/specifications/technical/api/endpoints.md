@@ -3614,6 +3614,82 @@ sequenceDiagram
 
 **Performance**: Optimized with database aggregation, <3s for projects with up to 1,000 jobs
 
+## Heatmap Endpoints
+
+### GET /api/heatmap
+
+Fetch aggregated activity heatmap data across all of the authenticated user's projects.
+
+**Authentication**: Required (session)
+**Authorization**: User-scoped (returns data for all projects the user owns or is a member of)
+
+**Query Parameters**:
+- `year` (string, optional): Time period — `rolling` (default, last 365 days) or a 4-digit calendar year (e.g., `2025`)
+- `agent` (string, optional): Agent filter — `all` (default), `CLAUDE`, `CODEX`, `MISTRAL`, or `GEMINI`
+
+**Response** (200 OK):
+```json
+{
+  "cells": [
+    {
+      "date": "2025-03-15",
+      "jobCount": 5,
+      "shippedCount": 1,
+      "totalCost": 2.50
+    },
+    {
+      "date": "2025-03-16",
+      "jobCount": 3,
+      "shippedCount": 0,
+      "totalCost": null
+    }
+  ],
+  "summary": {
+    "totalJobs": 8,
+    "totalShipped": 1
+  },
+  "thresholds": [1, 2, 4, 8],
+  "availableAgents": [
+    { "value": "all", "label": "All agents", "jobCount": 45, "isDefault": true },
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 30, "isDefault": false },
+    { "value": "CODEX", "label": "Codex", "jobCount": 15, "isDefault": false }
+  ],
+  "availableYears": ["2024", "2025", "2026"],
+  "accountCreatedYear": 2024,
+  "filters": {
+    "year": "rolling",
+    "agent": "all"
+  }
+}
+```
+
+**Fields**:
+- `cells`: Array of days with activity (zero-activity days omitted; client fills the grid and treats missing dates as empty)
+  - `date`: ISO date string (YYYY-MM-DD), UTC-normalized
+  - `jobCount`: Total jobs created on that day across all user projects
+  - `shippedCount`: Tickets with a COMPLETED `ship` job on that day (keyed by `completedAt`)
+  - `totalCost`: Sum of `costUsd` for jobs with cost data; `null` when all jobs on that day lack cost data
+- `summary`: Aggregated totals for the selected period
+  - `totalJobs`: Sum of all `jobCount` values
+  - `totalShipped`: Sum of all `shippedCount` values
+- `thresholds`: Four percentile-based intensity breakpoints `[p25, p50, p75, max]` computed from non-zero job counts; used by the client to assign cells to intensity levels 1–4
+- `availableAgents`: Agent filter options with job counts, following the same structure as the analytics endpoint
+- `availableYears`: Calendar years from user's account creation year to current year
+- `accountCreatedYear`: Year the user's account was created (determines year selector behavior)
+- `filters`: The applied filter set echoed back by the server
+
+**Data Aggregation**:
+- Jobs grouped by `DATE(createdAt)` in UTC for job counts and cost aggregation
+- Shipped tickets counted separately: `command = 'ship'` AND `status = 'COMPLETED'`, grouped by `DATE(completedAt)`
+- Agent filtering uses effective agent resolution: `ticket.agent` when present, otherwise `project.defaultAgent`
+- Cost aggregated only for non-null `costUsd` values; `totalCost` is `null` when all jobs on a day lack cost data
+- All dates UTC-normalized to avoid timezone boundary issues
+
+**Errors**:
+- `400`: Invalid heatmap filters (invalid year format or unrecognized agent value)
+- `401`: Not authenticated
+- `500`: Database error
+
 ## Project Member Endpoints
 
 ### GET /api/projects/:projectId/members

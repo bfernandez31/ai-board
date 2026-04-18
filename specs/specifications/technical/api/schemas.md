@@ -431,6 +431,30 @@ export type UpdateJobStatusInput = z.infer<typeof updateJobStatusSchema>;
 - Terminal states (COMPLETED, FAILED, CANCELLED) cannot transition
 - Idempotent updates allowed (same status returns 200)
 
+## Heatmap Schemas
+
+### HeatmapQuerySchema
+
+```typescript
+import { z } from 'zod';
+import { HEATMAP_AGENT_FILTER_VALUES } from '@/lib/heatmap/types';
+
+const querySchema = z.object({
+  year: z.string().regex(/^(rolling|\d{4})$/).default('rolling'),
+  agent: z.enum(HEATMAP_AGENT_FILTER_VALUES).default('all'),
+});
+```
+
+**Location**: Inline in `app/api/heatmap/route.ts`
+
+**Validation Rules**:
+- **year**: `"rolling"` (default) for the last 365 days, or a 4-digit year string (e.g., `"2025"`)
+- **agent**: `"all"` (default), `"CLAUDE"`, `"CODEX"`, `"MISTRAL"`, or `"GEMINI"`
+
+**Notes**:
+- Query params are read from `request.url` search params; missing values use Zod defaults
+- Invalid values produce a `400` response with `"Invalid heatmap filters"`
+
 ## Project Schemas
 
 ### UpdateProjectSchema
