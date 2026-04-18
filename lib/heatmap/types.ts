@@ -9,13 +9,6 @@ export interface HeatmapCell {
   totalCost: number | null;
 }
 
-export interface HeatmapPeriod {
-  value: 'rolling' | string;
-  label: string;
-  startDate: string;
-  endDate: string;
-}
-
 export interface HeatmapFilters {
   year: 'rolling' | string;
   agent: HeatmapAgentFilter;

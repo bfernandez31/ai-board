@@ -24,15 +24,10 @@ function buildFilterSearchParams(
   filters: HeatmapFilters
 ): URLSearchParams {
   const params = new URLSearchParams(searchParams.toString());
-
-  // Remove heatmap params first
   params.delete('year');
   params.delete('agent');
-
-  // Only add non-default values
   if (filters.year !== 'rolling') params.set('year', filters.year);
   if (filters.agent !== 'all') params.set('agent', filters.agent);
-
   return params;
 }
 
@@ -57,10 +52,6 @@ function getPeriodDates(year: string): { startDate: string; endDate: string } {
   };
 }
 
-function getPeriodLabel(year: string): string {
-  return year === 'rolling' ? 'in the last year' : `in ${year}`;
-}
-
 function ActivityHeatmapInner({ initialData }: ActivityHeatmapProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -81,7 +72,7 @@ function ActivityHeatmapInner({ initialData }: ActivityHeatmapProps) {
   };
 
   const { startDate, endDate } = useMemo(() => getPeriodDates(filters.year), [filters.year]);
-  const periodLabel = getPeriodLabel(filters.year);
+  const periodLabel = filters.year === 'rolling' ? 'in the last year' : `in ${filters.year}`;
 
   if (!heatmap) return null;
 

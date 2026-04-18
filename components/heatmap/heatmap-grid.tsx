@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import type { HeatmapCell } from '@/lib/heatmap/types';
+import { HEATMAP_INTENSITY_CLASSES } from './palette';
 import { HeatmapTooltip } from './heatmap-tooltip';
 
 interface HeatmapGridProps {
@@ -13,6 +14,9 @@ interface HeatmapGridProps {
 
 const DAY_LABELS = ['Mon', 'Wed', 'Fri'] as const;
 const DAY_LABEL_ROWS = [1, 3, 5] as const;
+const CELL_SIZE_PX = 13;
+const CELL_GAP_PX = 2;
+const WEEK_STRIDE_PX = CELL_SIZE_PX + CELL_GAP_PX;
 
 function getIntensityLevel(jobCount: number, thresholds: [number, number, number, number]): number {
   if (jobCount === 0) return 0;
@@ -22,22 +26,12 @@ function getIntensityLevel(jobCount: number, thresholds: [number, number, number
   return 4;
 }
 
-const INTENSITY_CLASSES = [
-  'bg-muted/30',
-  'bg-violet-400/30',
-  'bg-violet-400/50',
-  'bg-violet-400/75',
-  'bg-violet-400',
-] as const;
-
 function formatMonthLabel(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
 }
 
 interface GridCell {
   date: string;
-  dayOfWeek: number;
-  weekIndex: number;
   data: HeatmapCell | null;
 }
 
@@ -57,7 +51,6 @@ function buildGrid(startDate: string, endDate: string, cells: HeatmapCell[]) {
   const current = new Date(start);
 
   while (current <= end) {
-    const dow = current.getUTCDay();
     const dateStr = current.toISOString().split('T')[0]!;
     const month = current.getUTCMonth();
 
@@ -68,8 +61,6 @@ function buildGrid(startDate: string, endDate: string, cells: HeatmapCell[]) {
 
     gridCells.push({
       date: dateStr,
-      dayOfWeek: dow,
-      weekIndex,
       data: cellMap.get(dateStr) ?? null,
     });
 
@@ -112,12 +103,13 @@ export function HeatmapGrid({ cells, thresholds, startDate, endDate }: HeatmapGr
   }, [handleCellInteraction]);
 
   const labelWidth = 32;
+  const preCount = startDow;
+  const postCount = 6 - endDow;
 
   return (
     <div className="relative" data-testid="heatmap-grid">
       <div className="overflow-x-auto">
         <div style={{ display: 'inline-block', minWidth: 'fit-content' }}>
-          {/* Month labels */}
           <div className="flex" style={{ paddingLeft: `${labelWidth + 4}px`, marginBottom: '4px' }}>
             {monthLabels.map((m, i) => {
               const nextStart = monthLabels[i + 1]?.weekIndex ?? totalWeeks;
@@ -126,7 +118,7 @@ export function HeatmapGrid({ cells, thresholds, startDate, endDate }: HeatmapGr
                 <span
                   key={`${m.label}-${m.weekIndex}`}
                   className="text-xs text-muted-foreground"
-                  style={{ width: `${span * 15}px`, flexShrink: 0 }}
+                  style={{ width: `${span * WEEK_STRIDE_PX}px`, flexShrink: 0 }}
                   data-testid="month-label"
                 >
                   {span >= 2 ? m.label : ''}
@@ -136,12 +128,11 @@ export function HeatmapGrid({ cells, thresholds, startDate, endDate }: HeatmapGr
           </div>
 
           <div className="flex">
-            {/* Day-of-week labels */}
             <div
               className="sticky left-0 z-10 flex-shrink-0"
               style={{ width: `${labelWidth}px` }}
             >
-              <div style={{ display: 'grid', gridTemplateRows: 'repeat(7, 13px)', gap: '2px' }}>
+              <div style={{ display: 'grid', gridTemplateRows: `repeat(7, ${CELL_SIZE_PX}px)`, gap: `${CELL_GAP_PX}px` }}>
                 {Array.from({ length: 7 }, (_, row) => {
                   const labelIdx = DAY_LABEL_ROWS.indexOf(row as 1 | 3 | 5);
                   return (
@@ -157,53 +148,44 @@ export function HeatmapGrid({ cells, thresholds, startDate, endDate }: HeatmapGr
               </div>
             </div>
 
-            {/* Grid cells */}
             <div
               style={{
                 display: 'grid',
-                gridTemplateRows: 'repeat(7, 13px)',
+                gridTemplateRows: `repeat(7, ${CELL_SIZE_PX}px)`,
                 gridAutoFlow: 'column',
-                gridAutoColumns: '13px',
-                gap: '2px',
+                gridAutoColumns: `${CELL_SIZE_PX}px`,
+                gap: `${CELL_GAP_PX}px`,
               }}
               data-testid="heatmap-cells"
             >
-              {Array.from({ length: totalWeeks }, (_, weekIdx) =>
-                Array.from({ length: 7 }, (_, dow) => {
-                  const isChippedStart = weekIdx === 0 && dow < startDow;
-                  const isChippedEnd = weekIdx === totalWeeks - 1 && dow > endDow;
+              {Array.from({ length: preCount }, (_, i) => (
+                <div key={`pre-${i}`} />
+              ))}
 
-                  if (isChippedStart || isChippedEnd) {
-                    return <div key={`${weekIdx}-${dow}`} />;
-                  }
+              {gridCells.map((cell) => {
+                const level = getIntensityLevel(cell.data?.jobCount ?? 0, thresholds);
+                return (
+                  <div
+                    key={cell.date}
+                    className={`rounded-sm ${HEATMAP_INTENSITY_CLASSES[level]} cursor-pointer`}
+                    style={{ width: `${CELL_SIZE_PX}px`, height: `${CELL_SIZE_PX}px`, minWidth: '11px', minHeight: '11px' }}
+                    data-testid="heatmap-cell"
+                    data-date={cell.date}
+                    data-level={level}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`${cell.date}: ${cell.data?.jobCount ?? 0} jobs`}
+                    onMouseEnter={(e) => handleCellInteraction(cell, e.currentTarget)}
+                    onMouseLeave={handleDismiss}
+                    onClick={(e) => handleCellInteraction(cell, e.currentTarget)}
+                    onKeyDown={(e) => handleKeyDown(e, cell, e.currentTarget)}
+                  />
+                );
+              })}
 
-                  const cell = gridCells.find(
-                    (c) => c.weekIndex === weekIdx && c.dayOfWeek === dow
-                  );
-
-                  if (!cell) return <div key={`${weekIdx}-${dow}`} />;
-
-                  const level = getIntensityLevel(cell.data?.jobCount ?? 0, thresholds);
-
-                  return (
-                    <div
-                      key={cell.date}
-                      className={`rounded-sm ${INTENSITY_CLASSES[level]} cursor-pointer`}
-                      style={{ width: '13px', height: '13px', padding: '0', minWidth: '11px', minHeight: '11px' }}
-                      data-testid="heatmap-cell"
-                      data-date={cell.date}
-                      data-level={level}
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`${cell.date}: ${cell.data?.jobCount ?? 0} jobs`}
-                      onMouseEnter={(e) => handleCellInteraction(cell, e.currentTarget)}
-                      onMouseLeave={handleDismiss}
-                      onClick={(e) => handleCellInteraction(cell, e.currentTarget)}
-                      onKeyDown={(e) => handleKeyDown(e, cell, e.currentTarget)}
-                    />
-                  );
-                })
-              )}
+              {Array.from({ length: postCount }, (_, i) => (
+                <div key={`post-${i}`} />
+              ))}
             </div>
           </div>
         </div>
