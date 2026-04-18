@@ -15,6 +15,8 @@ import {
   type ClaudeModelId,
 } from '@/lib/models/claude-models';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 
 const FALLBACK_SENTINEL = 'fallback-default';
 
@@ -44,6 +46,7 @@ function initialState(project: AIModelsCardProps['project']): ModelConfigState {
 
 export function AIModelsCard({ project }: AIModelsCardProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [state, setState] = useState<ModelConfigState>(() => initialState(project));
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -66,6 +69,11 @@ export function AIModelsCard({ project }: AIModelsCardProps) {
     } catch (error) {
       console.error('Error updating model:', error);
       setState((prev) => ({ ...prev, [stage]: previous }));
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update model',
+        description: 'Previous selection restored. Please try again.',
+      });
     } finally {
       setIsUpdating(false);
     }
@@ -87,6 +95,11 @@ export function AIModelsCard({ project }: AIModelsCardProps) {
     } catch (error) {
       console.error('Error applying smart defaults:', error);
       setState(previous);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to apply smart defaults',
+        description: 'Previous selections restored. Please try again.',
+      });
     } finally {
       setIsUpdating(false);
     }
@@ -103,8 +116,7 @@ export function AIModelsCard({ project }: AIModelsCardProps) {
       <CardContent className="space-y-4">
         {!isClaude ? (
           <p className="text-sm text-muted-foreground" data-testid="ai-models-card-inactive">
-            Per-stage models apply only when the project&apos;s default agent is Claude. This
-            configuration is stored but dormant for the current agent.
+            {`Using ${getAgentLabel(project.defaultAgent)}'s latest default model. Per-stage selection is only available for Claude today.`}
           </p>
         ) : (
           <>

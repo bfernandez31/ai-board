@@ -10,7 +10,7 @@ import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { AgentIcon } from '@/components/ui/agent-icon';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { JobStatusIndicator } from './job-status-indicator';
-import { Job } from '@prisma/client';
+import { Agent, Job } from '@prisma/client';
 import { classifyJobType } from '@/lib/utils/job-type-classifier';
 import { TicketCardDeployIcon } from './ticket-card-deploy-icon';
 import { TicketCardPreviewIcon } from './ticket-card-preview-icon';
@@ -22,7 +22,6 @@ import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
 import { useHasMounted } from '@/lib/hooks/use-has-mounted';
 import { QualityScoreBadge } from '@/components/ticket/quality-score-badge';
 import { X } from 'lucide-react';
-import { Agent } from '@prisma/client';
 import { STAGE_MODEL_KEYS, STAGE_MODEL_LABELS } from '@/lib/models/claude-models';
 
 interface DraggableTicketCardProps {

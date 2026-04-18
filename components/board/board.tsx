@@ -852,6 +852,11 @@ export function Board({
     autoMode: boolean;
     clarificationPolicy: ClarificationPolicy | null;
     agent?: import('@prisma/client').Agent | null;
+    specifyModel?: string | null;
+    planModel?: string | null;
+    implementModel?: string | null;
+    quickImplModel?: string | null;
+    verifyModel?: string | null;
     workflowType: 'FULL' | 'QUICK' | 'CLEAN';
     attachments?: import('@/app/lib/types/ticket').TicketAttachment[] | null;
     createdAt: string | Date;
@@ -881,11 +886,26 @@ export function Board({
         autoMode: updatedTicket.autoMode,
         clarificationPolicy: updatedTicket.clarificationPolicy,
         agent: updatedTicket.agent ?? existingTicket?.agent ?? null,
-        specifyModel: existingTicket?.specifyModel ?? null,
-        planModel: existingTicket?.planModel ?? null,
-        implementModel: existingTicket?.implementModel ?? null,
-        quickImplModel: existingTicket?.quickImplModel ?? null,
-        verifyModel: existingTicket?.verifyModel ?? null,
+        specifyModel:
+          updatedTicket.specifyModel !== undefined
+            ? updatedTicket.specifyModel
+            : existingTicket?.specifyModel ?? null,
+        planModel:
+          updatedTicket.planModel !== undefined
+            ? updatedTicket.planModel
+            : existingTicket?.planModel ?? null,
+        implementModel:
+          updatedTicket.implementModel !== undefined
+            ? updatedTicket.implementModel
+            : existingTicket?.implementModel ?? null,
+        quickImplModel:
+          updatedTicket.quickImplModel !== undefined
+            ? updatedTicket.quickImplModel
+            : existingTicket?.quickImplModel ?? null,
+        verifyModel:
+          updatedTicket.verifyModel !== undefined
+            ? updatedTicket.verifyModel
+            : existingTicket?.verifyModel ?? null,
         // Preserve workflowType from existing ticket if not in update (defensive)
         workflowType: updatedTicket.workflowType || existingTicket?.workflowType || 'FULL',
         // Preserve attachments from existing ticket or use empty array

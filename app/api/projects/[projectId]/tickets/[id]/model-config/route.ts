@@ -10,12 +10,13 @@ export async function PATCH(
   { params }: { params: Promise<{ projectId: string; id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { projectId: projectIdParam, id } = await params;
     const ticketId = parseInt(id, 10);
+    const projectId = parseInt(projectIdParam, 10);
 
-    if (isNaN(ticketId)) {
+    if (isNaN(ticketId) || isNaN(projectId)) {
       return NextResponse.json(
-        { error: 'Invalid ticket ID' },
+        { error: 'Invalid ticket or project ID' },
         { status: 400 }
       );
     }
@@ -34,8 +35,15 @@ export async function PATCH(
       }
     }
 
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'At least one field must be provided' },
+        { status: 400 }
+      );
+    }
+
     const updated = await prisma.ticket.update({
-      where: { id: ticketId },
+      where: { id: ticketId, projectId },
       data: updateData,
       select: {
         id: true,
@@ -79,6 +87,10 @@ export async function PATCH(
     }
 
     if (error instanceof Error && error.message === 'Ticket not found') {
+      return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
+    }
+
+    if (error instanceof Error && 'code' in error && (error as { code: string }).code === 'P2025') {
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     }
 

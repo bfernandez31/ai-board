@@ -16,13 +16,23 @@ export const ticketModelOverrideSchema = z
   })
   .refine(
     (d) =>
-      d.resetAll !== undefined ||
+      d.resetAll === true ||
       d.specifyModel !== undefined ||
       d.planModel !== undefined ||
       d.implementModel !== undefined ||
       d.quickImplModel !== undefined ||
       d.verifyModel !== undefined,
     { message: 'At least one field must be provided' }
+  )
+  .refine(
+    (d) =>
+      d.resetAll !== true ||
+      (d.specifyModel === undefined &&
+        d.planModel === undefined &&
+        d.implementModel === undefined &&
+        d.quickImplModel === undefined &&
+        d.verifyModel === undefined),
+    { message: 'resetAll cannot be combined with individual stage fields' }
   );
 
 export type TicketModelOverrideInput = z.infer<typeof ticketModelOverrideSchema>;
