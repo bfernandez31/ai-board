@@ -74,7 +74,7 @@ async function rollbackToPlanWithReset(
 ): Promise<TransitionExecutionResult> {
   const updatedTicket = await rollbackTransaction(
     ticket.id,
-    { stage: 'PLAN', previewUrl: null, version: { increment: 1 } },
+    { stage: 'PLAN', previewUrl: null, autoMode: false, version: { increment: 1 } },
     mostRecentJob
   );
 
