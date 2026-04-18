@@ -67,6 +67,12 @@ on:
         type: string
         default: 'CLAUDE'
 
+      model:
+        description: 'Claude model ID to use (only applied when agent=CLAUDE). Empty string uses workflow default.'
+        required: false
+        type: string
+        default: ''
+
       # Conditional service inputs
       needs_postgres:
         description: 'Provision PostgreSQL service container'
@@ -186,8 +192,8 @@ jobs:
       SKIP_SPECKIT_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
-      # Use Opus model for Claude Code
-      ANTHROPIC_MODEL: "claude-opus-4-7"
+      # Per-stage Claude model (falls back to Opus 4.7 when input is empty)
+      ANTHROPIC_MODEL: ${{ inputs.model != '' && inputs.model || 'claude-opus-4-7' }}
       # DATABASE_URL provided by .ai-board/config.yml env section via setup-environment.sh
       # Claude Code telemetry - send to OTLP endpoint
       CLAUDE_CODE_ENABLE_TELEMETRY: "1"

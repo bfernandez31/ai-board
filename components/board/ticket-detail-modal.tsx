@@ -32,6 +32,12 @@ import { CharacterCounter } from '@/components/ui/character-counter';
 import { PolicyBadge } from '@/components/ui/policy-badge';
 import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
 import { AgentEditDialog } from '@/components/tickets/agent-edit-dialog';
+import { ClaudeModelsEditDialog } from '@/components/tickets/claude-models-edit-dialog';
+import {
+  overriddenStageKeys,
+  type ClaudeModelMap,
+  CLAUDE_STAGES,
+} from '@/lib/workflows/claude-models';
 import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { AgentIcon } from '@/components/ui/agent-icon';
 import DocumentationViewer from './documentation-viewer';
@@ -71,6 +77,7 @@ interface TicketData {
   autoMode: boolean;
   clarificationPolicy: ClarificationPolicy | null;
   agent?: Agent | null;
+  claudeModelOverrides?: unknown;
   workflowType: 'FULL' | 'QUICK' | 'CLEAN';
   attachments?: TicketAttachment[] | null;
   createdAt: Date | string;
@@ -78,6 +85,7 @@ interface TicketData {
   project?: {
     clarificationPolicy: ClarificationPolicy;
     defaultAgent?: Agent;
+    claudeModels?: unknown;
     githubOwner?: string;
     githubRepo?: string;
   };
@@ -186,6 +194,7 @@ export function TicketDetailModal({
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
   const [policyEditOpen, setPolicyEditOpen] = useState(false);
   const [agentEditOpen, setAgentEditOpen] = useState(false);
+  const [claudeModelsEditOpen, setClaudeModelsEditOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
@@ -676,6 +685,92 @@ export function TicketDetailModal({
     }
   };
 
+  const handleSaveClaudeModels = async (
+    overrides: ClaudeModelMap | null
+  ): Promise<void> => {
+    if (!localTicket) return;
+
+    const originalTicket = { ...localTicket };
+
+    setLocalTicket({ ...localTicket, claudeModelOverrides: overrides });
+
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${localTicket.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            claudeModelOverrides: overrides,
+            version: localTicket.version,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        if (response.status === 409) {
+          setLocalTicket(originalTicket);
+          toast({
+            variant: 'destructive',
+            title: 'Conflict',
+            description:
+              'Ticket was modified by another user. Please refresh to see the latest changes.',
+          });
+          refreshTicketFromServer();
+          throw new Error('Conflict');
+        }
+
+        toast({
+          variant: 'destructive',
+          title: response.status === 400 ? 'Validation Error' : 'Error',
+          description:
+            response.status === 400
+              ? error.issues?.[0]?.message || 'Invalid model selection'
+              : 'Failed to save changes. Changes reverted.',
+        });
+        setTimeout(() => setLocalTicket(originalTicket), 500);
+        throw new Error('Update error');
+      }
+
+      const updatedTicket = await response.json();
+      const normalizedTicket: TicketData = {
+        ...updatedTicket,
+        createdAt: new Date(updatedTicket.createdAt),
+        updatedAt: new Date(updatedTicket.updatedAt),
+        project: localTicket.project,
+        attachments: localTicket.attachments,
+        ticketNumber: updatedTicket.ticketNumber ?? localTicket.ticketNumber,
+        ticketKey: updatedTicket.ticketKey ?? localTicket.ticketKey,
+      };
+
+      setLocalTicket(normalizedTicket);
+
+      toast({
+        title: 'Success',
+        description: 'Claude models updated',
+      });
+
+      if (onUpdate) {
+        onUpdate(normalizedTicket);
+      }
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        !['Conflict', 'Update error'].includes(error.message)
+      ) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to save changes. Changes reverted.',
+        });
+        setLocalTicket(originalTicket);
+      }
+      throw error;
+    }
+  };
+
   const handleSaveDescription = (newDescription: string) => saveTicketField('description', newDescription, 'Ticket updated');
 
   // Initialize inline edit hooks
@@ -712,6 +807,9 @@ export function TicketDetailModal({
 
   const effectiveAgent = localTicket?.agent ?? localTicket?.project?.defaultAgent;
   const isAgentOverride = localTicket?.agent !== null && localTicket?.agent !== undefined;
+  const overriddenStages = overriddenStageKeys(localTicket?.claudeModelOverrides);
+  const hasClaudeModelOverrides = overriddenStages.length > 0;
+  const effectiveAgentIsClaude = effectiveAgent === Agent.CLAUDE;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -797,6 +895,20 @@ export function TicketDetailModal({
                   {!isAgentOverride && <span className="text-muted-foreground">(default)</span>}
                 </Badge>
               )}
+              {effectiveAgentIsClaude && hasClaudeModelOverrides && (
+                <Badge
+                  variant="outline"
+                  className="text-xs py-0.5 px-2 font-normal"
+                  data-testid="custom-models-badge"
+                  title={`Custom models: ${overriddenStages
+                    .map(
+                      (k) => CLAUDE_STAGES.find((s) => s.key === k)?.label ?? k
+                    )
+                    .join(', ')}`}
+                >
+                  Custom models
+                </Badge>
+              )}
               {localTicket?.branch &&
                 localTicket.branch.length > 0 &&
                 localTicket.stage !== 'SHIP' &&
@@ -861,6 +973,15 @@ export function TicketDetailModal({
                       >
                         <Settings2 className="mr-2 h-4 w-4" />
                         Edit Agent
+                      </DropdownMenuItem>
+                    )}
+                    {localTicket?.project?.defaultAgent && (
+                      <DropdownMenuItem
+                        onClick={() => setClaudeModelsEditOpen(true)}
+                        data-testid="edit-claude-models-button"
+                      >
+                        <Settings2 className="mr-2 h-4 w-4" />
+                        Edit Claude Models
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
@@ -1303,6 +1424,18 @@ export function TicketDetailModal({
           currentAgent={localTicket.agent ?? null}
           projectDefaultAgent={localTicket.project.defaultAgent}
           onSave={handleSaveAgent}
+        />
+      )}
+
+      {/* ClaudeModelsEditDialog - only render when parent dialog is open */}
+      {localTicket?.project?.defaultAgent && open && effectiveAgent && (
+        <ClaudeModelsEditDialog
+          open={claudeModelsEditOpen}
+          onOpenChange={setClaudeModelsEditOpen}
+          effectiveAgent={effectiveAgent}
+          projectClaudeModels={localTicket.project.claudeModels}
+          ticketClaudeModelOverrides={localTicket.claudeModelOverrides}
+          onSave={handleSaveClaudeModels}
         />
       )}
 

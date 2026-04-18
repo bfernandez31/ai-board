@@ -4,7 +4,12 @@ import { TicketWithVersion } from '../types';
 import type { CreateTicketInput } from '../validations/ticket';
 import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
 import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
-import type { Ticket, Job, Prisma, ClarificationPolicy, Agent } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import type { Ticket, Job, ClarificationPolicy, Agent } from '@prisma/client';
+import {
+  sanitizeClaudeModelMap,
+  type ClaudeModelMap,
+} from '@/lib/workflows/claude-models';
 
 type TicketRow = {
   id: number;
@@ -22,11 +27,13 @@ type TicketRow = {
   agent: import('@prisma/client').Agent | null;
   workflowType: import('@prisma/client').WorkflowType;
   attachments: import('@prisma/client').Prisma.JsonValue;
+  claudeModelOverrides?: import('@prisma/client').Prisma.JsonValue | null;
   createdAt: Date;
   updatedAt: Date;
   project: {
     clarificationPolicy: import('@prisma/client').ClarificationPolicy;
     defaultAgent: import('@prisma/client').Agent;
+    claudeModels?: import('@prisma/client').Prisma.JsonValue | null;
     githubOwner: string | null;
     githubRepo: string | null;
   };
@@ -47,6 +54,7 @@ function toTicketWithVersion(ticket: TicketRow): TicketWithVersion {
     autoMode: ticket.autoMode,
     clarificationPolicy: ticket.clarificationPolicy,
     agent: ticket.agent,
+    claudeModelOverrides: ticket.claudeModelOverrides ?? null,
     workflowType: ticket.workflowType,
     attachments: ticket.attachments,
     createdAt: ticket.createdAt.toISOString(),
@@ -54,6 +62,7 @@ function toTicketWithVersion(ticket: TicketRow): TicketWithVersion {
     project: {
       clarificationPolicy: ticket.project.clarificationPolicy,
       ...(ticket.project.defaultAgent != null && { defaultAgent: ticket.project.defaultAgent }),
+      ...(ticket.project.claudeModels != null && { claudeModels: ticket.project.claudeModels }),
       ...(ticket.project.githubOwner != null && { githubOwner: ticket.project.githubOwner }),
       ...(ticket.project.githubRepo != null && { githubRepo: ticket.project.githubRepo }),
     },
@@ -103,12 +112,14 @@ const TICKET_SELECT = {
   agent: true,
   workflowType: true,
   attachments: true,
+  claudeModelOverrides: true,
   createdAt: true,
   updatedAt: true,
   project: {
     select: {
       clarificationPolicy: true,
       defaultAgent: true,
+      claudeModels: true,
       githubOwner: true,
       githubRepo: true,
     },
@@ -247,6 +258,7 @@ const VIEW_PROJECT_SELECT = {
   name: true,
   clarificationPolicy: true,
   defaultAgent: true,
+  claudeModels: true,
   githubOwner: true,
   githubRepo: true,
 } as const;
@@ -286,12 +298,13 @@ export async function resolveTicketIdByKey(
 
 /** Inline edit patch payload accepted by patchTicketInline. */
 export interface TicketInlinePatch {
-  title?: string;
-  description?: string;
-  branch?: string | null;
-  autoMode?: boolean;
-  clarificationPolicy?: ClarificationPolicy | null;
-  agent?: Agent | null;
+  title?: string | undefined;
+  description?: string | undefined;
+  branch?: string | null | undefined;
+  autoMode?: boolean | undefined;
+  clarificationPolicy?: ClarificationPolicy | null | undefined;
+  agent?: Agent | null | undefined;
+  claudeModelOverrides?: ClaudeModelMap | null | undefined;
 }
 
 /** Discriminated result for inline PATCH. */
@@ -339,7 +352,7 @@ export async function patchTicketInline(
     };
   }
 
-  const { title, description, branch, autoMode, clarificationPolicy, agent } = patch;
+  const { title, description, branch, autoMode, clarificationPolicy, agent, claudeModelOverrides } = patch;
 
   if (
     (description !== undefined || clarificationPolicy !== undefined || agent !== undefined) &&
@@ -356,6 +369,13 @@ export async function patchTicketInline(
     };
   }
 
+  const claudeOverridesUpdate: Prisma.InputJsonValue | typeof Prisma.DbNull | undefined =
+    claudeModelOverrides === undefined
+      ? undefined
+      : claudeModelOverrides === null
+        ? Prisma.DbNull
+        : (sanitizeClaudeModelMap(claudeModelOverrides) as Prisma.InputJsonValue);
+
   try {
     const updatedTicket = await prisma.ticket.update({
       where: { id: ticketId, version: requestVersion },
@@ -366,6 +386,9 @@ export async function patchTicketInline(
         ...(autoMode !== undefined && { autoMode }),
         ...(clarificationPolicy !== undefined && { clarificationPolicy }),
         ...(agent !== undefined && { agent }),
+        ...(claudeOverridesUpdate !== undefined && {
+          claudeModelOverrides: claudeOverridesUpdate,
+        }),
         version: { increment: 1 },
         updatedAt: new Date(),
       },

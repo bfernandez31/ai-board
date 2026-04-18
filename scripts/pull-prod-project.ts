@@ -283,7 +283,11 @@ async function main() {
 
     console.log("Inserting project…");
     await local.project.create({
-      data: { ...projectData, config: jsonInNullable(projectData.config) },
+      data: {
+        ...projectData,
+        config: jsonInNullable(projectData.config),
+        claudeModels: jsonInNullable(projectData.claudeModels),
+      },
     });
 
     if (members.length) {
@@ -295,7 +299,11 @@ async function main() {
     for (const t of tickets) {
       const { jobs: _j, comments: _c, notifications: _n, ...tdata } = t;
       await local.ticket.create({
-        data: { ...tdata, attachments: jsonInNullable(tdata.attachments) },
+        data: {
+          ...tdata,
+          attachments: jsonInNullable(tdata.attachments),
+          claudeModelOverrides: jsonInNullable(tdata.claudeModelOverrides),
+        },
       });
     }
 

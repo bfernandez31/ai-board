@@ -267,6 +267,89 @@ describe('Project Settings - clarificationPolicy', () => {
     });
   });
 
+  describe('PATCH /api/projects/:id - claudeModels updates', () => {
+    it('should accept a valid claudeModels map', async () => {
+      const response = await ctx.api.patch<{ claudeModels: unknown }>(
+        `/api/projects/${ctx.projectId}`,
+        {
+          claudeModels: {
+            specify: 'claude-opus-4-7',
+            plan: 'claude-opus-4-6',
+            implement: 'claude-sonnet-4-6',
+            quickImpl: 'claude-sonnet-4-6',
+            verify: 'claude-haiku-4-5',
+          },
+        }
+      );
+
+      expect(response.status).toBe(200);
+
+      const dbProject = await prisma.project.findUnique({
+        where: { id: ctx.projectId },
+      });
+      expect(dbProject?.claudeModels).toEqual({
+        specify: 'claude-opus-4-7',
+        plan: 'claude-opus-4-6',
+        implement: 'claude-sonnet-4-6',
+        quickImpl: 'claude-sonnet-4-6',
+        verify: 'claude-haiku-4-5',
+      });
+    });
+
+    it('should accept a partial claudeModels map', async () => {
+      const response = await ctx.api.patch(
+        `/api/projects/${ctx.projectId}`,
+        {
+          claudeModels: { verify: 'claude-haiku-4-5' },
+        }
+      );
+
+      expect(response.status).toBe(200);
+    });
+
+    it('should reject an unknown model id with 400', async () => {
+      const response = await ctx.api.patch<{ error: string; issues: unknown[] }>(
+        `/api/projects/${ctx.projectId}`,
+        {
+          claudeModels: { specify: 'gpt-4' },
+        }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toBe('Validation failed');
+    });
+
+    it('should reject an unknown stage key with 400', async () => {
+      const response = await ctx.api.patch<{ error: string }>(
+        `/api/projects/${ctx.projectId}`,
+        {
+          claudeModels: { notAStage: 'claude-opus-4-7' },
+        }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toBe('Validation failed');
+    });
+
+    it('should allow null to clear claudeModels', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { claudeModels: { specify: 'claude-opus-4-6' } },
+      });
+
+      const response = await ctx.api.patch(
+        `/api/projects/${ctx.projectId}`,
+        { claudeModels: null }
+      );
+
+      expect(response.status).toBe(200);
+      const dbProject = await prisma.project.findUnique({
+        where: { id: ctx.projectId },
+      });
+      expect(dbProject?.claudeModels).toBeNull();
+    });
+  });
+
   describe('PATCH /api/projects/:id - Response Format', () => {
     it('should include all expected project fields in response', async () => {
       const response = await ctx.api.get<{

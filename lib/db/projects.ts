@@ -1,8 +1,13 @@
 import { prisma } from './client';
-import type { Project, ClarificationPolicy, Agent } from '@prisma/client';
+import type { Project, ClarificationPolicy, Agent, Prisma } from '@prisma/client';
 import type { NextRequest } from 'next/server';
 import { requireAuth } from './users';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
+import {
+  CLAUDE_SMART_DEFAULTS,
+  sanitizeClaudeModelMap,
+  type ClaudeModelMap,
+} from '@/lib/workflows/claude-models';
 
 /**
  * Retrieve a project by its ID
@@ -126,12 +131,15 @@ export async function createProject(data: {
 
   // Create project and AI-BOARD membership atomically
   return prisma.$transaction(async (tx) => {
-    // Create project
+    // Create project — new projects get smart, cost-conscious Claude model
+    // defaults. Existing projects migrate in with claudeModels=null, which
+    // keeps the legacy Opus 4.7 fallback behavior.
     const newProject = await tx.project.create({
       data: {
         ...data,
         userId, // ← CRITICAL: inject userId
         updatedAt: new Date(), // Required field
+        claudeModels: { ...CLAUDE_SMART_DEFAULTS } as Prisma.InputJsonValue,
       },
     });
 
@@ -166,6 +174,7 @@ export async function updateProject(
     clarificationPolicy?: ClarificationPolicy | undefined;
     defaultAgent?: Agent | undefined;
     deploymentUrl?: string | null | undefined;
+    claudeModels?: ClaudeModelMap | null | undefined;
   }
 ) {
   const userId = await requireAuth();
@@ -188,6 +197,12 @@ export async function updateProject(
   if (data.clarificationPolicy !== undefined) updateData.clarificationPolicy = data.clarificationPolicy;
   if (data.defaultAgent !== undefined) updateData.defaultAgent = data.defaultAgent;
   if (data.deploymentUrl !== undefined) updateData.deploymentUrl = data.deploymentUrl;
+  if (data.claudeModels !== undefined) {
+    updateData.claudeModels =
+      data.claudeModels === null
+        ? null
+        : (sanitizeClaudeModelMap(data.claudeModels) as Prisma.InputJsonValue);
+  }
 
   return prisma.project.update({
     where: { id: projectId },

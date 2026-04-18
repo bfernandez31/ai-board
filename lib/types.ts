@@ -28,6 +28,7 @@ export interface TicketWithVersion {
   autoMode: boolean;
   clarificationPolicy: ClarificationPolicy | null;
   agent: Agent | null;
+  claudeModelOverrides?: Prisma.JsonValue | null;
   workflowType: WorkflowType;
   attachments: Prisma.JsonValue;
   createdAt: string;
@@ -35,6 +36,7 @@ export interface TicketWithVersion {
   project?: {
     clarificationPolicy: ClarificationPolicy;
     defaultAgent?: Agent;
+    claudeModels?: Prisma.JsonValue | null;
     githubOwner?: string;
     githubRepo?: string;
   };

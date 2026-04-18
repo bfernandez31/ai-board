@@ -674,4 +674,107 @@ describe('Tickets CRUD', () => {
       expect(response.status).toBe(400);
     });
   });
+
+  describe('PATCH /api/projects/:projectId/tickets/:id - claudeModelOverrides', () => {
+    it('should accept a valid per-stage claudeModelOverrides map', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Ticket for claude overrides',
+          description: 'Test claude overrides',
+        }
+      );
+      const ticketId = createResponse.data.id;
+      const version = createResponse.data.version;
+
+      const response = await ctx.api.patch<{
+        claudeModelOverrides: Record<string, string> | null;
+        version: number;
+      }>(`/api/projects/${ctx.projectId}/tickets/${ticketId}`, {
+        claudeModelOverrides: {
+          verify: 'claude-haiku-4-5',
+          implement: 'claude-sonnet-4-6',
+        },
+        version,
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.data.claudeModelOverrides).toEqual({
+        verify: 'claude-haiku-4-5',
+        implement: 'claude-sonnet-4-6',
+      });
+    });
+
+    it('should allow null to clear overrides', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Ticket for claude override clear',
+          description: 'Test clear overrides',
+        }
+      );
+      let ticketId = createResponse.data.id;
+      let version = createResponse.data.version;
+
+      const setResp = await ctx.api.patch<{ version: number }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}`,
+        { claudeModelOverrides: { plan: 'claude-opus-4-6' }, version }
+      );
+      expect(setResp.status).toBe(200);
+      version = setResp.data.version;
+
+      const clearResp = await ctx.api.patch<{
+        claudeModelOverrides: unknown;
+      }>(`/api/projects/${ctx.projectId}/tickets/${ticketId}`, {
+        claudeModelOverrides: null,
+        version,
+      });
+
+      expect(clearResp.status).toBe(200);
+      expect(clearResp.data.claudeModelOverrides).toBeNull();
+      void ticketId;
+    });
+
+    it('should return 400 for an unknown model id', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Ticket for bad claude override',
+          description: 'Test bad model',
+        }
+      );
+      const ticketId = createResponse.data.id;
+      const version = createResponse.data.version;
+
+      const response = await ctx.api.patch<{ error: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}`,
+        { claudeModelOverrides: { verify: 'gpt-4' }, version }
+      );
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should allow override updates outside INBOX stage', async () => {
+      const { id: ticketId } = await ctx.createTicket({
+        title: '[e2e] Ticket override outside INBOX',
+        description: 'Should allow claudeModelOverrides update',
+        stage: 'BUILD',
+      });
+
+      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+
+      const response = await ctx.api.patch<{ claudeModelOverrides: unknown }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}`,
+        {
+          claudeModelOverrides: { verify: 'claude-haiku-4-5' },
+          version: ticket!.version,
+        }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.claudeModelOverrides).toEqual({
+        verify: 'claude-haiku-4-5',
+      });
+    });
+  });
 });

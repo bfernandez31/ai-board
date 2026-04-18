@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { getProject } from '@/lib/db/projects';
 import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
 import { DefaultAgentCard } from '@/components/settings/default-agent-card';
+import { AIModelsCard } from '@/components/settings/ai-models-card';
 import { Button } from '@/components/ui/button';
 import { ConstitutionCard } from '@/components/settings/constitution-card';
 import { ConfigCard } from '@/components/settings/config-card';
@@ -75,6 +76,14 @@ export default async function ProjectSettingsPage({
             project={{
               id: project.id,
               defaultAgent: project.defaultAgent,
+            }}
+          />
+
+          <AIModelsCard
+            project={{
+              id: project.id,
+              defaultAgent: project.defaultAgent,
+              claudeModels: project.claudeModels,
             }}
           />
 

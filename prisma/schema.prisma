@@ -82,6 +82,7 @@ model Project {
   defaultAgent        Agent               @default(CLAUDE)
   config              Json?
   configSyncedAt      DateTime?
+  claudeModels        Json?
   defaultBranch       String              @default("main") @db.VarChar(100)
   hasSpecs            Boolean             @default(false)
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -140,6 +141,7 @@ model Ticket {
   updatedAt              DateTime                  @default(now()) @updatedAt
   clarificationPolicy    ClarificationPolicy?
   agent                  Agent?
+  claudeModelOverrides   Json?
   closedAt               DateTime?
   comments               Comment[]
   jobs                   Job[]

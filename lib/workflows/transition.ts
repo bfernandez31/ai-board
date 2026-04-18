@@ -9,6 +9,7 @@ import { getProjectServiceInputs } from '@/lib/workflows/service-inputs';
 import { ensureFreshConfig } from '@/lib/config-sync';
 import { prisma } from '@/lib/db/client';
 import { supportsWorkflowCommand } from '@/app/lib/utils/agent-resolution';
+import { resolveClaudeModel } from '@/lib/workflows/claude-models';
 
 /** Stage-to-command mapping (null = manual/no workflow) */
 export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
@@ -178,6 +179,12 @@ export async function handleTicketTransition(
     }
 
     const effectiveAgent = resolveEffectiveAgent(ticket);
+    const resolvedClaudeModel = resolveClaudeModel({
+      command,
+      effectiveAgent,
+      projectClaudeModels: ticket.project.claudeModels,
+      ticketClaudeModelOverrides: ticket.claudeModelOverrides,
+    });
     if (!supportsWorkflowCommand(effectiveAgent, command)) {
       return {
         success: false,
@@ -278,6 +285,7 @@ export async function handleTicketTransition(
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            ...(resolvedClaudeModel ? { model: resolvedClaudeModel } : {}),
             ...getProjectServiceInputs(ticket.project),
           };
 
@@ -295,6 +303,7 @@ export async function handleTicketTransition(
             workflowType: ticket.workflowType,
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            ...(resolvedClaudeModel ? { model: resolvedClaudeModel } : {}),
             ...getProjectServiceInputs(ticket.project),
           };
 
@@ -308,6 +317,7 @@ export async function handleTicketTransition(
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            ...(resolvedClaudeModel ? { model: resolvedClaudeModel } : {}),
             ...(command === 'implement' && getProjectServiceInputs(ticket.project)),
           };
 

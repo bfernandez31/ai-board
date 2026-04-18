@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ClarificationPolicy, Agent } from '@prisma/client';
 import { TicketAttachment } from '@/app/lib/types/ticket';
+import { claudeModelOverridesSchema } from '@/app/lib/schemas/clarification-policy';
 
 /**
  * Project ID validation schema
@@ -121,6 +122,7 @@ export const patchTicketSchema = z
     autoMode: z.boolean().optional(),
     clarificationPolicy: z.nativeEnum(ClarificationPolicy).nullable().optional(),
     agent: z.nativeEnum(Agent).nullable().optional(),
+    claudeModelOverrides: claudeModelOverridesSchema.nullable().optional(),
     version: versionSchema,
   })
   .refine(
@@ -131,7 +133,8 @@ export const patchTicketSchema = z
       data.branch !== undefined ||
       data.autoMode !== undefined ||
       data.clarificationPolicy !== undefined ||
-      data.agent !== undefined,
+      data.agent !== undefined ||
+      data.claudeModelOverrides !== undefined,
     { message: 'At least one field must be provided' }
   );
 

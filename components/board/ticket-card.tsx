@@ -9,6 +9,13 @@ import { TicketWithVersion } from '@/lib/types';
 import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { AgentIcon } from '@/components/ui/agent-icon';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import {
+  overriddenStageKeys,
+  CLAUDE_STAGES,
+  getClaudeModelLabel,
+  sanitizeClaudeModelMap,
+} from '@/lib/workflows/claude-models';
+import { Agent } from '@prisma/client';
 import { JobStatusIndicator } from './job-status-indicator';
 import { Job } from '@prisma/client';
 import { classifyJobType } from '@/lib/utils/job-type-classifier';
@@ -99,6 +106,24 @@ export const TicketCard = React.memo(
     const effectiveAgent = ticket.agent ?? ticket.project?.defaultAgent;
     const isAgentInherited = ticket.agent == null;
 
+    const overriddenStages = React.useMemo(
+      () => overriddenStageKeys(ticket.claudeModelOverrides),
+      [ticket.claudeModelOverrides]
+    );
+    const showCustomModelsBadge =
+      effectiveAgent === Agent.CLAUDE && overriddenStages.length > 0;
+    const customModelsTooltip = React.useMemo(() => {
+      if (!showCustomModelsBadge) return '';
+      const overrides = sanitizeClaudeModelMap(ticket.claudeModelOverrides);
+      return overriddenStages
+        .map((k) => {
+          const label = CLAUDE_STAGES.find((s) => s.key === k)?.label ?? k;
+          const model = overrides[k];
+          return `${label}: ${model ? getClaudeModelLabel(model) : ''}`;
+        })
+        .join(', ');
+    }, [showCustomModelsBadge, overriddenStages, ticket.claudeModelOverrides]);
+
     const isDeployJobActive = deployJob != null && (deployJob.status === 'PENDING' || deployJob.status === 'RUNNING');
     const showDeployButton = (!deployJob && isDeployable) || (deployJob != null && !isDeployJobActive && ticket.stage === 'VERIFY');
 
@@ -168,6 +193,21 @@ export const TicketCard = React.memo(
                   <TooltipContent>
                     {getAgentLabel(effectiveAgent)}{isAgentInherited ? ' (default)' : ''}
                   </TooltipContent>
+                </Tooltip>
+              )}
+              {/* Custom Models Badge */}
+              {showCustomModelsBadge && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 text-[10px] px-1.5 py-0 font-medium"
+                      data-testid="custom-models-badge"
+                    >
+                      Custom models
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>{customModelsTooltip}</TooltipContent>
                 </Tooltip>
               )}
             </div>

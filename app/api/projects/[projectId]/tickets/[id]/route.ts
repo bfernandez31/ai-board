@@ -61,6 +61,7 @@ export async function GET(
       autoMode: ticket.autoMode,
       clarificationPolicy: ticket.clarificationPolicy,
       agent: ticket.agent,
+      claudeModelOverrides: ticket.claudeModelOverrides ?? null,
       workflowType: ticket.workflowType,
       attachments: ticket.attachments,
       createdAt: ticket.createdAt.toISOString(),
@@ -70,6 +71,7 @@ export async function GET(
         name: ticket.project.name,
         clarificationPolicy: ticket.project.clarificationPolicy,
         defaultAgent: ticket.project.defaultAgent,
+        claudeModels: ticket.project.claudeModels ?? null,
         githubOwner: ticket.project.githubOwner,
         githubRepo: ticket.project.githubRepo,
       },
@@ -120,7 +122,7 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const isInlineEdit = 'title' in body || 'description' in body || 'branch' in body || 'autoMode' in body || 'clarificationPolicy' in body || 'agent' in body;
+    const isInlineEdit = 'title' in body || 'description' in body || 'branch' in body || 'autoMode' in body || 'clarificationPolicy' in body || 'agent' in body || 'claudeModelOverrides' in body;
 
     if (isInlineEdit) {
       const parseResult = patchTicketSchema.safeParse(body);
@@ -142,6 +144,7 @@ export async function PATCH(
         autoMode,
         clarificationPolicy,
         agent,
+        claudeModelOverrides,
         version: requestVersion,
       } = parseResult.data;
 
@@ -152,6 +155,7 @@ export async function PATCH(
         ...(autoMode !== undefined && { autoMode }),
         ...(clarificationPolicy !== undefined && { clarificationPolicy }),
         ...(agent !== undefined && { agent }),
+        ...(claudeModelOverrides !== undefined && { claudeModelOverrides }),
       });
 
       if (!result.ok) {
@@ -173,6 +177,7 @@ export async function PATCH(
           autoMode: updatedTicket.autoMode,
           clarificationPolicy: updatedTicket.clarificationPolicy,
           agent: updatedTicket.agent,
+          claudeModelOverrides: updatedTicket.claudeModelOverrides ?? null,
           workflowType: updatedTicket.workflowType,
           createdAt: updatedTicket.createdAt.toISOString(),
           updatedAt: updatedTicket.updatedAt.toISOString(),
@@ -193,7 +198,7 @@ export async function PATCH(
     return NextResponse.json(
       {
         error: 'Invalid request',
-        message: 'Must provide fields to update (title, description, branch, autoMode, clarificationPolicy, or agent)',
+        message: 'Must provide fields to update (title, description, branch, autoMode, clarificationPolicy, agent, or claudeModelOverrides)',
       },
       { status: 400 }
     );
