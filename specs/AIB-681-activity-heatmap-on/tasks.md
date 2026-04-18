@@ -18,9 +18,9 @@
 
 **Purpose**: Type definitions and shared utilities that all stories depend on.
 
-- [ ] T001 Define heatmap TypeScript interfaces (`HeatmapCell`, `HeatmapData`, `HeatmapFilters`, `HeatmapPeriod`, `HeatmapAgentOption`) in `lib/heatmap/types.ts`
-- [ ] T002 [P] Export `buildEffectiveAgentWhere()` from `lib/analytics/queries.ts` (currently private; needed by heatmap queries)
-- [ ] T003 [P] Add `heatmap` query key namespace to `app/lib/query-keys.ts` with `all` and `data(year, agent)` keys
+- [x] T001 Define heatmap TypeScript interfaces (`HeatmapCell`, `HeatmapData`, `HeatmapFilters`, `HeatmapPeriod`, `HeatmapAgentOption`) in `lib/heatmap/types.ts`
+- [x] T002 [P] Export `buildEffectiveAgentWhere()` from `lib/analytics/queries.ts` (currently private; needed by heatmap queries)
+- [x] T003 [P] Add `heatmap` query key namespace to `app/lib/query-keys.ts` with `all` and `data(year, agent)` keys
 
 ---
 
@@ -30,9 +30,9 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 Implement `getHeatmapData(userId, filters)` in `lib/heatmap/queries.ts` — aggregate jobs by UTC date across user's projects (owned + member), count shipped tickets (`command='ship'`, `status='COMPLETED'`, keyed by `completedAt`), sum `costUsd` (null-safe), compute percentile-based intensity thresholds, resolve available agents and years. Import `buildEffectiveAgentWhere()` from `lib/analytics/queries.ts`. Use `Promise.all` for parallel sub-queries.
-- [ ] T005 Create `GET /api/heatmap` route in `app/api/heatmap/route.ts` — Zod-validated `year` and `agent` query params, session auth (user-scoped, not project-scoped), `Cache-Control: no-store`, structured error responses (400/401/500). Follow pattern from `app/api/projects/[projectId]/analytics/route.ts`.
-- [ ] T006 Create `useHeatmap(filters, initialData)` TanStack Query hook in `app/lib/hooks/queries/use-heatmap.ts` — query key from `queryKeys.heatmap.data(year, agent)`, `initialData` for SSR, `staleTime: 60_000`, `refetchInterval: 60_000`, `refetchOnWindowFocus: true`. Follow pattern from `app/lib/hooks/queries/use-project-activity.ts`.
+- [x] T004 Implement `getHeatmapData(userId, filters)` in `lib/heatmap/queries.ts` — aggregate jobs by UTC date across user's projects (owned + member), count shipped tickets (`command='ship'`, `status='COMPLETED'`, keyed by `completedAt`), sum `costUsd` (null-safe), compute percentile-based intensity thresholds, resolve available agents and years. Import `buildEffectiveAgentWhere()` from `lib/analytics/queries.ts`. Use `Promise.all` for parallel sub-queries.
+- [x] T005 Create `GET /api/heatmap` route in `app/api/heatmap/route.ts` — Zod-validated `year` and `agent` query params, session auth (user-scoped, not project-scoped), `Cache-Control: no-store`, structured error responses (400/401/500). Follow pattern from `app/api/projects/[projectId]/analytics/route.ts`.
+- [x] T006 Create `useHeatmap(filters, initialData)` TanStack Query hook in `app/lib/hooks/queries/use-heatmap.ts` — query key from `queryKeys.heatmap.data(year, agent)`, `initialData` for SSR, `staleTime: 60_000`, `refetchInterval: 60_000`, `refetchOnWindowFocus: true`. Follow pattern from `app/lib/hooks/queries/use-project-activity.ts`.
 
 **Checkpoint**: Data layer ready — API returns correct heatmap data for any filter combination.
 
