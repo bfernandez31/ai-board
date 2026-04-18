@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, ChevronsRight } from 'lucide-react';
 import { TicketWithVersion } from '@/lib/types';
 import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { AgentIcon } from '@/components/ui/agent-icon';
@@ -16,12 +16,15 @@ import { TicketCardDeployIcon } from './ticket-card-deploy-icon';
 import { TicketCardPreviewIcon } from './ticket-card-preview-icon';
 import { DeployConfirmationModal } from './deploy-confirmation-modal';
 import { CancelConfirmationModal } from './cancel-confirmation-modal';
+import { AutoModeConfirmationModal } from './auto-mode-confirmation-modal';
 import { isTicketDeployable } from '@/app/lib/utils/deploy-preview-eligibility';
 import { useDeployPreview } from '@/app/lib/hooks/mutations/useDeployPreview';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
+import { useAutoMode, isRunningJob } from '@/app/lib/hooks/mutations/useAutoMode';
 import { useHasMounted } from '@/lib/hooks/use-has-mounted';
 import { QualityScoreBadge } from '@/components/ticket/quality-score-badge';
 import { X } from 'lucide-react';
+import { Stage } from '@/lib/stage-transitions';
 import { STAGE_MODEL_KEYS, STAGE_MODEL_LABELS } from '@/lib/models/claude-models';
 
 interface DraggableTicketCardProps {
@@ -56,12 +59,16 @@ export const TicketCard = React.memo(
     const isMounted = useHasMounted();
     const [showDeployModal, setShowDeployModal] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
+    const [showAutoModeModal, setShowAutoModeModal] = useState(false);
 
     // Deploy preview mutation
     const { mutate: deployPreview } = useDeployPreview(ticket.projectId);
 
     // Cancel job mutation
     const cancelJobMutation = useCancelJob(ticket.projectId);
+
+    // Auto-transition toggle mutation
+    const autoModeMutation = useAutoMode(ticket.projectId);
 
     // Check if ticket is deployable
     const isDeployable = React.useMemo(() => {
@@ -113,6 +120,29 @@ export const TicketCard = React.memo(
 
     // Cancel button: visible when ticket has PENDING or RUNNING workflow job
     const isCancellableJob = workflowJob && (workflowJob.status === 'PENDING' || workflowJob.status === 'RUNNING');
+
+    // Auto-transition toggle: only on FULL-workflow tickets in INBOX, SPECIFY, or PLAN
+    const autoModeStages: Stage[] = [Stage.INBOX, Stage.SPECIFY, Stage.PLAN];
+    const showAutoModeToggle =
+      ticket.workflowType === 'FULL' &&
+      autoModeStages.includes(ticket.stage as Stage);
+    const isAutoModeOn = ticket.autoMode === true;
+    const hasRunningWorkflowJob = workflowJob ? isRunningJob(workflowJob.status) : false;
+
+    const handleAutoModeClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isAutoModeOn) {
+        autoModeMutation.mutate({
+          ticketId: ticket.id,
+          enabled: false,
+          version: ticket.version,
+          currentStage: ticket.stage as Stage,
+          hasRunningJob: hasRunningWorkflowJob,
+        });
+      } else {
+        setShowAutoModeModal(true);
+      }
+    };
 
     const handleClick = () => {
       // Prevent click during drag
@@ -233,6 +263,26 @@ export const TicketCard = React.memo(
             isRetry={deployJob?.status === 'FAILED' || deployJob?.status === 'CANCELLED'}
           />
 
+          {/* Auto-transition Confirmation Modal */}
+          {showAutoModeToggle && (
+            <AutoModeConfirmationModal
+              open={showAutoModeModal}
+              onOpenChange={setShowAutoModeModal}
+              onConfirm={() => {
+                autoModeMutation.mutate({
+                  ticketId: ticket.id,
+                  enabled: true,
+                  version: ticket.version,
+                  currentStage: ticket.stage as Stage,
+                  hasRunningJob: hasRunningWorkflowJob,
+                });
+                setShowAutoModeModal(false);
+              }}
+              currentStage={ticket.stage as Stage}
+              ticketKey={ticket.ticketKey}
+            />
+          )}
+
           {/* Title */}
           <h3
             className="font-semibold text-sm line-clamp-2 text-foreground break-words overflow-hidden mb-3"
@@ -242,36 +292,62 @@ export const TicketCard = React.memo(
           </h3>
 
           {/* Job Status Indicators (Single-line layout with right-aligned compact icons) */}
-          {(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl) && (
+          {(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl || showAutoModeToggle) && (
             <div className="border-t border-border pt-3">
               <div className="flex items-center justify-between gap-3">
-                {/* Left: Workflow Job Indicator + Cancel Button */}
-                {workflowJob && (
-                  <div className="flex items-center gap-1.5">
-                    <JobStatusIndicator
-                      status={workflowJob.status}
-                      command={workflowJob.command}
-                      jobType={classifyJobType(workflowJob.command)}
-                      stage={ticket.stage}
-                      animated={true}
-                      completedAt={workflowJob.completedAt}
-                    />
-                    {isCancellableJob && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowCancelModal(true);
-                        }}
-                        disabled={cancelJobMutation.isPending}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
-                        aria-label="Cancel workflow"
-                        data-testid="cancel-job-button"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                )}
+                {/* Left: Workflow Job Indicator + Cancel Button + Auto-transition Toggle */}
+                <div className="flex items-center gap-1.5">
+                  {workflowJob && (
+                    <>
+                      <JobStatusIndicator
+                        status={workflowJob.status}
+                        command={workflowJob.command}
+                        jobType={classifyJobType(workflowJob.command)}
+                        stage={ticket.stage}
+                        animated={true}
+                        completedAt={workflowJob.completedAt}
+                      />
+                      {isCancellableJob && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowCancelModal(true);
+                          }}
+                          disabled={cancelJobMutation.isPending}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
+                          aria-label="Cancel workflow"
+                          data-testid="cancel-job-button"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {showAutoModeToggle && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={handleAutoModeClick}
+                          disabled={autoModeMutation.isPending}
+                          className={
+                            isAutoModeOn
+                              ? 'p-0.5 rounded text-ctp-blue hover:bg-ctp-blue/20 transition-colors'
+                              : 'opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground'
+                          }
+                          aria-label={isAutoModeOn ? 'Auto-transition on — click to disable' : 'Enable auto-transition'}
+                          aria-pressed={isAutoModeOn}
+                          data-testid="auto-mode-toggle"
+                          data-auto-mode={isAutoModeOn ? 'on' : 'off'}
+                        >
+                          <ChevronsRight className="h-3.5 w-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {isAutoModeOn ? 'Auto-transition on — click to disable' : 'Enable auto-transition'}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
 
                 {/* Right: Compact icon indicators (Preview + Deploy + AI-BOARD) */}
                 <div className="flex items-center gap-3">

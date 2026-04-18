@@ -183,10 +183,18 @@ export async function executeTicketTransition(
     };
   }
 
-  // VERIFY → PLAN rollback (FULL workflow, dispatches rollback-reset)
+  // VERIFY → PLAN rollback (FULL workflow, dispatches rollback-reset).
+  // Also clears autoMode to avoid re-dispatching the chain the user just rolled back.
   if (ticket.stage === Stage.VERIFY && targetStage === Stage.PLAN) {
     const result = validateRollback(ticket, targetStage, canRollbackToPlan);
     if ('denied' in result) return { ok: false, ...result.denied };
+
+    if (ticket.autoMode) {
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { autoMode: false },
+      });
+    }
 
     return rollbackToPlanWithReset(
       ticket,
