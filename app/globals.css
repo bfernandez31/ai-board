@@ -394,4 +394,28 @@
 
   /* Recommendation container */
   .aurora-bg-recommendation { background: hsl(var(--ctp-mauve) / 0.04); }
+
+  /* Activity heatmap cells — violet gradient, 5 intensity levels */
+  .activity-heatmap-cell-0 {
+    background: hsl(var(--ctp-surface-0) / 0.6);
+    border: 1px solid hsl(var(--ctp-surface-1) / 0.25);
+  }
+  .activity-heatmap-cell-1 {
+    background: hsl(var(--primary-violet) / 0.22);
+    border: 1px solid hsl(var(--primary-violet) / 0.35);
+  }
+  .activity-heatmap-cell-2 {
+    background: hsl(var(--primary-violet) / 0.42);
+    border: 1px solid hsl(var(--primary-violet) / 0.5);
+  }
+  .activity-heatmap-cell-3 {
+    background: hsl(var(--primary-violet) / 0.68);
+    border: 1px solid hsl(var(--primary-violet) / 0.7);
+    box-shadow: 0 0 6px hsl(var(--primary-violet) / 0.18);
+  }
+  .activity-heatmap-cell-4 {
+    background: linear-gradient(135deg, hsl(var(--primary-violet) / 0.9), hsl(var(--ctp-mauve) / 0.8));
+    border: 1px solid hsl(var(--primary-violet) / 0.9);
+    box-shadow: 0 0 10px hsl(var(--primary-violet) / 0.3);
+  }
 }
