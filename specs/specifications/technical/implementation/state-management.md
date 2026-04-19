@@ -58,8 +58,16 @@ export const queryKeys = {
     ticketJobs: (projectId: number, ticketId: number) =>
       [...queryKeys.projects.detail(projectId), 'tickets', ticketId, 'jobs'] as const,
   },
+
+  activityHeatmap: {
+    all: ['activity-heatmap'] as const,
+    data: (period: string, agent: string, tz: string) =>
+      ['activity-heatmap', period, agent, tz] as const,
+  },
 };
 ```
+
+The `activityHeatmap` namespace is a top-level key (not nested under a `projectId`) because the heatmap scope is per-user across all accessible projects. The `data(period, agent, tz)` variant keys each filter combination separately so that changing period or agent triggers a fresh fetch without invalidating prior cached views.
 
 **Benefits**:
 - Hierarchical invalidation (invalidate all tickets: `queryKeys.projects.tickets(1)`)
@@ -1176,6 +1184,13 @@ queryClient.setQueryData(
 - **Trigger**: When board visible
 - **Stop**: When all jobs terminal
 - **Resume**: When new job created
+
+**Activity Heatmap Polling**:
+- **Interval**: 15 seconds
+- **Trigger**: When `/projects` page is mounted
+- **Stale time**: 10 seconds
+- **Initial data**: Server-rendered payload is passed to TanStack Query as `initialData` when the URL filters match the server-resolved filters, avoiding a first-paint spinner
+- **Refetch mode**: Silent background refetches — the heatmap never blanks out, shows a spinner, or shifts layout during updates
 
 ### Workflow-Triggered Cache Invalidation
 

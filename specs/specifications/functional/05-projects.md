@@ -127,6 +127,66 @@ When no projects exist:
 - All text content uses `min-w-0` and `truncate` utilities to prevent horizontal scroll
 - Cards maintain fixed width boundaries on mobile viewports (375px minimum)
 
+## Activity Heatmap
+
+The projects page renders a GitHub-style contribution heatmap beneath the project cards grid, giving signed-in users a single-glance view of AI workflow activity across every project they own or belong to as a member.
+
+**Scope and Access**:
+- Data covers all projects accessible to the viewer (owner OR member), matching the project list shown directly above.
+- Visible only to authenticated users; fully server-rendered on first paint (no spinner or skeleton flash, including when URL query parameters select a non-default view).
+- Section heading reads "AI activity" with a header counter in the form `{jobs} jobs · {tickets} tickets shipped in {period label}`.
+
+**Grid Layout**:
+- 7-row grid (one row per day of the week) with one column per week in the selected period.
+- Month labels rendered above the grid; day-of-week labels rendered to the left.
+- Cells outside the selected period (e.g., a calendar year that does not start on Sunday or end on Saturday) are omitted, producing "chipped" corners. Future days within the current calendar year render as empty (no-activity) cells rather than being omitted.
+- A five-swatch intensity legend (`Less` → `More`) appears at the bottom-right, using a violet gradient consistent with the aurora theme.
+
+**Intensity Bucketing**:
+- Each cell's shade is one of five levels: level 0 (no activity) plus levels 1–4 (ascending violet shades).
+- Thresholds are per-viewer quartiles over the non-zero per-day job counts in the selected period, so light users still see meaningful contrast.
+
+**Period Selector**:
+- Default: "Last 12 months" (rolling window ending today in the viewer's browser timezone).
+- Dropdown also lists each calendar year from the viewer's account creation year up to the current year, in descending order.
+- Accounts created in the current calendar year only see "Last 12 months" (the calendar-year options are hidden or disabled).
+- Selecting a past year renders the full calendar year (Jan 1 – Dec 31). Selecting the current year clamps the trailing edge to today.
+
+**Agent Filter**:
+- Shown only when the viewer's in-scope data contains two or more distinct effective agents (combining explicit `ticket.agent` values and the `project.defaultAgent` fallback).
+- When shown, the filter always includes an "All" option (selected by default) plus one option per distinct agent observed in the data.
+- When the viewer filters by a specific agent, effective agent resolution applies: tickets with no explicit agent on a project whose default is that agent are included.
+
+**URL State**:
+- Period and agent selections are reflected in `/projects` query parameters (`?period=YYYY`, `?agent=CLAUDE`, optional `?tz=...`).
+- Copying the URL and opening it in another browser tab reproduces the same view on first paint.
+- Filter changes update the URL with `{ scroll: false }` so the user's scroll position is preserved.
+
+**Tooltips**:
+- Hovering (desktop) or tapping (mobile) a cell reveals a tooltip showing:
+  - The formatted date
+  - The list of tickets shipped that day, if any (`ticketKey` + title)
+  - The job count for that day
+  - A total-cost line, only when at least one job that day has a recorded cost
+- The tooltip never displays `$NaN` or `$0` as a placeholder for missing cost — the cost line is omitted entirely.
+- On mobile, tapping outside an open tooltip dismisses it.
+
+**Shipped Count Rule**:
+- A ticket counts as "shipped" on a given day if and only if its `ship` workflow job completed successfully that day. Stage transitions to SHIP without a successful `ship` job do not contribute to the header counter or to tooltip "shipped" lists.
+- Distinct ticket count is used for `totals.shippedTickets` over the full period.
+
+**Empty States**:
+- When the selected period contains zero activity, the grid area is replaced by the centered message "No activity to show yet — your AI work will appear here". The legend and filters remain visible so the user can change the selection.
+- Filter changes never alter the grid boundaries — only the shaded intensity, the header counter, and tooltip data update.
+
+**Refresh Behavior**:
+- The client refetches every 15 seconds in the background.
+- Refetches are silent: the grid never blanks, no spinner overlays, and no layout shift occurs during background updates.
+
+**Responsive Behavior**:
+- **Desktop** (≥640px): Header and filters display side-by-side above the grid; cells are sized for mouse precision.
+- **Mobile** (<640px): The grid scrolls horizontally rather than wrapping or shrinking cells below a tappable size (minimum 14×14 CSS pixels). Day-of-week labels remain pinned to the left edge while the grid is scrolled horizontally.
+
 ## Project Settings
 
 ### Settings Page Navigation

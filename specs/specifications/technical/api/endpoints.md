@@ -4595,6 +4595,115 @@ Fetch unified activity feed for a project.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 
+## Activity Heatmap Endpoints
+
+### GET /api/activity-heatmap
+
+Fetch per-day AI activity aggregates across all projects accessible to the current user, driving the GitHub-style contribution heatmap on `/projects`.
+
+**Authentication**: Required (session)
+**Authorization**: None beyond a valid session — scope is "all projects the user owns or is a member of". No `projectId` is passed; `verifyProjectAccess` is NOT called.
+
+**Query Parameters**:
+- `period` (string, optional): `last-12-months` (default) or a 4-digit calendar year (`YYYY`). Years outside `[year(user.createdAt), currentYear]` silently coerce to `last-12-months`.
+- `agent` (string, optional): `all` (default) | `CLAUDE` | `CODEX` | `MISTRAL` | `GEMINI`. Invalid values silently coerce to `all`.
+- `tz` (string, optional): IANA timezone string (e.g., `America/New_York`). Defaults to `UTC`. Invalid values silently coerce to `UTC`.
+
+Invalid query parameters never produce a `400` — they are coerced to defaults so shared URLs always render. The server logs each coercion.
+
+**Behavior**:
+- Resolves the set of accessible project IDs via the owner-OR-member `OR` clause used by `getUserProjects`.
+- Resolves the period into a tz-local `[rangeStart, rangeEnd]` date range. For `calendar-year` of the current year, the range is clamped to today.
+- Aggregates `Job` rows whose `ticket.projectId` is in scope and whose `completedAt` falls within the range into per-day buckets: job count and sum of non-null `costUsd`.
+- Separately aggregates `ship`-command jobs with `status = COMPLETED` into per-day shipped-ticket lists (deduplicated by `ticketKey`).
+- Computes the distinct set of effective agents across in-scope tickets with at least one job in range (without applying the agent filter) for filter visibility.
+- Computes quartile-based intensity thresholds over non-zero per-day job counts and pre-assigns each day a `level` in `0..4`.
+- Effective agent resolution: `ticket.agent` when present, else `project.defaultAgent`.
+- Response `Cache-Control: private, no-store` (per-user data; never cached shared).
+
+**Sequence**:
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant R as Heatmap Route
+    participant Q as Heatmap Query
+    participant DB as Database
+
+    C->>R: GET /api/activity-heatmap?period&agent&tz
+    R->>R: requireAuth; parse & coerce filters
+    R->>Q: getActivityHeatmap(userId, filters, now)
+    Q->>DB: Resolve accessible project IDs (owner OR member)
+    Q->>DB: groupBy Job (count + cost) in range & scope
+    Q->>DB: groupBy ship-command COMPLETED jobs per day
+    DB-->>Q: Per-day aggregates + shipped ticket lists
+    Q-->>R: HeatmapPayload (days, totals, thresholds, agents)
+    R-->>C: 200 JSON (Cache-Control: private, no-store)
+```
+
+**Response** (200 OK):
+```json
+{
+  "filters": {
+    "period": { "kind": "last-12-months" },
+    "agent": "all",
+    "timezone": "America/New_York"
+  },
+  "meta": {
+    "rangeStart": "2025-04-20",
+    "rangeEnd": "2026-04-19",
+    "label": "Last 12 months"
+  },
+  "days": [
+    {
+      "date": "2025-04-20",
+      "jobCount": 0,
+      "totalCost": null,
+      "shippedTickets": [],
+      "level": 0
+    },
+    {
+      "date": "2025-04-21",
+      "jobCount": 4,
+      "totalCost": 0.38,
+      "shippedTickets": [
+        { "ticketKey": "AIB-123", "title": "Fix OAuth redirect" }
+      ],
+      "level": 2
+    }
+  ],
+  "totals": { "jobs": 412, "shippedTickets": 18 },
+  "thresholds": { "t1": 1, "t2": 3, "t3": 6, "t4": 12 },
+  "distinctAgents": ["CLAUDE", "CODEX"],
+  "availableYears": [2026, 2025, 2024]
+}
+```
+
+**Fields**:
+- `filters.period`: `{ kind: 'last-12-months' } | { kind: 'calendar-year', year: number }`. Echoes the resolved period after coercion.
+- `filters.agent`: `'all' | 'CLAUDE' | 'CODEX' | 'MISTRAL' | 'GEMINI'`.
+- `filters.timezone`: IANA string; always echoed back (even when coerced to `UTC`).
+- `meta.rangeStart`, `meta.rangeEnd`, `days[].date`: `YYYY-MM-DD` in `filters.timezone`.
+- `meta.label`: Human-readable period label (`"Last 12 months"` or `"2025"`).
+- `days`: Contiguous, ascending by date, one entry per day in the range. Zero-count days are present with `jobCount: 0` and `totalCost: null`.
+- `days[].totalCost`: `number | null`. **Null** when no job that day recorded a cost; never `0.0` as a placeholder.
+- `days[].level`: Integer `0..4`, pre-bucketed server-side.
+- `days[].shippedTickets`: Deduplicated by `ticketKey` per day, ordered by each `ship` job's `completedAt` ascending.
+- `totals.jobs`: Sum of `days[].jobCount`.
+- `totals.shippedTickets`: Count of DISTINCT `ticketKey` across the whole period.
+- `thresholds.t1 <= t2 <= t3 <= t4`, all `>= 1`.
+- `distinctAgents`: Subset of `['CLAUDE','CODEX','MISTRAL','GEMINI']`, alphabetical. Used by the client to hide the agent filter when length `< 2`.
+- `availableYears`: Descending list from `currentYear` down to `year(user.createdAt)`. When `user.createdAt` is in the current year, contains only `[currentYear]`.
+
+**Errors**:
+- `401 Unauthorized`: No valid session.
+- `500 Internal Server Error`: `{ "error": "Failed to load activity heatmap" }` — unexpected DB or runtime failure. Logged with context.
+
+**No `400` is returned** — invalid query parameters silently coerce to defaults so shared URLs always render.
+
+**Polling**: Clients use TanStack Query `refetchInterval: 15000` with `staleTime: 10000`.
+
+**Performance**: Payload target `< 60 KB` uncompressed for a 12-month view (365-day array with short ticket lists per day). Aggregation uses two Prisma `groupBy` queries plus a distinct-agent query — no per-day fan-out.
+
 ## Token Endpoints
 
 ### GET /api/tokens
