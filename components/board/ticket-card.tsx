@@ -179,7 +179,7 @@ export const TicketCard = React.memo(
                           className={`inline-flex items-center justify-center rounded-full p-0.5 ${
                             isModelOverrideDormant
                               ? 'ring-1 ring-muted-foreground/40'
-                              : 'ring-2 ring-indigo-500 dark:ring-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.5)]'
+                              : 'ring-2 ring-indigo-500 dark:ring-indigo-400 shadow-[0_0_10px_theme(colors.indigo.500/0.5)]'
                           }`}
                         >
                           <AgentIcon agent={effectiveAgent} size={16} />
