@@ -21,30 +21,32 @@ function makeHealthScore(overrides: Partial<NonNullable<HealthScore>> = {}): Hea
 
 describe('HealthScoreHeart', () => {
   describe('color thresholds', () => {
-    it('renders green heart with score "95" for globalScore=95', () => {
+    it('renders green heart with score "95" for globalScore=95 (>=85)', () => {
       renderWithProviders(
         <HealthScoreHeart healthScore={makeHealthScore({ globalScore: 95 })} />
       );
       expect(screen.getByText('95')).toBeInTheDocument();
       const heart = screen.getByTestId('health-heart');
-      expect(heart.querySelector('svg path')).toHaveAttribute('fill');
+      // Rendered heart has a stroked outline path (not inside <defs><clipPath>)
+      const outlinePath = heart.querySelector('svg > path');
+      expect(outlinePath).toHaveAttribute('stroke');
     });
 
-    it('renders blue heart with score "75" for globalScore=75', () => {
+    it('renders violet heart with score "72" for globalScore=72 (60-84)', () => {
       renderWithProviders(
-        <HealthScoreHeart healthScore={makeHealthScore({ globalScore: 75 })} />
+        <HealthScoreHeart healthScore={makeHealthScore({ globalScore: 72 })} />
       );
-      expect(screen.getByText('75')).toBeInTheDocument();
+      expect(screen.getByText('72')).toBeInTheDocument();
     });
 
-    it('renders yellow heart with score "55" for globalScore=55', () => {
+    it('renders orange heart with score "55" for globalScore=55 (40-59)', () => {
       renderWithProviders(
         <HealthScoreHeart healthScore={makeHealthScore({ globalScore: 55 })} />
       );
       expect(screen.getByText('55')).toBeInTheDocument();
     });
 
-    it('renders red heart with score "30" for globalScore=30', () => {
+    it('renders red heart with score "30" for globalScore=30 (<40)', () => {
       renderWithProviders(
         <HealthScoreHeart healthScore={makeHealthScore({ globalScore: 30 })} />
       );
@@ -58,6 +60,20 @@ describe('HealthScoreHeart', () => {
       expect(screen.getByText('0')).toBeInTheDocument();
       // Should NOT show dash — score of 0 is a valid score
       expect(screen.queryByText('—')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('progressive fill', () => {
+    it('exposes the score via data-score for verification', () => {
+      renderWithProviders(
+        <HealthScoreHeart healthScore={makeHealthScore({ globalScore: 72 })} />
+      );
+      expect(screen.getByTestId('health-heart')).toHaveAttribute('data-score', '72');
+    });
+
+    it('exposes data-score="null" when no data', () => {
+      renderWithProviders(<HealthScoreHeart healthScore={null} />);
+      expect(screen.getByTestId('health-heart')).toHaveAttribute('data-score', 'null');
     });
   });
 

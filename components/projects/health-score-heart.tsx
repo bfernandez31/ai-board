@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { getScoreColorConfig } from '@/lib/health/score-calculator';
 import type { ProjectWithCount } from '@/app/lib/types/project';
 import {
@@ -22,57 +22,37 @@ const SUB_SCORE_LABELS: Array<{ key: keyof NonNullable<ProjectWithCount['healthS
   { key: 'reviewQualityScore', label: 'Review Quality' },
 ];
 
-const HEART_PATH = 'M18 32 C8 24 2 18 2 12 2 6 6 2 12 2 15 2 18 5 18 5 18 5 21 2 24 2 30 2 34 6 34 12 34 18 28 24 18 32Z';
+const HEART_PATH =
+  'M22 33.5 C22 33.5 10 26 10 17.5 C10 13 13.5 10 17 10 ' +
+  'C19.5 10 21 11.5 22 13 C23 11.5 24.5 10 27 10 C30.5 10 34 13 ' +
+  '34 17.5 C34 26 22 33.5 22 33.5 Z';
 
-interface HeartColors {
-  from: string;
-  to: string;
-  glow: string;
-  stroke: string;
-}
+const TOP = 10;
+const BOTTOM = 33.5;
+const USABLE = BOTTOM - TOP;
 
-function getHeartColors(score: number | null): HeartColors {
-  if (score === null) return {
-    from: 'hsl(var(--muted-foreground) / 0.2)',
-    to: 'hsl(var(--muted-foreground) / 0.3)',
-    glow: 'transparent',
-    stroke: 'hsl(var(--muted-foreground) / 0.15)',
-  };
-  if (score >= 90) return {
-    from: 'hsl(var(--ctp-green))',
-    to: 'hsl(var(--ctp-teal))',
-    glow: 'hsl(var(--ctp-green) / 0.4)',
-    stroke: 'hsl(var(--ctp-green) / 0.6)',
-  };
-  if (score >= 70) return {
-    from: 'hsl(var(--ctp-blue))',
-    to: 'hsl(var(--ctp-lavender))',
-    glow: 'hsl(var(--ctp-blue) / 0.4)',
-    stroke: 'hsl(var(--ctp-blue) / 0.6)',
-  };
-  if (score >= 50) return {
-    from: 'hsl(var(--ctp-yellow))',
-    to: 'hsl(var(--ctp-peach))',
-    glow: 'hsl(var(--ctp-yellow) / 0.4)',
-    stroke: 'hsl(var(--ctp-yellow) / 0.6)',
-  };
-  return {
-    from: 'hsl(var(--ctp-red))',
-    to: 'hsl(var(--ctp-maroon))',
-    glow: 'hsl(var(--ctp-red) / 0.4)',
-    stroke: 'hsl(var(--ctp-red) / 0.6)',
-  };
+function getHeartColorClass(score: number | null): string {
+  if (score === null) return 'text-muted-foreground';
+  if (score >= 85) return 'text-emerald-400';
+  if (score >= 60) return 'text-violet-400';
+  if (score >= 40) return 'text-orange-400';
+  return 'text-red-400';
 }
 
 export function HealthScoreHeart({ healthScore }: HealthScoreHeartProps) {
   const [open, setOpen] = useState(false);
+  const reactId = useId();
+  const clipId = `heart-clip-${reactId.replace(/:/g, '')}`;
 
   const globalScore = healthScore?.globalScore ?? null;
   const hasData = globalScore !== null;
-  const displayText = hasData ? globalScore.toString() : '—';
-  const colors = getHeartColors(globalScore);
-  const gradientId = `heart-grad-${globalScore ?? 'null'}`;
-  const glowId = `heart-glow-${globalScore ?? 'null'}`;
+  const clamped = hasData ? Math.max(0, Math.min(100, globalScore)) : 0;
+  const displayText = hasData ? Math.round(clamped).toString() : '—';
+  const colorClass = getHeartColorClass(globalScore);
+
+  const fillHeight = (clamped / 100) * USABLE;
+  const rectY = BOTTOM - fillHeight;
+  const rectH = BOTTOM - rectY + 0.5;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -80,66 +60,48 @@ export function HealthScoreHeart({ healthScore }: HealthScoreHeartProps) {
         <button
           type="button"
           data-testid="health-heart"
+          data-score={hasData ? globalScore : 'null'}
           onClick={(e) => e.stopPropagation()}
           onMouseEnter={() => setOpen(true)}
           onMouseLeave={() => setOpen(false)}
           className="relative inline-flex items-center justify-center focus:outline-none group"
-          aria-label={hasData ? `Health score: ${globalScore}` : 'No health data'}
+          aria-label={hasData ? `Project health: ${globalScore} out of 100` : 'No health data'}
         >
-          <svg
-            width="40"
-            height="40"
-            viewBox="0 0 36 36"
-            className="transition-transform duration-200 group-hover:scale-110"
+          <span
+            className={`relative inline-block transition-transform duration-200 group-hover:scale-110 ${colorClass}`}
+            style={{ width: 55, height: 50, lineHeight: 0 }}
           >
-            <defs>
-              <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor={colors.from} />
-                <stop offset="100%" stopColor={colors.to} />
-              </linearGradient>
-              <filter id={glowId}>
-                <feGaussianBlur stdDeviation="2" result="blur" />
-                <feFlood floodColor={colors.glow} result="color" />
-                <feComposite in="color" in2="blur" operator="in" result="glow" />
-                <feMerge>
-                  <feMergeNode in="glow" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-            <g filter={hasData ? `url(#${glowId})` : undefined}>
+            <svg viewBox="0 0 44 40" width="100%" height="100%">
+              <defs>
+                <clipPath id={clipId}>
+                  <path d={HEART_PATH} />
+                </clipPath>
+              </defs>
               <path
                 d={HEART_PATH}
-                fill={`url(#${gradientId})`}
-                stroke={colors.stroke}
-                strokeWidth="0.8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinejoin="round"
               />
-              {/* Highlight on top-left for depth */}
-              <path
-                d={HEART_PATH}
-                fill="url(#heart-shine)"
-                opacity="0.25"
-              />
-            </g>
-            {/* Shine gradient (shared) */}
-            <defs>
-              <linearGradient id="heart-shine" x1="20%" y1="0%" x2="80%" y2="100%">
-                <stop offset="0%" stopColor="white" stopOpacity="0.6" />
-                <stop offset="50%" stopColor="white" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <text
-              x="18"
-              y="17"
-              textAnchor="middle"
-              dominantBaseline="central"
-              fill="hsl(var(--ctp-crust))"
-              fontWeight="800"
-              fontSize={hasData && globalScore >= 100 ? '9' : '11'}
+              {hasData && (
+                <rect
+                  x="0"
+                  y={rectY}
+                  width="44"
+                  height={rectH}
+                  fill="currentColor"
+                  fillOpacity="0.22"
+                  clipPath={`url(#${clipId})`}
+                />
+              )}
+            </svg>
+            <span
+              className="absolute inset-0 grid place-items-center font-mono font-bold text-[12px] text-zinc-100 pointer-events-none pt-[4px] [text-shadow:0_1px_2px_rgb(0_0_0_/_0.5)]"
             >
               {displayText}
-            </text>
-          </svg>
+            </span>
+          </span>
         </button>
       </PopoverTrigger>
       <PopoverContent
