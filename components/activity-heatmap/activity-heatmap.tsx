@@ -30,7 +30,7 @@ import {
 } from '@/lib/heatmap/types';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
-const VISIBLE_DAY_LABELS = [1, 3, 5] as const; // Mon, Wed, Fri
+const VISIBLE_DAY_LABELS: readonly number[] = [1, 3, 5]; // Mon, Wed, Fri
 
 async function fetchHeatmapData(filters: HeatmapFilters): Promise<ActivityHeatmapResponse> {
   const params = new URLSearchParams({ year: filters.year, agent: filters.agent });
@@ -65,15 +65,13 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
   const shouldUseInitialData =
     filters.year === initialData.filters.year && filters.agent === initialData.filters.agent;
 
-  const { data } = useQuery({
+  const { data: heatmap } = useQuery({
     queryKey: queryKeys.projects.heatmap(filters.year, filters.agent),
     queryFn: () => fetchHeatmapData(filters),
     initialData: shouldUseInitialData ? initialData : undefined,
     refetchInterval: 60000,
     staleTime: 30000,
   });
-
-  const heatmap = data ?? (shouldUseInitialData ? initialData : undefined);
 
   const updateFilters = (next: HeatmapFilters) => {
     setFilters(next);
@@ -206,7 +204,7 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
                       key={label}
                       className="sticky left-0 z-10 flex h-[13px] w-8 items-center text-[10px] text-muted-foreground aurora-bg-subtle sm:h-[13px] max-sm:h-[16px]"
                     >
-                      {(VISIBLE_DAY_LABELS as readonly number[]).includes(idx) ? label : ''}
+                      {VISIBLE_DAY_LABELS.includes(idx) ? label : ''}
                     </div>
                   ))}
                 </div>
@@ -241,15 +239,15 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
                           const intensityClass = HEATMAP_INTENSITY_CLASSES[level];
 
                           const tooltipLines: string[] = [formatDisplayDate(cell.dateKey)];
-                          if (count > 0) {
+                          if (dayData && count > 0) {
                             tooltipLines.push(`${count} job${count !== 1 ? 's' : ''}`);
-                            if (dayData!.shippedCount > 0) {
+                            if (dayData.shippedCount > 0) {
                               tooltipLines.push(
-                                `${dayData!.shippedCount} ticket${dayData!.shippedCount !== 1 ? 's' : ''} shipped`
+                                `${dayData.shippedCount} ticket${dayData.shippedCount !== 1 ? 's' : ''} shipped`
                               );
                             }
-                            if (dayData!.costUsd !== null) {
-                              tooltipLines.push(`$${dayData!.costUsd!.toFixed(2)}`);
+                            if (dayData.costUsd !== null) {
+                              tooltipLines.push(`$${dayData.costUsd.toFixed(2)}`);
                             }
                           } else {
                             tooltipLines.push('No activity');

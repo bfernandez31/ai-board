@@ -95,9 +95,6 @@ export async function getActivityHeatmapData(
     }
   }
 
-  if (days[formatDateKey(endDate)]?.costUsd !== undefined && days[formatDateKey(endDate)]?.costUsd !== null) {
-    days[formatDateKey(endDate)]!.costUsd = Math.round(days[formatDateKey(endDate)]!.costUsd! * 100) / 100;
-  }
   for (const day of Object.values(days)) {
     if (day.costUsd !== null) {
       day.costUsd = Math.round(day.costUsd * 100) / 100;
