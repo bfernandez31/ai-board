@@ -3,8 +3,12 @@ import { ProjectsContainer } from '@/components/projects/projects-container';
 import { ProjectQuotaGate } from '@/components/projects/project-quota-gate';
 import { UsageBanner } from '@/components/billing/usage-banner';
 import { ProjectsHeaderActions } from '@/components/projects/projects-header-actions';
+import { ActivityHeatmap } from '@/components/activity-heatmap/activity-heatmap';
 import { toProjectWithCount, type ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
+import { requireAuth } from '@/lib/db/users';
+import { getActivityHeatmapData } from '@/lib/heatmap/queries';
+import { DEFAULT_HEATMAP_FILTERS } from '@/lib/heatmap/types';
 
 // Force dynamic rendering - this page uses headers() for auth
 export const dynamic = 'force-dynamic';
@@ -26,8 +30,17 @@ async function getProjects(): Promise<ProjectsListResponse> {
   }
 }
 
+async function getHeatmapData() {
+  try {
+    const userId = await requireAuth();
+    return await getActivityHeatmapData(userId, DEFAULT_HEATMAP_FILTERS);
+  } catch {
+    return null;
+  }
+}
+
 export default async function ProjectsPage() {
-  const projects = await getProjects();
+  const [projects, heatmapData] = await Promise.all([getProjects(), getHeatmapData()]);
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -43,6 +56,12 @@ export default async function ProjectsPage() {
       <div className="mt-6">
         <ProjectsContainer projects={projects} />
       </div>
+
+      {heatmapData && (
+        <div className="mt-8">
+          <ActivityHeatmap initialData={heatmapData} />
+        </div>
+      )}
     </div>
   );
 }
