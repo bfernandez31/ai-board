@@ -55,10 +55,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       agent: searchParams.get('agent') ?? undefined,
       tz: searchParams.get('tz') ?? undefined,
     });
-
-    const rawAgent = parsed.success ? parsed.data.agent : undefined;
-    const rawTz = parsed.success ? parsed.data.tz : undefined;
-    const rawPeriod = parsed.success ? parsed.data.period : undefined;
+    const { agent: rawAgent, tz: rawTz, period: rawPeriod } = parsed.success
+      ? parsed.data
+      : {};
 
     const agent: HeatmapAgentFilter = rawAgent ?? 'all';
     const timezone = coerceTimezone(rawTz);
@@ -80,12 +79,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const payload = await getActivityHeatmap({ userId, filters, now });
 
-    return new NextResponse(JSON.stringify(payload), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'private, no-store',
-      },
+    return NextResponse.json(payload, {
+      headers: { 'Cache-Control': 'private, no-store' },
     });
   } catch (error) {
     console.error('Activity heatmap API error:', error);

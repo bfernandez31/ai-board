@@ -72,13 +72,8 @@ export const TicketCard = React.memo(
       });
     }, [ticket.stage, ticket.branch, ticket.jobs]);
 
-    // Check if deploy is disabled due to another ticket's active deployment
-    // Deploy is disabled when:
-    // 1. Another ticket has a PENDING or RUNNING deployment
-    // 2. This ticket is NOT the one with the active deployment
-    const isDeployDisabled = React.useMemo(() => {
-      return activeDeploymentTicket !== null && activeDeploymentTicket !== ticket.id;
-    }, [activeDeploymentTicket, ticket.id]);
+    const isDeployDisabled =
+      activeDeploymentTicket !== null && activeDeploymentTicket !== ticket.id;
 
 
     const { attributes, listeners, setNodeRef, transform, isDragging } =

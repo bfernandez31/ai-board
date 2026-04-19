@@ -37,12 +37,10 @@ const MONTH_LABELS = [
   'Dec',
 ] as const;
 
-interface GridCell {
-  kind: 'day' | 'chip' | 'future';
-  day?: HeatmapDay;
-  dateKey: string;
-  isFuture: boolean;
-}
+type GridCell =
+  | { kind: 'day'; dateKey: string; day: HeatmapDay }
+  | { kind: 'future'; dateKey: string; day: HeatmapDay }
+  | { kind: 'chip'; dateKey: string };
 
 interface WeekColumn {
   cells: GridCell[];
@@ -108,7 +106,7 @@ function buildWeeks(days: HeatmapDay[], meta: HeatmapMeta, todayKey: string): We
       const key = dayKey(cursor);
       const day = byDay.get(key);
       if (day) {
-        cells.push({ kind: 'day', day, dateKey: key, isFuture: false });
+        cells.push({ kind: 'day', day, dateKey: key });
       } else if (
         isCalendarYearCurrent &&
         key > todayKey &&
@@ -117,11 +115,10 @@ function buildWeeks(days: HeatmapDay[], meta: HeatmapMeta, todayKey: string): We
         cells.push({
           kind: 'future',
           dateKey: key,
-          isFuture: true,
           day: { date: key, jobCount: 0, totalCost: null, shippedTickets: [], level: 0 },
         });
       } else {
-        cells.push({ kind: 'chip', dateKey: key, isFuture: false });
+        cells.push({ kind: 'chip', dateKey: key });
       }
       cursor = addDays(cursor, 1);
     }
@@ -205,21 +202,24 @@ export function HeatmapGrid({
           <div className="flex gap-1">
             {weeks.map((week, wi) => (
               <div key={wi} className="flex flex-col gap-1">
-                {week.cells.map((cell, ci) =>
-                  cell.kind === 'chip' ? (
-                    <span
-                      key={`${wi}-${ci}`}
-                      aria-hidden="true"
-                      className="h-[14px] w-[14px]"
-                    />
-                  ) : (
+                {week.cells.map((cell, ci) => {
+                  if (cell.kind === 'chip') {
+                    return (
+                      <span
+                        key={`${wi}-${ci}`}
+                        aria-hidden="true"
+                        className="h-[14px] w-[14px]"
+                      />
+                    );
+                  }
+                  return (
                     <HeatmapCell
                       key={`${wi}-${ci}`}
-                      day={cell.day!}
-                      isFuture={cell.isFuture}
+                      day={cell.day}
+                      isFuture={cell.kind === 'future'}
                     />
-                  )
-                )}
+                  );
+                })}
               </div>
             ))}
           </div>

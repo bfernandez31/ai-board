@@ -89,20 +89,15 @@ export function formatDayKey(date: Date, timezone: string): string {
 }
 
 function createDayFormatter(timezone: string): Intl.DateTimeFormat {
+  const options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  };
   try {
-    return new Intl.DateTimeFormat('en-CA', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
+    return new Intl.DateTimeFormat('en-CA', { ...options, timeZone: timezone });
   } catch {
-    return new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'UTC',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
+    return new Intl.DateTimeFormat('en-CA', { ...options, timeZone: 'UTC' });
   }
 }
 
