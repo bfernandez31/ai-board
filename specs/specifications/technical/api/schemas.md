@@ -69,6 +69,8 @@ export const updateTicketSchema = z.object({
 
   agent: z.nativeEnum(Agent).nullable().optional(),
 
+  autoMode: z.boolean().optional(),
+
   version: z.number().int().positive(),
 });
 
@@ -79,6 +81,7 @@ export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 - **description**: Editable ONLY in INBOX stage (API enforced)
 - **clarificationPolicy**: Editable ONLY in INBOX stage (API enforced)
 - **agent**: Editable ONLY in INBOX stage (API enforced; follows same rules as clarificationPolicy)
+- **autoMode**: Editable at any stage; meaningful only on FULL-workflow tickets in INBOX/SPECIFY/PLAN (server-side auto-clears it on terminal failure/cancellation and on PLAN rollbacks)
 - **version**: Always required for optimistic concurrency control
 
 ### TransitionRequestSchema

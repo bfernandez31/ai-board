@@ -59,6 +59,31 @@ sequenceDiagram
     end
 ```
 
+## Auto-Transition Chain
+
+FULL-workflow tickets can opt into an automatic chain of forward transitions across the INBOX → SPECIFY → PLAN → BUILD sequence, so the user does not have to drag the card at every step. BUILD → VERIFY and VERIFY → SHIP already progress automatically; auto-transition extends that behavior to the earlier stages on demand.
+
+**Activation**: The user toggles auto mode from the ticket card (see Ticket Management — Auto-Transition Mode). When auto mode is enabled on a ticket whose current stage has no running workflow job, the next stage transition is dispatched immediately alongside the toggle update. When enabled during an active job, dispatch is deferred until that job reaches a terminal state.
+
+**On successful job completion**:
+- If the ticket has `autoMode=true`, `workflowType=FULL`, and is in SPECIFY or PLAN, the next stage transition is dispatched automatically — the same way BUILD → VERIFY progresses today
+- Stage mapping: SPECIFY → PLAN, PLAN → BUILD
+- Tickets in INBOX are advanced exclusively via the immediate dispatch at toggle time, not via job completion
+- AI-BOARD comment jobs (`comment-*`) and `deploy-preview` jobs are ignored — only primary workflow jobs drive the chain
+- If the next dispatch itself fails (missing credential, quota exhausted, validation error), auto mode is disabled on the ticket so the chain does not silently retry
+
+**On failed or cancelled job completion**:
+- Auto mode is turned off automatically
+- The ticket stays on its current stage; the user must re-enable auto mode manually after resolving the failure
+- Rationale: failures usually need human attention (ambiguous spec, broken test, missing credential, quota exhausted); silently chaining into the next stage would hide the problem
+
+**On rollback**: VERIFY → PLAN and BUILD → PLAN rollbacks clear `autoMode` as part of the rollback transaction, to prevent the chain from re-looping through BUILD → VERIFY repeatedly.
+
+**Scope**:
+- Only FULL-workflow tickets participate; QUICK tickets are never eligible
+- Scope is limited to forward transitions between INBOX, SPECIFY, PLAN, and BUILD. Later-stage auto-progression (BUILD → VERIFY, VERIFY → SHIP) keeps its own existing mechanisms
+- Auto-transition reuses the standard `POST /api/projects/:projectId/tickets/:id/transition` path, so all normal guards (active-job check, credential guard, concurrent-update protection) apply
+
 ## Workflow Jobs
 
 ### Automated Test Authentication

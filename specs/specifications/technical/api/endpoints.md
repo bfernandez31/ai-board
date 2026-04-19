@@ -910,6 +910,7 @@ Update ticket fields with optimistic concurrency control.
   "title": "Updated title",
   "description": "Updated description",
   "clarificationPolicy": "CONSERVATIVE",
+  "autoMode": true,
   "version": 3
 }
 ```
@@ -918,7 +919,12 @@ Update ticket fields with optimistic concurrency control.
 - `title`: Optional, 1-100 characters, alphanumeric + basic punctuation
 - `description`: Optional, 1-10000 characters (editable only in INBOX stage)
 - `clarificationPolicy`: Optional, enum or null (editable only in INBOX stage)
+- `agent`: Optional, enum or null (editable only in INBOX stage)
+- `autoMode`: Optional boolean; enables automatic forward stage chaining on FULL-workflow tickets (see Automation — Auto-Transition Chain). Server disables it automatically on FAILED/CANCELLED jobs and on VERIFY→PLAN / BUILD→PLAN rollback.
 - `version`: Required for concurrency control
+
+**Auto-Transition Dispatch**:
+- When the client sets `autoMode: true` on a ticket currently in INBOX/SPECIFY/PLAN with no running workflow job, it typically follows the PATCH with an immediate `POST /api/projects/:projectId/tickets/:id/transition` for the next stage to kick off the chain. The PATCH itself only updates the flag — it does not dispatch a workflow.
 
 **Response** (200 OK):
 ```json

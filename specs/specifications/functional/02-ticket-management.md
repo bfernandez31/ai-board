@@ -167,6 +167,48 @@ Users move tickets between stages using drag-and-drop:
 - Response feels instantaneous for professional-grade UX
 - Performance maintained regardless of ticket count
 
+### Auto-Transition Mode
+
+FULL-workflow tickets sitting in INBOX, SPECIFY, or PLAN can opt into an automatic chain of forward transitions so the user does not have to drag the card at every step. BUILD → VERIFY and VERIFY → SHIP already progress automatically today; auto-transition extends the same "hands-off" behavior to the earlier stages.
+
+**Toggle icon** (double right-chevron, "fast forward"):
+- Rendered on the ticket card next to the cancel (×) icon
+- Shown only on FULL-workflow tickets currently in INBOX, SPECIFY, or PLAN (never on QUICK tickets, never in BUILD, VERIFY, SHIP, or CLOSED)
+- **Off**: visible only on card hover, muted color (same pattern as the cancel icon)
+- **On**: always visible with accent color, so the state is obvious at a glance
+- Tooltip off: "Enable auto-transition"
+- Tooltip on: "Auto-transition on — click to disable"
+
+**Enabling**:
+1. User clicks the icon while auto mode is off
+2. A confirmation modal opens listing the stages that will be chained based on the current stage:
+   - From INBOX: `SPECIFY → PLAN → BUILD`
+   - From SPECIFY: `PLAN → BUILD`
+   - From PLAN: `BUILD`
+3. On confirm, auto mode turns on for this ticket. If no workflow job is currently running on the card, the next stage transition is dispatched immediately.
+4. On cancel, nothing changes.
+
+**Disabling**:
+- Clicking the icon while auto mode is on disables it immediately, with no confirmation modal
+- The icon reverts to hover-only visibility
+- A job already running is not interrupted; it simply will not trigger the next transition on completion
+
+**Chain behavior**:
+- When a workflow job completes successfully on a ticket with auto mode on and stage SPECIFY or PLAN, the next stage transition is dispatched automatically
+- The chain stops at BUILD (from there, the existing BUILD → VERIFY auto-progression takes over)
+- A FAILED or CANCELLED job on a ticket with auto mode on turns auto mode off automatically; the ticket stays on its current stage, and the user must re-enable manually after resolving the failure
+- If the immediate dispatch fails (missing credential, quota exhausted, etc.), auto mode is turned off via the same failure path
+
+**Rollback interaction**:
+- Rolling a ticket back from VERIFY to PLAN (or BUILD to PLAN) clears auto mode on that ticket to prevent the chain from re-looping through BUILD → VERIFY repeatedly
+- The user re-enables auto mode manually if they want the chain to resume
+
+**Edge cases**:
+- Enabling auto mode while a job is already running is allowed; it takes effect when that job finishes successfully
+- The user can still manually drag the card while auto mode is on — auto stays on and applies at the next job completion
+- Auto-mode state is per ticket and persists across page reloads and sessions; it is not shared between tickets
+- AI-BOARD comment jobs (`comment-*`) and deploy-preview jobs never trigger the auto chain
+
 ### Concurrent Updates
 
 When two users modify the same ticket simultaneously:
@@ -827,6 +869,12 @@ Timestamps display in user-friendly formats:
   - Immutable after being set
   - Visual badges distinguish workflow types on ticket cards:
     - QUICK: ⚡ Quick badge (amber styling)
+
+- **Auto-Transition Mode**: Boolean flag enabling automatic forward stage chaining
+  - Applies only to FULL-workflow tickets in INBOX, SPECIFY, or PLAN
+  - Default: `false`
+  - Persisted per ticket; toggled via the fast-forward icon on the ticket card
+  - Automatically cleared on FAILED/CANCELLED jobs and on VERIFY→PLAN / BUILD→PLAN rollback
 
 ### Optional Configuration
 
