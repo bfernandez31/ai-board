@@ -359,6 +359,69 @@ Import a GitHub repository as a new ai-board project.
 - `409` (other conflict): `{ "error": "A conflict occurred while creating the project. Please try again.", "code": "CONFLICT" }`
 - `502`: GitHub API error
 
+## Activity Endpoints
+
+### GET /api/activity
+
+Fetch activity heatmap data for the authenticated user across all accessible projects.
+
+**Authentication**: Required (session)
+**Authorization**: Aggregate data for all projects owned by or shared with the user
+
+**Query Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `range` | string | `"last-12-months"` | Time period: `"last-12-months"` or a specific year (e.g., `"2025"`) |
+| `agent` | string | `"all"` | Filter by agent name (e.g., `"CLAUDE"`, `"CODEX"`). Matches effective agent resolution. |
+
+**Response** (200 OK):
+```json
+{
+  "data": [
+    {
+      "date": "2026-04-19",
+      "jobCount": 5,
+      "totalCost": 0.125,
+      "shippedTickets": [
+        {
+          "id": 123,
+          "ticketKey": "ABC-1",
+          "title": "Initial feature"
+        }
+      ]
+    }
+  ],
+  "availableAgents": [
+    {
+      "value": "CLAUDE",
+      "label": "Claude",
+      "jobCount": 150
+    }
+  ],
+  "stats": {
+    "totalJobs": 450,
+    "totalTicketsShipped": 12
+  },
+  "userCreatedAt": "2025-01-01T00:00:00.000Z"
+}
+```
+
+**Fields**:
+- `data`: Array of daily activity points
+  - `date`: ISO 8601 date string (YYYY-MM-DD)
+  - `jobCount`: Total jobs started on that day
+  - `totalCost`: Combined USD cost of all jobs on that day (null if no cost data)
+  - `shippedTickets`: Tickets where a `ship` job successfully completed on that day
+- `availableAgents`: List of distinct agents present in the user's history for the agent filter
+- `stats`: Summary totals for the requested range and agent filter
+- `userCreatedAt`: Timestamp when the user account was created (used to bound the year selector)
+
+**Errors**:
+- `401`: Not authenticated
+- `404`: User not found
+- `500`: Database error
+
 ## Project Setup Endpoints
 
 Endpoints for the project onboarding setup flow. All session-authenticated endpoints require project ownership (not just membership). The status callback endpoint uses workflow Bearer token authentication.

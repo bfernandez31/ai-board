@@ -733,7 +733,23 @@ The command palette provides unified keyboard-driven navigation and search acros
 - No elements extend beyond card boundaries
 - Prevents horizontal scrolling on narrow screens (375px minimum supported)
 
-## Loading States
+### Activity Heatmap
+
+The activity heatmap is positioned full-width below the project card grid on the `/projects` page. It provides immediate visual feedback on AI contribution trends without requiring navigation to a sub-page.
+
+**Visual Presentation**:
+- **Aurora Violet Scale**: Cells use a violet gradient matching the application's aurora theme. Intensity levels correspond to job volume.
+- **Dynamic Grid**: The grid boundaries adjust based on the selected period. Partial weeks at the start or end of a period are rendered with "chipped" corners (empty spaces), following GitHub's visual convention.
+- **Month & Day Labels**: Month names are displayed at the top; day-of-week abbreviations (Mon, Wed, Fri) are pinned to the left.
+- **Immediate Render**: The heatmap uses server-rendered initial data to prevent "loading flashes" on first page load. Background refreshes for filter changes update the UI without blanking the grid.
+
+**Interactivity**:
+- **Hover Tooltips**: A stylized tooltip follows the pointer on hover (or tap on mobile), displaying detailed metrics for that day (tickets shipped, job count, cost).
+- **Responsive Navigation**: On mobile viewports, the grid allows horizontal scrolling with the day-of-week labels remaining sticky on the left.
+- **Filter Reflection**: Year selection and agent filtering are applied instantly. Active filters are synced to the browser's URL query parameters, enabling state persistence and sharing.
+
+## Project Settings
+
 
 ### Initial Load
 

@@ -439,6 +439,67 @@ Projects track activity across all tickets:
 - Ticket count shows total across all stages
 - Activity visible in project list view
 
+## Activity Heatmap
+
+Users can visualize project activity through a contribution heatmap on the projects list page. This provides a high-level overview of AI engagement and shipping velocity across all user-accessible projects.
+
+### Heatmap Grid
+
+**Visual Presentation**:
+- GitHub-style grid layout: 7 rows representing days of the week
+- Column count dynamically adjusts to the selected time period
+- Month labels positioned above the grid; day-of-week labels on the left
+- Cell intensity represents the total **job count** for each specific day
+- Color scale: Violet gradient using the project's aurora theme (darker = more activity)
+- Chipped corner behavior: Cells before the first day of the year or after the last day of the year are not rendered, matching standard contribution grid conventions
+- Intensity legend at bottom right (Less □□■■■ More)
+
+**Empty State**:
+- When the selected period contains zero activity across all projects, the grid is replaced by a centered message: "No activity to show yet — your AI work will appear here"
+- Filter and period selectors remain visible in the empty state
+
+### Period Selection
+
+**Dynamic Year Selector**:
+- Default option: "Last 12 months" (rolling window)
+- Calendar years: Individual options for each year from user account creation to the current year
+- Logic: If account was created in the current year, only "Last 12 months" is shown
+
+### Activity Metrics
+
+**Heatmap Header**:
+- Summary counter: "X jobs · Y tickets shipped in the last year" (or selected period)
+- **Shipped Definition**: A ticket is counted as "shipped" only when its `ship` workflow job completes successfully. Manual stage changes to SHIP without a corresponding successful job are not counted in this metric.
+
+### Agent Filtering
+
+**Dynamic Agent Filter**:
+- Options derived from agents actually present in the user's job history
+- Includes "All" option (default)
+- Resolves effective agents: honors inherited agents (ticket with no explicit agent on a project with a default agent)
+- Filter visibility: Hidden entirely if only 0 or 1 distinct agent exists in the dataset
+
+### Interaction & Tooltips
+
+**Hover Behavior**:
+- Tooltip appears on cell hover showing:
+  - Formatted date
+  - Number of tickets shipped that day
+  - Total job count
+  - Total cost (if cost data exists; omitted if null or 0 to avoid "$NaN" displays)
+- Mobile: Tap a cell to show tooltip; tap outside to dismiss
+
+### URL Integration
+
+- Active filters (period and agent) are reflected in the URL query parameters
+- Page refreshes and shared links preserve the exact heatmap view and filter state
+
+### Mobile Experience
+
+- Horizontal scroll for the grid on small screens
+- Day-of-week labels remain pinned to the left during horizontal scrolling
+- Grid cells maintain minimum tappable size on mobile viewports
+
 ## Project Actions
 
 ### Project Analytics

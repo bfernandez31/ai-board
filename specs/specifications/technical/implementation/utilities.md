@@ -505,6 +505,39 @@ if (process.env.TEST_MODE === 'true') {
 }
 ```
 
+## Heatmap Date Utilities
+
+### Purpose
+
+Provides logic for calculating date ranges and periods for the activity heatmap. Ensures consistent period boundaries and supports dynamic year selection based on user account age.
+
+### File Location
+
+`lib/utils/heatmap-dates.ts`
+
+### API Reference
+
+**Function**: `calculateDateRange(range: string): { startDate: Date; endDate: Date }`
+
+Calculates the start and end dates for a requested heatmap period.
+
+**Parameters**:
+- `range` (string): Either `"last-12-months"` or a 4-digit calendar year (e.g., `"2025"`)
+
+**Returns**:
+- `startDate` (Date): First day of the period (normalized to UTC midnight)
+- `endDate` (Date): Last day of the period (normalized to end of day)
+
+**Algorithm**:
+- `"last-12-months"`: Returns range from 365 days ago to today
+- Calendar year: Returns range from January 1st to December 31st of the specified year
+
+### Testing
+
+**Unit Tests**: `tests/unit/lib/utils/heatmap-dates.test.ts`
+
+---
+
 ## Conversation Events
 
 ### Purpose
