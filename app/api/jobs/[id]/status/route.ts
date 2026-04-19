@@ -217,9 +217,31 @@ export async function PATCH(
       }
     }
 
-    const updatedJob = await prisma.job.update({
-      where: { id: jobId },
+    // Atomic conditional update: only transition when source status matches.
+    // Prevents duplicate terminal callbacks (e.g., GitHub Actions retry) from
+    // both passing the idempotency check above and both firing completion hooks.
+    const transitionResult = await prisma.job.updateMany({
+      where: { id: jobId, status: currentStatus },
       data: updateData,
+    });
+
+    if (transitionResult.count === 0) {
+      const currentJob = await prisma.job.findUnique({
+        where: { id: jobId },
+        select: { id: true, status: true, completedAt: true },
+      });
+      return NextResponse.json(
+        {
+          id: currentJob!.id,
+          status: currentJob!.status,
+          completedAt: currentJob!.completedAt?.toISOString() || null,
+        },
+        { status: 200 }
+      );
+    }
+
+    const updatedJob = await prisma.job.findUniqueOrThrow({
+      where: { id: jobId },
       select: {
         id: true,
         status: true,

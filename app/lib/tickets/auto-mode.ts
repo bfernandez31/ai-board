@@ -21,10 +21,23 @@ export interface AutoModeHookInput {
   terminalStatus: 'COMPLETED' | 'FAILED' | 'CANCELLED';
 }
 
+// Commands that represent a stage workflow. Only these should influence
+// auto-mode disengagement or auto-chain dispatch. Non-stage commands
+// (comment-*, deploy-preview, rollback-reset, iterate, health-scan) must
+// not drive auto-mode.
+const STAGE_COMMANDS = new Set([
+  'specify',
+  'plan',
+  'implement',
+  'verify',
+  'ship',
+  'quick-impl',
+]);
+
 async function findTicket(projectId: number, identifier: string) {
-  const numericId = parseInt(identifier, 10);
-  const where = !isNaN(numericId)
-    ? { id: numericId, projectId }
+  const isNumericIdentifier = /^\d+$/.test(identifier);
+  const where = isNumericIdentifier
+    ? { id: parseInt(identifier, 10), projectId }
     : { ticketKey: identifier, projectId };
   return prisma.ticket.findFirst({
     where,
@@ -127,11 +140,19 @@ export async function enableAutoMode(
     };
   }
 
-  const dispatchResult = await executeTicketTransition(
-    ticket.projectId,
-    String(ticket.id),
-    nextStage as unknown as Stage
-  );
+  let dispatchResult;
+  try {
+    dispatchResult = await executeTicketTransition(
+      ticket.projectId,
+      String(ticket.id),
+      nextStage as unknown as Stage
+    );
+  } catch (error) {
+    // Roll back autoMode flag so a DB/network error doesn't silently leave the
+    // ticket "engaged" with no running job to trigger a subsequent hook.
+    await disengageAutoMode(ticket.id);
+    throw error;
+  }
 
   if (!dispatchResult.ok) {
     await disengageAutoMode(ticket.id);
@@ -205,67 +226,77 @@ export async function handleJobCompletionAutoTransition(
 ): Promise<void> {
   const { jobId, terminalStatus } = input;
 
-  if (!isTerminalStatus(terminalStatus as JobStatus)) {
-    return;
-  }
+  try {
+    if (!isTerminalStatus(terminalStatus as JobStatus)) {
+      return;
+    }
 
-  const job = await prisma.job.findUnique({
-    where: { id: jobId },
-    select: {
-      command: true,
-      ticket: {
-        select: {
-          id: true,
-          projectId: true,
-          stage: true,
-          workflowType: true,
-          autoMode: true,
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      select: {
+        command: true,
+        ticket: {
+          select: {
+            id: true,
+            projectId: true,
+            stage: true,
+            workflowType: true,
+            autoMode: true,
+          },
         },
       },
-    },
-  });
-
-  if (!job || !job.ticket) return;
-  if (job.command.startsWith('comment-')) return;
-
-  const ticket = job.ticket;
-
-  if (terminalStatus === 'FAILED' || terminalStatus === 'CANCELLED') {
-    if (ticket.autoMode) {
-      await disengageAutoMode(ticket.id);
-      console.log('[AutoMode] Disengaged after terminal status', {
-        ticketId: ticket.id,
-        terminalStatus,
-      });
-    }
-    return;
-  }
-
-  if (!ticket.autoMode) return;
-  if (!isAutoModeEligible(ticket)) return;
-  if (ticket.stage !== 'SPECIFY' && ticket.stage !== 'PLAN') return;
-
-  const nextStage = getNextStage(ticket.stage as unknown as ValidationStage);
-  if (!nextStage) return;
-
-  const result = await executeTicketTransition(
-    ticket.projectId,
-    String(ticket.id),
-    nextStage as unknown as Stage
-  );
-
-  if (!result.ok) {
-    await disengageAutoMode(ticket.id);
-    console.error('[AutoMode] Dispatch failed during auto-chain; disengaged.', {
-      ticketId: ticket.id,
-      status: result.status,
-      body: result.body,
     });
-    return;
-  }
 
-  console.log('[AutoMode] Advanced to next stage', {
-    ticketId: ticket.id,
-    nextStage,
-  });
+    if (!job || !job.ticket) return;
+    // Only stage-advancing workflows should influence auto-mode. Ignore
+    // comments, deploy-preview, rollback-reset, iterate, and health-scan.
+    if (!STAGE_COMMANDS.has(job.command)) return;
+
+    const ticket = job.ticket;
+
+    if (terminalStatus === 'FAILED' || terminalStatus === 'CANCELLED') {
+      if (ticket.autoMode) {
+        await disengageAutoMode(ticket.id);
+        console.log('[AutoMode] Disengaged after terminal status', {
+          ticketId: ticket.id,
+          terminalStatus,
+        });
+      }
+      return;
+    }
+
+    if (!ticket.autoMode) return;
+    if (!isAutoModeEligible(ticket)) return;
+    if (ticket.stage !== 'SPECIFY' && ticket.stage !== 'PLAN') return;
+
+    const nextStage = getNextStage(ticket.stage as unknown as ValidationStage);
+    if (!nextStage) return;
+
+    const result = await executeTicketTransition(
+      ticket.projectId,
+      String(ticket.id),
+      nextStage as unknown as Stage
+    );
+
+    if (!result.ok) {
+      await disengageAutoMode(ticket.id);
+      console.error('[AutoMode] Dispatch failed during auto-chain; disengaged.', {
+        ticketId: ticket.id,
+        status: result.status,
+        body: result.body,
+      });
+      return;
+    }
+
+    console.log('[AutoMode] Advanced to next stage', {
+      ticketId: ticket.id,
+      nextStage,
+    });
+  } catch (error) {
+    console.error('[AutoMode] Unexpected error in completion hook', {
+      jobId,
+      terminalStatus,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }

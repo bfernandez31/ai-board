@@ -1612,8 +1612,7 @@ Any running job is untouched.
   }
   ```
 - `401`: Not authenticated
-- `403`: User is neither project owner nor member
-- `404`: Ticket not found
+- `404`: Project not found, user is neither owner nor member, or ticket not found
 - `409`: Underlying optimistic-concurrency check failed during immediate dispatch
 - `500`: `{ "error": "Auto-mode dispatch failed; auto-mode reverted to off.", "code": "AUTO_MODE_DISPATCH_FAILED" }` — enable succeeded but the follow-up dispatch failed and could not be rolled back cleanly
 

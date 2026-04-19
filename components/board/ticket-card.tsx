@@ -281,8 +281,21 @@ export const TicketCard = React.memo(
             {ticket.title}
           </h3>
 
+          {/* Auto-mode hover-reveal footer: only renders for eligible tickets
+              with no other visible content. Collapsed until hover so the card
+              doesn't reserve an empty bordered row for the off-state icon. */}
+          {!(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl || ticket.autoMode) && autoModeEligible && (
+            <div className="hidden group-hover:block border-t border-border pt-3">
+              <AutoModeIcon
+                autoMode={ticket.autoMode}
+                onClick={handleAutoModeClick}
+                disabled={autoModeMutation.isPending}
+              />
+            </div>
+          )}
+
           {/* Job Status Indicators (Single-line layout with right-aligned compact icons) */}
-          {(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl || autoModeEligible) && (
+          {(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl || ticket.autoMode) && (
             <div className="border-t border-border pt-3">
               <div className="flex items-center justify-between gap-3">
                 {/* Left: Workflow Job Indicator + Cancel Button + Auto-mode toggle */}

@@ -28,7 +28,7 @@ export async function PATCH(
           return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
         if (error.message === 'Project not found') {
-          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+          return NextResponse.json({ error: 'Project not found' }, { status: 404 });
         }
       }
       throw error;
