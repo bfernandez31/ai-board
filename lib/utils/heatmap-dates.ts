@@ -5,6 +5,25 @@ export interface HeatmapCell {
   isWithinPeriod: boolean;
 }
 
+export function calculateDateRange(range: string): { startDate: Date; endDate: Date } {
+  const now = new Date();
+  let startDate: Date;
+  let endDate: Date;
+
+  if (range === 'last-12-months') {
+    endDate = new Date(now);
+    startDate = new Date(now);
+    startDate.setFullYear(now.getFullYear() - 1);
+    startDate.setHours(0, 0, 0, 0);
+  } else {
+    const year = parseInt(range, 10);
+    startDate = new Date(year, 0, 1); // Jan 1st
+    endDate = new Date(year, 11, 31, 23, 59, 59, 999); // Dec 31st
+  }
+
+  return { startDate, endDate };
+}
+
 export function generateHeatmapGrid(startDate: Date, endDate: Date): HeatmapCell[][] {
   // Align start date to the preceding Sunday to start the grid
   const startGrid = new Date(startDate);

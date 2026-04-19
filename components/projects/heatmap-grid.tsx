@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { generateHeatmapGrid, getMonthLabels } from '@/lib/utils/heatmap-dates';
+import { generateHeatmapGrid, getMonthLabels, calculateDateRange } from '@/lib/utils/heatmap-dates';
 import { HeatmapTooltip } from './heatmap-tooltip';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -19,21 +19,7 @@ interface HeatmapGridProps {
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function HeatmapGrid({ data, range }: HeatmapGridProps) {
-  const { startDate, endDate } = useMemo(() => {
-    const now = new Date();
-    if (range === 'last-12-months') {
-      const start = new Date(now);
-      start.setFullYear(now.getFullYear() - 1);
-      start.setHours(0, 0, 0, 0);
-      return { startDate: start, endDate: now };
-    } else {
-      const year = parseInt(range, 10);
-      return {
-        startDate: new Date(year, 0, 1),
-        endDate: new Date(year, 11, 31, 23, 59, 59, 999),
-      };
-    }
-  }, [range]);
+  const { startDate, endDate } = useMemo(() => calculateDateRange(range), [range]);
 
   const grid = useMemo(() => generateHeatmapGrid(startDate, endDate), [startDate, endDate]);
   const monthLabels = useMemo(() => getMonthLabels(grid), [grid]);
@@ -44,23 +30,12 @@ export function HeatmapGrid({ data, range }: HeatmapGridProps) {
     return map;
   }, [data]);
 
-  const getIntensity = (jobCount: number) => {
-    if (jobCount === 0) return 0;
-    if (jobCount <= 2) return 1;
-    if (jobCount <= 5) return 2;
-    if (jobCount <= 10) return 3;
-    return 4;
-  };
-
-  const getLevelClass = (level: number) => {
-    switch (level) {
-      case 0: return 'bg-accent/10';
-      case 1: return 'bg-ctp-mauve/20';
-      case 2: return 'bg-ctp-mauve/40';
-      case 3: return 'bg-ctp-mauve/70';
-      case 4: return 'bg-ctp-mauve';
-      default: return 'bg-accent/10';
-    }
+  const getLevelClass = (jobCount: number) => {
+    if (jobCount === 0) return 'bg-accent/10';
+    if (jobCount <= 2) return 'bg-ctp-mauve/20';
+    if (jobCount <= 5) return 'bg-ctp-mauve/40';
+    if (jobCount <= 10) return 'bg-ctp-mauve/70';
+    return 'bg-ctp-mauve';
   };
 
   const hasActivity = data.length > 0;
@@ -75,7 +50,7 @@ export function HeatmapGrid({ data, range }: HeatmapGridProps) {
               <div
                 key={`${label.label}-${i}`}
                 className="text-[10px] text-muted-foreground absolute"
-                style={{ left: `${label.weekIndex * 14 + 32}px` }}
+                style={{ left: `${label.weekIndex * 13 + 32}px` }}
               >
                 {label.label}
               </div>
@@ -104,7 +79,6 @@ export function HeatmapGrid({ data, range }: HeatmapGridProps) {
                     <div key={weekIdx} className="flex flex-col gap-[3px]">
                       {week.map((cell) => {
                         const dayData = dataMap.get(cell.date);
-                        const level = dayData ? getIntensity(dayData.jobCount) : 0;
                         
                         if (!cell.isWithinPeriod) {
                           return <div key={cell.date} className="w-[10px] h-[10px]" />;
@@ -116,7 +90,7 @@ export function HeatmapGrid({ data, range }: HeatmapGridProps) {
                               <div
                                 className={cn(
                                   "w-[10px] h-[10px] rounded-[1px] transition-colors",
-                                  getLevelClass(level)
+                                  getLevelClass(dayData?.jobCount ?? 0)
                                 )}
                               />
                             </TooltipTrigger>
@@ -141,10 +115,10 @@ export function HeatmapGrid({ data, range }: HeatmapGridProps) {
       <div className="flex justify-end items-center gap-2 mt-2">
         <span className="text-[10px] text-muted-foreground">Less</span>
         <div className="flex gap-[3px]">
-          {[0, 1, 2, 3, 4].map((level) => (
+          {[0, 2, 5, 10, 11].map((count) => (
             <div
-              key={level}
-              className={cn("w-[10px] h-[10px] rounded-[1px]", getLevelClass(level))}
+              key={count}
+              className={cn("w-[10px] h-[10px] rounded-[1px]", getLevelClass(count))}
             />
           ))}
         </div>

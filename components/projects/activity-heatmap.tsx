@@ -39,9 +39,8 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
     router.push(`?${params.toString()}`, { scroll: false });
   };
 
-  // If we have query data, use it. Otherwise use initialData if it matches current filters.
   const isDefaultView = range === 'last-12-months' && agent === 'all';
-  const heatmap: ActivityHeatmapResponse | undefined = (data as ActivityHeatmapResponse | undefined) ?? (isDefaultView ? (initialData || undefined) : undefined);
+  const heatmap = data ?? (isDefaultView ? initialData : undefined);
 
   return (
     <Card className="w-full mt-12 bg-card/50 backdrop-blur-sm border-accent/20">

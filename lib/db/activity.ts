@@ -1,6 +1,7 @@
 import { prisma } from './client';
 import { resolveEffectiveAgent } from '@/app/lib/utils/agent-resolution';
 import { requireAuth } from './users';
+import { calculateDateRange } from '@/lib/utils/heatmap-dates';
 import type { NextRequest } from 'next/server';
 
 export interface HeatmapDataPoint {
@@ -63,20 +64,7 @@ export async function getActivityHeatmap(options: {
   const projectDefaultAgents = new Map(accessibleProjects.map(p => [p.id, p.defaultAgent]));
 
   // Determine date range
-  const now = new Date();
-  let startDate: Date;
-  let endDate: Date;
-
-  if (range === 'last-12-months') {
-    endDate = new Date(now);
-    startDate = new Date(now);
-    startDate.setFullYear(now.getFullYear() - 1);
-    startDate.setHours(0, 0, 0, 0);
-  } else {
-    const year = parseInt(range, 10);
-    startDate = new Date(year, 0, 1); // Jan 1st
-    endDate = new Date(year, 11, 31, 23, 59, 59, 999); // Dec 31st
-  }
+  const { startDate, endDate } = calculateDateRange(range);
 
   // Fetch all jobs in the range for these projects
   const jobs = await prisma.job.findMany({
@@ -142,11 +130,14 @@ export async function getActivityHeatmap(options: {
 
     // Check if this job was a successful ship job
     if (job.command === 'ship' && job.status === 'COMPLETED') {
-      dataPoint.shippedTickets.push({
-        id: job.ticket.id,
-        ticketKey: job.ticket.ticketKey,
-        title: job.ticket.title,
-      });
+      const isAlreadyAdded = dataPoint.shippedTickets.some(t => t.id === job.ticket.id);
+      if (!isAlreadyAdded) {
+        dataPoint.shippedTickets.push({
+          id: job.ticket.id,
+          ticketKey: job.ticket.ticketKey,
+          title: job.ticket.title,
+        });
+      }
     }
   });
 
