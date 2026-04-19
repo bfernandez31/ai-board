@@ -79,6 +79,7 @@ export function useCreateTicket() {
         quickImplModel: null,
         verifyModel: null,
         attachments: [],
+        qualityScore: null,
       };
 
       // Update cache with optimistic ticket

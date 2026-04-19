@@ -93,10 +93,18 @@ export function useJobPolling(
       prev => !currentIds.has(prev.id)
     );
 
-    const jobsToInvalidate = [...newlyTerminalJobs, ...disappearedJobs];
+    // New workflow jobs appearing mid-stream signal a server-side stage transition
+    // (auto-mode chain, BUILD→VERIFY, etc.) that the client wouldn't otherwise notice
+    // until the new job itself reaches a terminal state. Comment-* jobs never drive
+    // the stage and are excluded.
+    const newJobs = jobs.filter(
+      job => !previousById.has(job.id) && !job.command.startsWith('comment-')
+    );
+
+    const jobsToInvalidate = [...newlyTerminalJobs, ...disappearedJobs, ...newJobs];
 
     if (jobsToInvalidate.length > 0) {
-      console.log('[useJobPolling] Jobs reached terminal state:', jobsToInvalidate.map(j => `${j.id}(${j.status})`));
+      console.log('[useJobPolling] Cache invalidation triggered by jobs:', jobsToInvalidate.map(j => `${j.id}(${j.status})`));
       queryClient.invalidateQueries({
         queryKey: queryKeys.projects.tickets(projectId),
         exact: true,
@@ -113,7 +121,9 @@ export function useJobPolling(
       }
     }
 
-    for (const job of jobsToInvalidate) {
+    // Stop tracking jobs that are done; new jobs must remain tracked so subsequent
+    // status changes are observed.
+    for (const job of [...newlyTerminalJobs, ...disappearedJobs]) {
       trackedJobIdsRef.current.delete(job.id);
     }
 

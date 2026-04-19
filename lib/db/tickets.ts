@@ -59,6 +59,7 @@ function toTicketWithVersion(ticket: TicketRow): TicketWithVersion {
     verifyModel: ticket.verifyModel,
     workflowType: ticket.workflowType,
     attachments: ticket.attachments,
+    qualityScore: null,
     createdAt: ticket.createdAt.toISOString(),
     updatedAt: ticket.updatedAt.toISOString(),
     project: {
@@ -68,6 +69,40 @@ function toTicketWithVersion(ticket: TicketRow): TicketWithVersion {
       ...(ticket.project.githubRepo != null && { githubRepo: ticket.project.githubRepo }),
     },
   };
+}
+
+/**
+ * Fetch the latest COMPLETED verify qualityScore for each given ticket and
+ * mutate `qualityScore` in place. Single batched query keyed on ticketId.
+ */
+async function attachQualityScores(
+  tickets: TicketWithVersion[],
+  projectId: number
+): Promise<void> {
+  if (tickets.length === 0) return;
+
+  const verifyJobs = await prisma.job.findMany({
+    where: {
+      projectId,
+      ticketId: { in: tickets.map((t) => t.id) },
+      command: 'verify',
+      status: 'COMPLETED',
+      qualityScore: { not: null },
+    },
+    select: { ticketId: true, qualityScore: true },
+    orderBy: { startedAt: 'desc' },
+  });
+
+  const scoreByTicket = new Map<number, number>();
+  for (const job of verifyJobs) {
+    if (job.qualityScore != null && !scoreByTicket.has(job.ticketId)) {
+      scoreByTicket.set(job.ticketId, job.qualityScore);
+    }
+  }
+
+  for (const ticket of tickets) {
+    ticket.qualityScore = scoreByTicket.get(ticket.id) ?? null;
+  }
 }
 
 function createEmptyStageMap<T>(): Record<Stage, T[]> {
@@ -163,16 +198,23 @@ export async function getTicketsByStage(
   ]);
 
   const grouped = createEmptyStageMap<TicketWithVersion>();
+  const allMapped: TicketWithVersion[] = [];
 
   for (const ticket of nonShipTickets) {
     const stage = ticket.stage as Stage;
     if (!(stage in grouped)) continue;
-    grouped[stage].push(toTicketWithVersion(ticket));
+    const mapped = toTicketWithVersion(ticket);
+    grouped[stage].push(mapped);
+    allMapped.push(mapped);
   }
 
   for (const ticket of shipTickets) {
-    grouped[Stage.SHIP].push(toTicketWithVersion(ticket));
+    const mapped = toTicketWithVersion(ticket);
+    grouped[Stage.SHIP].push(mapped);
+    allMapped.push(mapped);
   }
+
+  await attachQualityScores(allMapped, projectId);
 
   sortByStage(grouped);
 
@@ -195,7 +237,9 @@ export async function getMoreShipTickets(
     take: limit,
   });
 
-  return tickets.map(toTicketWithVersion);
+  const mapped = tickets.map(toTicketWithVersion);
+  await attachQualityScores(mapped, projectId);
+  return mapped;
 }
 
 /**
@@ -268,22 +312,37 @@ const VIEW_PROJECT_SELECT = {
 
 /**
  * Find a ticket by numeric id or ticketKey within a project, including
- * the project fields required by the ticket detail view.
+ * the project fields required by the ticket detail view and the most
+ * recent COMPLETED verify qualityScore (filtered subquery, take 1).
  */
 export async function findTicketForView(
   projectId: number,
   idOrKey: string
 ) {
+  const include = {
+    project: { select: VIEW_PROJECT_SELECT },
+    jobs: {
+      where: {
+        command: 'verify',
+        status: 'COMPLETED' as const,
+        qualityScore: { not: null },
+      },
+      orderBy: { startedAt: 'desc' as const },
+      take: 1,
+      select: { qualityScore: true },
+    },
+  } as const;
+
   const isNumeric = /^\d+$/.test(idOrKey);
   if (isNumeric) {
     return prisma.ticket.findFirst({
       where: { id: parseInt(idOrKey, 10), projectId },
-      include: { project: { select: VIEW_PROJECT_SELECT } },
+      include,
     });
   }
   return prisma.ticket.findFirst({
     where: { ticketKey: idOrKey, projectId },
-    include: { project: { select: VIEW_PROJECT_SELECT } },
+    include,
   });
 }
 
@@ -494,6 +553,7 @@ export async function getTicketsWithJobs(projectId: number, shipLimit: number = 
       command: job.command,
       createdAt: job.createdAt,
     }));
+    mapped.qualityScore = latestVerifyQualityScore(ticket.jobs);
     ticketsByStage[stage].push(mapped);
     rawByStage[stage].push(ticket);
   }
@@ -502,6 +562,25 @@ export async function getTicketsWithJobs(projectId: number, shipLimit: number = 
   sortByStage(rawByStage);
 
   return { ticketsByStage, ticketsWithJobs: rawByStage, shipTotal };
+}
+
+/**
+ * Pick the qualityScore of the most recent COMPLETED verify job from a list.
+ * Used by `getTicketsWithJobs` (SSR) which already loaded all jobs.
+ */
+function latestVerifyQualityScore(
+  jobs: Array<Pick<Job, 'command' | 'status' | 'qualityScore' | 'startedAt'>>
+): number | null {
+  let latest: { startedAt: Date; qualityScore: number } | null = null;
+  for (const job of jobs) {
+    if (job.command !== 'verify' || job.status !== 'COMPLETED' || job.qualityScore == null) {
+      continue;
+    }
+    if (!latest || job.startedAt.getTime() > latest.startedAt.getTime()) {
+      latest = { startedAt: job.startedAt, qualityScore: job.qualityScore };
+    }
+  }
+  return latest?.qualityScore ?? null;
 }
 
 /**

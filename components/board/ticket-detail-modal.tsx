@@ -326,6 +326,7 @@ export function TicketDetailModal({
       quickImplModel: localTicket.quickImplModel ?? null,
       verifyModel: localTicket.verifyModel ?? null,
       attachments: (localTicket.attachments || []) as unknown as TicketWithVersion['attachments'],
+      qualityScore: null,
     };
 
     // Add to cache optimistically

@@ -8,6 +8,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
+import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 
 describe('GET /api/projects/:projectId/tickets/:ticketKey', () => {
   let ctx: TestContext;
@@ -68,8 +69,60 @@ describe('GET /api/projects/:projectId/tickets/:ticketKey', () => {
       expect(response.data).toHaveProperty('stage');
       expect(response.data).toHaveProperty('version');
       expect(response.data).toHaveProperty('projectId');
+      expect(response.data).toHaveProperty('qualityScore');
       expect(response.data).toHaveProperty('createdAt');
       expect(response.data).toHaveProperty('updatedAt');
+    });
+
+    it('should expose qualityScore from latest COMPLETED verify job', async () => {
+      const prisma = getPrismaClient();
+      const ticket = await ctx.createTicket({
+        title: '[e2e] Quality score field on single ticket',
+      });
+
+      // Older verify with stale score — must be ignored.
+      await prisma.job.create({
+        data: {
+          ticketId: ticket.id,
+          projectId: ctx.projectId,
+          command: 'verify',
+          status: 'COMPLETED',
+          qualityScore: 55,
+          startedAt: new Date('2026-01-01T10:00:00Z'),
+          completedAt: new Date('2026-01-01T10:05:00Z'),
+          updatedAt: new Date('2026-01-01T10:05:00Z'),
+        },
+      });
+      await prisma.job.create({
+        data: {
+          ticketId: ticket.id,
+          projectId: ctx.projectId,
+          command: 'verify',
+          status: 'COMPLETED',
+          qualityScore: 87,
+          startedAt: new Date('2026-02-01T10:00:00Z'),
+          completedAt: new Date('2026-02-01T10:05:00Z'),
+          updatedAt: new Date('2026-02-01T10:05:00Z'),
+        },
+      });
+
+      const response = await ctx.api.get<{ qualityScore: number | null }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticket.ticketKey}`
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.qualityScore).toBe(87);
+    });
+
+    it('should expose qualityScore as null when no verify job has scored', async () => {
+      const ticket = await ctx.createTicket({ title: '[e2e] No verify yet' });
+
+      const response = await ctx.api.get<{ qualityScore: number | null }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticket.ticketKey}`
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.qualityScore).toBeNull();
     });
   });
 

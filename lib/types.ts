@@ -35,6 +35,7 @@ export interface TicketWithVersion {
   verifyModel: string | null;
   workflowType: WorkflowType;
   attachments: Prisma.JsonValue;
+  qualityScore: number | null;
   createdAt: string;
   updatedAt: string;
   project?: {

@@ -63,6 +63,7 @@ export async function GET(
       agent: ticket.agent,
       workflowType: ticket.workflowType,
       attachments: ticket.attachments,
+      qualityScore: ticket.jobs[0]?.qualityScore ?? null,
       createdAt: ticket.createdAt.toISOString(),
       updatedAt: ticket.updatedAt.toISOString(),
       project: {

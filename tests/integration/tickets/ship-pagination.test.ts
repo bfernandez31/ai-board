@@ -138,5 +138,60 @@ describe('SHIP Stage Pagination', () => {
         expect(timestamps[i]).toBeLessThanOrEqual(timestamps[i - 1]);
       }
     });
+
+    it('should include qualityScore from latest COMPLETED verify job on each ticket', async () => {
+      const [withScore, withoutScore] = await createShipTickets(2);
+      if (withScore == null || withoutScore == null) {
+        throw new Error('createShipTickets did not return expected ids');
+      }
+
+      // Older verify with a stale score — must be ignored in favour of the newer one.
+      await prisma.job.create({
+        data: {
+          ticketId: withScore,
+          projectId: ctx.projectId,
+          command: 'verify',
+          status: 'COMPLETED',
+          qualityScore: 60,
+          startedAt: new Date('2026-01-01T10:00:00Z'),
+          completedAt: new Date('2026-01-01T10:05:00Z'),
+          updatedAt: new Date('2026-01-01T10:05:00Z'),
+        },
+      });
+      await prisma.job.create({
+        data: {
+          ticketId: withScore,
+          projectId: ctx.projectId,
+          command: 'verify',
+          status: 'COMPLETED',
+          qualityScore: 92,
+          startedAt: new Date('2026-02-01T10:00:00Z'),
+          completedAt: new Date('2026-02-01T10:05:00Z'),
+          updatedAt: new Date('2026-02-01T10:05:00Z'),
+        },
+      });
+      // Other ticket only has a non-verify completed job → should report null.
+      await prisma.job.create({
+        data: {
+          ticketId: withoutScore,
+          projectId: ctx.projectId,
+          command: 'implement',
+          status: 'COMPLETED',
+          qualityScore: 99,
+          startedAt: new Date('2026-02-01T10:00:00Z'),
+          completedAt: new Date('2026-02-01T10:05:00Z'),
+          updatedAt: new Date('2026-02-01T10:05:00Z'),
+        },
+      });
+
+      const response = await ctx.api.get<{ tickets: TicketWithVersion[] }>(
+        `/api/projects/${ctx.projectId}/tickets?stage=SHIP&offset=0&limit=10`
+      );
+
+      expect(response.status).toBe(200);
+      const byId = new Map(response.data.tickets.map((t) => [t.id, t]));
+      expect(byId.get(withScore)?.qualityScore).toBe(92);
+      expect(byId.get(withoutScore)?.qualityScore).toBeNull();
+    });
   });
 });

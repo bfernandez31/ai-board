@@ -39,7 +39,6 @@ export interface DualJobState {
   workflow: Job | null;
   aiBoard: Job | null;
   deployJob: Job | null;
-  qualityScore: number | null;
 }
 
 /**

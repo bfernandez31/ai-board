@@ -290,6 +290,122 @@ describe('useJobPolling - Cache Invalidation', () => {
     });
   });
 
+  it('should invalidate caches when a new workflow job appears mid-stream (auto-mode chain)', async () => {
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    // Simulates the auto-mode race: poll 1 sees specify RUNNING, poll 2 sees specify
+    // COMPLETED + a fresh plan job that the server-side hook just dispatched. Without
+    // this invalidation, the tickets cache stays stuck on SPECIFY visually until the
+    // plan job itself terminates.
+    let callCount = 0;
+    global.fetch = vi.fn(() => {
+      callCount++;
+      const jobs: JobStatusDto[] =
+        callCount === 1
+          ? [
+              {
+                id: 1,
+                ticketId: 10,
+                status: 'RUNNING',
+                command: 'specify',
+                updatedAt: new Date().toISOString(),
+              },
+            ]
+          : [
+              {
+                id: 1,
+                ticketId: 10,
+                status: 'COMPLETED',
+                command: 'specify',
+                updatedAt: new Date().toISOString(),
+              },
+              {
+                id: 2,
+                ticketId: 10,
+                status: 'RUNNING',
+                command: 'plan',
+                updatedAt: new Date().toISOString(),
+              },
+            ];
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ jobs }),
+      } as Response);
+    });
+
+    const { result } = renderHook(() => useJobPolling(1, 100), {
+      wrapper: ({ children }) =>
+        React.createElement(QueryClientProvider, { client: queryClient }, children),
+    });
+
+    await waitFor(() => expect(result.current.jobs.length).toBe(1), { timeout: 1000 });
+    await waitFor(() => expect(result.current.jobs.length).toBe(2), { timeout: 1000 });
+
+    // Tickets cache must be invalidated so the new PLAN stage shows immediately.
+    await waitFor(
+      () =>
+        expect(invalidateSpy).toHaveBeenCalledWith({
+          queryKey: ['projects', 1, 'tickets'],
+          exact: true,
+        }),
+      { timeout: 1000 }
+    );
+  });
+
+  it('should NOT invalidate cache when a new comment-* job appears (AI-BOARD comment)', async () => {
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    // A comment-* job appearing should not trigger a tickets refetch — comment jobs
+    // never drive stage transitions.
+    let callCount = 0;
+    global.fetch = vi.fn(() => {
+      callCount++;
+      const jobs: JobStatusDto[] =
+        callCount === 1
+          ? [
+              {
+                id: 1,
+                ticketId: 10,
+                status: 'RUNNING',
+                command: 'specify',
+                updatedAt: new Date().toISOString(),
+              },
+            ]
+          : [
+              {
+                id: 1,
+                ticketId: 10,
+                status: 'RUNNING',
+                command: 'specify',
+                updatedAt: new Date().toISOString(),
+              },
+              {
+                id: 99,
+                ticketId: 10,
+                status: 'RUNNING',
+                command: 'comment-specify',
+                updatedAt: new Date().toISOString(),
+              },
+            ];
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ jobs }),
+      } as Response);
+    });
+
+    const { result } = renderHook(() => useJobPolling(1, 100), {
+      wrapper: ({ children }) =>
+        React.createElement(QueryClientProvider, { client: queryClient }, children),
+    });
+
+    await waitFor(() => expect(result.current.jobs.length).toBe(2), { timeout: 1000 });
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+
   it('should keep tracking a seeded pending job so a fast FAILED transition is still observed', async () => {
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 

@@ -519,16 +519,8 @@ export function Board({
       // Get all polled jobs for this ticket
       const ticketPolledJobs = polledJobs.filter(job => job.ticketId === ticketId);
 
-      // Helper: find quality score from latest COMPLETED verify job
-      const getLatestQualityScore = (jobs: Job[]): number | null => {
-        const verifyJob = jobs
-          .filter((j) => j.command === 'verify' && j.status === 'COMPLETED' && j.qualityScore != null)
-          .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
-        return verifyJob?.qualityScore ?? null;
-      };
-
       if (ticketSnapshotJobs.length === 0 && ticketPolledJobs.length === 0) {
-        return { workflow: null, aiBoard: null, deployJob: null, qualityScore: null };
+        return { workflow: null, aiBoard: null, deployJob: null };
       }
 
       // Merge active polled status updates with the latest known snapshot, keeping
@@ -550,7 +542,6 @@ export function Board({
         workflow: ticket ? getWorkflowJob(fullJobs, ticket.stage) : null,
         aiBoard: ticket ? getAIBoardJob(fullJobs, ticket.stage) : null,
         deployJob: getDeployJob(fullJobs),
-        qualityScore: getLatestQualityScore(fullJobs),
       };
     },
     [polledJobs, jobSnapshots, projectId, allTickets]
@@ -910,6 +901,7 @@ export function Board({
         workflowType: updatedTicket.workflowType || existingTicket?.workflowType || 'FULL',
         // Preserve attachments from existing ticket or use empty array
         attachments: (updatedTicket.attachments ?? existingTicket?.attachments ?? []) as import('@prisma/client').Prisma.JsonValue,
+        qualityScore: existingTicket?.qualityScore ?? null,
         createdAt:
           updatedTicket.createdAt instanceof Date
             ? updatedTicket.createdAt.toISOString()
