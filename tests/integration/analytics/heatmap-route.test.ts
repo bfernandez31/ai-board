@@ -6,18 +6,25 @@ import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 
 let currentUserId: string | null = 'test-user-id';
 
-vi.mock('@/lib/db/users', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/db/users')>('@/lib/db/users');
-  return {
-    ...actual,
-    requireAuth: vi.fn(async () => {
-      if (!currentUserId) {
-        throw new Error('Unauthorized');
-      }
-      return currentUserId;
-    }),
-  };
-});
+vi.mock('@/lib/db/users', () => ({
+  requireAuth: vi.fn(async () => {
+    if (!currentUserId) {
+      throw new Error('Unauthorized');
+    }
+    return currentUserId;
+  }),
+  getCurrentUser: vi.fn(async () => {
+    if (!currentUserId) {
+      throw new Error('Unauthorized');
+    }
+    return { id: currentUserId, email: 'test@e2e.local', name: 'Test' };
+  }),
+  getCurrentUserOrNull: vi.fn(async () =>
+    currentUserId
+      ? { id: currentUserId, email: 'test@e2e.local', name: 'Test' }
+      : null
+  ),
+}));
 
 import { GET } from '@/app/api/activity/heatmap/route';
 

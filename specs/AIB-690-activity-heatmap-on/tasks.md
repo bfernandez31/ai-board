@@ -108,12 +108,12 @@
 ### Tests for User Story 3
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T020 [P] [US3] Extend `tests/unit/components/activity-heatmap.test.tsx` with: year `<Select>` offers "Last 12 months" + each year in `availableYears` descending; selecting a year calls mocked `router.push` with a query string containing `heatmapPeriod=YYYY` and with no `heatmapPeriod` key when selecting "Last 12 months" (FR-016 — defaults never in URL); year select is not rendered when `availableYears.length === 0` (FR-012)
-- [ ] T021 [P] [US3] Extend `tests/integration/analytics/heatmap-route.test.ts` with: `availableYears` descends from `currentYear` down to `accountCreationYear`; `availableYears` is `[]` when the user was created in the current calendar year (FR-011 / FR-012, spec edge case line 100)
+- [X] T020 [P] [US3] Extend `tests/unit/components/activity-heatmap.test.tsx` with: year `<Select>` offers "Last 12 months" + each year in `availableYears` descending; selecting a year calls mocked `router.push` with a query string containing `heatmapPeriod=YYYY` and with no `heatmapPeriod` key when selecting "Last 12 months" (FR-016 — defaults never in URL); year select is not rendered when `availableYears.length === 0` (FR-012)
+- [X] T021 [P] [US3] Extend `tests/integration/analytics/heatmap-route.test.ts` with: `availableYears` descends from `currentYear` down to `accountCreationYear`; `availableYears` is `[]` when the user was created in the current calendar year (FR-011 / FR-012, spec edge case line 100)
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Modify `components/projects/activity-heatmap.tsx` to render a year `<Select>` (from `@/components/ui/select`) above the grid with options `"Last 12 months"` + each value from `availableYears` in descending order; hide the select when `availableYears.length === 0` (FR-012); on change, compute next filters and call `router.push(nextUrl, { scroll: false })` using a `buildFilterSearchParams` helper that deletes `heatmapPeriod` when the chosen value is `'last12months'` (FR-016, research §Pattern 2)
+- [X] T022 [US3] Modify `components/projects/activity-heatmap.tsx` to render a year `<Select>` (from `@/components/ui/select`) above the grid with options `"Last 12 months"` + each value from `availableYears` in descending order; hide the select when `availableYears.length === 0` (FR-012); on change, compute next filters and call `router.push(nextUrl, { scroll: false })` using a `buildFilterSearchParams` helper that deletes `heatmapPeriod` when the chosen value is `'last12months'` (FR-016, research §Pattern 2)
 
 **Checkpoint**: US3 adds analytical flexibility; the MVP (US1 + US2) remains intact.
 
@@ -128,13 +128,13 @@
 ### Tests for User Story 4
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T023 [P] [US4] Extend `tests/unit/components/activity-heatmap.test.tsx` with: agent `<Select>` is not rendered when `availableAgents` contains fewer than 2 named agents (i.e., `availableAgents.length <= 2` counting the `"all"` sentinel — FR-014); when rendered, options include "All agents" + each named agent; selecting an agent calls `router.push` with `heatmapAgent=<AGENT>` and omits the key when selecting "All agents" (FR-016)
-- [ ] T024 [P] [US4] Extend `tests/integration/analytics/heatmap-route.test.ts` with: effective-agent inclusion — `ticket.agent === null` on a project with `defaultAgent = CLAUDE` IS included when filter is `CLAUDE`; explicit `ticket.agent = CODEX` on a project whose `defaultAgent = CLAUDE` is NOT included when filter is `CLAUDE` (FR-015); `availableAgents` only lists agents whose jobs live in the user's `accessibleProjectIds` (FR-013)
+- [X] T023 [P] [US4] Extend `tests/unit/components/activity-heatmap.test.tsx` with: agent `<Select>` is not rendered when `availableAgents` contains fewer than 2 named agents (i.e., `availableAgents.length <= 2` counting the `"all"` sentinel — FR-014); when rendered, options include "All agents" + each named agent; selecting an agent calls `router.push` with `heatmapAgent=<AGENT>` and omits the key when selecting "All agents" (FR-016)
+- [X] T024 [P] [US4] Extend `tests/integration/analytics/heatmap-route.test.ts` with: effective-agent inclusion — `ticket.agent === null` on a project with `defaultAgent = CLAUDE` IS included when filter is `CLAUDE`; explicit `ticket.agent = CODEX` on a project whose `defaultAgent = CLAUDE` is NOT included when filter is `CLAUDE` (FR-015); `availableAgents` only lists agents whose jobs live in the user's `accessibleProjectIds` (FR-013)
 
 ### Implementation for User Story 4
 
-- [ ] T025 [US4] Modify `components/projects/activity-heatmap.tsx` to render an agent `<Select>` beside the year select when `availableAgents.length > 2`; options built from `availableAgents` with `"All agents"` first (FR-013); on change, call `router.push` via the shared `buildFilterSearchParams` helper so `heatmapAgent` is deleted when the chosen value is `'all'` (FR-016)
-- [ ] T026 [US4] Add an inline `buildFilterSearchParams(current: URLSearchParams, next: HeatmapFilters): URLSearchParams` helper inside `components/projects/activity-heatmap.tsx` that sets `heatmapPeriod` / `heatmapAgent` only when they differ from defaults and deletes them otherwise (FR-016, research §Pattern 2) — shared by the T022 year selector and the T025 agent selector
+- [X] T025 [US4] Modify `components/projects/activity-heatmap.tsx` to render an agent `<Select>` beside the year select when `availableAgents.length > 2`; options built from `availableAgents` with `"All agents"` first (FR-013); on change, call `router.push` via the shared `buildFilterSearchParams` helper so `heatmapAgent` is deleted when the chosen value is `'all'` (FR-016)
+- [X] T026 [US4] Add an inline `buildFilterSearchParams(current: URLSearchParams, next: HeatmapFilters): URLSearchParams` helper inside `components/projects/activity-heatmap.tsx` that sets `heatmapPeriod` / `heatmapAgent` only when they differ from defaults and deletes them otherwise (FR-016, research §Pattern 2) — shared by the T022 year selector and the T025 agent selector
 
 **Checkpoint**: US4 delivers agent filtering without changing grid boundaries (FR-024). US1 + US2 + US3 + US4 cover all P1 and P2 scope.
 

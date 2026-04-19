@@ -29,18 +29,88 @@ function mockMatchMedia(touchOnly: boolean): void {
 
 beforeEach(() => {
   mockMatchMedia(false);
+  mockSearchParams = new URLSearchParams();
+  pushMock.mockReset();
 });
 
-const mockSearchParams = new URLSearchParams();
+let mockSearchParams = new URLSearchParams();
+const pushMock = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: vi.fn(),
+    push: pushMock,
     replace: vi.fn(),
     refresh: vi.fn(),
   }),
   useSearchParams: () => mockSearchParams,
 }));
+
+vi.mock('@/components/ui/select', () => {
+  const SelectItem = ({
+    value,
+    children,
+  }: {
+    value: string;
+    children: React.ReactNode;
+  }) => <option value={value}>{children}</option>;
+
+  function collectOptions(children: React.ReactNode): React.ReactNode[] {
+    return React.Children.toArray(children).flatMap((child) => {
+      if (!React.isValidElement(child)) return [];
+      if (child.type === SelectItem) return [child];
+      return collectOptions((child as React.ReactElement<{ children?: React.ReactNode }>).props.children);
+    });
+  }
+
+  const SelectTrigger = ({
+    value,
+    options,
+    onValueChange,
+    'data-testid': dataTestId,
+    'aria-label': ariaLabel,
+  }: {
+    value?: string;
+    options?: React.ReactNode[];
+    onValueChange?: (value: string) => void;
+    'data-testid'?: string;
+    'aria-label'?: string;
+  }) => (
+    <select
+      data-testid={dataTestId}
+      aria-label={ariaLabel}
+      value={value}
+      onChange={(event) => onValueChange?.(event.target.value)}
+    >
+      {options}
+    </select>
+  );
+
+  return {
+    Select: ({
+      value,
+      onValueChange,
+      children,
+    }: {
+      value: string;
+      onValueChange: (value: string) => void;
+      children: React.ReactNode;
+    }) => {
+      const options = collectOptions(children);
+      return (
+        <>
+          {React.Children.map(children, (child) => {
+            if (!React.isValidElement(child) || child.type !== SelectTrigger) return null;
+            return React.cloneElement(child as React.ReactElement, { value, onValueChange, options });
+          })}
+        </>
+      );
+    },
+    SelectTrigger,
+    SelectValue: () => null,
+    SelectContent: () => null,
+    SelectItem,
+  };
+});
 
 function buildCell(date: string, jobCount: number): DailyCell {
   return {
@@ -193,7 +263,7 @@ describe('ActivityHeatmapCell tooltip (US2)', () => {
     expect(tooltip.textContent).toContain('4 jobs');
   });
 
-  it('uses a Popover on touch-only viewports', async () => {
+  it('opens the popover root on touch-only viewports', async () => {
     mockMatchMedia(true);
     const cell: DailyCell = {
       date: '2025-04-15',
@@ -210,5 +280,103 @@ describe('ActivityHeatmapCell tooltip (US2)', () => {
     await waitFor(() => {
       expect(button.getAttribute('aria-expanded')).toBe('true');
     });
+  });
+});
+
+describe('ActivityHeatmap year selector (US3)', () => {
+  it('offers "Last 12 months" + each year in availableYears descending', () => {
+    const data = buildHeatmapData({ availableYears: [2026, 2025, 2024] });
+    renderWithProviders(<ActivityHeatmap userId="user-1" initialData={data} />);
+    const select = screen.getByTestId('heatmap-period-filter') as HTMLSelectElement;
+    const optionValues = Array.from(select.options).map((opt) => opt.value);
+    expect(optionValues).toEqual(['last12months', '2026', '2025', '2024']);
+  });
+
+  it('is not rendered when availableYears is empty', () => {
+    const data = buildHeatmapData({ availableYears: [] });
+    renderWithProviders(<ActivityHeatmap userId="user-1" initialData={data} />);
+    expect(screen.queryByTestId('heatmap-period-filter')).not.toBeInTheDocument();
+  });
+
+  it('sets heatmapPeriod=YYYY when a year is selected', async () => {
+    const data = buildHeatmapData({ availableYears: [2026, 2025, 2024] });
+    renderWithProviders(<ActivityHeatmap userId="user-1" initialData={data} />);
+    const user = userEvent.setup();
+    const select = screen.getByTestId('heatmap-period-filter') as HTMLSelectElement;
+    await user.selectOptions(select, '2025');
+    expect(pushMock).toHaveBeenCalledTimes(1);
+    const [url] = pushMock.mock.calls[0] as [string, unknown];
+    expect(url).toContain('heatmapPeriod=2025');
+  });
+
+  it('omits heatmapPeriod from URL when "Last 12 months" is selected', async () => {
+    mockSearchParams = new URLSearchParams('heatmapPeriod=2025');
+    const yearData: HeatmapData = buildHeatmapData({
+      availableYears: [2026, 2025, 2024],
+      filters: {
+        period: { kind: 'year', year: 2025 },
+        agent: 'all',
+      },
+      period: { kind: 'year', startDate: '2025-01-01', endDate: '2025-12-31', year: 2025 },
+    });
+    renderWithProviders(<ActivityHeatmap userId="user-1" initialData={yearData} />);
+    const user = userEvent.setup();
+    const select = screen.getByTestId('heatmap-period-filter') as HTMLSelectElement;
+    await user.selectOptions(select, 'last12months');
+    expect(pushMock).toHaveBeenCalledTimes(1);
+    const [url] = pushMock.mock.calls[0] as [string, unknown];
+    expect(url).not.toContain('heatmapPeriod');
+  });
+});
+
+describe('ActivityHeatmap agent filter (US4)', () => {
+  it('is not rendered when fewer than 2 named agents are available', () => {
+    const data = buildHeatmapData({
+      availableAgents: [
+        { value: 'all', label: 'All agents', jobCount: 8, isDefault: true },
+        { value: 'CLAUDE', label: 'Claude', jobCount: 8, isDefault: false },
+      ],
+    });
+    renderWithProviders(<ActivityHeatmap userId="user-1" initialData={data} />);
+    expect(screen.queryByTestId('heatmap-agent-filter')).not.toBeInTheDocument();
+  });
+
+  it('renders when 2+ named agents are available; selecting an agent sets heatmapAgent=<AGENT>', async () => {
+    const data = buildHeatmapData({
+      availableAgents: [
+        { value: 'all', label: 'All agents', jobCount: 16, isDefault: true },
+        { value: 'CLAUDE', label: 'Claude', jobCount: 8, isDefault: false },
+        { value: 'CODEX', label: 'Codex', jobCount: 8, isDefault: false },
+      ],
+    });
+    renderWithProviders(<ActivityHeatmap userId="user-1" initialData={data} />);
+    const user = userEvent.setup();
+    const select = screen.getByTestId('heatmap-agent-filter') as HTMLSelectElement;
+    await user.selectOptions(select, 'CLAUDE');
+    expect(pushMock).toHaveBeenCalledTimes(1);
+    const [url] = pushMock.mock.calls[0] as [string, unknown];
+    expect(url).toContain('heatmapAgent=CLAUDE');
+  });
+
+  it('omits heatmapAgent from URL when "All agents" is selected', async () => {
+    mockSearchParams = new URLSearchParams('heatmapAgent=CLAUDE');
+    const data = buildHeatmapData({
+      availableAgents: [
+        { value: 'all', label: 'All agents', jobCount: 16, isDefault: true },
+        { value: 'CLAUDE', label: 'Claude', jobCount: 8, isDefault: false },
+        { value: 'CODEX', label: 'Codex', jobCount: 8, isDefault: false },
+      ],
+      filters: {
+        period: { kind: 'rolling12m', endDate: '' },
+        agent: 'CLAUDE',
+      },
+    });
+    renderWithProviders(<ActivityHeatmap userId="user-1" initialData={data} />);
+    const user = userEvent.setup();
+    const select = screen.getByTestId('heatmap-agent-filter') as HTMLSelectElement;
+    await user.selectOptions(select, 'all');
+    expect(pushMock).toHaveBeenCalledTimes(1);
+    const [url] = pushMock.mock.calls[0] as [string, unknown];
+    expect(url).not.toContain('heatmapAgent');
   });
 });
