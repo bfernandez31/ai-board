@@ -50,6 +50,8 @@ interface SearchParamsLike {
 }
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+const WEEK_STARTS_ON = 0 as const;
+const MILLISECONDS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
 const HEATMAP_LEVEL_CLASSES = [
   'border-border/70 bg-muted/20',
   'border-ctp-mauve/30 bg-ctp-mauve/15',
@@ -105,6 +107,15 @@ function buildFilterSearchParams(
   return params;
 }
 
+function parseHeatmapDate(value: string): Date {
+  return new Date(`${value}T12:00:00.000Z`);
+}
+
+function getWeekIndex(day: Date, firstGridDate: Date): number {
+  const weekStart = startOfWeek(day, { weekStartsOn: WEEK_STARTS_ON });
+  return Math.floor((weekStart.getTime() - firstGridDate.getTime()) / MILLISECONDS_PER_WEEK);
+}
+
 function getIntensityLevel(jobCount: number, maxJobCount: number): number {
   if (jobCount <= 0 || maxJobCount <= 0) {
     return 0;
@@ -124,8 +135,8 @@ function buildHeatmapCalendar(
   monthLabels: HeatmapMonthLabel[];
   weeksCount: number;
 } {
-  const periodStart = new Date(`${data.periodStart}T12:00:00.000Z`);
-  const periodEnd = new Date(`${data.periodEnd}T12:00:00.000Z`);
+  const periodStart = parseHeatmapDate(data.periodStart);
+  const periodEnd = parseHeatmapDate(data.periodEnd);
   const intervalDays = eachDayOfInterval({
     start: periodStart,
     end: periodEnd,
@@ -133,24 +144,20 @@ function buildHeatmapCalendar(
   const cellsByDate = new Map<string, ProjectsActivityHeatmapCell>(
     data.cells.map((cell) => [cell.date, cell])
   );
-  const firstGridDate = startOfWeek(periodStart, { weekStartsOn: 0 });
-  const lastGridDate = endOfWeek(periodEnd, { weekStartsOn: 0 });
+  const firstGridDate = startOfWeek(periodStart, { weekStartsOn: WEEK_STARTS_ON });
+  const lastGridDate = endOfWeek(periodEnd, { weekStartsOn: WEEK_STARTS_ON });
   const weeksCount =
-    Math.floor((lastGridDate.getTime() - firstGridDate.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
+    Math.floor((lastGridDate.getTime() - firstGridDate.getTime()) / MILLISECONDS_PER_WEEK) + 1;
   const maxJobCount = data.cells.reduce((max, cell) => Math.max(max, cell.jobCount), 0);
 
   const cells = intervalDays.map((day) => {
     const date = format(day, 'yyyy-MM-dd');
     const cellData = cellsByDate.get(date);
-    const weekIndex = Math.floor(
-      (startOfWeek(day, { weekStartsOn: 0 }).getTime() - firstGridDate.getTime()) /
-        (7 * 24 * 60 * 60 * 1000)
-    );
 
     return {
       date,
       label: format(day, 'MMM d, yyyy'),
-      weekIndex,
+      weekIndex: getWeekIndex(day, firstGridDate),
       dayOfWeek: day.getUTCDay(),
       jobCount: cellData?.jobCount ?? 0,
       shippedTicketCount: cellData?.shippedTicketCount ?? 0,
@@ -172,10 +179,7 @@ function buildHeatmapCalendar(
     seenMonths.add(monthKey);
     monthLabels.push({
       month: format(day, 'MMM'),
-      weekIndex: Math.floor(
-        (startOfWeek(day, { weekStartsOn: 0 }).getTime() - firstGridDate.getTime()) /
-          (7 * 24 * 60 * 60 * 1000)
-      ),
+      weekIndex: getWeekIndex(day, firstGridDate),
     });
   }
 
@@ -200,13 +204,16 @@ function formatCost(totalCost: number): string {
 }
 
 function buildCellAriaLabel(cell: HeatmapCalendarCell): string {
-  const segments = [`${cell.label}`];
-  segments.push(`${cell.jobCount} jobs`);
-  segments.push(`${cell.shippedTicketCount} tickets shipped`);
-  return segments.join(', ');
+  return [
+    cell.label,
+    `${cell.jobCount} jobs`,
+    `${cell.shippedTicketCount} tickets shipped`,
+  ].join(', ');
 }
 
-export function ProjectsActivityHeatmap({ initialData }: ProjectsActivityHeatmapProps) {
+export function ProjectsActivityHeatmap({
+  initialData,
+}: ProjectsActivityHeatmapProps): JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<ProjectsActivityHeatmapFilters>(() =>
@@ -228,11 +235,25 @@ export function ProjectsActivityHeatmap({ initialData }: ProjectsActivityHeatmap
   const showAgentFilter = heatmap.availableAgents.length > 1;
   const calendar = useMemo(() => buildHeatmapCalendar(heatmap), [heatmap]);
 
-  const updateFilters = (nextFilters: ProjectsActivityHeatmapFilters) => {
+  function updateFilters(nextFilters: ProjectsActivityHeatmapFilters): void {
     setFilters(nextFilters);
     const params = buildFilterSearchParams(searchParams, nextFilters);
     router.push(`?${params.toString()}`, { scroll: false });
-  };
+  }
+
+  function updatePeriodFilter(period: string): void {
+    updateFilters({
+      ...filters,
+      period,
+    });
+  }
+
+  function updateAgentFilter(agent: ProjectsActivityHeatmapFilters['agent']): void {
+    updateFilters({
+      ...filters,
+      agent,
+    });
+  }
 
   return (
     <Card className="overflow-hidden border-border/80 aurora-bg-card-mauve">
@@ -246,12 +267,7 @@ export function ProjectsActivityHeatmap({ initialData }: ProjectsActivityHeatmap
           <div className="grid gap-3 sm:grid-cols-2">
             <Select
               value={filters.period}
-              onValueChange={(value) =>
-                updateFilters({
-                  ...filters,
-                  period: value,
-                })
-              }
+              onValueChange={updatePeriodFilter}
               disabled={heatmap.availablePeriods.length <= 1}
             >
               <SelectTrigger
@@ -273,10 +289,7 @@ export function ProjectsActivityHeatmap({ initialData }: ProjectsActivityHeatmap
               <Select
                 value={filters.agent}
                 onValueChange={(value) =>
-                  updateFilters({
-                    ...filters,
-                    agent: value as ProjectsActivityHeatmapFilters['agent'],
-                  })
+                  updateAgentFilter(value as ProjectsActivityHeatmapFilters['agent'])
                 }
               >
                 <SelectTrigger

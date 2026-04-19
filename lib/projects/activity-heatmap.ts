@@ -25,6 +25,15 @@ interface ParsedPeriod {
   label: string;
 }
 
+interface AggregatedHeatmapCell {
+  date: string;
+  jobCount: number;
+  shippedTicketCount: number;
+  totalCost: number | null;
+  hasMissingCosts: boolean;
+  knownCostTotal: number;
+}
+
 interface GetProjectsActivityHeatmapDataOptions {
   now?: Date;
   strict?: boolean;
@@ -94,6 +103,15 @@ function resolveAgentFilter(
   return DEFAULT_PROJECTS_ACTIVITY_HEATMAP_AGENT;
 }
 
+function buildLastTwelveMonthsPeriod(now: Date): ParsedPeriod {
+  return {
+    value: DEFAULT_PROJECTS_ACTIVITY_HEATMAP_PERIOD,
+    start: startOfDay(subYears(now, 1)),
+    end: endOfDay(now),
+    label: 'in the last year',
+  };
+}
+
 function buildAvailablePeriods(userCreatedYear: number, now: Date): HeatmapPeriodOption[] {
   const currentYear = now.getUTCFullYear();
   const periods: HeatmapPeriodOption[] = [
@@ -131,21 +149,11 @@ function parsePeriod(
       throw new Error('Invalid heatmap filters');
     }
 
-    return {
-      value: DEFAULT_PROJECTS_ACTIVITY_HEATMAP_PERIOD,
-      start: startOfDay(subYears(now, 1)),
-      end: endOfDay(now),
-      label: 'in the last year',
-    };
+    return buildLastTwelveMonthsPeriod(now);
   }
 
   if (selectedPeriod === DEFAULT_PROJECTS_ACTIVITY_HEATMAP_PERIOD) {
-    return {
-      value: selectedPeriod,
-      start: startOfDay(subYears(now, 1)),
-      end: endOfDay(now),
-      label: 'in the last year',
-    };
+    return buildLastTwelveMonthsPeriod(now);
   }
 
   const year = Number.parseInt(selectedPeriod, 10);
@@ -227,6 +235,151 @@ async function getAvailableAgents(projectIds: number[]): Promise<AgentOption[]> 
   return options;
 }
 
+function buildEmptyHeatmapResponse(
+  parsedPeriod: ParsedPeriod,
+  agent: AgentFilter,
+  userCreatedYear: number,
+  availablePeriods: HeatmapPeriodOption[],
+  availableAgents: AgentOption[],
+  now: Date
+): ProjectsActivityHeatmapData {
+  return {
+    filters: {
+      period: parsedPeriod.value,
+      agent,
+    },
+    summary: {
+      jobCount: 0,
+      shippedTicketCount: 0,
+      label: parsedPeriod.label,
+    },
+    periodStart: format(parsedPeriod.start, 'yyyy-MM-dd'),
+    periodEnd: format(parsedPeriod.end, 'yyyy-MM-dd'),
+    userCreatedYear,
+    availablePeriods,
+    availableAgents,
+    cells: [],
+    hasAnyActivity: false,
+    generatedAt: now.toISOString(),
+  };
+}
+
+function createAggregatedHeatmapCell(
+  date: string,
+  shippedTicketCount: number
+): AggregatedHeatmapCell {
+  return {
+    date,
+    jobCount: 0,
+    shippedTicketCount,
+    totalCost: 0,
+    hasMissingCosts: false,
+    knownCostTotal: 0,
+  };
+}
+
+function buildTicketAgentJobWhere(
+  projectIds: number[],
+  parsedPeriod: ParsedPeriod,
+  effectiveAgentWhere: Prisma.TicketWhereInput | undefined
+): Prisma.JobWhereInput {
+  return {
+    projectId: {
+      in: projectIds,
+    },
+    status: {
+      in: FINAL_JOB_STATUSES,
+    },
+    completedAt: {
+      gte: parsedPeriod.start,
+      lte: parsedPeriod.end,
+    },
+    ...(effectiveAgentWhere
+      ? {
+          ticket: {
+            is: effectiveAgentWhere,
+          },
+        }
+      : {}),
+  };
+}
+
+function buildShipJobWhere(
+  projectIds: number[],
+  parsedPeriod: ParsedPeriod,
+  effectiveAgentWhere: Prisma.TicketWhereInput | undefined
+): Prisma.JobWhereInput {
+  return {
+    projectId: {
+      in: projectIds,
+    },
+    command: 'ship',
+    status: JobStatus.COMPLETED,
+    completedAt: {
+      lte: parsedPeriod.end,
+    },
+    ...(effectiveAgentWhere
+      ? {
+          ticket: {
+            is: effectiveAgentWhere,
+          },
+        }
+      : {}),
+  };
+}
+
+function buildHeatmapCells(
+  jobs: Array<{
+    ticketId: number;
+    completedAt: Date | null;
+    costUsd: Prisma.Decimal | number | null;
+  }>,
+  shippedCountsByDate: Map<string, number>
+): ProjectsActivityHeatmapCell[] {
+  const cellsByDate = new Map<string, AggregatedHeatmapCell>();
+
+  for (const job of jobs) {
+    if (!job.completedAt) {
+      continue;
+    }
+
+    const date = format(job.completedAt, 'yyyy-MM-dd');
+    const cell =
+      cellsByDate.get(date) ??
+      createAggregatedHeatmapCell(date, shippedCountsByDate.get(date) ?? 0);
+
+    cell.jobCount += 1;
+
+    if (job.costUsd == null) {
+      cell.hasMissingCosts = true;
+    } else {
+      cell.knownCostTotal += Number(job.costUsd);
+      cell.totalCost = cell.knownCostTotal;
+    }
+
+    cellsByDate.set(date, cell);
+  }
+
+  for (const [date, shippedTicketCount] of shippedCountsByDate.entries()) {
+    if (cellsByDate.has(date)) {
+      continue;
+    }
+
+    cellsByDate.set(date, createAggregatedHeatmapCell(date, shippedTicketCount));
+  }
+
+  return Array.from(cellsByDate.values())
+    .sort((left, right) => left.date.localeCompare(right.date))
+    .map((cell) => ({
+      date: cell.date,
+      jobCount: cell.jobCount,
+      shippedTicketCount: cell.shippedTicketCount,
+      totalCost: cell.hasMissingCosts ? null : cell.totalCost,
+      hasMissingCosts: cell.hasMissingCosts,
+    }))
+    .filter((cell) => cell.jobCount > 0 || cell.shippedTicketCount > 0);
+}
+
 export async function getProjectsActivityHeatmapData(
   rawFilters: RawProjectsActivityHeatmapFilters = {},
   options: GetProjectsActivityHeatmapDataOptions = {}
@@ -260,68 +413,19 @@ export async function getProjectsActivityHeatmapData(
   const effectiveAgentWhere = buildEffectiveAgentTicketWhere(agent);
 
   if (projectIds.length === 0) {
-    return {
-      filters: {
-        period: parsedPeriod.value,
-        agent,
-      },
-      summary: {
-        jobCount: 0,
-        shippedTicketCount: 0,
-        label: parsedPeriod.label,
-      },
-      periodStart: format(parsedPeriod.start, 'yyyy-MM-dd'),
-      periodEnd: format(parsedPeriod.end, 'yyyy-MM-dd'),
+    return buildEmptyHeatmapResponse(
+      parsedPeriod,
+      agent,
       userCreatedYear,
       availablePeriods,
       availableAgents,
-      cells: [],
-      hasAnyActivity: false,
-      generatedAt: now.toISOString(),
-    };
+      now
+    );
   }
-
-  const jobWhere: Prisma.JobWhereInput = {
-    projectId: {
-      in: projectIds,
-    },
-    status: {
-      in: FINAL_JOB_STATUSES,
-    },
-    completedAt: {
-      gte: parsedPeriod.start,
-      lte: parsedPeriod.end,
-    },
-    ...(effectiveAgentWhere
-      ? {
-          ticket: {
-            is: effectiveAgentWhere,
-          },
-        }
-      : {}),
-  };
-
-  const shipJobWhere: Prisma.JobWhereInput = {
-    projectId: {
-      in: projectIds,
-    },
-    command: 'ship',
-    status: JobStatus.COMPLETED,
-    completedAt: {
-      lte: parsedPeriod.end,
-    },
-    ...(effectiveAgentWhere
-      ? {
-          ticket: {
-            is: effectiveAgentWhere,
-          },
-        }
-      : {}),
-  };
 
   const [jobs, shipJobs] = await Promise.all([
     prisma.job.findMany({
-      where: jobWhere,
+      where: buildTicketAgentJobWhere(projectIds, parsedPeriod, effectiveAgentWhere),
       select: {
         ticketId: true,
         completedAt: true,
@@ -332,7 +436,7 @@ export async function getProjectsActivityHeatmapData(
       },
     }),
     prisma.job.findMany({
-      where: shipJobWhere,
+      where: buildShipJobWhere(projectIds, parsedPeriod, effectiveAgentWhere),
       select: {
         ticketId: true,
         completedAt: true,
@@ -362,70 +466,7 @@ export async function getProjectsActivityHeatmapData(
     shippedCountsByDate.set(date, (shippedCountsByDate.get(date) ?? 0) + 1);
   }
 
-  const cellsByDate = new Map<
-    string,
-    {
-      date: string;
-      jobCount: number;
-      shippedTicketCount: number;
-      totalCost: number | null;
-      hasMissingCosts: boolean;
-      knownCostTotal: number;
-    }
-  >();
-
-  for (const job of jobs) {
-    if (!job.completedAt) {
-      continue;
-    }
-
-    const date = format(job.completedAt, 'yyyy-MM-dd');
-    const existing = cellsByDate.get(date) ?? {
-      date,
-      jobCount: 0,
-      shippedTicketCount: shippedCountsByDate.get(date) ?? 0,
-      totalCost: 0,
-      hasMissingCosts: false,
-      knownCostTotal: 0,
-    };
-
-    existing.jobCount += 1;
-
-    if (job.costUsd == null) {
-      existing.hasMissingCosts = true;
-    } else {
-      existing.knownCostTotal += job.costUsd;
-      existing.totalCost = existing.knownCostTotal;
-    }
-
-    cellsByDate.set(date, existing);
-  }
-
-  for (const [date, shippedTicketCount] of shippedCountsByDate.entries()) {
-    if (cellsByDate.has(date)) {
-      continue;
-    }
-
-    cellsByDate.set(date, {
-      date,
-      jobCount: 0,
-      shippedTicketCount,
-      totalCost: 0,
-      hasMissingCosts: false,
-      knownCostTotal: 0,
-    });
-  }
-
-  const cells: ProjectsActivityHeatmapCell[] = Array.from(cellsByDate.values())
-    .sort((left, right) => left.date.localeCompare(right.date))
-    .map((cell) => ({
-      date: cell.date,
-      jobCount: cell.jobCount,
-      shippedTicketCount: cell.shippedTicketCount,
-      totalCost: cell.hasMissingCosts ? null : cell.totalCost,
-      hasMissingCosts: cell.hasMissingCosts,
-    }))
-    .filter((cell) => cell.jobCount > 0 || cell.shippedTicketCount > 0);
+  const cells = buildHeatmapCells(jobs, shippedCountsByDate);
 
   const shippedTicketCount = Array.from(shippedCountsByDate.values()).reduce(
     (sum, count) => sum + count,

@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjectsActivityHeatmapData } from '@/lib/projects/activity-heatmap';
 
+function buildErrorResponse(error: unknown): NextResponse | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  switch (error.message) {
+    case 'Invalid heatmap filters':
+      return NextResponse.json({ error: 'Invalid heatmap filters' }, { status: 400 });
+    case 'Unauthorized':
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    default:
+      return null;
+  }
+}
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url);
@@ -17,14 +32,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(data);
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === 'Invalid heatmap filters') {
-        return NextResponse.json({ error: 'Invalid heatmap filters' }, { status: 400 });
-      }
-
-      if (error.message === 'Unauthorized') {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-      }
+    const errorResponse = buildErrorResponse(error);
+    if (errorResponse) {
+      return errorResponse;
     }
 
     console.error('Projects activity heatmap API error:', error);
