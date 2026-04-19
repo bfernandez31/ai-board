@@ -15,10 +15,11 @@ export function formatUtcDate(date: Date): string {
 export function parseUtcDate(value: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return null;
-  const [, year, month, day] = match as unknown as [string, string, string, string];
-  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-  if (Number.isNaN(date.getTime())) return null;
-  return date;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /** Add (or subtract) whole days from a UTC midnight date. */

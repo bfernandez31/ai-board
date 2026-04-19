@@ -66,31 +66,25 @@ function getInitialFilters(
   searchParams: URLSearchParams,
   initialData: HeatmapData
 ): HeatmapFilters {
-  const rawPeriod = searchParams.get(HEATMAP_PERIOD_PARAM);
-  const parsedPeriod = parsePeriodFilter(rawPeriod);
-  let period: HeatmapPeriod;
-  if (parsedPeriod === null || parsedPeriod === 'last12') {
-    period = parsedPeriod === 'last12' ? 'last12' : initialData.filters.period;
-  } else if (initialData.availableYears.includes(parsedPeriod)) {
+  const parsedPeriod = parsePeriodFilter(searchParams.get(HEATMAP_PERIOD_PARAM));
+  let period: HeatmapPeriod = initialData.filters.period;
+  if (parsedPeriod === 'last12') {
+    period = 'last12';
+  } else if (parsedPeriod !== null && initialData.availableYears.includes(parsedPeriod)) {
     period = parsedPeriod;
-  } else {
-    period = initialData.filters.period;
   }
 
   const rawAgent = searchParams.get(HEATMAP_AGENT_PARAM);
-  const agent: HeatmapAgentFilter =
-    rawAgent && isValidAgentFilter(rawAgent) &&
-    initialData.availableAgents.some((option) => option.value === rawAgent)
-      ? rawAgent
-      : initialData.filters.agent;
+  const isKnownAgent =
+    rawAgent !== null &&
+    isValidAgentFilter(rawAgent) &&
+    initialData.availableAgents.some((option) => option.value === rawAgent);
+  const agent: HeatmapAgentFilter = isKnownAgent ? rawAgent : initialData.filters.agent;
 
   return { period, agent };
 }
 
 function formatCost(cost: number): string {
-  if (cost >= 1) {
-    return `$${cost.toFixed(2)}`;
-  }
   return `$${cost.toFixed(2)}`;
 }
 

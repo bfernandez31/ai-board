@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/db/users';
 import { getHeatmapData } from '@/lib/heatmap/queries';
 import { isValidAgentFilter, parsePeriodFilter } from '@/lib/heatmap/aggregations';
+import type { HeatmapAgentFilter } from '@/lib/heatmap/types';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
@@ -12,11 +13,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (period === null) {
       return NextResponse.json({ error: 'Invalid period' }, { status: 400 });
     }
+
     const agentParam = searchParams.get('agent');
-    if (agentParam !== null && !isValidAgentFilter(agentParam)) {
-      return NextResponse.json({ error: 'Invalid agent' }, { status: 400 });
+    let agent: HeatmapAgentFilter = 'all';
+    if (agentParam !== null) {
+      if (!isValidAgentFilter(agentParam)) {
+        return NextResponse.json({ error: 'Invalid agent' }, { status: 400 });
+      }
+      agent = agentParam;
     }
-    const agent = isValidAgentFilter(agentParam) ? agentParam : 'all';
 
     const data = await getHeatmapData(userId, { period, agent });
     return NextResponse.json(data);

@@ -113,8 +113,7 @@ export function buildGridLayout(
  * Quartile-based bucketing over the observed max count. Zero always maps to 0.
  */
 export function computeLevel(count: number, max: number): number {
-  if (count <= 0) return 0;
-  if (max <= 0) return 0;
+  if (count <= 0 || max <= 0) return 0;
   const ratio = count / max;
   if (ratio <= 0.25) return 1;
   if (ratio <= 0.5) return 2;
