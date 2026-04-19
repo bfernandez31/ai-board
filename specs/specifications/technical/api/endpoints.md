@@ -3693,6 +3693,80 @@ sequenceDiagram
 
 **Performance**: Optimized with database aggregation, <3s for projects with up to 1,000 jobs
 
+## Activity Heatmap Endpoints
+
+### GET /api/activity-heatmap
+
+Return day-level AI activity across every project the authenticated user owns or is a member of, for rendering the contribution heatmap on the `/projects` page.
+
+**Authentication**: Required (session)
+**Authorization**: User-scoped — aggregates data across projects where the caller is owner or member; no separate project access check is performed at the endpoint level because the aggregation filter enforces it.
+
+**Query Parameters**:
+- `period` (string, optional): `last12` for the rolling 12-month window (default) or a 4-digit calendar year (e.g. `2025`)
+- `agent` (string, optional): `all` (default), `CLAUDE`, `CODEX`, `MISTRAL`, or `GEMINI`
+
+**Behavior**:
+- Period bounds are computed in UTC:
+  - `last12` covers the 365-day window ending at today's UTC midnight (today − 364 → today)
+  - A calendar year covers `Jan 1 → Dec 31` of that year, clamped to today when the year equals the current year
+- Job counts include every job with `completedAt` inside the period, whose ticket matches the agent filter. Effective agent resolution is applied: when `agent` is a specific value, the filter accepts tickets where `ticket.agent = agent`, or `ticket.agent IS NULL` and the ticket's project has `defaultAgent = agent`.
+- `totals.ticketsShipped` counts jobs with `command = 'ship'` and `status = COMPLETED` inside the period; a stage change to SHIP without a completed ship job is not counted.
+- Daily cost is the sum of `job.costUsd` for jobs with a recorded cost on that day, rounded to cents. `totalCost` is `null` for days where no job recorded a cost (the client must omit the cost line rather than rendering `$0`).
+- `availableAgents` reflects the agents actually present in the user's job history (union of `ticket.agent` and inherited `project.defaultAgent`) with per-agent job counts; `all` is always included.
+- `availableYears` lists every year from the user's account-creation year to the current year, descending. When the account was created in the current year the array is empty (only `last12` applies).
+- Invalid or unknown filter values are coerced to defaults in the returned `filters` payload rather than returning an error; only malformed inputs (non-year period, unknown agent string) return `400`.
+
+**Response** (200 OK):
+```json
+{
+  "startDate": "2025-04-20",
+  "endDate": "2026-04-19",
+  "days": [
+    { "date": "2025-04-21", "jobCount": 3, "totalCost": 0.42, "shipped": 0 },
+    { "date": "2025-04-22", "jobCount": 1, "totalCost": null, "shipped": 1 }
+  ],
+  "totals": {
+    "jobCount": 142,
+    "ticketsShipped": 18
+  },
+  "availableAgents": [
+    { "value": "all", "label": "All agents", "jobCount": 142 },
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 120 },
+    { "value": "CODEX", "label": "Codex", "jobCount": 22 }
+  ],
+  "availableYears": [2026, 2025, 2024],
+  "filters": {
+    "period": "last12",
+    "agent": "all"
+  },
+  "generatedAt": "2026-04-19T10:30:00.000Z"
+}
+```
+
+**Fields**:
+- `startDate`, `endDate`: Inclusive UTC bounds of the returned period (`YYYY-MM-DD`)
+- `days`: One entry per day that has at least one job or shipped ticket; days with zero activity are omitted
+  - `date`: ISO date (`YYYY-MM-DD`, UTC)
+  - `jobCount`: Count of jobs completed on that day under the active filter
+  - `totalCost`: Sum of `costUsd` for jobs on that day, or `null` when no job had a recorded cost
+  - `shipped`: Count of `ship` jobs with `status = COMPLETED` on that day
+- `totals.jobCount`: Total job count across the period under the active filter
+- `totals.ticketsShipped`: Total count of `ship` jobs that reached `COMPLETED` during the period
+- `availableAgents`: Agent filter options (always includes `all`; specific agents appear only when they have at least one job)
+- `availableYears`: Calendar years offered in the period selector, in descending order
+- `filters`: Normalized filter values actually applied (may differ from the request when the client passed a value not present in `availableAgents` or `availableYears`)
+- `generatedAt`: Server timestamp for the response
+
+**Errors**:
+- `400`: `period` is not `last12` nor a 4-digit year, or `agent` is not in the supported enum
+- `401`: Not authenticated
+- `500`: Database error
+
+**Client Integration**:
+- The `/projects` page performs a server-side render of the default filters (falling back to the request's URL query parameters) and passes the payload to the heatmap component as `initialData`, eliminating a loading flash on first render.
+- The client refetches every 60 seconds via TanStack Query (`staleTime: 30s`) when the filters differ from the initial snapshot; identical-filter renders keep using the SSR payload.
+
 ## Project Member Endpoints
 
 ### GET /api/projects/:projectId/members
