@@ -18,7 +18,7 @@
 - **Database**: PostgreSQL 14+, Prisma 6.x
 - **Styling**: TailwindCSS 3.4, shadcn/ui, lucide-react
 - **Charts**: Recharts 3.x (analytics dashboard)
-- **State**: TanStack Query v5.95.2, client-side polling (2s jobs, 10s comments, 15s notifications, 15s analytics, 15s usage)
+- **State**: TanStack Query v5.95.2, client-side polling (2s jobs, 10s comments, 15s notifications, 15s analytics, 15s usage, 60s projects activity heatmap)
 - **Testing**: Vitest (unit + integration), Playwright (E2E browser tests)
 - **Auth**: NextAuth.js (session-based)
 - **Push Notifications**: web-push ^3.6.x (VAPID), Web Push API, Service Worker (/public/sw.js)

@@ -84,6 +84,57 @@ When no projects exist:
 - Call-to-action encourages creating first project
 - Clear path to project creation
 
+### Activity Heatmap
+
+Below the project cards grid, the projects page displays a full-width activity heatmap summarizing the user's AI activity across all of their projects (owned and member) over the selected period.
+
+**Grid**:
+- GitHub-style contribution grid: 7 rows (Sunday through Saturday) × weeks in the selected period
+- Default period is a rolling 12-month window ending today
+- Month labels run along the top of the grid; day-of-week labels ("Mon", "Wed", "Fri") run down the left edge
+- Cells outside the selected period are not rendered (chipped top-left and bottom-right corners for partial first/last weeks)
+- Cells are colored using a violet gradient with 5 discrete intensity levels (empty, low, medium, high, max). Intensity is assigned from quantile thresholds computed over the user's non-zero daily job counts for the active period, so users with small datasets still see a useful distribution
+- When all non-zero days have the same job count, every active cell renders at the same mid-intensity level
+- An intensity legend labeled "Less" → "More" sits at the bottom-right of the grid
+
+**Summary Header**:
+- Displays "X jobs + Y tickets shipped" for the active period and filters
+- `X` counts COMPLETED jobs across the user's tickets
+- `Y` counts distinct tickets with a successfully COMPLETED `ship` workflow job in the period. Tickets that reached the SHIP stage without a completed `ship` job are not counted
+
+**Filters**:
+- **Year selector**: "Last 12 months" (default rolling window) plus each calendar year from the user's account creation year to the current year
+  - Hidden entirely when the user's account was created in the current year (only "Last 12 months" would be available)
+- **Agent filter**: "All" (default) plus each distinct effective agent that appears in the user's completed job history
+  - Effective agent resolution: a ticket's explicit `agent` value is used when set, otherwise the parent project's `defaultAgent` is inherited
+  - Hidden entirely when the user's jobs span only 0 or 1 distinct effective agents
+- Filter changes update the grid cells, intensity thresholds, and summary counters; grid boundaries only change when the period changes
+
+**URL Persistence**:
+- Active non-default filters are reflected in the `/projects` URL as `?year=<rolling|YYYY>&agent=<all|CLAUDE|CODEX|MISTRAL|GEMINI>`
+- Default values (`rolling`, `all`) are stripped from the URL so the default view has a clean URL
+- Opening a URL with these parameters restores the exact filtered view on load
+- Filter changes update the URL without scrolling the page
+
+**Tooltips**:
+- Hover (desktop) or tap (mobile) on any cell reveals a tooltip
+- Active-day tooltip shows: formatted date, job count, tickets shipped that day (when ≥1), and total cost in USD. The cost line is omitted entirely when no job for that day has a recorded cost — no `$0` or `$NaN` placeholders
+- Empty-cell tooltip shows only the formatted date and "No activity"
+- Mobile tooltips dismiss on tap outside
+
+**Initial Render and Refresh**:
+- The first render uses server-provided data for the default filters, so the heatmap appears immediately with no loading spinner or blank flash
+- Data refreshes silently in the background every 60 seconds without blanking the visible grid
+- A job completed between refreshes appears on the next refresh cycle
+
+**Empty State**:
+- When the active period and filters contain zero activity, a centered message "No activity to show yet — your AI work will appear here" replaces the grid. The legend and filters remain visible so the user can adjust the view
+
+**Mobile Behavior**:
+- The grid scrolls horizontally inside its card; cells maintain a minimum tappable size
+- Day-of-week labels stay pinned to the left edge during horizontal scroll so rows remain identifiable
+- The projects page scrolls naturally to reveal the heatmap — the project cards grid no longer constrains vertical scroll
+
 ### Navigation
 
 **To Project Board**:

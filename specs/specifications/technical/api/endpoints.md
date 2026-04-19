@@ -118,6 +118,66 @@ Fetch all projects for the authenticated user with shipping status.
 - `401`: Not authenticated
 - `500`: Database error
 
+### GET /api/projects/activity-heatmap
+
+Fetch the authenticated user's daily AI activity across all accessible projects (owned or member) for the selected period, aggregated for GitHub-style heatmap rendering on the projects page.
+
+**Authentication**: Required (session)
+**Authorization**: Implicit — results are scoped to projects the user owns or is a member of
+
+**Query Parameters**:
+- `year` (string, optional, default `rolling`): `rolling` for the last 12 months, or a 4-digit calendar year (e.g. `2025`)
+- `agent` (string, optional, default `all`): `all` or one of `CLAUDE`, `CODEX`, `MISTRAL`, `GEMINI`
+
+**Behavior**:
+- Counts `COMPLETED` jobs whose `completedAt` falls within the selected period
+- `agent` filter uses effective agent resolution: `ticket.agent` when set, otherwise `project.defaultAgent`
+- `shippedCount` for a day is the number of distinct tickets with a `COMPLETED` job whose `command = ship` completed that day
+- `costUsd` for a day is the sum of non-null `Job.costUsd` values; it is `null` when no job that day has a recorded cost
+- `days` only contains keys for dates with at least one completed job — missing keys are treated by the client as zero-activity
+- `thresholds` are quantile-based (q25, q50, q75, q90) computed from the non-zero daily job counts in the selected period. When all non-zero days have the same count, every threshold equals that count (client renders all active cells at mid intensity). When the period has zero activity, thresholds default to `{ q25: 1, q50: 2, q75: 3, q90: 4 }`
+- `availableYears` is `['rolling', ...years from user.createdAt year through current year]`
+- `availableAgents` includes `{ value: 'all', label: 'All' }` plus one entry per distinct effective agent found across the user's completed-job tickets
+
+**Response** (200 OK):
+```json
+{
+  "days": {
+    "2026-01-15": { "jobCount": 5, "shippedCount": 1, "costUsd": 2.40 },
+    "2026-01-16": { "jobCount": 3, "shippedCount": 0, "costUsd": null }
+  },
+  "thresholds": { "q25": 1, "q50": 3, "q75": 6, "q90": 10 },
+  "summary": { "totalJobs": 142, "ticketsShipped": 12 },
+  "period": { "startDate": "2025-04-19", "endDate": "2026-04-19" },
+  "availableYears": ["rolling", "2024", "2025", "2026"],
+  "availableAgents": [
+    { "value": "all", "label": "All" },
+    { "value": "CLAUDE", "label": "Claude" },
+    { "value": "CODEX", "label": "Codex" }
+  ],
+  "filters": { "year": "rolling", "agent": "all" }
+}
+```
+
+**Fields**:
+- `days`: Map of `YYYY-MM-DD` → `{ jobCount, shippedCount, costUsd }`; days with no activity are omitted
+- `thresholds`: Quantile cutoffs used to map a cell's job count to one of the 5 intensity levels
+- `summary.totalJobs`: Total completed jobs in the period under the active filters
+- `summary.ticketsShipped`: Distinct tickets with a `ship` job completed in the period
+- `period`: Inclusive `startDate` and `endDate` for the selected view (both `YYYY-MM-DD`)
+- `availableYears`: Options for the year selector — includes `rolling` and every calendar year from account creation year to current year
+- `availableAgents`: Options for the agent filter — always starts with `all`, followed by effective agents present in the user's completed-job history
+- `filters`: Active filters echoed back for client-side cache key matching
+
+**Errors**:
+- `400`: Invalid `year` (not `rolling` or 4-digit) or invalid `agent` (not in enum)
+- `401`: Not authenticated
+- `500`: Database or aggregation failure
+
+**Client Usage**:
+- Polled every 60 seconds from the projects page; the initial render uses server-provided data for the default filters to eliminate loading flash
+- Query key: `['projects', 'heatmap', year, agent]`
+
 ### GET /api/projects/:projectId
 
 Fetch project details including clarification policy.
