@@ -1,8 +1,35 @@
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
-import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  renderWithProviders,
+  screen,
+  userEvent,
+  waitFor,
+} from '@/tests/utils/component-test-utils';
 import { ActivityHeatmap } from '@/components/projects/activity-heatmap';
+import { ActivityHeatmapCell } from '@/components/projects/activity-heatmap-cell';
 import type { DailyCell, HeatmapData } from '@/lib/analytics/heatmap-types';
+
+function mockMatchMedia(touchOnly: boolean): void {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    configurable: true,
+    value: (query: string) => ({
+      matches: query.includes('hover: none') ? touchOnly : false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }),
+  });
+}
+
+beforeEach(() => {
+  mockMatchMedia(false);
+});
 
 const mockSearchParams = new URLSearchParams();
 
@@ -121,5 +148,67 @@ describe('ActivityHeatmap', () => {
       (el) => el.getAttribute('aria-hidden') === 'true'
     );
     expect(legendSwatches).toHaveLength(5);
+  });
+});
+
+describe('ActivityHeatmapCell tooltip (US2)', () => {
+  it('shows date, shipped, and jobs · cost in tooltip on hover (desktop)', async () => {
+    mockMatchMedia(false);
+    const cell: DailyCell = {
+      date: '2025-04-15',
+      jobCount: 4,
+      shipJobCount: 1,
+      shippedTicketCount: 1,
+      totalCostUsd: 1.23,
+      bucket: 3,
+    };
+    renderWithProviders(<ActivityHeatmapCell cell={cell} column={1} row={1} />);
+    const user = userEvent.setup();
+    const button = screen.getByRole('button', { name: /2025-04-15: 4 jobs/i });
+    await user.hover(button);
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip.textContent).toMatch(/April 15, 2025|2025/);
+    expect(tooltip.textContent).toContain('1 ticket shipped');
+    expect(tooltip.textContent).toContain('4 jobs');
+    expect(tooltip.textContent).toContain('$1.23');
+  });
+
+  it('omits cost entirely when totalCostUsd is null (no $NaN / $0)', async () => {
+    mockMatchMedia(false);
+    const cell: DailyCell = {
+      date: '2025-04-15',
+      jobCount: 4,
+      shipJobCount: 0,
+      shippedTicketCount: 0,
+      totalCostUsd: null,
+      bucket: 2,
+    };
+    renderWithProviders(<ActivityHeatmapCell cell={cell} column={1} row={1} />);
+    const user = userEvent.setup();
+    const button = screen.getByRole('button', { name: /2025-04-15: 4 jobs/i });
+    await user.hover(button);
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip.textContent).not.toContain('$');
+    expect(tooltip.textContent).not.toContain('NaN');
+    expect(tooltip.textContent).toContain('4 jobs');
+  });
+
+  it('uses a Popover on touch-only viewports', async () => {
+    mockMatchMedia(true);
+    const cell: DailyCell = {
+      date: '2025-04-15',
+      jobCount: 2,
+      shipJobCount: 0,
+      shippedTicketCount: 0,
+      totalCostUsd: 0.5,
+      bucket: 1,
+    };
+    renderWithProviders(<ActivityHeatmapCell cell={cell} column={1} row={1} />);
+    const user = userEvent.setup();
+    const button = screen.getByRole('button', { name: /2025-04-15: 2 jobs/i });
+    await user.click(button);
+    await waitFor(() => {
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+    });
   });
 });

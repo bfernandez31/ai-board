@@ -89,11 +89,11 @@
 ### Tests for User Story 2
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T018 [P] [US2] Extend `tests/unit/components/activity-heatmap.test.tsx` with: tooltip content on hover shows `{formattedDate}` + `"{shippedTicketCount} tickets shipped"` + `"{jobCount} jobs · $X.XX"` (FR-017); cost line is entirely absent when `totalCostUsd === null` — assert no "$NaN", "$0", or dollar glyph in the tooltip DOM (FR-018); mobile path via `matchMedia('(hover: none)')` mock uses `<Popover>` with outside-click dismissal (FR-019); only one tooltip/popover is open at a time
+- [X] T018 [P] [US2] Extend `tests/unit/components/activity-heatmap.test.tsx` with: tooltip content on hover shows `{formattedDate}` + `"{shippedTicketCount} tickets shipped"` + `"{jobCount} jobs · $X.XX"` (FR-017); cost line is entirely absent when `totalCostUsd === null` — assert no "$NaN", "$0", or dollar glyph in the tooltip DOM (FR-018); mobile path via `matchMedia('(hover: none)')` mock uses `<Popover>` with outside-click dismissal (FR-019); only one tooltip/popover is open at a time
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Modify `components/projects/activity-heatmap-cell.tsx` to wrap the cell in a Radix `<Tooltip>` from `@/components/ui/tooltip` when `matchMedia('(hover: none)').matches === false` (desktop) or in a Radix `<Popover>` from `@/components/ui/popover` when hover is unavailable (touch devices); content renders the `date-fns`-formatted locale date, `"{shippedTicketCount} tickets shipped"` (or "1 ticket shipped" for singular), and `"{jobCount} jobs · $X.XX"` where the cost segment is conditionally rendered only when `totalCostUsd !== null` (FR-017, FR-018); close prior popover when another opens (FR-019)
+- [X] T019 [US2] Modify `components/projects/activity-heatmap-cell.tsx` to wrap the cell in a Radix `<Tooltip>` from `@/components/ui/tooltip` when `matchMedia('(hover: none)').matches === false` (desktop) or in a Radix `<Popover>` from `@/components/ui/popover` when hover is unavailable (touch devices); content renders the `date-fns`-formatted locale date, `"{shippedTicketCount} tickets shipped"` (or "1 ticket shipped" for singular), and `"{jobCount} jobs · $X.XX"` where the cost segment is conditionally rendered only when `totalCostUsd !== null` (FR-017, FR-018); close prior popover when another opens (FR-019)
 
 **Checkpoint**: US1 + US2 deliver the complete P1 scope — users can view AND interrogate activity.
 
