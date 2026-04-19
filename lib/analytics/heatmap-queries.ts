@@ -16,7 +16,6 @@ import {
 } from './aggregations';
 import { buildEffectiveAgentWhere } from './queries';
 import type {
-  AgentFilter,
   AgentOption,
   DailyCell,
   HeatmapData,
@@ -35,8 +34,7 @@ function buildPeriodLabel(
 }
 
 async function getAvailableAgentsForUser(
-  accessibleProjectIds: number[],
-  effectiveAgentWhere: Prisma.TicketWhereInput | undefined
+  accessibleProjectIds: number[]
 ): Promise<AgentOption[]> {
   if (accessibleProjectIds.length === 0) {
     return [
@@ -97,8 +95,6 @@ async function getAvailableAgentsForUser(
     }
   }
 
-  // suppress unused-parameter warning — kept for future scoping symmetry
-  void effectiveAgentWhere;
   return options;
 }
 
@@ -114,6 +110,51 @@ function resolveEffectivePeriod(
     }
   }
   return filters.period;
+}
+
+function forEachDayUTC(
+  startDate: Date,
+  endDate: Date,
+  callback: (dateKey: string) => void
+): void {
+  const dayMs = 24 * 60 * 60 * 1000;
+  const rawStart = Date.UTC(
+    startDate.getUTCFullYear(),
+    startDate.getUTCMonth(),
+    startDate.getUTCDate()
+  );
+  const rawEnd = Date.UTC(
+    endDate.getUTCFullYear(),
+    endDate.getUTCMonth(),
+    endDate.getUTCDate()
+  );
+  for (let ts = rawStart; ts <= rawEnd; ts += dayMs) {
+    callback(formatUTCDate(new Date(ts)));
+  }
+}
+
+function buildPeriodEnvelope(
+  effectivePeriod: HeatmapFilters['period'],
+  startDate: Date,
+  endDate: Date
+): HeatmapData['period'] {
+  return {
+    kind: effectivePeriod.kind,
+    startDate: formatUTCDate(startDate),
+    endDate: formatUTCDate(endDate),
+    ...(effectivePeriod.kind === 'year' ? { year: effectivePeriod.year } : {}),
+  };
+}
+
+function emptyCell(date: string): DailyCell {
+  return {
+    date,
+    jobCount: 0,
+    shipJobCount: 0,
+    shippedTicketCount: 0,
+    totalCostUsd: null,
+    bucket: 0,
+  };
 }
 
 export async function getHeatmapData(
@@ -142,9 +183,7 @@ export async function getHeatmapData(
 
   const effectivePeriod = resolveEffectivePeriod(filters, accountCreationYear, currentYear);
   const { startDate, endDate } = getHeatmapPeriodBounds(effectivePeriod, now);
-
-  const effectiveAgent: NamedAgent | 'all' = filters.agent;
-  const effectiveAgentTicketWhere = buildEffectiveAgentWhere(effectiveAgent);
+  const effectiveAgentTicketWhere = buildEffectiveAgentWhere(filters.agent);
 
   const jobWhere: Prisma.JobWhereInput = {
     projectId: { in: accessibleProjectIds },
@@ -182,7 +221,7 @@ export async function getHeatmapData(
       },
     }),
     prisma.ticket.count({ where: shippedTicketWhere }),
-    getAvailableAgentsForUser(accessibleProjectIds, effectiveAgentTicketWhere),
+    getAvailableAgentsForUser(accessibleProjectIds),
   ]);
 
   interface DayAccumulator {
@@ -222,31 +261,11 @@ export async function getHeatmapData(
   }
 
   const cells: DailyCell[] = [];
-  const dayMs = 24 * 60 * 60 * 1000;
-  const rawStart = Date.UTC(
-    startDate.getUTCFullYear(),
-    startDate.getUTCMonth(),
-    startDate.getUTCDate()
-  );
-  const rawEnd = Date.UTC(
-    endDate.getUTCFullYear(),
-    endDate.getUTCMonth(),
-    endDate.getUTCDate()
-  );
-
-  for (let ts = rawStart; ts <= rawEnd; ts += dayMs) {
-    const dateKey = formatUTCDate(new Date(ts));
+  forEachDayUTC(startDate, endDate, (dateKey) => {
     const acc = byDate.get(dateKey);
     if (!acc) {
-      cells.push({
-        date: dateKey,
-        jobCount: 0,
-        shipJobCount: 0,
-        shippedTicketCount: 0,
-        totalCostUsd: null,
-        bucket: 0,
-      });
-      continue;
+      cells.push(emptyCell(dateKey));
+      return;
     }
     const totalCostUsd = acc.hasNullCost
       ? null
@@ -259,7 +278,7 @@ export async function getHeatmapData(
       totalCostUsd,
       bucket: 0,
     });
-  }
+  });
 
   const nonZeroCounts = cells.filter((c) => c.jobCount > 0).map((c) => c.jobCount);
   const thresholds = computeQuantileBuckets(nonZeroCounts);
@@ -271,15 +290,10 @@ export async function getHeatmapData(
   const availableYears = buildAvailableYears(accountCreationYear, currentYear);
 
   return {
-    period: {
-      kind: effectivePeriod.kind,
-      startDate: formatUTCDate(startDate),
-      endDate: formatUTCDate(endDate),
-      ...(effectivePeriod.kind === 'year' ? { year: effectivePeriod.year } : {}),
-    },
+    period: buildPeriodEnvelope(effectivePeriod, startDate, endDate),
     filters: {
       period: effectivePeriod,
-      agent: effectiveAgent as AgentFilter,
+      agent: filters.agent,
     },
     cells,
     summary: {
@@ -318,35 +332,12 @@ function buildEmptyEnvelope(
   now: Date
 ): HeatmapData {
   const cells: DailyCell[] = [];
-  const dayMs = 24 * 60 * 60 * 1000;
-  const rawStart = Date.UTC(
-    startDate.getUTCFullYear(),
-    startDate.getUTCMonth(),
-    startDate.getUTCDate()
-  );
-  const rawEnd = Date.UTC(
-    endDate.getUTCFullYear(),
-    endDate.getUTCMonth(),
-    endDate.getUTCDate()
-  );
-  for (let ts = rawStart; ts <= rawEnd; ts += dayMs) {
-    cells.push({
-      date: formatUTCDate(new Date(ts)),
-      jobCount: 0,
-      shipJobCount: 0,
-      shippedTicketCount: 0,
-      totalCostUsd: null,
-      bucket: 0,
-    });
-  }
+  forEachDayUTC(startDate, endDate, (dateKey) => {
+    cells.push(emptyCell(dateKey));
+  });
 
   return {
-    period: {
-      kind: effectivePeriod.kind,
-      startDate: formatUTCDate(startDate),
-      endDate: formatUTCDate(endDate),
-      ...(effectivePeriod.kind === 'year' ? { year: effectivePeriod.year } : {}),
-    },
+    period: buildPeriodEnvelope(effectivePeriod, startDate, endDate),
     filters: {
       period: effectivePeriod,
       agent: filters.agent,

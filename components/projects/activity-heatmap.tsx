@@ -144,8 +144,8 @@ export function ActivityHeatmap({
     staleTime: 10_000,
   });
 
-  const heatmap = data ?? (shouldUseInitialData ? initialData : null);
-  const hasError = !heatmap && (initialError !== undefined || error);
+  const heatmap = data ?? null;
+  const hasError = !heatmap && (initialError || error);
 
   if (hasError) {
     return (
@@ -171,23 +171,14 @@ export function ActivityHeatmap({
   const namedAgents = heatmap.availableAgents.filter((a) => a.value !== 'all');
   const showAgentFilter = namedAgents.length > 1;
   const showYearFilter = heatmap.availableYears.length > 0;
-  const periodSelectValue =
-    filters.period.kind === 'year' ? String(filters.period.year) : 'last12months';
+  const periodSelectValue = periodKey(filters.period);
 
   const handlePeriodChange = (value: string): void => {
-    if (value === 'last12months') {
-      updateFilters({ ...filters, period: { kind: 'rolling12m', endDate: '' } });
-      return;
-    }
-    const year = Number.parseInt(value, 10);
-    if (!Number.isNaN(year)) {
-      updateFilters({ ...filters, period: { kind: 'year', year } });
-    }
+    updateFilters({ ...filters, period: coercePeriod(value) });
   };
 
   const handleAgentChange = (value: string): void => {
-    const agent = value === 'all' || isSupportedAgent(value) ? (value as AgentFilter) : 'all';
-    updateFilters({ ...filters, agent });
+    updateFilters({ ...filters, agent: coerceAgent(value) });
   };
 
   return (
