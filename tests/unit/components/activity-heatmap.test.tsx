@@ -329,6 +329,39 @@ describe('ActivityHeatmap year selector (US3)', () => {
   });
 });
 
+describe('ActivityHeatmap mobile layout (US5)', () => {
+  it('wraps the grid in an overflow-x-auto scroll container', () => {
+    const data = buildHeatmapData();
+    const { container } = renderWithProviders(
+      <ActivityHeatmap userId="user-1" initialData={data} />
+    );
+    const scroller = container.querySelector('.overflow-x-auto');
+    expect(scroller).not.toBeNull();
+  });
+
+  it('day-of-week label column has sticky + left-0 classes', () => {
+    const data = buildHeatmapData();
+    const { container } = renderWithProviders(
+      <ActivityHeatmap userId="user-1" initialData={data} />
+    );
+    const sticky = container.querySelector('.sticky.left-0');
+    expect(sticky).not.toBeNull();
+  });
+
+  it('cell classes come from BUCKET_CLASSES as literal strings (no dynamic concatenation)', () => {
+    const data = buildHeatmapData();
+    const { container } = renderWithProviders(
+      <ActivityHeatmap userId="user-1" initialData={data} />
+    );
+    const cells = container.querySelectorAll('[data-bucket]');
+    const literalPrefix = /aurora-heatmap-bucket-[0-4]/;
+    for (const cell of Array.from(cells)) {
+      const cls = cell.className;
+      expect(cls).toMatch(literalPrefix);
+    }
+  });
+});
+
 describe('ActivityHeatmap agent filter (US4)', () => {
   it('is not rendered when fewer than 2 named agents are available', () => {
     const data = buildHeatmapData({

@@ -149,11 +149,11 @@
 ### Tests for User Story 5
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T027 [P] [US5] Extend `tests/unit/components/activity-heatmap.test.tsx` asserting: the grid outer container has the `overflow-x-auto` class (FR-021); the day-of-week label column has `position: sticky` / `left-0` classes (FR-022); cell classes come from `BUCKET_CLASSES` as complete string literals (no dynamic concatenation fragments present in the DOM — CLAUDE.md Tailwind-literal rule)
+- [X] T027 [P] [US5] Extend `tests/unit/components/activity-heatmap.test.tsx` asserting: the grid outer container has the `overflow-x-auto` class (FR-021); the day-of-week label column has `position: sticky` / `left-0` classes (FR-022); cell classes come from `BUCKET_CLASSES` as complete string literals (no dynamic concatenation fragments present in the DOM — CLAUDE.md Tailwind-literal rule)
 
 ### Implementation for User Story 5
 
-- [ ] T028 [US5] Modify `components/projects/activity-heatmap-grid.tsx` to wrap the grid in a div with `overflow-x-auto` (FR-021); set `grid-template-rows: repeat(7, minmax(14px, 1fr))` and `grid-template-columns: repeat(N, minmax(14px, 1fr))` so cells never shrink below 14 px (spec Auto-Resolved decision #4); apply `position: sticky; left: 0; z-index: 1; background: var(--background)` to the day-of-week label column so it remains visible during horizontal scroll (FR-022); weekday rows must not wrap to a second visual row (FR-021)
+- [X] T028 [US5] Modify `components/projects/activity-heatmap-grid.tsx` to wrap the grid in a div with `overflow-x-auto` (FR-021); set `grid-template-rows: repeat(7, minmax(14px, 1fr))` and `grid-template-columns: repeat(N, minmax(14px, 1fr))` so cells never shrink below 14 px (spec Auto-Resolved decision #4); apply `position: sticky; left: 0; z-index: 1; background: var(--background)` to the day-of-week label column so it remains visible during horizontal scroll (FR-022); weekday rows must not wrap to a second visual row (FR-021)
 
 **Checkpoint**: All five user stories are independently functional. Desktop + mobile, hover + tap, default period + year + agent filters all work.
 
@@ -168,11 +168,11 @@
 - [ ] T031 [P] Manual QA URL round-trip: open `/projects?heatmapPeriod=2025&heatmapAgent=CLAUDE`, verify the year and agent selects reflect the URL values and the grid renders the 2025 CLAUDE-filtered view (SC-004)
 - [ ] T032 [P] Manual QA no-spinner cold load: open `/projects` with a seeded user on a fresh session, verify the grid is painted immediately with no loading spinner flash (FR-020, SC-001)
 - [ ] T033 [P] Manual QA invalid-params: open `/projects?heatmapPeriod=1999&heatmapAgent=BOGUS`, verify the heatmap renders the default rolling-12-month all-agents view and the URL is silently corrected on the next filter interaction (spec edge case "Invalid query params")
-- [ ] T034 Run `bun run type-check` — must pass (CLAUDE.md commit rule)
-- [ ] T035 Run `bun run lint` — must pass (CLAUDE.md commit rule)
-- [ ] T036 Run `bun run test:unit tests/unit/heatmap-aggregations.test.ts tests/unit/components/activity-heatmap.test.tsx` — must pass
-- [ ] T037 Run `bun run test:integration tests/integration/analytics/heatmap-route.test.ts` — must pass
-- [ ] T038 Verify no new Prisma migrations were generated on the branch (SC-008): `git diff main..HEAD -- prisma/migrations` must be empty
+- [X] T034 Run `bun run type-check` — must pass (CLAUDE.md commit rule)
+- [X] T035 Run `bun run lint` — must pass (CLAUDE.md commit rule)
+- [X] T036 Run `bun run test:unit tests/unit/heatmap-aggregations.test.ts tests/unit/components/activity-heatmap.test.tsx` — must pass
+- [X] T037 Run `bun run test:integration tests/integration/analytics/heatmap-route.test.ts` — must pass
+- [X] T038 Verify no new Prisma migrations were generated on the branch (SC-008): `git diff main..HEAD -- prisma/migrations` must be empty
 
 ---
 
