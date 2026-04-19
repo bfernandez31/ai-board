@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { cancelWorkflowRun } from '@/lib/workflows/cancel-workflow-run';
+import { handleJobCompletionAutoTransition } from '@/app/lib/tickets/auto-mode';
 
 const TERMINAL_STATUSES = ['COMPLETED', 'FAILED', 'CANCELLED'];
 
@@ -96,6 +97,16 @@ export async function POST(
     }
 
     console.log('[Cancel Job] Success:', { jobId, previousStatus: job.status });
+
+    // Disengage auto-mode on UI-initiated cancellation. PATCH /api/jobs/:id/status
+    // fires the same hook for workflow-originated terminal callbacks, but this
+    // route updates the job directly and would otherwise leave autoMode=true.
+    handleJobCompletionAutoTransition({
+      jobId,
+      terminalStatus: 'CANCELLED',
+    }).catch((err) => {
+      console.error('[Cancel Job] Auto-mode hook error:', err);
+    });
 
     return NextResponse.json({
       id: jobId,

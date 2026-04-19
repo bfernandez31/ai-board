@@ -8,6 +8,7 @@ import {
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { sendJobCompletionNotification } from '@/app/lib/push/send-notification';
+import { handleJobCompletionAutoTransition } from '@/app/lib/tickets/auto-mode';
 
 /**
  * PATCH /api/jobs/[id]/status
@@ -216,9 +217,31 @@ export async function PATCH(
       }
     }
 
-    const updatedJob = await prisma.job.update({
-      where: { id: jobId },
+    // Atomic conditional update: only transition when source status matches.
+    // Prevents duplicate terminal callbacks (e.g., GitHub Actions retry) from
+    // both passing the idempotency check above and both firing completion hooks.
+    const transitionResult = await prisma.job.updateMany({
+      where: { id: jobId, status: currentStatus },
       data: updateData,
+    });
+
+    if (transitionResult.count === 0) {
+      const currentJob = await prisma.job.findUnique({
+        where: { id: jobId },
+        select: { id: true, status: true, completedAt: true },
+      });
+      return NextResponse.json(
+        {
+          id: currentJob!.id,
+          status: currentJob!.status,
+          completedAt: currentJob!.completedAt?.toISOString() || null,
+        },
+        { status: 200 }
+      );
+    }
+
+    const updatedJob = await prisma.job.findUniqueOrThrow({
+      where: { id: jobId },
       select: {
         id: true,
         status: true,
@@ -254,6 +277,13 @@ export async function PATCH(
         requestedStatus as 'COMPLETED' | 'FAILED' | 'CANCELLED'
       ).catch((err) => {
         console.error('[Job Status Update] Push notification error:', err);
+      });
+
+      handleJobCompletionAutoTransition({
+        jobId,
+        terminalStatus: requestedStatus as 'COMPLETED' | 'FAILED' | 'CANCELLED',
+      }).catch((err) => {
+        console.error('[Job Status Update] Auto-mode hook error:', err);
       });
     }
 

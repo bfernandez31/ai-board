@@ -16,11 +16,15 @@ import { TicketCardDeployIcon } from './ticket-card-deploy-icon';
 import { TicketCardPreviewIcon } from './ticket-card-preview-icon';
 import { DeployConfirmationModal } from './deploy-confirmation-modal';
 import { CancelConfirmationModal } from './cancel-confirmation-modal';
+import { AutoModeIcon } from './auto-mode-icon';
+import { AutoModeConfirmationModal } from './auto-mode-confirmation-modal';
 import { isTicketDeployable } from '@/app/lib/utils/deploy-preview-eligibility';
 import { useDeployPreview } from '@/app/lib/hooks/mutations/useDeployPreview';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
+import { useAutoMode } from '@/app/lib/hooks/mutations/useAutoMode';
 import { useHasMounted } from '@/lib/hooks/use-has-mounted';
 import { QualityScoreBadge } from '@/components/ticket/quality-score-badge';
+import { isAutoModeEligible } from '@/app/lib/tickets/auto-mode-eligibility';
 import { X } from 'lucide-react';
 import { STAGE_MODEL_KEYS, STAGE_MODEL_LABELS } from '@/lib/models/claude-models';
 
@@ -56,12 +60,38 @@ export const TicketCard = React.memo(
     const isMounted = useHasMounted();
     const [showDeployModal, setShowDeployModal] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
+    const [showAutoModeModal, setShowAutoModeModal] = useState(false);
 
     // Deploy preview mutation
     const { mutate: deployPreview } = useDeployPreview(ticket.projectId);
 
     // Cancel job mutation
     const cancelJobMutation = useCancelJob(ticket.projectId);
+
+    // Auto-mode mutation (AIB-682)
+    const autoModeMutation = useAutoMode(ticket.projectId);
+
+    const autoModeEligible = isAutoModeEligible({
+      workflowType: ticket.workflowType,
+      stage: ticket.stage,
+    });
+
+    const handleAutoModeClick = React.useCallback(
+      (e: React.MouseEvent<HTMLButtonElement>) => {
+        e.stopPropagation();
+        if (ticket.autoMode) {
+          autoModeMutation.mutate({ ticketId: ticket.id, enabled: false });
+          return;
+        }
+        setShowAutoModeModal(true);
+      },
+      [autoModeMutation, ticket.autoMode, ticket.id]
+    );
+
+    const handleAutoModeConfirm = React.useCallback(() => {
+      autoModeMutation.mutate({ ticketId: ticket.id, enabled: true });
+      setShowAutoModeModal(false);
+    }, [autoModeMutation, ticket.id]);
 
     // Check if ticket is deployable
     const isDeployable = React.useMemo(() => {
@@ -219,6 +249,16 @@ export const TicketCard = React.memo(
             />
           )}
 
+          {/* Auto-mode Confirmation Modal (AIB-682) */}
+          {autoModeEligible && (
+            <AutoModeConfirmationModal
+              open={showAutoModeModal}
+              onOpenChange={setShowAutoModeModal}
+              onConfirm={handleAutoModeConfirm}
+              currentStage={ticket.stage}
+            />
+          )}
+
           {/* Deploy Confirmation Modal */}
           <DeployConfirmationModal
             open={showDeployModal}
@@ -241,21 +281,36 @@ export const TicketCard = React.memo(
             {ticket.title}
           </h3>
 
+          {/* Auto-mode hover-reveal footer: only renders for eligible tickets
+              with no other visible content. Collapsed until hover so the card
+              doesn't reserve an empty bordered row for the off-state icon. */}
+          {!(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl || ticket.autoMode) && autoModeEligible && (
+            <div className="hidden group-hover:block border-t border-border pt-3">
+              <AutoModeIcon
+                autoMode={ticket.autoMode}
+                onClick={handleAutoModeClick}
+                disabled={autoModeMutation.isPending}
+              />
+            </div>
+          )}
+
           {/* Job Status Indicators (Single-line layout with right-aligned compact icons) */}
-          {(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl) && (
+          {(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl || ticket.autoMode) && (
             <div className="border-t border-border pt-3">
               <div className="flex items-center justify-between gap-3">
-                {/* Left: Workflow Job Indicator + Cancel Button */}
-                {workflowJob && (
+                {/* Left: Workflow Job Indicator + Cancel Button + Auto-mode toggle */}
+                {(workflowJob || autoModeEligible) && (
                   <div className="flex items-center gap-1.5">
-                    <JobStatusIndicator
-                      status={workflowJob.status}
-                      command={workflowJob.command}
-                      jobType={classifyJobType(workflowJob.command)}
-                      stage={ticket.stage}
-                      animated={true}
-                      completedAt={workflowJob.completedAt}
-                    />
+                    {workflowJob && (
+                      <JobStatusIndicator
+                        status={workflowJob.status}
+                        command={workflowJob.command}
+                        jobType={classifyJobType(workflowJob.command)}
+                        stage={ticket.stage}
+                        animated={true}
+                        completedAt={workflowJob.completedAt}
+                      />
+                    )}
                     {isCancellableJob && (
                       <button
                         onClick={(e) => {
@@ -269,6 +324,13 @@ export const TicketCard = React.memo(
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
+                    )}
+                    {autoModeEligible && (
+                      <AutoModeIcon
+                        autoMode={ticket.autoMode}
+                        onClick={handleAutoModeClick}
+                        disabled={autoModeMutation.isPending}
+                      />
                     )}
                   </div>
                 )}

@@ -389,6 +389,28 @@ describe('Ticket Transitions', () => {
       });
     });
 
+    describe('VERIFY → PLAN (rollback-reset)', () => {
+      it('disengages autoMode atomically with the stage rollback (AIB-682 FR-022)', async () => {
+        const ticketId = await createTicketInStage('VERIFY', 'FAILED');
+        await prisma.ticket.update({
+          where: { id: ticketId },
+          data: { autoMode: true, branch: 'feat/AIB-682-rollback' },
+        });
+
+        const response = await ctx.api.post<{ id: number; stage: string }>(
+          `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+          { targetStage: 'PLAN' }
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.data.stage).toBe('PLAN');
+
+        const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+        expect(ticket?.stage).toBe('PLAN');
+        expect(ticket?.autoMode).toBe(false);
+      });
+    });
+
     describe('VERIFY → BUILD', () => {
       it('should rollback with FAILED job', async () => {
         const ticketId = await createTicketInStage('VERIFY', 'FAILED');

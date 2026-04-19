@@ -136,6 +136,7 @@ Users move tickets between stages using drag-and-drop:
   - Spec files in `specs/{branch}/` folder are preserved automatically
   - Preview URL will be cleared
   - Original implement job record will be deleted
+  - Auto-mode (if enabled) is turned off to prevent the PLAN → BUILD → VERIFY → PLAN loop
 - Triggers rollback-reset workflow that:
   - Identifies the last commit before BUILD phase began
   - Backs up spec files using git stash
@@ -146,6 +147,14 @@ Users move tickets between stages using drag-and-drop:
 - Not available for QUICK workflow type
 - Not available when job is RUNNING or PENDING
 - Creates a `rollback-reset` job to track the git reset operation
+
+**Auto-Transition Mode**:
+- FULL-workflow tickets in INBOX/SPECIFY/PLAN display a fast-forward toggle icon on the card
+- Enabling it chains SPECIFY → PLAN → BUILD automatically as each workflow job succeeds
+- Disabling it is a single click with no confirmation; running jobs are not affected
+- Auto-mode turns itself off on any FAILED/CANCELLED job and on VERIFY → PLAN rollback
+- State is per-ticket, persisted server-side, and shared across all viewers
+- Full behavior documented in the Kanban Board specification
 
 **Close Ticket (VERIFY to CLOSED)**:
 - When dropping VERIFY ticket on Close zone in SHIP column
