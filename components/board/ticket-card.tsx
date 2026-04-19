@@ -11,14 +11,18 @@ import { AgentIcon } from '@/components/ui/agent-icon';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { JobStatusIndicator } from './job-status-indicator';
 import { Agent, Job } from '@prisma/client';
+import type { Stage } from '@/lib/types';
 import { classifyJobType } from '@/lib/utils/job-type-classifier';
 import { TicketCardDeployIcon } from './ticket-card-deploy-icon';
 import { TicketCardPreviewIcon } from './ticket-card-preview-icon';
 import { DeployConfirmationModal } from './deploy-confirmation-modal';
 import { CancelConfirmationModal } from './cancel-confirmation-modal';
+import { AutoTransitionToggle } from './auto-transition-toggle';
+import { AutoTransitionConfirmationModal } from './auto-transition-confirmation-modal';
 import { isTicketDeployable } from '@/app/lib/utils/deploy-preview-eligibility';
 import { useDeployPreview } from '@/app/lib/hooks/mutations/useDeployPreview';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
+import { useToggleAutoMode } from '@/app/lib/hooks/mutations/useToggleAutoMode';
 import { useHasMounted } from '@/lib/hooks/use-has-mounted';
 import { QualityScoreBadge } from '@/components/ticket/quality-score-badge';
 import { X } from 'lucide-react';
@@ -56,12 +60,55 @@ export const TicketCard = React.memo(
     const isMounted = useHasMounted();
     const [showDeployModal, setShowDeployModal] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
+    const [showAutoTransitionModal, setShowAutoTransitionModal] = useState(false);
 
     // Deploy preview mutation
     const { mutate: deployPreview } = useDeployPreview(ticket.projectId);
 
     // Cancel job mutation
     const cancelJobMutation = useCancelJob(ticket.projectId);
+
+    // Auto-transition toggle mutation
+    const toggleAutoModeMutation = useToggleAutoMode(ticket.projectId);
+
+    // Auto-transition toggle is only shown for FULL-workflow tickets in INBOX/SPECIFY/PLAN
+    const showAutoTransitionToggle =
+      ticket.workflowType === 'FULL' &&
+      (ticket.stage === 'INBOX' || ticket.stage === 'SPECIFY' || ticket.stage === 'PLAN');
+
+    const nextStageFromCurrent: Stage | null = React.useMemo(() => {
+      if (ticket.stage === 'INBOX') return 'SPECIFY' as Stage;
+      if (ticket.stage === 'SPECIFY') return 'PLAN' as Stage;
+      if (ticket.stage === 'PLAN') return 'BUILD' as Stage;
+      return null;
+    }, [ticket.stage]);
+
+    const hasRunningWorkflowJob =
+      workflowJob != null && (workflowJob.status === 'PENDING' || workflowJob.status === 'RUNNING');
+
+    const handleAutoTransitionToggle = React.useCallback(() => {
+      if (ticket.autoMode) {
+        toggleAutoModeMutation.mutate({
+          ticketId: ticket.id,
+          ticketKey: ticket.ticketKey,
+          version: ticket.version,
+          enable: false,
+        });
+        return;
+      }
+      setShowAutoTransitionModal(true);
+    }, [ticket.autoMode, ticket.id, ticket.ticketKey, ticket.version, toggleAutoModeMutation]);
+
+    const handleAutoTransitionConfirm = React.useCallback(() => {
+      toggleAutoModeMutation.mutate({
+        ticketId: ticket.id,
+        ticketKey: ticket.ticketKey,
+        version: ticket.version,
+        enable: true,
+        immediateDispatchStage: hasRunningWorkflowJob ? null : nextStageFromCurrent,
+      });
+      setShowAutoTransitionModal(false);
+    }, [ticket.id, ticket.ticketKey, ticket.version, hasRunningWorkflowJob, nextStageFromCurrent, toggleAutoModeMutation]);
 
     // Check if ticket is deployable
     const isDeployable = React.useMemo(() => {
@@ -166,6 +213,14 @@ export const TicketCard = React.memo(
                   Clean
                 </Badge>
               )}
+              {/* Auto-transition toggle (FULL workflow, INBOX/SPECIFY/PLAN only) */}
+              {showAutoTransitionToggle && (
+                <AutoTransitionToggle
+                  enabled={ticket.autoMode}
+                  onClick={handleAutoTransitionToggle}
+                  disabled={toggleAutoModeMutation.isPending}
+                />
+              )}
               {/* Agent Badge (with optional custom-models halo ring) */}
               {effectiveAgent && (
                 <Tooltip>
@@ -204,6 +259,17 @@ export const TicketCard = React.memo(
               )}
             </div>
           </div>
+
+          {/* Auto-transition Confirmation Modal */}
+          {showAutoTransitionToggle && (
+            <AutoTransitionConfirmationModal
+              open={showAutoTransitionModal}
+              onOpenChange={setShowAutoTransitionModal}
+              onConfirm={handleAutoTransitionConfirm}
+              currentStage={ticket.stage}
+              isPending={toggleAutoModeMutation.isPending}
+            />
+          )}
 
           {/* Cancel Confirmation Modal */}
           {workflowJob && (

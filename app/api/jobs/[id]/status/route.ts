@@ -8,6 +8,7 @@ import {
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { sendJobCompletionNotification } from '@/app/lib/push/send-notification';
+import { handleAutoTransitionOnJobComplete } from '@/lib/tickets/auto-transition';
 
 /**
  * PATCH /api/jobs/[id]/status
@@ -254,6 +255,14 @@ export async function PATCH(
         requestedStatus as 'COMPLETED' | 'FAILED' | 'CANCELLED'
       ).catch((err) => {
         console.error('[Job Status Update] Push notification error:', err);
+      });
+
+      // Auto-transition mode: dispatch next stage on success or disable on failure (non-blocking)
+      handleAutoTransitionOnJobComplete(
+        jobId,
+        requestedStatus as 'COMPLETED' | 'FAILED' | 'CANCELLED'
+      ).catch((err) => {
+        console.error('[Job Status Update] Auto-transition error:', err);
       });
     }
 
