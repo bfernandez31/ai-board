@@ -44,10 +44,7 @@ export const AutoModeConfirmationModal = React.memo(
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={(e) => e.stopPropagation()}
-              className="bg-secondary text-foreground hover:bg-accent"
-            >
+            <AlertDialogCancel onClick={(e) => e.stopPropagation()}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
@@ -55,7 +52,6 @@ export const AutoModeConfirmationModal = React.memo(
                 e.stopPropagation();
                 onConfirm();
               }}
-              className="bg-indigo-500 text-white hover:bg-indigo-600 dark:bg-indigo-400 dark:hover:bg-indigo-500"
               data-testid="auto-mode-confirm"
             >
               Enable auto-mode

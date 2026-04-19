@@ -149,7 +149,7 @@ Users move tickets between stages using drag-and-drop:
 - Creates a `rollback-reset` job to track the git reset operation
 
 **Auto-Transition Mode**:
-- FULL-workflow tickets in INBOX/SPECIFY/PLAN display a fast-forward toggle icon on the card
+- FULL-workflow tickets in INBOX/SPECIFY/PLAN display a double-chevron toggle icon on the card (animated mauve glyph when on, hover-reveal when off)
 - Enabling it chains SPECIFY → PLAN → BUILD automatically as each workflow job succeeds
 - Disabling it is a single click with no confirmation; running jobs are not affected
 - Auto-mode turns itself off on any FAILED/CANCELLED job and on VERIFY → PLAN rollback

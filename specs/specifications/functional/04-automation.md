@@ -262,7 +262,7 @@ FULL-workflow tickets can opt into automatic stage chaining so that SPECIFY → 
 
 ### Activation
 
-1. User clicks the fast-forward icon on an eligible ticket card
+1. User clicks the double-chevron icon on an eligible ticket card
 2. Confirmation modal lists the stages that will run automatically (e.g., from SPECIFY: "PLAN → BUILD will run automatically")
 3. On confirm:
    - `autoMode` is persisted as `true` for the ticket
@@ -310,7 +310,7 @@ sequenceDiagram
     participant WF as GitHub Actions
     participant DB as Database
 
-    U->>UI: Click fast-forward icon (INBOX ticket)
+    U->>UI: Click double-chevron icon (INBOX ticket)
     UI->>API: PATCH /auto-mode { enabled: true }
     API->>DB: autoMode=true
     API->>WF: Dispatch speckit.yml (SPECIFY)

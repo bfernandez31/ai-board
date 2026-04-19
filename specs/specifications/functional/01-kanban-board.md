@@ -117,11 +117,11 @@ Tickets are ordered differently depending on their stage:
 Users can enable a per-ticket "auto mode" that automatically chains the SPECIFY → PLAN → BUILD workflow after each successful job, removing the need to drag the card between stages manually.
 
 **Toggle icon**:
-- A fast-forward icon appears on FULL-workflow ticket cards in INBOX, SPECIFY, or PLAN
+- A double-chevron icon appears on FULL-workflow ticket cards in INBOX, SPECIFY, or PLAN
 - Never rendered on QUICK-workflow tickets in any stage
 - Never rendered on full-workflow tickets in BUILD, VERIFY, SHIP, or CLOSED
-- Off state: hidden by default, visible only on card hover (matches the cancel-X pattern)
-- On state: permanently visible with accent halo styling so the state is obvious across the board without hovering
+- Off state: hidden by default, visible only on card hover (matches the cancel-X pattern) — plain double-chevron with no background, border, or glow
+- On state: permanently visible as an animated mauve glyph (the chevron slides horizontally with a gentle opacity pulse) so the state is obvious across the board without hovering. No background, border, or box-shadow. Respects `prefers-reduced-motion` by pausing the animation at a steady opacity.
 - Tooltip: "Enable auto-transition" when off, "Auto-transition on — click to disable" when on
 
 **Enabling auto-mode** (from off):
