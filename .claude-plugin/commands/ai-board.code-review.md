@@ -41,7 +41,7 @@ To do this, follow these steps precisely:
 5b. **Compute dimension scores post-vote.** For each of the 5 dimensions, compute its `dimensionScore` using the confidence scores from step 5. Start from a base score of 100 and apply penalties for each issue belonging to that dimension, based on the issue's confidence score:
    - Confidence 0-29: 0 pts penalty (false positive, ignore)
    - Confidence 30-59: -1 pt penalty (weak signal)
-   - Confidence 60-79: -3 pts penalty (almost real, deserves attention)
+   - Confidence 60-79: -5 pts penalty (almost real, deserves attention)
    - Confidence 80-89: -8 pts penalty (confirmed moderate bug)
    - Confidence 90-100: -15 pts penalty (confirmed serious bug)
    - Floor the result at 0 (score cannot go negative).
