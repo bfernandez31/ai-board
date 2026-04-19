@@ -127,6 +127,70 @@ When no projects exist:
 - All text content uses `min-w-0` and `truncate` utilities to prevent horizontal scroll
 - Cards maintain fixed width boundaries on mobile viewports (375px minimum)
 
+### Activity Heatmap
+
+Below the project cards grid, the `/projects` page renders a GitHub-style contribution heatmap that aggregates the signed-in user's AI activity across every project they own or are a member of.
+
+**Layout**:
+- Full-width section rendered below the project cards
+- Header line above the grid in the form "X jobs · Y tickets shipped in the last year" (or "in 2025" when a specific year is selected), where X is total job count and Y is distinct tickets whose `ship` workflow job completed successfully in the period
+- 7-row grid (days of the week) × one column per ISO week intersecting the selected period
+- Month labels along the top, aligned to the column in which each month begins
+- Day-of-week labels along the left side (sticky during horizontal scroll)
+- Legend in the bottom-right: five swatches from least to most intense, labeled "Less" on the left and "More" on the right
+
+**Cell coloring**:
+- Five violet intensity buckets drawn from the aurora theme
+- Bucket 0 represents zero jobs for that day; buckets 1–4 use quantile thresholds (p25/p50/p75) computed over the non-zero days in the period — a single outlier day does not flatten the rest of the scale
+- When at least one day has activity, bucket 1 is never empty (all same-count non-zero days fall into bucket 1)
+- Cells for weekdays outside the selected period are omitted rather than rendered, producing a "chipped corner" effect on partial weeks at period boundaries
+
+**Cell tooltip (hover on desktop, tap on mobile)**:
+- Formatted human-readable date
+- Ticket-shipped line: "N tickets shipped" (distinct tickets with a completed `ship` job that day)
+- Jobs and cost line: "N jobs · $X.XX"
+- When any contributing job on that day has no recorded cost, the cost portion is omitted entirely — never displayed as "$NaN" or "$0"
+- On touch devices, tapping outside the cell dismisses the tooltip; only one tooltip is visible at a time
+
+**Period selector** (year dropdown above the grid):
+- "Last 12 months" (default, rolling 12-month window ending today)
+- Each calendar year from the user's account-creation year through the current year, ordered most recent first
+- Hidden or disabled when the only available option is "Last 12 months" (user was created in the current calendar year)
+- Switching selection re-renders the grid for the new period
+
+**Agent filter** (dropdown above the grid):
+- Populated from the distinct agents present in the user's jobs, combining explicit `ticket.agent` values with the effective agent inherited from `project.defaultAgent`
+- "All" entry selected by default
+- Hidden entirely when fewer than two distinct agents are present
+- When filtering by a specific agent, jobs from tickets with that explicit agent AND jobs from tickets with no explicit agent whose project's default agent matches the filter are both included
+- Agent filter does not change the grid boundaries; only the counts used for coloring and tooltips
+
+**URL-shareable state**:
+- Selected period and agent filter are reflected in URL query parameters `heatmapPeriod` (values: `last12months` or a four-digit year) and `heatmapAgent` (values: `all` or an agent identifier such as `CLAUDE`)
+- Defaults are omitted from the URL — a fresh view keeps the URL clean
+- Copying the URL and opening it in another tab (while signed in) reproduces the same period and agent filter
+- Invalid query parameters (non-existent year, unknown agent) are silently coerced to defaults
+
+**Empty and error states**:
+- When the selected period has zero jobs (after any active filter), the grid is replaced by the centered message "No activity to show yet — your AI work will appear here" while legend and filter controls remain visible
+- When the aggregation fails on first render, the heatmap region shows a non-blocking error card ("Couldn't load activity — please refresh") without blocking the project cards above it
+- Polled refreshes that fail do not blank the current grid; they retry silently on the next interval
+
+**Rendering and refresh**:
+- Initial data is fetched server-side so the heatmap appears on first paint with no loading spinner flash
+- Background refetches update the data silently on a 15-second polling cadence (matching analytics and usage)
+
+**Responsive behavior**:
+- On viewports too narrow to display the full grid, the grid scrolls horizontally within its container rather than shrinking cells or wrapping weekday rows
+- Cells maintain a minimum tappable size (14 px, with 2 px gap)
+- The day-of-week label column remains pinned (sticky) to the left edge as cells and month labels scroll underneath
+- The `/projects` page scroll is adjusted so the heatmap is reachable via natural page scroll rather than being cut off by an internal scroll constraint on the project cards region
+
+**Scope and accuracy**:
+- Data is scoped to the signed-in user — jobs from projects they own and projects they are a member of
+- "Tickets shipped" is counted only when a ticket's `ship` workflow job reached COMPLETED status; stage transitions to SHIP without a successful ship job do not increment the counter
+- The daily cell's `shippedTicketCount` counts distinct tickets shipped that day; the header's `Y tickets shipped` dedupes by ticket across the entire period, so a ticket re-shipped after rollback is counted once in the header but contributes to both days' cell counts
+
 ## Project Settings
 
 ### Settings Page Navigation
