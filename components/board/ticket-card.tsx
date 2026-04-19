@@ -28,6 +28,13 @@ import { QualityScoreBadge } from '@/components/ticket/quality-score-badge';
 import { X } from 'lucide-react';
 import { STAGE_MODEL_KEYS, STAGE_MODEL_LABELS } from '@/lib/models/claude-models';
 
+/** Stages that support kicking off an auto-transition chain immediately (INBOX/SPECIFY/PLAN). */
+const IMMEDIATE_DISPATCH_NEXT: Record<string, Stage> = {
+  INBOX: 'SPECIFY' as Stage,
+  SPECIFY: 'PLAN' as Stage,
+  PLAN: 'BUILD' as Stage,
+};
+
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
   workflowJob?: Job | null; // User Story 1: Workflow job display
@@ -72,16 +79,9 @@ export const TicketCard = React.memo(
     const toggleAutoModeMutation = useToggleAutoMode(ticket.projectId);
 
     // Auto-transition toggle is only shown for FULL-workflow tickets in INBOX/SPECIFY/PLAN
+    const nextStageFromCurrent = IMMEDIATE_DISPATCH_NEXT[ticket.stage] ?? null;
     const showAutoTransitionToggle =
-      ticket.workflowType === 'FULL' &&
-      (ticket.stage === 'INBOX' || ticket.stage === 'SPECIFY' || ticket.stage === 'PLAN');
-
-    const nextStageFromCurrent: Stage | null = React.useMemo(() => {
-      if (ticket.stage === 'INBOX') return 'SPECIFY' as Stage;
-      if (ticket.stage === 'SPECIFY') return 'PLAN' as Stage;
-      if (ticket.stage === 'PLAN') return 'BUILD' as Stage;
-      return null;
-    }, [ticket.stage]);
+      ticket.workflowType === 'FULL' && nextStageFromCurrent !== null;
 
     const hasRunningWorkflowJob =
       workflowJob != null && (workflowJob.status === 'PENDING' || workflowJob.status === 'RUNNING');
@@ -159,7 +159,7 @@ export const TicketCard = React.memo(
     const showDeployButton = (!deployJob && isDeployable) || (deployJob != null && !isDeployJobActive && ticket.stage === 'VERIFY');
 
     // Cancel button: visible when ticket has PENDING or RUNNING workflow job
-    const isCancellableJob = workflowJob && (workflowJob.status === 'PENDING' || workflowJob.status === 'RUNNING');
+    const isCancellableJob = hasRunningWorkflowJob;
 
     const handleClick = () => {
       // Prevent click during drag
