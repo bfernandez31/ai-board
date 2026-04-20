@@ -9,8 +9,8 @@
 ## Phase 2: Foundational
 - [ ] T003 Implement `lib/db/activity.ts` for heatmap data aggregation (counts per day, shipped tickets, cost calculation)
 - [ ] T004 [P] Create integration test `tests/integration/activity/heatmap-aggregation.test.ts` for database aggregation logic
-- [ ] T005 Implement date utility functions (rolling 12-month boundaries, calendar year ranges, chipped edge logic) in `lib/utils/activity-date-utils.ts`
-- [ ] T006 [P] Create unit test `tests/unit/activity/heatmap-logic.test.ts` for date boundaries and chipped edge calculations
+- [X] T005 Implement date utility functions (rolling 12-month boundaries, calendar year ranges, chipped edge logic) in `lib/utils/activity-date-utils.ts` ✅ DONE
+- [X] T006 [P] Create unit test `tests/unit/activity/heatmap-logic.test.ts` for date boundaries and chipped edge calculations ✅ DONE
 
 ## Phase 3: User Story 1 - View Rolling Annual Heatmap (P1)
 - [ ] T007 [US1] Create API route `app/api/activity/heatmap/route.ts` for fetching heatmap data with user authentication
