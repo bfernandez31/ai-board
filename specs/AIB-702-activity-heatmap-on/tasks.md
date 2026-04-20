@@ -21,8 +21,8 @@
 - [X] T012 [US1] Add Aurora theme intensity classes (`.aurora-cell-1`, `.aurora-cell-2`, etc.) to `app/globals.css` ✅ DONE
 
 ## Phase 4: User Story 4 - View Detailed Daily Activity (P2)
-- [ ] T013 [P] [US4] Implement `ActivityHeatmapTooltip` using shadcn/ui Tooltip component
-- [ ] T014 [US4] Integrate `ActivityHeatmapTooltip` into `ActivityHeatmapCell` with mobile tap/touch support and conditional cost display
+- [X] T013 [P] [US4] Implement `ActivityHeatmapTooltip` using shadcn/ui Tooltip component ✅ DONE
+- [X] T014 [US4] Integrate `ActivityHeatmapTooltip` into `ActivityHeatmapCell` with mobile tap/touch support and conditional cost display ✅ DONE
 
 ## Phase 5: User Story 2 - Filter Heatmap by Agent (P2)
 - [ ] T015 [US2] Implement `ActivityHeatmapHeader` with Agent Filter dropdown (dynamically populated from user's jobs)
