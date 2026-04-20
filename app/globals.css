@@ -395,6 +395,11 @@
   /* Recommendation container */
   .aurora-bg-recommendation { background: hsl(var(--ctp-mauve) / 0.04); }
 
+  /* Health score heart — dark shadow keeps zinc-100 label readable on colored heart fill regardless of theme */
+  .health-heart-score-label {
+    text-shadow: 0 1px 2px hsl(0 0% 0% / 0.5);
+  }
+
   /* Auto-transition animated glyph (AIB-682) */
   .auto-transition-glyph {
     display: inline-flex;

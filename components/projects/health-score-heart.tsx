@@ -97,7 +97,7 @@ export function HealthScoreHeart({ healthScore }: HealthScoreHeartProps) {
               )}
             </svg>
             <span
-              className="absolute inset-0 grid place-items-center font-mono font-bold text-[12px] text-zinc-100 pointer-events-none pt-[4px] [text-shadow:0_1px_2px_rgb(0_0_0_/_0.5)]"
+              className="absolute inset-0 grid place-items-center font-mono font-bold text-[12px] text-zinc-100 pointer-events-none pt-[4px] health-heart-score-label"
             >
               {displayText}
             </span>
