@@ -5,6 +5,9 @@ import { UsageBanner } from '@/components/billing/usage-banner';
 import { ProjectsHeaderActions } from '@/components/projects/projects-header-actions';
 import { toProjectWithCount, type ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
+import { ActivityHeatmap } from '@/components/projects/activity-heatmap/activity-heatmap';
+import { Suspense } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Force dynamic rendering - this page uses headers() for auth
 export const dynamic = 'force-dynamic';
@@ -26,8 +29,19 @@ async function getProjects(): Promise<ProjectsListResponse> {
   }
 }
 
-export default async function ProjectsPage() {
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function ProjectsPage({ searchParams }: PageProps) {
   const projects = await getProjects();
+  const resolvedSearchParams = await searchParams;
+
+  // Type cast for Heatmap props
+  const heatmapParams = {
+    agent: typeof resolvedSearchParams.agent === 'string' ? resolvedSearchParams.agent : undefined,
+    year: typeof resolvedSearchParams.year === 'string' ? resolvedSearchParams.year : undefined,
+  };
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -43,6 +57,10 @@ export default async function ProjectsPage() {
       <div className="mt-6">
         <ProjectsContainer projects={projects} />
       </div>
+
+      <Suspense fallback={<Skeleton className="h-[200px] w-full mt-12" />}>
+        <ActivityHeatmap searchParams={heatmapParams} />
+      </Suspense>
     </div>
   );
 }

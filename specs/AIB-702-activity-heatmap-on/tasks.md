@@ -15,10 +15,10 @@
 ## Phase 3: User Story 1 - View Rolling Annual Heatmap (P1)
 - [X] T007 [US1] Create API route `app/api/activity/heatmap/route.ts` for fetching heatmap data with user authentication ✅ DONE
 - [X] T008 [P] [US1] Extend `tests/integration/activity/api.test.ts` to include contract tests for `GET /api/activity/heatmap` ✅ DONE
-- [ ] T009 [US1] Implement `ActivityHeatmapGrid` and `ActivityHeatmapCell` components in `components/projects/activity-heatmap/`
-- [ ] T010 [US1] Implement `ActivityHeatmap` main component with server-side data fetching for initial load
-- [ ] T011 [US1] Inject `ActivityHeatmap` into `app/projects/page.tsx` below the project cards grid
-- [ ] T012 [US1] Add Aurora theme intensity classes (`.aurora-cell-1`, `.aurora-cell-2`, etc.) to `app/globals.css`
+- [X] T009 [US1] Implement `ActivityHeatmapGrid` and `ActivityHeatmapCell` components in `components/projects/activity-heatmap/` ✅ DONE
+- [X] T010 [US1] Implement `ActivityHeatmap` main component with server-side data fetching for initial load ✅ DONE
+- [X] T011 [US1] Inject `ActivityHeatmap` into `app/projects/page.tsx` below the project cards grid ✅ DONE
+- [X] T012 [US1] Add Aurora theme intensity classes (`.aurora-cell-1`, `.aurora-cell-2`, etc.) to `app/globals.css` ✅ DONE
 
 ## Phase 4: User Story 4 - View Detailed Daily Activity (P2)
 - [ ] T013 [P] [US4] Implement `ActivityHeatmapTooltip` using shadcn/ui Tooltip component

@@ -386,6 +386,31 @@
     box-shadow: 0 0 8px hsl(var(--ctp-mauve) / 0.1);
   }
 
+  /* Activity heatmap cells */
+  .aurora-cell-0 { background: hsl(var(--ctp-surface-0) / 0.3); border: 1px solid transparent; }
+  .aurora-cell-1 {
+    background: linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.15), hsl(var(--ctp-mauve) / 0.1));
+    border: 1px solid hsl(var(--ctp-sapphire) / 0.2);
+  }
+  .aurora-cell-2 {
+    background: linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.3), hsl(var(--ctp-mauve) / 0.25));
+    border: 1px solid hsl(var(--ctp-sapphire) / 0.4);
+    box-shadow: 0 0 8px hsl(var(--ctp-sapphire) / 0.1);
+  }
+  .aurora-cell-3 {
+    background: linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.5), hsl(var(--ctp-mauve) / 0.45));
+    border: 1px solid hsl(var(--ctp-sapphire) / 0.6);
+    box-shadow: 0 0 12px hsl(var(--ctp-sapphire) / 0.2);
+  }
+  .aurora-cell-shipped {
+    border: 1px solid hsl(var(--ctp-pink) / 0.6) !important;
+    box-shadow: 0 0 10px hsl(var(--ctp-pink) / 0.3) !important;
+  }
+  .aurora-cell-chipped {
+    opacity: 0.2;
+    pointer-events: none;
+  }
+
   /* Decision point card */
   .aurora-bg-decision { background: linear-gradient(135deg, hsl(var(--ctp-sapphire) / 0.03), hsl(var(--ctp-mauve) / 0.05)); }
 
