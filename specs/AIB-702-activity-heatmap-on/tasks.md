@@ -25,13 +25,13 @@
 - [X] T014 [US4] Integrate `ActivityHeatmapTooltip` into `ActivityHeatmapCell` with mobile tap/touch support and conditional cost display ✅ DONE
 
 ## Phase 5: User Story 2 - Filter Heatmap by Agent (P2)
-- [ ] T015 [US2] Implement `ActivityHeatmapHeader` with Agent Filter dropdown (dynamically populated from user's jobs)
-- [ ] T016 [US2] Update `lib/db/activity.ts` and API route to support filtering by effective agent (Ticket.agent ?? Project.defaultAgent)
-- [ ] T017 [US2] Sync agent filter state to URL search parameters in `ActivityHeatmap` for shareable URLs
+- [X] T015 [US2] Implement `ActivityHeatmapHeader` with Agent Filter dropdown (dynamically populated from user's jobs) ✅ DONE
+- [X] T016 [US2] Update `lib/db/activity.ts` and API route to support filtering by effective agent (Ticket.agent ?? Project.defaultAgent) ✅ DONE
+- [X] T017 [US2] Sync agent filter state to URL search parameters in `ActivityHeatmap` for shareable URLs ✅ DONE
 
 ## Phase 6: User Story 3 - Select Historical Year (P3)
-- [ ] T018 [US3] Implement Year Selector dropdown in `ActivityHeatmapHeader` (from account creation year to current)
-- [ ] T019 [US3] Update `lib/db/activity.ts` and `ActivityHeatmapGrid` to handle calendar year boundaries and chipped edges
+- [X] T018 [US3] Implement Year Selector dropdown in `ActivityHeatmapHeader` (from account creation year to current) ✅ DONE
+- [X] T019 [US3] Update `lib/db/activity.ts` and `ActivityHeatmapGrid` to handle calendar year boundaries and chipped edges ✅ DONE
 
 ## Phase 7: Polish & Cross-cutting
 - [ ] T020 [P] Implement horizontal scrolling for the heatmap grid on mobile viewports with sticky day labels
