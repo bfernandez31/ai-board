@@ -97,7 +97,33 @@ When no projects exist:
 - Ticket keys clearly indicate which project they belong to
 - URLs are stable and shareable (bookmarks, external links)
 
-**Action Buttons**:
+## Activity Heatmap
+
+The Projects page includes a global activity heatmap that visualizes AI work across all user projects over the past year.
+
+### Visual Representation
+- **Grid Layout**: A 7-row heatmap grid (Sunday to Saturday) displayed below the project cards.
+- **Intensity Colors**: Cells utilize a violet color gradient from the project aurora theme. Higher intensity indicates more AI jobs completed on that day.
+- **Chipped Corners**: The grid boundaries for the selected period (rolling year or calendar year) are respected by omitting unrendered cells at the start and end of the period.
+- **Empty State**: If no activity exists in the selected period, a message displays: "No activity to show yet — your AI work will appear here".
+
+### Metrics and Counters
+- **Activity Summary**: A header above the grid displays the total count of jobs and tickets shipped during the period (e.g., "1,234 jobs · 45 tickets shipped in the last year").
+- **Ship Definition**: A ticket is counted as "shipped" only when its associated `ship` workflow job completes successfully.
+
+### Interaction and Filtering
+- **Tooltips**: Hovering (desktop) or tapping (mobile) a cell displays a detailed tooltip with:
+  - Shipped tickets count
+  - Total job count
+  - Total AI cost (omitted if no cost data exists)
+  - Formatted date
+- **Year Selector**: Users can switch between "Last 12 months" and specific calendar years back to their account creation date.
+- **Agent Filter**: A dropdown allows filtering activity by a specific AI agent (e.g., CLAUDE, CODEX). The filter is hidden if only one agent (or none) has performed work.
+- **URL Synchronization**: The active year and agent filters are synchronized with URL query parameters for stable sharing.
+- **Mobile Experience**: The heatmap supports horizontal scrolling on small screens, with day-of-week labels pinned to the left.
+
+### Action Buttons
+
 - "Import Project" button (with icon) — opens the Import Project modal; requires GitHub `repo` scope
 - "Create Project" button (with icon) — disabled (manual project creation is a future feature)
 

@@ -35,15 +35,18 @@ ai-board/
 ├── app/                          # Next.js App Router
 │   ├── api/                      # RESTful API endpoints
 │   │   ├── projects/             # Project-scoped APIs
+│   │   ├── activity/             # Global activity & heatmap APIs
 │   │   └── jobs/                 # Job status updates
 │   ├── lib/                      # Shared utilities
-│   │   ├── db/                   # Database utilities
+│   │   ├── db/                   # Database utilities (including activity aggregation)
 │   │   ├── hooks/                # React hooks
-│   │   │   ├── queries/          # TanStack Query hooks
+│   │   │   ├── queries/          # TanStack Query hooks (use-project-activity, etc.)
 │   │   │   └── mutations/        # Mutation hooks
+│   │   ├── types/                # Type definitions (activity.ts, etc.)
 │   │   ├── schemas/              # Zod validation schemas
 │   │   ├── workflows/            # Workflow orchestration
-│   │   └── utils/                # Helper functions
+│   │   └── utils/                # Helper functions (activity-date-utils.ts, etc.)
+│   ├── projects/                 # Global projects page with Activity Heatmap
 │   ├── projects/[projectId]/     # Project-scoped pages
 │   │   └── board/                # Kanban board
 │   ├── legal/                    # Legal pages (public)
@@ -135,6 +138,15 @@ Stage Transition
 - Only `.claude-plugin/` and `.github/scripts/` directories are fetched (~1MB vs ~100MB)
 - Commands are symlinked to `target/.claude/commands/` for Claude to discover
 - Even when ai-board works on itself, it uses stable commands from main
+
+#### Activity Tracking & Visualization
+
+The system provides a global activity heatmap that aggregates AI work across all projects.
+
+- **Data Sourcing**: Activity is derived from `Job` records with `COMPLETED` status and successful `ship` command jobs.
+- **Aggregation Layer**: A dedicated database utility layer handles the time-range calculations (rolling year or calendar year) and agent-based filtering.
+- **Server-Side Rendering**: Initial heatmap data is fetched and passed to the component via React Server Components to ensure zero-flash page loads.
+- **Filtering Logic**: Activity can be filtered by calendar year and AI agent, with state synchronized to URL query parameters for consistency and shareability.
 
 ### Multi-Tenancy Pattern
 

@@ -303,6 +303,19 @@ model Ticket {
   - CLOSED tickets excluded from board display but included in search results
   - CLOSED is terminal state (no outbound transitions)
 
+## Derived Views
+
+### Activity Tracking
+
+Activity is not stored in a separate table but is dynamically derived from the `Job` and `Ticket` models to ensure 100% data consistency.
+
+- **Daily Activity**: Aggregated from `Job` records where `status = COMPLETED`.
+- **Shipped Tickets**: Calculated from successful `ship` command jobs.
+- **Agent Resolution**: When filtering by agent, the system considers:
+  1. The `agent` explicitly set on the `Ticket`.
+  2. If the ticket agent is null, the `defaultAgent` of the parent `Project`.
+- **Visual Intensity**: Job counts are mapped to a 5-level intensity scale (0-4) for heatmap rendering.
+
 ### Job
 
 Jobs track GitHub Actions workflow executions.

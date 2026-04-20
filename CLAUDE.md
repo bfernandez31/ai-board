@@ -17,7 +17,7 @@
 - **Core**: TypeScript 5.9 (strict), Node.js 22.20.0, Next.js 16 (App Router), React 18
 - **Database**: PostgreSQL 14+, Prisma 6.x
 - **Styling**: TailwindCSS 3.4, shadcn/ui, lucide-react
-- **Charts**: Recharts 3.x (analytics dashboard)
+- **Charts**: Recharts 3.x (analytics dashboard), Custom SVG/CSS Heatmap (contribution activity)
 - **State**: TanStack Query v5.95.2, client-side polling (2s jobs, 10s comments, 15s notifications, 15s analytics, 15s usage)
 - **Testing**: Vitest (unit + integration), Playwright (E2E browser tests)
 - **Auth**: NextAuth.js (session-based)
@@ -65,6 +65,7 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 - Usage: `GET /api/billing/usage` returns current counts vs limits; `useUsage` hook (15s polling) powers dashboard `UsageBanner` and ticket/project creation quota gates
 - StripeEvent: Idempotency log for webhook events (keyed on Stripe event ID)
 - UserCredential: One per provider per user; encrypted with AES-256-GCM; master key in `CREDENTIAL_ENCRYPTION_KEY` env var (must be provisioned in all environments); workflow dispatch blocked when owner has no credential
+- **Activity**: Global contribution heatmap data is derived from `Job` (count) and successful `ship` jobs (shipped tickets); resolution considers `ticket.agent` → `project.defaultAgent` fallback.
 
 ## API Patterns
 

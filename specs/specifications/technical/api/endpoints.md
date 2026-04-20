@@ -4628,6 +4628,49 @@ Returns aggregated Quality Gate data for the Health Dashboard drawer.
 
 ## Activity Endpoints
 
+### GET /api/activity/heatmap
+
+Fetch aggregated activity data for the contribution heatmap across all user projects.
+
+**Authentication**: Required (session)
+**Authorization**: Returns activity for all projects owned by or accessible to the user.
+
+**Query Parameters**:
+- `year` (optional): Specific calendar year (e.g., `2025`) or `rolling` for the last 12 months (default: `rolling`).
+- `agent` (optional): Filter activity by specific AI agent name (e.g., `CLAUDE`).
+
+**Response** (200 OK):
+```json
+{
+  "days": [
+    {
+      "date": "2026-04-20T00:00:00.000Z",
+      "count": 12,
+      "shippedCount": 2,
+      "costUsd": 0.45,
+      "intensity": 4
+    }
+  ],
+  "stats": {
+    "totalJobs": 1234,
+    "totalShipped": 45
+  },
+  "availableAgents": ["CLAUDE", "CODEX"],
+  "accountCreatedYear": 2024
+}
+```
+
+**Fields**:
+- `days`: Array of daily activity objects.
+  - `date`: ISO 8601 timestamp for the start of the day.
+  - `count`: Total number of jobs completed on that day.
+  - `shippedCount`: Number of successful `ship` jobs on that day.
+  - `costUsd`: Total AI cost for jobs on that day.
+  - `intensity`: Score (0-4) mapping job count to visual intensity levels.
+- `stats`: Aggregated totals for the selected period.
+- `availableAgents`: List of distinct agents found in the user's historical jobs.
+- `accountCreatedYear`: The year the user's account was created, used for year selection boundaries.
+
 ### GET /api/projects/:projectId/activity
 
 Fetch unified activity feed for a project.
