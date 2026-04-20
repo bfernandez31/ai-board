@@ -203,6 +203,17 @@ function getPeriodLabel(period: PeriodRange): string {
   return period.label
 }
 
+function isValidStrictSelectedPeriod(
+  periods: ActivityHeatmapPeriodOption[],
+  selectedPeriod: string | null | undefined
+): boolean {
+  if (!selectedPeriod || selectedPeriod === DEFAULT_ACTIVITY_PERIOD) {
+    return true
+  }
+
+  return periods.some((period) => period.value === selectedPeriod)
+}
+
 function getJobEffectiveAgent(job: ActivityJobRecord): Agent {
   return resolveEffectiveAgent(job.ticketAgent, job.projectDefaultAgent)
 }
@@ -332,6 +343,72 @@ export function buildMonthLabels(range: PeriodRange): ActivityHeatmapMonthLabel[
   return labels
 }
 
+function getIntensityLevel(jobCount: number, maxJobCount: number): number {
+  if (jobCount === 0 || maxJobCount === 0) {
+    return 0
+  }
+
+  return clampIntensityLevel(Math.ceil((jobCount / maxJobCount) * 4))
+}
+
+function buildSummary(
+  cells: Array<Pick<ActivityHeatmapCell, "jobCount" | "shippedTicketCount">>,
+  range: PeriodRange
+): ActivityHeatmapSummary {
+  const summary = cells.reduce(
+    (accumulator, cell) => {
+      accumulator.jobCount += cell.jobCount
+      accumulator.shippedTicketCount += cell.shippedTicketCount
+      return accumulator
+    },
+    {
+      jobCount: 0,
+      shippedTicketCount: 0,
+    }
+  )
+
+  return {
+    ...summary,
+    periodLabel: getPeriodLabel(range),
+  }
+}
+
+function toActivityJobRecord(
+  job: Prisma.JobGetPayload<{
+    select: {
+      ticketId: true
+      command: true
+      status: true
+      completedAt: true
+      costUsd: true
+      ticket: {
+        select: {
+          agent: true
+          project: {
+            select: {
+              defaultAgent: true
+            }
+          }
+        }
+      }
+    }
+  }>
+): ActivityJobRecord | null {
+  if (!job.completedAt) {
+    return null
+  }
+
+  return {
+    ticketId: job.ticketId,
+    command: job.command,
+    status: job.status,
+    completedAt: job.completedAt,
+    costUsd: job.costUsd,
+    ticketAgent: job.ticket.agent,
+    projectDefaultAgent: job.ticket.project.defaultAgent,
+  }
+}
+
 export function buildActivityHeatmapFromJobs({
   jobs,
   range,
@@ -378,33 +455,17 @@ export function buildActivityHeatmapFromJobs({
     shippedTicketCount: bucket.shippedTicketCount,
     totalCostUsd: bucket.totalCostUsd,
     hasCostData: bucket.hasCostData,
-    intensityLevel:
-      bucket.jobCount === 0 || maxJobCount === 0
-        ? 0
-        : clampIntensityLevel(Math.ceil((bucket.jobCount / maxJobCount) * 4)),
+    intensityLevel: getIntensityLevel(bucket.jobCount, maxJobCount),
     isInSelectedMonth: true,
   }))
 
-  const summary = cells.reduce(
-    (accumulator, cell) => {
-      accumulator.jobCount += cell.jobCount
-      accumulator.shippedTicketCount += cell.shippedTicketCount
-      return accumulator
-    },
-    {
-      jobCount: 0,
-      shippedTicketCount: 0,
-    }
-  )
+  const summary = buildSummary(cells, range)
 
   const agents = buildAgentOptions(jobs)
   const normalizedSelectedAgent = resolveSelectedAgent(agents, selectedAgent)
 
   return {
-    summary: {
-      ...summary,
-      periodLabel: getPeriodLabel(range),
-    },
+    summary,
     periods: [],
     agents,
     cells,
@@ -424,12 +485,7 @@ export async function getProjectsActivityHeatmap(
   const now = new Date()
   const periods = buildActivityPeriods(user.createdAt, now)
 
-  if (
-    options.strictPeriodValidation &&
-    filters.selectedPeriod &&
-    filters.selectedPeriod !== DEFAULT_ACTIVITY_PERIOD &&
-    !periods.some((period) => period.value === filters.selectedPeriod)
-  ) {
+  if (options.strictPeriodValidation && !isValidStrictSelectedPeriod(periods, filters.selectedPeriod)) {
     throw new InvalidActivityHeatmapFilterError("Invalid activity period")
   }
 
@@ -460,22 +516,9 @@ export async function getProjectsActivityHeatmap(
     },
   })
 
-  const records: ActivityJobRecord[] = jobs.flatMap((job) => {
-    if (!job.completedAt) {
-      return []
-    }
-
-    return [
-      {
-        ticketId: job.ticketId,
-        command: job.command,
-        status: job.status,
-        completedAt: job.completedAt,
-        costUsd: job.costUsd,
-        ticketAgent: job.ticket.agent,
-        projectDefaultAgent: job.ticket.project.defaultAgent,
-      },
-    ]
+  const records = jobs.flatMap((job) => {
+    const record = toActivityJobRecord(job)
+    return record ? [record] : []
   })
 
   const agentOptions = buildAgentOptions(records)

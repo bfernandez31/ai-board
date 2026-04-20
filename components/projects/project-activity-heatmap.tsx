@@ -30,6 +30,7 @@ interface HeatmapFilters {
 }
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const
+const LEGEND_LEVELS = [0, 1, 2, 3, 4] as const
 
 function formatCount(value: number, singular: string, plural = `${singular}s`): string {
   return `${value} ${value === 1 ? singular : plural}`
@@ -126,6 +127,29 @@ function groupCellsByWeek(cells: ActivityHeatmapData["cells"]): Map<number, Acti
   return new Map(Array.from(weeks.entries()).sort(([left], [right]) => left - right))
 }
 
+function buildMonthLabelMap(
+  monthLabels: ActivityHeatmapData["monthLabels"]
+): Map<number, string> {
+  return new Map(monthLabels.map((label) => [label.weekIndex, label.label] as const))
+}
+
+function getNextPeriodFilters(period: string): HeatmapFilters {
+  return {
+    period: period as ActivityPeriodValue,
+    agent: "all",
+  }
+}
+
+function getNextAgentFilters(
+  currentFilters: HeatmapFilters,
+  agent: string
+): HeatmapFilters {
+  return {
+    period: currentFilters.period,
+    agent: agent as ActivityAgentValue,
+  }
+}
+
 export function ProjectActivityHeatmap({
   initialData,
 }: ProjectActivityHeatmapProps): JSX.Element {
@@ -150,10 +174,7 @@ export function ProjectActivityHeatmap({
 
   const heatmap = data ?? initialData
   const weeks = useMemo(() => groupCellsByWeek(heatmap.cells), [heatmap.cells])
-  const monthLabelByWeek = useMemo(
-    () => new Map(heatmap.monthLabels.map((label) => [label.weekIndex, label.label] as const)),
-    [heatmap.monthLabels]
-  )
+  const monthLabelByWeek = useMemo(() => buildMonthLabelMap(heatmap.monthLabels), [heatmap.monthLabels])
   const activeCell = heatmap.cells.find((cell) => cell.date === activeDate) ?? null
 
   useEffect(() => {
@@ -171,7 +192,7 @@ export function ProjectActivityHeatmap({
     return () => document.removeEventListener("pointerdown", handlePointerDown)
   }, [activeDate])
 
-  const updateFilters = (nextFilters: HeatmapFilters) => {
+  function updateFilters(nextFilters: HeatmapFilters): void {
     setFilters(nextFilters)
     router.push(buildFilterSearchParams(searchParams, nextFilters), { scroll: false })
   }
@@ -189,12 +210,7 @@ export function ProjectActivityHeatmap({
             {heatmap.periods.length > 1 && (
               <Select
                 value={filters.period}
-                onValueChange={(value) =>
-                  updateFilters({
-                    period: value as ActivityPeriodValue,
-                    agent: "all",
-                  })
-                }
+                onValueChange={(value) => updateFilters(getNextPeriodFilters(value))}
               >
                 <SelectTrigger
                   className="w-full sm:w-[180px]"
@@ -215,12 +231,7 @@ export function ProjectActivityHeatmap({
             {heatmap.agents.length > 1 && (
               <Select
                 value={filters.agent}
-                onValueChange={(value) =>
-                  updateFilters({
-                    period: filters.period,
-                    agent: value as ActivityAgentValue,
-                  })
-                }
+                onValueChange={(value) => updateFilters(getNextAgentFilters(filters, value))}
               >
                 <SelectTrigger
                   className="w-full sm:w-[180px]"
@@ -242,7 +253,7 @@ export function ProjectActivityHeatmap({
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>Less</span>
-          {[0, 1, 2, 3, 4].map((level) => (
+          {LEGEND_LEVELS.map((level) => (
             <span
               key={level}
               className={`h-3 w-3 rounded-sm ${getIntensityClass(level)}`}

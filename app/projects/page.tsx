@@ -6,7 +6,10 @@ import { ProjectsHeaderActions } from '@/components/projects/projects-header-act
 import { ProjectActivityHeatmap } from '@/components/projects/project-activity-heatmap';
 import { toProjectWithCount, type ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
-import { getProjectsActivityHeatmap } from '@/lib/projects/activity-heatmap';
+import {
+  getProjectsActivityHeatmap,
+  type ActivityHeatmapFilters,
+} from '@/lib/projects/activity-heatmap';
 
 // Force dynamic rendering - this page uses headers() for auth
 export const dynamic = 'force-dynamic';
@@ -28,18 +31,33 @@ async function getProjects(): Promise<ProjectsListResponse> {
   }
 }
 
+interface ProjectsPageProps {
+  searchParams: Promise<{ activityPeriod?: string; activityAgent?: string }>;
+}
+
+function buildHeatmapFilters(params: {
+  activityPeriod?: string;
+  activityAgent?: string;
+}): ActivityHeatmapFilters {
+  const filters: ActivityHeatmapFilters = {};
+
+  if (params.activityPeriod) {
+    filters.selectedPeriod = params.activityPeriod;
+  }
+
+  if (params.activityAgent) {
+    filters.selectedAgent = params.activityAgent;
+  }
+
+  return filters;
+}
+
 export default async function ProjectsPage({
   searchParams,
-}: {
-  searchParams: Promise<{ activityPeriod?: string; activityAgent?: string }>;
-}) {
+}: ProjectsPageProps): Promise<JSX.Element> {
   const filters = await searchParams;
   const projects = await getProjects();
-  const heatmapFilters = {
-    ...(filters.activityPeriod ? { selectedPeriod: filters.activityPeriod } : {}),
-    ...(filters.activityAgent ? { selectedAgent: filters.activityAgent } : {}),
-  };
-  const heatmap = await getProjectsActivityHeatmap(heatmapFilters);
+  const heatmap = await getProjectsActivityHeatmap(buildHeatmapFilters(filters));
 
   return (
     <div className="container mx-auto py-8 px-4">
