@@ -14,19 +14,16 @@ interface ActivityHeatmapProps {
   };
 }
 
-export async function ActivityHeatmap({ searchParams }: ActivityHeatmapProps) {
+export async function ActivityHeatmap({ searchParams }: ActivityHeatmapProps): Promise<JSX.Element | null> {
   const user = await getCurrentUserOrNull();
   if (!user) return null;
 
   const agent = searchParams.agent as Agent | undefined;
   const year = searchParams.year;
 
-  let range;
-  if (year && year !== "last-12-months") {
-    range = getCalendarYearRange(parseInt(year, 10));
-  } else {
-    range = getRollingAnnualRange();
-  }
+  const range = (year && year !== "last-12-months")
+    ? getCalendarYearRange(parseInt(year, 10))
+    : getRollingAnnualRange();
 
   const data = await getHeatmapData({
     userId: user.id,

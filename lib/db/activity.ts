@@ -31,20 +31,20 @@ export async function getHeatmapData({
   }
 
   // 2. Fetch jobs within the range for these projects
-  // We include ticket to determine the "effective agent"
   const jobs = await prisma.job.findMany({
     where: {
       projectId: { in: projectIds },
-      startedAt: {
-        gte: start,
-        lte: end,
-      },
-      // If agent filter is provided, we need to apply it
+      startedAt: { gte: start, lte: end },
       ...(agent ? {
-        OR: [
-          { ticket: { agent } },
-          { ticket: { agent: null }, projectId: { in: projects.filter(p => p.defaultAgent === agent).map(p => p.id) } }
-        ]
+        ticket: {
+          OR: [
+            { agent },
+            { 
+              agent: null, 
+              project: { defaultAgent: agent } 
+            }
+          ]
+        }
       } : {}),
     },
     select: {
@@ -53,42 +53,35 @@ export async function getHeatmapData({
       command: true,
       status: true,
       ticketId: true,
-      projectId: true,
-      ticket: {
-        select: {
-          agent: true,
-        },
-      },
     },
   });
 
   // 3. Aggregate data by day
-  const dailyData: Record<string, HeatmapDay> = {};
+  const dailyData = new Map<string, HeatmapDay>();
+  const shippedTicketsByDay = new Map<string, Set<number>>();
   let totalJobs = 0;
   let totalShippedTickets = 0;
-  const shippedTicketIdsPerDay: Record<string, Set<number>> = {};
 
-  jobs.forEach((job) => {
+  for (const job of jobs) {
     const dateKey = formatDateKey(job.startedAt);
     
-    if (!dailyData[dateKey]) {
-      dailyData[dateKey] = {
+    if (!dailyData.has(dateKey)) {
+      dailyData.set(dateKey, {
         date: dateKey,
         jobCount: 0,
         shippedTicketCount: 0,
         totalCost: 0,
-      };
-      shippedTicketIdsPerDay[dateKey] = new Set();
+      });
+      shippedTicketsByDay.set(dateKey, new Set());
     }
 
-    const day = dailyData[dateKey]!;
-    const shippedTickets = shippedTicketIdsPerDay[dateKey]!;
+    const day = dailyData.get(dateKey)!;
+    const shippedTickets = shippedTicketsByDay.get(dateKey)!;
 
     day.jobCount++;
     totalJobs++;
     day.totalCost = (day.totalCost || 0) + (job.costUsd || 0);
 
-    // Shipped ticket logic: distinct ticketId where Job.command === 'ship' and Job.status === 'COMPLETED'
     if (job.command === "ship" && job.status === JobStatus.COMPLETED) {
       if (!shippedTickets.has(job.ticketId)) {
         shippedTickets.add(job.ticketId);
@@ -96,10 +89,9 @@ export async function getHeatmapData({
         totalShippedTickets++;
       }
     }
-  });
+  }
 
-  // 4. Get available agents (from all user's jobs, not just in range)
-  // This satisfies FR-008: "distinct agents present in the user's jobs"
+  // 4. Get available agents
   const distinctAgents = await prisma.ticket.findMany({
     where: { projectId: { in: projectIds } },
     select: { agent: true },
@@ -107,26 +99,27 @@ export async function getHeatmapData({
   });
   
   const availableAgents = new Set<string>();
-  distinctAgents.forEach(t => {
+  for (const t of distinctAgents) {
     if (t.agent) availableAgents.add(t.agent);
-  });
-  // Also include project default agents if no tickets exist yet
-  projects.forEach(p => availableAgents.add(p.defaultAgent));
+  }
+  for (const p of projects) {
+    availableAgents.add(p.defaultAgent);
+  }
 
-  // 5. Get available years (from account creation to now)
+  // 5. Get available years
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { createdAt: true },
   });
   const startYear = user?.createdAt.getFullYear() || projects[0]?.createdAt.getFullYear() || new Date().getFullYear();
   const currentYear = new Date().getFullYear();
-  const availableYears = [];
+  const availableYears: number[] = [];
   for (let y = startYear; y <= currentYear; y++) {
     availableYears.push(y);
   }
 
   // 6. Format response
-  const days = Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
+  const days = Array.from(dailyData.values()).sort((a, b) => a.date.localeCompare(b.date));
 
   return {
     days,

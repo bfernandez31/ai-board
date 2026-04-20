@@ -15,30 +15,20 @@ interface ActivityHeatmapHeaderProps {
   filters: HeatmapFilters;
 }
 
-export function ActivityHeatmapHeader({ stats, filters }: ActivityHeatmapHeaderProps) {
+export function ActivityHeatmapHeader({ stats, filters }: ActivityHeatmapHeaderProps): JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const handleAgentChange = (value: string) => {
+  function handleFilterChange(key: "agent" | "year", value: string, defaultValue: string): void {
     const params = new URLSearchParams(searchParams.toString());
-    if (value === "all") {
-      params.delete("agent");
+    if (value === defaultValue) {
+      params.delete(key);
     } else {
-      params.set("agent", value);
+      params.set(key, value);
     }
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
-  };
-
-  const handleYearChange = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (value === "last-12-months") {
-      params.delete("year");
-    } else {
-      params.set("year", value);
-    }
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
-  };
+  }
 
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
@@ -59,7 +49,7 @@ export function ActivityHeatmapHeader({ stats, filters }: ActivityHeatmapHeaderP
       <div className="flex items-center gap-3">
         <Select
           value={filters.currentAgent || "all"}
-          onValueChange={handleAgentChange}
+          onValueChange={(value) => handleFilterChange("agent", value, "all")}
         >
           <SelectTrigger className="h-8 w-[130px] text-xs bg-muted/30 border-border/50">
             <SelectValue placeholder="All Agents" />
@@ -76,7 +66,7 @@ export function ActivityHeatmapHeader({ stats, filters }: ActivityHeatmapHeaderP
 
         <Select
           value={filters.currentYear}
-          onValueChange={handleYearChange}
+          onValueChange={(value) => handleFilterChange("year", value, "last-12-months")}
         >
           <SelectTrigger className="h-8 w-[140px] text-xs bg-muted/30 border-border/50">
             <SelectValue placeholder="Period" />

@@ -12,16 +12,16 @@ interface ActivityHeatmapCellProps {
   isChipped?: boolean | undefined;
 }
 
-export function ActivityHeatmapCell({ day, isChipped }: ActivityHeatmapCellProps) {
-  const getIntensityClass = (count: number) => {
-    if (count === 0) return "aurora-cell-0";
-    if (count <= 2) return "aurora-cell-1";
-    if (count <= 5) return "aurora-cell-2";
-    return "aurora-cell-3";
-  };
+function getIntensityClass(count: number): string {
+  if (count === 0) return "aurora-cell-0";
+  if (count <= 2) return "aurora-cell-1";
+  if (count <= 5) return "aurora-cell-2";
+  return "aurora-cell-3";
+}
 
-  const intensityClass = day ? getIntensityClass(day.jobCount) : "aurora-cell-0";
-  const isShipped = day && day.shippedTicketCount > 0;
+export function ActivityHeatmapCell({ day, isChipped }: ActivityHeatmapCellProps): JSX.Element {
+  const intensityClass = getIntensityClass(day?.jobCount ?? 0);
+  const isShipped = !!(day && day.shippedTicketCount > 0);
 
   const cell = (
     <div
