@@ -44,22 +44,24 @@ export function ActivityHeatmapGrid({ days, start, end }: ActivityHeatmapGridPro
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Month Labels */}
-      <div className="flex gap-[3px] text-[10px] text-muted-foreground ml-8 h-4 relative">
-        {monthLabels.map((m) => (
-          <div
-            key={`${m.label}-${m.colIndex}`}
-            className="absolute"
-            style={{ left: `${m.colIndex * 15}px` }}
-          >
-            {m.label}
-          </div>
-        ))}
+      {/* Month Labels Container (needs to scroll with grid) */}
+      <div className="flex-1 overflow-hidden ml-8">
+        <div className="relative h-4 mb-1">
+          {monthLabels.map((m) => (
+            <div
+              key={`${m.label}-${m.colIndex}`}
+              className="absolute text-[10px] text-muted-foreground whitespace-nowrap"
+              style={{ left: `${m.colIndex * 15}px` }}
+            >
+              {m.label}
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="flex gap-2">
-        {/* Day Labels */}
-        <div className="flex flex-col gap-[3px] text-[10px] text-muted-foreground pt-[2px] w-6">
+      <div className="flex gap-2 relative">
+        {/* Sticky Day Labels */}
+        <div className="flex flex-col gap-[3px] text-[10px] text-muted-foreground pt-[2px] w-6 sticky left-0 z-10 bg-background/80 backdrop-blur-sm pr-1">
           <div className="h-[12px]">Sun</div>
           <div className="h-[12px]"></div>
           <div className="h-[12px]">Tue</div>
@@ -69,7 +71,7 @@ export function ActivityHeatmapGrid({ days, start, end }: ActivityHeatmapGridPro
           <div className="h-[12px]">Sat</div>
         </div>
 
-        {/* The Grid */}
+        {/* The Grid Container with horizontal scroll */}
         <div className="flex-1 overflow-x-auto pb-2 scrollbar-hide">
           <div className="flex gap-[3px] min-w-max">
             {columns.map((week, colIndex) => (

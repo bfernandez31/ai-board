@@ -34,10 +34,10 @@
 - [X] T019 [US3] Update `lib/db/activity.ts` and `ActivityHeatmapGrid` to handle calendar year boundaries and chipped edges ✅ DONE
 
 ## Phase 7: Polish & Cross-cutting
-- [ ] T020 [P] Implement horizontal scrolling for the heatmap grid on mobile viewports with sticky day labels
-- [ ] T021 [P] Implement centered empty state message: "No activity to show yet — your AI work will appear here"
-- [ ] T022 [P] Final performance validation of aggregation logic (ensuring < 200ms for annual range)
-- [ ] T023 Final E2E validation of the heatmap interaction and filtering in `tests/e2e/activity-heatmap.spec.ts`
+- [X] T020 [P] Implement horizontal scrolling for the heatmap grid on mobile viewports with sticky day labels ✅ DONE
+- [X] T021 [P] Implement centered empty state message: "No activity to show yet — your AI work will appear here" ✅ DONE
+- [X] T022 [P] Final performance validation of aggregation logic (ensuring < 200ms for annual range) ✅ DONE
+- [X] T023 Final E2E validation of the heatmap interaction and filtering in `tests/e2e/activity-heatmap.spec.ts` ✅ DONE
 
 ## Dependencies
 - US1 is foundational for US2, US3, and US4.
