@@ -3,8 +3,8 @@
 **Feature**: `AIB-702-activity-heatmap-on` | **Status**: Actionable
 
 ## Phase 1: Setup
-- [ ] T001 Define heatmap types and Zod schemas (HeatmapDay, HeatmapStats, HeatmapFilters) in `lib/types/activity.ts`
-- [ ] T002 Create feature directory structure in `components/projects/activity-heatmap/`
+- [X] T001 Define heatmap types and Zod schemas (HeatmapDay, HeatmapStats, HeatmapFilters) in `lib/types/activity.ts` ✅ DONE
+- [X] T002 Create feature directory structure in `components/projects/activity-heatmap/` ✅ DONE
 
 ## Phase 2: Foundational
 - [ ] T003 Implement `lib/db/activity.ts` for heatmap data aggregation (counts per day, shipped tickets, cost calculation)
