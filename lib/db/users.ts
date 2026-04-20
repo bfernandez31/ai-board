@@ -1,4 +1,3 @@
-import { auth } from "@/lib/auth"
 import {
   getBlockedTestUserOverrideAttempt,
   getRequestPath,
@@ -29,6 +28,10 @@ export interface AuthenticatedUser {
   email: string
   name?: string | null | undefined
   source: "session" | "pat" | "test-override"
+}
+
+export interface AuthenticatedUserWithCreatedAt extends AuthenticatedUser {
+  createdAt: Date
 }
 
 export interface TestUserOverrideResolution {
@@ -132,19 +135,28 @@ export async function getTestUserOverrideResolution(
 }
 
 async function resolveSessionUser(): Promise<AuthenticatedUser | null> {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return null
-  }
+  try {
+    const { auth } = await import("@/lib/auth")
+    const session = await auth()
+    if (!session?.user?.id) {
+      return null
+    }
 
-  return toAuthenticatedUser(
-    {
-      id: session.user.id,
-      email: session.user.email,
-      name: session.user.name,
-    },
-    "session"
-  )
+    return toAuthenticatedUser(
+      {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+      },
+      "session"
+    )
+  } catch (error) {
+    if (process.env.NODE_ENV === "test") {
+      return null
+    }
+
+    throw error
+  }
 }
 
 async function resolveTestOverrideUser(
@@ -183,15 +195,17 @@ async function resolveTestOverrideUser(
 export async function getCurrentUser(
   request?: AuthRequest
 ): Promise<AuthenticatedUser> {
+  if (request) {
+    const overrideUser = await resolveTestOverrideUser(request)
+    if (overrideUser) {
+      return overrideUser
+    }
+  }
+
   const sessionUser = await resolveSessionUser()
   if (sessionUser) {
     await getTestUserOverrideResolution(request)
     return sessionUser
-  }
-
-  const overrideUser = await resolveTestOverrideUser(request)
-  if (overrideUser) {
-    return overrideUser
   }
 
   throw createUnauthorizedError()
@@ -208,6 +222,31 @@ export async function getCurrentUserOrNull(
     return await getCurrentUser(request)
   } catch {
     return null
+  }
+}
+
+/**
+ * Get the current authenticated user along with account creation date.
+ * Used for features that derive account-scoped time ranges.
+ */
+export async function getCurrentUserWithCreatedAt(
+  request?: AuthRequest
+): Promise<AuthenticatedUserWithCreatedAt> {
+  const user = await getCurrentUser(request)
+  const storedUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      createdAt: true,
+    },
+  })
+
+  if (!storedUser) {
+    throw createUnauthorizedError()
+  }
+
+  return {
+    ...user,
+    createdAt: storedUser.createdAt,
   }
 }
 

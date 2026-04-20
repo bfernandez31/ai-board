@@ -1,6 +1,8 @@
 export const queryKeys = {
   projects: {
     all: ['projects'] as const,
+    activityHeatmap: (period: string, agent: string) =>
+      ['projects', 'activity-heatmap', period, agent] as const,
     detail: (id: number) => ['projects', id] as const,
     tickets: (id: number) => ['projects', id, 'tickets'] as const,
     ticket: (projectId: number, ticketId: number) =>

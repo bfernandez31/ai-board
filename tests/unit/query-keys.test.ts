@@ -14,6 +14,21 @@ describe('Query Keys Factory', () => {
       expect(queryKeys.projects.all).toEqual(['projects']);
     });
 
+    it('should return correct key for projects activity heatmap filters', () => {
+      expect(queryKeys.projects.activityHeatmap('last-12-months', 'all')).toEqual([
+        'projects',
+        'activity-heatmap',
+        'last-12-months',
+        'all',
+      ]);
+      expect(queryKeys.projects.activityHeatmap('2026', 'CODEX')).toEqual([
+        'projects',
+        'activity-heatmap',
+        '2026',
+        'CODEX',
+      ]);
+    });
+
     it('should return correct key for project detail', () => {
       expect(queryKeys.projects.detail(1)).toEqual(['projects', 1]);
       expect(queryKeys.projects.detail(42)).toEqual(['projects', 42]);

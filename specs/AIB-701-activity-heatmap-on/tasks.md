@@ -16,9 +16,9 @@
 
 **Purpose**: Prepare shared query and auth plumbing needed by every heatmap slice.
 
-- [ ] T001 [P] Add projects activity heatmap query-key helpers to `app/lib/query-keys.ts`
-- [ ] T002 [P] Extend current-user data access for heatmap period derivation in `lib/db/users.ts`
-- [ ] T003 [P] Extend query-key regression coverage for the new heatmap keys in `tests/unit/query-keys.test.ts`
+- [X] T001 [P] Add projects activity heatmap query-key helpers to `app/lib/query-keys.ts` ✅ DONE
+- [X] T002 [P] Extend current-user data access for heatmap period derivation in `lib/db/users.ts` ✅ DONE
+- [X] T003 [P] Extend query-key regression coverage for the new heatmap keys in `tests/unit/query-keys.test.ts` ✅ DONE
 
 ---
 
@@ -28,8 +28,8 @@
 
 **⚠️ CRITICAL**: No user story work should start until this phase is complete.
 
-- [ ] T004 [P] Create cross-project aggregation tests for period construction, shipped deduping, accessible-project filtering, and agent-option derivation in `tests/unit/lib/projects/activity-heatmap.test.ts`
-- [ ] T005 Create the shared heatmap aggregation helper, payload types, and date bucketing logic in `lib/projects/activity-heatmap.ts`
+- [X] T004 [P] Create cross-project aggregation tests for period construction, shipped deduping, accessible-project filtering, and agent-option derivation in `tests/unit/lib/projects/activity-heatmap.test.ts` ✅ DONE
+- [X] T005 Create the shared heatmap aggregation helper, payload types, and date bucketing logic in `lib/projects/activity-heatmap.ts` ✅ DONE
 
 **Checkpoint**: Shared aggregation, period rules, and query keys are ready for route and UI work.
 
@@ -43,15 +43,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T006 [P] [US1] Create route integration coverage for default responses, auth failures, shipped-only counting, and zero-activity payloads in `tests/integration/projects/activity-heatmap-route.test.ts`
-- [ ] T007 [P] [US1] Create component coverage for default summary rendering, legend visibility, populated cells, and empty-state replacement in `tests/unit/components/projects/project-activity-heatmap.test.tsx`
+- [X] T006 [P] [US1] Create route integration coverage for default responses, auth failures, shipped-only counting, and zero-activity payloads in `tests/integration/projects/activity-heatmap-route.test.ts` ✅ DONE
+- [X] T007 [P] [US1] Create component coverage for default summary rendering, legend visibility, populated cells, and empty-state replacement in `tests/unit/components/projects/project-activity-heatmap.test.tsx` ✅ DONE
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Create the dedicated `GET /api/projects/activity-heatmap` handler backed by `lib/projects/activity-heatmap.ts` in `app/api/projects/activity-heatmap/route.ts`
-- [ ] T009 [US1] Extend `app/projects/page.tsx` to server-render the default heatmap payload and place the new section beneath the project cards
-- [ ] T010 [US1] Remove the trapped vertical scroll from `components/projects/projects-container.tsx` so the page can naturally reach the heatmap section
-- [ ] T011 [US1] Create the projects-page heatmap UI with summary header, month/day labels, legend, grid rendering, and empty-state content in `components/projects/project-activity-heatmap.tsx`
+- [X] T008 [US1] Create the dedicated `GET /api/projects/activity-heatmap` handler backed by `lib/projects/activity-heatmap.ts` in `app/api/projects/activity-heatmap/route.ts` ✅ DONE
+- [X] T009 [US1] Extend `app/projects/page.tsx` to server-render the default heatmap payload and place the new section beneath the project cards ✅ DONE
+- [X] T010 [US1] Remove the trapped vertical scroll from `components/projects/projects-container.tsx` so the page can naturally reach the heatmap section ✅ DONE
+- [X] T011 [US1] Create the projects-page heatmap UI with summary header, month/day labels, legend, grid rendering, and empty-state content in `components/projects/project-activity-heatmap.tsx` ✅ DONE
 
 **Checkpoint**: User Story 1 should render the default heatmap experience end-to-end and remain independently testable.
 
@@ -65,15 +65,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T012 [P] [US2] Extend `tests/integration/projects/activity-heatmap-route.test.ts` with invalid-filter handling, calendar-year availability, and effective-agent filtering scenarios
-- [ ] T013 [P] [US2] Extend `tests/unit/components/projects/project-activity-heatmap.test.tsx` with URL persistence, hidden-filter states, and keep-previous-data refresh behavior
+- [X] T012 [P] [US2] Extend `tests/integration/projects/activity-heatmap-route.test.ts` with invalid-filter handling, calendar-year availability, and effective-agent filtering scenarios ✅ DONE
+- [X] T013 [P] [US2] Extend `tests/unit/components/projects/project-activity-heatmap.test.tsx` with URL persistence, hidden-filter states, and keep-previous-data refresh behavior ✅ DONE
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Extend `lib/projects/activity-heatmap.ts` to validate selected periods, derive year options from `User.createdAt`, compute agent options, and normalize unavailable agents to `all`
-- [ ] T015 [US2] Extend `app/api/projects/activity-heatmap/route.ts` with Zod parsing for `activityPeriod` and `activityAgent` plus contract-aligned `400/401/403/500` responses
-- [ ] T016 [US2] Extend `app/projects/page.tsx` to read `activityPeriod` and `activityAgent` from `searchParams` and pass the validated initial selection to the heatmap component
-- [ ] T017 [US2] Extend `components/projects/project-activity-heatmap.tsx` with filter controls, TanStack Query refresh, URL synchronization, and no-blanking background updates
+- [X] T014 [US2] Extend `lib/projects/activity-heatmap.ts` to validate selected periods, derive year options from `User.createdAt`, compute agent options, and normalize unavailable agents to `all` ✅ DONE
+- [X] T015 [US2] Extend `app/api/projects/activity-heatmap/route.ts` with Zod parsing for `activityPeriod` and `activityAgent` plus contract-aligned `400/401/403/500` responses ✅ DONE
+- [X] T016 [US2] Extend `app/projects/page.tsx` to read `activityPeriod` and `activityAgent` from `searchParams` and pass the validated initial selection to the heatmap component ✅ DONE
+- [X] T017 [US2] Extend `components/projects/project-activity-heatmap.tsx` with filter controls, TanStack Query refresh, URL synchronization, and no-blanking background updates ✅ DONE
 
 **Checkpoint**: User Story 2 should preserve a shareable filtered view and remain independently testable on top of the MVP.
 
@@ -87,13 +87,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T018 [P] [US3] Extend `tests/unit/components/projects/project-activity-heatmap.test.tsx` with hover and tap tooltip flows, outside-tap dismissal, and sticky-label mobile rendering checks
-- [ ] T019 [P] [US3] Extend `tests/unit/lib/projects/activity-heatmap.test.ts` with chipped-week boundaries, tooltip cost omission, and month-label placement assertions
+- [X] T018 [P] [US3] Extend `tests/unit/components/projects/project-activity-heatmap.test.tsx` with hover and tap tooltip flows, outside-tap dismissal, and sticky-label mobile rendering checks ✅ DONE
+- [X] T019 [P] [US3] Extend `tests/unit/lib/projects/activity-heatmap.test.ts` with chipped-week boundaries, tooltip cost omission, and month-label placement assertions ✅ DONE
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Extend `lib/projects/activity-heatmap.ts` to emit tooltip-ready daily cells with optional cost totals, chipped first/last weeks, and stable month-label coordinates
-- [ ] T021 [US3] Extend `components/projects/project-activity-heatmap.tsx` with hover and tap tooltips, `components/ui/scroll-area.tsx` horizontal overflow, sticky day labels, and mobile dismissal behavior
+- [X] T020 [US3] Extend `lib/projects/activity-heatmap.ts` to emit tooltip-ready daily cells with optional cost totals, chipped first/last weeks, and stable month-label coordinates ✅ DONE
+- [X] T021 [US3] Extend `components/projects/project-activity-heatmap.tsx` with hover and tap tooltips, `components/ui/scroll-area.tsx` horizontal overflow, sticky day labels, and mobile dismissal behavior ✅ DONE
 
 **Checkpoint**: User Story 3 should add inspectable daily details and mobile interaction support without regressing earlier stories.
 
@@ -103,8 +103,8 @@
 
 **Purpose**: Final regression coverage and cross-story refinement.
 
-- [ ] T022 [P] Refine shared accessibility and fallback states across `components/projects/project-activity-heatmap.tsx`, `app/projects/page.tsx`, and `app/api/projects/activity-heatmap/route.ts`
-- [ ] T023 Run full regression verification in `tests/unit/query-keys.test.ts`, `tests/unit/lib/projects/activity-heatmap.test.ts`, `tests/unit/components/projects/project-activity-heatmap.test.tsx`, and `tests/integration/projects/activity-heatmap-route.test.ts`
+- [X] T022 [P] Refine shared accessibility and fallback states across `components/projects/project-activity-heatmap.tsx`, `app/projects/page.tsx`, and `app/api/projects/activity-heatmap/route.ts` ✅ DONE
+- [X] T023 Run full regression verification in `tests/unit/query-keys.test.ts`, `tests/unit/lib/projects/activity-heatmap.test.ts`, `tests/unit/components/projects/project-activity-heatmap.test.tsx`, and `tests/integration/projects/activity-heatmap-route.test.ts` ✅ DONE
 
 ---
 
