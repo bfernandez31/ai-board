@@ -7,8 +7,8 @@
 - [X] T002 Create feature directory structure in `components/projects/activity-heatmap/` ✅ DONE
 
 ## Phase 2: Foundational
-- [ ] T003 Implement `lib/db/activity.ts` for heatmap data aggregation (counts per day, shipped tickets, cost calculation)
-- [ ] T004 [P] Create integration test `tests/integration/activity/heatmap-aggregation.test.ts` for database aggregation logic
+- [X] T003 Implement `lib/db/activity.ts` for heatmap data aggregation (counts per day, shipped tickets, cost calculation) ✅ DONE
+- [X] T004 [P] Create integration test `tests/integration/activity/heatmap-aggregation.test.ts` for database aggregation logic ✅ DONE
 - [X] T005 Implement date utility functions (rolling 12-month boundaries, calendar year ranges, chipped edge logic) in `lib/utils/activity-date-utils.ts` ✅ DONE
 - [X] T006 [P] Create unit test `tests/unit/activity/heatmap-logic.test.ts` for date boundaries and chipped edge calculations ✅ DONE
 
