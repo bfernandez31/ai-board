@@ -132,8 +132,8 @@ When no projects exist:
 Below the project cards grid, the `/projects` page renders a GitHub-style contribution heatmap that aggregates the signed-in user's AI activity across every project they own or are a member of.
 
 **Layout**:
-- Full-width section rendered below the project cards
-- Header line above the grid in the form "X jobs · Y tickets shipped in the last year" (or "in 2025" when a specific year is selected), where X is total job count and Y is distinct tickets whose `ship` workflow job completed successfully in the period
+- Section rendered below the project cards, sized to fit its content (GitHub-style fixed-cell grid) and horizontally centered within the page rather than stretching to full viewport width
+- Header line above the grid in the form "X jobs · Y tickets shipped in the last year" (or "in 2025" when a specific year is selected), where X is total job count and Y is distinct tickets currently in `SHIP` stage whose `updatedAt` falls in the period
 - 7-row grid (days of the week) × one column per ISO week intersecting the selected period
 - Month labels along the top, aligned to the column in which each month begins
 - Day-of-week labels along the left side (sticky during horizontal scroll)
@@ -147,7 +147,7 @@ Below the project cards grid, the `/projects` page renders a GitHub-style contri
 
 **Cell tooltip (hover on desktop, tap on mobile)**:
 - Formatted human-readable date
-- Ticket-shipped line: "N tickets shipped" (distinct tickets with a completed `ship` job that day)
+- Ticket-shipped line: "N tickets shipped" (distinct tickets currently in `SHIP` stage whose `updatedAt` falls on that day)
 - Jobs and cost line: "N jobs · $X.XX"
 - When any contributing job on that day has no recorded cost, the cost portion is omitted entirely — never displayed as "$NaN" or "$0"
 - On touch devices, tapping outside the cell dismisses the tooltip; only one tooltip is visible at a time
@@ -182,14 +182,16 @@ Below the project cards grid, the `/projects` page renders a GitHub-style contri
 
 **Responsive behavior**:
 - On viewports too narrow to display the full grid, the grid scrolls horizontally within its container rather than shrinking cells or wrapping weekday rows
-- Cells maintain a minimum tappable size (14 px, with 2 px gap)
+- Cells are fixed at 14 px with a 2 px gap — the grid never stretches cells to fill surrounding space, which keeps empty (bucket 0) days legible regardless of viewport width
+- The containing section adapts to content width and is centered horizontally; it never fills viewport width just to leave blank space around the grid
 - The day-of-week label column remains pinned (sticky) to the left edge as cells and month labels scroll underneath
 - The `/projects` page scroll is adjusted so the heatmap is reachable via natural page scroll rather than being cut off by an internal scroll constraint on the project cards region
 
 **Scope and accuracy**:
 - Data is scoped to the signed-in user — jobs from projects they own and projects they are a member of
-- "Tickets shipped" is counted only when a ticket's `ship` workflow job reached COMPLETED status; stage transitions to SHIP without a successful ship job do not increment the counter
-- The daily cell's `shippedTicketCount` counts distinct tickets shipped that day; the header's `Y tickets shipped` dedupes by ticket across the entire period, so a ticket re-shipped after rollback is counted once in the header but contributes to both days' cell counts
+- "Tickets shipped" is counted from tickets currently in `SHIP` stage whose `updatedAt` falls within the period; `CLOSED` tickets are excluded so only actively-shipped work is reflected
+- Because `updatedAt` is the anchor, a ticket shipped earlier but edited within the period (comment, description change, re-trigger) will appear on the edit date rather than the original ship date; a ticket rolled back out of `SHIP` stops being counted
+- The daily cell's `shippedTicketCount` counts tickets whose `updatedAt` falls on that day; the header's `Y tickets shipped` is the sum of per-day cell counts (since each ticket has a single `updatedAt`, the two totals agree)
 
 ## Project Settings
 

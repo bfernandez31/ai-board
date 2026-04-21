@@ -69,21 +69,14 @@ function pluralize(n: number, singular: string, plural: string): string {
   return `${n} ${n === 1 ? singular : plural}`;
 }
 
-function CellContent({ cell, column, row }: ActivityHeatmapCellProps): ReactElement {
+function CellContent({ cell }: { cell: DailyCell }): ReactElement {
   const bucketClass = BUCKET_CLASSES[cell.bucket];
   return (
-    <div
-      role="gridcell"
-      aria-label={`${cell.date}: ${cell.jobCount} jobs`}
-      data-date={cell.date}
+    <span
+      aria-hidden="true"
       data-bucket={cell.bucket}
-      className={`${bucketClass} rounded-sm cursor-default`}
-      style={{
-        gridColumn: column,
-        gridRow: row,
-        minHeight: 14,
-        minWidth: 14,
-      }}
+      className={`${bucketClass} rounded-sm block w-full h-full`}
+      style={{ minHeight: 14, minWidth: 14 }}
     />
   );
 }
@@ -109,17 +102,22 @@ export function ActivityHeatmapCell(props: ActivityHeatmapCellProps): ReactEleme
   const isTouchOnly = useTouchOnlyViewport();
   const { cell } = props;
 
+  const cellStyle = { gridColumn: props.column, gridRow: props.row };
+  const cellLabel = `${cell.date}: ${cell.jobCount} jobs`;
+
   if (isTouchOnly) {
     return (
       <Popover>
         <PopoverTrigger asChild>
           <button
             type="button"
-            aria-label={`${cell.date}: ${cell.jobCount} jobs`}
+            role="gridcell"
+            aria-label={cellLabel}
+            data-date={cell.date}
             className="appearance-none border-0 p-0 bg-transparent"
-            style={{ gridColumn: props.column, gridRow: props.row }}
+            style={cellStyle}
           >
-            <CellContent {...props} />
+            <CellContent cell={cell} />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-2">
@@ -134,11 +132,13 @@ export function ActivityHeatmapCell(props: ActivityHeatmapCellProps): ReactEleme
       <TooltipTrigger asChild>
         <button
           type="button"
-          aria-label={`${cell.date}: ${cell.jobCount} jobs`}
+          role="gridcell"
+          aria-label={cellLabel}
+          data-date={cell.date}
           className="appearance-none border-0 p-0 bg-transparent"
-          style={{ gridColumn: props.column, gridRow: props.row }}
+          style={cellStyle}
         >
-          <CellContent {...props} />
+          <CellContent cell={cell} />
         </button>
       </TooltipTrigger>
       <TooltipContent side="top" className="p-2">

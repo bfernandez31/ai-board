@@ -109,60 +109,62 @@ export function ActivityHeatmapGrid({
 
   return (
     <div className="overflow-x-auto">
-      <div className="inline-flex flex-col gap-1 min-w-full">
-        <div
-          className="grid gap-[2px] pl-10"
-          style={{
-            gridTemplateColumns: `repeat(${layout.columnCount}, minmax(14px, 1fr))`,
-          }}
-          aria-hidden="true"
-        >
-          {layout.monthLabels.map((m) => (
-            <span
-              key={`month-${m.column}-${m.label}`}
-              className="text-xs text-muted-foreground"
-              style={{ gridColumn: m.column }}
-            >
-              {m.label}
-            </span>
-          ))}
-        </div>
-        <div className="flex gap-1">
+      <div className="flex justify-center min-w-max">
+        <div className="flex flex-col gap-1">
           <div
-            className="sticky left-0 z-10 grid grid-rows-7 gap-[2px] pr-1 bg-background"
+            className="grid gap-[2px] pl-10"
             style={{
-              gridTemplateRows: 'repeat(7, minmax(14px, 1fr))',
+              gridTemplateColumns: `repeat(${layout.columnCount}, 14px)`,
             }}
             aria-hidden="true"
           >
-            {DAY_LABELS.map((label, idx) => (
+            {layout.monthLabels.map((m) => (
               <span
-                key={label}
-                className="text-xs text-muted-foreground leading-none flex items-center"
-                style={{ gridRow: idx + 1, minHeight: 14 }}
+                key={`month-${m.column}-${m.label}`}
+                className="text-xs text-muted-foreground"
+                style={{ gridColumn: m.column }}
               >
-                {idx % 2 === 1 ? label : ''}
+                {m.label}
               </span>
             ))}
           </div>
-          <div
-            role="grid"
-            aria-label="Activity heatmap"
-            className="grid gap-[2px]"
-            style={{
-              gridTemplateRows: 'repeat(7, minmax(14px, 1fr))',
-              gridTemplateColumns: `repeat(${layout.columnCount}, minmax(14px, 1fr))`,
-              gridAutoFlow: 'column',
-            }}
-          >
-            {layout.placed.map((item) => (
-              <ActivityHeatmapCell
-                key={item.cell.date}
-                cell={item.cell}
-                column={item.column}
-                row={item.row}
-              />
-            ))}
+          <div className="flex gap-1">
+            <div
+              className="sticky left-0 z-10 grid grid-rows-7 gap-[2px] pr-1 bg-card"
+              style={{
+                gridTemplateRows: 'repeat(7, 14px)',
+              }}
+              aria-hidden="true"
+            >
+              {DAY_LABELS.map((label, idx) => (
+                <span
+                  key={label}
+                  className="text-xs text-muted-foreground leading-none flex items-center"
+                  style={{ gridRow: idx + 1, minHeight: 14 }}
+                >
+                  {idx % 2 === 1 ? label : ''}
+                </span>
+              ))}
+            </div>
+            <div
+              role="grid"
+              aria-label="Activity heatmap"
+              className="grid gap-[2px]"
+              style={{
+                gridTemplateRows: 'repeat(7, 14px)',
+                gridTemplateColumns: `repeat(${layout.columnCount}, 14px)`,
+                gridAutoFlow: 'column',
+              }}
+            >
+              {layout.placed.map((item) => (
+                <ActivityHeatmapCell
+                  key={item.cell.date}
+                  cell={item.cell}
+                  column={item.column}
+                  row={item.row}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>

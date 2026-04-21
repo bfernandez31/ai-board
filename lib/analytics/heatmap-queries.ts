@@ -34,7 +34,9 @@ function buildPeriodLabel(
 }
 
 async function getAvailableAgentsForUser(
-  accessibleProjectIds: number[]
+  accessibleProjectIds: number[],
+  periodStart: Date,
+  periodEnd: Date
 ): Promise<AgentOption[]> {
   if (accessibleProjectIds.length === 0) {
     return [
@@ -47,18 +49,17 @@ async function getAvailableAgentsForUser(
     ];
   }
 
-  const tickets = await prisma.ticket.findMany({
+  const jobs = await prisma.job.findMany({
     where: {
       projectId: { in: accessibleProjectIds },
-      jobs: { some: {} },
+      completedAt: { gte: periodStart, lte: periodEnd },
     },
     select: {
-      agent: true,
-      project: {
-        select: { defaultAgent: true },
-      },
-      _count: {
-        select: { jobs: true },
+      ticket: {
+        select: {
+          agent: true,
+          project: { select: { defaultAgent: true } },
+        },
       },
     },
   });
@@ -67,9 +68,9 @@ async function getAvailableAgentsForUser(
     ALL_AGENTS.map((agent) => [agent, 0] as const)
   );
 
-  for (const ticket of tickets) {
-    const effective = (ticket.agent ?? ticket.project.defaultAgent) as NamedAgent;
-    counts.set(effective, (counts.get(effective) ?? 0) + ticket._count.jobs);
+  for (const job of jobs) {
+    const effective = (job.ticket.agent ?? job.ticket.project.defaultAgent) as NamedAgent;
+    counts.set(effective, (counts.get(effective) ?? 0) + 1);
   }
 
   const total = Array.from(counts.values()).reduce((sum, n) => sum + n, 0);
@@ -105,7 +106,11 @@ function resolveEffectivePeriod(
 ): HeatmapFilters['period'] {
   if (filters.period.kind === 'year') {
     const { year } = filters.period;
-    if (year < accountCreationYear || year > currentYear) {
+    if (
+      accountCreationYear >= currentYear ||
+      year < accountCreationYear ||
+      year > currentYear
+    ) {
       return { kind: 'rolling12m', endDate: '' };
     }
   }
@@ -195,13 +200,8 @@ export async function getHeatmapData(
 
   const shippedTicketWhere: Prisma.TicketWhereInput = {
     projectId: { in: accessibleProjectIds },
-    jobs: {
-      some: {
-        command: 'ship',
-        status: 'COMPLETED',
-        completedAt: { gte: startDate, lte: endDate },
-      },
-    },
+    stage: 'SHIP',
+    updatedAt: { gte: startDate, lte: endDate },
     ...(effectiveAgentTicketWhere ?? {}),
   };
 
@@ -209,7 +209,7 @@ export async function getHeatmapData(
     return buildEmptyEnvelope(filters, effectivePeriod, startDate, endDate, accountCreationYear, currentYear, now);
   }
 
-  const [jobs, distinctShippedTickets, availableAgents] = await Promise.all([
+  const [jobs, shippedTickets, availableAgents] = await Promise.all([
     prisma.job.findMany({
       where: jobWhere,
       select: {
@@ -220,9 +220,17 @@ export async function getHeatmapData(
         ticketId: true,
       },
     }),
-    prisma.ticket.count({ where: shippedTicketWhere }),
-    getAvailableAgentsForUser(accessibleProjectIds),
+    prisma.ticket.findMany({
+      where: shippedTicketWhere,
+      select: {
+        id: true,
+        updatedAt: true,
+      },
+    }),
+    getAvailableAgentsForUser(accessibleProjectIds, startDate, endDate),
   ]);
+
+  const distinctShippedTickets = shippedTickets.length;
 
   interface DayAccumulator {
     jobCount: number;
@@ -234,9 +242,7 @@ export async function getHeatmapData(
 
   const byDate = new Map<string, DayAccumulator>();
 
-  for (const job of jobs) {
-    if (!job.completedAt) continue;
-    const key = formatUTCDate(job.completedAt);
+  function getOrCreate(key: string): DayAccumulator {
     let entry = byDate.get(key);
     if (!entry) {
       entry = {
@@ -248,6 +254,13 @@ export async function getHeatmapData(
       };
       byDate.set(key, entry);
     }
+    return entry;
+  }
+
+  for (const job of jobs) {
+    if (!job.completedAt) continue;
+    const key = formatUTCDate(job.completedAt);
+    const entry = getOrCreate(key);
     entry.jobCount += 1;
     if (job.costUsd === null) {
       entry.hasNullCost = true;
@@ -256,8 +269,13 @@ export async function getHeatmapData(
     }
     if (job.command === 'ship' && job.status === 'COMPLETED') {
       entry.shipJobCount += 1;
-      entry.shippedTicketIds.add(job.ticketId);
     }
+  }
+
+  for (const ticket of shippedTickets) {
+    const key = formatUTCDate(ticket.updatedAt);
+    const entry = getOrCreate(key);
+    entry.shippedTicketIds.add(ticket.id);
   }
 
   const cells: DailyCell[] = [];

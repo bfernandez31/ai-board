@@ -73,7 +73,14 @@ describe('Heatmap Route', () => {
     projectId: number,
     defaultAgent: Agent,
     jobs: JobSeed[],
-    tickets: Array<{ key: string; number: number; agent?: Agent | null }>
+    tickets: Array<{
+      key: string;
+      number: number;
+      agent?: Agent | null;
+      stage?: Stage;
+      closedAt?: Date | null;
+      updatedAt?: Date | null;
+    }>
   ): Promise<void> {
     await prisma.project.update({
       where: { id: projectId },
@@ -85,13 +92,23 @@ describe('Heatmap Route', () => {
         projectId,
         title: `[e2e] ${t.key}`,
         description: 'heatmap seed',
-        stage: Stage.INBOX,
+        stage: t.stage ?? Stage.INBOX,
         workflowType: WorkflowType.FULL,
         ticketNumber: t.number,
         ticketKey: t.key,
         agent: t.agent ?? null,
+        ...(t.closedAt ? { closedAt: t.closedAt } : {}),
       })),
     });
+
+    for (const t of tickets) {
+      if (t.updatedAt) {
+        await prisma.$executeRaw`
+          UPDATE "Ticket" SET "updatedAt" = ${t.updatedAt}
+          WHERE "projectId" = ${projectId} AND "ticketNumber" = ${t.number}
+        `;
+      }
+    }
 
     const ticketRows = await prisma.ticket.findMany({
       where: { projectId, ticketKey: { in: tickets.map((t) => t.key) } },
@@ -159,7 +176,7 @@ describe('Heatmap Route', () => {
         },
       ],
       [
-        { key: 'HM-1', number: 1001 },
+        { key: 'HM-1', number: 1001, stage: Stage.SHIP, updatedAt: daysAgo(9) },
         { key: 'HM-2', number: 1002 },
       ]
     );
@@ -426,7 +443,7 @@ describe('Heatmap Route', () => {
           costUsd: 0.1,
         },
       ],
-      [{ key: 'HM-SHIP2X', number: 3301 }]
+      [{ key: 'HM-SHIP2X', number: 3301, stage: Stage.SHIP, updatedAt: target }]
     );
 
     const response = await GET(new NextRequest('http://localhost/api/activity/heatmap'));

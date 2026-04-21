@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, type ReactElement } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { queryKeys } from '@/app/lib/query-keys';
-import { isSupportedAgent } from '@/app/lib/utils/agent-resolution';
+import { AGENT_LABELS, isSupportedAgent } from '@/app/lib/utils/agent-resolution';
 import {
   Select,
   SelectContent,
@@ -27,10 +27,22 @@ interface ActivityHeatmapProps {
   initialError?: { message: string };
 }
 
-function coercePeriod(rawPeriod: string | null): HeatmapPeriod {
+function normalizePeriod(
+  period: HeatmapPeriod,
+  availableYears?: readonly number[]
+): HeatmapPeriod {
+  if (period.kind !== 'year') return period;
+  if (!availableYears || availableYears.includes(period.year)) return period;
+  return { kind: 'rolling12m', endDate: '' };
+}
+
+function coercePeriod(
+  rawPeriod: string | null,
+  availableYears?: readonly number[]
+): HeatmapPeriod {
   if (rawPeriod && /^\d{4}$/.test(rawPeriod)) {
     const year = Number.parseInt(rawPeriod, 10);
-    return { kind: 'year', year };
+    return normalizePeriod({ kind: 'year', year }, availableYears);
   }
   return { kind: 'rolling12m', endDate: '' };
 }
@@ -117,18 +129,22 @@ export function ActivityHeatmap({
   initialError,
 }: ActivityHeatmapProps): ReactElement {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const filters = useMemo<HeatmapFilters>(() => {
-    const period = coercePeriod(searchParams.get('heatmapPeriod'));
+    const period = coercePeriod(
+      searchParams.get('heatmapPeriod'),
+      initialData?.availableYears
+    );
     const agent = coerceAgent(searchParams.get('heatmapAgent'));
     return { period, agent };
-  }, [searchParams]);
+  }, [searchParams, initialData?.availableYears]);
 
   const updateFilters = (next: HeatmapFilters): void => {
     const params = buildFilterSearchParams(searchParams, next);
     const qs = params.toString();
-    router.push(qs ? `?${qs}` : '?', { scroll: false });
+    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
 
   const shouldUseInitialData = useMemo(
@@ -140,6 +156,7 @@ export function ActivityHeatmap({
     queryKey: queryKeys.heatmap.data(userId, periodKey(filters.period), filters.agent),
     queryFn: () => fetchHeatmap(filters),
     initialData: shouldUseInitialData && initialData ? initialData : undefined,
+    placeholderData: keepPreviousData,
     refetchInterval: 15_000,
     staleTime: 10_000,
   });
@@ -149,7 +166,7 @@ export function ActivityHeatmap({
 
   if (hasError) {
     return (
-      <section className="mt-8 rounded-lg border border-border bg-card p-6">
+      <section className="mt-8 mx-auto w-fit max-w-full rounded-lg border border-border bg-card p-6">
         <h2 className="text-lg font-semibold text-foreground mb-2">Activity</h2>
         <p className="text-sm text-muted-foreground">
           {initialError?.message ?? "Couldn't load activity — please refresh"}
@@ -160,7 +177,7 @@ export function ActivityHeatmap({
 
   if (!heatmap) {
     return (
-      <section className="mt-8 rounded-lg border border-border bg-card p-6">
+      <section className="mt-8 mx-auto w-fit max-w-full rounded-lg border border-border bg-card p-6">
         <h2 className="text-lg font-semibold text-foreground mb-2">Activity</h2>
         <HeatmapLegend />
       </section>
@@ -169,12 +186,30 @@ export function ActivityHeatmap({
 
   const hasAnyActivity = heatmap.cells.some((c) => c.jobCount > 0);
   const namedAgents = heatmap.availableAgents.filter((a) => a.value !== 'all');
-  const showAgentFilter = namedAgents.length > 1;
+  const showAgentFilter = namedAgents.length > 1 || filters.agent !== 'all';
   const showYearFilter = heatmap.availableYears.length > 0;
   const periodSelectValue = periodKey(filters.period);
+  const hasCurrentAgentOption = heatmap.availableAgents.some(
+    (a) => a.value === filters.agent
+  );
+  const agentSelectOptions =
+    !hasCurrentAgentOption && filters.agent !== 'all'
+      ? [
+          ...heatmap.availableAgents,
+          {
+            value: filters.agent,
+            label: AGENT_LABELS[filters.agent],
+            jobCount: 0,
+            isDefault: false,
+          },
+        ]
+      : heatmap.availableAgents;
 
   const handlePeriodChange = (value: string): void => {
-    updateFilters({ ...filters, period: coercePeriod(value) });
+    updateFilters({
+      ...filters,
+      period: coercePeriod(value, heatmap.availableYears),
+    });
   };
 
   const handleAgentChange = (value: string): void => {
@@ -182,7 +217,7 @@ export function ActivityHeatmap({
   };
 
   return (
-    <section className="mt-8 rounded-lg border border-border bg-card p-6 space-y-4">
+    <section className="mt-8 mx-auto w-fit max-w-full rounded-lg border border-border bg-card p-6 space-y-4">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold text-foreground">
           {heatmap.summary.totalJobs} jobs · {heatmap.summary.distinctShippedTickets} tickets shipped {heatmap.summary.periodLabel}
@@ -218,7 +253,7 @@ export function ActivityHeatmap({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {heatmap.availableAgents.map((option) => (
+                  {agentSelectOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>

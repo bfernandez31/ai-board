@@ -4742,12 +4742,12 @@ GET /api/activity/heatmap?period=2025&agent=CLAUDE
 - `cells`: One entry per UTC calendar day between `period.startDate` and `period.endDate` inclusive, sorted ascending. `cells.length === daysBetween(startDate, endDate) + 1` with no gaps or duplicates.
   - `jobCount`: Jobs whose `completedAt` falls on that day (any terminal status), post agent filter.
   - `shipJobCount`: Jobs with `command === 'ship'` AND `status === 'COMPLETED'` on that day. `shipJobCount <= jobCount`.
-  - `shippedTicketCount`: Distinct ticket IDs contributing to `shipJobCount` that day. `shippedTicketCount <= shipJobCount`.
+  - `shippedTicketCount`: Distinct tickets currently in `stage = 'SHIP'` whose `updatedAt` falls on that day (after agent filter). Not derived from `shipJobCount` — a ticket that reached `SHIP` without a `ship` COMPLETED job (e.g., manual transition) still contributes here, and a ticket with a `ship` COMPLETED job that later rolled back does not.
   - `totalCostUsd`: Sum of `costUsd` for contributing jobs, rounded to 2 decimals. `null` when any contributing job has a null cost (never `0` as a substitute).
   - `bucket`: Intensity level 0–4. `bucket === 0` if and only if `jobCount === 0`. Non-zero cells always get at least bucket 1.
 - `summary`:
   - `totalJobs`: Equals `sum(cells[*].jobCount)`.
-  - `distinctShippedTickets`: Distinct ticket IDs with at least one `ship` job completed in the period (after agent filter). NOT the sum of `cells[*].shippedTicketCount` — a ticket re-shipped on two different days counts once here but contributes to both days' cells.
+  - `distinctShippedTickets`: Count of tickets currently in `stage = 'SHIP'` whose `updatedAt` falls in the period (after agent filter). `CLOSED` tickets are excluded — only tickets actively in the shipped state count. Equals `sum(cells[*].shippedTicketCount)` since each ticket has a single `updatedAt`.
   - `periodLabel`: Human-readable label used in the header line (e.g., `"in the last year"`, `"in 2025"`).
 - `thresholds`: Job-count quantiles over the non-zero days in the period, used to assign each cell's bucket. When all cells have `jobCount === 0`, every threshold is `0`. When all non-zero days share the same count, `p25 === p50 === p75 === that count` and every non-zero cell falls into bucket 1.
 - `availableAgents`: Agent filter options derived from the distinct agents across the user's accessible jobs, combining explicit `ticket.agent` with the effective agent inherited from `project.defaultAgent`. Always includes `{ value: "all", label: "All agents", jobCount: totalJobs, isDefault: true }` as the first entry. Only agents with `jobCount > 0` appear beyond "all".
@@ -4765,13 +4765,14 @@ jobCount  > p75         → bucket 4
 
 **Effective-agent resolution** (when `agent !== "all"`):
 - A job contributes to the filtered dataset when its ticket's `agent` equals the filter value OR when the ticket's `agent` is null AND the ticket's project has `defaultAgent` equal to the filter value.
-- Same rule applies to ticket-shipped counting in `summary.distinctShippedTickets`.
+- Same rule applies to shipped-ticket counting in both `summary.distinctShippedTickets` and `cells[*].shippedTicketCount`.
 
 **Data derivation**:
 - Read-only over existing `Job`, `Ticket`, `Project`, `ProjectMember`, and `User` tables. No dedicated table or migration — all values are computed on demand.
 - Accessible project set: `Project.userId = currentUserId OR ProjectMember.userId = currentUserId`.
-- Cells are keyed by `DATE(Job.completedAt AT TIME ZONE 'UTC')`.
-- One request issues three Prisma queries: accessible projects, filtered jobs, and ticket-count for the ship-summary.
+- Job cells are keyed by `DATE(Job.completedAt AT TIME ZONE 'UTC')`.
+- Shipped-ticket cells are keyed by `DATE(Ticket.updatedAt AT TIME ZONE 'UTC')` for tickets in `stage = 'SHIP'`.
+- One request issues two Prisma batches: first `[accessible projects, user createdAt]`, then `[filtered jobs, shipped tickets (id + updatedAt for stage = 'SHIP' within the period), agent options for the period]`.
 
 **Caching**:
 - No HTTP caching headers; responses are user-specific and change as jobs complete.

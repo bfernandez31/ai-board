@@ -43,6 +43,7 @@ vi.mock('next/navigation', () => ({
     refresh: vi.fn(),
   }),
   useSearchParams: () => mockSearchParams,
+  usePathname: () => '/projects',
 }));
 
 vi.mock('@/components/ui/select', () => {
@@ -215,7 +216,7 @@ describe('ActivityHeatmap', () => {
       '[class*="aurora-heatmap-bucket-"]'
     );
     const legendSwatches = Array.from(swatches).filter(
-      (el) => el.getAttribute('aria-hidden') === 'true'
+      (el) => el.tagName === 'SPAN' && el.getAttribute('aria-hidden') === 'true' && !el.hasAttribute('data-bucket')
     );
     expect(legendSwatches).toHaveLength(5);
   });
@@ -234,7 +235,7 @@ describe('ActivityHeatmapCell tooltip (US2)', () => {
     };
     renderWithProviders(<ActivityHeatmapCell cell={cell} column={1} row={1} />);
     const user = userEvent.setup();
-    const button = screen.getByRole('button', { name: /2025-04-15: 4 jobs/i });
+    const button = screen.getByRole('gridcell', { name: /2025-04-15: 4 jobs/i });
     await user.hover(button);
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip.textContent).toMatch(/April 15, 2025|2025/);
@@ -255,7 +256,7 @@ describe('ActivityHeatmapCell tooltip (US2)', () => {
     };
     renderWithProviders(<ActivityHeatmapCell cell={cell} column={1} row={1} />);
     const user = userEvent.setup();
-    const button = screen.getByRole('button', { name: /2025-04-15: 4 jobs/i });
+    const button = screen.getByRole('gridcell', { name: /2025-04-15: 4 jobs/i });
     await user.hover(button);
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip.textContent).not.toContain('$');
@@ -275,7 +276,7 @@ describe('ActivityHeatmapCell tooltip (US2)', () => {
     };
     renderWithProviders(<ActivityHeatmapCell cell={cell} column={1} row={1} />);
     const user = userEvent.setup();
-    const button = screen.getByRole('button', { name: /2025-04-15: 2 jobs/i });
+    const button = screen.getByRole('gridcell', { name: /2025-04-15: 2 jobs/i });
     await user.click(button);
     await waitFor(() => {
       expect(button.getAttribute('aria-expanded')).toBe('true');
