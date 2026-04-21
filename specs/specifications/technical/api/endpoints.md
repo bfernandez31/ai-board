@@ -118,6 +118,88 @@ Fetch all projects for the authenticated user with shipping status.
 - `401`: Not authenticated
 - `500`: Database error
 
+### GET /api/projects/activity-heatmap
+
+Fetch the activity heatmap payload aggregated across every project the viewer owns or is a member of.
+
+**Authentication**: Required (session or Bearer PAT, resolved via `requireAuth`)
+**Authorization**: User-scoped — every underlying job and ticket belongs to a project where the viewer is owner or member
+**Caching**: `export const dynamic = 'force-dynamic'`, `revalidate = 0`, response sets `Cache-Control: no-store`
+
+**Query Parameters**:
+- `period` (string, optional, default `'12m'`): `'12m'` for a rolling 12-month window, or a `YYYY` calendar year. Invalid or out-of-range values silently fall back to `'12m'` rather than returning 400 (bookmarked URLs remain forgiving).
+- `agent` (enum, optional, default `'all'`): one of `'all' | 'CLAUDE' | 'CODEX' | 'MISTRAL' | 'GEMINI'`. A typo on this closed enum returns 400.
+
+**Behavior**:
+- Jobs are bucketed by `startedAt` (day-of-record), excluding `PENDING` and any `startedAt > today`
+- "Tickets shipped" derive exclusively from `command='ship' AND status='COMPLETED'` jobs (never from `Ticket.stage`)
+- Effective-agent resolution: `ticket.agent ?? project.defaultAgent`, via the shared analytics `buildEffectiveAgentWhere` helper
+- Cost totals only sum non-null `costUsd` values; `sumCostUsd` is rounded to 2 decimals; `hasAnyCost` is false when every job on a day has a null cost
+- Intensity thresholds `{t1, t2, t3, t4}` are derived from the non-zero count distribution (p50/p75/p90, rounded up, monotonic)
+- `availableAgents` is computed from the UNFILTERED dataset so filter options survive when the user narrows by agent
+- Empty result sets return the zero-state shape (full grid of empty days, `totals: { jobs: 0, ticketsShipped: 0 }`, `availableAgents: []`) — the endpoint never throws for empty data
+
+**Response** (200 OK):
+```json
+{
+  "filters": {
+    "period": { "kind": "rolling", "months": 12 },
+    "agent": "all"
+  },
+  "period": {
+    "startDate": "2025-04-22",
+    "endDate": "2026-04-21",
+    "label": "the last year"
+  },
+  "intensityThresholds": { "t1": 1, "t2": 3, "t3": 7, "t4": 15 },
+  "days": [
+    {
+      "date": "2025-04-22",
+      "jobCount": 0,
+      "sumCostUsd": 0,
+      "hasAnyCost": false,
+      "shippedTickets": [],
+      "intensity": 0
+    },
+    {
+      "date": "2025-04-23",
+      "jobCount": 5,
+      "sumCostUsd": 1.23,
+      "hasAnyCost": true,
+      "shippedTickets": [
+        { "ticketKey": "AIB-704", "title": "Activity heatmap on projects page" }
+      ],
+      "intensity": 2
+    }
+  ],
+  "totals": { "jobs": 847, "ticketsShipped": 43 },
+  "availableAgents": [
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 612 },
+    { "value": "CODEX",  "label": "Codex",  "jobCount": 235 }
+  ],
+  "accountCreatedYear": 2024,
+  "generatedAt": "2026-04-21T14:02:33.001Z"
+}
+```
+
+**Field Reference**:
+- `filters.period`: resolved period echoed back (not the raw param), so the client can gate `initialData` reuse via a filters-match comparison
+- `period.startDate` / `period.endDate`: inclusive `YYYY-MM-DD` (UTC); `endDate` is clamped to today
+- `period.label`: human-readable (`"the last year"` for rolling, `"2025"` for year) — consumed by the header counter
+- `days[]`: exactly one entry per calendar day in `[startDate, endDate]`; zero-activity days appear as `{ jobCount: 0, sumCostUsd: 0, hasAnyCost: false, shippedTickets: [], intensity: 0 }`
+- `totals.jobs === sum(days[].jobCount)`; `totals.ticketsShipped === sum(days[].shippedTickets.length)`
+- `availableAgents[].value`: closed enum (no `'all'` entry — `'all'` is implicit in the UI default)
+- `accountCreatedYear`: lower bound for the period-selector dropdown
+
+**Errors**:
+- `400`: Invalid `agent` enum value → `{ "error": "Invalid heatmap filters" }`
+- `401`: Not authenticated → `{ "error": "Unauthorized" }`
+- `500`: Unhandled exception → `{ "error": "Internal server error" }`
+
+No `403` / `404` surface — the endpoint is user-scoped, so missing data returns the zero-state shape rather than an error.
+
+**Server-side hydration**: `app/projects/page.tsx` calls `getHeatmapInitialData(userId, filters)` in parallel with the project list query (single `Promise.all`) and passes the payload as `initialData` to the client `useActivityHeatmap` hook. This guarantees the heatmap paints with real data on first render with no loading spinner.
+
 ### GET /api/projects/:projectId
 
 Fetch project details including clarification policy.

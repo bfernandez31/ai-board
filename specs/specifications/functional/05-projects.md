@@ -127,6 +127,76 @@ When no projects exist:
 - All text content uses `min-w-0` and `truncate` utilities to prevent horizontal scroll
 - Cards maintain fixed width boundaries on mobile viewports (375px minimum)
 
+## Activity Heatmap
+
+Below the project cards grid, the projects page renders a GitHub-style contribution heatmap that summarizes the viewer's AI activity across every project they own or are a member of. The page scrolls naturally so the heatmap is reachable by scrolling past the cards (no nested scroll region).
+
+### Data Scope
+
+- Includes jobs and tickets from every project where the current user is owner or member
+- Jobs are bucketed into daily cells by `completedAt` (falling back to `startedAt` when completion is unavailable)
+- "Tickets shipped" counts only tickets whose `ship` job status is `COMPLETED` on that day — stage changes to SHIP without a completed ship job are never counted
+- Cost totals sum only jobs with non-null `costUsd`; jobs without recorded cost are excluded rather than treated as zero
+- Future-dated job timestamps are clamped to today so cells never appear in the future
+
+### Grid and Legend
+
+- Seven-row grid (one row per day of the week) with one column per calendar week in the selected period
+- Month labels render above the grid; day-of-week labels (Mon/Wed/Fri) render to the left
+- Cells outside the period are not rendered — produces "chipped" top-left and bottom-right corners when the period does not start on Sunday or end on Saturday
+- Five-level violet aurora intensity scale: level 0 is "no activity"; levels 1–4 are derived from the non-zero distribution's p50/p75/p90 percentiles within the selected period
+- Legend rendered bottom-right showing the intensity scale from "Less" to "More"
+
+### Header Counter and Period Selector
+
+- Counter reads "N jobs · M tickets shipped in the last year" (or "in {year}" when a specific year is selected) where N and M reflect the filtered, period-bounded data set
+- Period selector defaults to "Last 12 months" (a rolling 365-day window ending today)
+- Period selector also offers every calendar year from the user's account creation year through the current year, in reverse chronological order
+- If the user's account was created in the current calendar year, the period selector is hidden — "Last 12 months" is the only effective option
+- A specific year selection spans exactly January 1 through December 31 of that year
+
+### Agent Filter
+
+- The filter is built dynamically from the user's actual data, combining explicit `ticket.agent` values and the agent inherited from `project.defaultAgent` when `ticket.agent` is null
+- Includes an "All" option and defaults to "All" on initial load
+- Hidden entirely when the user's data resolves to 0 or 1 distinct effective agent
+- Selecting a specific agent includes jobs whose effective agent equals the selection, including tickets that inherit the agent via their project default
+- Changing the agent filter never changes grid boundaries, chipped corners, or the legend — only cell intensities, the counter, and tooltip contents
+
+### Cell Tooltip
+
+Hovering a cell on a pointer device (or tapping on touch) displays a tooltip with, in order:
+
+1. The formatted date
+2. Each ticket shipped on that day, rendered as `{ticketKey} — {title}`
+3. A summary line:
+   - `"N jobs · $X.XX"` when at least one job on that day recorded cost ($X.XX is the sum of recorded costs)
+   - `"N jobs"` alone when no job on that day recorded cost — no dollar sign, no `$0` placeholder, no `$NaN`
+
+On touch devices, tapping a cell displays its tooltip; tapping outside dismisses it. Cells are focusable buttons with an aria-label describing the date and count.
+
+### Empty State
+
+When the user has zero jobs and zero shipped tickets across the selected period and the agent filter is "All", the grid is replaced by an empty-state message ("No activity to show yet — your AI work will appear here"). The legend and filters remain visible and interactive. When the agent filter reduces visible data to zero but activity exists elsewhere in the period, the grid still renders as empty cells (no empty-state message).
+
+### URL State
+
+- The selected period and agent are reflected in the page URL as query parameters (`period`, `agent`)
+- Default values (`period=12m`, `agent=all`) are omitted from the URL
+- Opening a shared URL (signed in as the same user) reproduces the same view on first paint
+- Period changes call a non-scrolling router navigation so the viewport stays on the heatmap
+
+### Loading and Refresh
+
+- The initial render is server-hydrated — the heatmap paints with real data, not a spinner or skeleton
+- Data refetches silently in the background every 15 seconds and on window focus
+- Background refetches never blank, shimmer, or flash the visible grid
+
+### Mobile Layout
+
+- On narrow viewports (≤ 480px), the grid scrolls horizontally rather than wrapping or shrinking cells below a tappable size
+- The day-of-week label column stays pinned to the left edge while months and dates scroll beneath it
+
 ## Project Settings
 
 ### Settings Page Navigation
