@@ -84,8 +84,7 @@ export function getPeriodBoundaries(
 
 export function enumerateYearsSinceJoin(joinYear: number, now: Date = new Date()): number[] {
   const currentYear = now.getUTCFullYear();
-  if (joinYear > currentYear) return [];
-  if (joinYear === currentYear) return [];
+  if (joinYear >= currentYear) return [];
   const years: number[] = [];
   for (let y = currentYear; y >= joinYear; y -= 1) {
     years.push(y);

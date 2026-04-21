@@ -34,7 +34,7 @@ function getInitialFilters(
   const rawAgent = searchParams.get('agent');
 
   const period: HeatmapPeriodKey = rawPeriod
-    ? parsePeriodParam(rawPeriod, accountCreatedYear, new Date())
+    ? parsePeriodParam(rawPeriod, accountCreatedYear)
     : initialData.filters.period;
 
   const agent: AgentFilter = isAgentFilter(rawAgent) ? rawAgent : initialData.filters.agent;
@@ -80,7 +80,7 @@ export function ActivityHeatmapSection({
   const heatmap = data ?? initialData;
 
   const availableYears = useMemo(
-    () => enumerateYearsSinceJoin(accountCreatedYear, new Date()),
+    () => enumerateYearsSinceJoin(accountCreatedYear),
     [accountCreatedYear]
   );
 

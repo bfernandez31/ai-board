@@ -12,10 +12,6 @@ const DEFAULT_THRESHOLDS: HeatmapIntensityThresholds = { t1: 1, t2: 1, t3: 1, t4
 
 function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) return 0;
-  if (sorted.length === 1) {
-    const first = sorted[0] ?? 0;
-    return first;
-  }
   const rank = (sorted.length - 1) * p;
   const lowIndex = Math.floor(rank);
   const highIndex = Math.ceil(rank);

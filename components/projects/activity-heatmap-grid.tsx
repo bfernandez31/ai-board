@@ -45,6 +45,10 @@ function formatDateLong(iso: string): string {
   }).format(d);
 }
 
+function formatJobCount(count: number): string {
+  return `${count} ${count === 1 ? 'job' : 'jobs'}`;
+}
+
 interface WeekColumn {
   weekIndex: number;
   cells: (HeatmapDay | null)[];
@@ -164,7 +168,8 @@ export function ActivityHeatmapGrid({ days, startDate, endDate }: ActivityHeatma
 
                   const intensityClass = INTENSITY_CLASSES[day.intensity];
                   const dateLong = formatDateLong(day.date);
-                  const ariaLabel = `${dateLong}, ${day.jobCount} ${day.jobCount === 1 ? 'job' : 'jobs'}`;
+                  const jobLabel = formatJobCount(day.jobCount);
+                  const ariaLabel = `${dateLong}, ${jobLabel}`;
                   const isOpen = openDate === day.date;
 
                   return (
@@ -209,8 +214,8 @@ export function ActivityHeatmapGrid({ days, startDate, endDate }: ActivityHeatma
                         )}
                         <p className="text-xs">
                           {day.hasAnyCost
-                            ? `${day.jobCount} ${day.jobCount === 1 ? 'job' : 'jobs'} · $${day.sumCostUsd.toFixed(2)}`
-                            : `${day.jobCount} ${day.jobCount === 1 ? 'job' : 'jobs'}`}
+                            ? `${jobLabel} · $${day.sumCostUsd.toFixed(2)}`
+                            : jobLabel}
                         </p>
                       </TooltipContent>
                     </Tooltip>

@@ -186,25 +186,20 @@ export async function getHeatmapInitialData(
   const totalJobs = days.reduce((sum, d) => sum + d.jobCount, 0);
 
   const agentCounts = new Map<NamedAgent, number>();
-  for (const agent of ALL_AGENTS) agentCounts.set(agent, 0);
   for (const ticket of agentTickets) {
     const effective = resolveEffectiveAgent(ticket.agent, ticket.project.defaultAgent) as NamedAgent;
     agentCounts.set(effective, (agentCounts.get(effective) ?? 0) + ticket._count.jobs);
   }
-  const availableAgents: HeatmapAgentOption[] = [];
-  for (const agent of ALL_AGENTS) {
-    const count = agentCounts.get(agent) ?? 0;
-    if (count > 0) {
-      availableAgents.push({
-        value: agent,
-        label: getAgentLabel(agent),
-        jobCount: count,
-      });
-    }
-  }
+  const availableAgents: HeatmapAgentOption[] = ALL_AGENTS
+    .map((agent) => ({
+      value: agent,
+      label: getAgentLabel(agent),
+      jobCount: agentCounts.get(agent) ?? 0,
+    }))
+    .filter((option) => option.jobCount > 0);
 
   return {
-    filters: { ...filters, period: filters.period },
+    filters,
     period: {
       startDate: formatDateForGrouping(startDate, 'daily'),
       endDate: formatDateForGrouping(endDate, 'daily'),

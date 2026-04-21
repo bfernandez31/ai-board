@@ -61,11 +61,11 @@ export function ActivityHeatmapHeader({
             onValueChange={(value) => {
               if (value === '12m') {
                 onPeriodChange({ kind: 'rolling', months: 12 });
-              } else {
-                const parsedYear = Number(value);
-                if (!Number.isNaN(parsedYear)) {
-                  onPeriodChange({ kind: 'year', year: parsedYear });
-                }
+                return;
+              }
+              const parsedYear = Number(value);
+              if (!Number.isNaN(parsedYear)) {
+                onPeriodChange({ kind: 'year', year: parsedYear });
               }
             }}
           >
