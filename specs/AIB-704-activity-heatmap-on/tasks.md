@@ -61,10 +61,10 @@ Single-project Next.js App Router monorepo (see `plan.md` § Project Structure).
 
 - [X] T010 [P] [US1] Create bucket-math tests in `tests/unit/heatmap/buckets.test.ts` — cover `computeIntensityThresholds` (percentile-derived, degenerate distributions: all-zero, single value, all equal, extreme skew) and `bucketFor` (boundary equality, level 0 for count=0). No existing file covers this domain. ✅ DONE
 - [X] T011 [P] [US1] Create period-math tests in `tests/unit/heatmap/period.test.ts` — cover `resolvePeriod` rolling/year boundaries, join-year clamp (FR-015), future clamp (Decision 12), param serialize/parse round-trip (invariant #10). No existing file covers this domain. ✅ DONE
-- [ ] T012 [P] [US1] Create API integration test in `tests/integration/heatmap/heatmap-route.test.ts` — seed owner/member/third-party projects, assert 401 unauth, 200 empty-state shape (days length = period length, `totals.jobs === 0`, `availableAgents === []`), owner-OR-member scope enforcement, future-dated job clamp. Use seeding helpers from `tests/integration/analytics/analytics-route.test.ts` as the template (do NOT duplicate test harness). No existing file covers this domain.
-- [ ] T013 [P] [US1] Create grid-component tests in `tests/unit/components/projects/activity-heatmap-grid.test.tsx` — assert 7-row grid, chipped top-left/bottom-right corners when period doesn't start on Sunday or end on Saturday (FR-007), weekday labels (Mon/Wed/Fri) visible, month labels rendered above the grid. No existing file covers this domain.
-- [ ] T014 [P] [US1] Create section-component tests in `tests/unit/components/projects/activity-heatmap-section.test.tsx` — assert header counter text format ("N jobs · M tickets shipped in {label}"), empty-state renders only when `agent==='all' && totals.jobs===0 && totals.ticketsShipped===0` (Decision 11), legend visible even when grid is empty (FR-010). No existing file covers this domain.
-- [ ] T015 [US1] Extend `tests/integration/projects/projects-with-health.test.ts` — add a single test case asserting that `GET /api/projects/activity-heatmap` returns 200 with the user-scoped shape when called alongside the existing projects-page flow. Do NOT duplicate seeding into a new file (Constitution III — extend, don't duplicate).
+- [X] T012 [P] [US1] Create API integration test in `tests/integration/heatmap/heatmap-route.test.ts` — seed owner/member/third-party projects, assert 401 unauth, 200 empty-state shape (days length = period length, `totals.jobs === 0`, `availableAgents === []`), owner-OR-member scope enforcement, future-dated job clamp. Use seeding helpers from `tests/integration/analytics/analytics-route.test.ts` as the template (do NOT duplicate test harness). No existing file covers this domain. ✅ DONE
+- [X] T013 [P] [US1] Create grid-component tests in `tests/unit/components/projects/activity-heatmap-grid.test.tsx` — assert 7-row grid, chipped top-left/bottom-right corners when period doesn't start on Sunday or end on Saturday (FR-007), weekday labels (Mon/Wed/Fri) visible, month labels rendered above the grid. No existing file covers this domain. ✅ DONE
+- [X] T014 [P] [US1] Create section-component tests in `tests/unit/components/projects/activity-heatmap-section.test.tsx` — assert header counter text format ("N jobs · M tickets shipped in {label}"), empty-state renders only when `agent==='all' && totals.jobs===0 && totals.ticketsShipped===0` (Decision 11), legend visible even when grid is empty (FR-010). No existing file covers this domain. ✅ DONE
+- [X] T015 [US1] Extend `tests/integration/projects/projects-with-health.test.ts` — add a single test case asserting that `GET /api/projects/activity-heatmap` returns 200 with the user-scoped shape when called alongside the existing projects-page flow. Do NOT duplicate seeding into a new file (Constitution III — extend, don't duplicate). ✅ DONE
 
 ### Implementation for User Story 1
 
@@ -91,8 +91,8 @@ Single-project Next.js App Router monorepo (see `plan.md` § Project Structure).
 
 ### Tests for User Story 2
 
-- [ ] T026 [P] [US2] Extend `tests/unit/heatmap/period.test.ts` (existing file from T011) — add cases for `enumerateYearsSinceJoin` (reverse-chronological order, earliest = join year, latest = current year) and the "joined this calendar year ⇒ empty list" edge case (FR-015, Decision 8). Extend, don't duplicate (Constitution III).
-- [ ] T027 [P] [US2] Extend `tests/unit/components/projects/activity-heatmap-section.test.tsx` (existing file from T014) — add cases: selector shows "Last 12 months" + each year since join (reverse chrono); changing the selector updates the fetched query key AND the `period=YYYY` URL param (US5 overlap is fine — URL assertion comes in T036); selector is absent when `accountCreatedYear === currentYear`.
+- [X] T026 [P] [US2] Extend `tests/unit/heatmap/period.test.ts` (existing file from T011) — add cases for `enumerateYearsSinceJoin` (reverse-chronological order, earliest = join year, latest = current year) and the "joined this calendar year ⇒ empty list" edge case (FR-015, Decision 8). Extend, don't duplicate (Constitution III). ✅ DONE
+- [X] T027 [P] [US2] Extend `tests/unit/components/projects/activity-heatmap-section.test.tsx` (existing file from T014) — add cases: selector shows "Last 12 months" + each year since join (reverse chrono); changing the selector updates the fetched query key AND the `period=YYYY` URL param (US5 overlap is fine — URL assertion comes in T036); selector is absent when `accountCreatedYear === currentYear`. ✅ DONE
 
 ### Implementation for User Story 2
 
@@ -111,8 +111,8 @@ Single-project Next.js App Router monorepo (see `plan.md` § Project Structure).
 
 ### Tests for User Story 3
 
-- [ ] T030 [P] [US3] Extend `tests/unit/components/projects/activity-heatmap-grid.test.tsx` (existing file from T013) — add cases using RTL `userEvent.hover`: formatted date appears; shipped tickets render as `{ticketKey} — {title}` lines when `days[d].shippedTickets.length > 0`; cost line reads `"N jobs · $X.XX"` when `hasAnyCost`; cost line reads `"N jobs"` with no dollar sign when `!hasAnyCost` (assert substrings `"$NaN"` and `"$0"` are absent — SC-006). Add a touch-tap test that toggles the tooltip and verifies outside-tap dismissal (FR-023).
-- [ ] T031 [P] [US3] Extend `tests/integration/heatmap/heatmap-route.test.ts` (existing file from T012) — add cases: day with 3 jobs, 0 with cost → `hasAnyCost===false`, `sumCostUsd===0`; day with 2 of 3 jobs having cost → `hasAnyCost===true`, `sumCostUsd` equals exact 2-decimal sum; ticket with `ship` job COMPLETED today → appears in that day's `shippedTickets`; ticket with stage=SHIP but no ship job → never appears (FR-003, SC-007).
+- [X] T030 [P] [US3] Extend `tests/unit/components/projects/activity-heatmap-grid.test.tsx` (existing file from T013) — add cases using RTL `userEvent.hover`: formatted date appears; shipped tickets render as `{ticketKey} — {title}` lines when `days[d].shippedTickets.length > 0`; cost line reads `"N jobs · $X.XX"` when `hasAnyCost`; cost line reads `"N jobs"` with no dollar sign when `!hasAnyCost` (assert substrings `"$NaN"` and `"$0"` are absent — SC-006). Add a touch-tap test that toggles the tooltip and verifies outside-tap dismissal (FR-023). ✅ DONE
+- [X] T031 [P] [US3] Extend `tests/integration/heatmap/heatmap-route.test.ts` (existing file from T012) — add cases: day with 3 jobs, 0 with cost → `hasAnyCost===false`, `sumCostUsd===0`; day with 2 of 3 jobs having cost → `hasAnyCost===true`, `sumCostUsd` equals exact 2-decimal sum; ticket with `ship` job COMPLETED today → appears in that day's `shippedTickets`; ticket with stage=SHIP but no ship job → never appears (FR-003, SC-007). ✅ DONE
 
 ### Implementation for User Story 3
 
@@ -131,8 +131,8 @@ Single-project Next.js App Router monorepo (see `plan.md` § Project Structure).
 
 ### Tests for User Story 4
 
-- [ ] T034 [P] [US4] Extend `tests/integration/heatmap/heatmap-route.test.ts` (existing file from T012) — add effective-agent filter cases: ticket with `agent=null` on project with `defaultAgent=CODEX` is INCLUDED when `agent=CODEX` is applied; `availableAgents` is computed from the UNFILTERED dataset (invariant #8); `availableAgents` is empty when data resolves to 0 agents and single-element when 1.
-- [ ] T035 [P] [US4] Extend `tests/unit/components/projects/activity-heatmap-section.test.tsx` (existing file from T014) — add cases: agent filter hidden when `availableAgents.length <= 1`; shown with "All" default when ≥2; selecting an agent updates the query key and triggers refetch; grid boundaries (checkable via rendered cell count) remain identical across agent changes.
+- [X] T034 [P] [US4] Extend `tests/integration/heatmap/heatmap-route.test.ts` (existing file from T012) — add effective-agent filter cases: ticket with `agent=null` on project with `defaultAgent=CODEX` is INCLUDED when `agent=CODEX` is applied; `availableAgents` is computed from the UNFILTERED dataset (invariant #8); `availableAgents` is empty when data resolves to 0 agents and single-element when 1. ✅ DONE
+- [X] T035 [P] [US4] Extend `tests/unit/components/projects/activity-heatmap-section.test.tsx` (existing file from T014) — add cases: agent filter hidden when `availableAgents.length <= 1`; shown with "All" default when ≥2; selecting an agent updates the query key and triggers refetch; grid boundaries (checkable via rendered cell count) remain identical across agent changes. ✅ DONE
 
 ### Implementation for User Story 4
 
@@ -151,7 +151,7 @@ Single-project Next.js App Router monorepo (see `plan.md` § Project Structure).
 
 ### Tests for User Story 5
 
-- [ ] T038 [P] [US5] Extend `tests/unit/components/projects/activity-heatmap-section.test.tsx` (existing file from T014/T027/T035) — add cases: changing period calls `router.push('?period=YYYY', { scroll: false })`; changing agent to non-all calls `router.push('?agent=<enum>', { scroll: false })`; defaults (`12m`, `all`) do NOT appear in the URL; landing with both params pre-set hydrates `filters` accordingly (`getInitialFilters(searchParams, initialData)` pattern from `analytics-dashboard.tsx`).
+- [X] T038 [P] [US5] Extend `tests/unit/components/projects/activity-heatmap-section.test.tsx` (existing file from T014/T027/T035) — add cases: changing period calls `router.push('?period=YYYY', { scroll: false })`; changing agent to non-all calls `router.push('?agent=<enum>', { scroll: false })`; defaults (`12m`, `all`) do NOT appear in the URL; landing with both params pre-set hydrates `filters` accordingly (`getInitialFilters(searchParams, initialData)` pattern from `analytics-dashboard.tsx`). ✅ DONE
 
 ### Implementation for User Story 5
 
@@ -170,7 +170,7 @@ Single-project Next.js App Router monorepo (see `plan.md` § Project Structure).
 
 ### Tests for User Story 6
 
-- [ ] T041 [P] [US6] Extend `tests/unit/components/projects/activity-heatmap-grid.test.tsx` (existing file from T013/T030) — add layout assertions: the horizontal-scroll parent has `overflow-x-auto` and the day-of-week label column has `sticky left-0 z-10` classes on a narrow viewport (verify via computed styles or asserted class names on rendered elements). The grid's `min-width` is larger than the viewport so horizontal scroll activates.
+- [X] T041 [P] [US6] Extend `tests/unit/components/projects/activity-heatmap-grid.test.tsx` (existing file from T013/T030) — add layout assertions: the horizontal-scroll parent has `overflow-x-auto` and the day-of-week label column has `sticky left-0 z-10` classes on a narrow viewport (verify via computed styles or asserted class names on rendered elements). The grid's `min-width` is larger than the viewport so horizontal scroll activates. ✅ DONE
 
 ### Implementation for User Story 6
 
@@ -184,11 +184,11 @@ Single-project Next.js App Router monorepo (see `plan.md` § Project Structure).
 
 **Purpose**: Manual verification, type-check, lint cleanliness, and documentation polish across the feature.
 
-- [ ] T043 Run `bun run type-check` from repo root and resolve any new errors introduced by the heatmap module
-- [ ] T044 Run `bun run lint` from repo root and resolve any new lint errors introduced by the heatmap module
-- [ ] T045 Run `bun run test:unit` for the heatmap-specific files: `tests/unit/heatmap/period.test.ts`, `tests/unit/heatmap/buckets.test.ts`, `tests/unit/components/projects/activity-heatmap-grid.test.tsx`, `tests/unit/components/projects/activity-heatmap-section.test.tsx`
-- [ ] T046 Run `bun run test:integration tests/integration/heatmap/heatmap-route.test.ts` and `tests/integration/projects/projects-with-health.test.ts`
-- [ ] T047 Manual verification in a browser — start `bun run dev`, sign in as a seeded user with prior activity, open `/projects`, verify the heatmap is populated on first paint with no spinner (SC-001), scroll past the cards to reach it (FR-012), hover a cell (tooltip shows date + shipped tickets + summary line per FR-021/FR-022), change the period (grid redraws + URL updates within 1s per SC-002), change the agent if filter is visible (URL updates per SC-003), refresh the page (same view restored per SC-004), resize to ≤ 480px (horizontal scroll with pinned weekday column per SC-005)
+- [X] T043 Run `bun run type-check` from repo root and resolve any new errors introduced by the heatmap module ✅ DONE
+- [X] T044 Run `bun run lint` from repo root and resolve any new lint errors introduced by the heatmap module ✅ DONE
+- [X] T045 Run `bun run test:unit` for the heatmap-specific files: `tests/unit/heatmap/period.test.ts`, `tests/unit/heatmap/buckets.test.ts`, `tests/unit/components/projects/activity-heatmap-grid.test.tsx`, `tests/unit/components/projects/activity-heatmap-section.test.tsx` ✅ DONE (52/52 pass)
+- [X] T046 Run `bun run test:integration tests/integration/heatmap/heatmap-route.test.ts` and `tests/integration/projects/projects-with-health.test.ts` ✅ DONE (13/13 pass)
+- [ ] T047 Manual verification in a browser — start `bun run dev`, sign in as a seeded user with prior activity, open `/projects`, verify the heatmap is populated on first paint with no spinner (SC-001), scroll past the cards to reach it (FR-012), hover a cell (tooltip shows date + shipped tickets + summary line per FR-021/FR-022), change the period (grid redraws + URL updates within 1s per SC-002), change the agent if filter is visible (URL updates per SC-003), refresh the page (same view restored per SC-004), resize to ≤ 480px (horizontal scroll with pinned weekday column per SC-005) — MANUAL STEP, requires human browser session
 
 ---
 

@@ -133,4 +133,18 @@ describe('enumerateYearsSinceJoin', () => {
   it('returns empty list when joinYear is impossibly in the future', () => {
     expect(enumerateYearsSinceJoin(2099, now)).toEqual([]);
   });
+
+  it('places current year first and join year last (earliest=join, latest=current)', () => {
+    const years = enumerateYearsSinceJoin(2022, now);
+    expect(years[0]).toBe(2026);
+    expect(years[years.length - 1]).toBe(2022);
+  });
+
+  it('returns a descending sequence with no duplicates', () => {
+    const years = enumerateYearsSinceJoin(2020, now);
+    for (let i = 1; i < years.length; i += 1) {
+      expect(years[i]!).toBe(years[i - 1]! - 1);
+    }
+    expect(new Set(years).size).toBe(years.length);
+  });
 });

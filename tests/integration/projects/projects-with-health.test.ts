@@ -178,4 +178,34 @@ describe('Projects API with Health Score', () => {
       expect(project).toHaveProperty('healthScore');
     }
   });
+
+  it('serves /api/projects/activity-heatmap alongside /api/projects with user-scoped shape (AIB-704 T015)', async () => {
+    const [projectsRes, heatmapRes] = await Promise.all([
+      ctx.api.get<Array<{ id: number }>>('/api/projects'),
+      ctx.api.get<{
+        filters: { period: { kind: string }; agent: string };
+        period: { startDate: string; endDate: string; label: string };
+        days: Array<{ date: string; jobCount: number; intensity: number }>;
+        totals: { jobs: number; ticketsShipped: number };
+        availableAgents: Array<{ value: string; label: string; jobCount: number }>;
+        accountCreatedYear: number;
+      }>('/api/projects/activity-heatmap'),
+    ]);
+
+    expect(projectsRes.status).toBe(200);
+    expect(heatmapRes.status).toBe(200);
+
+    const { data } = heatmapRes;
+    expect(data.filters.agent).toBe('all');
+    expect(data.filters.period.kind).toBe('rolling');
+    expect(typeof data.period.startDate).toBe('string');
+    expect(typeof data.period.endDate).toBe('string');
+    expect(typeof data.period.label).toBe('string');
+    expect(Array.isArray(data.days)).toBe(true);
+    expect(data.days.length).toBeGreaterThanOrEqual(365);
+    expect(typeof data.totals.jobs).toBe('number');
+    expect(typeof data.totals.ticketsShipped).toBe('number');
+    expect(Array.isArray(data.availableAgents)).toBe(true);
+    expect(typeof data.accountCreatedYear).toBe('number');
+  });
 });

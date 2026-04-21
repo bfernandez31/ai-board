@@ -167,14 +167,14 @@ export function ActivityHeatmapGrid({ days, startDate, endDate }: ActivityHeatma
                   const ariaLabel = `${dateLong}, ${day.jobCount} ${day.jobCount === 1 ? 'job' : 'jobs'}`;
                   const isOpen = openDate === day.date;
 
-                  const tooltipProps = isOpen ? { open: true as const } : {};
-
                   return (
                     <Tooltip
                       key={day.date}
-                      {...tooltipProps}
+                      open={isOpen}
                       onOpenChange={(next) => {
-                        if (!next && openDate === day.date) {
+                        if (next) {
+                          setOpenDate(day.date);
+                        } else if (openDate === day.date) {
                           setOpenDate(null);
                         }
                       }}
