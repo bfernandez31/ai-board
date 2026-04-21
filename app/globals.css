@@ -427,4 +427,28 @@
       opacity: 0.85;
     }
   }
+
+  /* Activity heatmap cells — 5-bucket quantile scale (AIB-690) */
+  .aurora-heatmap-bucket-0 {
+    background: hsl(var(--ctp-surface-0) / 0.6);
+    border: 1px solid hsl(var(--ctp-surface-1) / 0.3);
+  }
+  .aurora-heatmap-bucket-1 {
+    background: linear-gradient(135deg, hsl(var(--primary-violet) / 0.18), hsl(var(--ctp-lavender) / 0.12));
+    border: 1px solid hsl(var(--primary-violet) / 0.22);
+  }
+  .aurora-heatmap-bucket-2 {
+    background: linear-gradient(135deg, hsl(var(--primary-violet) / 0.38), hsl(var(--ctp-mauve) / 0.26));
+    border: 1px solid hsl(var(--primary-violet) / 0.38);
+  }
+  .aurora-heatmap-bucket-3 {
+    background: linear-gradient(135deg, hsl(var(--primary-violet) / 0.62), hsl(var(--ctp-mauve) / 0.45));
+    border: 1px solid hsl(var(--primary-violet) / 0.55);
+    box-shadow: 0 0 6px hsl(var(--primary-violet) / 0.15);
+  }
+  .aurora-heatmap-bucket-4 {
+    background: linear-gradient(135deg, hsl(var(--primary-violet) / 0.9), hsl(var(--ctp-mauve) / 0.75));
+    border: 1px solid hsl(var(--primary-violet) / 0.85);
+    box-shadow: 0 0 10px hsl(var(--primary-violet) / 0.28);
+  }
 }

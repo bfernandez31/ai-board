@@ -4674,6 +4674,121 @@ Fetch unified activity feed for a project.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 
+### GET /api/activity/heatmap
+
+Return a full activity-heatmap dataset (daily cells, header summary, filter options, bucket thresholds) for the signed-in user's accessible projects. Consumed by the `/projects` server page for SSR initial data and by client-side TanStack Query polling.
+
+**Authentication**: Required (session or Bearer PAT via `requireAuth(request)`)
+**Authorization**: User-scoped — no project ID in the URL. The dataset is automatically restricted to projects the caller owns or is a member of. No 403 is ever returned from this endpoint.
+
+**Query Parameters**:
+- `period` (string, optional): `last12months` or a four-digit year `YYYY` (default: `last12months`). Invalid or out-of-range values (e.g., year outside `[accountCreationYear, currentYear]`, non-numeric strings) are silently coerced to the default rather than rejected with a 400.
+- `agent` (string, optional): `all` | `CLAUDE` | `CODEX` | `MISTRAL` | `GEMINI` (default: `all`). Unknown values are coerced to `all`.
+
+Query parameters are validated with Zod via `safeParse`; validation failure does not return 400 — the failing value is coerced to the default so shared URLs remain usable.
+
+**Example**:
+```
+GET /api/activity/heatmap?period=2025&agent=CLAUDE
+```
+
+**Response** (200 OK):
+```json
+{
+  "period": {
+    "kind": "year",
+    "startDate": "2025-01-01",
+    "endDate": "2025-12-31",
+    "year": 2025
+  },
+  "filters": {
+    "period": { "kind": "year", "year": 2025 },
+    "agent": "CLAUDE"
+  },
+  "cells": [
+    {
+      "date": "2025-01-01",
+      "jobCount": 4,
+      "shipJobCount": 1,
+      "shippedTicketCount": 1,
+      "totalCostUsd": 1.23,
+      "bucket": 2
+    }
+  ],
+  "summary": {
+    "totalJobs": 812,
+    "distinctShippedTickets": 27,
+    "periodLabel": "in 2025"
+  },
+  "thresholds": {
+    "p25": 1,
+    "p50": 3,
+    "p75": 7,
+    "maxJobCount": 42
+  },
+  "availableAgents": [
+    { "value": "all", "label": "All agents", "jobCount": 812, "isDefault": true },
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 720, "isDefault": false },
+    { "value": "CODEX", "label": "Codex", "jobCount": 92, "isDefault": false }
+  ],
+  "availableYears": [2026, 2025, 2024],
+  "generatedAt": "2026-04-19T10:30:00.000Z"
+}
+```
+
+**Fields**:
+- `period`: Resolved window after coercion. `kind`: `rolling12m` or `year`. `startDate` and `endDate` are UTC calendar dates, inclusive. `year` is present only when `kind === "year"`.
+- `filters`: Applied filter set echoed back to the client (source of truth for client cache key).
+- `cells`: One entry per UTC calendar day between `period.startDate` and `period.endDate` inclusive, sorted ascending. `cells.length === daysBetween(startDate, endDate) + 1` with no gaps or duplicates.
+  - `jobCount`: Jobs whose `completedAt` falls on that day (any terminal status), post agent filter.
+  - `shipJobCount`: Jobs with `command === 'ship'` AND `status === 'COMPLETED'` on that day. `shipJobCount <= jobCount`.
+  - `shippedTicketCount`: Distinct tickets currently in `stage = 'SHIP'` whose `updatedAt` falls on that day (after agent filter). Not derived from `shipJobCount` — a ticket that reached `SHIP` without a `ship` COMPLETED job (e.g., manual transition) still contributes here, and a ticket with a `ship` COMPLETED job that later rolled back does not.
+  - `totalCostUsd`: Sum of `costUsd` for contributing jobs, rounded to 2 decimals. `null` when any contributing job has a null cost (never `0` as a substitute).
+  - `bucket`: Intensity level 0–4. `bucket === 0` if and only if `jobCount === 0`. Non-zero cells always get at least bucket 1.
+- `summary`:
+  - `totalJobs`: Equals `sum(cells[*].jobCount)`.
+  - `distinctShippedTickets`: Count of tickets currently in `stage = 'SHIP'` whose `updatedAt` falls in the period (after agent filter). `CLOSED` tickets are excluded — only tickets actively in the shipped state count. Equals `sum(cells[*].shippedTicketCount)` since each ticket has a single `updatedAt`.
+  - `periodLabel`: Human-readable label used in the header line (e.g., `"in the last year"`, `"in 2025"`).
+- `thresholds`: Job-count quantiles over the non-zero days in the period, used to assign each cell's bucket. When all cells have `jobCount === 0`, every threshold is `0`. When all non-zero days share the same count, `p25 === p50 === p75 === that count` and every non-zero cell falls into bucket 1.
+- `availableAgents`: Agent filter options derived from the distinct agents across the user's accessible jobs, combining explicit `ticket.agent` with the effective agent inherited from `project.defaultAgent`. Always includes `{ value: "all", label: "All agents", jobCount: totalJobs, isDefault: true }` as the first entry. Only agents with `jobCount > 0` appear beyond "all".
+- `availableYears`: `[accountCreationYear..currentYear]` in descending order. Empty `[]` when the user's account is younger than a full calendar year AND was created in the current year.
+- `generatedAt`: ISO timestamp of server-side generation.
+
+**Bucket assignment**:
+```
+jobCount === 0          → bucket 0
+jobCount <= p25         → bucket 1
+jobCount <= p50         → bucket 2
+jobCount <= p75         → bucket 3
+jobCount  > p75         → bucket 4
+```
+
+**Effective-agent resolution** (when `agent !== "all"`):
+- A job contributes to the filtered dataset when its ticket's `agent` equals the filter value OR when the ticket's `agent` is null AND the ticket's project has `defaultAgent` equal to the filter value.
+- Same rule applies to shipped-ticket counting in both `summary.distinctShippedTickets` and `cells[*].shippedTicketCount`.
+
+**Data derivation**:
+- Read-only over existing `Job`, `Ticket`, `Project`, `ProjectMember`, and `User` tables. No dedicated table or migration — all values are computed on demand.
+- Accessible project set: `Project.userId = currentUserId OR ProjectMember.userId = currentUserId`.
+- Job cells are keyed by `DATE(Job.completedAt AT TIME ZONE 'UTC')`.
+- Shipped-ticket cells are keyed by `DATE(Ticket.updatedAt AT TIME ZONE 'UTC')` for tickets in `stage = 'SHIP'`.
+- One request issues two Prisma batches: first `[accessible projects, user createdAt]`, then `[filtered jobs, shipped tickets (id + updatedAt for stage = 'SHIP' within the period), agent options for the period]`.
+
+**Caching**:
+- No HTTP caching headers; responses are user-specific and change as jobs complete.
+- Client uses TanStack Query with `staleTime: 10_000` and `refetchInterval: 15_000`, matching analytics and usage polling cadence.
+
+**Initial-data path**:
+- `app/projects/page.tsx` (Server Component) calls `getHeatmapData(userId, filters)` directly — not via HTTP — and passes the result as `initialData` to the client `<ActivityHeatmap>` component. If the server call throws, the page still renders the project cards and the heatmap region shows a non-blocking error card.
+
+**Errors**:
+- `401`: Not authenticated → `{ "error": "Unauthorized" }`
+- `500`: Database error or aggregation failure → `{ "error": "Internal server error" }`
+
+**Performance Budget**:
+- Target p95 < 300 ms for 10 projects × 2000 jobs/year.
+- Payload ~30 KB ungzipped for a 365-day response (~400 cells × ~75 bytes).
+
 ## Token Endpoints
 
 ### GET /api/tokens

@@ -48,7 +48,7 @@ import {
 const COMPLETED_TICKET_STAGES: Stage[] = ['SHIP', 'CLOSED'];
 const JOB_STATUSES: JobStatus[] = [JobStatus.COMPLETED, JobStatus.FAILED];
 
-function buildEffectiveAgentWhere(agent: NamedAgent | 'all'): Prisma.TicketWhereInput | undefined {
+export function buildEffectiveAgentWhere(agent: NamedAgent | 'all'): Prisma.TicketWhereInput | undefined {
   if (agent === 'all') {
     return undefined;
   }

@@ -58,6 +58,11 @@ export const queryKeys = {
     ticketJobs: (projectId: number, ticketId: number) =>
       [...queryKeys.projects.detail(projectId), 'tickets', ticketId, 'jobs'] as const,
   },
+
+  heatmap: {
+    data: (userId: string, period: string, agent: string) =>
+      ['heatmap', userId, period, agent] as const,
+  },
 };
 ```
 
@@ -1176,6 +1181,14 @@ queryClient.setQueryData(
 - **Trigger**: When board visible
 - **Stop**: When all jobs terminal
 - **Resume**: When new job created
+
+**Activity Heatmap Polling** (`/projects` page):
+- **Interval**: 15 seconds (matches analytics and usage cadence)
+- **Query Key**: `queryKeys.heatmap.data(userId, period, agent)` — keyed by the signed-in user plus current period + agent filter
+- **Initial Data**: Supplied by the `/projects` Server Component via direct `getHeatmapData(userId, filters)` call so the grid paints on first render with no spinner flash
+- **`staleTime`**: `10_000` ms — background refetches update silently without blanking the grid
+- **Initial-Data Gate**: Client compares the URL-derived filters against the server's echoed `filters` before applying `initialData`; when they match, the cache is seeded and the first render avoids a fetch
+- **Error Handling**: A failing polled refresh does not clear the current grid; the UI keeps showing the previous data and retries on the next interval. A failing SSR call degrades to a non-blocking error card while the project cards above continue to render.
 
 ### Workflow-Triggered Cache Invalidation
 

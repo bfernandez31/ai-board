@@ -13,6 +13,7 @@ import type {
   TimeRange,
   ToolUsage,
 } from './types';
+import type { BucketThresholds, HeatmapPeriod } from './heatmap-types';
 import {
   ALL_AGENTS,
   getAgentLabel as getSharedAgentLabel,
@@ -236,4 +237,82 @@ export function formatDuration(ms: number): string {
 export function calculateTrend(current: number, previous: number): number {
   if (previous === 0) return current > 0 ? 100 : 0;
   return ((current - previous) / previous) * 100;
+}
+
+/**
+ * Heatmap: Compute 25/50/75 percentile thresholds over non-zero daily counts.
+ * Empty input produces all-zero thresholds; a single distinct value collapses
+ * p25/p50/p75 to that value (guaranteeing bucket 1 is never empty).
+ */
+export function computeQuantileBuckets(nonZeroCounts: number[]): BucketThresholds {
+  if (nonZeroCounts.length === 0) {
+    return { p25: 0, p50: 0, p75: 0, maxJobCount: 0 };
+  }
+
+  const sorted = [...nonZeroCounts].sort((a, b) => a - b);
+  const pick = (q: number): number => {
+    const idx = Math.min(sorted.length - 1, Math.floor(q * sorted.length));
+    return sorted[idx] ?? 0;
+  };
+
+  return {
+    p25: pick(0.25),
+    p50: pick(0.5),
+    p75: pick(0.75),
+    maxJobCount: sorted[sorted.length - 1] ?? 0,
+  };
+}
+
+/**
+ * Heatmap: Assign a 0–4 intensity bucket given a day's job count and thresholds.
+ *   0 iff jobCount === 0
+ *   1 if jobCount <= p25
+ *   2 if jobCount <= p50
+ *   3 if jobCount <= p75
+ *   4 otherwise
+ */
+export function assignIntensityBucket(
+  jobCount: number,
+  thresholds: BucketThresholds
+): 0 | 1 | 2 | 3 | 4 {
+  if (jobCount <= 0) return 0;
+  if (jobCount <= thresholds.p25) return 1;
+  if (jobCount <= thresholds.p50) return 2;
+  if (jobCount <= thresholds.p75) return 3;
+  return 4;
+}
+
+/**
+ * Heatmap: UTC calendar-date boundaries for a given HeatmapPeriod.
+ * - rolling12m → [today - 364 days, today], inclusive (365 days)
+ * - year → [Jan 1, Dec 31] of that year, inclusive (365 or 366 days)
+ */
+export function getHeatmapPeriodBounds(
+  period: HeatmapPeriod,
+  now: Date
+): { startDate: Date; endDate: Date } {
+  if (period.kind === 'year') {
+    const startDate = new Date(Date.UTC(period.year, 0, 1, 0, 0, 0, 0));
+    const endDate = new Date(Date.UTC(period.year, 11, 31, 23, 59, 59, 999));
+    return { startDate, endDate };
+  }
+
+  const endUtc = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999)
+  );
+  const startUtc = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 364, 0, 0, 0, 0)
+  );
+  return { startDate: startUtc, endDate: endUtc };
+}
+
+/**
+ * Heatmap: Format a Date as YYYY-MM-DD using UTC components.
+ * Deterministic regardless of the process timezone.
+ */
+export function formatUTCDate(d: Date): string {
+  const year = d.getUTCFullYear().toString().padStart(4, '0');
+  const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+  const day = d.getUTCDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
