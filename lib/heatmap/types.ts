@@ -66,7 +66,7 @@ export function getIntensityLevel(
 
   if (count <= thresholds.q25) return 1;
   if (count <= thresholds.q50) return 2;
-  if (count <= thresholds.q75) return 3;
+  if (count <= thresholds.q90) return 3;
   return 4;
 }
 

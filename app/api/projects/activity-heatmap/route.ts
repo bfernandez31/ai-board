@@ -4,12 +4,27 @@ import { requireAuth } from '@/lib/db/users';
 import { getActivityHeatmapData } from '@/lib/heatmap/queries';
 import { VALID_AGENTS } from '@/lib/heatmap/types';
 
+const AUTH_ERROR_MESSAGES = new Set([
+  'Unauthorized',
+  'Invalid token',
+  'Invalid token format',
+  'Rate limit exceeded',
+]);
+
+const MIN_HEATMAP_YEAR = 1970;
+const MAX_HEATMAP_YEAR = new Date().getFullYear();
+
 const querySchema = z.object({
   year: z
     .string()
     .refine(
-      (val) => val === 'rolling' || /^\d{4}$/.test(val),
-      { message: 'Year must be "rolling" or a 4-digit year' }
+      (val) => {
+        if (val === 'rolling') return true;
+        if (!/^\d{4}$/.test(val)) return false;
+        const yearNum = parseInt(val, 10);
+        return yearNum >= MIN_HEATMAP_YEAR && yearNum <= MAX_HEATMAP_YEAR;
+      },
+      { message: `Year must be "rolling" or a 4-digit year between ${MIN_HEATMAP_YEAR} and ${MAX_HEATMAP_YEAR}` }
     )
     .default('rolling'),
   agent: z
@@ -36,7 +51,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         { status: 400 }
       );
     }
-    if (error instanceof Error && error.message === 'Unauthorized') {
+    if (error instanceof Error && AUTH_ERROR_MESSAGES.has(error.message)) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }

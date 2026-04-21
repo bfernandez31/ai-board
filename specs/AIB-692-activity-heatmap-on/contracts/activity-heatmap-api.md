@@ -8,8 +8,8 @@ Returns daily activity data for the authenticated user across all their projects
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `year` | `string` | No | `'rolling'` | `'rolling'` for last 12 months, or 4-digit year (e.g., `'2025'`) |
-| `agent` | `string` | No | `'all'` | `'all'` or a valid agent identifier (`'claude'`, `'codex'`, `'mistral'`, `'gemini'`) |
+| `year` | `string` | No | `'rolling'` | `'rolling'` for last 12 months, or 4-digit year (e.g., `'2025'`) between 1970 and the current year |
+| `agent` | `string` | No | `'all'` | `'all'` or a valid agent identifier matching the Prisma `Agent` enum (`'CLAUDE'`, `'CODEX'`, `'MISTRAL'`, `'GEMINI'`) |
 
 ### Response: `200 OK`
 
@@ -35,7 +35,7 @@ interface ActivityHeatmapResponse {
 
   /** Available filter options (for populating dropdowns) */
   availableYears: string[];       // e.g., ['rolling', '2024', '2025', '2026']
-  availableAgents: AgentOption[]; // e.g., [{ value: 'all', label: 'All' }, { value: 'claude', label: 'Claude' }]
+  availableAgents: AgentOption[]; // e.g., [{ value: 'all', label: 'All' }, { value: 'CLAUDE', label: 'Claude' }]
 
   /** Active filters (echoed back for cache key matching) */
   filters: {
@@ -58,7 +58,7 @@ interface IntensityThresholds {
 }
 
 interface AgentOption {
-  value: string; // 'all' | lowercase agent name
+  value: string; // 'all' | Prisma Agent enum value (e.g., 'CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI')
   label: string; // Display name
 }
 ```

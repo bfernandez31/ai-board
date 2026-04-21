@@ -19,6 +19,7 @@ vi.mock('next/navigation', () => ({
     prefetch: vi.fn(),
   }),
   useSearchParams: () => mockSearchParams,
+  usePathname: () => '/projects',
 }));
 
 vi.mock('@/components/ui/select', () => {
@@ -92,7 +93,7 @@ function makeHeatmapData(overrides: Partial<ActivityHeatmapResponse> = {}): Acti
   yesterday.setDate(yesterday.getDate() - 1);
   const yMonth = String(yesterday.getMonth() + 1).padStart(2, '0');
   const yDay = String(yesterday.getDate()).padStart(2, '0');
-  const yesterdayKey = `${year}-${yMonth}-${yDay}`;
+  const yesterdayKey = `${yesterday.getFullYear()}-${yMonth}-${yDay}`;
 
   const startDate = new Date(today);
   startDate.setFullYear(startDate.getFullYear() - 1);
@@ -192,6 +193,8 @@ describe('ActivityHeatmap', () => {
         expect.stringContaining('year=2025'),
         { scroll: false }
       );
+      const [pushedUrl] = pushMock.mock.calls[pushMock.mock.calls.length - 1]!;
+      expect(pushedUrl).toMatch(/^\/projects\?/);
     });
   });
 
@@ -220,6 +223,8 @@ describe('ActivityHeatmap', () => {
         expect.stringContaining('agent=CLAUDE'),
         { scroll: false }
       );
+      const [pushedUrl] = pushMock.mock.calls[pushMock.mock.calls.length - 1]!;
+      expect(pushedUrl).toMatch(/^\/projects\?/);
     });
   });
 
@@ -239,7 +244,7 @@ describe('ActivityHeatmap', () => {
       renderWithProviders(<ActivityHeatmap initialData={makeHeatmapData()} />);
       const yearSelect = screen.getByTestId('heatmap-year-select');
       fireEvent.change(yearSelect, { target: { value: 'rolling' } });
-      expect(pushMock).toHaveBeenCalledWith('?', { scroll: false });
+      expect(pushMock).toHaveBeenCalledWith('/projects', { scroll: false });
     });
   });
 

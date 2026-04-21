@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
@@ -23,10 +23,10 @@ import type { ActivityHeatmapResponse, HeatmapFilters } from '@/lib/heatmap/type
 import {
   DEFAULT_HEATMAP_FILTERS,
   HEATMAP_INTENSITY_CLASSES,
+  VALID_AGENTS,
   generateGridDates,
   getIntensityLevel,
   formatDateKey,
-  computePeriodDates,
 } from '@/lib/heatmap/types';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
@@ -39,11 +39,25 @@ async function fetchHeatmapData(filters: HeatmapFilters): Promise<ActivityHeatma
   return response.json();
 }
 
+function isValidYearParam(value: string): boolean {
+  return value === 'rolling' || /^\d{4}$/.test(value);
+}
+
 function getInitialFilters(searchParams: URLSearchParams): HeatmapFilters {
+  const yearParam = searchParams.get('year');
+  const agentParam = searchParams.get('agent');
   return {
-    year: searchParams.get('year') || DEFAULT_HEATMAP_FILTERS.year,
-    agent: searchParams.get('agent') || DEFAULT_HEATMAP_FILTERS.agent,
+    year: yearParam && isValidYearParam(yearParam) ? yearParam : DEFAULT_HEATMAP_FILTERS.year,
+    agent:
+      agentParam && (VALID_AGENTS as readonly string[]).includes(agentParam)
+        ? agentParam
+        : DEFAULT_HEATMAP_FILTERS.agent,
   };
+}
+
+function parseDateKey(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y!, m! - 1, d!);
 }
 
 function formatDisplayDate(dateStr: string): string {
@@ -59,16 +73,18 @@ function formatDisplayDate(dateStr: string): string {
 
 export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<HeatmapFilters>(() => getInitialFilters(searchParams));
 
   const shouldUseInitialData =
     filters.year === initialData.filters.year && filters.agent === initialData.filters.agent;
 
-  const { data: heatmap } = useQuery({
+  const { data: heatmap, isError, isFetching } = useQuery({
     queryKey: queryKeys.projects.heatmap(filters.year, filters.agent),
     queryFn: () => fetchHeatmapData(filters),
     initialData: shouldUseInitialData ? initialData : undefined,
+    placeholderData: (previousData) => previousData,
     refetchInterval: 60000,
     staleTime: 30000,
   });
@@ -90,12 +106,13 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
     }
 
     const paramStr = params.toString();
-    router.push(paramStr ? `?${paramStr}` : '?', { scroll: false });
+    router.push(paramStr ? `${pathname}?${paramStr}` : pathname, { scroll: false });
   };
 
   const gridData = useMemo(() => {
     if (!heatmap) return null;
-    const { startDate, endDate } = computePeriodDates(heatmap.filters.year);
+    const startDate = parseDateKey(heatmap.period.startDate);
+    const endDate = parseDateKey(heatmap.period.endDate);
     const gridDates = generateGridDates(startDate, endDate);
 
     const weeks: { date: Date; inRange: boolean; dateKey: string }[][] = [];
@@ -135,6 +152,18 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
     return { weeks, monthLabels };
   }, [heatmap]);
 
+  if (isError && !heatmap) {
+    return (
+      <Card className="border-ctp-mauve/15 aurora-bg-subtle" data-testid="activity-heatmap">
+        <CardContent className="flex min-h-[120px] items-center justify-center py-6">
+          <p className="text-sm text-muted-foreground" data-testid="heatmap-error">
+            Could not load activity data. Please try again later.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!heatmap || !gridData) return null;
 
   const { summary, thresholds, days, availableYears, availableAgents } = heatmap;
@@ -142,8 +171,14 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
   const showAgentFilter = availableAgents.length > 1;
   const isEmpty = summary.totalJobs === 0;
 
+  const isStale = isFetching && !isEmpty;
+
   return (
-    <Card className="border-ctp-mauve/15 aurora-bg-subtle" data-testid="activity-heatmap">
+    <Card
+      className="border-ctp-mauve/15 aurora-bg-subtle"
+      data-testid="activity-heatmap"
+      data-fetching={isFetching ? 'true' : undefined}
+    >
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground" data-testid="heatmap-summary">
           <span className="font-semibold text-foreground">{summary.totalJobs}</span> jobs
@@ -196,8 +231,11 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
           </div>
         ) : (
           <TooltipProvider>
-            <div className="overflow-x-auto" data-testid="heatmap-grid-container">
-              <div className="inline-flex gap-[3px]">
+            <div
+              className={`overflow-x-auto transition-opacity ${isStale ? 'opacity-70' : ''}`}
+              data-testid="heatmap-grid-container"
+            >
+              <div className="inline-flex gap-[3px] [--heatmap-cell:13px] max-sm:[--heatmap-cell:16px]">
                 <div className="flex flex-col gap-[3px] pt-5">
                   {DAY_LABELS.map((label, idx) => (
                     <div
@@ -214,7 +252,9 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
                       <div
                         key={`${ml.label}-${ml.colStart}`}
                         className="text-[10px] text-muted-foreground"
-                        style={{ width: `${ml.colSpan * 16}px` }}
+                        style={{
+                          width: `calc(${ml.colSpan} * var(--heatmap-cell, 13px) + ${Math.max(ml.colSpan - 1, 0)} * 3px)`,
+                        }}
                       >
                         {ml.colSpan >= 2 ? ml.label : ''}
                       </div>
@@ -240,12 +280,12 @@ export function ActivityHeatmap({ initialData }: ActivityHeatmapProps) {
 
                           const tooltipLines: string[] = [formatDisplayDate(cell.dateKey)];
                           if (dayData && count > 0) {
-                            tooltipLines.push(`${count} job${count !== 1 ? 's' : ''}`);
                             if (dayData.shippedCount > 0) {
                               tooltipLines.push(
                                 `${dayData.shippedCount} ticket${dayData.shippedCount !== 1 ? 's' : ''} shipped`
                               );
                             }
+                            tooltipLines.push(`${count} job${count !== 1 ? 's' : ''}`);
                             if (dayData.costUsd !== null) {
                               tooltipLines.push(`$${dayData.costUsd.toFixed(2)}`);
                             }

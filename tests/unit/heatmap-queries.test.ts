@@ -57,13 +57,14 @@ describe('Heatmap Pure Logic', () => {
       expect(getIntensityLevel(5, thresholds)).toBe(2);
     });
 
-    it('returns 3 for count > q50 and <= q75', () => {
+    it('returns 3 for count > q50 and <= q90', () => {
       expect(getIntensityLevel(6, thresholds)).toBe(3);
       expect(getIntensityLevel(8, thresholds)).toBe(3);
+      expect(getIntensityLevel(10, thresholds)).toBe(3);
     });
 
-    it('returns 4 for count > q75', () => {
-      expect(getIntensityLevel(9, thresholds)).toBe(4);
+    it('returns 4 for count > q90', () => {
+      expect(getIntensityLevel(11, thresholds)).toBe(4);
       expect(getIntensityLevel(15, thresholds)).toBe(4);
     });
 

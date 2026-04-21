@@ -58,7 +58,7 @@ Users access projects through a dedicated projects list page:
 
 **Visual Design**:
 - Modern and clean interface
-- Scrollable container for many projects (50+)
+- The grid grows with the number of projects; the page itself scrolls naturally to reveal additional rows and sibling sections (e.g., activity heatmap)
 - No pagination - all projects visible
 - Compact card layout with clear information hierarchy
 
@@ -168,7 +168,7 @@ Below the project cards grid, the projects page displays a full-width activity h
 - **Tablet** (640px - 1023px): 2-column grid layout (grid-cols-2)
 - **Mobile** (<640px): 1-column layout (grid-cols-1, full width cards)
 - Cards maintain consistent spacing and visual hierarchy across all breakpoints
-- Scrollable container supports 50+ projects without performance degradation
+- The grid renders all projects without pagination and relies on natural page scrolling to handle 50+ projects without performance degradation
 
 **Text Overflow Handling**:
 - Long ticket titles truncate with ellipsis to prevent card overflow

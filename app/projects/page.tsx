@@ -34,7 +34,8 @@ async function getHeatmapData() {
   try {
     const userId = await requireAuth();
     return await getActivityHeatmapData(userId, DEFAULT_HEATMAP_FILTERS);
-  } catch {
+  } catch (error) {
+    console.error('Failed to fetch heatmap data:', error);
     return null;
   }
 }
