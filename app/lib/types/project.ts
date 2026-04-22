@@ -11,6 +11,9 @@ export interface ProjectWithCount {
   githubRepo: string;
   deploymentUrl: string | null;
   updatedAt: string; // ISO 8601 timestamp
+  // Last-activity timestamp used for ordering the projects list (AIB-713):
+  // MAX of project.updatedAt, latest ticket.updatedAt, and latest job.startedAt.
+  lastActivityAt: string; // ISO 8601 timestamp
   ticketCount: number;
   lastShippedTicket: {
     id: number;
@@ -55,6 +58,7 @@ export function toProjectWithCount(project: {
   githubRepo: string;
   deploymentUrl: string | null;
   updatedAt: Date;
+  lastActivityAt: Date;
   _count: { tickets: number };
   tickets: Array<{ id: number; ticketKey: string; title: string; updatedAt: Date }>;
   healthScore: ProjectWithCount['healthScore'] | null;
@@ -68,6 +72,7 @@ export function toProjectWithCount(project: {
     githubRepo: project.githubRepo,
     deploymentUrl: project.deploymentUrl,
     updatedAt: project.updatedAt.toISOString(),
+    lastActivityAt: project.lastActivityAt.toISOString(),
     ticketCount: project._count.tickets,
     lastShippedTicket: project.tickets[0] ? {
       id: project.tickets[0].id,
