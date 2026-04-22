@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 import { requireAuth } from './users';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
 import { SMART_DEFAULTS } from '@/lib/models/claude-models';
+import { computeLastActivityAt, sortProjectsByActivity } from './projects-activity';
 
 /**
  * Retrieve a project by its ID
@@ -21,14 +22,14 @@ export async function getProjectById(
 
 /**
  * Get all projects for the current user
- * Returns projects where user is owner OR member
+ * Returns projects where user is owner OR member, ordered by last activity (most recent first).
  * Supports both session auth and Bearer token (PAT) authentication.
  * @param request - Optional NextRequest for Bearer token extraction
  */
 export async function getUserProjects(request?: NextRequest) {
   const userId = await requireAuth(request);
 
-  return prisma.project.findMany({
+  const projects = await prisma.project.findMany({
     where: {
       OR: [
         { userId },                            // Owner access
@@ -74,8 +75,46 @@ export async function getUserProjects(request?: NextRequest) {
         }
       }
     },
-    orderBy: { updatedAt: 'desc' },
   });
+
+  if (projects.length === 0) return [];
+
+  const projectIds = projects.map((p) => p.id);
+
+  const [ticketActivity, jobActivity] = await Promise.all([
+    prisma.ticket.groupBy({
+      by: ['projectId'],
+      where: { projectId: { in: projectIds } },
+      _max: { updatedAt: true },
+    }),
+    prisma.job.groupBy({
+      by: ['projectId'],
+      where: { projectId: { in: projectIds } },
+      _max: { startedAt: true },
+    }),
+  ]);
+
+  const ticketMaxByProject = new Map<number, Date>();
+  for (const row of ticketActivity) {
+    if (row._max.updatedAt) ticketMaxByProject.set(row.projectId, row._max.updatedAt);
+  }
+  const jobMaxByProject = new Map<number, Date>();
+  for (const row of jobActivity) {
+    if (row._max.startedAt) jobMaxByProject.set(row.projectId, row._max.startedAt);
+  }
+
+  const enriched = projects.map((p) => {
+    const lastTicketUpdatedAt = ticketMaxByProject.get(p.id) ?? null;
+    const lastJobStartedAt = jobMaxByProject.get(p.id) ?? null;
+    return {
+      ...p,
+      lastTicketUpdatedAt,
+      lastJobStartedAt,
+      lastActivityAt: computeLastActivityAt(p.updatedAt, lastTicketUpdatedAt, lastJobStartedAt),
+    };
+  });
+
+  return sortProjectsByActivity(enriched);
 }
 
 /**

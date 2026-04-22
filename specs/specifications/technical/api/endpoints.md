@@ -40,7 +40,7 @@ Authorization: Bearer <WORKFLOW_API_TOKEN>
 
 ### GET /api/projects
 
-Fetch all projects for the authenticated user with shipping status.
+Fetch all projects for the authenticated user with shipping status, ordered by most recent activity.
 
 **Authentication**: Required (session)
 **Authorization**: Returns projects owned by or accessible to the user (owner OR member)
@@ -61,6 +61,7 @@ Fetch all projects for the authenticated user with shipping status.
       "clarificationPolicy": "AUTO",
       "createdAt": "2025-01-01T00:00:00.000Z",
       "updatedAt": "2025-01-15T10:30:00.000Z",
+      "lastActivityAt": "2025-01-15T14:05:00.000Z",
       "ticketCount": 12,
       "lastShippedTicket": {
         "id": 42,
@@ -90,6 +91,7 @@ Fetch all projects for the authenticated user with shipping status.
       "clarificationPolicy": "CONSERVATIVE",
       "createdAt": "2025-01-05T00:00:00.000Z",
       "updatedAt": "2025-01-10T08:15:00.000Z",
+      "lastActivityAt": "2025-01-10T08:15:00.000Z",
       "ticketCount": 5,
       "lastShippedTicket": null,
       "healthScore": null
@@ -99,6 +101,7 @@ Fetch all projects for the authenticated user with shipping status.
 ```
 
 **Fields**:
+- `lastActivityAt`: ISO 8601 timestamp of the project's most recent activity, computed as `MAX(project.updatedAt, latest ticket.updatedAt, latest job.startedAt)`. Falls back to `project.updatedAt` when the project has no tickets or jobs.
 - `ticketCount`: Total number of tickets across all stages
 - `lastShippedTicket`: Most recent ticket in SHIP stage (null if no shipped tickets)
   - `id`: Ticket ID
@@ -108,6 +111,11 @@ Fetch all projects for the authenticated user with shipping status.
 - `healthScore`: Cached aggregate health score (null if no scan has ever completed)
   - `globalScore`: Overall score 0–100, or null if no modules have been scanned
   - `securityScore`, `complianceScore`, `testsScore`, `specSyncScore`, `qualityGate`, `reviewQualityScore`: Individual module scores 0–100, or null if that module has never been scanned
+
+**Ordering**:
+- Results are sorted by `lastActivityAt` descending (most recently active first)
+- Ties on `lastActivityAt` are broken by `id` descending for deterministic ordering
+- Sorting is performed server-side in `lib/db/projects.ts` using the helpers in `lib/db/projects-activity.ts` (`computeLastActivityAt`, `sortProjectsByActivity`); ticket and job max-timestamps are aggregated with two `groupBy` queries and merged in memory
 
 **Frontend Display**:
 - Project cards display ticketKey (bold) followed by title

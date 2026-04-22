@@ -77,6 +77,13 @@ Users access projects through a dedicated projects list page:
 - Full ticket title visible via tooltip on hover for truncated titles
 - Relative timestamps update on page refresh
 
+**Sort Order**:
+- Projects are ordered from most recently active to least recently active
+- A project's activity timestamp is the most recent of: project last-updated time, latest ticket update (including stage transitions), and latest workflow execution start
+- Projects with no ticket or workflow activity fall back to the project's own last-updated time and appear last among recently-touched projects
+- Ties (equal activity timestamps) are broken by project ID descending so ordering is deterministic
+- The order is recomputed on every page load and reflects the latest activity after any ticket move, workflow run, or project edit
+
 ### Empty State
 
 When no projects exist:
@@ -504,6 +511,7 @@ Projects track activity across all tickets:
 - Last updated reflects most recent ticket change
 - Ticket count shows total across all stages
 - Activity visible in project list view
+- Activity drives the default ordering of the project list — the most recently active project appears first (see **Sort Order** under Project List View)
 
 ## Project Actions
 
