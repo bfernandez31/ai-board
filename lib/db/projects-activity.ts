@@ -1,14 +1,8 @@
 /**
- * Project activity scoring & sorting (AIB-713).
- *
  * A project's "last activity" is the most recent timestamp across:
- *   - project.updatedAt            — direct edits to the project
- *   - MAX(ticket.updatedAt)        — ticket state transitions & ticket edits
- *                                    (Prisma @updatedAt bumps on stage changes)
- *   - MAX(job.startedAt)           — last workflow execution
- *
- * Projects with no ticket/job activity fall back to project.updatedAt, which
- * naturally places long-dormant projects at the bottom of the list.
+ *   - project.updatedAt       — direct edits to the project
+ *   - MAX(ticket.updatedAt)   — ticket state transitions (Prisma @updatedAt bumps on stage changes)
+ *   - MAX(job.startedAt)      — last workflow execution
  */
 
 export interface ProjectWithActivity {

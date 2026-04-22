@@ -1,10 +1,3 @@
-/**
- * Unit tests for project activity sorting (AIB-713).
- *
- * Projects on the projects page are ordered by recent activity — the most
- * recent timestamp across: the project itself, its tickets (state transitions
- * bump ticket.updatedAt via @updatedAt), and its jobs (last workflow run).
- */
 import { describe, it, expect } from 'vitest';
 import {
   computeLastActivityAt,

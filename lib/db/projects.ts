@@ -22,9 +22,8 @@ export async function getProjectById(
 
 /**
  * Get all projects for the current user
- * Returns projects where user is owner OR member
+ * Returns projects where user is owner OR member, ordered by last activity (most recent first).
  * Supports both session auth and Bearer token (PAT) authentication.
- * Projects are ordered by last activity (most recent first) — AIB-713.
  * @param request - Optional NextRequest for Bearer token extraction
  */
 export async function getUserProjects(request?: NextRequest) {
@@ -82,9 +81,6 @@ export async function getUserProjects(request?: NextRequest) {
 
   const projectIds = projects.map((p) => p.id);
 
-  // Fetch per-project activity signals in parallel: latest ticket update
-  // (captures stage transitions via @updatedAt) and latest job start (last
-  // workflow execution).
   const [ticketActivity, jobActivity] = await Promise.all([
     prisma.ticket.groupBy({
       by: ['projectId'],

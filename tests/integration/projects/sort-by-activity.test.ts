@@ -1,10 +1,3 @@
-/**
- * Integration tests: GET /api/projects sorted by activity (AIB-713).
- *
- * Projects on the projects page should be ordered from most to least
- * active. Activity = MAX(project.updatedAt, latest ticket.updatedAt,
- * latest job.startedAt).
- */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
@@ -15,7 +8,7 @@ interface ProjectResponseItem {
   lastActivityAt: string;
 }
 
-describe('GET /api/projects — activity-based sorting (AIB-713)', () => {
+describe('GET /api/projects — activity-based sorting', () => {
   let ctx: TestContext;
   const createdProjectIds: number[] = [];
 

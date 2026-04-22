@@ -11,7 +11,6 @@ export interface ProjectWithCount {
   githubRepo: string;
   deploymentUrl: string | null;
   updatedAt: string; // ISO 8601 timestamp
-  // Last-activity timestamp used for ordering the projects list (AIB-713):
   // MAX of project.updatedAt, latest ticket.updatedAt, and latest job.startedAt.
   lastActivityAt: string; // ISO 8601 timestamp
   ticketCount: number;
