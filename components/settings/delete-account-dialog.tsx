@@ -142,7 +142,7 @@ export function DeleteAccountDialog({
 
         <DialogFooter>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleCancel}
             disabled={deleteMutation.isPending}
           >

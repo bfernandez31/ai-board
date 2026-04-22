@@ -55,7 +55,7 @@ export function DeleteConfirmationModal({
               onConfirm();
             }}
             disabled={isDeleting}
-            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            variant="destructive"
           >
             {isDeleting ? 'Deleting...' : 'Delete Permanently'}
           </AlertDialogAction>

@@ -202,7 +202,7 @@ export function PolicyEditDialog({
         <DialogFooter>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={handleCancel}
             disabled={isSaving}
           >

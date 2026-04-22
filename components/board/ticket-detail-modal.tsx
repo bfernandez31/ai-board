@@ -1175,7 +1175,7 @@ export function TicketDetailModal({
                           descriptionEdit.value.trim() ===
                             (localTicket?.description || '')
                         }
-                        className="bg-primary hover:bg-primary-hover text-white font-medium px-6 shadow-sm"
+                        className="px-6"
                         aria-label="Save description changes"
                       >
                         {descriptionEdit.isSaving ? 'Saving...' : 'Save'}
@@ -1183,9 +1183,9 @@ export function TicketDetailModal({
                       <Button
                         type="button"
                         onClick={descriptionEdit.cancelEdit}
-                        variant="outline"
+                        variant="secondary"
                         disabled={descriptionEdit.isSaving}
-                        className="border-2 border-accent bg-transparent hover:bg-secondary text-foreground font-medium px-6"
+                        className="px-6"
                         aria-label="Cancel editing"
                       >
                         Cancel

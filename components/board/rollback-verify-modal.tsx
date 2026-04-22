@@ -71,7 +71,7 @@ export function RollbackVerifyModal({ open, onConfirm, onCancel }: RollbackVerif
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={onCancel}
             data-action="cancel"
           >
@@ -81,7 +81,6 @@ export function RollbackVerifyModal({ open, onConfirm, onCancel }: RollbackVerif
             onClick={onConfirm}
             data-action="confirm"
             variant="destructive"
-            className="bg-amber-600 hover:bg-amber-700"
           >
             Confirm Rollback
           </Button>

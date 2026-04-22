@@ -194,7 +194,7 @@ export function ModelOverrideDialog({
         <DialogFooter>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
           >

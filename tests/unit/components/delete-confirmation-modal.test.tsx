@@ -111,7 +111,7 @@ describe('DeleteConfirmationModal', () => {
       renderWithProviders(<DeleteConfirmationModal {...defaultProps} />);
 
       const deleteButton = screen.getByRole('button', { name: /delete permanently/i });
-      expect(deleteButton).toHaveClass('bg-red-600');
+      expect(deleteButton).toHaveClass('bg-destructive');
     });
   });
 });

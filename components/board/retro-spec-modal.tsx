@@ -180,7 +180,7 @@ export function RetroSpecModal({ open, onOpenChange, projectId, defaultAgent = '
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
+          <Button variant="secondary" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>

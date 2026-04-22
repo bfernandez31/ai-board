@@ -241,7 +241,7 @@ export function ImageGallery({
                 <Button
                   onClick={handleUploadImages}
                   disabled={isUploading}
-                  className="mt-3 w-full bg-lavender hover:bg-lavender/90 text-base"
+                  className="mt-3 w-full text-base"
                   aria-describedby="upload-section-heading"
                 >
                   {isUploading ? (
@@ -426,7 +426,7 @@ export function ImageGallery({
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
-              className="bg-red hover:bg-red/90 text-white"
+              variant="destructive"
             >
               Delete
             </AlertDialogAction>

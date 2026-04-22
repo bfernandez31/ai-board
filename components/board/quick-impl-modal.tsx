@@ -76,7 +76,7 @@ export function QuickImplModal({ open, onConfirm, onCancel }: QuickImplModalProp
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={onCancel}
             data-action="cancel"
           >
@@ -85,7 +85,6 @@ export function QuickImplModal({ open, onConfirm, onCancel }: QuickImplModalProp
           <Button
             onClick={onConfirm}
             data-action="proceed"
-            className="bg-amber-600 hover:bg-amber-700 text-white"
           >
             Proceed with Quick Implementation
           </Button>

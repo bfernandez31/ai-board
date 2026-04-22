@@ -50,7 +50,7 @@ export function DeleteTokenDialog({
               onConfirm();
             }}
             disabled={isDeleting}
-            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            variant="destructive"
           >
             {isDeleting ? "Revoking..." : "Revoke Token"}
           </AlertDialogAction>

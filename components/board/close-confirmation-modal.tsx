@@ -65,7 +65,7 @@ export function CloseConfirmationModal({
               onConfirm();
             }}
             disabled={isClosing}
-            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            variant="destructive"
             data-testid="close-confirm-button"
           >
             {isClosing ? 'Closing...' : 'Close Ticket'}

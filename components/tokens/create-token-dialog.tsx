@@ -108,7 +108,7 @@ export function CreateTokenDialog({
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={handleClose} disabled={isCreating}>
+              <Button variant="secondary" onClick={handleClose} disabled={isCreating}>
                 Cancel
               </Button>
               <Button onClick={handleCreate} disabled={isCreating || !name.trim()}>

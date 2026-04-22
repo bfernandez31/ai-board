@@ -374,7 +374,7 @@ export default function ConstitutionViewer({
 
               <div className="flex justify-end gap-2">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={handleCancelEdit}
                   disabled={mutation.isPending}
                 >
