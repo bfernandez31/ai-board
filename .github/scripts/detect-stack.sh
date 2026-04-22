@@ -812,7 +812,7 @@ detect_runtime_versions() {
   # Zig version from build.zig.zon (.minimum_zig_version)
   local zig_ver=""
   if [[ -f "$REPO_DIR/build.zig.zon" ]]; then
-    zig_ver=$(grep -m1 '\.minimum_zig_version[[:space:]]*=' "$REPO_DIR/build.zig.zon" \
+    zig_ver=$(grep -m1 '^[[:space:]]*\.minimum_zig_version[[:space:]]*=' "$REPO_DIR/build.zig.zon" \
       | sed -E 's/.*=[[:space:]]*"([^"]+)".*/\1/' 2>/dev/null || true)
     # Guard against lines that didn't match the quoted-string form.
     if [[ -n "$zig_ver" && "$zig_ver" == *"="* ]]; then

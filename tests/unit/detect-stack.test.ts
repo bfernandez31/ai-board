@@ -666,6 +666,86 @@ describe('detect-stack.sh — Node project with .nvmrc', () => {
   });
 });
 
+describe('detect-stack.sh — Node project with .node-version', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('node-version-pinned');
+
+    fs.writeFileSync(
+      path.join(fixtureDir, 'package.json'),
+      JSON.stringify({ name: 'node-version-app', devDependencies: { typescript: '5.0.0' } }),
+    );
+    fs.writeFileSync(path.join(fixtureDir, 'tsconfig.json'), '{}');
+    fs.writeFileSync(path.join(fixtureDir, '.node-version'), 'v20.10.0\n');
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('writes runtime.node from .node-version', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.node).toBe('20.10.0');
+  });
+});
+
+describe('detect-stack.sh — Node project with package.json engines.node', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('engines-node-pinned');
+
+    fs.writeFileSync(
+      path.join(fixtureDir, 'package.json'),
+      JSON.stringify({
+        name: 'engines-node-app',
+        engines: { node: '22.11.0' },
+        devDependencies: { typescript: '5.0.0' },
+      }),
+    );
+    fs.writeFileSync(path.join(fixtureDir, 'tsconfig.json'), '{}');
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('writes runtime.node from package.json engines.node', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.node).toBe('22.11.0');
+  });
+});
+
+describe('detect-stack.sh — Go project with go.mod', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('go-mod-pinned');
+
+    fs.writeFileSync(
+      path.join(fixtureDir, 'go.mod'),
+      `module pinned-go-app\n\ngo 1.22.3\n`,
+    );
+    fs.writeFileSync(path.join(fixtureDir, 'go.sum'), '');
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('writes runtime.go from the go directive in go.mod', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.go).toBe('1.22.3');
+  });
+});
+
 describe('detect-stack.sh — Python project with .python-version', () => {
   let fixtureDir: string;
 
