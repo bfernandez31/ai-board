@@ -58,8 +58,7 @@ interface LogEventRowProps {
 
 export function LogEventRow({ event }: LogEventRowProps) {
   const { copy, isCopied } = useCopyToClipboard();
-  const visual =
-    EVENT_ICON[event.type as NormalizedEvent['type']] ?? UNKNOWN_ICON;
+  const visual = EVENT_ICON[event.type] ?? UNKNOWN_ICON;
   const Icon = visual.icon;
   const isToolResultError = event.type === 'tool_result' && event.payload.isError;
   const iconTone = isToolResultError ? 'text-ctp-red' : visual.tone;

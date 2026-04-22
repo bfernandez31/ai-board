@@ -24,12 +24,17 @@ export function redactString(value) {
   if (!value) return value;
   let result = value;
   for (const pattern of PATTERNS) {
-    result = result.replace(pattern.regex, () => `[REDACTED:${pattern.kind}]`);
+    result = result.replace(pattern.regex, `[REDACTED:${pattern.kind}]`);
   }
-  result = result.replace(ENV_SECRET_REGEX, (_match, key) => {
-    return `${key}=[REDACTED:env_secret:${key}]`;
-  });
+  result = result.replace(
+    ENV_SECRET_REGEX,
+    (_match, key) => `${key}=[REDACTED:env_secret:${key}]`
+  );
   return result;
+}
+
+function redactOptional(value) {
+  return value ? redactString(value) : value;
 }
 
 function deepRedact(value) {
@@ -49,41 +54,42 @@ function deepRedact(value) {
 
 export function redactEvents(events) {
   return events.map((event) => {
-    if (event.type === 'message') {
-      return {
-        ...event,
-        payload: {
-          ...event.payload,
-          text: redactString(event.payload.text),
-          thinking: event.payload.thinking ? redactString(event.payload.thinking) : event.payload.thinking,
-        },
-      };
+    switch (event.type) {
+      case 'message':
+        return {
+          ...event,
+          payload: {
+            ...event.payload,
+            text: redactString(event.payload.text),
+            thinking: redactOptional(event.payload.thinking),
+          },
+        };
+      case 'tool_invocation':
+        return {
+          ...event,
+          payload: { ...event.payload, input: deepRedact(event.payload.input) },
+        };
+      case 'tool_result':
+        return {
+          ...event,
+          payload: { ...event.payload, output: deepRedact(event.payload.output) },
+        };
+      case 'error':
+        return {
+          ...event,
+          payload: {
+            ...event.payload,
+            message: redactString(event.payload.message),
+            stack: redactOptional(event.payload.stack),
+          },
+        };
+      case 'lifecycle':
+        return {
+          ...event,
+          payload: { ...event.payload, detail: redactOptional(event.payload.detail) },
+        };
+      default:
+        return event;
     }
-    if (event.type === 'tool_invocation') {
-      return { ...event, payload: { ...event.payload, input: deepRedact(event.payload.input) } };
-    }
-    if (event.type === 'tool_result') {
-      return { ...event, payload: { ...event.payload, output: deepRedact(event.payload.output) } };
-    }
-    if (event.type === 'error') {
-      return {
-        ...event,
-        payload: {
-          ...event.payload,
-          message: redactString(event.payload.message),
-          stack: event.payload.stack ? redactString(event.payload.stack) : event.payload.stack,
-        },
-      };
-    }
-    if (event.type === 'lifecycle') {
-      return {
-        ...event,
-        payload: {
-          ...event.payload,
-          detail: event.payload.detail ? redactString(event.payload.detail) : event.payload.detail,
-        },
-      };
-    }
-    return event;
   });
 }

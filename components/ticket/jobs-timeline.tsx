@@ -46,6 +46,12 @@ function previewTone(status: string, log: TicketJobLogSummary | null): string {
   return 'text-muted-foreground';
 }
 
+function disabledLogsReason(log: TicketJobLogSummary | null): string | null {
+  if (log?.captureStatus === 'UNAVAILABLE') return 'Logs unavailable for this run';
+  if (log?.captureStatus === 'PRUNED') return 'Logs no longer retained';
+  return null;
+}
+
 /**
  * Status configuration type
  */
@@ -98,17 +104,12 @@ function JobRow({
     job.cacheReadTokens != null ||
     job.cacheCreationTokens != null;
 
-  const log: TicketJobLogSummary | null = job.log ?? null;
+  const log = job.log;
   const isTerminal = TERMINAL_STATUSES.has(job.status);
   const canViewLogs = log?.captureStatus === 'CAPTURED' && projectId != null && ticketId != null;
   const showPreview = isTerminal && log != null;
   const previewToneClass = previewTone(job.status, log);
-  const viewerDisabledReason =
-    log?.captureStatus === 'UNAVAILABLE'
-      ? 'Logs unavailable for this run'
-      : log?.captureStatus === 'PRUNED'
-        ? 'Logs no longer retained'
-        : null;
+  const viewerDisabledReason = disabledLogsReason(log);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -243,7 +244,7 @@ function JobRow({
           <p className={`text-xs line-clamp-2 flex-1 ${previewToneClass}`}>
             {log?.preview}
           </p>
-          {canViewLogs ? (
+          {canViewLogs && (
             <Button
               type="button"
               variant="ghost"
@@ -255,7 +256,8 @@ function JobRow({
               <FileText className="w-3.5 h-3.5" />
               View full logs
             </Button>
-          ) : viewerDisabledReason ? (
+          )}
+          {!canViewLogs && viewerDisabledReason && (
             <Button
               type="button"
               variant="ghost"
@@ -268,7 +270,7 @@ function JobRow({
               <FileText className="w-3.5 h-3.5" />
               View full logs
             </Button>
-          ) : null}
+          )}
         </div>
       )}
 

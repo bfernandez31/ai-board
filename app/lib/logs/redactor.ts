@@ -3,7 +3,6 @@ import type { NormalizedEvent } from './schema';
 interface Pattern {
   kind: string;
   regex: RegExp;
-  replacement?: (match: string, ...groups: string[]) => string;
 }
 
 const PATTERNS: Pattern[] = [
@@ -49,12 +48,17 @@ export function redactString(value: string): string {
   if (!value) return value;
   let result = value;
   for (const pattern of PATTERNS) {
-    result = result.replace(pattern.regex, () => `[REDACTED:${pattern.kind}]`);
+    result = result.replace(pattern.regex, `[REDACTED:${pattern.kind}]`);
   }
-  result = result.replace(ENV_SECRET_REGEX, (_match: string, key: string) => {
-    return `${key}=[REDACTED:env_secret:${key}]`;
-  });
+  result = result.replace(
+    ENV_SECRET_REGEX,
+    (_match: string, key: string) => `${key}=[REDACTED:env_secret:${key}]`
+  );
   return result;
+}
+
+function redactOptional(value: string | undefined): string | undefined {
+  return value ? redactString(value) : value;
 }
 
 function deepRedact(value: unknown): unknown {
@@ -81,26 +85,18 @@ export function redactEvents(events: NormalizedEvent[]): NormalizedEvent[] {
           payload: {
             ...event.payload,
             text: redactString(event.payload.text),
-            thinking: event.payload.thinking
-              ? redactString(event.payload.thinking)
-              : event.payload.thinking,
+            thinking: redactOptional(event.payload.thinking),
           },
         };
       case 'tool_invocation':
         return {
           ...event,
-          payload: {
-            ...event.payload,
-            input: deepRedact(event.payload.input),
-          },
+          payload: { ...event.payload, input: deepRedact(event.payload.input) },
         };
       case 'tool_result':
         return {
           ...event,
-          payload: {
-            ...event.payload,
-            output: deepRedact(event.payload.output),
-          },
+          payload: { ...event.payload, output: deepRedact(event.payload.output) },
         };
       case 'error':
         return {
@@ -108,16 +104,13 @@ export function redactEvents(events: NormalizedEvent[]): NormalizedEvent[] {
           payload: {
             ...event.payload,
             message: redactString(event.payload.message),
-            stack: event.payload.stack ? redactString(event.payload.stack) : event.payload.stack,
+            stack: redactOptional(event.payload.stack),
           },
         };
       case 'lifecycle':
         return {
           ...event,
-          payload: {
-            ...event.payload,
-            detail: event.payload.detail ? redactString(event.payload.detail) : event.payload.detail,
-          },
+          payload: { ...event.payload, detail: redactOptional(event.payload.detail) },
         };
     }
   });

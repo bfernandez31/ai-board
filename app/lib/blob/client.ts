@@ -1,11 +1,15 @@
 import { put, del, head, type PutBlobResult } from '@vercel/blob';
 
-function getToken(): string | undefined {
-  return process.env.BLOB_READ_WRITE_TOKEN;
+function requireToken(): string {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    throw new Error('BLOB_READ_WRITE_TOKEN is not configured');
+  }
+  return token;
 }
 
 export function isConfigured(): boolean {
-  return !!getToken();
+  return !!process.env.BLOB_READ_WRITE_TOKEN;
 }
 
 export async function uploadJobLogArtifact(
@@ -13,10 +17,7 @@ export async function uploadJobLogArtifact(
   body: Buffer | Uint8Array,
   size: number
 ): Promise<PutBlobResult> {
-  const token = getToken();
-  if (!token) {
-    throw new Error('BLOB_READ_WRITE_TOKEN is not configured');
-  }
+  const token = requireToken();
   if (size <= 0) {
     throw new Error('Artifact size must be positive');
   }
@@ -33,10 +34,7 @@ export async function uploadJobLogArtifact(
 export async function streamJobLogArtifact(
   key: string
 ): Promise<{ stream: ReadableStream<Uint8Array>; size: number } | null> {
-  const token = getToken();
-  if (!token) {
-    throw new Error('BLOB_READ_WRITE_TOKEN is not configured');
-  }
+  const token = requireToken();
   let info;
   try {
     info = await head(key, { token });
@@ -54,10 +52,7 @@ export async function streamJobLogArtifact(
 }
 
 export async function deleteJobLogArtifact(key: string): Promise<{ deleted: boolean }> {
-  const token = getToken();
-  if (!token) {
-    throw new Error('BLOB_READ_WRITE_TOKEN is not configured');
-  }
+  const token = requireToken();
   try {
     await del(key, { token });
     return { deleted: true };
