@@ -80,7 +80,10 @@ export function ModelOverrideDialog({
       setSelection(toSelection(current));
       setError(null);
     }
-  }, [open, current]);
+    // `current` is a fresh object literal on every parent render; including it
+    // in deps would wipe the user's in-progress selection each polling tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const isClaude = effectiveAgent === Agent.CLAUDE;
 

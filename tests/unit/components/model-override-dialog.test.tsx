@@ -78,6 +78,40 @@ describe('ModelOverrideDialog', () => {
     expect(onSave).toHaveBeenCalledWith({ resetAll: true });
   });
 
+  it('preserves in-progress selection when parent re-renders with a new current object reference', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onOpenChange = vi.fn();
+    const initialCurrent = { ...baseCurrent, verifyModel: 'claude-opus-4-7' };
+
+    const { rerender } = renderWithProviders(
+      <ModelOverrideDialog
+        open
+        onOpenChange={onOpenChange}
+        effectiveAgent={Agent.CLAUDE}
+        current={initialCurrent}
+        onSave={onSave}
+      />
+    );
+
+    await user.click(screen.getByTestId('reset-all-overrides'));
+    const saveButton = screen.getByTestId('save-model-overrides');
+    expect(saveButton).not.toBeDisabled();
+
+    // Simulate parent re-render caused by job polling: same values, new object ref.
+    rerender(
+      <ModelOverrideDialog
+        open
+        onOpenChange={onOpenChange}
+        effectiveAgent={Agent.CLAUDE}
+        current={{ ...initialCurrent }}
+        onSave={onSave}
+      />
+    );
+
+    expect(saveButton).not.toBeDisabled();
+  });
+
   it('surfaces an error when onSave rejects and keeps dialog open', async () => {
     const user = userEvent.setup();
     const onSave = vi.fn().mockRejectedValue(new Error('API exploded'));
