@@ -90,7 +90,7 @@ This gives you access to all `/ai-board.*` commands locally.
 **Learn More**:
 - [Technical: Plugin Architecture](./technical/implementation/plugin-architecture.md) - Complete plugin system documentation
 - [Functional: External Repository Support](./functional/05-projects.md#external-repository-support)
-- [Technical: Multi-Repository Architecture](./technical/implementation/integrations.md#multi-repository-workflow-architecture)
+- [Technical: Multi-Repository Architecture](./technical/implementation/integrations/github.md#multi-repository-workflow-architecture)
 
 ## 🗂️ Quick Navigation
 
@@ -99,14 +99,14 @@ This gives you access to all `/ai-board.*` commands locally.
 | Feature | Functional Spec | Technical Details |
 |---------|----------------|-------------------|
 | Kanban Board | [Board Behavior](./functional/01-kanban-board.md) | [Architecture](./technical/architecture/overview.md) |
-| Tickets | [Ticket Management](./functional/02-ticket-management.md) | [Data Model](./technical/architecture/data-model.md#ticket-model) |
-| Comments | [Collaboration](./functional/03-collaboration.md) | [API Endpoints](./technical/api/endpoints.md#comments) |
-| Automation | [Workflows](./functional/04-automation.md) | [GitHub Actions](./technical/quality/deployment.md) |
-| Plugin System | [Workflows](./functional/04-automation.md) | [Plugin Architecture](./technical/implementation/plugin-architecture.md) |
+| Tickets | [Ticket Management](./functional/02-ticket-management.md) | [Data Model](./technical/architecture/data-model/core-models.md#ticket) |
+| Comments | [Collaboration](./functional/03-collaboration.md) | [API Endpoints](./technical/api/endpoints/comments.md) |
+| Automation | [Workflows](./functional/04-automation/README.md) | [GitHub Actions](./technical/quality/deployment.md) |
+| Plugin System | [Workflows](./functional/04-automation/README.md) | [Plugin Architecture](./technical/implementation/plugin-architecture.md) |
 | Projects | [Multi-Project](./functional/05-projects.md) | [Authentication](./technical/implementation/authentication.md) |
 | UI/UX | [Interface](./functional/06-user-interface.md) | [State Management](./technical/implementation/state-management.md) |
-| Billing | [Billing & Subscriptions](./functional/07-billing.md) | [Stripe Integration](./technical/implementation/integrations.md#stripe-billing-integration) |
-| Health Dashboard | [Health Dashboard](./functional/08-health-dashboard.md) | [Health Endpoints](./technical/api/endpoints.md#health-endpoints), [Health Models](./technical/architecture/data-model.md#health-models) |
+| Billing | [Billing & Subscriptions](./functional/07-billing.md) | [Stripe Integration](./technical/implementation/integrations/stripe.md) |
+| Health Dashboard | [Health Dashboard](./functional/08-health-dashboard.md) | [Health Endpoints](./technical/api/endpoints/health.md), [Health Models](./technical/architecture/data-model/health-models.md) |
 
 ### By Task
 
@@ -114,8 +114,8 @@ This gives you access to all `/ai-board.*` commands locally.
 |--------------|------------|
 | Understand a feature | [Functional Specs](./functional/) |
 | Implement a feature | [Technical Docs](./technical/) |
-| Add an API endpoint | [API Reference](./technical/api/endpoints.md) |
-| Modify the database | [Data Model](./technical/architecture/data-model.md) |
+| Add an API endpoint | [API Reference](./technical/api/endpoints/README.md) |
+| Modify the database | [Data Model](./technical/architecture/data-model/README.md) |
 | Write tests | [Testing Guide](./technical/quality/testing.md) |
 | Deploy changes | [Deployment](./technical/quality/deployment.md) |
 | Understand the plugin system | [Plugin Architecture](./technical/implementation/plugin-architecture.md) |
@@ -140,8 +140,8 @@ The original consolidated specifications (before reorganization) are preserved i
 
 ### For Developers
 - Start with [Technical README](./technical/README.md)
-- Review [Stack](./technical/architecture/stack.md) and [Data Model](./technical/architecture/data-model.md)
-- Check [API Reference](./technical/api/endpoints.md) for implementation
+- Review [Stack](./technical/architecture/stack.md) and [Data Model](./technical/architecture/data-model/README.md)
+- Check [API Reference](./technical/api/endpoints/README.md) for implementation
 
 ---
 

@@ -77,8 +77,6 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 
 **Job status**: PATCH `/api/jobs/:id/status` (workflow token auth), GET `/api/projects/:projectId/jobs/status` (polling).
 
-For full endpoint catalog, read `specs/specifications/endpoints.md`.
-
 ## Key Architecture Decisions
 
 ### Multi-Repository Support
@@ -141,5 +139,4 @@ For topics beyond this file, read these sources before implementing:
 | Topic | Read This |
 |-------|-----------|
 | Core principles, non-negotiable rules, governance | `.ai-board/memory/constitution.md` |
-| Consolidated feature specifications | `specs/specifications/` directory |
-| API request/response schemas | `specs/specifications/schemas.md` |
+| All feature specifications (functional + technical) | `specs/specifications/README.md` (index) |

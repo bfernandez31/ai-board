@@ -1,0 +1,1145 @@
+# Ticket Endpoints
+
+## Ticket Endpoints
+
+### GET /api/projects/:projectId/tickets
+
+Fetch tickets for a project, grouped by stage. SHIP stage is paginated (default 50 tickets). When `stage` or `workflowType` query params are provided, returns a flat filtered array instead.
+
+**Authentication**: Required (session or workflow Bearer token)
+**Authorization**: Must be project owner or member (workflow token bypasses)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters**:
+- `stage` (string, optional): Filter by stage — `INBOX|SPECIFY|PLAN|BUILD|VERIFY|SHIP|CLOSED`
+- `workflowType` (string, optional): Filter by workflow type — `FULL|QUICK|CLEAN`
+- `limit` (number, optional): Maximum number of tickets to return (min: 1). Only applies when at least one filter is provided. Results are sorted by `updatedAt` desc.
+- `offset` (number, optional): Skip N tickets (min: 0). Used for SHIP "Load More" pagination. When `stage=SHIP` and `offset` is provided, returns the next page of SHIP tickets.
+- `updatedSince` (string, optional): ISO 8601 datetime. Only return tickets updated after this timestamp.
+
+**Response — no filters** (200 OK): Stage-grouped object with SHIP pagination metadata
+
+All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tickets (sorted by `updatedAt` desc). `_shipTotal` indicates the total number of SHIP tickets for "Load More" pagination.
+
+```json
+{
+  "INBOX": [...],
+  "SPECIFY": [...],
+  "PLAN": [...],
+  "BUILD": [...],
+  "VERIFY": [...],
+  "SHIP": [
+    {
+      "id": 42,
+      "ticketNumber": 5,
+      "ticketKey": "ABC-5",
+      "title": "Add login feature",
+      "description": "Implement user authentication",
+      "stage": "SHIP",
+      "projectId": 1,
+      "branch": "042-add-login-feature",
+      "workflowType": "FULL",
+      "clarificationPolicy": null,
+      "attachments": [],
+      "version": 3,
+      "closedAt": null,
+      "createdAt": "2025-01-10T14:00:00.000Z",
+      "updatedAt": "2025-01-15T10:30:00.000Z"
+    }
+  ],
+  "_shipTotal": 248
+}
+```
+
+**Response — SHIP Load More** (`?stage=SHIP&offset=50&limit=50`) (200 OK):
+```json
+{
+  "tickets": [
+    {
+      "id": 38,
+      "ticketKey": "ABC-3",
+      "title": "Older shipped ticket",
+      "stage": "SHIP",
+      ...
+    }
+  ]
+}
+```
+
+**Response — with other filters** (200 OK): Flat array of matching tickets
+```json
+[
+  {
+    "id": 42,
+    "ticketKey": "ABC-5",
+    "title": "Add login feature",
+    "stage": "SHIP",
+    "workflowType": "FULL",
+    ...
+  }
+]
+```
+
+**Sorting Behavior**:
+- **INBOX**: Tickets sorted by `ticketNumber` ascending (oldest first, newest last)
+- **All Other Stages**: Tickets sorted by `updatedAt` descending (most recently updated first)
+- Sorting applied per-stage after grouping
+
+**Filtering**:
+- By default, excludes CLOSED tickets (they don't appear on board)
+- CLOSED tickets only accessible via search or direct URL
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project not found
+
+### POST /api/projects/:projectId/tickets
+
+Create a new ticket.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "title": "Fix login bug",
+  "description": "Login button doesn't work on mobile devices"
+}
+```
+
+**Validation**:
+- `title`: Required, 1-100 characters, alphanumeric + basic punctuation
+- `description`: Required, 1-10000 characters, all UTF-8 characters allowed
+
+**Response** (201 Created):
+```json
+{
+  "id": 43,
+  "ticketNumber": 6,
+  "ticketKey": "ABC-6",
+  "title": "Fix login bug",
+  "description": "Login button doesn't work on mobile devices",
+  "stage": "INBOX",
+  "projectId": 1,
+  "branch": null,
+  "workflowType": "FULL",
+  "clarificationPolicy": null,
+  "attachments": [],
+  "version": 1,
+  "createdAt": "2025-01-20T09:00:00.000Z",
+  "updatedAt": "2025-01-20T09:00:00.000Z"
+}
+```
+
+**Errors**:
+- `400`: Invalid request body (Zod validation errors)
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project not found
+- `500`: Database error
+
+### GET /browse/:key
+
+Fetch ticket by human-readable key (primary user-facing endpoint).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (resolved via ticket key)
+
+**Path Parameters**:
+- `key` (string, required): Ticket key in format "{PROJECT_KEY}-{TICKET_NUMBER}" (e.g., "ABC-123")
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "ticketNumber": 5,
+  "ticketKey": "ABC-5",
+  "title": "Add login feature",
+  "description": "Implement user authentication",
+  "stage": "SPECIFY",
+  "projectId": 1,
+  "branch": "042-add-login-feature",
+  "workflowType": "FULL",
+  "clarificationPolicy": null,
+  "attachments": [],
+  "version": 3,
+  "project": {
+    "id": 1,
+    "name": "AI Board Development",
+    "key": "ABC",
+    "clarificationPolicy": "AUTO"
+  },
+  "createdAt": "2025-01-10T14:00:00.000Z",
+  "updatedAt": "2025-01-15T10:30:00.000Z"
+}
+```
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket not found
+
+**Notes**:
+- This is the primary user-facing endpoint for ticket access
+- URLs like `/browse/ABC-123` are shareable and stable
+- Used for bookmarks, external links, and ticket references
+
+### GET /api/projects/:projectId/tickets/:id
+
+Fetch single ticket with nested project data.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number or string, required): Ticket ID (numeric) or Ticket Key (e.g., "ABC-123")
+
+**Note**: This endpoint supports both internal numeric IDs (for backward compatibility) and human-readable ticket keys. The ticket key lookup enables fetching tickets not present in the kanban board (e.g., closed tickets accessed via search or direct URL). New code should use `/browse/:key` for user-facing navigation.
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "ticketNumber": 5,
+  "ticketKey": "ABC-5",
+  "title": "Add login feature",
+  "description": "Implement user authentication",
+  "stage": "SPECIFY",
+  "projectId": 1,
+  "branch": "042-add-login-feature",
+  "workflowType": "FULL",
+  "clarificationPolicy": null,
+  "attachments": [
+    {
+      "type": "uploaded",
+      "url": "https://res.cloudinary.com/.../screenshot.png",
+      "filename": "screenshot.png",
+      "mimeType": "image/png",
+      "sizeBytes": 204800,
+      "uploadedAt": "2025-01-15T10:00:00.000Z",
+      "cloudinaryPublicId": "ai-board/tickets/42/screenshot"
+    }
+  ],
+  "version": 3,
+  "project": {
+    "id": 1,
+    "name": "AI Board Development",
+    "key": "ABC",
+    "clarificationPolicy": "AUTO"
+  },
+  "createdAt": "2025-01-10T14:00:00.000Z",
+  "updatedAt": "2025-01-15T10:30:00.000Z"
+}
+```
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket or project not found
+
+### PATCH /api/projects/:projectId/tickets/:id
+
+Update ticket fields with optimistic concurrency control.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body**:
+```json
+{
+  "title": "Updated title",
+  "description": "Updated description",
+  "clarificationPolicy": "CONSERVATIVE",
+  "version": 3
+}
+```
+
+**Validation**:
+- `title`: Optional, 1-100 characters, alphanumeric + basic punctuation
+- `description`: Optional, 1-10000 characters (editable only in INBOX stage)
+- `clarificationPolicy`: Optional, enum or null (editable only in INBOX stage)
+- `version`: Required for concurrency control
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "ticketNumber": 5,
+  "ticketKey": "ABC-5",
+  "title": "Updated title",
+  "description": "Updated description",
+  "clarificationPolicy": "CONSERVATIVE",
+  "version": 4,
+  ...
+}
+```
+
+**Errors**:
+- `400`: Invalid request body, validation failure, or stage restriction violation
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket or project not found
+- `409`: Version conflict (concurrent update detected)
+
+### POST /api/projects/:projectId/tickets/:id/duplicate
+
+Create a duplicate of an existing ticket using simple copy or full clone mode.
+
+**Full Clone Workflow Sequence**:
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Frontend
+    participant API as Duplicate API
+    participant GH as GitHub API
+    participant DB as Database
+
+    U->>UI: Click "Full clone"
+    UI->>API: POST /duplicate (mode: full)
+    API->>DB: Fetch source ticket
+    DB-->>API: Ticket + project data
+
+    alt Source ticket has no branch
+        API-->>UI: 400 MISSING_BRANCH
+        UI->>U: Error toast
+    else Source ticket has branch
+        API->>DB: Get next ticket number
+        DB-->>API: Ticket number
+        API->>API: Generate branch name
+
+        API->>GH: Get source branch commit
+        GH-->>API: Commit SHA
+
+        API->>GH: Create new branch ref
+        alt Branch creation fails
+            GH-->>API: 404/422/500 error
+            API-->>UI: 400/500 error
+            UI->>U: Error toast
+        else Branch created
+            GH-->>API: New ref created
+
+            API->>DB: Transaction start
+            API->>DB: Clone ticket with stage
+            API->>DB: Copy all jobs + telemetry
+            API->>DB: Update ticket with branch
+            API->>DB: Transaction commit
+            DB-->>API: Cloned ticket + jobs
+
+            API-->>UI: 201 Created
+            UI->>U: Success toast
+            UI->>UI: Show cloned ticket
+        end
+    end
+```
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Source ticket ID to duplicate
+
+**Request Body**:
+```json
+{
+  "mode": "simple" | "full"
+}
+```
+
+**Validation**:
+- `mode` (optional): Duplication mode (default: "simple")
+  - "simple": Create copy in INBOX with no jobs or branch
+  - "full": Preserve stage, copy all jobs with telemetry, create new branch
+
+**Response - Simple Copy** (201 Created):
+```json
+{
+  "id": 107,
+  "ticketNumber": 107,
+  "ticketKey": "AIB-107",
+  "title": "Copy of Add login button",
+  "description": "User story: As a user, I want to log in...",
+  "stage": "INBOX",
+  "version": 1,
+  "projectId": 3,
+  "branch": null,
+  "previewUrl": null,
+  "autoMode": false,
+  "workflowType": "FULL",
+  "attachments": [
+    {
+      "type": "uploaded",
+      "url": "https://res.cloudinary.com/xxx/image/upload/v1/ai-board/tickets/42/mockup.png",
+      "filename": "mockup.png",
+      "mimeType": "image/png",
+      "sizeBytes": 245760,
+      "uploadedAt": "2025-01-15T10:30:00.000Z",
+      "cloudinaryPublicId": "ai-board/tickets/42/mockup"
+    }
+  ],
+  "clarificationPolicy": "PRAGMATIC",
+  "createdAt": "2025-01-20T14:22:00.000Z",
+  "updatedAt": "2025-01-20T14:22:00.000Z"
+}
+```
+
+**Response - Full Clone** (201 Created):
+```json
+{
+  "id": 219,
+  "ticketNumber": 219,
+  "ticketKey": "AIB-219",
+  "title": "Clone of Add login button",
+  "description": "User story: As a user, I want to log in...",
+  "stage": "PLAN",
+  "version": 1,
+  "projectId": 3,
+  "branch": "219-add-login-button",
+  "previewUrl": null,
+  "autoMode": false,
+  "workflowType": "FULL",
+  "attachments": [
+    {
+      "type": "uploaded",
+      "url": "https://res.cloudinary.com/xxx/image/upload/v1/ai-board/tickets/42/mockup.png",
+      "filename": "mockup.png",
+      "mimeType": "image/png",
+      "sizeBytes": 245760,
+      "uploadedAt": "2025-01-15T10:30:00.000Z",
+      "cloudinaryPublicId": "ai-board/tickets/42/mockup"
+    }
+  ],
+  "clarificationPolicy": "PRAGMATIC",
+  "createdAt": "2025-01-20T14:22:00.000Z",
+  "updatedAt": "2025-01-20T14:22:00.000Z",
+  "jobs": [
+    {
+      "id": 456,
+      "command": "specify",
+      "status": "COMPLETED",
+      "branch": "219-add-login-button",
+      "commitSha": "abc123...",
+      "startedAt": "2025-01-20T14:00:00.000Z",
+      "completedAt": "2025-01-20T14:05:00.000Z",
+      "inputTokens": 5000,
+      "outputTokens": 1500,
+      "cacheReadTokens": 2000,
+      "cacheCreationTokens": 500,
+      "costUsd": 0.025,
+      "durationMs": 300000,
+      "model": "claude-sonnet-4-5-20250929",
+      "toolsUsed": ["Read", "Edit", "Write"]
+    },
+    {
+      "id": 457,
+      "command": "plan",
+      "status": "COMPLETED",
+      "branch": "219-add-login-button",
+      "commitSha": "def456...",
+      "startedAt": "2025-01-20T14:10:00.000Z",
+      "completedAt": "2025-01-20T14:18:00.000Z",
+      "inputTokens": 8000,
+      "outputTokens": 2500,
+      "cacheReadTokens": 3000,
+      "cacheCreationTokens": 1000,
+      "costUsd": 0.045,
+      "durationMs": 480000,
+      "model": "claude-sonnet-4-5-20250929",
+      "toolsUsed": ["Read", "Glob", "Write"]
+    }
+  ]
+}
+```
+
+**Simple Copy Behavior** (mode: "simple"):
+- **New Ticket Created**: Always in INBOX stage with new ticket number and key
+- **Title**: Prefixed with "Copy of " (truncated to 100 chars if needed)
+- **Description**: Exact copy from source ticket
+- **Clarification Policy**: Copied from source (or null if source uses project default)
+- **Attachments**: All image attachments copied by reference (same URLs)
+  - Uploaded images (Cloudinary) safely reference same URL
+  - External URLs copied as-is
+  - No image re-uploading or duplication
+- **Branch**: Always null (new tickets have no branch)
+- **Preview URL**: Always null (new tickets have no preview)
+- **Workflow Type**: Always FULL (standard workflow path)
+- **Version**: Always 1 (new ticket version)
+- **Jobs**: None (clean slate)
+
+**Full Clone Behavior** (mode: "full"):
+- **New Ticket Created**: In same stage as source ticket with new ticket number and key
+- **Title**: Prefixed with "Clone of " (truncated to 100 chars if needed)
+- **Description**: Exact copy from source ticket
+- **Stage**: Preserved from source ticket (SPECIFY, PLAN, BUILD, or VERIFY)
+- **Clarification Policy**: Copied from source
+- **Attachments**: Copied by reference (same as simple copy)
+- **Branch**: New Git branch created from source branch
+  - Format: `{TICKET_NUMBER}-{slug}` (e.g., "219-add-login-button")
+  - Slug: First 3 words of title, lowercase, hyphenated
+  - Points to same commit as source branch
+- **Jobs**: All jobs copied with complete telemetry data:
+  - Command, status, branch, commit SHA
+  - Timestamps (startedAt, completedAt)
+  - Token metrics (input, output, cache read, cache creation)
+  - Cost and performance (costUsd, durationMs)
+  - Model identifier and tools used
+  - Jobs reference new ticket ID
+- **Workflow Type**: Copied from source
+- **Version**: Always 1 (new ticket version)
+
+**Branch Creation**:
+- Creates new Git branch via GitHub API
+- Uses `git.createRef()` to create `refs/heads/{newBranchName}`
+- New branch points to same commit SHA as source branch
+- Preserves complete Git history for comparison
+
+**Title Truncation**:
+- If "Copy of [original title]" or "Clone of [original title]" exceeds 100 characters:
+  - Original title is truncated first
+  - Prefix ("Copy of " or "Clone of ") is preserved
+  - Final title stays within 100 character limit
+
+**Full Clone Eligibility**:
+- Source ticket must have a branch (tickets in SPECIFY, PLAN, BUILD, VERIFY stages)
+- Source branch must exist on GitHub
+- Returns 400 error if ticket has no branch
+
+**Errors**:
+- `400`: Invalid mode parameter, projectId, ticketId format, or full clone precondition failure
+  - Invalid mode: `{ "error": "Invalid mode parameter. Must be 'simple' or 'full'", "code": "VALIDATION_ERROR" }`
+  - Missing branch: `{ "error": "Source ticket has no branch. Full clone requires a branch.", "code": "MISSING_BRANCH" }`
+  - Branch not found: `{ "error": "Source branch '{branch}' not found on GitHub", "code": "BRANCH_NOT_FOUND" }`
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project or source ticket not found
+- `500`: Database error, GitHub API error, or branch creation failure
+  - Branch exists: `{ "error": "Branch '{newBranchName}' already exists", "code": "BRANCH_CREATION_FAILED" }`
+  - GitHub error: `{ "error": "Failed to create branch on GitHub", "code": "BRANCH_CREATION_FAILED" }`
+
+**Performance**:
+- Simple copy: <3 seconds from API call to new ticket visible in UI
+- Full clone: <5 seconds (includes GitHub API branch creation + database transaction)
+
+### GET /api/projects/:projectId/tickets/:id/branch
+
+Fetch ticket branch name.
+
+**Authentication**: None (unauthenticated endpoint)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number or string, required): Ticket ID or Ticket Key
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "branch": "042-add-login-feature",
+  "updatedAt": "2025-01-15T10:35:00.000Z"
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID or ticket ID
+- `404`: Project or ticket not found
+
+### PATCH /api/projects/:projectId/tickets/:id/branch
+
+Update ticket branch name (workflow-only endpoint).
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation (no project membership check)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body**:
+```json
+{
+  "branch": "042-add-login-feature"
+}
+```
+
+**Validation**:
+- `branch`: Required, max 200 characters or null
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "branch": "042-add-login-feature",
+  "updatedAt": "2025-01-15T10:35:00.000Z"
+}
+```
+
+**Errors**:
+- `400`: Invalid branch name (exceeds 200 characters)
+- `401`: Invalid or missing workflow token
+- `404`: Ticket or project not found
+
+**Note**: This endpoint does NOT use optimistic concurrency control (no version checking).
+
+### POST /api/projects/:projectId/tickets/:id/deploy
+
+Trigger manual Vercel preview deployment (user-initiated).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body**: Empty
+
+**Response** (201 Created):
+```json
+{
+  "success": true,
+  "jobId": 125,
+  "message": "Deploy preview workflow dispatched"
+}
+```
+
+**Eligibility Requirements**:
+- Ticket must be in VERIFY stage
+- Ticket must have a branch
+- Latest job must have COMPLETED status
+
+**Workflow Behavior**:
+- Creates new Job record with command="deploy-preview", status=PENDING
+- Clears any existing preview URL in project (single-preview enforcement)
+- Dispatches GitHub Actions workflow (deploy-preview.yml)
+- Workflow deploys branch to Vercel and updates ticket with preview URL
+
+**Errors**:
+- `400`: Ticket not eligible for deployment (wrong stage, no branch, job not completed)
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket or project not found
+- `500`: Workflow dispatch error
+
+### PATCH /api/projects/:projectId/tickets/:id/preview-url
+
+Update ticket preview URL (workflow-only endpoint).
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation (no project membership check)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body**:
+```json
+{
+  "previewUrl": "https://ai-board-080-1490-deploy-preview.vercel.app"
+}
+```
+
+**Validation**:
+- `previewUrl`: Required, max 500 characters, HTTPS-only, Vercel domain pattern
+- Pattern: `^https:\/\/[a-z0-9-]+\.vercel\.app$`
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "previewUrl": "https://ai-board-080-1490-deploy-preview.vercel.app",
+  "updatedAt": "2025-01-15T10:40:00.000Z"
+}
+```
+
+**Errors**:
+- `400`: Invalid preview URL (non-HTTPS, invalid domain, exceeds 500 characters)
+- `401`: Invalid or missing workflow token
+- `404`: Ticket or project not found
+
+**Note**: This endpoint does NOT use optimistic concurrency control (no version checking).
+
+### PATCH /api/projects/:projectId/tickets/:id/model-config
+
+Set or clear per-stage Claude model overrides on a ticket.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (`verifyTicketAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body** (set individual overrides):
+```json
+{
+  "specifyModel": "claude-opus-4-7",
+  "verifyModel": "claude-haiku-4-5-20251001"
+}
+```
+
+**Request Body** (clear all overrides):
+```json
+{
+  "resetAll": true
+}
+```
+
+**Validation**:
+- Each model field is optional, nullable — accepted values are the whitelisted Claude model IDs or `null` to clear that stage
+- `resetAll: true` sets all 5 stage fields to `null` in a single atomic operation; cannot be combined with individual field values
+- Empty body returns `400`
+- Unknown model ID returns `400` with `INVALID_MODEL_ID` error code
+
+**Response** (200 OK):
+```json
+{
+  "specifyModel": "claude-opus-4-7",
+  "planModel": null,
+  "implementModel": null,
+  "quickImplModel": null,
+  "verifyModel": "claude-haiku-4-5-20251001"
+}
+```
+
+All 5 fields are always returned; `null` means "inherit from project default" at dispatch time.
+
+**Errors**:
+- `400`: Empty body, `INVALID_MODEL_ID`, or `resetAll` combined with field values
+- `401`: Not authenticated
+- `404`: Ticket or project not found, or no access
+
+### GET /api/projects/:projectId/tickets/search
+
+Search tickets within a project by key, title, or description.
+
+**Authentication**: Required (session) OR Bearer token (workflow)
+**Authorization**: Must be project owner or member (session), OR valid workflow token
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters**:
+- `q` (string, required): Search query (minimum 2 characters)
+- `limit` (number, optional): Maximum results to return (default: 20, max: 50)
+
+**Response** (200 OK):
+```json
+{
+  "results": [
+    {
+      "id": 42,
+      "ticketKey": "ABC-42",
+      "title": "Add user authentication",
+      "stage": "BUILD"
+    },
+    {
+      "id": 38,
+      "ticketKey": "ABC-38",
+      "title": "Fix authentication bug",
+      "stage": "VERIFY"
+    }
+  ],
+  "totalCount": 2
+}
+```
+
+**Search Behavior**:
+- Searches across ticketKey, title, and description fields
+- Case-insensitive matching (uses Prisma `mode: 'insensitive'`)
+- Results ordered by relevance:
+  1. Exact ticket key matches (score: 4)
+  2. Partial ticket key matches (score: 3)
+  3. Title contains query (score: 2)
+  4. Description contains query (score: 1)
+- Within same relevance score, ordered by most recently updated
+- Limited to specified limit (default 20, max 50)
+
+**Fields**:
+- `id`: Ticket ID (for opening modal via URL parameter)
+- `ticketKey`: Human-readable key (e.g., "ABC-42")
+- `title`: Ticket title
+- `stage`: Current workflow stage
+- `totalCount`: Number of results returned (capped at limit)
+
+**Errors**:
+- `400`: Query too short (less than 2 characters) or invalid limit
+  ```json
+  {
+    "error": "Query must be at least 2 characters"
+  }
+  ```
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project not found
+- `500`: Database error
+
+**Performance**: <500ms for typical queries, indexed on projectId
+
+### DELETE /api/projects/:projectId/tickets/:id
+
+Delete ticket with GitHub cleanup (permanent deletion).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body**: Empty
+
+**Response** (204 No Content)
+
+**Deletion Behavior**:
+- **Transactional**: All GitHub artifacts must be deleted successfully before database deletion
+- **GitHub Cleanup** (in order):
+  1. Close all pull requests where head branch matches ticket branch
+  2. Delete Git branch from repository
+- **Database Cleanup** (cascade):
+  1. Delete all associated jobs
+  2. Delete all associated comments
+  3. Delete ticket record
+- **Failure Handling**: If any GitHub operation fails, ticket remains unchanged in database
+- **Idempotent Branch Deletion**: If branch already deleted (404 or 422 "reference does not exist"), operation continues successfully
+
+**Validation**:
+- Ticket cannot be in SHIP stage (400 error)
+- Ticket cannot have PENDING or RUNNING jobs (400 error)
+
+**Errors**:
+- `400`: Invalid deletion (SHIP stage or active job)
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket or project not found
+- `500`: GitHub API error or database error
+
+**GitHub API Errors**:
+- 404 errors (branch/PR not found) are ignored (idempotent operation)
+- 422 errors with "reference does not exist" message are ignored (branch already deleted)
+- Other GitHub API errors abort the deletion and preserve ticket
+
+**Notes**:
+- Pull requests are identified by matching head branch name
+- All PRs with matching head branch are closed (handles multiple PRs scenario)
+- Workflow artifacts (spec.md, plan.md, tasks.md) are deleted when branch is deleted
+- Preview deployments become orphaned (Vercel cleanup is manual)
+- TanStack Query optimistic update removes ticket immediately from UI
+
+### POST /api/projects/:projectId/tickets/:id/close
+
+Close ticket from VERIFY stage (transition to CLOSED).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body**: Empty
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "stage": "CLOSED",
+  "closedAt": "2025-01-15T10:45:00.000Z",
+  "updatedAt": "2025-01-15T10:45:00.000Z"
+}
+```
+
+**Close Behavior**:
+1. Validates ticket is in VERIFY stage
+2. Validates no PENDING or RUNNING jobs exist
+3. Closes all open GitHub PRs for ticket branch with comment: "Closed by ai-board - ticket moved to CLOSED state"
+5. Updates ticket stage to CLOSED and sets closedAt timestamp
+6. Preserves Git branch (not deleted)
+
+**GitHub PR Close**:
+- Finds all open PRs where head branch matches ticket branch
+- Closes each PR with explanatory comment
+- Idempotent: succeeds if PRs already closed or no PRs exist
+- GitHub API failures logged but don't block close operation
+
+**Errors**:
+- `400`: Invalid close (ticket not in VERIFY or has active jobs)
+  ```json
+  {
+    "error": "Cannot close ticket",
+    "code": "INVALID_CLOSE",
+    "details": {
+      "stage": "BUILD",
+      "message": "Ticket must be in VERIFY stage"
+    }
+  }
+  ```
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket or project not found
+- `500`: Database error
+
+**Notes**:
+- CLOSED tickets removed from board display
+- CLOSED tickets remain searchable
+- CLOSED is terminal state (no further transitions)
+- Branch preserved for audit trail
+
+### PATCH /api/projects/:projectId/tickets/:id/auto-mode
+
+Toggle the `autoMode` flag on a ticket. When enabling on a ticket with no running workflow job, the server also dispatches the next stage transition in the same request.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (same authorization as `/transition`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number | string, required): Ticket ID (numeric) or ticket key (e.g., `"AIB-123"`)
+
+**Request Body**:
+```json
+{ "enabled": true }
+```
+
+**Validation** (Zod): `z.object({ enabled: z.boolean() })`
+
+**Response** (200 OK — enabled with immediate dispatch):
+```json
+{
+  "autoMode": true,
+  "ticketId": 42,
+  "stage": "SPECIFY",
+  "jobId": 1234
+}
+```
+
+**Response** (200 OK — enabled without dispatch, job already running):
+```json
+{
+  "autoMode": true,
+  "ticketId": 42,
+  "stage": "SPECIFY"
+}
+```
+
+`jobId` is present only when an immediate dispatch occurred. It is absent when a workflow job was already running on the ticket at the time of enable.
+
+**Response** (200 OK — disabled):
+```json
+{ "autoMode": false, "ticketId": 42, "stage": "SPECIFY" }
+```
+
+Any running job is untouched.
+
+**Side effects**:
+
+| Case | Effects |
+|------|---------|
+| Enable, no running job | `autoMode=true` persisted; new PENDING Job created; GitHub workflow dispatched; on dispatch failure `autoMode` is reverted to `false` and the upstream error is propagated |
+| Enable, running job present (PENDING or RUNNING, non `comment-*`) | `autoMode=true` persisted; no Job touched; the chain starts on the running job's successful completion |
+| Disable | `autoMode=false` persisted; no Job touched |
+
+**Idempotency**:
+- Enabling a ticket already `autoMode=true` returns 200 with the current state and no `jobId` (no re-dispatch)
+- Disabling a ticket already `autoMode=false` returns 200 with the current state (no-op)
+
+**Errors**:
+- `400`: Zod validation failure, or attempt to enable on an ineligible ticket (QUICK workflow, or stage ∈ {BUILD, VERIFY, SHIP, CLOSED})
+  ```json
+  {
+    "error": "Auto-mode is only available on FULL-workflow tickets in INBOX, SPECIFY, or PLAN.",
+    "code": "AUTO_MODE_INELIGIBLE"
+  }
+  ```
+- `401`: Not authenticated
+- `404`: Project not found, user is neither owner nor member, or ticket not found
+- `409`: Underlying optimistic-concurrency check failed during immediate dispatch
+- `500`: `{ "error": "Auto-mode dispatch failed; auto-mode reverted to off.", "code": "AUTO_MODE_DISPATCH_FAILED" }` — enable succeeded but the follow-up dispatch failed and could not be rolled back cleanly
+
+### POST /api/projects/:projectId/tickets/:id/transition
+
+Transition ticket to target stage with workflow dispatch.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body**:
+```json
+{
+  "targetStage": "SPECIFY"
+}
+```
+
+**Validation**:
+- `targetStage`: Required, enum (SPECIFY|PLAN|BUILD|VERIFY|SHIP)
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "jobId": 123,
+  "message": "Workflow dispatched successfully"
+}
+```
+
+**Transition Logic**:
+- **INBOX → SPECIFY**: Creates job, dispatches workflow (specify command)
+- **INBOX → BUILD**: Quick-impl mode, creates job, dispatches quick-impl workflow, sets workflowType=QUICK
+- **SPECIFY → PLAN**: Validates specify job completed, creates job, dispatches workflow (plan command)
+- **PLAN → BUILD**: Validates plan job completed, creates job, dispatches workflow (implement command)
+- **BUILD → VERIFY**: Creates job, dispatches verify workflow with workflowType (FULL runs tests, QUICK skips to PR)
+- **BUILD → INBOX**: Rollback if job failed/cancelled, resets workflowType to FULL
+- **VERIFY → PLAN**: Rollback for FULL workflows only:
+  1. Validates latest job is COMPLETED, FAILED, or CANCELLED
+  2. Clears previewUrl on ticket
+  3. Deletes most recent job record (ordered by startedAt desc)
+  4. Updates ticket stage to PLAN and sets `autoMode=false` atomically (prevents PLAN → BUILD → VERIFY loop)
+  5. Dispatches rollback-reset workflow (git reset to pre-BUILD state, preserves spec files)
+  6. Creates rollback-reset job to track the git reset operation
+- **VERIFY → SHIP**: Manual transition (no workflow)
+
+**Errors**:
+- `400`: Invalid transition (non-sequential, job not completed, rollback not allowed)
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket or project not found
+- `500`: Workflow dispatch error or database error
+
+**Error Response** (Job Not Completed):
+```json
+{
+  "error": "Cannot transition",
+  "message": "Cannot transition: workflow is still running",
+  "code": "JOB_NOT_COMPLETED",
+  "details": {
+    "currentStage": "SPECIFY",
+    "targetStage": "PLAN",
+    "jobStatus": "RUNNING",
+    "jobCommand": "specify"
+  }
+}
+```
+
+**Error Response** (500 — Unexpected server error):
+```json
+{
+  "error": "Internal server error"
+}
+```
+
+
+## Ticket Lookup Endpoints
+
+### GET /api/ticket/:key
+
+Fetch ticket by key without requiring project ID.
+
+**Authentication**: Required (session)
+**Authorization**: Must be owner or member of the ticket's project
+
+**Path Parameters**:
+- `key` (string, required): Ticket key in format `{PROJECT_KEY}-{NUMBER}` (e.g., "ABC-123")
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "ticketKey": "ABC-5",
+  "title": "Add login feature",
+  "stage": "SPECIFY",
+  "projectId": 1,
+  "project": {
+    "id": 1,
+    "name": "AI Board Development",
+    "clarificationPolicy": "AUTO",
+    "githubOwner": "bfernandez31",
+    "githubRepo": "ai-board"
+  }
+}
+```
+
+**Errors**:
+- `400`: Invalid ticket key format
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket not found
+
+### GET /api/tickets/:id/ai-board-availability
+
+Check if AI-BOARD can be mentioned for a given ticket.
+
+**Authentication**: Not required (public endpoint)
+
+**Path Parameters**:
+- `id` (number, required): Ticket ID
+
+**Response** (200 OK):
+```json
+{
+  "available": true,
+  "reason": null
+}
+```
+
+**Response (unavailable)**:
+```json
+{
+  "available": false,
+  "reason": "Job is currently running"
+}
+```
+
+**Errors**:
+- `400`: Invalid ticket ID
+- `500`: Internal server error
+
+### GET /api/projects/:projectId/tickets/verify
+
+Fetch all VERIFY-stage tickets for a project (workflow-only endpoint).
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Response** (200 OK):
+```json
+{
+  "tickets": [
+    {
+      "id": 42,
+      "title": "Add login feature",
+      "branch": "042-add-login-feature",
+      "stage": "VERIFY",
+      "updatedAt": "2025-01-15T10:35:00.000Z"
+    }
+  ]
+}
+```
+
+**Usage**: Used by `auto-ship.yml` workflow to find VERIFY tickets eligible for auto-ship after production deployment.
+
+**Errors**:
+- `400`: Invalid project ID
+- `401`: Invalid or missing workflow token
+- `404`: Project not found
+
+---
+

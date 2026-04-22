@@ -26,7 +26,7 @@ Complete system architecture, design patterns, and technology stack.
 - Security architecture
 - Scalability considerations
 
-**[data-model.md](architecture/data-model.md)**
+**[data-model/](architecture/data-model/README.md)**
 - Complete Prisma schema reference
 - Database relationships and constraints
 - Indexes and query optimization
@@ -50,7 +50,7 @@ Complete system architecture, design patterns, and technology stack.
 
 RESTful API documentation with complete endpoint reference.
 
-**[endpoints.md](api/endpoints.md)**
+**[endpoints/](api/endpoints/README.md)**
 - Complete endpoint reference (50+ endpoints)
 - HTTP methods, authentication, authorization
 - Request/response formats with examples
@@ -101,7 +101,7 @@ Core implementation patterns and code organization.
 - Plugin installation (local, self-management, CI/CD)
 - External project requirements
 
-**[integrations.md](implementation/integrations.md)**
+**[integrations/](implementation/integrations/README.md)**
 - GitHub Actions integration (Octokit)
 - Workflow dispatch patterns
 - Cloudinary CDN integration
@@ -152,8 +152,8 @@ Testing infrastructure and deployment processes.
 ### By Role
 
 **Backend Developer**:
-- [architecture/data-model.md](architecture/data-model.md) - Database schema
-- [api/endpoints.md](api/endpoints.md) - API reference
+- [architecture/data-model/](architecture/data-model/README.md) - Database schema
+- [api/endpoints/](api/endpoints/README.md) - API reference
 - [api/schemas.md](api/schemas.md) - Validation schemas
 - [implementation/authentication.md](implementation/authentication.md) - Auth patterns
 
@@ -161,42 +161,42 @@ Testing infrastructure and deployment processes.
 - [architecture/stack.md](architecture/stack.md) - UI libraries and tools
 - [implementation/state-management.md](implementation/state-management.md) - TanStack Query patterns
 - [implementation/utilities.md](implementation/utilities.md) - Helper functions and utilities
-- [api/endpoints.md](api/endpoints.md) - API contracts
+- [api/endpoints/](api/endpoints/README.md) - API contracts
 - [api/schemas.md](api/schemas.md) - Request/response types
 
 **DevOps Engineer**:
 - [quality/deployment.md](quality/deployment.md) - CI/CD and deployment
-- [implementation/integrations.md](implementation/integrations.md) - External services
+- [implementation/integrations/](implementation/integrations/README.md) - External services
 - [architecture/overview.md](architecture/overview.md) - System architecture
 
 **QA Engineer**:
 - [quality/testing.md](quality/testing.md) - Testing infrastructure
-- [api/endpoints.md](api/endpoints.md) - API contracts for testing
-- [architecture/data-model.md](architecture/data-model.md) - Test data models
+- [api/endpoints/](api/endpoints/README.md) - API contracts for testing
+- [architecture/data-model/](architecture/data-model/README.md) - Test data models
 
 ### By Feature
 
 **Tickets**:
-- CRUD operations: [api/endpoints.md](api/endpoints.md#ticket-endpoints)
-- Data model: [architecture/data-model.md](architecture/data-model.md#ticket)
+- CRUD operations: [api/endpoints/](api/endpoints/tickets.md)
+- Data model: [architecture/data-model/](architecture/data-model/core-models.md#ticket)
 - State management: [implementation/state-management.md](implementation/state-management.md#tickets-query)
 - Validation: [api/schemas.md](api/schemas.md#ticket-schemas)
 
 **Comments**:
-- API endpoints: [api/endpoints.md](api/endpoints.md#comment-endpoints)
+- API endpoints: [api/endpoints/](api/endpoints/comments.md)
 - Real-time updates: [implementation/state-management.md](implementation/state-management.md#comments-query-with-polling)
 - Timeline utilities: [implementation/utilities.md](implementation/utilities.md#conversation-events)
-- Data model: [architecture/data-model.md](architecture/data-model.md#comment)
+- Data model: [architecture/data-model/](architecture/data-model/core-models.md#comment)
 
 **Workflow Automation**:
 - GitHub Actions: [quality/deployment.md](quality/deployment.md#github-actions-workflows)
-- Job tracking: [architecture/data-model.md](architecture/data-model.md#job)
-- Workflow dispatch: [implementation/integrations.md](implementation/integrations.md#github-actions-integration)
+- Job tracking: [architecture/data-model/](architecture/data-model/core-models.md#job)
+- Workflow dispatch: [implementation/integrations/](implementation/integrations/github.md)
 
 **Image Attachments**:
-- Cloudinary integration: [implementation/integrations.md](implementation/integrations.md#cloudinary-cdn-integration)
-- API endpoints: [api/endpoints.md](api/endpoints.md#image-attachment-endpoints)
-- Data structure: [architecture/data-model.md](architecture/data-model.md#json-fields)
+- Cloudinary integration: [implementation/integrations/](implementation/integrations/cloudinary.md)
+- API endpoints: [api/endpoints/](api/endpoints/comments.md#image-attachment-endpoints)
+- Data structure: [architecture/data-model/](architecture/data-model/README.md#json-fields)
 
 **Authentication**:
 - NextAuth setup: [implementation/authentication.md](implementation/authentication.md#nextauthjs-configuration)
@@ -208,25 +208,25 @@ Testing infrastructure and deployment processes.
 **Adding a New API Endpoint**:
 1. Define schema: [api/schemas.md](api/schemas.md)
 2. Check auth pattern: [implementation/authentication.md](implementation/authentication.md#authenticated-api-route)
-3. Follow conventions: [api/endpoints.md](api/endpoints.md#error-response-format)
+3. Follow conventions: [api/endpoints/](api/endpoints/README.md#error-response-format)
 4. Add tests: [quality/testing.md](quality/testing.md#api-contract-test)
 
 **Adding a New Feature**:
 1. Check architecture: [architecture/overview.md](architecture/overview.md)
-2. Update data model: [architecture/data-model.md](architecture/data-model.md)
-3. Create API endpoints: [api/endpoints.md](api/endpoints.md)
+2. Update data model: [architecture/data-model/](architecture/data-model/README.md)
+3. Create API endpoints: [api/endpoints/](api/endpoints/README.md)
 4. Implement state management: [implementation/state-management.md](implementation/state-management.md)
 5. Add tests: [quality/testing.md](quality/testing.md)
 
 **Debugging Production Issues**:
 1. Check monitoring: [quality/deployment.md](quality/deployment.md#monitoring--logging)
-2. Review error patterns: [api/endpoints.md](api/endpoints.md#error-response-format)
+2. Review error patterns: [api/endpoints/](api/endpoints/README.md#error-response-format)
 3. Check workflow logs: [quality/deployment.md](quality/deployment.md#github-actions-logs)
 4. Verify environment: [quality/deployment.md](quality/deployment.md#environment-configuration)
 
 **Optimizing Performance**:
 1. Review targets: [architecture/stack.md](architecture/stack.md#performance-targets)
-2. Check indexes: [architecture/data-model.md](architecture/data-model.md#indexes-strategy)
+2. Check indexes: [architecture/data-model/](architecture/data-model/relationships-and-indexes.md#indexes-strategy)
 3. Optimize queries: [implementation/state-management.md](implementation/state-management.md#performance-optimization)
 4. Monitor builds: [quality/deployment.md](quality/deployment.md#build-performance)
 
@@ -323,8 +323,8 @@ Keep files focused and avoid duplication. Cross-reference other files when neede
 
 For questions about:
 - **Implementation Patterns**: See [implementation/](implementation/)
-- **API Contracts**: See [api/endpoints.md](api/endpoints.md)
-- **Data Models**: See [architecture/data-model.md](architecture/data-model.md)
+- **API Contracts**: See [api/endpoints/](api/endpoints/README.md)
+- **Data Models**: See [architecture/data-model/](architecture/data-model/README.md)
 - **Deployment**: See [quality/deployment.md](quality/deployment.md)
 - **Testing**: See [quality/testing.md](quality/testing.md)
 

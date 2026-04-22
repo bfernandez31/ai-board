@@ -57,7 +57,7 @@ Explains the comment system for team discussions, @mentions for user notificatio
 
 ---
 
-### [04-automation.md](04-automation.md)
+### [04-automation/](04-automation/README.md)
 **Automated Workflows and Policies**
 
 Describes AI-powered workflows that automatically generate specifications, plans, and implementations when tickets move through stages.
@@ -155,10 +155,10 @@ For technical implementation details, see:
 ## Reading Guide
 
 ### For Product Managers
-Start with **01-kanban-board.md** to understand the core workflow, then review **02-ticket-management.md** and **04-automation.md** to see how tickets flow through the system.
+Start with **01-kanban-board.md** to understand the core workflow, then review **02-ticket-management.md** and **04-automation/** to see how tickets flow through the system.
 
 ### For Business Stakeholders
-Read **01-kanban-board.md** for the overall concept, then **04-automation.md** to understand the AI-powered automation value proposition.
+Read **01-kanban-board.md** for the overall concept, then **04-automation/** to understand the AI-powered automation value proposition.
 
 ### For QA/Testers
 Review all documents sequentially. Pay special attention to:

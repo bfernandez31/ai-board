@@ -104,7 +104,7 @@ You MUST write the result as a valid JSON file to `/tmp/health-scan-result.json`
     "type": "SPEC_SYNC",
     "specs": [
       {
-        "specPath": "specs/specifications/technical/api/endpoints.md",
+        "specPath": "specs/specifications/technical/api/endpoints/tickets.md",
         "status": "synced"
       },
       {
@@ -113,7 +113,7 @@ You MUST write the result as a valid JSON file to `/tmp/health-scan-result.json`
         "drift": "Missing documentation for POST /api/health/scans endpoint"
       },
       {
-        "specPath": "specs/specifications/technical/architecture/data-model.md",
+        "specPath": "specs/specifications/technical/architecture/data-model/core-models.md",
         "status": "drifted",
         "drift": "Model 'HealthScore' exists in schema but is not documented in data-model spec"
       }

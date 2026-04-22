@@ -249,7 +249,7 @@ Before any workflow dispatch, the system resolves which agent (CLI) to use:
 ticket.agent → project.defaultAgent → CLAUDE (fallback)
 ```
 
-See [Agent Resolution](integrations.md#agent-resolution) for details.
+See [Agent Resolution](integrations/github.md#agent-resolution) for details.
 
 ### Agent-Specific Command Execution
 
