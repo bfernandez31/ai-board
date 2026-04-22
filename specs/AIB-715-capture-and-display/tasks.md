@@ -101,13 +101,13 @@ Web application (Next.js): `app/api/**` server routes, `app/lib/**` shared helpe
 
 ### Tests for User Story 2
 
-- [ ] T042 [P] [US2] Extend `tests/unit/logs/preview.test.ts` with cases for the `COMPLETED` branch (final agent message / tool-usage recap), `CANCELLED` branch (lifecycle `kind` surfaces as cause), and `PRUNED` literal string; assert the 280-char cap holds on every branch
-- [ ] T043 [P] [US2] Extend `tests/unit/components/ticket-stats.test.tsx` with assertions that rows render distinct previews across `COMPLETED` / `CANCELLED` / `UNAVAILABLE` / `PRUNED` statuses via the hook's mocked data (file already exists — extending avoids duplicating the ticket-stats render setup)
+- [X] T042 [P] [US2] ✅ DONE Extend `tests/unit/logs/preview.test.ts` with cases for the `COMPLETED` branch (final agent message / tool-usage recap), `CANCELLED` branch (lifecycle `kind` surfaces as cause), and `PRUNED` literal string; assert the 280-char cap holds on every branch
+- [X] T043 [P] [US2] ✅ DONE Extend `tests/unit/components/ticket-stats.test.tsx` with assertions that rows render distinct previews across `COMPLETED` / `CANCELLED` / `UNAVAILABLE` / `PRUNED` statuses via the hook's mocked data (file already exists — extending avoids duplicating the ticket-stats render setup)
 
 ### Implementation for User Story 2
 
-- [ ] T044 [US2] Refine `components/ticket/jobs-timeline.tsx` `JobRow` preview styling — use Catppuccin tokens to color-tint the preview line per status (`text-ctp-red` for `FAILED`, `text-ctp-blue` for `COMPLETED`, `text-ctp-yellow` for `CANCELLED`, `text-ctp-overlay-0` for `UNAVAILABLE` / `PRUNED`), keep class strings as static literals (no dynamic class construction per `CLAUDE.md`), and ensure `UNAVAILABLE` / `PRUNED` rows render the "View full logs" trigger in a disabled state
-- [ ] T045 [US2] Extend `.github/scripts/capture-agent-logs.sh` to synthesize the minimal `lifecycle:started` + `lifecycle:cancelled` pair when the raw log is empty (covers the "job cancelled before any agent output" edge case — `workflows/agent-log-capture.md` Phase 1)
+- [X] T044 [US2] ✅ DONE Refine `components/ticket/jobs-timeline.tsx` `JobRow` preview styling — use Catppuccin tokens to color-tint the preview line per status (`text-ctp-red` for `FAILED`, `text-ctp-blue` for `COMPLETED`, `text-ctp-yellow` for `CANCELLED`, `text-ctp-overlay-0` for `UNAVAILABLE` / `PRUNED`), keep class strings as static literals (no dynamic class construction per `CLAUDE.md`), and ensure `UNAVAILABLE` / `PRUNED` rows render the "View full logs" trigger in a disabled state
+- [X] T045 [US2] ✅ DONE Extend `.github/scripts/capture-agent-logs.sh` to synthesize the minimal `lifecycle:started` + `lifecycle:cancelled` pair when the raw log is empty (covers the "job cancelled before any agent output" edge case — `workflows/agent-log-capture.md` Phase 1)
 
 **Checkpoint**: Timeline is glance-ably useful across every terminated-job outcome.
 
@@ -121,12 +121,12 @@ Web application (Next.js): `app/api/**` server routes, `app/lib/**` shared helpe
 
 ### Tests for User Story 3
 
-- [ ] T046 [P] [US3] Create RTL test `tests/unit/components/log-viewer-sheet.test.tsx` covering the five event types rendering with distinct icons, per-entry copy calling `useCopyToClipboard`, and the "Download raw" `<a>` emitting the correct `href` + `download` attributes; uses `renderWithProviders()` from `tests/utils/component-test-utils.tsx`
+- [X] T046 [P] [US3] ✅ DONE Create RTL test `tests/unit/components/log-viewer-sheet.test.tsx` covering the five event types rendering with distinct icons, per-entry copy calling `useCopyToClipboard`, and the "Download raw" `<a>` emitting the correct `href` + `download` attributes; uses `renderWithProviders()` from `tests/utils/component-test-utils.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T047 [US3] Enhance `components/ticket/log-event-row.tsx` with a static `const EVENT_ICON: Record<EventType, {icon, tone}>` map using lucide-react icons + Catppuccin tokens per `research.md §3.9` (`MessageSquare`/`text-ctp-blue`, `Wrench`/`text-ctp-mauve`, `CheckCheck`/`text-ctp-green` (or `text-ctp-red` on error), `XCircle`/`text-ctp-red`, `Clock`/`text-ctp-overlay-0`); add a per-row copy button wired to `app/lib/hooks/useCopyToClipboard.ts`
-- [ ] T048 [US3] Extend `components/ticket/log-viewer-sheet.tsx` footer with a "Download raw" `<a download>` element pointing at `/api/projects/[projectId]/tickets/[ticketId]/jobs/[jobId]/logs/raw?format=jsonl` (session cookie carries auth — no blob token exposure)
+- [X] T047 [US3] ✅ DONE Enhance `components/ticket/log-event-row.tsx` with a static `const EVENT_ICON: Record<EventType, {icon, tone}>` map using lucide-react icons + Catppuccin tokens per `research.md §3.9` (`MessageSquare`/`text-ctp-blue`, `Wrench`/`text-ctp-mauve`, `CheckCheck`/`text-ctp-green` (or `text-ctp-red` on error), `XCircle`/`text-ctp-red`, `Clock`/`text-ctp-overlay-0`); add a per-row copy button wired to `app/lib/hooks/useCopyToClipboard.ts`
+- [X] T048 [US3] ✅ DONE Extend `components/ticket/log-viewer-sheet.tsx` footer with a "Download raw" `<a download>` element pointing at `/api/projects/[projectId]/tickets/[ticketId]/jobs/[jobId]/logs/raw?format=jsonl` (session cookie carries auth — no blob token exposure)
 
 **Checkpoint**: Power users have the full drill-down experience.
 
@@ -136,10 +136,10 @@ Web application (Next.js): `app/api/**` server routes, `app/lib/**` shared helpe
 
 **Purpose**: Retention pruning (required by FR-019/FR-020 but independent of the P1–P3 user-visible slices), scheduled workflow wiring, and documentation.
 
-- [ ] T049 [P] Create `tests/integration/api/maintenance/prune-logs.test.ts` — seeds N records with `createdAt = now - 31d`, asserts `prunedCount === N` and rows removed; asserts second run is a no-op; asserts Blob 404 is treated as success; Blob client mocked at `@/app/lib/blob/client`
-- [ ] T050 Create `app/api/maintenance/prune-logs/route.ts` with `verifyWorkflowToken`, bounded batching (500 rows/loop, 50 k/cycle cap), Blob-delete-before-DB ordering, idempotent `where: { createdAt: { lt: cutoff }, captureStatus: { not: 'PRUNED' } }` filter, and `{ prunedCount, skippedCount, durationMs }` response
-- [ ] T051 Create scheduled `.github/workflows/nightly-log-prune.yml` with `cron: '15 1 * * *'`, `workflow_dispatch: {}` trigger, and the `curl POST /api/maintenance/prune-logs` invocation matching the template in `workflows/log-retention-pruning.md` §Scheduled workflow
-- [ ] T052 [P] Run `bun run type-check` and `bun run lint` end-to-end, confirm no regression in existing telemetry tests (FR-018 / SC-007), and verify the constitution gate documented in `plan.md` §Constitution Check still holds
+- [X] T049 [P] ✅ DONE Create `tests/integration/api/maintenance/prune-logs.test.ts` — seeds N records with `createdAt = now - 31d`, asserts `prunedCount === N` and rows removed; asserts second run is a no-op; asserts Blob 404 is treated as success; Blob client mocked at `@/app/lib/blob/client`
+- [X] T050 ✅ DONE Create `app/api/maintenance/prune-logs/route.ts` with `verifyWorkflowToken`, bounded batching (500 rows/loop, 50 k/cycle cap), Blob-delete-before-DB ordering, idempotent `where: { createdAt: { lt: cutoff }, captureStatus: { not: 'PRUNED' } }` filter, and `{ prunedCount, skippedCount, durationMs }` response
+- [X] T051 ✅ DONE Create scheduled `.github/workflows/nightly-log-prune.yml` with `cron: '15 1 * * *'`, `workflow_dispatch: {}` trigger, and the `curl POST /api/maintenance/prune-logs` invocation matching the template in `workflows/log-retention-pruning.md` §Scheduled workflow
+- [X] T052 [P] ✅ DONE Run `bun run type-check` and `bun run lint` end-to-end, confirm no regression in existing telemetry tests (FR-018 / SC-007), and verify the constitution gate documented in `plan.md` §Constitution Check still holds
 
 ---
 
