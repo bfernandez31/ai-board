@@ -288,6 +288,16 @@
 - **Limits**: 25GB storage, 25GB bandwidth (free tier)
 - **Configuration**: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
 
+### Vercel Blob SDK
+- **Package**: `@vercel/blob` ^2.3.x
+- **Purpose**: Durable object storage for gzipped JSONL agent execution transcripts
+- **Usage**: Server-side only — never imported in client bundles; runner uploads stream through the authenticated ai-board API so the `BLOB_READ_WRITE_TOKEN` lives only in the Vercel environment
+- **Storage layout**: `logs/<projectId>/<ticketId>/<jobId>.jsonl.gz` — one object per terminated job, 25 MB gzipped cap
+- **Read path**: proxied through `GET /api/projects/:projectId/tickets/:id/jobs/:jobId/logs/raw` (gzip Content-Encoding preserved)
+- **Write path**: proxied through `PUT /api/jobs/:id/logs/artifact` (workflow token auth)
+- **Module**: `app/lib/blob/client.ts` wraps `put`, `list`, `del`, and streaming reads
+- **Retention**: `LOG_RETENTION_DAYS` (default `30`) drives the nightly prune scheduled via `.github/workflows/nightly-log-prune.yml`
+
 ## Testing
 
 ### Vitest
@@ -418,6 +428,8 @@
   - `VAPID_PUBLIC_KEY`: Web Push VAPID public key (browser push notifications)
   - `VAPID_PRIVATE_KEY`: Web Push VAPID private key (server push authentication)
   - `VAPID_SUBJECT`: VAPID subject (contact email or URL)
+  - `BLOB_READ_WRITE_TOKEN`: Vercel Blob token for agent log artifact storage (Vercel environment only; never exposed to runners)
+  - `LOG_RETENTION_DAYS`: Retention window for agent log artifacts (default `30`)
 
 ## Package Management
 
@@ -457,6 +469,7 @@
 | date-fns | Latest | Date utilities |
 | @vercel/speed-insights | ^1.2.0 | Performance monitoring |
 | web-push | ^3.6.x | Web Push protocol (VAPID) |
+| @vercel/blob | ^2.3.x | Durable object storage for agent log transcripts |
 
 ## Browser Support
 

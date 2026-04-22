@@ -335,6 +335,7 @@ model Job {
 
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  log         JobLog?
 
   @@index([ticketId])
   @@index([projectId])
@@ -354,7 +355,7 @@ model Job {
 - `status`: Current execution state (enum: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
 - `branch`: Git branch name (max 200 chars, nullable)
 - `commitSha`: Git commit hash (max 40 chars, nullable)
-- `logs`: Complete execution logs (text, unlimited)
+- `logs`: Legacy free-form log field (text, unlimited); retained for full-clone compatibility and not populated by the current agent log capture pipeline, which writes to the separate `JobLog` model
 - `startedAt`: Execution start timestamp (set on creation)
 - `completedAt`: Execution completion timestamp (nullable, set on terminal state)
 - `createdAt`: Record creation timestamp
@@ -435,6 +436,67 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - When multiple verify jobs exist (rollback-reset cycles), the UI scans completed verify jobs and displays the score from the latest job by `startedAt`
 - The Stats tab always renders the summary score first; dimension rows are shown only when `qualityScoreDetails` contains one or more parsed dimensions and the user expands the disclosure
 - If `qualityScore` exists but `qualityScoreDetails` is absent or cannot be parsed, the UI still shows the overall score and threshold label without the expandable breakdown
+
+### JobLog
+
+Captured agent execution transcript summary for a terminated job.
+
+```prisma
+model JobLog {
+  id             Int           @id @default(autoincrement())
+  jobId          Int           @unique
+  captureStatus  CaptureStatus
+  preview        String        @db.VarChar(320)
+  schemaVersion  Int           @default(1)
+  eventCount     Int           @default(0)
+  errorCount     Int           @default(0)
+  artifactKey    String?       @db.VarChar(300)
+  artifactSize   Int?
+  capturedAt     DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([captureStatus, createdAt])
+  @@index([createdAt])
+}
+```
+
+**Purpose**: Store the glanceable summary and external artifact reference for an agent run, so project members can diagnose workflow failures from the ai-board UI without GitHub Actions access.
+
+**Fields**:
+- `id`: Auto-incrementing primary key
+- `jobId`: Parent job (unique — one log per job)
+- `captureStatus`: `CAPTURED`, `UNAVAILABLE`, or `PRUNED` (see `CaptureStatus` enum)
+- `preview`: Inline timeline preview text — stored with a 320-char column to leave unicode slack over the 280-char effective cap
+- `schemaVersion`: Version of the normalized event stream format carried by the artifact (currently `1`)
+- `eventCount`: Number of normalized events in the artifact
+- `errorCount`: Number of `error` events in the artifact (≤ `eventCount`)
+- `artifactKey`: Vercel Blob pathname (`logs/<projectId>/<ticketId>/<jobId>.jsonl.gz`); null when `captureStatus !== CAPTURED`
+- `artifactSize`: Size of the gzipped artifact in bytes; null when no artifact exists
+- `capturedAt`: When capture completed on the runner
+- `createdAt` / `updatedAt`: Row timestamps
+
+**Relationships**:
+- Belongs to Job (required, cascade delete)
+
+**Constraints**:
+- Unique `jobId` — exactly one log per job
+- Composite index `(captureStatus, createdAt)` services the retention-prune scan
+- Index on `createdAt` supports prune ordering
+
+**Business Rules**:
+- `POST /api/jobs/:id/logs` is an idempotent upsert keyed on `jobId`; a second submission replaces the first
+- `preview` is re-run through the server-side redactor before persistence as defense-in-depth — the runner also redacts before upload
+- `preview` is capped at 280 chars with trailing `…` truncation; the 320-char DB column absorbs unicode overhead
+- `captureStatus = CAPTURED` requires both `artifactKey` and `artifactSize`; `UNAVAILABLE` forbids them
+- Log capture is independent of `PATCH /api/jobs/:id/status` — a capture failure must never prevent the job's terminal status from being reported
+- Telemetry fields on `Job` (`inputTokens`, `costUsd`, `toolsUsed`, `qualityScore`, …) are written by a separate pipeline and remain unaffected by log capture outcome
+- Hard-deleted by retention pruning after 30 days (`LOG_RETENTION_DAYS`, configurable); no soft-delete column
+- Prune order per record: delete Blob artifact first (404 treated as success), then delete Postgres row
+- Access for read endpoints follows the parent ticket's ownership and membership rules via `verifyTicketAccess`
+- Blob artifact pathname is never rendered client-side — reads are proxied through the authenticated API
 
 ### Comment
 
