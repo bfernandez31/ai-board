@@ -119,7 +119,6 @@
         hsl(var(--ctp-sapphire))   100%);
     background-size: 100% 100%, 200% 100%;
     background-position: 0% 0%, 0% 0%;
-    color: hsl(0 0% 100%);
     font-weight: 600;
     text-shadow: 0 1px 2px hsl(0 0% 0% / 0.25);
     box-shadow:
@@ -150,7 +149,6 @@
      crust fill on padding-box, separated by a 1px transparent border.
      Reliable, no pseudo-element, no issue with asChild. */
   .aurora-btn-outline {
-    color: hsl(var(--foreground));
     border: 1px solid transparent;
     background:
       linear-gradient(hsl(var(--ctp-crust)), hsl(var(--ctp-crust))) padding-box,
@@ -160,7 +158,6 @@
         hsl(var(--ctp-blue))) border-box;
   }
   .aurora-btn-outline:hover {
-    color: hsl(var(--ctp-mauve));
     box-shadow: 0 0 16px hsl(var(--ctp-mauve) / 0.22);
   }
 }

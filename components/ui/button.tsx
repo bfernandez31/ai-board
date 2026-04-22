@@ -49,10 +49,10 @@ const buttonVariants = cva(
     variants: {
       variant: {
         /* DEFAULT — Night arc (global CSS: .aurora-btn-default) */
-        default: 'aurora-btn-default',
+        default: 'aurora-btn-default text-white',
 
         /* OUTLINE — Aurora gradient border (global CSS: .aurora-btn-outline) */
-        outline: 'aurora-btn-outline',
+        outline: 'aurora-btn-outline text-foreground hover:text-[hsl(var(--ctp-mauve))]',
 
         /* SECONDARY — Crust + surface-1 border */
         secondary: [
