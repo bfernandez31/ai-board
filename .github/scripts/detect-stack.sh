@@ -494,7 +494,9 @@ detect_test_commands() {
       TEST_CMD="go test ./..."
       ;;
     zig)
-      TEST_CMD="zig build test"
+      # --summary all forces a "Build Summary: .../... tests passed; N failed" line to stderr;
+      # without it, zig build test is silent on success (upstream issue #16673) and unparseable.
+      TEST_CMD="zig build test --summary all"
       ;;
     ruby)
       if [[ "$TEST_FRAMEWORK" == "rspec" ]]; then

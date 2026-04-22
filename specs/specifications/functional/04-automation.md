@@ -890,10 +890,10 @@ The `onboard.yml` workflow runs once per project during the initial setup phase.
 
 `.github/scripts/detect-stack.sh` scans the target repository and produces validated outputs:
 
-- Detects primary language from manifest files: `package.json` (TypeScript/JavaScript), `Cargo.toml` (Rust), `go.mod` (Go), `pyproject.toml` (Python), `pom.xml`/`build.gradle` (Java/Kotlin), `Gemfile` (Ruby), `composer.json` (PHP)
+- Detects primary language from manifest files: `package.json` (TypeScript/JavaScript), `Cargo.toml` (Rust), `go.mod` (Go), `pyproject.toml` (Python), `pom.xml`/`build.gradle` (Java/Kotlin), `Gemfile` (Ruby), `composer.json` (PHP), `build.zig`/`build.zig.zon` (Zig)
 - Detects package manager from lockfiles (`bun.lockb`, `yarn.lock`, `pnpm-lock.yaml`, `Cargo.lock`, `poetry.lock`, `Gemfile.lock`, `composer.lock`, etc.)
-- Detects test framework from dependency declarations and writes `testing.framework` (vitest, jest, pytest, cargo-test, go-test, rspec, phpunit) and `testing.e2e` / `testing.e2e_framework` (Playwright, Cypress, Selenium) to `config.yml`
-- Detects test commands per language/package manager (e.g., `bun run test`, `pytest`, `cargo test`, `go test ./...`) and writes `commands.test` to `config.yml`; supports granular `commands.test_unit`, `commands.test_integration`, `commands.test_e2e` when distinct scripts are found
+- Detects test framework from dependency declarations and writes `testing.framework` (vitest, jest, pytest, cargo-test, go-test, rspec, phpunit, zig-test) and `testing.e2e` / `testing.e2e_framework` (Playwright, Cypress, Selenium) to `config.yml`
+- Detects test commands per language/package manager (e.g., `bun run test`, `pytest`, `cargo test`, `go test ./...`, `zig build test --summary all`) and writes `commands.test` to `config.yml`; supports granular `commands.test_unit`, `commands.test_integration`, `commands.test_e2e` when distinct scripts are found
 - Detects type-check and lint commands (e.g., `bun run type-check`, `cargo clippy`, `go vet`) and writes `commands.type_check` and `commands.lint` to `config.yml`; missing fields are omitted (not set to null)
 - Detects services from `docker-compose.yml` service definitions and ORM configuration (e.g., Prisma schema referencing PostgreSQL)
 - Produces `.ai-board/config.yml` (validated against the project config schema) and `analysis.json` summarizing all detection results

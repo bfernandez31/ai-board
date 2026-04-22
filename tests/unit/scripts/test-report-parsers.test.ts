@@ -413,6 +413,104 @@ agent:
     expect(summary.hasErrors).toBe(true);
   });
 
+  // ── zig-test parser ──────────────────────────────────────────────
+
+  it('parses zig build test --summary all with all passing', () => {
+    // zig emits the Build Summary line to stderr; the runner captures via 2>&1
+    const wrapperScript = join(TMP_DIR, 'mock-zig-pass.sh');
+    writeFileSync(wrapperScript, `#!/bin/bash
+echo "Build Summary: 3/3 steps succeeded; 5/5 tests passed" >&2
+exit 0
+`);
+    execSync(`chmod +x "${wrapperScript}"`);
+
+    const configPath = writeConfig(TMP_DIR, `version: 1
+project:
+  name: Test
+  language: zig
+runtime:
+  manager: zig
+testing:
+  framework: zig-test
+commands:
+  test: bash ${wrapperScript}
+agent:
+  cli: claude-code
+`);
+
+    const summary = runRunner(configPath, TMP_DIR);
+
+    expect(summary.unit.ran).toBe(true);
+    expect(summary.unit.passed).toBe(5);
+    expect(summary.unit.failed).toBe(0);
+    expect(summary.unit.total).toBe(5);
+    expect(summary.hasErrors).toBe(false);
+  });
+
+  it('parses zig build test --summary all with failures (steps-failed does not leak into tests-failed)', () => {
+    // Real-world shape: the Build Summary line carries two "N failed" fields —
+    // one for steps, one for tests. The parser must anchor on "tests passed;" to avoid
+    // attributing the steps-failed count to tests.
+    const wrapperScript = join(TMP_DIR, 'mock-zig-fail.sh');
+    writeFileSync(wrapperScript, `#!/bin/bash
+echo "Build Summary: 1/3 steps succeeded; 1 failed; 3/4 tests passed; 1 failed" >&2
+exit 1
+`);
+    execSync(`chmod +x "${wrapperScript}"`);
+
+    const configPath = writeConfig(TMP_DIR, `version: 1
+project:
+  name: Test
+  language: zig
+runtime:
+  manager: zig
+testing:
+  framework: zig-test
+commands:
+  test: bash ${wrapperScript}
+agent:
+  cli: claude-code
+`);
+
+    const summary = runRunner(configPath, TMP_DIR);
+
+    expect(summary.unit.passed).toBe(3);
+    expect(summary.unit.failed).toBe(1);
+    expect(summary.unit.total).toBe(4);
+    expect(summary.hasErrors).toBe(true);
+  });
+
+  it('parses raw zig test "All N tests passed" fallback', () => {
+    const wrapperScript = join(TMP_DIR, 'mock-zig-all.sh');
+    writeFileSync(wrapperScript, `#!/bin/bash
+echo "1/2 module.test_foo... OK" >&2
+echo "2/2 module.test_bar... OK" >&2
+echo "All 2 tests passed." >&2
+exit 0
+`);
+    execSync(`chmod +x "${wrapperScript}"`);
+
+    const configPath = writeConfig(TMP_DIR, `version: 1
+project:
+  name: Test
+  language: zig
+runtime:
+  manager: zig
+testing:
+  framework: zig-test
+commands:
+  test: bash ${wrapperScript}
+agent:
+  cli: claude-code
+`);
+
+    const summary = runRunner(configPath, TMP_DIR);
+
+    expect(summary.unit.passed).toBe(2);
+    expect(summary.unit.failed).toBe(0);
+    expect(summary.unit.total).toBe(2);
+  });
+
   // ── rspec parser ─────────────────────────────────────────────────
 
   it('parses rspec JSON report correctly', () => {

@@ -22,6 +22,7 @@
 # rspec          | --format json --out FILE          | jq .examples[] status
 # phpunit        | --log-junit FILE                  | xmllint JUnit XML (tests - failures)
 # playwright     | --reporter=json > FILE            | jq recursive .specs[].tests[] status
+# zig-test       | (capture stderr — add --summary)  | grep "Build Summary: P/T tests passed"
 # (unknown)      | (none)                            | exit-code fallback (0=pass, else fail)
 #
 # ── Parser Selection Logic ──────────────────────────────────────────
@@ -266,6 +267,62 @@ parse_phpunit_report() {
   fi
 }
 
+# zig-test: parse `zig build test --summary all` (preferred) or `zig test` stderr output.
+# Upstream issue ziglang/zig#16673: `zig build test` is silent on success without --summary all.
+# Summary line shapes observed across versions:
+#   "Build Summary: 3/3 steps succeeded; 2/2 tests passed"
+#   "Build Summary: 1/3 steps succeeded; 1 failed; 0/1 tests passed; 1 failed"
+# Fallbacks for raw `zig test`:
+#   "All N tests passed."
+#   "X passed; Y skipped; Z failed."
+parse_zig_report() {
+  local output="$1"
+  local passed=0 failed=0 total=0
+
+  # Primary: Build Summary line — anchor failed-count on "tests passed;" to skip steps-failed
+  local summary_line
+  summary_line=$(echo "$output" | grep 'Build Summary:' | tail -1)
+  if [ -n "$summary_line" ]; then
+    passed=$(echo "$summary_line" | grep -oP '\d+(?=/\d+ tests passed)' | tail -1)
+    total=$(echo "$summary_line" | grep -oP '\d+/\K\d+(?= tests passed)' | tail -1)
+    failed=$(echo "$summary_line" | grep -oP 'tests passed;\s+\K\d+(?=\s+failed)' | tail -1)
+    [ -z "$passed" ] && passed=0
+    [ -z "$total" ] && total=0
+    [ -z "$failed" ] && failed=0
+    if [ "$total" -gt 0 ] || [ "$passed" -gt 0 ] || [ "$failed" -gt 0 ]; then
+      [ "$total" -eq 0 ] && total=$((passed + failed))
+      echo "$passed $failed $total"
+      return
+    fi
+  fi
+
+  # Fallback 1: "All N tests passed."
+  local all_passed
+  all_passed=$(echo "$output" | grep -oP 'All \K\d+(?= tests? passed)' | tail -1)
+  if [ -n "$all_passed" ]; then
+    echo "$all_passed 0 $all_passed"
+    return
+  fi
+
+  # Fallback 2: "X passed; Y skipped; Z failed."
+  local mix_line
+  mix_line=$(echo "$output" | grep -oP '\d+ passed; \d+ skipped; \d+ failed' | tail -1)
+  if [ -n "$mix_line" ]; then
+    passed=$(echo "$mix_line" | grep -oP '^\d+')
+    local skipped
+    skipped=$(echo "$mix_line" | grep -oP 'passed;\s+\K\d+(?=\s+skipped)')
+    failed=$(echo "$mix_line" | grep -oP 'skipped;\s+\K\d+(?=\s+failed)')
+    [ -z "$passed" ] && passed=0
+    [ -z "$skipped" ] && skipped=0
+    [ -z "$failed" ] && failed=0
+    total=$((passed + skipped + failed))
+    echo "$passed $failed $total"
+    return
+  fi
+
+  echo "0 0 0"
+}
+
 # exit-code fallback: 0 exit = 1 passed, non-zero = 1 failed
 parse_exitcode_report() {
   local exit_code="$1"
@@ -363,6 +420,7 @@ run_test_cmd() {
     go-test)         parsed=$(parse_go_report "$report_file") ;;
     rspec)           parsed=$(parse_rspec_report "$report_file") ;;
     phpunit)         parsed=$(parse_phpunit_report "$report_file") ;;
+    zig-test)        parsed=$(parse_zig_report "$output") ;;
     *)               parsed=$(parse_exitcode_report "$exit_code") ;;
   esac
 
