@@ -29,6 +29,7 @@ REPO_DIR="$(cd "$REPO_DIR" && pwd)"
 LANGUAGE=""
 FRAMEWORK=""
 PACKAGE_MANAGER=""
+MANAGER_VERSION=""
 TEST_FRAMEWORK=""
 PROJECT_NAME=""
 SERVICES_JSON="[]"
@@ -797,7 +798,59 @@ detect_runtime_versions() {
     fi
   fi
 
+  # Java version from .java-version or .sdkmanrc (java= line)
+  local java_ver=""
+  if [[ -f "$REPO_DIR/.java-version" ]]; then
+    java_ver=$(head -n1 "$REPO_DIR/.java-version" | tr -d ' \n\r' 2>/dev/null || true)
+  elif [[ -f "$REPO_DIR/.sdkmanrc" ]]; then
+    java_ver=$(grep -m1 '^java=' "$REPO_DIR/.sdkmanrc" | sed 's/^java=//' | tr -d ' \n\r' 2>/dev/null || true)
+  fi
+  if [[ -n "$java_ver" ]]; then
+    versions=$(echo "$versions" | jq --arg v "$java_ver" '. + {java: $v}')
+  fi
+
+  # Zig version from build.zig.zon (.minimum_zig_version)
+  local zig_ver=""
+  if [[ -f "$REPO_DIR/build.zig.zon" ]]; then
+    zig_ver=$(grep -m1 '\.minimum_zig_version[[:space:]]*=' "$REPO_DIR/build.zig.zon" \
+      | sed -E 's/.*=[[:space:]]*"([^"]+)".*/\1/' 2>/dev/null || true)
+    # Guard against lines that didn't match the quoted-string form.
+    if [[ -n "$zig_ver" && "$zig_ver" == *"="* ]]; then
+      zig_ver=""
+    fi
+    if [[ -n "$zig_ver" ]]; then
+      versions=$(echo "$versions" | jq --arg v "$zig_ver" '. + {zig: $v}')
+    fi
+  fi
+
   RUNTIME_VERSIONS="$versions"
+
+  # Derive MANAGER_VERSION from the ecosystem-specific pin file.
+  # Zig: .minimum_zig_version pins the Zig toolchain (manager=zig).
+  # Node managers: package.json#packageManager pins the manager itself
+  # when its name matches the detected manager (e.g., "pnpm@8.15.0").
+  case "$PACKAGE_MANAGER" in
+    zig)
+      if [[ -n "$zig_ver" ]]; then
+        MANAGER_VERSION="$zig_ver"
+      fi
+      ;;
+    bun|yarn|pnpm|npm)
+      if [[ -f "$REPO_DIR/package.json" ]]; then
+        local pm_field pm_name pm_ver
+        pm_field=$(jq -r '.packageManager // empty' "$REPO_DIR/package.json" 2>/dev/null || true)
+        if [[ -n "$pm_field" && "$pm_field" == *"@"* ]]; then
+          pm_name="${pm_field%%@*}"
+          pm_ver="${pm_field#*@}"
+          # Strip integrity hash suffix (e.g., "9.0.4+sha256.abc" -> "9.0.4").
+          pm_ver="${pm_ver%%+*}"
+          if [[ "$pm_name" == "$PACKAGE_MANAGER" && -n "$pm_ver" ]]; then
+            MANAGER_VERSION="$pm_ver"
+          fi
+        fi
+      fi
+      ;;
+  esac
 }
 
 # ─── Output Generation ──────────────────────────────────────────────
@@ -845,7 +898,7 @@ generate_config_yml() {
     agent_cli="codex"
   fi
 
-  # Base config (version, project, runtime, commands:install)
+  # Base config (version, project, runtime)
   cat > "$REPO_DIR/.ai-board/config.yml" <<EOF
 version: 1
 project:
@@ -854,6 +907,24 @@ project:
   framework: ${fw_val}
 runtime:
   manager: ${pm_val}
+EOF
+
+  # Emit manager_version when a version pin was found in the target repo.
+  if [[ -n "$MANAGER_VERSION" ]]; then
+    echo "  manager_version: \"${MANAGER_VERSION}\"" >> "$REPO_DIR/.ai-board/config.yml"
+  fi
+
+  # Emit detected language runtime versions (node/python/java/go/rust) for
+  # observability and for downstream setup-environment integrations.
+  local rt_key rt_val
+  for rt_key in node python java go rust; do
+    rt_val=$(echo "$RUNTIME_VERSIONS" | jq -r --arg k "$rt_key" '.[$k] // empty' 2>/dev/null || true)
+    if [[ -n "$rt_val" ]]; then
+      echo "  ${rt_key}: \"${rt_val}\"" >> "$REPO_DIR/.ai-board/config.yml"
+    fi
+  done
+
+  cat >> "$REPO_DIR/.ai-board/config.yml" <<EOF
 commands:
   install: "${install_cmd}"
 EOF

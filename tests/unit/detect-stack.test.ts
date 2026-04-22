@@ -487,3 +487,316 @@ describe('detect-stack.sh — Error conditions', () => {
     expect(fs.existsSync(path.join(badPath, 'analysis.json'))).toBe(false);
   });
 });
+
+// ─── Runtime Version Pinning (AIB-714) ──────────────────────────────
+
+describe('detect-stack.sh — Zig project with .minimum_zig_version', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('zig-pinned');
+
+    fs.writeFileSync(path.join(fixtureDir, 'build.zig'), 'pub fn build(b: *std.Build) void {}');
+    fs.writeFileSync(
+      path.join(fixtureDir, 'build.zig.zon'),
+      `.{\n    .name = "death-note",\n    .version = "0.1.0",\n    .minimum_zig_version = "0.13.0",\n}\n`,
+    );
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('writes runtime.manager_version matching the pinned Zig version', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.manager).toBe('zig');
+    expect(runtime.manager_version).toBe('0.13.0');
+  });
+
+  it('exposes zig runtime version in analysis.json', () => {
+    const analysis = readAnalysisJson(fixtureDir);
+    expect(analysis.runtimeVersions.zig).toBe('0.13.0');
+  });
+});
+
+describe('detect-stack.sh — Zig project without .minimum_zig_version', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('zig-unpinned');
+
+    fs.writeFileSync(path.join(fixtureDir, 'build.zig'), 'pub fn build(b: *std.Build) void {}');
+    fs.writeFileSync(
+      path.join(fixtureDir, 'build.zig.zon'),
+      `.{\n    .name = "untimed",\n    .version = "0.1.0",\n}\n`,
+    );
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('omits runtime.manager_version when no pin is present', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.manager).toBe('zig');
+    expect(runtime.manager_version).toBeUndefined();
+  });
+});
+
+describe('detect-stack.sh — Node project with packageManager field (pnpm)', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('pnpm-pinned');
+
+    fs.writeFileSync(
+      path.join(fixtureDir, 'package.json'),
+      JSON.stringify({
+        name: 'pnpm-app',
+        packageManager: 'pnpm@8.15.0',
+        devDependencies: { typescript: '5.0.0' },
+      }),
+    );
+    fs.writeFileSync(path.join(fixtureDir, 'tsconfig.json'), '{}');
+    fs.writeFileSync(path.join(fixtureDir, 'pnpm-lock.yaml'), '');
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('writes runtime.manager_version matching the packageManager field', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.manager).toBe('pnpm');
+    expect(runtime.manager_version).toBe('8.15.0');
+  });
+});
+
+describe('detect-stack.sh — Node project with packageManager hash suffix', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('pnpm-hashed');
+
+    fs.writeFileSync(
+      path.join(fixtureDir, 'package.json'),
+      JSON.stringify({
+        name: 'hashed-app',
+        packageManager: 'pnpm@9.0.4+sha256.abc123def',
+        devDependencies: { typescript: '5.0.0' },
+      }),
+    );
+    fs.writeFileSync(path.join(fixtureDir, 'tsconfig.json'), '{}');
+    fs.writeFileSync(path.join(fixtureDir, 'pnpm-lock.yaml'), '');
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('strips the integrity hash from the version', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.manager_version).toBe('9.0.4');
+  });
+});
+
+describe('detect-stack.sh — Node project with packageManager mismatched to lockfile', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('pm-mismatch');
+
+    // Lockfile says bun, but packageManager field says yarn — trust detected manager.
+    fs.writeFileSync(
+      path.join(fixtureDir, 'package.json'),
+      JSON.stringify({
+        name: 'mismatch-app',
+        packageManager: 'yarn@3.6.4',
+        devDependencies: { typescript: '5.0.0' },
+      }),
+    );
+    fs.writeFileSync(path.join(fixtureDir, 'tsconfig.json'), '{}');
+    fs.writeFileSync(path.join(fixtureDir, 'bun.lockb'), '');
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('does not set manager_version when packageManager name does not match detected manager', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.manager).toBe('bun');
+    expect(runtime.manager_version).toBeUndefined();
+  });
+});
+
+describe('detect-stack.sh — Node project with .nvmrc', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('nvmrc-pinned');
+
+    fs.writeFileSync(
+      path.join(fixtureDir, 'package.json'),
+      JSON.stringify({ name: 'nvmrc-app', devDependencies: { typescript: '5.0.0' } }),
+    );
+    fs.writeFileSync(path.join(fixtureDir, 'tsconfig.json'), '{}');
+    fs.writeFileSync(path.join(fixtureDir, '.nvmrc'), 'v22.20.0\n');
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('writes runtime.node from .nvmrc', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.node).toBe('22.20.0');
+  });
+});
+
+describe('detect-stack.sh — Python project with .python-version', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('python-pinned');
+
+    fs.writeFileSync(path.join(fixtureDir, 'requirements.txt'), 'requests==2.31.0\n');
+    fs.writeFileSync(path.join(fixtureDir, '.python-version'), '3.11.7\n');
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('writes runtime.python from .python-version', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.python).toBe('3.11.7');
+  });
+});
+
+describe('detect-stack.sh — Rust project with rust-toolchain.toml', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('rust-pinned');
+
+    fs.writeFileSync(
+      path.join(fixtureDir, 'Cargo.toml'),
+      `[package]\nname = "rust-pinned"\nversion = "0.1.0"\n`,
+    );
+    fs.writeFileSync(
+      path.join(fixtureDir, 'rust-toolchain.toml'),
+      `[toolchain]\nchannel = "1.75.0"\n`,
+    );
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('writes runtime.rust from rust-toolchain.toml channel', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.rust).toBe('1.75.0');
+  });
+});
+
+describe('detect-stack.sh — Java project with .java-version', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('java-version');
+
+    fs.writeFileSync(
+      path.join(fixtureDir, 'pom.xml'),
+      `<project><modelVersion>4.0.0</modelVersion><artifactId>app</artifactId></project>`,
+    );
+    fs.writeFileSync(path.join(fixtureDir, '.java-version'), '17\n');
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('writes runtime.java from .java-version', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.java).toBe('17');
+  });
+});
+
+describe('detect-stack.sh — Java project with .sdkmanrc', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('java-sdkman');
+
+    fs.writeFileSync(
+      path.join(fixtureDir, 'pom.xml'),
+      `<project><modelVersion>4.0.0</modelVersion><artifactId>app</artifactId></project>`,
+    );
+    fs.writeFileSync(
+      path.join(fixtureDir, '.sdkmanrc'),
+      `# Enable auto-env\njava=17.0.11-tem\nmaven=3.9.6\n`,
+    );
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('writes runtime.java from .sdkmanrc java entry', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.java).toBe('17.0.11-tem');
+  });
+});
+
+describe('detect-stack.sh — Project without any version pin files', () => {
+  let fixtureDir: string;
+
+  beforeAll(() => {
+    fixtureDir = createFixtureDir('unpinned');
+
+    fs.writeFileSync(
+      path.join(fixtureDir, 'package.json'),
+      JSON.stringify({ name: 'unpinned-app', devDependencies: { typescript: '5.0.0' } }),
+    );
+    fs.writeFileSync(path.join(fixtureDir, 'tsconfig.json'), '{}');
+    fs.writeFileSync(path.join(fixtureDir, 'bun.lockb'), '');
+
+    const result = runDetectStack(fixtureDir);
+    expect(result.exitCode).toBe(0);
+  });
+
+  afterAll(() => cleanupFixture(fixtureDir));
+
+  it('omits manager_version and runtime language fields', () => {
+    const config = readConfigYml(fixtureDir);
+    const runtime = config.runtime as Record<string, unknown>;
+    expect(runtime.manager).toBe('bun');
+    expect(runtime.manager_version).toBeUndefined();
+    expect(runtime.node).toBeUndefined();
+    expect(runtime.python).toBeUndefined();
+    expect(runtime.java).toBeUndefined();
+    expect(runtime.rust).toBeUndefined();
+    expect(runtime.go).toBeUndefined();
+  });
+});
