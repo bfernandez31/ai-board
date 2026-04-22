@@ -396,9 +396,12 @@ External projects declare their environment via `.ai-board/config.yml` (schema v
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `project.framework` | enum | `none` | `nextjs` \| `express` \| `fastapi` \| `django` \| `gin` \| `none` |
-| `runtime.manager_version` | string | — | Package manager version |
-| `runtime.node` | string | — | Node.js version override |
-| `runtime.python` | string | — | Python version override |
+| `runtime.manager_version` | string | — | Package manager / toolchain version pin. Auto-detected from `packageManager` in `package.json` (Node managers, integrity hash stripped) or `.minimum_zig_version` in `build.zig.zon` (Zig). Honored by `setup-environment.sh` when installing the runtime; falls back to latest stable when omitted. |
+| `runtime.node` | string | — | Node.js version. Auto-detected from `.nvmrc`, `.node-version`, or `package.json#engines.node`. |
+| `runtime.python` | string | — | Python version. Auto-detected from `.python-version`. |
+| `runtime.java` | string | — | Java version. Auto-detected from `.java-version` or the `java=` entry in `.sdkmanrc`. |
+| `runtime.go` | string | — | Go version. Auto-detected from the `go` directive in `go.mod`. |
+| `runtime.rust` | string | — | Rust toolchain channel. Auto-detected from `rust-toolchain.toml`. |
 | `commands.build` | string | — | Build command (skipped if absent) |
 | `commands.lint` | string | — | Lint command (auto-detected by `detect-stack.sh`; skipped if absent) |
 | `commands.type_check` | string | — | Type-check command (auto-detected; skipped if absent) |
