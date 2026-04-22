@@ -215,8 +215,36 @@ install_package_manager() {
         success "poetry already available: $(poetry --version)"
       fi
       ;;
+    zig)
+      if ! command -v zig &>/dev/null; then
+        info "Installing zig${MANAGER_VERSION:+ ${MANAGER_VERSION}}..."
+        local ZIG_URL
+        if [[ -n "$MANAGER_VERSION" ]]; then
+          ZIG_URL=$(curl -fsSL https://ziglang.org/download/index.json \
+            | jq -r --arg v "$MANAGER_VERSION" '.[$v]["x86_64-linux"].tarball')
+        else
+          # Latest stable release (first non-master entry in the release index)
+          ZIG_URL=$(curl -fsSL https://ziglang.org/download/index.json \
+            | jq -r '[to_entries[] | select(.key != "master")] | first | .value["x86_64-linux"].tarball')
+        fi
+        if [[ -z "$ZIG_URL" || "$ZIG_URL" == "null" ]]; then
+          error "Could not resolve Zig download URL${MANAGER_VERSION:+ for version ${MANAGER_VERSION}}."
+          exit 1
+        fi
+        local ZIG_INSTALL="${HOME}/.zig"
+        mkdir -p "$ZIG_INSTALL"
+        curl -fsSL "$ZIG_URL" -o /tmp/zig.tar.xz
+        tar -xJf /tmp/zig.tar.xz -C "$ZIG_INSTALL" --strip-components=1
+        rm -f /tmp/zig.tar.xz
+        export PATH="${ZIG_INSTALL}:${PATH}"
+        [[ -n "${GITHUB_PATH:-}" ]] && echo "$ZIG_INSTALL" >> "$GITHUB_PATH"
+        success "zig installed: $(zig version)"
+      else
+        success "zig already available: $(zig version)"
+      fi
+      ;;
     *)
-      error "Unsupported package manager: $MANAGER. Supported: bun, npm, yarn, pnpm, pip, poetry, cargo, maven, gradle"
+      error "Unsupported package manager: $MANAGER. Supported: bun, npm, yarn, pnpm, pip, poetry, cargo, maven, gradle, zig"
       exit 1
       ;;
   esac

@@ -624,7 +624,7 @@ project:
   framework: nextjs
 
 runtime:
-  manager: bun          # bun | npm | yarn | pnpm | pip | poetry | cargo | maven | gradle
+  manager: bun          # bun | npm | yarn | pnpm | pip | poetry | cargo | maven | gradle | zig
   manager_version: "1.3.1"
   node: "22"
 
@@ -643,7 +643,7 @@ agent:
 **Phase `lightweight`** (specify, plan, clarify, iterate, assist):
 1. Bootstraps `yq` v4 if not already present on the runner
 2. Validates `.ai-board/config.yml` — fails with specific error for missing required fields (`runtime.manager`, `commands.install`, `agent.cli`)
-3. Installs the specified runtime at the configured version (bun, npm, yarn, or pnpm)
+3. Installs the specified runtime at the configured version (see Supported Runtimes table below)
 4. Creates `.claude/commands` and `.claude/skills` symlinks in the target directory pointing to ai-board plugin directories
 5. Validates runtime on PATH and symlinks readable
 
@@ -671,6 +671,7 @@ Workflow-level secrets always override config-defined values via the pattern `ex
 | `cargo` | Rust assumed pre-installed; cargo used directly |
 | `maven` | Java assumed pre-installed; mvn used directly |
 | `gradle` | Java + Gradle assumed pre-installed; gradle used directly |
+| `zig` | Tarball downloaded from ziglang.org (honors `manager_version`, falls back to latest stable) |
 
 Unsupported managers cause an immediate fail with a clear error listing supported values.
 

@@ -279,7 +279,7 @@ describe('SetupPageClient', () => {
         if (url.includes('/setup/jobs') && !url.includes('status')) {
           return Promise.resolve(
             mockSetupJobResponse(
-              { status: 'COMPLETED', errorMessage: 'Config sync failed: zig is not a valid language' },
+              { status: 'COMPLETED', errorMessage: 'Config sync failed: unknown-lang is not a valid language' },
               null
             )
           );
@@ -292,7 +292,7 @@ describe('SetupPageClient', () => {
       await waitFor(() => {
         expect(screen.getByText('Setup failed')).toBeInTheDocument();
         expect(
-          screen.getByText('Config sync failed: zig is not a valid language')
+          screen.getByText('Config sync failed: unknown-lang is not a valid language')
         ).toBeInTheDocument();
         expect(screen.getByText('Retry')).toBeInTheDocument();
       });
