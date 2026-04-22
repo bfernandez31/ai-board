@@ -269,4 +269,121 @@ describe('SetupPageClient', () => {
       expect(button).not.toBeDisabled();
     });
   });
+
+  describe('post-completion config sync failure', () => {
+    it('shows failure panel when job is COMPLETED with errorMessage and no configSyncedAt', async () => {
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('/credential-check')) {
+          return Promise.resolve(mockCredentialResponse(true));
+        }
+        if (url.includes('/setup/jobs') && !url.includes('status')) {
+          return Promise.resolve(
+            mockSetupJobResponse(
+              { status: 'COMPLETED', errorMessage: 'Config sync failed: zig is not a valid language' },
+              null
+            )
+          );
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      });
+
+      renderWithProviders(<SetupPageClient projectId={1} projectName="Test Project" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Setup failed')).toBeInTheDocument();
+        expect(
+          screen.getByText('Config sync failed: zig is not a valid language')
+        ).toBeInTheDocument();
+        expect(screen.getByText('Retry')).toBeInTheDocument();
+      });
+    });
+
+    it('does not show failure panel when job is COMPLETED without errorMessage', async () => {
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('/credential-check')) {
+          return Promise.resolve(mockCredentialResponse(true));
+        }
+        if (url.includes('/setup/jobs') && !url.includes('status')) {
+          return Promise.resolve(
+            mockSetupJobResponse({ status: 'COMPLETED', errorMessage: null }, null)
+          );
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      });
+
+      renderWithProviders(<SetupPageClient projectId={1} projectName="Test Project" />);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Setup failed')).not.toBeInTheDocument();
+      });
+    });
+
+    it('hides the Initialize Project button when showing the failure panel', async () => {
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('/credential-check')) {
+          return Promise.resolve(mockCredentialResponse(true));
+        }
+        if (url.includes('/setup/jobs') && !url.includes('status')) {
+          return Promise.resolve(
+            mockSetupJobResponse(
+              { status: 'COMPLETED', errorMessage: 'Config sync failed: token expired' },
+              null
+            )
+          );
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      });
+
+      renderWithProviders(<SetupPageClient projectId={1} projectName="Test Project" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Retry')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('Initialize Project')).not.toBeInTheDocument();
+    });
+
+    it('dispatches a new job when Retry is clicked after a post-completion failure', async () => {
+      const user = userEvent.setup();
+
+      mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+        if (url.includes('/credential-check')) {
+          return Promise.resolve(mockCredentialResponse(true));
+        }
+        if (url.includes('/setup/jobs') && options?.method === 'POST') {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ id: 2, status: 'PENDING', agent: 'CLAUDE' }),
+          });
+        }
+        if (url.includes('/setup/jobs') && !url.includes('status')) {
+          return Promise.resolve(
+            mockSetupJobResponse(
+              { status: 'COMPLETED', errorMessage: 'Config sync failed: repo not found' },
+              null
+            )
+          );
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      });
+
+      renderWithProviders(<SetupPageClient projectId={1} projectName="Test Project" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Retry')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText('Retry'));
+
+      await waitFor(() => {
+        const postCalls = mockFetch.mock.calls.filter(
+          (call: unknown[]) =>
+            typeof call[0] === 'string' &&
+            call[0].includes('/setup/jobs') &&
+            (call[1] as RequestInit)?.method === 'POST'
+        );
+        expect(postCalls.length).toBeGreaterThan(0);
+      });
+    });
+  });
 });

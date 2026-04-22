@@ -56,8 +56,12 @@ export function useSetupJobPolling(
       // Stop polling when configSyncedAt is set (setup complete)
       if (result.configSyncedAt) return false;
 
-      // Only stop polling on FAILED — COMPLETED must keep polling until configSyncedAt is set
+      // Stop polling on FAILED
       if (result.job?.status === 'FAILED') return false;
+
+      // COMPLETED with an errorMessage means a post-completion step failed
+      // (e.g. config sync) — no point polling, user needs to act.
+      if (result.job?.status === 'COMPLETED' && result.job.errorMessage) return false;
 
       return pollingInterval;
     },

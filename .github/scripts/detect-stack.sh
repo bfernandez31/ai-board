@@ -70,6 +70,19 @@ detect_project_name() {
     fi
   fi
 
+  # Try build.zig.zon (Zig package manifest)
+  # Supports both legacy string ("death-note") and modern enum-literal (.death_note) forms.
+  if [[ -f "$REPO_DIR/build.zig.zon" ]]; then
+    local name
+    name=$(grep -m1 '\.name[[:space:]]*=' "$REPO_DIR/build.zig.zon" \
+      | sed -E 's/^[[:space:]]*\.name[[:space:]]*=[[:space:]]*\.?"?([A-Za-z0-9_.-]+).*/\1/' \
+      2>/dev/null || true)
+    if [[ -n "$name" && "$name" != *"="* ]]; then
+      PROJECT_NAME="$name"
+      return
+    fi
+  fi
+
   # Try pyproject.toml
   if [[ -f "$REPO_DIR/pyproject.toml" ]]; then
     local name
@@ -150,6 +163,13 @@ detect_language() {
   if [[ -f "$REPO_DIR/composer.json" ]]; then
     MANIFESTS+=("composer.json")
     all_langs+=("php")
+  fi
+
+  # Zig: build.zig is the canonical build manifest; build.zig.zon is the package manifest
+  if [[ -f "$REPO_DIR/build.zig" ]]; then
+    MANIFESTS+=("build.zig")
+    [[ -f "$REPO_DIR/build.zig.zon" ]] && MANIFESTS+=("build.zig.zon")
+    all_langs+=("zig")
   fi
 
   # Set primary language (first detected) and secondary languages
@@ -240,6 +260,11 @@ detect_package_manager() {
     fi
   elif [[ "$LANGUAGE" == "php" ]] && [[ -z "$PACKAGE_MANAGER" ]]; then
     PACKAGE_MANAGER="composer"
+  fi
+
+  # Zig uses its own build system (zig build); build.zig.zon declares deps
+  if [[ "$LANGUAGE" == "zig" ]] && [[ -z "$PACKAGE_MANAGER" ]]; then
+    PACKAGE_MANAGER="zig"
   fi
 }
 
@@ -397,6 +422,10 @@ detect_test_framework() {
       # Go uses built-in go test
       TEST_FRAMEWORK="go-test"
       ;;
+    zig)
+      # Zig uses built-in test runner via `zig build test`
+      TEST_FRAMEWORK="zig-test"
+      ;;
     ruby)
       if [[ -f "$REPO_DIR/Gemfile" ]]; then
         if grep -q "rspec" "$REPO_DIR/Gemfile" 2>/dev/null; then
@@ -463,6 +492,9 @@ detect_test_commands() {
       ;;
     go)
       TEST_CMD="go test ./..."
+      ;;
+    zig)
+      TEST_CMD="zig build test"
       ;;
     ruby)
       if [[ "$TEST_FRAMEWORK" == "rspec" ]]; then
@@ -583,6 +615,11 @@ detect_lint_typecheck() {
       ;;
     go)
       LINT_CMD="go vet ./..."
+      ;;
+    zig)
+      # zig fmt doubles as lint; `zig build` type-checks while building
+      LINT_CMD="zig fmt --check ."
+      TYPE_CHECK_CMD="zig build --summary all"
       ;;
   esac
 }
@@ -794,6 +831,7 @@ generate_config_yml() {
       composer) install_cmd="composer install" ;;
       maven) install_cmd="mvn install" ;;
       gradle) install_cmd="gradle build" ;;
+      zig) install_cmd="zig build" ;;
     esac
   elif [[ "$LANGUAGE" == "go" ]]; then
     install_cmd="go mod download"

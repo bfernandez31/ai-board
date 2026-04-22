@@ -132,12 +132,43 @@ export async function PATCH(
         });
 
         if (project) {
+          const persistSyncFailure = async (
+            message: string,
+            code?: string,
+            details?: unknown,
+          ): Promise<void> => {
+            const existingSummary =
+              (updatedJob.artifactSummary as Record<string, unknown> | null) ?? {};
+            const syncFailureSummary: Record<string, unknown> = {
+              ...existingSummary,
+              configSyncError: message,
+            };
+            if (code) syncFailureSummary.configSyncErrorCode = code;
+            if (details !== undefined) syncFailureSummary.configSyncDetails = details;
+            if (!syncFailureSummary.errorCode) {
+              syncFailureSummary.errorCode = code ?? 'CONFIG_SYNC_FAILED';
+            }
+
+            await prisma.projectSetupJob.update({
+              where: { id: jobId },
+              data: {
+                errorMessage: `Config sync failed: ${message}`,
+                artifactSummary: syncFailureSummary as Prisma.InputJsonValue,
+              },
+            });
+          };
+
           try {
             const ownerToken = await getGitHubAccessToken(project.userId);
             const configSyncResult = await syncProjectConfig(project, ownerToken ?? undefined);
 
             if (!configSyncResult.success) {
               console.error('[setup-job-status] Config sync failed:', configSyncResult.error);
+              await persistSyncFailure(
+                configSyncResult.error || 'Config sync failed',
+                configSyncResult.code,
+                'details' in configSyncResult ? configSyncResult.details : undefined,
+              );
               return NextResponse.json({
                 id: updatedJob.id,
                 status: updatedJob.status,
@@ -148,11 +179,14 @@ export async function PATCH(
             }
           } catch (syncError) {
             console.error('[setup-job-status] Config sync failed:', syncError);
+            const message =
+              syncError instanceof Error ? syncError.message : 'Config sync failed';
+            await persistSyncFailure(message);
             return NextResponse.json({
               id: updatedJob.id,
               status: updatedJob.status,
               completedAt: updatedJob.completedAt,
-              configSyncError: syncError instanceof Error ? syncError.message : 'Config sync failed',
+              configSyncError: message,
             });
           }
         }

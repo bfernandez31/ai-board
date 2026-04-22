@@ -54,7 +54,11 @@ export function SetupPageClient({ projectId, projectName }: SetupPageClientProps
   const hasCredential = credentialData?.hasCredential ?? false;
 
   const isJobActive = job?.status === 'PENDING' || job?.status === 'RUNNING';
-  const isJobFailed = job?.status === 'FAILED';
+  // COMPLETED + errorMessage + no configSyncedAt = post-completion failure (e.g. config sync),
+  // surface it as a failure so the user sees what went wrong instead of an infinite spinner.
+  const hasPostCompletionError =
+    job?.status === 'COMPLETED' && !configSyncedAt && !!job?.errorMessage;
+  const isJobFailed = job?.status === 'FAILED' || hasPostCompletionError;
 
   const handleDispatch = useCallback(async () => {
     setIsDispatching(true);
