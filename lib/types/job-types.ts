@@ -47,6 +47,11 @@ export interface DualJobState {
  * Extended job interface with full telemetry data for Stats tab display.
  * Used to type jobs passed to ticket-stats and jobs-timeline components.
  */
+export interface TicketJobLogSummary {
+  captureStatus: 'CAPTURED' | 'UNAVAILABLE' | 'PRUNED';
+  preview: string;
+}
+
 export interface TicketJobWithTelemetry {
   id: number;
   command: string;
@@ -64,4 +69,5 @@ export interface TicketJobWithTelemetry {
   toolsUsed: string[];
   qualityScore: number | null;
   qualityScoreDetails: string | null;
+  log: TicketJobLogSummary | null;
 }

@@ -145,6 +145,12 @@ export async function GET(
         toolsUsed: true,
         qualityScore: true,
         qualityScoreDetails: true,
+        log: {
+          select: {
+            captureStatus: true,
+            preview: true,
+          },
+        },
       },
       orderBy: { id: 'asc' },
     });

@@ -55,39 +55,39 @@ Web application (Next.js): `app/api/**` server routes, `app/lib/**` shared helpe
 
 ### Tests for User Story 1 (write first, confirm they fail)
 
-- [ ] T012 [P] [US1] Create redactor unit tests in `tests/unit/logs/redactor.test.ts` covering every pattern in `research.md §1.6`, placeholder format, and nested deep-visitor over `tool_invocation.input` / `tool_result.output`
-- [ ] T013 [P] [US1] Create normalizer unit tests in `tests/unit/logs/normalizer.test.ts` with one captured fixture per agent (Claude / Codex / Mistral / Gemini) asserting event ordering, header schema version, and lifecycle bookends
-- [ ] T014 [P] [US1] Create preview derivation unit tests in `tests/unit/logs/preview.test.ts` covering the `FAILED` branch (terminal error excerpt preferred, fallback to last message, 280-char truncation) and the `UNAVAILABLE` literal string
-- [ ] T015 [P] [US1] Create `POST /logs` integration test in `tests/integration/api/jobs/logs-post.test.ts` covering workflow-token auth (401 on missing/invalid), Zod 400 on bad body, idempotent upsert, and the `UNAVAILABLE` branch rejecting `artifactKey`
-- [ ] T016 [P] [US1] Create `GET /logs` integration test in `tests/integration/api/jobs/logs-get.test.ts` covering session auth + `verifyTicketAccess` (owner + member pass, non-member 403), `rawUrl` null when `captureStatus !== CAPTURED`, and `Cache-Control: no-store`
-- [ ] T017 [P] [US1] Create `GET /logs/raw` integration test in `tests/integration/api/jobs/logs-raw-get.test.ts` covering the gzip stream passthrough, `?format=jsonl` Content-Disposition, 404 when no artifact exists, and Blob client mocked at `@/app/lib/blob/client`
-- [ ] T018 [P] [US1] Create `PUT /logs/artifact` integration test in `tests/integration/api/jobs/logs-artifact-put.test.ts` covering 415 on wrong Content-Type, 413 on oversize (> 25 MB), and the `{ artifactKey, artifactSize }` response on success
+- [X] T012 [P] [US1] ✅ DONE Create redactor unit tests in `tests/unit/logs/redactor.test.ts` covering every pattern in `research.md §1.6`, placeholder format, and nested deep-visitor over `tool_invocation.input` / `tool_result.output`
+- [X] T013 [P] [US1] ✅ DONE Create normalizer unit tests in `tests/unit/logs/normalizer.test.ts` with one captured fixture per agent (Claude / Codex / Mistral / Gemini) asserting event ordering, header schema version, and lifecycle bookends
+- [X] T014 [P] [US1] ✅ DONE Create preview derivation unit tests in `tests/unit/logs/preview.test.ts` covering the `FAILED` branch (terminal error excerpt preferred, fallback to last message, 280-char truncation) and the `UNAVAILABLE` literal string
+- [X] T015 [P] [US1] ✅ DONE Create `POST /logs` integration test in `tests/integration/api/jobs/logs-post.test.ts` covering workflow-token auth (401 on missing/invalid), Zod 400 on bad body, idempotent upsert, and the `UNAVAILABLE` branch rejecting `artifactKey`
+- [X] T016 [P] [US1] ✅ DONE Create `GET /logs` integration test in `tests/integration/api/jobs/logs-get.test.ts` covering session auth + `verifyTicketAccess` (owner + member pass, non-member 403), `rawUrl` null when `captureStatus !== CAPTURED`, and `Cache-Control: no-store`
+- [X] T017 [P] [US1] ✅ DONE Create `GET /logs/raw` integration test in `tests/integration/api/jobs/logs-raw-get.test.ts` covering the gzip stream passthrough, `?format=jsonl` Content-Disposition, 404 when no artifact exists, and Blob client mocked at `@/app/lib/blob/client`
+- [X] T018 [P] [US1] ✅ DONE Create `PUT /logs/artifact` integration test in `tests/integration/api/jobs/logs-artifact-put.test.ts` covering 415 on wrong Content-Type, 413 on oversize (> 25 MB), and the `{ artifactKey, artifactSize }` response on success
 
 ### Implementation for User Story 1
 
-- [ ] T019 [P] [US1] Implement `POST /api/jobs/[id]/logs/route.ts` with `validateWorkflowAuth`, Zod validation of `JobLogSubmission`, server-side re-redaction of `preview`, and Prisma upsert keyed on `jobId`
-- [ ] T020 [P] [US1] Implement `PUT /api/jobs/[id]/logs/artifact/route.ts` with `validateWorkflowAuth`, Content-Type/length guards, derive `artifactKey = logs/<projectId>/<ticketId>/<jobId>.jsonl.gz`, call `uploadJobLogArtifact()`, and return `{ artifactKey, artifactSize }`
-- [ ] T021 [P] [US1] Implement `GET /api/projects/[projectId]/tickets/[id]/jobs/[jobId]/logs/route.ts` with session auth + `verifyTicketAccess`, return `JobLogReadable` shape with `rawUrl` populated only when `captureStatus === CAPTURED`, and `Cache-Control: no-store`
-- [ ] T022 [P] [US1] Implement `GET /api/projects/[projectId]/tickets/[id]/jobs/[jobId]/logs/raw/route.ts` with session auth + `verifyTicketAccess`, stream via `streamJobLogArtifact()`, preserve gzip Content-Encoding, set `Content-Disposition` only when `?format=jsonl`, 502 on Blob backend unreachable
-- [ ] T023 [US1] Extend `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts` to include `log: { captureStatus, preview }` in the select (depends on T004 migration; returned shape consumed by the extended hook in T025)
-- [ ] T024 [P] [US1] Create `app/lib/hooks/queries/useJobLog.ts` — TanStack Query hook keyed on `jobLog(projectId, ticketId, jobId)` for the summary endpoint
-- [ ] T025 [US1] Extend `app/lib/hooks/queries/useTicketJobs.ts` row shape with `log: { captureStatus, preview } | null` (depends on T023)
-- [ ] T026 [P] [US1] Create `app/lib/hooks/queries/useJobLogRaw.ts` — conditional-fetch hook keyed on `jobLogRaw(...)`, enabled only when the viewer sheet is open (mirrors `useQualityGateDetails` pattern at `components/health/drawer/quality-gate-drawer.tsx`)
-- [ ] T027 [P] [US1] Create `components/ticket/log-event-row.tsx` rendering one `NormalizedEvent` with a timestamp, event-type header, and monospace payload body (type-specific styling deferred to US3; US1 only needs readable, non-JSON output)
-- [ ] T028 [US1] Create `components/ticket/log-viewer-sheet.tsx` wrapping `components/ui/sheet.tsx` — opens on trigger, calls `useJobLogRaw`, parses the streamed NDJSON, renders `<LogEventRow>` per event, and shows a skeleton + 502 error state (depends on T026, T027)
-- [ ] T029 [US1] Extend `components/ticket/jobs-timeline.tsx` `JobRow` to (a) render the `log.preview` line below the command/status header with `line-clamp-2`, (b) render a "View full logs" button that opens the sheet for `CAPTURED` status, and (c) render a disabled trigger with explanatory copy for `UNAVAILABLE`
-- [ ] T030 [P] [US1] Create `.github/scripts/lib/normalize-claude.mjs` parsing `claude-stream-json` plus `~/.claude/projects/**` session metadata → v1 event stream (delegates redaction to `redactor.mjs` from T011)
-- [ ] T031 [P] [US1] Create `.github/scripts/lib/normalize-codex.mjs` parsing Codex stdout + `~/.codex/sessions/*` → v1 event stream
-- [ ] T032 [P] [US1] Create `.github/scripts/lib/normalize-mistral.mjs` parsing Mistral/vibe output + `~/.vibe/sessions/*` → v1 event stream
-- [ ] T033 [P] [US1] Create `.github/scripts/lib/normalize-gemini.mjs` parsing Gemini stdout → v1 event stream
-- [ ] T034 [US1] Create `.github/scripts/capture-agent-logs.sh` implementing the 7-phase pipeline from `workflows/agent-log-capture.md` (collect → normalize → redact → derive preview → gzip + `PUT /logs/artifact` with 3/1-2-4 s backoff → `POST /logs` with same retry → cleanup) (depends on T011, T030–T033, T019, T020)
-- [ ] T035 [US1] Extend `.github/scripts/run-agent.sh` to tee agent stdout into `$RUNNER_TEMP/agent-raw-<jobId>.log` and install a trap that calls `capture-agent-logs.sh` on agent exit (depends on T034)
-- [ ] T036 [P] [US1] Add `if: always()` capture step immediately after `run-agent.sh` and before the status PATCH in `.github/workflows/speckit.yml`
-- [ ] T037 [P] [US1] Add the same capture step in `.github/workflows/quick-impl.yml`
-- [ ] T038 [P] [US1] Add the same capture step in `.github/workflows/verify.yml` — single call after the last agent invocation (both `fix-tests` and `code-review` tee into the same raw log file)
-- [ ] T039 [P] [US1] Add the same capture step in `.github/workflows/ai-board-assist.yml`
-- [ ] T040 [P] [US1] Add the same capture step in `.github/workflows/iterate.yml`
-- [ ] T041 [US1] Create E2E in `tests/e2e/capture-and-display-logs.spec.ts` — seeds a `[e2e]`-prefixed project + ticket + `FAILED` job with a `JobLog` fixture and a small stubbed artifact via the Blob mock, authenticates as a member (not owner), asserts the preview is visible on the Stats tab, clicks "View full logs", asserts the sheet renders the seeded events (no real workflow run)
+- [X] T019 [P] [US1] ✅ DONE Implement `POST /api/jobs/[id]/logs/route.ts` with `validateWorkflowAuth`, Zod validation of `JobLogSubmission`, server-side re-redaction of `preview`, and Prisma upsert keyed on `jobId`
+- [X] T020 [P] [US1] ✅ DONE Implement `PUT /api/jobs/[id]/logs/artifact/route.ts` with `validateWorkflowAuth`, Content-Type/length guards, derive `artifactKey = logs/<projectId>/<ticketId>/<jobId>.jsonl.gz`, call `uploadJobLogArtifact()`, and return `{ artifactKey, artifactSize }`
+- [X] T021 [P] [US1] ✅ DONE Implement `GET /api/projects/[projectId]/tickets/[id]/jobs/[jobId]/logs/route.ts` with session auth + `verifyTicketAccess`, return `JobLogReadable` shape with `rawUrl` populated only when `captureStatus === CAPTURED`, and `Cache-Control: no-store`
+- [X] T022 [P] [US1] ✅ DONE Implement `GET /api/projects/[projectId]/tickets/[id]/jobs/[jobId]/logs/raw/route.ts` with session auth + `verifyTicketAccess`, stream via `streamJobLogArtifact()`, preserve gzip Content-Encoding, set `Content-Disposition` only when `?format=jsonl`, 502 on Blob backend unreachable
+- [X] T023 [US1] ✅ DONE Extend `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts` to include `log: { captureStatus, preview }` in the select (depends on T004 migration; returned shape consumed by the extended hook in T025)
+- [X] T024 [P] [US1] ✅ DONE Create `app/lib/hooks/queries/useJobLog.ts` — TanStack Query hook keyed on `jobLog(projectId, ticketId, jobId)` for the summary endpoint
+- [X] T025 [US1] ✅ DONE Extend `app/lib/hooks/queries/useTicketJobs.ts` row shape with `log: { captureStatus, preview } | null` (depends on T023)
+- [X] T026 [P] [US1] ✅ DONE Create `app/lib/hooks/queries/useJobLogRaw.ts` — conditional-fetch hook keyed on `jobLogRaw(...)`, enabled only when the viewer sheet is open (mirrors `useQualityGateDetails` pattern at `components/health/drawer/quality-gate-drawer.tsx`)
+- [X] T027 [P] [US1] ✅ DONE Create `components/ticket/log-event-row.tsx` rendering one `NormalizedEvent` with a timestamp, event-type header, and monospace payload body (type-specific styling deferred to US3; US1 only needs readable, non-JSON output)
+- [X] T028 [US1] ✅ DONE Create `components/ticket/log-viewer-sheet.tsx` wrapping `components/ui/sheet.tsx` — opens on trigger, calls `useJobLogRaw`, parses the streamed NDJSON, renders `<LogEventRow>` per event, and shows a skeleton + 502 error state (depends on T026, T027)
+- [X] T029 [US1] ✅ DONE Extend `components/ticket/jobs-timeline.tsx` `JobRow` to (a) render the `log.preview` line below the command/status header with `line-clamp-2`, (b) render a "View full logs" button that opens the sheet for `CAPTURED` status, and (c) render a disabled trigger with explanatory copy for `UNAVAILABLE`
+- [X] T030 [P] [US1] ✅ DONE Create `.github/scripts/lib/normalize-claude.mjs` parsing `claude-stream-json` plus `~/.claude/projects/**` session metadata → v1 event stream (delegates redaction to `redactor.mjs` from T011)
+- [X] T031 [P] [US1] ✅ DONE Create `.github/scripts/lib/normalize-codex.mjs` parsing Codex stdout + `~/.codex/sessions/*` → v1 event stream
+- [X] T032 [P] [US1] ✅ DONE Create `.github/scripts/lib/normalize-mistral.mjs` parsing Mistral/vibe output + `~/.vibe/sessions/*` → v1 event stream
+- [X] T033 [P] [US1] ✅ DONE Create `.github/scripts/lib/normalize-gemini.mjs` parsing Gemini stdout → v1 event stream
+- [X] T034 [US1] ✅ DONE Create `.github/scripts/capture-agent-logs.sh` implementing the 7-phase pipeline from `workflows/agent-log-capture.md` (collect → normalize → redact → derive preview → gzip + `PUT /logs/artifact` with 3/1-2-4 s backoff → `POST /logs` with same retry → cleanup) (depends on T011, T030–T033, T019, T020)
+- [X] T035 [US1] ✅ DONE Extend `.github/scripts/run-agent.sh` to tee agent stdout into `$RUNNER_TEMP/agent-raw-<jobId>.log` and install a trap that calls `capture-agent-logs.sh` on agent exit (depends on T034)
+- [X] T036 [P] [US1] ✅ DONE Add `if: always()` capture step immediately after `run-agent.sh` and before the status PATCH in `.github/workflows/speckit.yml`
+- [X] T037 [P] [US1] ✅ DONE Add the same capture step in `.github/workflows/quick-impl.yml`
+- [X] T038 [P] [US1] ✅ DONE Add the same capture step in `.github/workflows/verify.yml` — single call after the last agent invocation (both `fix-tests` and `code-review` tee into the same raw log file)
+- [X] T039 [P] [US1] ✅ DONE Add the same capture step in `.github/workflows/ai-board-assist.yml`
+- [X] T040 [P] [US1] ✅ DONE Add the same capture step in `.github/workflows/iterate.yml`
+- [X] T041 [US1] ✅ DONE Create E2E in `tests/e2e/capture-and-display-logs.spec.ts` — seeds a `[e2e]`-prefixed project + ticket + `FAILED` job with a `JobLog` fixture and a small stubbed artifact via the Blob mock, authenticates as a member (not owner), asserts the preview is visible on the Stats tab, clicks "View full logs", asserts the sheet renders the seeded events (no real workflow run)
 
 **Checkpoint**: US1 MVP is functional — a member can diagnose a failed job end-to-end from ai-board.
 

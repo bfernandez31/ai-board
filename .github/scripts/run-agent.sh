@@ -740,40 +740,75 @@ invoke_gemini() {
   return $exit_code
 }
 
-# --- Main dispatch ---
+# --- Agent stdout capture (AIB-715) ---
+#
+# Tees the agent's stdout into $RUNNER_TEMP/agent-raw-<jobId>.log so the
+# capture-agent-logs.sh step (run via `if: always()` in each workflow) can
+# normalize, redact, and upload the transcript. The tee is best-effort: if
+# JOB_ID is unavailable we skip silently so existing workflows are unaffected.
 
-case "$AGENT_TYPE" in
-  CLAUDE)
-    validate_auth
-    install_claude
-    invoke_claude
-    ;;
-  CODEX)
-    validate_auth
-    install_codex
-    auth_codex
-    setup_codex_telemetry
-    invoke_codex
-    persist_codex_token
-    ;;
-  MISTRAL)
-    validate_auth
-    install_mistral
-    setup_mistral_telemetry
-    invoke_mistral
-    collect_mistral_telemetry
-    ;;
-  GEMINI)
-    validate_auth
-    install_gemini
-    auth_gemini
-    setup_gemini_telemetry
-    gemini_exit=0
-    invoke_gemini || gemini_exit=$?
-    exit $gemini_exit
-    ;;
-  *)
-    log_error "Unsupported agent type '$AGENT_TYPE'. Supported: CLAUDE, CODEX, MISTRAL, GEMINI"
-    exit 1
-    ;;
-esac
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+AGENT_RAW_LOG=""
+if [[ -n "${JOB_ID:-}" && -n "${RUNNER_TEMP:-}" ]]; then
+  AGENT_RAW_LOG="${RUNNER_TEMP}/agent-raw-${JOB_ID}.log"
+  touch "${AGENT_RAW_LOG}" 2>/dev/null || AGENT_RAW_LOG=""
+fi
+
+_capture_agent_end_kind="completed"
+
+dispatch_agent() {
+  case "$AGENT_TYPE" in
+    CLAUDE)
+      validate_auth
+      install_claude
+      invoke_claude
+      ;;
+    CODEX)
+      validate_auth
+      install_codex
+      auth_codex
+      setup_codex_telemetry
+      invoke_codex
+      persist_codex_token
+      ;;
+    MISTRAL)
+      validate_auth
+      install_mistral
+      setup_mistral_telemetry
+      invoke_mistral
+      collect_mistral_telemetry
+      ;;
+    GEMINI)
+      validate_auth
+      install_gemini
+      auth_gemini
+      setup_gemini_telemetry
+      local gemini_exit=0
+      invoke_gemini || gemini_exit=$?
+      return $gemini_exit
+      ;;
+    *)
+      log_error "Unsupported agent type '$AGENT_TYPE'. Supported: CLAUDE, CODEX, MISTRAL, GEMINI"
+      return 1
+      ;;
+  esac
+}
+
+if [[ -n "${AGENT_RAW_LOG}" ]]; then
+  # Append agent stdout to the raw log (stderr unchanged — passes through).
+  dispatch_agent | tee -a "${AGENT_RAW_LOG}"
+  dispatch_exit="${PIPESTATUS[0]}"
+else
+  set +e
+  dispatch_agent
+  dispatch_exit=$?
+  set -e
+fi
+
+if [[ "${dispatch_exit}" -ne 0 ]]; then
+  _capture_agent_end_kind="upstream_error"
+fi
+
+export CAPTURE_END_KIND="${_capture_agent_end_kind}"
+
+exit "${dispatch_exit}"

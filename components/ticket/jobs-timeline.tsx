@@ -7,6 +7,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
 import {
   CheckCircle2,
   XCircle,
@@ -16,8 +17,12 @@ import {
   ChevronDown,
   ChevronRight,
   X,
+  FileText,
 } from 'lucide-react';
-import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
+import type {
+  TicketJobLogSummary,
+  TicketJobWithTelemetry,
+} from '@/lib/types/job-types';
 import {
   formatCost,
   formatDuration,
@@ -26,6 +31,20 @@ import {
 import { formatCommandName } from '@/lib/utils/format-command';
 import { CancelConfirmationModal } from '@/components/board/cancel-confirmation-modal';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
+import { LogViewerSheet } from './log-viewer-sheet';
+
+const TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED', 'CANCELLED']);
+
+function previewTone(status: string, log: TicketJobLogSummary | null): string {
+  if (!log) return 'text-muted-foreground';
+  if (log.captureStatus === 'UNAVAILABLE' || log.captureStatus === 'PRUNED') {
+    return 'text-ctp-overlay0';
+  }
+  if (status === 'FAILED') return 'text-ctp-red';
+  if (status === 'COMPLETED') return 'text-ctp-blue';
+  if (status === 'CANCELLED') return 'text-ctp-yellow';
+  return 'text-muted-foreground';
+}
 
 /**
  * Status configuration type
@@ -53,9 +72,18 @@ const STATUS_ICONS: Record<string, StatusConfig> = {
  *
  * Single job entry with expandable token breakdown
  */
-function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: number | undefined }) {
+function JobRow({
+  job,
+  projectId,
+  ticketId,
+}: {
+  job: TicketJobWithTelemetry;
+  projectId?: number | undefined;
+  ticketId?: number | undefined;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showLogViewer, setShowLogViewer] = useState(false);
   const cancelJobMutation = useCancelJob(projectId ?? 0);
 
   const statusConfig = STATUS_ICONS[job.status] ?? DEFAULT_STATUS;
@@ -69,6 +97,18 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
     job.outputTokens != null ||
     job.cacheReadTokens != null ||
     job.cacheCreationTokens != null;
+
+  const log: TicketJobLogSummary | null = job.log ?? null;
+  const isTerminal = TERMINAL_STATUSES.has(job.status);
+  const canViewLogs = log?.captureStatus === 'CAPTURED' && projectId != null && ticketId != null;
+  const showPreview = isTerminal && log != null;
+  const previewToneClass = previewTone(job.status, log);
+  const viewerDisabledReason =
+    log?.captureStatus === 'UNAVAILABLE'
+      ? 'Logs unavailable for this run'
+      : log?.captureStatus === 'PRUNED'
+        ? 'Logs no longer retained'
+        : null;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -194,6 +234,54 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
           </div>
         </CollapsibleContent>
       )}
+
+      {showPreview && (
+        <div
+          className="ml-8 mt-2 flex items-start justify-between gap-3"
+          data-testid={`job-log-preview-${job.id}`}
+        >
+          <p className={`text-xs line-clamp-2 flex-1 ${previewToneClass}`}>
+            {log?.preview}
+          </p>
+          {canViewLogs ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs gap-1"
+              onClick={() => setShowLogViewer(true)}
+              data-testid={`view-full-logs-${job.id}`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              View full logs
+            </Button>
+          ) : viewerDisabledReason ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled
+              aria-label={viewerDisabledReason}
+              className="h-7 px-2 text-xs gap-1 cursor-not-allowed"
+              data-testid={`view-full-logs-disabled-${job.id}`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              View full logs
+            </Button>
+          ) : null}
+        </div>
+      )}
+
+      {projectId != null && ticketId != null && showLogViewer && (
+        <LogViewerSheet
+          open={showLogViewer}
+          onOpenChange={setShowLogViewer}
+          projectId={projectId}
+          ticketId={ticketId}
+          jobId={job.id}
+          commandLabel={formatCommandName(job.command)}
+        />
+      )}
     </Collapsible>
   );
 }
@@ -207,9 +295,10 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
 interface JobsTimelineProps {
   jobs: TicketJobWithTelemetry[];
   projectId?: number | undefined;
+  ticketId?: number | undefined;
 }
 
-export function JobsTimeline({ jobs, projectId }: JobsTimelineProps) {
+export function JobsTimeline({ jobs, projectId, ticketId }: JobsTimelineProps) {
   if (jobs.length === 0) {
     return (
       <div className="text-sm text-ctp-overlay0" data-testid="no-jobs-message">
@@ -225,7 +314,7 @@ export function JobsTimeline({ jobs, projectId }: JobsTimelineProps) {
       </h3>
       <div className="space-y-2">
         {jobs.map((job) => (
-          <JobRow key={job.id} job={job} projectId={projectId} />
+          <JobRow key={job.id} job={job} projectId={projectId} ticketId={ticketId} />
         ))}
       </div>
     </div>
