@@ -22,8 +22,8 @@ Web application (Next.js): `app/api/**` server routes, `app/lib/**` shared helpe
 
 **Purpose**: Project-wide prerequisites that must land before any schema, module, or route is authored.
 
-- [ ] T001 Install `@vercel/blob` dependency and pin to a compatible range in `package.json`
-- [ ] T002 [P] Document new env vars (`BLOB_READ_WRITE_TOKEN`, `LOG_RETENTION_DAYS`) in `.env.example` and add the "Agent log capture" section to `CLAUDE.md` under Tech Stack so future AI agents know the storage backend
+- [X] T001 ✅ DONE Install `@vercel/blob` dependency and pin to a compatible range in `package.json`
+- [X] T002 [P] ✅ DONE Document new env vars (`BLOB_READ_WRITE_TOKEN`, `LOG_RETENTION_DAYS`) in `.env.example` and add the "Agent log capture" section to `CLAUDE.md` under Tech Stack so future AI agents know the storage backend
 
 ---
 
@@ -33,15 +33,15 @@ Web application (Next.js): `app/api/**` server routes, `app/lib/**` shared helpe
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T003 Add `JobLog` model, `CaptureStatus` enum, and `log JobLog?` relation on `Job` to `prisma/schema.prisma` (fields and indexes per `data-model.md` §1.1–1.3)
-- [ ] T004 Generate Prisma migration `<timestamp>_add_job_log` via `bunx prisma migrate dev --name add_job_log` and regenerate the Prisma client with `bunx prisma generate`
-- [ ] T005 [P] Create Zod schemas `JobLogSubmissionSchema` + `NormalizedEventSchema` + `ArtifactHeaderSchema` in `app/lib/logs/schema.ts` (payload rules per `contracts/job-logs-api.yaml` §components.schemas and `contracts/normalized-event-schema.md`)
-- [ ] T006 [P] Create Vercel Blob client wrapper in `app/lib/blob/client.ts` exposing `isConfigured()`, `uploadJobLogArtifact(key, body, size)`, `streamJobLogArtifact(key)`, `deleteJobLogArtifact(key)` — mirrors the shape of `app/lib/cloudinary/client.ts`
-- [ ] T007 Extend `app/lib/query-keys.ts` with `jobLog(projectId, ticketId, jobId)` and `jobLogRaw(projectId, ticketId, jobId)` key factories
-- [ ] T008 [P] Create shared secret redactor in `app/lib/logs/redactor.ts` with `redactString(value)` + `redactEvents(events)` deep-visitor; placeholder format `[REDACTED:<kind>]`; patterns per `research.md` §1.6
-- [ ] T009 [P] Create per-agent TypeScript normalizers `normalizeClaude`, `normalizeCodex`, `normalizeMistral`, `normalizeGemini` in `app/lib/logs/normalizer.ts`, each returning a `NormalizedEvent[]` plus the v1 header per `contracts/normalized-event-schema.md`
-- [ ] T010 [P] Create `derivePreview(events, status): string` in `app/lib/logs/preview.ts` covering `FAILED`, `COMPLETED`, `CANCELLED`, `UNAVAILABLE`, `PRUNED` branches with a 280-char hard cap and trailing `…` truncation (rules per `research.md` §1.7)
-- [ ] T011 [P] Create runner-side redactor sibling in `.github/scripts/lib/redactor.mjs` (plain ESM, same pattern table as `app/lib/logs/redactor.ts`) — required because the capture script runs on Ubuntu runners before the artifact leaves the machine
+- [X] T003 ✅ DONE Add `JobLog` model, `CaptureStatus` enum, and `log JobLog?` relation on `Job` to `prisma/schema.prisma` (fields and indexes per `data-model.md` §1.1–1.3)
+- [X] T004 ✅ DONE Generate Prisma migration `<timestamp>_add_job_log` via `bunx prisma migrate dev --name add_job_log` and regenerate the Prisma client with `bunx prisma generate`
+- [X] T005 [P] ✅ DONE Create Zod schemas `JobLogSubmissionSchema` + `NormalizedEventSchema` + `ArtifactHeaderSchema` in `app/lib/logs/schema.ts` (payload rules per `contracts/job-logs-api.yaml` §components.schemas and `contracts/normalized-event-schema.md`)
+- [X] T006 [P] ✅ DONE Create Vercel Blob client wrapper in `app/lib/blob/client.ts` exposing `isConfigured()`, `uploadJobLogArtifact(key, body, size)`, `streamJobLogArtifact(key)`, `deleteJobLogArtifact(key)` — mirrors the shape of `app/lib/cloudinary/client.ts`
+- [X] T007 ✅ DONE Extend `app/lib/query-keys.ts` with `jobLog(projectId, ticketId, jobId)` and `jobLogRaw(projectId, ticketId, jobId)` key factories
+- [X] T008 [P] ✅ DONE Create shared secret redactor in `app/lib/logs/redactor.ts` with `redactString(value)` + `redactEvents(events)` deep-visitor; placeholder format `[REDACTED:<kind>]`; patterns per `research.md` §1.6
+- [X] T009 [P] ✅ DONE Create per-agent TypeScript normalizers `normalizeClaude`, `normalizeCodex`, `normalizeMistral`, `normalizeGemini` in `app/lib/logs/normalizer.ts`, each returning a `NormalizedEvent[]` plus the v1 header per `contracts/normalized-event-schema.md`
+- [X] T010 [P] ✅ DONE Create `derivePreview(events, status): string` in `app/lib/logs/preview.ts` covering `FAILED`, `COMPLETED`, `CANCELLED`, `UNAVAILABLE`, `PRUNED` branches with a 280-char hard cap and trailing `…` truncation (rules per `research.md` §1.7)
+- [X] T011 [P] ✅ DONE Create runner-side redactor sibling in `.github/scripts/lib/redactor.mjs` (plain ESM, same pattern table as `app/lib/logs/redactor.ts`) — required because the capture script runs on Ubuntu runners before the artifact leaves the machine
 
 **Checkpoint**: Schema, shared libraries, and runner-side helpers available — user stories can begin.
 
