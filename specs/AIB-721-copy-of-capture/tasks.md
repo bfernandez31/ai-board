@@ -35,15 +35,15 @@
 
 ### Unit Tests (write first, ensure they FAIL)
 
-- [ ] T005 [P] Create `tests/unit/log-parser.test.ts` — test `parseAgentOutput()` for all 4 agent types (CLAUDE, CODEX, MISTRAL, GEMINI), verify NormalizedLogEntry output, test fallback behavior when parsing fails
-- [ ] T006 [P] Create `tests/unit/log-summarizer.test.ts` — test `generateLogSummary()` for FAILED (error extraction), COMPLETED (milestone count), and CANCELLED (entry count + last entry) job statuses, verify max 2000-char output
-- [ ] T007 [P] Create `tests/unit/log-truncator.test.ts` — test `truncateOutput()` for under-limit (no-op), at-limit, and over-limit inputs, verify first-25%/last-25% boundary preservation and truncation marker insertion
+- [x] T005 [P] Create `tests/unit/log-parser.test.ts` — test `parseAgentOutput()` for all 4 agent types (CLAUDE, CODEX, MISTRAL, GEMINI), verify NormalizedLogEntry output, test fallback behavior when parsing fails
+- [x] T006 [P] Create `tests/unit/log-summarizer.test.ts` — test `generateLogSummary()` for FAILED (error extraction), COMPLETED (milestone count), and CANCELLED (entry count + last entry) job statuses, verify max 2000-char output
+- [x] T007 [P] Create `tests/unit/log-truncator.test.ts` — test `truncateOutput()` for under-limit (no-op), at-limit, and over-limit inputs, verify first-25%/last-25% boundary preservation and truncation marker insertion
 
 ### Log Processing Implementation
 
-- [ ] T008 [P] Create `lib/logs/log-parser.ts` — implement `parseAgentOutput(rawOutput, agentType)` with agent-specific parsers (`parseClaudeOutput`, `parseCodexOutput`, `parseMistralOutput`, `parseGeminiOutput`) and fallback to single `message` entry on parse failure (FR-015)
-- [ ] T009 [P] Create `lib/logs/log-summarizer.ts` — implement `generateLogSummary(entries, jobStatus)` returning error summary for FAILED, milestone summary for COMPLETED, cancellation summary for CANCELLED, capped at 2000 characters
-- [ ] T010 [P] Create `lib/logs/log-truncator.ts` — implement `truncateOutput(rawOutput, maxBytes)` returning `{ content, truncated }` with first-25%/last-25% preservation and `--- [TRUNCATED: original size X bytes] ---` marker (FR-013)
+- [x] T008 [P] Create `lib/logs/log-parser.ts` — implement `parseAgentOutput(rawOutput, agentType)` with agent-specific parsers (`parseClaudeOutput`, `parseCodexOutput`, `parseMistralOutput`, `parseGeminiOutput`) and fallback to single `message` entry on parse failure (FR-015)
+- [x] T009 [P] Create `lib/logs/log-summarizer.ts` — implement `generateLogSummary(entries, jobStatus)` returning error summary for FAILED, milestone summary for COMPLETED, cancellation summary for CANCELLED, capped at 2000 characters
+- [x] T010 [P] Create `lib/logs/log-truncator.ts` — implement `truncateOutput(rawOutput, maxBytes)` returning `{ content, truncated }` with first-25%/last-25% preservation and `--- [TRUNCATED: original size X bytes] ---` marker (FR-013)
 
 ### API Integration Tests (write first)
 
