@@ -216,6 +216,96 @@ All tests pass. Implementation complete.`;
       expect(toolEntries.length).toBeGreaterThanOrEqual(2);
     });
 
+    it('should prune logs older than retention period', async () => {
+      await workflowApi.post(`/api/jobs/${jobId}/logs`, {
+        agentType: 'CLAUDE',
+        rawOutput: SAMPLE_CLAUDE_OUTPUT,
+      });
+
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { completedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) },
+      });
+
+      const { pruneExpiredLogs } = await import('@/lib/logs/prune-expired-logs');
+      const result = await pruneExpiredLogs(30);
+
+      expect(result.pruned).toBeGreaterThanOrEqual(1);
+      expect(result.errors).toBe(0);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.logStatus).toBe('PRUNED');
+      expect(job?.logSummary).toBeNull();
+
+      const jobLog = await prisma.jobLog.findUnique({ where: { jobId } });
+      expect(jobLog).toBeNull();
+    });
+
+    it('should not prune logs within retention period', async () => {
+      await workflowApi.post(`/api/jobs/${jobId}/logs`, {
+        agentType: 'CLAUDE',
+        rawOutput: SAMPLE_CLAUDE_OUTPUT,
+      });
+
+      const { pruneExpiredLogs } = await import('@/lib/logs/prune-expired-logs');
+      const result = await pruneExpiredLogs(30);
+
+      expect(result.pruned).toBe(0);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.logStatus).toBe('AVAILABLE');
+    });
+
+    it('should preserve job telemetry after pruning', async () => {
+      await workflowApi.post(`/api/jobs/${jobId}/logs`, {
+        agentType: 'CLAUDE',
+        rawOutput: SAMPLE_CLAUDE_OUTPUT,
+      });
+
+      await prisma.job.update({
+        where: { id: jobId },
+        data: {
+          completedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+          inputTokens: 1000,
+          outputTokens: 500,
+          costUsd: 0.05,
+          durationMs: 30000,
+        },
+      });
+
+      const { pruneExpiredLogs } = await import('@/lib/logs/prune-expired-logs');
+      await pruneExpiredLogs(30);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.logStatus).toBe('PRUNED');
+      expect(job?.inputTokens).toBe(1000);
+      expect(job?.outputTokens).toBe(500);
+      expect(job?.costUsd).toBeCloseTo(0.05);
+      expect(job?.durationMs).toBe(30000);
+    });
+
+    it('should return 410 for pruned logs via GET', async () => {
+      await workflowApi.post(`/api/jobs/${jobId}/logs`, {
+        agentType: 'CLAUDE',
+        rawOutput: SAMPLE_CLAUDE_OUTPUT,
+      });
+
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { completedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) },
+      });
+
+      const { pruneExpiredLogs } = await import('@/lib/logs/prune-expired-logs');
+      await pruneExpiredLogs(30);
+
+      const response = await ctx.api.get<{ logStatus: string }>(
+        `/api/jobs/${jobId}/logs`
+      );
+
+      expect(response.status).toBe(410);
+      expect(response.data.logStatus).toBe('PRUNED');
+    });
+
     it('should return consistent format across agent types', async () => {
       const codexOutput = `Thinking about the problem...
 Running: npm test

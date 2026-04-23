@@ -128,12 +128,12 @@
 ### Tests for User Story 3
 **RULE: Extend existing test files — do not create new files for this domain.**
 
-- [ ] T031 [US3] Extend `tests/integration/jobs/job-logs.test.ts` — add pruning scenarios: logs older than 30 days are deleted in batches, Job.logStatus set to PRUNED, Job.logSummary set to null, job telemetry fields preserved, logs under 30 days unaffected, GET returns 410 for pruned logs
+- [x] T031 [US3] Extend `tests/integration/jobs/job-logs.test.ts` — add pruning scenarios: logs older than 30 days are deleted in batches, Job.logStatus set to PRUNED, Job.logSummary set to null, job telemetry fields preserved, logs under 30 days unaffected, GET returns 410 for pruned logs
 
 ### Implementation for User Story 3
 
-- [ ] T032 [US3] Create `lib/logs/prune-expired-logs.ts` — implement `pruneExpiredLogs(retentionDays)` returning `{ pruned, errors }`, find JobLog records where job's completedAt < now - retentionDays, delete in batches of 100, update Job.logStatus to PRUNED and logSummary to null for each pruned record
-- [ ] T033 [US3] Create `app/api/cron/prune-logs/route.ts` — POST handler with CRON secret auth, call `pruneExpiredLogs(30)`, return summary JSON with pruned count, errors, and durationMs
+- [x] T032 [US3] Create `lib/logs/prune-expired-logs.ts` — implement `pruneExpiredLogs(retentionDays)` returning `{ pruned, errors }`, find JobLog records where job's completedAt < now - retentionDays, delete in batches of 100, update Job.logStatus to PRUNED and logSummary to null for each pruned record
+- [x] T033 [US3] Create `app/api/cron/prune-logs/route.ts` — POST handler with CRON secret auth, call `pruneExpiredLogs(30)`, return summary JSON with pruned count, errors, and durationMs
 
 **Checkpoint**: All pruning logic verified — expired logs removed, telemetry preserved, CRON endpoint operational.
 
