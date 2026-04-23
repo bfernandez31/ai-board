@@ -195,6 +195,148 @@ Invalid transitions return 400 error
 - If the auto-dispatch returns a non-OK result, sets `Ticket.autoMode=false` and logs with the `[AutoMode]` prefix
 - Any hook error is caught and logged; it never fails the outer 200 response (the job row is already persisted)
 
+## Job Log Endpoints
+
+### POST /api/jobs/:id/logs
+
+Upload captured agent execution logs for a completed job. Called by workflow scripts after a job reaches terminal state.
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation (no user session check)
+
+**Path Parameters**:
+- `id` (number, required): Job ID
+
+**Request Body**:
+```json
+{
+  "agentType": "CLAUDE",
+  "rawOutput": "... agent execution output ..."
+}
+```
+
+**Validation**:
+- `agentType`: Required, enum (`CLAUDE`, `CODEX`, `MISTRAL`, `GEMINI`)
+- `rawOutput`: Required, string (max 5MB)
+
+**Processing**:
+1. Verify job exists
+2. Check for existing `JobLog` — return 200 if exists (idempotent)
+3. Parse raw output into `NormalizedLogEntry[]` using agent-specific parsers
+4. Generate condensed summary using `generateLogSummary()`
+5. Truncate raw output if exceeding 5MB (preserve first 25% and last 25%)
+6. Create `JobLog` + update `Job.logStatus` to AVAILABLE and `Job.logSummary` in a Prisma transaction
+
+**Response** (201 Created — new log):
+```json
+{
+  "id": 45,
+  "jobId": 123,
+  "entryCount": 42,
+  "rawSize": 15234,
+  "truncated": false
+}
+```
+
+**Response** (200 OK — log already exists, idempotent):
+```json
+{
+  "id": 45,
+  "jobId": 123,
+  "entryCount": 42,
+  "rawSize": 15234,
+  "truncated": false,
+  "existing": true
+}
+```
+
+**Errors**:
+- `400`: Invalid body (Zod validation failure)
+- `401`: Invalid or missing workflow token
+- `404`: Job not found
+
+### GET /api/jobs/:id/logs
+
+Retrieve full log content for a job.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (resolved via job → ticket → project)
+
+**Path Parameters**:
+- `id` (number, required): Job ID
+
+**Response** (200 OK — logs available):
+```json
+{
+  "id": 45,
+  "jobId": 123,
+  "agentType": "CLAUDE",
+  "entries": [
+    {
+      "timestamp": "2026-04-23T10:30:00.000Z",
+      "type": "message",
+      "content": "Starting implementation..."
+    },
+    {
+      "timestamp": "2026-04-23T10:30:05.000Z",
+      "type": "tool_invocation",
+      "content": "Edit: app/api/jobs/[id]/logs/route.ts"
+    }
+  ],
+  "entryCount": 42,
+  "rawSize": 15234,
+  "truncated": false,
+  "summary": "Implementation completed. 12 tool invocations, 42 entries."
+}
+```
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Job not found or `logStatus` is NONE (no logs captured)
+- `410`: Logs have been pruned (`logStatus` is PRUNED)
+
+**Log Entry Types**:
+
+| Type | Description | Icon |
+|------|-------------|------|
+| `message` | Agent text output | MessageSquare |
+| `tool_invocation` | Tool call (Edit, Write, Bash, etc.) | Wrench |
+| `error` | Error message or stack trace | AlertCircle |
+| `status_change` | Status or phase transition | ArrowRight |
+
+### POST /api/cron/prune-logs
+
+Scheduled endpoint to remove expired log content. Preserves job telemetry while freeing storage.
+
+**Authentication**: CRON secret (via request header or body)
+**Authorization**: Internal only (CRON scheduler)
+
+**Request Body**: None or CRON secret
+
+**Processing**:
+1. Find `JobLog` records where associated job's `completedAt` < now - 30 days
+2. Delete in batches of 100 (avoid long-running transactions)
+3. For each deleted `JobLog`, update `Job.logStatus` to PRUNED and `Job.logSummary` to null
+
+**Response** (200 OK):
+```json
+{
+  "pruned": 15,
+  "errors": 0,
+  "durationMs": 234
+}
+```
+
+**Errors**:
+- `401`: Invalid or missing CRON secret
+
+**Behavior**:
+- Idempotent — safe to run multiple times
+- Batch processing (100 per batch) prevents long-running transactions
+- Job telemetry fields (tokens, cost, duration, tools, quality score) are preserved
+- Only log content (JobLog record) and summary (Job.logSummary) are removed
+
 ## Telemetry Endpoints
 
 ### POST /api/telemetry/v1/logs

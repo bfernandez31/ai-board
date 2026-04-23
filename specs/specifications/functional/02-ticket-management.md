@@ -327,6 +327,28 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
   - Cache read tokens
   - Cache creation tokens
 
+**Log Preview** (inline on completion events):
+- Completion events for jobs with captured logs display a condensed preview below the status line
+- For FAILED jobs: error summary text in red (`text-red-500`)
+- For COMPLETED jobs: milestone summary in muted text (`text-muted-foreground`)
+- For CANCELLED jobs: cancellation indicator with entry count
+- For PRUNED logs: "Logs expired" message in subdued text
+- Hidden when no logs are available (NONE status, pre-feature jobs)
+
+**Full Log Viewer**:
+- A "View full logs" link button appears when `logStatus` is AVAILABLE
+- Opens a dialog displaying the complete captured agent output
+- Dialog header shows job command name, agent type badge, and timestamp
+- Log entries displayed chronologically with:
+  - Timestamp (relative format)
+  - Event type icon (message, tool invocation, error, status change)
+  - Content text in monospace font for code/error content
+  - Color coding by event type
+- Loading skeleton shown during fetch (logs are lazy-loaded on dialog open)
+- Truncation indicator banner when log output was truncated due to size limits
+- Graceful states for pruned logs (410), missing logs (404), and empty output
+- Log format is consistent across all supported agents (Claude Code, Codex, Mistral/vibe, Gemini)
+
 **Tools Usage**:
 - Aggregated count of all tools used across jobs
 - Sorted by frequency (most-used first)

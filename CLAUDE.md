@@ -59,6 +59,7 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 - `defaultBranch`: Repository default branch (auto-updated during config sync, defaults to `"main"`)
 - `previewUrl`: Single per project (auto-replaces on deploy)
 - Job commands: `specify`, `plan`, `implement`, `verify`, `ship`, `quick-impl`, `deploy-preview`, `rollback-reset`, `iterate`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`, `comment-ship`, `health-scan`
+- JobLog: One per job (separate table), 30-day retention, auto-pruned via `POST /api/cron/prune-logs`; `Job.logStatus` tracks NONE/AVAILABLE/PRUNED; log processing in `lib/logs/`
 - Notifications: 15s polling, soft delete with 30-day retention
 - PushSubscriptions: Multiple per user, auto-cleanup on 410/404
 - Subscription: One per user (FREE/PRO/TEAM), effective plan considers grace period; `lib/billing/` for billing logic; `PlanLimits` includes `maxMembersPerProject` (0=not allowed, 10=Team)

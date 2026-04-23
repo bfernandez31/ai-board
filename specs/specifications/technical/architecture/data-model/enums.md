@@ -2,6 +2,24 @@
 
 ## Enums
 
+### LogStatus
+
+Log availability state for job execution logs.
+
+```prisma
+enum LogStatus {
+  NONE       // No logs captured (pre-feature jobs, capture failures)
+  AVAILABLE  // Logs captured and accessible
+  PRUNED     // Logs removed after retention period (30 days)
+}
+```
+
+| Value | Description | Transitions To |
+|-------|-------------|----------------|
+| `NONE` | Default state — no logs have been captured for this job | `AVAILABLE` (on successful log upload) |
+| `AVAILABLE` | Log content exists in the `JobLog` table and is retrievable | `PRUNED` (after retention period) |
+| `PRUNED` | Log content has been deleted by the pruning process; job telemetry preserved | Terminal |
+
 ### CredentialProvider
 
 AI provider identifier for BYOK credentials.

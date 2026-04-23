@@ -403,6 +403,146 @@ it('should return "New Command Display Name" for new-command', () => {
 - No code changes required for new assistance commands
 - Test fallback pattern with example command
 
+## Log Processing
+
+### Purpose
+
+Server-side utilities for capturing, normalizing, summarizing, and pruning agent execution logs. Processes raw output from all supported agents (Claude Code, Codex, Mistral/vibe, Gemini) into a common structured format.
+
+### File Locations
+
+- Type definitions: `lib/logs/types.ts`
+- Agent-specific parsers: `lib/logs/log-parser.ts`
+- Summary generator: `lib/logs/log-summarizer.ts`
+- Size-aware truncation: `lib/logs/log-truncator.ts`
+- Retention pruning: `lib/logs/prune-expired-logs.ts`
+
+### Type Definitions
+
+**File**: `lib/logs/types.ts`
+
+```typescript
+type LogEventType = 'message' | 'tool_invocation' | 'error' | 'status_change';
+
+interface NormalizedLogEntry {
+  timestamp: string;   // ISO 8601
+  type: LogEventType;
+  content: string;
+}
+
+interface LogUploadPayload {
+  agentType: 'CLAUDE' | 'CODEX' | 'MISTRAL' | 'GEMINI';
+  rawOutput: string;
+}
+
+interface JobLogResponse {
+  id: number;
+  jobId: number;
+  agentType: string;
+  entries: NormalizedLogEntry[];
+  entryCount: number;
+  rawSize: number;
+  truncated: boolean;
+  summary: string | null;
+}
+```
+
+### Log Parser
+
+**File**: `lib/logs/log-parser.ts`
+
+**Function**: `parseAgentOutput(rawOutput: string, agentType: string): NormalizedLogEntry[]`
+
+Parses raw agent output into normalized log entries using agent-specific parsing logic.
+
+**Agent-specific parsers**:
+- `parseClaudeOutput`: Parses Claude Code structured output (messages, tool invocations, errors)
+- `parseCodexOutput`: Parses Codex CLI output
+- `parseMistralOutput`: Parses Mistral vibe CLI output
+- `parseGeminiOutput`: Parses Gemini CLI output
+
+**Fallback behavior**: If parsing fails for any agent type, returns a single `message` entry containing the raw content. Parsing never blocks log storage.
+
+### Log Summarizer
+
+**File**: `lib/logs/log-summarizer.ts`
+
+**Function**: `generateLogSummary(entries: NormalizedLogEntry[], jobStatus: string): string`
+
+Generates a condensed preview summary from parsed log entries, suitable for inline timeline display.
+
+**Summary strategies by job status**:
+- **FAILED**: Extracts error entries, returns last error message + entry count
+- **COMPLETED**: Counts tool invocations, returns key milestones + completion message
+- **CANCELLED**: Returns "Cancelled after N entries" + last entry content
+
+**Constraints**: Maximum 2,000 characters.
+
+### Log Truncator
+
+**File**: `lib/logs/log-truncator.ts`
+
+**Function**: `truncateOutput(rawOutput: string, maxBytes: number): { content: string; truncated: boolean }`
+
+Truncates oversized raw output while preserving diagnostic value.
+
+**Algorithm**: Preserves first 25% and last 25% of `maxBytes`, inserts a `--- [TRUNCATED: original size X bytes] ---` marker in between.
+
+**Default limit**: 5MB (5,242,880 bytes).
+
+### Log Pruning
+
+**File**: `lib/logs/prune-expired-logs.ts`
+
+**Function**: `pruneExpiredLogs(retentionDays: number): Promise<{ pruned: number; errors: number }>`
+
+Removes expired `JobLog` records and updates parent `Job` metadata.
+
+**Algorithm**:
+1. Find `JobLog` records where associated job's `completedAt` < now - retentionDays
+2. Delete in batches of 100 to avoid long-running transactions
+3. For each deleted `JobLog`, set `Job.logStatus = PRUNED` and `Job.logSummary = null`
+
+**Properties**: Idempotent — safe to run multiple times. If a run fails partway, the next run picks up remaining records.
+
+### Testing
+
+| File | Coverage |
+|------|----------|
+| `tests/unit/log-parser.test.ts` | All 4 agent types, fallback behavior |
+| `tests/unit/log-summarizer.test.ts` | FAILED, COMPLETED, CANCELLED strategies, 2000-char limit |
+| `tests/unit/log-truncator.test.ts` | Under-limit, at-limit, over-limit, boundary preservation |
+| `tests/integration/jobs/job-logs.test.ts` | POST/GET endpoints, pruning, idempotency |
+
+---
+
+## Job Logs Query Hook
+
+### Purpose
+
+TanStack Query hook for lazy-loading full log content when the log viewer dialog opens.
+
+### File Location
+
+`app/lib/hooks/queries/use-job-logs.ts`
+
+### API Reference
+
+**Hook**: `useJobLogs(jobId: number, enabled: boolean)`
+
+**Parameters**:
+- `jobId` (number): Job ID to fetch logs for
+- `enabled` (boolean): Controls lazy loading — only fetches when `true` (typically when dialog opens)
+
+**Fetches**: `GET /api/jobs/${jobId}/logs`
+
+**Behavior**:
+- No polling (logs are immutable once written)
+- Lazy-loaded to avoid fetching log content for every job in the timeline
+- Returns full `JobLogResponse` with parsed entries
+
+---
+
 ## Default Branch Resolver
 
 ### Purpose

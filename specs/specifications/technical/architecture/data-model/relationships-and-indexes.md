@@ -7,6 +7,7 @@ User
 ├── projects (one-to-many) → Project
 │   ├── tickets (one-to-many) → Ticket
 │   │   ├── jobs (one-to-many) → Job
+│   │   │   └── jobLog (one-to-one, optional) → JobLog
 │   │   ├── comments (one-to-many) → Comment
 │   │   │   └── notifications (one-to-many) → Notification
 │   │   ├── notifications (one-to-many) → Notification
@@ -46,6 +47,10 @@ User
 - `Job(projectId)` - Project job polling
 - `Job(ticketId)` - Job history per ticket
 - `Job(status)` - Running jobs query
+
+**Job Log Queries**:
+- `JobLog(jobId)` - Log retrieval by job (unique)
+- `JobLog(createdAt)` - Pruning queries (retention period filtering)
 
 **Comment Queries**:
 - `Comment(ticketId, createdAt)` - Chronological sorting

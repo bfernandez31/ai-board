@@ -305,19 +305,20 @@ Jobs track GitHub Actions workflow executions.
 
 ```prisma
 model Job {
-  id              Int       @id @default(autoincrement())
-  ticketId        Int
-  projectId       Int
-  command         String    @db.VarChar(50)
-  status          JobStatus @default(PENDING)
-  branch          String?   @db.VarChar(200)
-  commitSha       String?   @db.VarChar(40)
-  logs            String?
-  startedAt       DateTime  @default(now())
-  completedAt     DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime
-  workflowRunId   BigInt?   // GitHub Actions workflow run ID (populated on first RUNNING callback)
+  id          Int       @id @default(autoincrement())
+  ticketId    Int
+  projectId   Int
+  command     String    @db.VarChar(50)
+  status      JobStatus @default(PENDING)
+  branch      String?   @db.VarChar(200)
+  commitSha   String?   @db.VarChar(40)
+  logStatus   LogStatus @default(NONE)
+  logSummary  String?   @db.Text
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  workflowRunId BigInt?   // GitHub Actions workflow run ID (populated on first RUNNING callback)
 
   // Claude telemetry metrics (aggregated from all API calls in the job)
   inputTokens         Int?      // Total input tokens consumed
@@ -329,9 +330,11 @@ model Job {
   model               String?   @db.VarChar(50)  // Primary model used
   toolsUsed           String[]  @default([])     // List of tools used (Edit, Write, Bash, etc.)
 
-  // Quality score (FULL workflow verify jobs only)
-  qualityScore        Int?      // Final weighted quality score (0-100)
-  qualityScoreDetails String?   @db.Text  // JSON with dimension sub-scores and weights
+  jobLog      JobLog?
+
+  // Quality score (0-100) computed from code review agent dimension scores
+  qualityScore        Int?
+  qualityScoreDetails String?   @db.Text
 
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -354,7 +357,8 @@ model Job {
 - `status`: Current execution state (enum: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
 - `branch`: Git branch name (max 200 chars, nullable)
 - `commitSha`: Git commit hash (max 40 chars, nullable)
-- `logs`: Complete execution logs (text, unlimited)
+- `logStatus`: Log availability state (enum: NONE, AVAILABLE, PRUNED; default: NONE)
+- `logSummary`: Condensed log preview text for inline timeline display (TEXT, nullable; max 2000 chars; set during log upload, cleared on pruning)
 - `startedAt`: Execution start timestamp (set on creation)
 - `completedAt`: Execution completion timestamp (nullable, set on terminal state)
 - `createdAt`: Record creation timestamp
@@ -374,6 +378,7 @@ model Job {
 **Relationships**:
 - Belongs to Ticket (required, cascade delete)
 - Belongs to Project (required, cascade delete)
+- One-to-one (optional): JobLog (full log content stored separately to avoid bloating job queries)
 
 **Constraints**:
 - Index on ticketId for job history queries
@@ -435,6 +440,58 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - When multiple verify jobs exist (rollback-reset cycles), the UI scans completed verify jobs and displays the score from the latest job by `startedAt`
 - The Stats tab always renders the summary score first; dimension rows are shown only when `qualityScoreDetails` contains one or more parsed dimensions and the user expands the disclosure
 - If `qualityScore` exists but `qualityScoreDetails` is absent or cannot be parsed, the UI still shows the overall score and threshold label without the expandable breakdown
+
+### JobLog
+
+Captured and normalized agent execution output for a single job run.
+
+```prisma
+model JobLog {
+  id         Int      @id @default(autoincrement())
+  jobId      Int      @unique
+  agentType  String   @db.VarChar(20)
+  rawContent String   @db.Text
+  entries    String   @db.Text
+  entryCount Int
+  rawSize    Int
+  truncated  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([createdAt])
+}
+```
+
+**Purpose**: Persistent storage for agent execution logs, separated from the Job table to avoid bloating job queries with multi-megabyte payloads.
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `jobId`: Parent job (unique — one log per job)
+- `agentType`: Agent that produced the output (e.g., "CLAUDE", "CODEX", "MISTRAL", "GEMINI")
+- `rawContent`: Truncated raw agent output (TEXT, up to 5MB before truncation)
+- `entries`: JSON-serialized array of `NormalizedLogEntry` objects (timestamp, event type, content)
+- `entryCount`: Total number of parsed log entries
+- `rawSize`: Original size of the raw agent output in bytes (before truncation)
+- `truncated`: Whether the raw output was truncated due to exceeding the 5MB size limit
+- `createdAt`: Log capture timestamp
+
+**Relationships**:
+- Belongs to Job (required, cascade delete; unique constraint ensures one log per job)
+
+**Constraints**:
+- Unique jobId (one log record per job)
+- Index on jobId for efficient retrieval
+- Index on createdAt for pruning queries
+
+**Business Rules**:
+- Created when a workflow uploads agent output after a job reaches terminal state (COMPLETED, FAILED, CANCELLED)
+- Log upload is idempotent — if a JobLog already exists for a job, subsequent uploads return 200 without modification
+- Log content is normalized to a common structured format regardless of which agent produced it
+- Raw output is truncated to 5MB maximum, preserving the first 25% and last 25% with a truncation marker
+- Pruned after 30-day retention period — the JobLog record is deleted and `Job.logStatus` is set to PRUNED
+- Log capture failures are non-blocking — if capture fails, the job's status and telemetry are unaffected
 
 ### Comment
 
