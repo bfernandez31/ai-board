@@ -224,6 +224,14 @@ jobs:
 
           echo "✅ Changes pushed to branch: ${{ inputs.branch }}"
 
+      - name: Upload Agent Logs
+        if: always()
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          AGENT_TYPE: ${{ inputs.agent }}
+        run: |
+          bash ../ai-board/.github/scripts/upload-agent-logs.sh || echo "⚠️ Log upload failed (non-blocking)"
+
       - name: Update Job Status - Success
         if: success()
         run: |

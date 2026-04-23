@@ -708,6 +708,14 @@ jobs:
             echo "has_score=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Upload Agent Logs
+        if: ${{ always() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          AGENT_TYPE: ${{ inputs.agent }}
+        run: |
+          bash ../ai-board/.github/scripts/upload-agent-logs.sh || echo "⚠️ Log upload failed (non-blocking)"
+
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
         run: |

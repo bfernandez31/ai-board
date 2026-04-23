@@ -145,6 +145,7 @@ export async function GET(
         toolsUsed: true,
         qualityScore: true,
         qualityScoreDetails: true,
+        logStatus: true,
       },
       orderBy: { id: 'asc' },
     });

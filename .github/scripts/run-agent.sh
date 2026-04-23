@@ -5,6 +5,8 @@ set -euo pipefail
 # Abstracts CLI installation, authentication, telemetry, and command invocation
 # across Claude Code, Codex, Mistral, and Gemini CLI agents.
 
+export LOG_CAPTURE_FILE="/tmp/agent-output-$$.log"
+
 AGENT_TYPE="${1:?ERROR: AGENT_TYPE is required (CLAUDE, CODEX, MISTRAL, or GEMINI)}"
 COMMAND="${2:?ERROR: COMMAND is required (e.g., ai-board.specify)}"
 shift 2
@@ -381,7 +383,7 @@ install_claude() {
 
 invoke_claude() {
   log_info "Invoking Claude: /$COMMAND $ORIGINAL_ARGS_STRING"
-  claude --dangerously-skip-permissions "/$COMMAND $ORIGINAL_ARGS_STRING"
+  claude --dangerously-skip-permissions "/$COMMAND $ORIGINAL_ARGS_STRING" 2>&1 | tee "$LOG_CAPTURE_FILE"
 }
 
 # --- Codex functions ---
@@ -505,7 +507,7 @@ invoke_codex() {
   prompt="$(build_non_claude_prompt "$command_file")"
 
   log_info "Model: $model | Reasoning: $reasoning"
-  echo "$prompt" | codex exec --dangerously-bypass-approvals-and-sandbox -m "$model" -c "reasoning_effort=\"$reasoning\"" -
+  echo "$prompt" | codex exec --dangerously-bypass-approvals-and-sandbox -m "$model" -c "reasoning_effort=\"$reasoning\"" - 2>&1 | tee "$LOG_CAPTURE_FILE"
 }
 
 # --- Mistral functions ---
@@ -662,8 +664,8 @@ invoke_mistral() {
   local exec_prefix="IMPORTANT: You are running in CI/CD headless mode. Do NOT just describe a plan — you MUST execute every step using your tools (bash, write_file, read_file, etc.). Do NOT wait for user confirmation. Act immediately and completely. When a step fails, try a different approach — do NOT retry the same command more than twice."
   vibe --prompt "${exec_prefix}
 
-$(cat "$prompt_file")" --agent auto-approve
-  local exit_code=$?
+$(cat "$prompt_file")" --agent auto-approve 2>&1 | tee "$LOG_CAPTURE_FILE"
+  local exit_code=${PIPESTATUS[0]}
 
   rm -f "$prompt_file"
   return $exit_code
@@ -733,8 +735,8 @@ invoke_gemini() {
   # when the prompt content starts with '-' (e.g. YAML frontmatter '---\n...').
   # The plain `-p "..."` form fails with "Not enough arguments following: p"
   # whenever the value's first character is '-'.
-  gemini "--prompt=$(cat "$prompt_file")" --approval-mode=yolo
-  local exit_code=$?
+  gemini "--prompt=$(cat "$prompt_file")" --approval-mode=yolo 2>&1 | tee "$LOG_CAPTURE_FILE"
+  local exit_code=${PIPESTATUS[0]}
 
   rm -f "$prompt_file"
   return $exit_code

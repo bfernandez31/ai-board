@@ -47,27 +47,27 @@
 
 ### API Integration Tests (write first)
 
-- [ ] T011 Create `tests/integration/jobs/job-logs.test.ts` — test POST /api/jobs/:id/logs (workflow auth, Zod validation, idempotency on duplicate upload, 5MB size limit, job-not-found 404), test GET /api/jobs/:id/logs (session auth, project access check, AVAILABLE/NONE/PRUNED status responses, 404/410 codes)
+- [x] T011 Create `tests/integration/jobs/job-logs.test.ts` — test POST /api/jobs/:id/logs (workflow auth, Zod validation, idempotency on duplicate upload, 5MB size limit, job-not-found 404), test GET /api/jobs/:id/logs (session auth, project access check, AVAILABLE/NONE/PRUNED status responses, 404/410 codes)
 
 ### API Endpoint Implementation
 
-- [ ] T012 Create `app/api/jobs/[id]/logs/route.ts` — POST handler (workflow auth via `validateWorkflowAuth`, Zod body validation, parse → summarize → truncate → Prisma transaction creating JobLog + updating Job.logStatus/logSummary, idempotent 200 on existing log) and GET handler (session auth via `requireAuth`, project access via `verifyProjectAccess`, return full JobLogResponse or 404/410 based on logStatus)
+- [x] T012 Create `app/api/jobs/[id]/logs/route.ts` — POST handler (workflow auth via `validateWorkflowAuth`, Zod body validation, parse → summarize → truncate → Prisma transaction creating JobLog + updating Job.logStatus/logSummary, idempotent 200 on existing log) and GET handler (session auth via `requireAuth`, project access via `verifyProjectAccess`, return full JobLogResponse or 404/410 based on logStatus)
 
 ### Existing API Updates
 
-- [ ] T013 [P] Update `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts` — add `logStatus` to the Prisma select clause (line ~131) so job telemetry responses include log availability status
+- [x] T013 [P] Update `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts` — add `logStatus` to the Prisma select clause (line ~131) so job telemetry responses include log availability status
 
 ### Workflow Capture Scripts
 
-- [ ] T014 Modify `.github/scripts/run-agent.sh` — define `LOG_CAPTURE_FILE=/tmp/agent-output-$$.log`, wrap each `invoke_*` function's agent command through `tee "$LOG_CAPTURE_FILE"` (Claude line ~384, Codex line ~508, Mistral line ~663, Gemini line ~736), export `LOG_CAPTURE_FILE` for subsequent workflow steps
-- [ ] T015 [P] Create `.github/scripts/upload-agent-logs.sh` — read `LOG_CAPTURE_FILE`, validate non-empty, JSON-encode raw output via `jq`, POST to `${APP_URL}/api/jobs/${JOB_ID}/logs` with `WORKFLOW_API_TOKEN` auth, handle failure gracefully (log warning, exit 0 per FR-015)
+- [x] T014 Modify `.github/scripts/run-agent.sh` — define `LOG_CAPTURE_FILE=/tmp/agent-output-$$.log`, wrap each `invoke_*` function's agent command through `tee "$LOG_CAPTURE_FILE"` (Claude line ~384, Codex line ~508, Mistral line ~663, Gemini line ~736), export `LOG_CAPTURE_FILE` for subsequent workflow steps
+- [x] T015 [P] Create `.github/scripts/upload-agent-logs.sh` — read `LOG_CAPTURE_FILE`, validate non-empty, JSON-encode raw output via `jq`, POST to `${APP_URL}/api/jobs/${JOB_ID}/logs` with `WORKFLOW_API_TOKEN` auth, handle failure gracefully (log warning, exit 0 per FR-015)
 
 ### Workflow Modifications
 
-- [ ] T016 [P] Add "Upload Agent Logs" step to `.github/workflows/speckit.yml` — after "Execute Spec-Kit Command" step, before status update steps, with `if: always()` and non-blocking failure handling
-- [ ] T017 [P] Add "Upload Agent Logs" step to `.github/workflows/quick-impl.yml` — after agent execution, before status update, with `if: always()` and non-blocking failure handling
-- [ ] T018 [P] Add "Upload Agent Logs" step to `.github/workflows/verify.yml` — after agent execution, before status update, with `if: always()` and non-blocking failure handling
-- [ ] T019 [P] Add "Upload Agent Logs" step to `.github/workflows/iterate.yml` — after agent execution, before status update, with `if: always()` and non-blocking failure handling
+- [x] T016 [P] Add "Upload Agent Logs" step to `.github/workflows/speckit.yml` — after "Execute Spec-Kit Command" step, before status update steps, with `if: always()` and non-blocking failure handling
+- [x] T017 [P] Add "Upload Agent Logs" step to `.github/workflows/quick-impl.yml` — after agent execution, before status update, with `if: always()` and non-blocking failure handling
+- [x] T018 [P] Add "Upload Agent Logs" step to `.github/workflows/verify.yml` — after agent execution, before status update, with `if: always()` and non-blocking failure handling
+- [x] T019 [P] Add "Upload Agent Logs" step to `.github/workflows/iterate.yml` — after agent execution, before status update, with `if: always()` and non-blocking failure handling
 
 **Checkpoint**: Foundation ready — unit tests pass for parsers/summarizer/truncator, integration tests pass for API endpoints, workflow scripts in place. User story implementation can now begin.
 
