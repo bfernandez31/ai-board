@@ -60,14 +60,10 @@ function tryParseJson(line: string): Record<string, unknown> | null {
 }
 
 function formatTimestamp(value: unknown): string {
-  if (typeof value === 'string') {
+  if (typeof value === 'string' || typeof value === 'number') {
     const d = new Date(value);
     if (!isNaN(d.getTime())) return d.toISOString();
-    return value;
-  }
-  if (typeof value === 'number') {
-    const d = new Date(value);
-    if (!isNaN(d.getTime())) return d.toISOString();
+    if (typeof value === 'string') return value;
   }
   return new Date().toISOString();
 }

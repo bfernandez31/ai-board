@@ -161,15 +161,14 @@ export async function GET(
     });
 
     // Flatten jobLog.* into a narrower shape the UI can consume directly.
-    const shaped = jobs.map((job) => ({
+    const shaped = jobs.map(({ jobLog, ...job }) => ({
       ...job,
-      hasLog: job.jobLog !== null,
+      hasLog: jobLog !== null,
       logSummary: job.logs,
-      logTruncated: job.jobLog?.truncated ?? false,
-      logByteSize: job.jobLog?.byteSize ?? null,
-      logEventCount: job.jobLog?.eventCount ?? null,
-      logAgent: job.jobLog?.agent ?? null,
-      jobLog: undefined,
+      logTruncated: jobLog?.truncated ?? false,
+      logByteSize: jobLog?.byteSize ?? null,
+      logEventCount: jobLog?.eventCount ?? null,
+      logAgent: jobLog?.agent ?? null,
     }));
 
     return NextResponse.json(shaped);

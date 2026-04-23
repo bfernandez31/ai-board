@@ -28,6 +28,15 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
+const ERROR_PATTERN = /(^|\s)(error|failed|traceback|exception)(:|\s|$)/i;
+
+function classifyLine(rest: string): string {
+  if (ERROR_PATTERN.test(rest)) return 'text-ctp-red font-medium';
+  if (rest.startsWith('tool_use:') || rest.startsWith('tool_result:')) return 'text-ctp-blue';
+  if (rest.startsWith('assistant:')) return 'text-ctp-mauve';
+  return 'text-foreground';
+}
+
 /**
  * Render a single log line with light syntax highlighting:
  * timestamps, tool_use prefixes, and ERROR lines are colored so the
@@ -36,14 +45,7 @@ function formatBytes(bytes: number): string {
 function LogLine({ line }: { line: string }) {
   const tsMatch = line.match(/^\[([^\]]+)\]\s*/);
   const rest = tsMatch ? line.slice(tsMatch[0].length) : line;
-  const isError = /(^|\s)(error|failed|traceback|exception)(:|\s|$)/i.test(rest);
-  const isTool = rest.startsWith('tool_use:') || rest.startsWith('tool_result:');
-  const isAssistant = rest.startsWith('assistant:');
-
-  let restClass = 'text-foreground';
-  if (isError) restClass = 'text-ctp-red font-medium';
-  else if (isTool) restClass = 'text-ctp-blue';
-  else if (isAssistant) restClass = 'text-ctp-mauve';
+  const restClass = classifyLine(rest);
 
   return (
     <div className="flex gap-2 py-0.5 text-xs font-mono">
@@ -78,14 +80,15 @@ export function JobLogDialog({
             Execution logs — {formatCommandName(command)}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            {data?.log && (
+            {data?.log ? (
               <>
                 {data.log.agent ?? 'agent'} · {data.log.eventCount} events ·{' '}
                 {formatBytes(data.log.byteSize)}
                 {data.log.truncated && ' · truncated (tail preserved)'}
               </>
+            ) : (
+              'Captured agent execution log.'
             )}
-            {!data?.log && 'Captured agent execution log.'}
           </DialogDescription>
         </DialogHeader>
 

@@ -81,34 +81,30 @@ export async function POST(
       agent: validation.data.agent ?? null,
     });
 
-    // Upsert the JobLog row so repeated workflow retries are safe.
-    const log = await prisma.jobLog.upsert({
-      where: { jobId },
-      create: {
-        jobId,
-        content: normalized.content,
-        summary: normalized.summary || null,
-        truncated: normalized.truncated,
-        byteSize: normalized.byteSize,
-        eventCount: normalized.eventCount,
-        agent: normalized.agent,
-      },
-      update: {
-        content: normalized.content,
-        summary: normalized.summary || null,
-        truncated: normalized.truncated,
-        byteSize: normalized.byteSize,
-        eventCount: normalized.eventCount,
-        agent: normalized.agent,
-      },
-    });
+    const summary = normalized.summary || null;
+    const logData = {
+      content: normalized.content,
+      summary,
+      truncated: normalized.truncated,
+      byteSize: normalized.byteSize,
+      eventCount: normalized.eventCount,
+      agent: normalized.agent,
+    };
 
-    // Mirror the summary on the Job.logs column so listing endpoints can
-    // surface it without joining the JobLog table.
-    await prisma.job.update({
-      where: { id: jobId },
-      data: { logs: normalized.summary || null },
-    });
+    // Upsert the JobLog row so repeated workflow retries are safe, and
+    // mirror the summary on Job.logs so listing endpoints can surface it
+    // without joining the JobLog table.
+    const [log] = await prisma.$transaction([
+      prisma.jobLog.upsert({
+        where: { jobId },
+        create: { jobId, ...logData },
+        update: logData,
+      }),
+      prisma.job.update({
+        where: { id: jobId },
+        data: { logs: summary },
+      }),
+    ]);
 
     return NextResponse.json(
       {
