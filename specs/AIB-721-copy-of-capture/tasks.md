@@ -83,21 +83,21 @@
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 **RULE (constitution): Extend existing test files where applicable. Create new only when no existing file covers the domain.**
 
-- [ ] T020 [P] [US1] Create `tests/unit/components/log-preview.test.tsx` — test LogPreview renders error summary for FAILED status in `text-red-500`, milestone summary for COMPLETED in `text-muted-foreground`, "Logs expired" for PRUNED, and hides for NONE status (no existing component test covers this domain)
-- [ ] T021 [P] [US1] Create `tests/unit/components/log-viewer.test.tsx` — test LogViewer dialog renders log entries chronologically, shows loading skeleton, handles error/pruned/empty states, displays truncation indicator banner when `truncated === true` (no existing component test covers this domain)
+- [x] T020 [P] [US1] Create `tests/unit/components/log-preview.test.tsx` — test LogPreview renders error summary for FAILED status in `text-red-500`, milestone summary for COMPLETED in `text-muted-foreground`, "Logs expired" for PRUNED, and hides for NONE status (no existing component test covers this domain)
+- [x] T021 [P] [US1] Create `tests/unit/components/log-viewer.test.tsx` — test LogViewer dialog renders log entries chronologically, shows loading skeleton, handles error/pruned/empty states, displays truncation indicator banner when `truncated === true` (no existing component test covers this domain)
 
 ### Implementation for User Story 1
 
-- [ ] T022 [P] [US1] Create `components/logs/log-entry-row.tsx` — render individual log entry with timestamp, event type icon (lucide-react: MessageSquare/Wrench/AlertCircle/ArrowRight), and content text with `font-mono text-sm` for code/error, color-coded by event type using Tailwind palette classes
-- [ ] T023 [P] [US1] Create `components/logs/log-preview.tsx` — render condensed inline preview: error text in `text-red-500` for FAILED, milestone summary in `text-muted-foreground` for COMPLETED, "Logs expired" in `text-subtext0` for PRUNED, hidden for NONE (FR-014)
-- [ ] T024 [US1] Create `app/lib/hooks/queries/use-job-logs.ts` — TanStack Query hook `useJobLogs(jobId, enabled)` fetching GET `/api/jobs/${jobId}/logs`, lazy-loaded (only when dialog opens), no polling (logs are immutable)
-- [ ] T025 [US1] Create `components/logs/log-viewer.tsx` — shadcn Dialog with `aurora-dialog-overlay` styling, header showing job command display name + agent type badge + timestamp, scrollable body rendering LogEntryRow list, loading skeleton, error/pruned/empty states, truncation indicator banner (FR-013)
-- [ ] T026 [US1] Modify `components/timeline/job-event-timeline-item.tsx` — for completion events, render `<LogPreview>` below status line, add "View full logs" Button (variant="link" size="sm") when `logStatus === 'AVAILABLE'` that opens LogViewer dialog
+- [x] T022 [P] [US1] Create `components/logs/log-entry-row.tsx` — render individual log entry with timestamp, event type icon (lucide-react: MessageSquare/Wrench/AlertCircle/ArrowRight), and content text with `font-mono text-sm` for code/error, color-coded by event type using Tailwind palette classes
+- [x] T023 [P] [US1] Create `components/logs/log-preview.tsx` — render condensed inline preview: error text in `text-red-500` for FAILED, milestone summary in `text-muted-foreground` for COMPLETED, "Logs expired" in `text-subtext0` for PRUNED, hidden for NONE (FR-014)
+- [x] T024 [US1] Create `app/lib/hooks/queries/use-job-logs.ts` — TanStack Query hook `useJobLogs(jobId, enabled)` fetching GET `/api/jobs/${jobId}/logs`, lazy-loaded (only when dialog opens), no polling (logs are immutable)
+- [x] T025 [US1] Create `components/logs/log-viewer.tsx` — shadcn Dialog with `aurora-dialog-overlay` styling, header showing job command display name + agent type badge + timestamp, scrollable body rendering LogEntryRow list, loading skeleton, error/pruned/empty states, truncation indicator banner (FR-013)
+- [x] T026 [US1] Modify `components/timeline/job-event-timeline-item.tsx` — for completion events, render `<LogPreview>` below status line, add "View full logs" Button (variant="link" size="sm") when `logStatus === 'AVAILABLE'` that opens LogViewer dialog
 
 ### Integration Test Extensions for User Story 1
 
-- [ ] T027 [P] [US1] Extend `tests/integration/tickets/timeline.test.ts` — verify `logSummary` and `logStatus` fields appear in timeline response for jobs with uploaded logs
-- [ ] T028 [P] [US1] Extend `tests/integration/jobs/ticket-jobs.test.ts` — verify `logStatus` field appears in ticket jobs telemetry response
+- [x] T027 [P] [US1] Extend `tests/integration/tickets/timeline.test.ts` — verify `logSummary` and `logStatus` fields appear in timeline response for jobs with uploaded logs
+- [x] T028 [P] [US1] Extend `tests/integration/jobs/ticket-jobs.test.ts` — verify `logStatus` field appears in ticket jobs telemetry response
 
 **Checkpoint**: User Story 1 fully functional — failed job shows inline error preview in timeline, "View full logs" opens detailed log viewer. Independently testable.
 

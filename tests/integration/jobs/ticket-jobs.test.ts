@@ -204,5 +204,24 @@ describe('Ticket Jobs API', () => {
       expect(job!.durationMs).toBe(180000);
       expect(job!.toolsUsed).toEqual(['read_file', 'shell']);
     });
+
+    it('should include logStatus in ticket jobs response', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'COMPLETED' });
+
+      await workflowApi.post(`/api/jobs/${jobId}/logs`, {
+        agentType: 'CLAUDE',
+        rawOutput: 'Test output for jobs telemetry',
+      });
+
+      const response = await ctx.api.get<Array<TicketJobWithTelemetry & { logStatus: string }>>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs`
+      );
+
+      expect(response.status).toBe(200);
+      const job = response.data.find((j) => j.id === jobId);
+      expect(job).toBeDefined();
+      expect(job!.logStatus).toBe('AVAILABLE');
+    });
   });
 });

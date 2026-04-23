@@ -12,6 +12,9 @@ import { PlayCircle, CheckCircle, XCircle, Ban } from 'lucide-react';
 import { TimelineBadge } from './timeline-badge';
 import { TimelineContent } from './timeline-content';
 import { getJobEventMessage } from '@/app/lib/utils/conversation-events';
+import { LogPreview } from '@/components/logs/log-preview';
+import { LogViewer } from '@/components/logs/log-viewer';
+import { Button } from '@/components/ui/button';
 import type { Job, JobStatus } from '@prisma/client';
 
 interface JobEventTimelineItemProps {
@@ -132,12 +135,14 @@ function getStatusWord(eventType: 'start' | 'complete', status: JobStatus): stri
  */
 export const JobEventTimelineItem = React.memo(
   function JobEventTimelineItem({ job, eventType, timestamp }: JobEventTimelineItemProps) {
-    // Generate user-friendly message with workflow indicator
+    const [logViewerOpen, setLogViewerOpen] = React.useState(false);
+
     const message = getJobEventMessage(job.command, eventType, job.status);
     const statusWord = getStatusWord(eventType, job.status);
-
-    // Split message to extract everything before the status word
     const messageBeforeStatus = message.substring(0, message.lastIndexOf(statusWord)).trim();
+
+    const isCompletion = eventType === 'complete';
+    const hasLogs = job.logStatus === 'AVAILABLE';
 
     return (
       <li className="relative pl-12">
@@ -151,7 +156,27 @@ export const JobEventTimelineItem = React.memo(
               {formatRelativeTime(timestamp)}
             </time>
           </span>
+          {isCompletion && (
+            <>
+              <LogPreview logStatus={job.logStatus} logSummary={job.logSummary} jobStatus={job.status} />
+              {hasLogs && (
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs mt-1" onClick={() => setLogViewerOpen(true)}>
+                  View full logs
+                </Button>
+              )}
+            </>
+          )}
         </TimelineContent>
+        {hasLogs && (
+          <LogViewer
+            open={logViewerOpen}
+            onOpenChange={setLogViewerOpen}
+            jobId={job.id}
+            jobCommand={job.command}
+            agentType="CLAUDE"
+            timestamp={timestamp}
+          />
+        )}
       </li>
     );
   }

@@ -168,5 +168,35 @@ describe('Conversation Timeline API', () => {
       // Should fail auth (project not found or no access)
       expect([403, 404]).toContain(response.status);
     });
+
+    it('should include logSummary and logStatus in timeline response for jobs with logs', async () => {
+      const transitionResponse = await ctx.api.post(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+        { targetStage: 'SPECIFY' }
+      );
+      if (transitionResponse.status !== 200) return;
+
+      const { waitForLatestJobId } = await import('@/tests/helpers/job-helpers');
+      const jobId = await waitForLatestJobId(prisma, ticketId);
+
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'COMPLETED' });
+
+      await workflowApi.post(`/api/jobs/${jobId}/logs`, {
+        agentType: 'CLAUDE',
+        rawOutput: 'Test output for timeline log verification',
+      });
+
+      const response = await ctx.api.get<TimelineResponse>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/timeline`
+      );
+
+      expect(response.status).toBe(200);
+      const jobEvents = response.data.timeline.filter((e) => e.type === 'job');
+      const jobWithLog = jobEvents.find((e) => (e.data as Record<string, unknown>).id === jobId);
+      expect(jobWithLog).toBeDefined();
+      expect((jobWithLog!.data as Record<string, unknown>).logStatus).toBe('AVAILABLE');
+      expect((jobWithLog!.data as Record<string, unknown>).logSummary).toBeTruthy();
+    });
   });
 });
