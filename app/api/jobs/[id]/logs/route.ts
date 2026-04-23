@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getLogService } from '@/lib/services/log-service';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
+import { verifyProjectAccess } from '@/lib/db/auth-helpers';
+import { prisma } from '@/lib/db/client';
 import { z } from 'zod';
 
 /**
@@ -13,6 +15,17 @@ const logCaptureSchema = z.object({
 });
 
 export type LogCaptureRequest = z.infer<typeof logCaptureSchema>;
+
+/**
+ * Get project ID for a job
+ */
+async function getProjectIdForJob(jobId: number): Promise<number | null> {
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    select: { projectId: true },
+  });
+  return job?.projectId || null;
+}
 
 /**
  * POST /api/jobs/[id]/logs
@@ -219,6 +232,31 @@ export async function GET(
       );
     }
 
+    // Get project ID for access control
+    const projectId = await getProjectIdForJob(jobId);
+    if (!projectId) {
+      console.error('[Log Retrieval] Job not found or no project association:', { jobId });
+      return NextResponse.json(
+        { error: 'Job not found' },
+        { status: 404 }
+      );
+    }
+
+    // Verify user has access to the project (same as ticket data access control)
+    try {
+      await verifyProjectAccess(projectId, request);
+    } catch (accessError) {
+      console.warn('[Log Retrieval] Access denied for project:', {
+        jobId,
+        projectId,
+        error: accessError instanceof Error ? accessError.message : String(accessError),
+      });
+      return NextResponse.json(
+        { error: 'Access denied' },
+        { status: 403 }
+      );
+    }
+
     // Retrieve logs using log service
     const logService = getLogService();
     const logs = await logService.getJobLogs(jobId);
@@ -234,6 +272,7 @@ export async function GET(
     const elapsedTime = Date.now() - startTime;
     console.log('[Log Retrieval] Success:', {
       jobId,
+      projectId,
       contentSize: logs.contentSize,
       elapsedMs: elapsedTime,
     });

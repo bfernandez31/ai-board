@@ -9,6 +9,15 @@ import type {
 } from '@/lib/types/log-types';
 import type { Agent, JobLog, LogEntry, LogStorage } from '@prisma/client';
 
+// Simple in-memory cache for log retrieval
+const logCache = new Map<number, {
+  data: LogRetrievalResponse;
+  timestamp: number;
+  expiresAt: number;
+}>();
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 /**
  * Log Service
  * Core business logic for log capture and retrieval
@@ -21,14 +30,47 @@ export class LogService {
   }
 
   /**
-   * Capture agent execution logs
+   * Execute operation with retries
+   */
+  private async withRetry<T>(
+    operation: () => Promise<T>,
+    maxAttempts: number = 3,
+    delayMs: number = 1000
+  ): Promise<T> {
+    let lastError: unknown;
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error;
+        console.warn(`Attempt ${attempt} failed, retrying...`, {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        
+        if (attempt < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
+    }
+    
+    console.error(`All ${maxAttempts} attempts failed`);
+    throw lastError;
+  }
+
+  /**
+   * Capture agent execution logs with retry logic
    */
   async captureLogs(request: LogCaptureRequest): Promise<LogCaptureResult> {
     const { jobId, agentType, logContent, logFormat } = request;
 
     try {
-      // Normalize log content
-      const normalizedEntries = this.normalizeLogContent(logContent, logFormat);
+      // Normalize log content with retry
+      const normalizedEntries = await this.withRetry(
+        () => this.normalizeLogContent(logContent, logFormat),
+        3,
+        500
+      );
       
       // Generate preview content (first 2000 characters)
       const previewContent = this.generatePreviewContent(normalizedEntries);
@@ -41,55 +83,77 @@ export class LogService {
         entries: normalizedEntries,
       }, null, 2);
 
-      // Upload to S3
-      const storageResult = await this.storageService.uploadLogContent(jobId, storageContent);
-
-      // Create JobLog record in database
-      const jobLog = await prisma.jobLog.create({
-        data: {
-          jobId,
-          agentType,
-          status: 'COMPLETED',
-          previewContent,
-          fullLogReference: storageResult.storageKey,
-          storageLocation: 'S3',
-          contentSize: storageResult.contentSize,
-          contentHash: storageResult.contentHash,
-          expirationDate: storageResult.expirationDate,
-        },
-        include: {
-          logEntries: true,
-        },
-      });
-
-      // Create LogEntry records
-      const logEntries = await Promise.all(
-        normalizedEntries.map((entry, index) =>
-          prisma.logEntry.create({
-            data: {
-              jobLogId: jobLog.id,
-              sequenceNumber: index + 1,
-              timestamp: new Date(entry.timestamp),
-              messageType: entry.messageType,
-              content: entry.content,
-              toolName: entry.toolName,
-              metadata: entry.metadata,
-            },
-          })
-        )
+      // Upload to S3 with retry
+      const storageResult = await this.withRetry(
+        () => this.storageService.uploadLogContent(jobId, storageContent),
+        3,
+        1000
       );
 
-      // Create LogStorage record
-      await prisma.logStorage.create({
-        data: {
-          jobLogId: jobLog.id,
-          storageProvider: 'S3',
-          storageKey: storageResult.storageKey,
-          contentSize: storageResult.contentSize,
-          contentHash: storageResult.contentHash,
-          expirationDate: storageResult.expirationDate,
+      // Create JobLog record in database with retry
+      const jobLog = await this.withRetry(
+        async () => {
+          return await prisma.jobLog.create({
+            data: {
+              jobId,
+              agentType,
+              status: 'COMPLETED',
+              previewContent,
+              fullLogReference: storageResult.storageKey,
+              storageLocation: 'S3',
+              contentSize: storageResult.contentSize,
+              contentHash: storageResult.contentHash,
+              expirationDate: storageResult.expirationDate,
+            },
+            include: {
+              logEntries: true,
+            },
+          });
         },
-      });
+        3,
+        1000
+      );
+
+      // Create LogEntry records with retry
+      const logEntries = await this.withRetry(
+        async () => {
+          return await Promise.all(
+            normalizedEntries.map((entry, index) =>
+              prisma.logEntry.create({
+                data: {
+                  jobLogId: jobLog.id,
+                  sequenceNumber: index + 1,
+                  timestamp: new Date(entry.timestamp),
+                  messageType: entry.messageType,
+                  content: entry.content,
+                  toolName: entry.toolName,
+                  metadata: entry.metadata,
+                },
+              })
+            )
+          );
+        },
+        3,
+        1000
+      );
+
+      // Create LogStorage record with retry
+      await this.withRetry(
+        async () => {
+          await prisma.logStorage.create({
+            data: {
+              jobLogId: jobLog.id,
+              storageProvider: 'S3',
+              storageKey: storageResult.storageKey,
+              contentSize: storageResult.contentSize,
+              contentHash: storageResult.contentHash,
+              expirationDate: storageResult.expirationDate,
+            },
+          });
+        },
+        3,
+        1000
+      );
 
       return {
         success: true,
@@ -98,7 +162,7 @@ export class LogService {
         previewContent,
       };
     } catch (error) {
-      console.error('Failed to capture logs:', {
+      console.error('Failed to capture logs after retries:', {
         jobId,
         agentType,
         error,
@@ -113,9 +177,18 @@ export class LogService {
   }
 
   /**
-   * Retrieve logs for a job
+   * Retrieve logs for a job with caching
    */
   async getJobLogs(jobId: number): Promise<LogRetrievalResponse | null> {
+    // Check cache first
+    const now = Date.now();
+    const cached = logCache.get(jobId);
+    
+    if (cached && cached.expiresAt > now) {
+      console.log(`[LogService] Cache hit for job ${jobId}`);
+      return cached.data;
+    }
+
     try {
       // Find job log with entries
       const jobLog = await prisma.jobLog.findUnique({
@@ -138,7 +211,7 @@ export class LogService {
         fullLogUrl = await this.storageService.generatePresignedUrl(jobLog.storage.storageKey);
       }
 
-      return {
+      const response: LogRetrievalResponse = {
         jobId,
         agentType: jobLog.agentType,
         status: jobLog.status,
@@ -158,6 +231,16 @@ export class LogService {
         contentSize: jobLog.contentSize,
         expirationDate: jobLog.expirationDate.toISOString(),
       };
+
+      // Cache the response
+      logCache.set(jobId, {
+        data: response,
+        timestamp: now,
+        expiresAt: now + CACHE_TTL_MS,
+      });
+
+      console.log(`[LogService] Cached logs for job ${jobId} (TTL: ${CACHE_TTL_MS}ms)`);
+      return response;
     } catch (error) {
       console.error('Failed to retrieve logs:', {
         jobId,
@@ -165,6 +248,23 @@ export class LogService {
       });
       throw new Error(`Failed to retrieve logs: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  /**
+   * Clear cache for a specific job
+   */
+  clearJobCache(jobId: number): void {
+    logCache.delete(jobId);
+    console.log(`[LogService] Cleared cache for job ${jobId}`);
+  }
+
+  /**
+   * Clear all cached logs
+   */
+  clearAllCache(): void {
+    const count = logCache.size;
+    logCache.clear();
+    console.log(`[LogService] Cleared all cache entries (${count} removed)`);
   }
 
   /**
