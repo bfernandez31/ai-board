@@ -143,7 +143,14 @@ describe('LogViewerSheet (AIB-715 US3)', () => {
       />
     );
 
-    const anchor = await screen.findByTestId('log-viewer-download');
+    // The download element is rendered as a disabled <Button> during loading
+    // and swaps to an <a> wrapping an enabled <Button> once data resolves.
+    // Wait for the enabled anchor form to appear before asserting the href.
+    const anchor = await waitFor(() => {
+      const el = screen.getByTestId('log-viewer-download');
+      expect(el.tagName).toBe('A');
+      return el;
+    });
     expect(anchor.getAttribute('href')).toBe(
       '/api/projects/7/tickets/11/jobs/99/logs/raw?format=jsonl'
     );

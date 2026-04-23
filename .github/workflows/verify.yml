@@ -708,18 +708,6 @@ jobs:
             echo "has_score=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Capture Agent Execution Logs
-        if: ${{ always() && inputs.job_id }}
-        env:
-          JOB_ID: ${{ inputs.job_id }}
-          PROJECT_ID: ${{ inputs.project_id }}
-          TICKET_ID: ${{ inputs.ticket_id }}
-          APP_URL: ${{ vars.APP_URL }}
-          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
-          AGENT_TYPE: ${{ inputs.agent }}
-        run: |
-          ../ai-board/.github/scripts/capture-agent-logs.sh || true
-
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
         run: |
@@ -769,7 +757,19 @@ jobs:
             -d '{"status": "CANCELLED"}' \
             -f -s -S || echo "⚠️ Failed to update job status to CANCELLED"
 
-      
+      # Runs AFTER the terminal status PATCH above so POST /api/jobs/:id/logs
+      # doesn't reject with 422 JOB_NOT_TERMINAL while the job is RUNNING.
+      - name: Capture Agent Execution Logs
+        if: ${{ always() && inputs.job_id }}
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          PROJECT_ID: ${{ inputs.project_id }}
+          TICKET_ID: ${{ inputs.ticket_id }}
+          APP_URL: ${{ vars.APP_URL }}
+          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+          AGENT_TYPE: ${{ inputs.agent }}
+        run: |
+          ../ai-board/.github/scripts/capture-agent-logs.sh || true
 
       - name: Report Success (Skipped)
         if: ${{ success() && env.SKIP_EXECUTION == 'true' }}

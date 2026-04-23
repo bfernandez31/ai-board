@@ -83,22 +83,38 @@ describe('PUT /api/jobs/:id/logs/artifact', () => {
     expect(res.status).toBe(413);
   });
 
-  it('returns 201 with derived artifactKey on success (or 502 if Blob unconfigured)', async () => {
-    const payload = gzipSync(Buffer.from(JSON.stringify({ schemaVersion: 1 }) + '\n'));
-    const res = await putArtifact(
-      `/api/jobs/${jobId}/logs/artifact`,
-      payload,
-      'application/gzip',
-      true
-    );
-    if (res.status === 201) {
+  const blobConfigured = !!process.env.BLOB_READ_WRITE_TOKEN;
+
+  it.skipIf(!blobConfigured)(
+    'returns 201 with derived artifactKey on Blob-configured success',
+    async () => {
+      const payload = gzipSync(Buffer.from(JSON.stringify({ schemaVersion: 1 }) + '\n'));
+      const res = await putArtifact(
+        `/api/jobs/${jobId}/logs/artifact`,
+        payload,
+        'application/gzip',
+        true
+      );
+      expect(res.status).toBe(201);
       const data = (await res.json()) as { artifactKey: string; artifactSize: number };
       expect(data.artifactKey).toBe(`logs/${ctx.projectId}/${ticketId}/${jobId}.jsonl.gz`);
       expect(data.artifactSize).toBe(payload.byteLength);
-    } else {
-      // Without BLOB_READ_WRITE_TOKEN configured in CI the upload step itself
-      // will fail with 502 — accept that, but never 5xx unrelated to Blob.
-      expect([502, 500]).toContain(res.status);
     }
-  });
+  );
+
+  it.skipIf(blobConfigured)(
+    'returns 502 BLOB_UPLOAD_FAILED when Blob is not configured',
+    async () => {
+      const payload = gzipSync(Buffer.from(JSON.stringify({ schemaVersion: 1 }) + '\n'));
+      const res = await putArtifact(
+        `/api/jobs/${jobId}/logs/artifact`,
+        payload,
+        'application/gzip',
+        true
+      );
+      expect(res.status).toBe(502);
+      const body = (await res.json()) as { code?: string };
+      expect(body.code).toBe('BLOB_UPLOAD_FAILED');
+    }
+  );
 });

@@ -806,9 +806,20 @@ else
 fi
 
 if [[ "${dispatch_exit}" -ne 0 ]]; then
-  _capture_agent_end_kind="upstream_error"
+  # SIGINT (130) and SIGTERM (143) indicate external cancellation of the agent
+  # process. Classify as cancelled so the log capture produces a CANCELLED
+  # preview instead of an upstream_error one.
+  case "${dispatch_exit}" in
+    130|143) _capture_agent_end_kind="cancelled" ;;
+    *) _capture_agent_end_kind="upstream_error" ;;
+  esac
 fi
 
 export CAPTURE_END_KIND="${_capture_agent_end_kind}"
+# Persist across step boundaries so the capture step (a fresh shell) can read
+# it from the workflow environment — `export` alone does not cross steps.
+if [[ -n "${GITHUB_ENV:-}" ]]; then
+  echo "CAPTURE_END_KIND=${_capture_agent_end_kind}" >> "${GITHUB_ENV}"
+fi
 
 exit "${dispatch_exit}"

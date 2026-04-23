@@ -38,7 +38,7 @@ export async function POST(
 
   const job = await prisma.job.findUnique({
     where: { id: jobId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, projectId: true, ticketId: true },
   });
   if (!job) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
@@ -70,6 +70,11 @@ export async function POST(
       update: data,
     });
 
+    const rawUrl =
+      row.captureStatus === 'CAPTURED'
+        ? `/api/projects/${job.projectId}/tickets/${job.ticketId}/jobs/${jobId}/logs/raw`
+        : null;
+
     return NextResponse.json(
       {
         captureStatus: row.captureStatus,
@@ -79,7 +84,7 @@ export async function POST(
         errorCount: row.errorCount,
         artifactSize: row.artifactSize,
         capturedAt: row.capturedAt.toISOString(),
-        rawUrl: null,
+        rawUrl,
       },
       { status: 200, headers: { 'Cache-Control': 'no-store' } }
     );

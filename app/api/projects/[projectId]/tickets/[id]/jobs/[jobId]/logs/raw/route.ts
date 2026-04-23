@@ -65,9 +65,13 @@ export async function GET(
   const isDownload = url.searchParams.get('format') === 'jsonl';
   const ticketKey = ticket.ticketKey ?? `ticket-${ticketId}`;
 
+  // NOTE: We do NOT set Content-Encoding: gzip here. The body is an opaque
+  // gzipped file (an archive), not a gzip-encoded response. Setting
+  // Content-Encoding would make fetch() transparently decompress it, which
+  // would then conflict with the client-side DecompressionStream pipeline
+  // used to parse the NDJSON payload.
   const headers: Record<string, string> = {
     'Content-Type': 'application/gzip',
-    'Content-Encoding': 'gzip',
     'Cache-Control': 'private, max-age=60',
     'Content-Length': String(result.size),
   };

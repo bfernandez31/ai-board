@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
-import { uploadJobLogArtifact } from '@/app/lib/blob/client';
+import { deleteJobLogArtifact, uploadJobLogArtifact } from '@/app/lib/blob/client';
 import { ARTIFACT_MAX_BYTES } from '@/app/lib/logs/schema';
 
 export async function PUT(
@@ -76,4 +76,40 @@ export async function PUT(
     { artifactKey, artifactSize: buffer.byteLength },
     { status: 201 }
   );
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  const auth = validateWorkflowAuth(request);
+  if (!auth.isValid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { id: jobIdString } = await context.params;
+  const jobId = parseInt(jobIdString, 10);
+  if (!Number.isFinite(jobId) || jobId <= 0) {
+    return NextResponse.json({ error: 'Invalid job ID' }, { status: 400 });
+  }
+
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    select: { projectId: true, ticketId: true },
+  });
+  if (!job) {
+    return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+  }
+
+  const artifactKey = `logs/${job.projectId}/${job.ticketId}/${jobId}.jsonl.gz`;
+  try {
+    const result = await deleteJobLogArtifact(artifactKey);
+    return NextResponse.json({ deleted: result.deleted }, { status: 200 });
+  } catch (error) {
+    console.error('[DELETE /jobs/:id/logs/artifact] Blob delete failed', error);
+    return NextResponse.json(
+      { error: 'Blob backend unavailable', code: 'BLOB_DELETE_FAILED' },
+      { status: 502 }
+    );
+  }
 }

@@ -83,31 +83,38 @@ fi
 
 # ---------- Phase 3: Redact ----------
 
-node --input-type=module -e "
-import('${LIB_DIR}/redactor.mjs').then(mod => {
-  const { redactEvents } = mod;
-  const fs = require('node:fs');
-  const raw = fs.readFileSync('${NORMALIZED}', 'utf-8');
-  const lines = raw.split(/\r?\n/).filter(l => l.length > 0);
-  const header = JSON.parse(lines[0]);
-  const events = lines.slice(1).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
-  const redacted = redactEvents(events);
-  const out = [JSON.stringify(header)].concat(redacted.map(e => JSON.stringify(e)));
-  fs.writeFileSync('${REDACTED}', out.join('\n') + '\n');
-});
-" >/dev/null 2>&1 || cp "${NORMALIZED}" "${REDACTED}"
+redact_events() {
+  node --input-type=module -e "
+import { readFileSync, writeFileSync } from 'node:fs';
+import { redactEvents } from '${LIB_DIR}/redactor.mjs';
+const raw = readFileSync('${NORMALIZED}', 'utf-8');
+const lines = raw.split(/\r?\n/).filter(l => l.length > 0);
+const header = JSON.parse(lines[0]);
+const events = lines.slice(1).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+const redacted = redactEvents(events);
+const out = [JSON.stringify(header)].concat(redacted.map(e => JSON.stringify(e)));
+writeFileSync('${REDACTED}', out.join('\n') + '\n');
+"
+}
+
+if ! redact_events 2>/tmp/redact-error.log; then
+  echo "capture-agent-logs: redaction failed, omitting artifact to avoid leaking secrets" >&2
+  cat /tmp/redact-error.log >&2 2>/dev/null || true
+  CAPTURE_STATUS_FORCED="UNAVAILABLE"
+  : > "${REDACTED}"
+fi
 
 # ---------- Phase 4: Derive preview ----------
 
-CAPTURE_STATUS="CAPTURED"
-EVENT_COUNT=$(($(wc -l < "${REDACTED}") - 1))
+CAPTURE_STATUS="${CAPTURE_STATUS_FORCED:-CAPTURED}"
+EVENT_COUNT=$(($(wc -l < "${REDACTED}" 2>/dev/null || echo 0) - 1))
 if [[ "${EVENT_COUNT}" -lt 0 ]]; then EVENT_COUNT=0; fi
 ERROR_COUNT=$(grep -c '"type":"error"' "${REDACTED}" 2>/dev/null || echo 0)
 
 derive_preview() {
   node --input-type=module -e "
-const fs = require('node:fs');
-const raw = fs.readFileSync('${REDACTED}', 'utf-8');
+import { readFileSync } from 'node:fs';
+const raw = readFileSync('${REDACTED}', 'utf-8');
 const lines = raw.split(/\r?\n/).filter(l => l.length > 0).slice(1);
 const events = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
 const status = process.env.CAPTURE_END_KIND === 'cancelled' ? 'CANCELLED'
@@ -144,39 +151,57 @@ fi
 
 # ---------- Phase 5: Compress + upload artifact ----------
 
-gzip -c "${REDACTED}" > "${ARTIFACT}"
-ARTIFACT_SIZE=$(stat -c%s "${ARTIFACT}" 2>/dev/null || stat -f%z "${ARTIFACT}" 2>/dev/null || wc -c < "${ARTIFACT}")
+ARTIFACT_KEY=""
+ARTIFACT_SIZE=0
 
-ARTIFACT_KEY="logs/${PROJECT_ID}/${TICKET_ID}/${JOB_ID}.jsonl.gz"
+if [[ "${CAPTURE_STATUS}" == "CAPTURED" ]]; then
+  gzip -c "${REDACTED}" > "${ARTIFACT}"
+  ARTIFACT_SIZE=$(stat -c%s "${ARTIFACT}" 2>/dev/null || stat -f%z "${ARTIFACT}" 2>/dev/null || wc -c < "${ARTIFACT}")
 
-put_artifact() {
-  local attempt=0
-  local delay=1
-  while [[ ${attempt} -lt 3 ]]; do
-    local code
-    code=$(curl -sS -o /tmp/upload-response.json -w "%{http_code}" \
-      -X PUT "${APP_URL}/api/jobs/${JOB_ID}/logs/artifact" \
-      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-      -H "Content-Type: application/gzip" \
-      --data-binary @"${ARTIFACT}" || echo "000")
-    if [[ "${code}" == "201" ]]; then
-      return 0
+  put_artifact() {
+    local attempt=0
+    local delay=1
+    while [[ ${attempt} -lt 3 ]]; do
+      local code
+      code=$(curl -sS -o /tmp/upload-response.json -w "%{http_code}" \
+        -X PUT "${APP_URL}/api/jobs/${JOB_ID}/logs/artifact" \
+        -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+        -H "Content-Type: application/gzip" \
+        --data-binary @"${ARTIFACT}" || echo "000")
+      if [[ "${code}" == "201" ]]; then
+        return 0
+      fi
+      if [[ "${code}" =~ ^4 ]]; then
+        echo "capture-agent-logs: FAILED status=${code} reason=non_retriable_upload" >&2
+        return 1
+      fi
+      attempt=$((attempt + 1))
+      sleep "${delay}"
+      delay=$((delay * 2))
+    done
+    echo "capture-agent-logs: FAILED status=retry_exhausted reason=upload_timeout" >&2
+    return 1
+  }
+
+  if put_artifact; then
+    # The server returns the canonical artifactKey derived from the job's DB
+    # projectId/ticketId. Use that rather than reconstructing it client-side,
+    # since TICKET_ID may be a ticket key (e.g. "AIB-123") in workflow inputs.
+    ARTIFACT_KEY=$(node --input-type=module -e "
+import { readFileSync } from 'node:fs';
+try {
+  const data = JSON.parse(readFileSync('/tmp/upload-response.json', 'utf-8'));
+  if (typeof data.artifactKey === 'string') process.stdout.write(data.artifactKey);
+} catch {}
+" 2>/dev/null)
+    if [[ -z "${ARTIFACT_KEY}" ]]; then
+      CAPTURE_STATUS="UNAVAILABLE"
+      PREVIEW="Logs unavailable — capture failed."
     fi
-    if [[ "${code}" =~ ^4 ]]; then
-      echo "capture-agent-logs: FAILED status=${code} reason=non_retriable_upload" >&2
-      return 1
-    fi
-    attempt=$((attempt + 1))
-    sleep "${delay}"
-    delay=$((delay * 2))
-  done
-  echo "capture-agent-logs: FAILED status=retry_exhausted reason=upload_timeout" >&2
-  return 1
-}
-
-if ! put_artifact; then
-  CAPTURE_STATUS="UNAVAILABLE"
-  PREVIEW="Logs unavailable — capture failed."
+  else
+    CAPTURE_STATUS="UNAVAILABLE"
+    PREVIEW="Logs unavailable — capture failed."
+  fi
 fi
 
 # ---------- Phase 6: Submit summary ----------
@@ -219,7 +244,19 @@ post_summary() {
   return 1
 }
 
+delete_orphan_artifact() {
+  [[ -z "${ARTIFACT_KEY}" ]] && return 0
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X DELETE "${APP_URL}/api/jobs/${JOB_ID}/logs/artifact" \
+    -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+    >/dev/null 2>&1 || true
+}
+
 SUMMARY_BODY="$(build_summary_body)"
-post_summary "${SUMMARY_BODY}" || true
+if ! post_summary "${SUMMARY_BODY}"; then
+  # Summary write failed permanently — the Blob artifact is orphaned because
+  # no JobLog row references it. Delete it so storage doesn't leak.
+  delete_orphan_artifact
+fi
 
 exit 0

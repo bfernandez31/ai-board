@@ -13,7 +13,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const startedAt = Date.now();
-  const retentionDays = Number(process.env.LOG_RETENTION_DAYS ?? DEFAULT_RETENTION_DAYS);
+  const parsedRetentionDays = Number(process.env.LOG_RETENTION_DAYS ?? DEFAULT_RETENTION_DAYS);
+  const retentionDays = Number.isFinite(parsedRetentionDays)
+    ? Math.max(1, parsedRetentionDays)
+    : DEFAULT_RETENTION_DAYS;
   const cutoff = new Date(Date.now() - retentionDays * 86_400_000);
   const blobConfigured = isConfigured();
 
@@ -36,7 +39,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       const confirmedIds: number[] = [];
       for (const row of batch) {
-        if (row.artifactKey && blobConfigured) {
+        if (row.artifactKey) {
+          if (!blobConfigured) {
+            // We can't delete the Blob artifact without a token — skip this
+            // row so storage doesn't silently leak. The row will be retried
+            // on the next cycle once Blob is configured.
+            skippedCount += 1;
+            continue;
+          }
           try {
             await deleteJobLogArtifact(row.artifactKey);
           } catch (error) {
@@ -49,10 +59,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
 
       if (confirmedIds.length > 0) {
-        const result = await prisma.jobLog.deleteMany({
+        // Mark the row as PRUNED rather than deleting it so the UI can still
+        // show a "logs no longer retained" placeholder for old jobs.
+        const result = await prisma.jobLog.updateMany({
           where: {
             id: { in: confirmedIds },
             captureStatus: { not: 'PRUNED' },
+          },
+          data: {
+            captureStatus: 'PRUNED',
+            artifactKey: null,
+            artifactSize: null,
           },
         });
         prunedCount += result.count;

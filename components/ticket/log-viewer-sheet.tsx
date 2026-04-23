@@ -36,6 +36,7 @@ export function LogViewerSheet({
   const rawUrl = `/api/projects/${projectId}/tickets/${ticketId}/jobs/${jobId}/logs/raw?format=jsonl`;
   const fileName = `job-${jobId}.jsonl.gz`;
   const isBlobError = error instanceof Error && /HTTP 502/.test(error.message);
+  const downloadDisabled = !data || isError;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -90,22 +91,30 @@ export function LogViewerSheet({
         </div>
 
         <SheetFooter className="mt-4">
-          <a
-            href={rawUrl}
-            download={fileName}
-            data-testid="log-viewer-download"
-          >
+          {downloadDisabled ? (
             <Button
               variant="outline"
               size="sm"
               type="button"
-              disabled={!data || isError}
+              disabled
               className="gap-2"
+              data-testid="log-viewer-download"
             >
               <Download className="w-3.5 h-3.5" />
               Download raw
             </Button>
-          </a>
+          ) : (
+            <a
+              href={rawUrl}
+              download={fileName}
+              data-testid="log-viewer-download"
+            >
+              <Button variant="outline" size="sm" type="button" className="gap-2">
+                <Download className="w-3.5 h-3.5" />
+                Download raw
+              </Button>
+            </a>
+          )}
         </SheetFooter>
       </SheetContent>
     </Sheet>

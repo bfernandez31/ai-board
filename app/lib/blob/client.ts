@@ -1,4 +1,4 @@
-import { put, del, head, type PutBlobResult } from '@vercel/blob';
+import { put, del, get, type PutBlobResult } from '@vercel/blob';
 
 function requireToken(): string {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
@@ -22,8 +22,11 @@ export async function uploadJobLogArtifact(
     throw new Error('Artifact size must be positive');
   }
   const buf = Buffer.isBuffer(body) ? body : Buffer.from(body);
+  // Private access so deterministic keys (`logs/<projectId>/<ticketId>/<jobId>.jsonl.gz`)
+  // aren't world-readable via guessed URLs — reads go through the authenticated
+  // raw-log route, which proxies via `get()` below.
   return put(key, buf, {
-    access: 'public',
+    access: 'private',
     token,
     contentType: 'application/gzip',
     addRandomSuffix: false,
@@ -35,20 +38,16 @@ export async function streamJobLogArtifact(
   key: string
 ): Promise<{ stream: ReadableStream<Uint8Array>; size: number } | null> {
   const token = requireToken();
-  let info;
+  let result;
   try {
-    info = await head(key, { token });
+    result = await get(key, { access: 'private', token });
   } catch (error) {
     const status = (error as { status?: number } | null)?.status;
     if (status === 404) return null;
     throw error;
   }
-  const response = await fetch(info.url);
-  if (response.status === 404) return null;
-  if (!response.ok || !response.body) {
-    throw new Error(`Blob fetch failed: HTTP ${response.status}`);
-  }
-  return { stream: response.body, size: info.size };
+  if (!result || result.statusCode !== 200 || !result.stream) return null;
+  return { stream: result.stream, size: result.blob.size };
 }
 
 export async function deleteJobLogArtifact(key: string): Promise<{ deleted: boolean }> {

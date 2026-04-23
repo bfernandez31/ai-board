@@ -494,7 +494,28 @@ Stream the gzipped JSONL transcript to Vercel Blob via the authenticated proxy.
 - `401`: Invalid or missing workflow token
 - `413`: Artifact exceeds 25 MB gzipped
 - `415`: Content-Type is not `application/gzip`
-- `500`: Upstream Blob write failure
+- `502`: Upstream Blob write failure (`code: BLOB_UPLOAD_FAILED`)
+
+### DELETE /api/jobs/:id/logs/artifact
+
+Delete an orphaned Blob artifact for a job (called by the capture script when the `POST /api/jobs/:id/logs` summary fails permanently, leaving the artifact without a `JobLog` row to reference it).
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation
+
+**Path Parameters**:
+- `id` (number, required): Job ID
+
+**Response** (200 OK):
+```json
+{ "deleted": true }
+```
+`deleted` is `false` when no matching Blob object exists.
+
+**Errors**:
+- `401`: Invalid or missing workflow token
+- `404`: Job not found
+- `502`: Upstream Blob delete failure (`code: BLOB_DELETE_FAILED`)
 
 ### GET /api/projects/:projectId/tickets/:ticketId/jobs/:jobId/logs
 

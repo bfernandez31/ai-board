@@ -64,29 +64,58 @@ describe('POST /api/maintenance/prune-logs', () => {
     expect(res.status).toBe(401);
   });
 
-  it('prunes aged rows and reports the count; second run is a no-op', async () => {
-    const ids = await seedAged(3);
-    const first = await workflowApi().post<{ prunedCount: number; skippedCount: number }>(
-      '/api/maintenance/prune-logs'
-    );
-    expect(first.status).toBe(200);
-    expect(first.data.prunedCount).toBeGreaterThanOrEqual(3);
+  const blobConfigured = !!process.env.BLOB_READ_WRITE_TOKEN;
 
-    const remaining = await prisma.jobLog.findMany({
-      where: { jobId: { in: ids } },
-    });
-    expect(remaining).toHaveLength(0);
+  it.skipIf(!blobConfigured)(
+    'marks aged rows PRUNED (not deleted) and reports the count; second run is a no-op',
+    async () => {
+      const ids = await seedAged(3);
+      const first = await workflowApi().post<{ prunedCount: number; skippedCount: number }>(
+        '/api/maintenance/prune-logs'
+      );
+      expect(first.status).toBe(200);
+      expect(first.data.prunedCount).toBeGreaterThanOrEqual(3);
 
-    const second = await workflowApi().post<{ prunedCount: number }>(
-      '/api/maintenance/prune-logs'
-    );
-    expect(second.status).toBe(200);
-    expect(second.data.prunedCount).toBe(0);
-  });
+      const remaining = await prisma.jobLog.findMany({
+        where: { jobId: { in: ids } },
+      });
+      expect(remaining.length).toBeGreaterThanOrEqual(3);
+      for (const row of remaining) {
+        expect(row.captureStatus).toBe('PRUNED');
+        expect(row.artifactKey).toBeNull();
+        expect(row.artifactSize).toBeNull();
+      }
 
-  it('treats Blob 404 as success (artifactKey absent → simply deletes row)', async () => {
-    // Create one aged row WITHOUT an artifactKey (UNAVAILABLE) to exercise
-    // the no-blob branch, which mirrors the 404-tolerance contract.
+      const second = await workflowApi().post<{ prunedCount: number }>(
+        '/api/maintenance/prune-logs'
+      );
+      expect(second.status).toBe(200);
+      expect(second.data.prunedCount).toBe(0);
+    }
+  );
+
+  it.skipIf(blobConfigured)(
+    'skips rows with artifactKey when Blob is unconfigured (avoids orphan leak)',
+    async () => {
+      const ids = await seedAged(2);
+      const res = await workflowApi().post<{ prunedCount: number; skippedCount: number }>(
+        '/api/maintenance/prune-logs'
+      );
+      expect(res.status).toBe(200);
+      expect(res.data.prunedCount).toBe(0);
+      expect(res.data.skippedCount).toBeGreaterThanOrEqual(2);
+
+      const remaining = await prisma.jobLog.findMany({ where: { jobId: { in: ids } } });
+      expect(remaining.length).toBe(2);
+      for (const row of remaining) {
+        expect(row.captureStatus).toBe('CAPTURED');
+      }
+    }
+  );
+
+  it('marks aged row without artifactKey as PRUNED regardless of Blob config', async () => {
+    // Rows without artifactKey (e.g. UNAVAILABLE captures) have no Blob object
+    // to clean up, so pruning works even when BLOB_READ_WRITE_TOKEN is unset.
     const job = await prisma.job.create({
       data: {
         ticketId,
@@ -114,7 +143,8 @@ describe('POST /api/maintenance/prune-logs', () => {
     expect(res.status).toBe(200);
     expect(res.data.prunedCount).toBeGreaterThanOrEqual(1);
 
-    const remaining = await prisma.jobLog.findUnique({ where: { jobId: job.id } });
-    expect(remaining).toBeNull();
+    const row = await prisma.jobLog.findUnique({ where: { jobId: job.id } });
+    expect(row).not.toBeNull();
+    expect(row?.captureStatus).toBe('PRUNED');
   });
 });
