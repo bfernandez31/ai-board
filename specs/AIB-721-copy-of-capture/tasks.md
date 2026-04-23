@@ -159,8 +159,8 @@
 
 **Purpose**: Cross-story verification and integration with existing test suites.
 
-- [ ] T036 [P] Extend `tests/integration/jobs/status.test.ts` — verify Job.logStatus reflects correctly after log upload (NONE → AVAILABLE transition) and that status endpoint behavior is unaffected by log feature
-- [ ] T037 Run full verification: `bun run type-check`, `bun run lint`, `bun run test:unit`, `bun run test:integration` — fix any regressions or cross-cutting issues
+- [x] T036 [P] Extend `tests/integration/jobs/status.test.ts` — verify Job.logStatus reflects correctly after log upload (NONE → AVAILABLE transition) and that status endpoint behavior is unaffected by log feature
+- [x] T037 Run full verification: `bun run type-check`, `bun run lint`, `bun run test:unit`, `bun run test:integration` — fix any regressions or cross-cutting issues
 
 ---
 

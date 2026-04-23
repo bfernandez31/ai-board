@@ -450,5 +450,22 @@ describe('Jobs Status', () => {
       expect(ticket?.jobs[1]?.status).toBe('PENDING');
       expect(ticket?.jobs[1]?.command).toBe('plan');
     });
+
+    it('should reflect logStatus NONE → AVAILABLE after log upload', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'COMPLETED' });
+
+      const jobBefore = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(jobBefore?.logStatus).toBe('NONE');
+
+      await workflowApi.post(`/api/jobs/${jobId}/logs`, {
+        agentType: 'CLAUDE',
+        rawOutput: 'Test log output for status verification',
+      });
+
+      const jobAfter = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(jobAfter?.logStatus).toBe('AVAILABLE');
+      expect(jobAfter?.logSummary).toBeTruthy();
+    });
   });
 });
