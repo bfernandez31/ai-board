@@ -64,8 +64,8 @@ function deepRedact(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(deepRedact);
   if (typeof value === 'object') {
     const result: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      result[k] = deepRedact(v);
+    for (const [key, nestedValue] of Object.entries(value as Record<string, unknown>)) {
+      result[key] = deepRedact(nestedValue);
     }
     return result;
   }

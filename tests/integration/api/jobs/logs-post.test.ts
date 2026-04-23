@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildJobLogArtifactKey } from '@/app/lib/logs/artifact-key';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { POST } from '@/app/api/jobs/[id]/logs/route';
@@ -40,6 +41,10 @@ describe('POST /api/jobs/:id/logs', () => {
     jobId = job.id;
   });
 
+  function buildArtifactKey(targetJobId: number): string {
+    return buildJobLogArtifactKey(ctx.projectId, ticketId, targetJobId);
+  }
+
   async function postLog(targetJobId: number, body: unknown): Promise<Response> {
     return POST(
       new NextRequest(`http://localhost/api/jobs/${targetJobId}/logs`, {
@@ -66,7 +71,7 @@ describe('POST /api/jobs/:id/logs', () => {
           schemaVersion: 1,
           eventCount: 1,
           errorCount: 0,
-          artifactKey: `logs/${ctx.projectId}/${ticketId}/${jobId}.jsonl.gz`,
+          artifactKey: buildArtifactKey(jobId),
           artifactSize: 100,
         }),
       }),
@@ -106,7 +111,7 @@ describe('POST /api/jobs/:id/logs', () => {
       schemaVersion: 1,
       eventCount: 0,
       errorCount: 0,
-      artifactKey: `logs/${ctx.projectId}/${ticketId}/${jobId}.jsonl.gz`,
+      artifactKey: buildArtifactKey(jobId),
       artifactSize: 100,
     });
     expect(res.status).toBe(400);
@@ -119,7 +124,7 @@ describe('POST /api/jobs/:id/logs', () => {
       schemaVersion: 1,
       eventCount: 5,
       errorCount: 0,
-      artifactKey: `logs/${ctx.projectId}/${ticketId}/${jobId}.jsonl.gz`,
+      artifactKey: buildArtifactKey(jobId),
       artifactSize: 1234,
     };
     const first = await postLog(jobId, body);
@@ -147,7 +152,7 @@ describe('POST /api/jobs/:id/logs', () => {
       schemaVersion: 1,
       eventCount: 1,
       errorCount: 0,
-      artifactKey: `logs/${ctx.projectId}/${ticketId}/${jobId}.jsonl.gz`,
+      artifactKey: buildArtifactKey(jobId),
       artifactSize: 100,
     });
 

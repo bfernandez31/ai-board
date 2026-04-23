@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildJobLogArtifactKey } from '@/app/lib/logs/artifact-key';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { PUT } from '@/app/api/jobs/[id]/logs/artifact/route';
@@ -46,7 +47,7 @@ describe('PUT artifact route overwrite observability', () => {
   });
 
   it('logs when a retried upload overwrites an existing captured artifact', async () => {
-    const artifactKey = `logs/${ctx.projectId}/${ticketId}/${jobId}.jsonl.gz`;
+    const artifactKey = buildJobLogArtifactKey(ctx.projectId, ticketId, jobId);
     await prisma.jobLog.create({
       data: {
         jobId,
@@ -77,7 +78,11 @@ describe('PUT artifact route overwrite observability', () => {
     );
 
     expect(response.status).toBe(201);
-    expect(uploadJobLogArtifact).toHaveBeenCalledWith(artifactKey, expect.any(Buffer), payload.byteLength);
+    expect(uploadJobLogArtifact).toHaveBeenCalledWith(
+      artifactKey,
+      expect.any(Buffer),
+      payload.byteLength
+    );
     expect(infoSpy).toHaveBeenCalledWith(
       '[PUT /jobs/:id/logs/artifact] Overwriting existing artifact for retried job run',
       expect.objectContaining({ artifactKey, jobId })

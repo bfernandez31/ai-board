@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildJobLogArtifactKey, buildJobLogRawUrl } from '@/app/lib/logs/artifact-key';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { GET } from '@/app/api/projects/[projectId]/tickets/[id]/jobs/[jobId]/logs/raw/route';
@@ -45,6 +46,8 @@ describe('GET raw log route hardening', () => {
   });
 
   it('rejects a stored artifactKey that does not match the canonical job path', async () => {
+    const canonicalArtifactKey = buildJobLogArtifactKey(ctx.projectId, ticketId, jobId);
+
     await prisma.jobLog.create({
       data: {
         jobId,
@@ -53,7 +56,10 @@ describe('GET raw log route hardening', () => {
         schemaVersion: 1,
         eventCount: 1,
         errorCount: 0,
-        artifactKey: `logs/999/${ticketId}/${jobId}.jsonl.gz`,
+        artifactKey: canonicalArtifactKey.replace(
+          `logs/${ctx.projectId}/`,
+          'logs/999/'
+        ),
         artifactSize: 42,
       },
     });
@@ -62,7 +68,7 @@ describe('GET raw log route hardening', () => {
 
     const response = await GET(
       new NextRequest(
-        `http://localhost/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs/${jobId}/logs/raw`
+        `http://localhost${buildJobLogRawUrl(ctx.projectId, ticketId, jobId)}`
       ),
       {
         params: Promise.resolve({

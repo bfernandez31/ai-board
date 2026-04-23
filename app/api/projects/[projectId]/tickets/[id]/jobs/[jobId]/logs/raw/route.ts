@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { verifyTicketAccess } from '@/lib/db/auth-helpers';
 import { streamJobLogArtifact } from '@/app/lib/blob/client';
-import { buildJobLogArtifactKey } from '@/app/lib/logs/artifact-key';
+import { buildJobLogArtifactKey, buildJobLogRawUrl } from '@/app/lib/logs/artifact-key';
 
 export async function GET(
   request: NextRequest,
@@ -48,12 +48,13 @@ export async function GET(
     return NextResponse.json({ error: 'Artifact not available' }, { status: 404 });
   }
 
-  const canonicalArtifactKey = buildJobLogArtifactKey(projectId, ticketId, jobId);
-  if (log.artifactKey !== canonicalArtifactKey) {
+  const artifactKey = buildJobLogArtifactKey(projectId, ticketId, jobId);
+  if (log.artifactKey !== artifactKey) {
     console.error('[GET /logs/raw] Stored artifact key mismatch', {
       jobId,
-      expectedArtifactKey: canonicalArtifactKey,
+      expectedArtifactKey: artifactKey,
       actualArtifactKey: log.artifactKey,
+      rawUrl: buildJobLogRawUrl(projectId, ticketId, jobId),
     });
     return NextResponse.json(
       { error: 'Artifact key mismatch', code: 'ARTIFACT_KEY_MISMATCH' },
@@ -63,7 +64,7 @@ export async function GET(
 
   let result;
   try {
-    result = await streamJobLogArtifact(canonicalArtifactKey);
+    result = await streamJobLogArtifact(artifactKey);
   } catch (error) {
     console.error('[GET /logs/raw] Blob stream failed', error);
     return NextResponse.json(

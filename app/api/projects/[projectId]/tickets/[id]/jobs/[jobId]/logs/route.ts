@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { verifyTicketAccess } from '@/lib/db/auth-helpers';
+import { buildJobLogRawUrl } from '@/app/lib/logs/artifact-key';
 
 export async function GET(
   request: NextRequest,
@@ -45,9 +46,7 @@ export async function GET(
   }
 
   const rawUrl =
-    log.captureStatus === 'CAPTURED'
-      ? `/api/projects/${projectId}/tickets/${ticketId}/jobs/${jobId}/logs/raw`
-      : null;
+    log.captureStatus === 'CAPTURED' ? buildJobLogRawUrl(projectId, ticketId, jobId) : null;
 
   return NextResponse.json(
     {
