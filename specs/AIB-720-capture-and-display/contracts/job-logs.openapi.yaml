@@ -1,0 +1,359 @@
+openapi: 3.1.0
+info:
+  title: AI Board Job Logs API
+  version: 1.0.0
+  description: >
+    Contract for uploading terminal job execution logs from workflows and reading
+    summarized or full execution logs inside the ticket experience.
+servers:
+  - url: /
+paths:
+  /api/jobs/{jobId}/logs:
+    post:
+      summary: Upload terminal execution logs for a job
+      description: >
+        Workflow-authenticated endpoint used after agent execution completes.
+        The upload is idempotent per job and may record AVAILABLE, PARTIAL, or
+        UNAVAILABLE log state.
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobLogUploadRequest'
+      responses:
+        '200':
+          description: Upload accepted or existing artifact replaced idempotently
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobLogUploadResponse'
+        '400':
+          description: Invalid payload or job not in a capturable terminal state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid workflow bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/projects/{projectId}/jobs/{jobId}/logs:
+    get:
+      summary: Retrieve full execution log detail for a job
+      description: >
+        Member-scoped endpoint that returns the retained detailed event list when
+        available, or summary plus audit state when the artifact is partial,
+        unavailable, or pruned.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Full log detail or summary-only audit state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobExecutionLogDetail'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user does not have project access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Project/job/log not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    JobLogUploadRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - agent
+        - sourceFormat
+        - availability
+        - summary
+      properties:
+        agent:
+          type: string
+          enum: [CLAUDE, CODEX, MISTRAL, GEMINI]
+        sourceFormat:
+          type: string
+          minLength: 1
+          description: Provider-native bundle source, e.g. codex-otlp
+        availability:
+          $ref: '#/components/schemas/JobLogAvailability'
+        capturedAt:
+          type: string
+          format: date-time
+        summary:
+          $ref: '#/components/schemas/JobLogSummary'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobLogEvent'
+          description: Required for AVAILABLE and recommended for PARTIAL
+        partialReason:
+          type: string
+          nullable: true
+        unavailableReason:
+          type: string
+          nullable: true
+        artifactSha256:
+          type: string
+          nullable: true
+          minLength: 64
+          maxLength: 64
+
+    JobLogUploadResponse:
+      type: object
+      required:
+        - jobId
+        - availability
+        - capturedAt
+        - retainedUntil
+      properties:
+        jobId:
+          type: integer
+          minimum: 1
+        availability:
+          $ref: '#/components/schemas/JobLogAvailability'
+        capturedAt:
+          type: string
+          format: date-time
+        retainedUntil:
+          type: string
+          format: date-time
+
+    JobExecutionLogDetail:
+      type: object
+      required:
+        - jobId
+        - projectId
+        - ticketId
+        - agent
+        - availability
+        - summary
+        - events
+      properties:
+        jobId:
+          type: integer
+          minimum: 1
+        projectId:
+          type: integer
+          minimum: 1
+        ticketId:
+          type: integer
+          minimum: 1
+        agent:
+          type: string
+          enum: [CLAUDE, CODEX, MISTRAL, GEMINI]
+        availability:
+          $ref: '#/components/schemas/JobLogAvailability'
+        capturedAt:
+          type: string
+          format: date-time
+          nullable: true
+        retainedUntil:
+          type: string
+          format: date-time
+          nullable: true
+        prunedAt:
+          type: string
+          format: date-time
+          nullable: true
+        partialReason:
+          type: string
+          nullable: true
+        unavailableReason:
+          type: string
+          nullable: true
+        summary:
+          $ref: '#/components/schemas/JobLogSummary'
+        events:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/JobLogEvent'
+
+    JobLogAvailability:
+      type: string
+      enum: [AVAILABLE, PARTIAL, UNAVAILABLE, PRUNED]
+
+    JobLogSummary:
+      type: object
+      required:
+        - headline
+        - status
+        - latestImportantEvents
+        - partial
+        - unavailable
+        - pruned
+        - capturedEventCount
+      properties:
+        headline:
+          type: string
+        status:
+          type: string
+          enum: [COMPLETED, FAILED, CANCELLED]
+        latestImportantEvents:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/JobLogSummaryEvent'
+        errorReason:
+          type: string
+          nullable: true
+        partial:
+          type: boolean
+        unavailable:
+          type: boolean
+        pruned:
+          type: boolean
+        capturedEventCount:
+          type: integer
+          minimum: 0
+
+    JobLogSummaryEvent:
+      type: object
+      required:
+        - timestamp
+        - kind
+        - label
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        kind:
+          type: string
+          enum: [MESSAGE, TOOL, WARNING, ERROR, STATUS]
+        label:
+          type: string
+
+    JobLogEvent:
+      type: object
+      required:
+        - sequence
+        - timestamp
+        - kind
+        - actor
+        - title
+      properties:
+        sequence:
+          type: integer
+          minimum: 0
+        timestamp:
+          type: string
+          format: date-time
+        kind:
+          type: string
+          enum: [MESSAGE, TOOL_CALL, TOOL_RESULT, WARNING, ERROR, STATUS]
+        actor:
+          type: string
+          enum: [agent, tool, system]
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+        toolName:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    TicketJobWithLogs:
+      type: object
+      description: Existing ticket job payload extended with summary log metadata
+      required:
+        - id
+        - command
+        - status
+        - startedAt
+        - completedAt
+        - toolsUsed
+      properties:
+        id:
+          type: integer
+        command:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED, CANCELLED]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        logAvailability:
+          allOf:
+            - $ref: '#/components/schemas/JobLogAvailability'
+          nullable: true
+        logCapturedAt:
+          type: string
+          format: date-time
+          nullable: true
+        logRetainedUntil:
+          type: string
+          format: date-time
+          nullable: true
+        logPrunedAt:
+          type: string
+          format: date-time
+          nullable: true
+        logSummary:
+          allOf:
+            - $ref: '#/components/schemas/JobLogSummary'
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+
