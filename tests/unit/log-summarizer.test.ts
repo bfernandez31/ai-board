@@ -68,6 +68,31 @@ describe('generateLogSummary', () => {
       const summary = generateLogSummary(entries, 'COMPLETED');
       expect(summary).toContain('Done with all tasks');
     });
+
+    it('includes tool invocation count in summary', () => {
+      const entries: NormalizedLogEntry[] = [
+        makeEntry('tool_invocation', 'Read file: src/a.ts'),
+        makeEntry('tool_invocation', 'Edit file: src/a.ts'),
+        makeEntry('tool_invocation', 'Bash: npm test'),
+        makeEntry('tool_invocation', 'Read file: src/b.ts'),
+        makeEntry('tool_invocation', 'Edit file: src/b.ts'),
+        makeEntry('message', 'All done'),
+      ];
+      const summary = generateLogSummary(entries, 'COMPLETED');
+      expect(summary).toContain('5 tool invocations');
+    });
+
+    it('includes key milestones and total entries', () => {
+      const entries: NormalizedLogEntry[] = [
+        makeEntry('message', 'Starting'),
+        makeEntry('tool_invocation', 'Read file'),
+        makeEntry('tool_invocation', 'Edit file'),
+        makeEntry('message', 'Feature implemented successfully'),
+      ];
+      const summary = generateLogSummary(entries, 'COMPLETED');
+      expect(summary).toContain('4 total entries');
+      expect(summary).toContain('Feature implemented successfully');
+    });
   });
 
   describe('CANCELLED jobs', () => {

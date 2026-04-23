@@ -181,5 +181,63 @@ describe('Job Logs API', () => {
 
       expect(response.status).toBe(404);
     });
+
+    it('should return milestone summary for completed job', async () => {
+      const completedOutput = `Let me implement the feature.
+
+> Read file: src/main.ts
+
+Reading the main entry point.
+
+> Edit file: src/main.ts
+
+Updated the main entry.
+
+> Bash: npm test
+
+All tests pass. Implementation complete.`;
+
+      await workflowApi.post(`/api/jobs/${jobId}/logs`, {
+        agentType: 'CLAUDE',
+        rawOutput: completedOutput,
+      });
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.logStatus).toBe('AVAILABLE');
+      expect(job?.logSummary).toContain('Completed');
+      expect(job?.logSummary).toContain('tool invocation');
+
+      const response = await ctx.api.get<{
+        entries: Array<{ eventType: string; content: string }>;
+      }>(`/api/jobs/${jobId}/logs`);
+
+      expect(response.status).toBe(200);
+      const toolEntries = response.data.entries.filter((e) => e.eventType === 'tool_invocation');
+      expect(toolEntries.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should return consistent format across agent types', async () => {
+      const codexOutput = `Thinking about the problem...
+Running: npm test
+Output: All tests passed
+Writing file: src/fix.ts
+Done.`;
+
+      await workflowApi.post(`/api/jobs/${jobId}/logs`, {
+        agentType: 'CODEX',
+        rawOutput: codexOutput,
+      });
+
+      const response = await ctx.api.get<{
+        agentType: string;
+        entries: Array<{ timestamp: string; eventType: string; content: string }>;
+      }>(`/api/jobs/${jobId}/logs`);
+
+      expect(response.status).toBe(200);
+      expect(response.data.agentType).toBe('CODEX');
+      expect(response.data.entries.every((e) => e.timestamp)).toBe(true);
+      expect(response.data.entries.every((e) => e.eventType)).toBe(true);
+      expect(response.data.entries.every((e) => e.content)).toBe(true);
+    });
   });
 });

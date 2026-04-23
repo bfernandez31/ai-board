@@ -112,8 +112,8 @@
 ### Tests for User Story 2
 **RULE: Extend existing test files — do not create new files for this domain.**
 
-- [ ] T029 [US2] Extend `tests/integration/jobs/job-logs.test.ts` — add completed job scenarios: upload log for a COMPLETED job, verify milestone summary in logSummary, verify GET returns chronologically ordered entries with tool_invocation events, verify consistent format across all 4 agent types
-- [ ] T030 [US2] Extend `tests/unit/log-summarizer.test.ts` — add COMPLETED-specific scenarios: verify summary includes tool invocation count, key milestones, and completion message
+- [x] T029 [US2] Extend `tests/integration/jobs/job-logs.test.ts` — add completed job scenarios: upload log for a COMPLETED job, verify milestone summary in logSummary, verify GET returns chronologically ordered entries with tool_invocation events, verify consistent format across all 4 agent types
+- [x] T030 [US2] Extend `tests/unit/log-summarizer.test.ts` — add COMPLETED-specific scenarios: verify summary includes tool invocation count, key milestones, and completion message
 
 **Checkpoint**: User Stories 1 AND 2 both work independently — failed jobs show error summaries, completed jobs show milestone summaries. Format is consistent across agent types.
 
