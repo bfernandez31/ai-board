@@ -53,6 +53,43 @@ describe('redactString', () => {
     expect(out).toContain('MY_API_TOKEN=[REDACTED:env_secret:MY_API_TOKEN]');
   });
 
+  it('redacts DATABASE_URL connection strings with credentials', () => {
+    const input = 'DATABASE_URL=postgres://user:s3cret@db.example.com:5432/appdb';
+    const out = redactString(input);
+    expect(out).toBe('DATABASE_URL=[REDACTED:env_secret:DATABASE_URL]');
+    expect(out).not.toContain('s3cret');
+    expect(out).not.toContain('db.example.com');
+  });
+
+  it('redacts REDIS_URL connection strings', () => {
+    const input = 'REDIS_URL="redis://:mypassword@redis.internal:6379/0"';
+    const out = redactString(input);
+    expect(out).toContain('REDIS_URL=[REDACTED:env_secret:REDIS_URL]');
+    expect(out).not.toContain('mypassword');
+  });
+
+  it('redacts SENTRY_DSN values', () => {
+    const input = 'SENTRY_DSN=https://abc123def456@o123.ingest.sentry.io/789';
+    const out = redactString(input);
+    expect(out).toContain('SENTRY_DSN=[REDACTED:env_secret:SENTRY_DSN]');
+    expect(out).not.toContain('abc123def456');
+  });
+
+  it('redacts generic CONNECTION_STRING env vars', () => {
+    const input = 'MONGO_CONNECTION=mongodb://admin:topsecret@cluster0.mongodb.net/db';
+    const out = redactString(input);
+    expect(out).toContain('MONGO_CONNECTION=[REDACTED:env_secret:MONGO_CONNECTION]');
+    expect(out).not.toContain('topsecret');
+  });
+
+  it('does not bleed across whitespace to adjacent env vars', () => {
+    const input = 'DATABASE_URL=postgres://u:p@h/d NEXTAUTH_SECRET=abcdefghijklmnopqrstuvwxyz1234567890';
+    const out = redactString(input);
+    expect(out).toContain('DATABASE_URL=[REDACTED:env_secret:DATABASE_URL]');
+    expect(out).toContain('NEXTAUTH_SECRET=[REDACTED:env_secret:NEXTAUTH_SECRET]');
+    expect(out).not.toContain('abcdefghijklmnopqrstuvwxyz1234567890');
+  });
+
   it('emits the literal placeholder format', () => {
     const out = redactString('Authorization: Bearer xxxxxxxxxxxxxxxx');
     expect(out).toMatch(/^Authorization: Bearer \[REDACTED:bearer\]$/);

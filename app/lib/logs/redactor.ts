@@ -42,7 +42,7 @@ const PATTERNS: Pattern[] = [
 ];
 
 const ENV_SECRET_REGEX =
-  /\b([A-Z0-9_]*?(?:TOKEN|SECRET|KEY|PASSWORD|AUTH|CREDENTIAL))\s*=\s*["']?[A-Za-z0-9+/=_\-]{32,}["']?/gi;
+  /\b([A-Z0-9_]*?(?:TOKEN|SECRET|KEY|PASSWORD|AUTH|CREDENTIAL|URL|DSN|CONNECTION))\s*=\s*["']?[A-Za-z0-9+/=_\-:@.?&~]{12,}["']?/gi;
 
 export function redactString(value: string): string {
   if (!value) return value;
