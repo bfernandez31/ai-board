@@ -714,7 +714,8 @@ export async function fullCloneTicket(
           status: job.status, // Point-in-time snapshot
           branch: newBranch, // Updated to new branch
           commitSha: job.commitSha,
-          logs: job.logs,
+          logStatus: job.logStatus,
+          logSummary: job.logSummary,
           startedAt: job.startedAt,
           completedAt: job.completedAt,
           updatedAt: job.updatedAt, // Copy original updatedAt timestamp

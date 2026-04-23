@@ -33,7 +33,8 @@ model Job {
   status      JobStatus @default(PENDING)
   branch      String?   @db.VarChar(200)
   commitSha   String?   @db.VarChar(40)
-  logs        String?
+  logStatus   LogStatus @default(NONE)
+  logSummary  String?   @db.Text
   startedAt   DateTime  @default(now())
   completedAt DateTime?
   createdAt   DateTime  @default(now())
@@ -52,6 +53,8 @@ model Job {
   durationMs          Int? // Total Claude API duration in milliseconds
   model               String?  @db.VarChar(50) // Primary model used
   toolsUsed           String[] @default([]) // List of tools used (Edit, Write, Bash, etc.)
+
+  jobLog      JobLog?
 
   // Quality score (0-100) computed from code review agent dimension scores
   // Only populated for COMPLETED verify jobs of FULL workflow tickets
@@ -317,6 +320,12 @@ enum Agent {
   CODEX
   MISTRAL
   GEMINI
+}
+
+enum LogStatus {
+  NONE
+  AVAILABLE
+  PRUNED
 }
 
 enum CredentialProvider {
@@ -585,6 +594,23 @@ model HealthScore {
   project            Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+}
+
+model JobLog {
+  id         Int      @id @default(autoincrement())
+  jobId      Int      @unique
+  agentType  String   @db.VarChar(20)
+  rawContent String   @db.Text
+  entries    String   @db.Text
+  entryCount Int
+  rawSize    Int
+  truncated  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([createdAt])
 }
 
 enum SetupJobCommand {

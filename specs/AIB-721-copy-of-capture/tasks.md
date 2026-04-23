@@ -18,10 +18,10 @@
 
 **Purpose**: Schema migration, type definitions, and Prisma client generation. All subsequent phases depend on this.
 
-- [ ] T001 Add LogStatus enum (`NONE`, `AVAILABLE`, `PRUNED`), JobLog model, and extend Job model with `logStatus`, `logSummary`, `jobLog` relation in `prisma/schema.prisma`. Drop unused `logs` column from Job.
-- [ ] T002 Run Prisma migration (`bunx prisma migrate dev --name add-job-logs`) and regenerate client (`bunx prisma generate`)
-- [ ] T003 [P] Create `lib/logs/types.ts` with `NormalizedLogEntry`, `LogEventType`, `LogUploadPayload`, `JobLogResponse` type definitions per data-model.md
-- [ ] T004 [P] Update `lib/types/job-types.ts` — add `logStatus` (LogStatus) and `logSummary` (string | null) to `TicketJobWithTelemetry` interface
+- [x] T001 Add LogStatus enum (`NONE`, `AVAILABLE`, `PRUNED`), JobLog model, and extend Job model with `logStatus`, `logSummary`, `jobLog` relation in `prisma/schema.prisma`. Drop unused `logs` column from Job.
+- [x] T002 Run Prisma migration (`bunx prisma migrate dev --name add-job-logs`) and regenerate client (`bunx prisma generate`)
+- [x] T003 [P] Create `lib/logs/types.ts` with `NormalizedLogEntry`, `LogEventType`, `LogUploadPayload`, `JobLogResponse` type definitions per data-model.md
+- [x] T004 [P] Update `lib/types/job-types.ts` — add `logStatus` (LogStatus) and `logSummary` (string | null) to `TicketJobWithTelemetry` interface
 
 **Checkpoint**: Schema compiles, `bun run type-check` passes, Prisma client regenerated with new types.
 

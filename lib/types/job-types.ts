@@ -64,4 +64,6 @@ export interface TicketJobWithTelemetry {
   toolsUsed: string[];
   qualityScore: number | null;
   qualityScoreDetails: string | null;
+  logStatus: string;
+  logSummary: string | null;
 }
