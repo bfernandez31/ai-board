@@ -1,0 +1,316 @@
+openapi: 3.1.0
+info:
+  title: AIB-715 Job Logs API
+  version: 1.0.0
+  description: |
+    REST contracts for capturing, fetching, downloading, and pruning agent
+    execution logs. Split into workflow-facing (write) and user-facing (read)
+    surfaces so a capture failure can never leak into the user surface, and
+    vice-versa.
+
+servers:
+  - url: '{APP_URL}'
+    variables:
+      APP_URL:
+        default: 'http://localhost:3000'
+
+paths:
+
+  # ────────────────────────────────────────────────────────────────
+  # Workflow-facing (write). Auth: Bearer WORKFLOW_API_TOKEN.
+  # ────────────────────────────────────────────────────────────────
+
+  /api/jobs/{jobId}/logs:
+    post:
+      summary: Submit or upsert the log summary for a terminated job
+      operationId: submitJobLog
+      security:
+        - WorkflowToken: []
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobLogSubmission'
+      responses:
+        '200':
+          description: Log record created or updated (idempotent upsert).
+          headers:
+            Cache-Control: { schema: { type: string }, example: 'no-store' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobLogReadable'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: Job not found.
+        '422':
+          description: |
+            Referenced Job is still in PENDING or RUNNING. The log endpoint
+            only accepts submissions for jobs already in a terminal state.
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/jobs/{jobId}/logs/artifact:
+    put:
+      summary: Upload the normalized transcript artifact
+      operationId: uploadJobLogArtifact
+      description: |
+        Streams the gzipped JSONL transcript body through the ai-board API to
+        Vercel Blob. The runner never holds the blob credentials. The server
+        computes `artifactKey` deterministically as
+        `logs/<projectId>/<ticketId>/<jobId>.jsonl.gz` and returns it so the
+        runner can include it in the subsequent summary submission.
+      security:
+        - WorkflowToken: []
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/gzip:
+            schema:
+              type: string
+              format: binary
+              maxLength: 26214400 # 25 MB
+      responses:
+        '201':
+          description: Artifact stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [artifactKey, artifactSize]
+                properties:
+                  artifactKey:  { type: string, maxLength: 300 }
+                  artifactSize: { type: integer, minimum: 1 }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '413':
+          description: Artifact exceeds 25 MB gzipped limit.
+        '415':
+          description: Content-Type must be application/gzip.
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/maintenance/prune-logs:
+    post:
+      summary: Retention prune of JobLog rows and their Blob artifacts
+      operationId: pruneLogs
+      description: |
+        Hard-deletes all JobLog rows older than the configured retention window
+        (default 30 days). Deletes the corresponding Blob object first; skips
+        rows whose Blob delete failed transiently. Idempotent — a re-run scans
+        and no-ops.
+      security:
+        - WorkflowToken: []
+      responses:
+        '200':
+          description: Prune cycle completed (with counts).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [prunedCount, skippedCount, durationMs]
+                properties:
+                  prunedCount:  { type: integer, minimum: 0 }
+                  skippedCount: { type: integer, minimum: 0 }
+                  durationMs:   { type: integer, minimum: 0 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  # ────────────────────────────────────────────────────────────────
+  # User-facing (read). Auth: session + verifyTicketAccess.
+  # ────────────────────────────────────────────────────────────────
+
+  /api/projects/{projectId}/tickets/{ticketId}/jobs/{jobId}/logs:
+    get:
+      summary: Fetch the log summary for a single job
+      operationId: getJobLog
+      security:
+        - SessionCookie: []
+      parameters:
+        - { in: path, name: projectId, required: true, schema: { type: integer } }
+        - { in: path, name: ticketId,  required: true, schema: { type: integer } }
+        - { in: path, name: jobId,     required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Summary found.
+          headers:
+            Cache-Control: { schema: { type: string }, example: 'no-store' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobLogReadable'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: User is not owner or member of the parent project.
+        '404':
+          description: Job or its log record does not exist (yet).
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/projects/{projectId}/tickets/{ticketId}/jobs/{jobId}/logs/raw:
+    get:
+      summary: Stream the raw normalized transcript artifact
+      operationId: getJobLogRaw
+      description: |
+        Streams the gzipped JSONL transcript from Vercel Blob through the
+        ai-board API. Session-authenticated. Supports `?format=jsonl` to set
+        `Content-Disposition: attachment` for the "Download raw" action.
+      security:
+        - SessionCookie: []
+      parameters:
+        - { in: path,  name: projectId, required: true, schema: { type: integer } }
+        - { in: path,  name: ticketId,  required: true, schema: { type: integer } }
+        - { in: path,  name: jobId,     required: true, schema: { type: integer } }
+        - in: query
+          name: format
+          required: false
+          schema: { type: string, enum: [jsonl] }
+          description: When `jsonl`, server sets Content-Disposition for download.
+      responses:
+        '200':
+          description: |
+            Stream of gzipped JSONL events. Content-Encoding preserved so the
+            browser decompresses transparently for in-app rendering; download
+            mode sets Content-Disposition for filesystem save.
+          headers:
+            Content-Type:       { schema: { type: string }, example: 'application/gzip' }
+            Content-Encoding:   { schema: { type: string }, example: 'gzip' }
+            Content-Disposition:
+              schema: { type: string }
+              example: 'attachment; filename="AIB-715-job-4321.jsonl.gz"'
+            Cache-Control:      { schema: { type: string }, example: 'private, max-age=60' }
+          content:
+            application/gzip:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Not owner / member.
+        '404':
+          description: No captured artifact (status is UNAVAILABLE or PRUNED).
+        '502':
+          description: |
+            Blob backend unreachable. Client should keep the inline preview
+            visible and surface a readable error message.
+        '500': { $ref: '#/components/responses/ServerError' }
+
+components:
+
+  securitySchemes:
+    WorkflowToken:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Validated by validateWorkflowAuth / verifyWorkflowToken.
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session.
+
+  schemas:
+
+    CaptureStatus:
+      type: string
+      enum: [CAPTURED, UNAVAILABLE, PRUNED]
+
+    JobLogSubmission:
+      type: object
+      required: [captureStatus, preview, schemaVersion, eventCount, errorCount]
+      properties:
+        captureStatus:
+          $ref: '#/components/schemas/CaptureStatus'
+          description: Only CAPTURED or UNAVAILABLE accepted on write. PRUNED is server-side only.
+        preview:
+          type: string
+          minLength: 1
+          maxLength: 280
+        schemaVersion:
+          type: integer
+          enum: [1]
+        eventCount:
+          type: integer
+          minimum: 0
+        errorCount:
+          type: integer
+          minimum: 0
+        artifactKey:
+          type: string
+          maxLength: 300
+          description: Required iff captureStatus === CAPTURED.
+        artifactSize:
+          type: integer
+          minimum: 1
+          description: Bytes of the uploaded artifact. Required iff captureStatus === CAPTURED.
+      additionalProperties: false
+
+    JobLogReadable:
+      type: object
+      required: [captureStatus, preview, schemaVersion, eventCount, errorCount, capturedAt, rawUrl]
+      properties:
+        captureStatus: { $ref: '#/components/schemas/CaptureStatus' }
+        preview:
+          type: string
+          maxLength: 280
+        schemaVersion:
+          type: integer
+        eventCount:
+          type: integer
+          minimum: 0
+        errorCount:
+          type: integer
+          minimum: 0
+        artifactSize:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Null when captureStatus is UNAVAILABLE or PRUNED.
+        capturedAt:
+          type: string
+          format: date-time
+        rawUrl:
+          type: string
+          nullable: true
+          description: |
+            Relative path to the proxied raw endpoint. Null when the artifact is
+            absent (UNAVAILABLE / PRUNED). Clients render a disabled "View full
+            logs" button when null. Example:
+            "/api/projects/7/tickets/41/jobs/4321/logs/raw".
+
+  responses:
+
+    BadRequest:
+      description: Validation failed.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+              code:  { type: string }
+
+    Unauthorized:
+      description: Authentication failed.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+
+    ServerError:
+      description: Internal server error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }

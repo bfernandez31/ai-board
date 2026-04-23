@@ -403,3 +403,243 @@ sequenceDiagram
     EP-->>OT: 200 { status: "accepted", metrics }
 ```
 
+## Job Log Endpoints
+
+Job logs capture the agent's normalized execution transcript for a terminated job. Writes are performed by the GitHub Actions runner (workflow token auth); reads are session-authenticated and gated by `verifyTicketAccess`. The full transcript lives in Vercel Blob; only the inline preview and metadata live in Postgres (`JobLog` model).
+
+### POST /api/jobs/:id/logs
+
+Upsert the log summary for a terminated job.
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation
+
+**Path Parameters**:
+- `id` (number, required): Job ID
+
+**Request Body**:
+```json
+{
+  "captureStatus": "CAPTURED",
+  "preview": "Build failed: Prisma migration 20260422 not applied to target DB",
+  "schemaVersion": 1,
+  "eventCount": 127,
+  "errorCount": 3,
+  "artifactKey": "logs/7/41/4321.jsonl.gz",
+  "artifactSize": 48210
+}
+```
+
+**Validation**:
+- `captureStatus`: Required, enum (`CAPTURED` | `UNAVAILABLE`); `PRUNED` is server-only
+- `preview`: Required, 1-280 chars; re-run through server-side redactor before persistence
+- `schemaVersion`: Required, currently `1`
+- `eventCount`: Required, integer ≥ 0
+- `errorCount`: Required, integer ≥ 0 and ≤ `eventCount`
+- `artifactKey`: Required iff `captureStatus === CAPTURED`; forbidden otherwise
+- `artifactSize`: Required iff `captureStatus === CAPTURED`; forbidden otherwise
+
+**Response** (200 OK — idempotent upsert):
+```json
+{
+  "captureStatus": "CAPTURED",
+  "preview": "Build failed: Prisma migration 20260422 not applied to target DB",
+  "schemaVersion": 1,
+  "eventCount": 127,
+  "errorCount": 3,
+  "artifactSize": 48210,
+  "capturedAt": "2026-04-22T21:44:10.000Z",
+  "rawUrl": "/api/projects/7/tickets/41/jobs/4321/logs/raw"
+}
+```
+
+**Errors**:
+- `400`: Validation failed (Zod)
+- `401`: Invalid or missing workflow token
+- `404`: Job not found
+- `422`: Job is still PENDING or RUNNING
+
+**Behavior**:
+- Upsert keyed on `jobId` — a second submission replaces the first (bounded-retry safety)
+- `Cache-Control: no-store`
+- Telemetry submission via OTLP remains independent; a capture failure never prevents `PATCH /api/jobs/:id/status` from landing
+
+### PUT /api/jobs/:id/logs/artifact
+
+Stream the gzipped JSONL transcript to Vercel Blob via the authenticated proxy.
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation
+
+**Path Parameters**:
+- `id` (number, required): Job ID
+
+**Request**:
+- `Content-Type: application/gzip` (any other value → 415)
+- Body: raw gzipped JSONL stream, max 25 MB (413 on overflow)
+
+**Server behavior**:
+- Derives `artifactKey = logs/<projectId>/<ticketId>/<jobId>.jsonl.gz` deterministically
+- Uploads through `app/lib/blob/client.ts` — the runner never holds the Blob token
+
+**Response** (201 Created):
+```json
+{
+  "artifactKey": "logs/7/41/4321.jsonl.gz",
+  "artifactSize": 48210
+}
+```
+
+**Errors**:
+- `401`: Invalid or missing workflow token
+- `413`: Artifact exceeds 25 MB gzipped
+- `415`: Content-Type is not `application/gzip`
+- `502`: Upstream Blob write failure (`code: BLOB_UPLOAD_FAILED`)
+
+### DELETE /api/jobs/:id/logs/artifact
+
+Delete an orphaned Blob artifact for a job (called by the capture script when the `POST /api/jobs/:id/logs` summary fails permanently, leaving the artifact without a `JobLog` row to reference it).
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation
+
+**Path Parameters**:
+- `id` (number, required): Job ID
+
+**Response** (200 OK):
+```json
+{ "deleted": true }
+```
+`deleted` is `false` when no matching Blob object exists.
+
+**Errors**:
+- `401`: Invalid or missing workflow token
+- `404`: Job not found
+- `502`: Upstream Blob delete failure (`code: BLOB_DELETE_FAILED`)
+
+### GET /api/projects/:projectId/tickets/:ticketId/jobs/:jobId/logs
+
+Fetch the log summary for rendering the inline preview and deciding whether the full viewer should be enabled.
+
+**Authentication**: Required (session)
+**Authorization**: `verifyTicketAccess` — owner OR project member
+
+**Path Parameters**:
+- `projectId` (number, required)
+- `ticketId` (number, required)
+- `jobId` (number, required)
+
+**Response** (200 OK):
+```json
+{
+  "captureStatus": "CAPTURED",
+  "preview": "Build failed: Prisma migration 20260422 not applied to target DB",
+  "schemaVersion": 1,
+  "eventCount": 127,
+  "errorCount": 3,
+  "artifactSize": 48210,
+  "capturedAt": "2026-04-22T21:44:10.000Z",
+  "rawUrl": "/api/projects/7/tickets/41/jobs/4321/logs/raw"
+}
+```
+
+`rawUrl` is `null` when `captureStatus !== CAPTURED`; clients render a disabled "View full logs" affordance in that case.
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Job or its log record does not exist
+
+**Headers**:
+- `Cache-Control: no-store`
+
+### GET /api/projects/:projectId/tickets/:ticketId/jobs/:jobId/logs/raw
+
+Stream the raw normalized transcript artifact. Session-authenticated; Blob pathnames never leak to the client.
+
+**Authentication**: Required (session)
+**Authorization**: `verifyTicketAccess`
+
+**Query Parameters**:
+- `format=jsonl` (optional): When set, server adds `Content-Disposition: attachment; filename="<ticketKey>-<jobId>.jsonl.gz"` for the "Download raw" button
+
+**Response** (200 OK):
+- `Content-Type: application/gzip`
+- `Content-Encoding: gzip` (preserved so browsers decompress transparently for in-app rendering)
+- Body: the gzipped JSONL stream read from Vercel Blob
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: Not owner/member
+- `404`: No captured artifact (status is `UNAVAILABLE` or `PRUNED`)
+- `502`: Blob backend unreachable — client keeps the inline preview visible and surfaces a readable error
+
+### POST /api/maintenance/prune-logs
+
+Retention prune of `JobLog` rows and their Blob artifacts. Invoked daily by `.github/workflows/nightly-log-prune.yml`.
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation
+
+**Behavior**:
+- Scans `JobLog` where `createdAt < now() - LOG_RETENTION_DAYS` (default 30) and `captureStatus != 'PRUNED'`
+- Batched at 500 rows per iteration, capped at 50 000 rows per cycle to stay inside serverless time budgets
+- Per row: delete Blob object first (404 treated as success), then delete Postgres row; transient Blob failures skip the row and increment `skippedCount`
+- Idempotent — a re-run over the same window finds no matches once the prior cycle completed
+
+**Response** (200 OK):
+```json
+{
+  "prunedCount": 128,
+  "skippedCount": 2,
+  "durationMs": 1843
+}
+```
+
+**Errors**:
+- `401`: Invalid or missing workflow token
+- `500`: Internal error
+
+### Extended: GET /api/projects/:projectId/tickets/:ticketId/jobs
+
+The ticket jobs listing includes a `log` object on each row so the timeline can render the preview without an N+1 fetch:
+
+```json
+{
+  "jobs": [
+    {
+      "id": 4321,
+      "status": "FAILED",
+      "command": "implement",
+      "log": {
+        "captureStatus": "CAPTURED",
+        "preview": "Build failed: Prisma migration 20260422 not applied to target DB"
+      }
+    }
+  ]
+}
+```
+
+`log` is `null` when no log record exists yet (e.g., a still-RUNNING job or capture in flight).
+
+```mermaid
+sequenceDiagram
+    participant RN as Runner (run-agent.sh)
+    participant CAP as capture-agent-logs.sh
+    participant ART as PUT /logs/artifact
+    participant BLOB as Vercel Blob
+    participant LOG as POST /logs
+    participant DB as Database (JobLog)
+
+    RN->>CAP: Trigger on agent exit (if: always())
+    CAP->>CAP: Normalize → redact → derive preview → gzip
+    CAP->>ART: PUT application/gzip (Bearer WORKFLOW_API_TOKEN)
+    ART->>BLOB: Upload to logs/<pid>/<tid>/<jid>.jsonl.gz
+    BLOB-->>ART: OK
+    ART-->>CAP: { artifactKey, artifactSize }
+    CAP->>LOG: POST summary (preview, counts, artifactKey)
+    LOG->>DB: UPSERT JobLog by jobId
+    DB-->>LOG: Row
+    LOG-->>CAP: 200 JobLogReadable
+```
+

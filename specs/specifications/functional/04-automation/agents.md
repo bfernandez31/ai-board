@@ -47,3 +47,84 @@ The effective agent is determined by a priority chain:
 - Core ticket workflows receive the resolved agent: SPECIFY, PLAN, BUILD, VERIFY, QUICK, iterate
 - Some workflows remain explicitly agent-restricted even when ticket/project resolution returns a different default. For example, ai-board-assist code review remains Claude-only, and setup / retro-spec / health-scan may reject unsupported agents before dispatch.
 - Agent selection is read-only during dispatch — it flows from the database into workflow inputs without changing ticket state
+
+## Agent Execution Log Capture & Display
+
+Every workflow that runs an AI agent (Claude, Codex, Mistral, Gemini) captures the agent's execution transcript so project members can diagnose failures from the ai-board UI without GitHub Actions access. Capture is agent-agnostic and uniform across self-managed and external projects.
+
+### Inline preview in the timeline
+
+Every terminated job row on the ticket's Stats tab shows a one-line preview below the command/status header, colored per status:
+
+| Job status | Preview content |
+|---|---|
+| `FAILED` | Terminal error excerpt, secrets redacted |
+| `COMPLETED` | Brief summary — final agent message snippet or short tool-usage recap |
+| `CANCELLED` | Cancellation cause (user-cancelled, timeout, upstream error) |
+| `UNAVAILABLE` | Literal "Logs unavailable — capture failed." (capture attempt did not complete) |
+| `PRUNED` | Literal notice that logs are no longer retained (>30 days old) |
+
+The preview is capped at 280 characters with trailing `…` truncation so the timeline cannot visually balloon. It renders without user interaction — reading the preview alone lets a member form a hypothesis about each job's outcome.
+
+### Full log viewer
+
+A "View full logs" affordance on each timeline row opens a side sheet that renders the normalized event stream with type-specific styling — not a raw JSON dump. Each entry carries a timestamp, a type icon, and a monospace payload body. Event types:
+
+| Event type | Meaning |
+|---|---|
+| `message` | Agent, user, or system message text (and `thinking` on Claude) |
+| `tool_invocation` | Tool name, call ID, and input payload |
+| `tool_result` | Output for a given `toolCallId`, with an `isError` flag |
+| `error` | Error message and optional stack |
+| `lifecycle` | `started` / `completed` / `cancelled` / `timeout` / `upstream_error` |
+
+From the viewer, users can copy any single entry to the clipboard and trigger "Download raw" to fetch the gzipped JSONL artifact through the authenticated `/logs/raw?format=jsonl` endpoint. For `UNAVAILABLE` / `PRUNED` logs the trigger is disabled with explanatory copy; for a `502` from the Blob backend the sheet shows a clear error state while the inline preview from Postgres remains visible.
+
+### Access control
+
+Log access follows the parent ticket's authorization rules — project owners and project members can read; non-members cannot. Access is enforced server-side via `verifyTicketAccess`; the Blob artifact pathname is never rendered client-side and raw streams are proxied through the ai-board API on every read.
+
+### Secret redaction
+
+Before any transcript leaves the GitHub Actions runner, recognizable secrets are replaced with a visible `[REDACTED:<kind>]` placeholder so reviewers can see that an elision occurred. Redaction covers:
+- GitHub tokens (`ghp_`, `ghs_`, `gho_`, `ghu_`, `ghr_`)
+- OAuth bearer tokens
+- Private SSH keys
+- High-entropy `KEY=VALUE` environment pairs
+
+The placeholder is preserved through the preview and through every event payload — `message` text, `tool_invocation.input`, `tool_result.output`, `error.message`, and `error.stack` are all passed through the redactor; the server re-runs the preview through the same redactor on submit as defense-in-depth.
+
+### Capture failure behavior
+
+Log capture runs in parallel with — and never blocks — the terminal status report. If capture, redaction, upload, or summary submission fails:
+- The job's terminal status (`COMPLETED` / `FAILED` / `CANCELLED`) is still reported via `PATCH /api/jobs/:id/status`
+- The `JobLog` row is written with `captureStatus = UNAVAILABLE` and the literal preview `"Logs unavailable — capture failed."`
+- Existing telemetry (tokens, cost, duration, tools used, quality score) continues to flow through its own OTLP / batch pipeline
+- The UI surfaces the unavailable state explicitly rather than silently hiding the absence
+
+### Agent Log Capture (per workflow run)
+
+Every agent-invoking workflow — `speckit.yml`, `quick-impl.yml`, `verify.yml`, `ai-board-assist.yml`, `iterate.yml` — includes a capture step (`if: always()`) after the agent invocation and before the terminal status PATCH.
+
+**Input**: tee'd raw agent stdout at `$RUNNER_TEMP/agent-raw-<jobId>.log`, plus agent-specific session dirs (`~/.claude/projects/...`, `~/.codex/sessions/*`, `~/.vibe/sessions/*`).
+
+**Phases**:
+1. Collect the tee'd raw log; synthesize a two-event `lifecycle:started` + `lifecycle:cancelled` pair when the log is empty (covers the cancelled-before-any-output edge case)
+2. Normalize via the agent-specific script (`normalize-claude.mjs`, `normalize-codex.mjs`, `normalize-mistral.mjs`, `normalize-gemini.mjs`) into a v1 event stream
+3. Apply secret redaction to every string payload
+4. Derive the preview capped at 280 chars
+5. Gzip and `PUT` the artifact through the authenticated proxy (bounded retry: 3 attempts with 1/2/4s exponential backoff)
+6. `POST` the summary with the same retry strategy — on upload failure, set `captureStatus = UNAVAILABLE` and omit `artifactKey` / `artifactSize`
+7. Clean up the raw log from the runner to avoid leaving secrets on disk
+
+`verify.yml` invokes `run-agent.sh` twice (fix-tests + code-review) but appends to a single raw log, so the capture step runs once after the last agent invocation.
+
+### Log Retention Pruning (scheduled)
+
+A scheduled workflow `.github/workflows/nightly-log-prune.yml` triggers `POST /api/maintenance/prune-logs` once per day at 01:15 UTC. The endpoint:
+- Scans `JobLog` rows older than `LOG_RETENTION_DAYS` (default 30) where `captureStatus != 'PRUNED'`
+- Deletes the Blob artifact first, treating `404` as success, then hard-deletes the Postgres row
+- Processes up to 500 rows per iteration and caps the cycle at 50 000 rows
+- Returns `{ prunedCount, skippedCount, durationMs }` for GitHub Actions log visibility
+
+Pruning is idempotent — a re-run over the same window finds no matches. Because both the Blob object and the Postgres row are hard-deleted, pruned jobs show the timeline entry (status, telemetry) with a "logs no longer retained" preview but no viewer.

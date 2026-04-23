@@ -59,6 +59,24 @@ enum CredentialReadiness {
 | `READY` | Provider confirmed the credential is valid | `ACTION_REQUIRED` (if re-test fails) |
 | `ACTION_REQUIRED` | Provider rejected or could not verify | `PENDING_VERIFICATION` (on replace) |
 
+### CaptureStatus
+
+State of the log artifact captured for a terminated job.
+
+```prisma
+enum CaptureStatus {
+  CAPTURED     // Transcript artifact uploaded and referenced by artifactKey
+  UNAVAILABLE  // Capture, redaction, or upload failed after bounded retry
+  PRUNED       // Retention pruning removed the artifact; preview retained until row pruned next cycle
+}
+```
+
+| Value | Description | Writable? |
+|-------|-------------|-----------|
+| `CAPTURED` | Artifact stored in Vercel Blob, `rawUrl` populated on read | Yes, via `POST /api/jobs/:id/logs` |
+| `UNAVAILABLE` | Runner could not complete capture after bounded retry (3 attempts, 1/2/4s) | Yes |
+| `PRUNED` | Server-side only — set by retention pruner to mark an artifact-less row for deletion in the next cycle | Server-only |
+
 ### HealthScanType
 
 ```prisma

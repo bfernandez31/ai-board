@@ -34,6 +34,7 @@ function createMockJob(
     toolsUsed: ['Read', 'Edit'],
     qualityScore: null,
     qualityScoreDetails: null,
+    log: null,
     ...overrides,
   };
 }
@@ -183,6 +184,54 @@ describe('TicketStats', () => {
       expect(screen.getByTestId('total-cost')).toHaveTextContent('N/A');
       expect(screen.getByTestId('total-duration')).toHaveTextContent('N/A');
       expect(screen.getByTestId('total-tokens')).toHaveTextContent('N/A');
+    });
+  });
+
+  describe('JobLog preview rendering (AIB-715 US2)', () => {
+    it('renders distinct preview text across FAILED / COMPLETED / CANCELLED / UNAVAILABLE / PRUNED', () => {
+      const jobs: TicketJobWithTelemetry[] = [
+        createMockJob({
+          id: 101,
+          status: 'FAILED',
+          log: { captureStatus: 'CAPTURED', preview: 'Bash command failed: exit 1' },
+        }),
+        createMockJob({
+          id: 102,
+          status: 'COMPLETED',
+          log: { captureStatus: 'CAPTURED', preview: 'All tasks complete.' },
+        }),
+        createMockJob({
+          id: 103,
+          status: 'CANCELLED',
+          log: { captureStatus: 'CAPTURED', preview: 'Cancelled (user-cancelled).' },
+        }),
+        createMockJob({
+          id: 104,
+          status: 'FAILED',
+          log: { captureStatus: 'UNAVAILABLE', preview: 'Logs unavailable — capture failed.' },
+        }),
+        createMockJob({
+          id: 105,
+          status: 'COMPLETED',
+          log: { captureStatus: 'PRUNED', preview: 'Logs no longer retained (30-day window expired).' },
+        }),
+      ];
+      const polledJobs: TicketJob[] = [];
+
+      renderWithProviders(
+        <TicketStats jobs={jobs} polledJobs={polledJobs} projectId={1} ticketId={42} />
+      );
+
+      expect(screen.getByTestId('job-log-preview-101')).toHaveTextContent('Bash command failed');
+      expect(screen.getByTestId('job-log-preview-102')).toHaveTextContent('All tasks complete');
+      expect(screen.getByTestId('job-log-preview-103')).toHaveTextContent('user-cancelled');
+      expect(screen.getByTestId('job-log-preview-104')).toHaveTextContent('Logs unavailable');
+      expect(screen.getByTestId('job-log-preview-105')).toHaveTextContent('no longer retained');
+
+      // CAPTURED rows expose the enabled trigger; UNAVAILABLE/PRUNED expose the disabled variant.
+      expect(screen.getByTestId('view-full-logs-101')).toBeInTheDocument();
+      expect(screen.getByTestId('view-full-logs-disabled-104')).toBeInTheDocument();
+      expect(screen.getByTestId('view-full-logs-disabled-105')).toBeInTheDocument();
     });
   });
 });
