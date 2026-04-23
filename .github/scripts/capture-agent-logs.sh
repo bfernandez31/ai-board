@@ -121,8 +121,7 @@ const status = process.env.CAPTURE_END_KIND === 'cancelled' ? 'CANCELLED'
   : events.some(e => e.type === 'error') ? 'FAILED'
   : 'COMPLETED';
 function truncate(v) {
-  const c = v.replace(/\s+/g, ' ').trim();
-  return c.length <= 280 ? c : c.slice(0, 279).trimEnd() + '…';
+  return v.replace(/\s+/g, ' ').trim();
 }
 let preview = '';
 if (status === 'FAILED') {

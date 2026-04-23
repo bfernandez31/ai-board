@@ -29,11 +29,11 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
-  const job = await prisma.job.findFirst({
-    where: { id: jobId, ticketId, projectId },
-    select: { id: true },
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    select: { id: true, ticketId: true, projectId: true },
   });
-  if (!job) {
+  if (!job || job.ticketId !== ticketId || job.projectId !== projectId) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 

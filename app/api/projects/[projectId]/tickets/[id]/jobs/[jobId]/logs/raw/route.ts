@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { verifyTicketAccess } from '@/lib/db/auth-helpers';
 import { streamJobLogArtifact } from '@/app/lib/blob/client';
+import { buildJobLogArtifactKey } from '@/app/lib/logs/artifact-key';
 
 export async function GET(
   request: NextRequest,
@@ -31,11 +32,11 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
-  const job = await prisma.job.findFirst({
-    where: { id: jobId, ticketId, projectId },
-    select: { id: true },
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    select: { id: true, ticketId: true, projectId: true },
   });
-  if (!job) {
+  if (!job || job.ticketId !== ticketId || job.projectId !== projectId) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 
@@ -47,9 +48,22 @@ export async function GET(
     return NextResponse.json({ error: 'Artifact not available' }, { status: 404 });
   }
 
+  const canonicalArtifactKey = buildJobLogArtifactKey(projectId, ticketId, jobId);
+  if (log.artifactKey !== canonicalArtifactKey) {
+    console.error('[GET /logs/raw] Stored artifact key mismatch', {
+      jobId,
+      expectedArtifactKey: canonicalArtifactKey,
+      actualArtifactKey: log.artifactKey,
+    });
+    return NextResponse.json(
+      { error: 'Artifact key mismatch', code: 'ARTIFACT_KEY_MISMATCH' },
+      { status: 500 }
+    );
+  }
+
   let result;
   try {
-    result = await streamJobLogArtifact(log.artifactKey);
+    result = await streamJobLogArtifact(canonicalArtifactKey);
   } catch (error) {
     console.error('[GET /logs/raw] Blob stream failed', error);
     return NextResponse.json(

@@ -167,6 +167,11 @@ jobs:
             -d '{"status": "RUNNING", "workflowRunId": ${{ github.run_id }}}' \
             -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
 
+      - name: Record Agent Capture Start Timestamp
+        if: ${{ inputs.job_id }}
+        run: |
+          echo "CAPTURE_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
       # All assist commands (compare, code-review, fix, assist) run on Claude
       # regardless of the project's primary agent — only the Anthropic credential
       # is needed. The project agent input is ignored here.

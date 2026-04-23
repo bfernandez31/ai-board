@@ -1,17 +1,16 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { NextRequest } from 'next/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
-import { createAPIClient, type APIClient } from '@/tests/fixtures/vitest/api-client';
+import { POST } from '@/app/api/jobs/[id]/logs/route';
 
-const WORKFLOW_TOKEN = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+const { validateWorkflowAuth } = vi.hoisted(() => ({
+  validateWorkflowAuth: vi.fn(),
+}));
 
-function workflowApi(): APIClient {
-  return createAPIClient({
-    defaultHeaders: { Authorization: `Bearer ${WORKFLOW_TOKEN}` },
-    includeTestUserHeader: false,
-    enableTestAuthOverride: false,
-  });
-}
+vi.mock('@/app/lib/auth/workflow-auth', () => ({
+  validateWorkflowAuth,
+}));
 
 describe('POST /api/jobs/:id/logs', () => {
   let ctx: TestContext;
@@ -22,6 +21,8 @@ describe('POST /api/jobs/:id/logs', () => {
   beforeEach(async () => {
     ctx = await getTestContext();
     await ctx.cleanup();
+    validateWorkflowAuth.mockReset();
+    validateWorkflowAuth.mockReturnValue({ isValid: true });
 
     const ticket = await ctx.createTicket({ title: '[e2e] log-post' });
     ticketId = ticket.id;
@@ -39,27 +40,44 @@ describe('POST /api/jobs/:id/logs', () => {
     jobId = job.id;
   });
 
+  async function postLog(targetJobId: number, body: unknown): Promise<Response> {
+    return POST(
+      new NextRequest(`http://localhost/api/jobs/${targetJobId}/logs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer test-token',
+        },
+        body: JSON.stringify(body),
+      }),
+      { params: Promise.resolve({ id: String(targetJobId) }) }
+    );
+  }
+
   it('returns 401 when Authorization header is missing', async () => {
-    const unauth = createAPIClient({ includeTestUserHeader: false, enableTestAuthOverride: false });
-    const res = await unauth.post(`/api/jobs/${jobId}/logs`, {
-      captureStatus: 'CAPTURED',
-      preview: 'ok',
-      schemaVersion: 1,
-      eventCount: 1,
-      errorCount: 0,
-      artifactKey: `logs/${ctx.projectId}/${ticketId}/${jobId}.jsonl.gz`,
-      artifactSize: 100,
-    });
+    validateWorkflowAuth.mockReturnValue({ isValid: false });
+    const res = await POST(
+      new NextRequest(`http://localhost/api/jobs/${jobId}/logs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          captureStatus: 'CAPTURED',
+          preview: 'ok',
+          schemaVersion: 1,
+          eventCount: 1,
+          errorCount: 0,
+          artifactKey: `logs/${ctx.projectId}/${ticketId}/${jobId}.jsonl.gz`,
+          artifactSize: 100,
+        }),
+      }),
+      { params: Promise.resolve({ id: String(jobId) }) }
+    );
     expect(res.status).toBe(401);
   });
 
   it('returns 401 when Authorization token is invalid', async () => {
-    const bad = createAPIClient({
-      defaultHeaders: { Authorization: 'Bearer not-a-real-token' },
-      includeTestUserHeader: false,
-      enableTestAuthOverride: false,
-    });
-    const res = await bad.post(`/api/jobs/${jobId}/logs`, {
+    validateWorkflowAuth.mockReturnValue({ isValid: false });
+    const res = await postLog(jobId, {
       captureStatus: 'UNAVAILABLE',
       preview: 'Logs unavailable — capture failed.',
       schemaVersion: 1,
@@ -70,7 +88,7 @@ describe('POST /api/jobs/:id/logs', () => {
   });
 
   it('returns 400 when payload fails Zod validation', async () => {
-    const res = await workflowApi().post<{ error: string }>(`/api/jobs/${jobId}/logs`, {
+    const res = await postLog(jobId, {
       captureStatus: 'CAPTURED',
       preview: '',
       schemaVersion: 1,
@@ -78,11 +96,11 @@ describe('POST /api/jobs/:id/logs', () => {
       errorCount: 0,
     });
     expect(res.status).toBe(400);
-    expect(res.data.error).toBeTruthy();
+    await expect(res.json()).resolves.toMatchObject({ error: 'Validation failed' });
   });
 
   it('rejects artifactKey when captureStatus is UNAVAILABLE', async () => {
-    const res = await workflowApi().post<{ error: string }>(`/api/jobs/${jobId}/logs`, {
+    const res = await postLog(jobId, {
       captureStatus: 'UNAVAILABLE',
       preview: 'Logs unavailable — capture failed.',
       schemaVersion: 1,
@@ -104,9 +122,9 @@ describe('POST /api/jobs/:id/logs', () => {
       artifactKey: `logs/${ctx.projectId}/${ticketId}/${jobId}.jsonl.gz`,
       artifactSize: 1234,
     };
-    const first = await workflowApi().post(`/api/jobs/${jobId}/logs`, body);
+    const first = await postLog(jobId, body);
     expect(first.status).toBe(200);
-    const second = await workflowApi().post(`/api/jobs/${jobId}/logs`, {
+    const second = await postLog(jobId, {
       ...body,
       preview: 'second preview',
       eventCount: 6,
@@ -119,8 +137,29 @@ describe('POST /api/jobs/:id/logs', () => {
     expect(rows[0]?.eventCount).toBe(6);
   });
 
+  it('re-redacts before truncation so partial secrets are not stored', async () => {
+    const longPrefix = `${'x'.repeat(249)} `;
+    const secret = 'ghp_1234567890abcdefghij';
+    const trailing = 'y'.repeat(80);
+    const res = await postLog(jobId, {
+      captureStatus: 'CAPTURED',
+      preview: `${longPrefix}${secret}${trailing}`,
+      schemaVersion: 1,
+      eventCount: 1,
+      errorCount: 0,
+      artifactKey: `logs/${ctx.projectId}/${ticketId}/${jobId}.jsonl.gz`,
+      artifactSize: 100,
+    });
+
+    expect(res.status).toBe(200);
+    const row = await prisma.jobLog.findUniqueOrThrow({ where: { jobId } });
+    expect(row.preview).toContain('[REDACTED:github_token]');
+    expect(row.preview).not.toContain(secret);
+    expect(row.preview.length).toBeLessThanOrEqual(280);
+  });
+
   it('returns 404 for unknown job', async () => {
-    const res = await workflowApi().post(`/api/jobs/9999999/logs`, {
+    const res = await postLog(9999999, {
       captureStatus: 'UNAVAILABLE',
       preview: 'Logs unavailable — capture failed.',
       schemaVersion: 1,

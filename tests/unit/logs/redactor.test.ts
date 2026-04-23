@@ -82,6 +82,13 @@ describe('redactString', () => {
     expect(out).not.toContain('topsecret');
   });
 
+  it('redacts realistic Mistral API key output via env-secret coverage', () => {
+    const input = 'stderr: MISTRAL_API_KEY=abcd1234abcd1234abcd1234abcd1234';
+    const out = redactString(input);
+    expect(out).toContain('MISTRAL_API_KEY=[REDACTED:env_secret:MISTRAL_API_KEY]');
+    expect(out).not.toContain('abcd1234abcd1234abcd1234abcd1234');
+  });
+
   it('does not bleed across whitespace to adjacent env vars', () => {
     const input = 'DATABASE_URL=postgres://u:p@h/d NEXTAUTH_SECRET=abcdefghijklmnopqrstuvwxyz1234567890';
     const out = redactString(input);

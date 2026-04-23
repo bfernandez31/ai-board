@@ -35,10 +35,6 @@ const PATTERNS: Pattern[] = [
     kind: 'google_key',
     regex: /\bAIza[A-Za-z0-9_\-]{20,}\b/g,
   },
-  {
-    kind: 'mistral_key',
-    regex: /\b[A-Za-z0-9]{32}\b(?=\s*(?:#|\/\/|$))/g,
-  },
 ];
 
 const ENV_SECRET_REGEX =

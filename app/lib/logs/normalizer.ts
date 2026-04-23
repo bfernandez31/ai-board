@@ -34,23 +34,6 @@ function buildHeader(agent: AgentId, input: NormalizerInput): ArtifactHeader {
   };
 }
 
-function emptyLifecyclePair(agent: AgentId, header: ArtifactHeader): NormalizedEvent[] {
-  return [
-    {
-      ts: header.startedAt,
-      type: 'lifecycle',
-      agent,
-      payload: { kind: 'started' },
-    },
-    {
-      ts: header.endedAt ?? header.startedAt,
-      type: 'lifecycle',
-      agent,
-      payload: { kind: header.endedAt ? 'completed' : 'cancelled' },
-    },
-  ];
-}
-
 interface ClaudeStreamEvent {
   type?: string;
   message?: {
@@ -106,9 +89,6 @@ function normalizeAgentStream(
     agent,
     payload: { kind: header.endedAt ? 'completed' : 'cancelled' },
   });
-  if (events.length === 2 && input.raw.trim().length === 0) {
-    return { header, events: emptyLifecyclePair(agent, header) };
-  }
   return { header, events };
 }
 

@@ -217,6 +217,11 @@ jobs:
             echo "⚠️ Failed to update job status to RUNNING (HTTP $HTTP_CODE)"
           fi
 
+      - name: Record Agent Capture Start Timestamp
+        if: ${{ inputs.job_id }}
+        run: |
+          echo "CAPTURE_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
       - name: Fetch Owner AI Credential
         if: ${{ env.SKIP_EXECUTION != 'true' && inputs.project_id }}
         run: |

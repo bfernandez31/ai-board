@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const SCHEMA_VERSION = 1 as const;
 export const PREVIEW_MAX_CHARS = 280;
+export const PREVIEW_INPUT_MAX_CHARS = 4096;
 export const ARTIFACT_MAX_BYTES = 25 * 1024 * 1024;
 
 export const AgentIdSchema = z.enum(['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']);
@@ -73,7 +74,7 @@ export type CaptureStatusWrite = z.infer<typeof CaptureStatusWriteSchema>;
 
 const baseSubmission = z.object({
   captureStatus: CaptureStatusWriteSchema,
-  preview: z.string().min(1).max(PREVIEW_MAX_CHARS),
+  preview: z.string().min(1).max(PREVIEW_INPUT_MAX_CHARS),
   schemaVersion: z.literal(SCHEMA_VERSION),
   eventCount: z.number().int().nonnegative(),
   errorCount: z.number().int().nonnegative(),
