@@ -23,6 +23,14 @@ interface JobLogDialogProps {
   jobCommand?: string | null;
 }
 
+function getJobLogDescription(jobCommand?: string | null): string {
+  if (jobCommand) {
+    return `${jobCommand} job execution detail`;
+  }
+
+  return 'Full retained execution detail for this job.';
+}
+
 function availabilityLabel(availability: string): string {
   switch (availability) {
     case 'AVAILABLE':
@@ -38,25 +46,27 @@ function availabilityLabel(availability: string): string {
   }
 }
 
+async function fetchJobLogDetail(projectId: number, jobId: number): Promise<TicketJobLogDetail> {
+  const response = await fetch(`/api/projects/${projectId}/jobs/${jobId}/logs`);
+  const body = await response.json();
+
+  if (!response.ok) {
+    throw new Error(body.error || 'Failed to load execution logs');
+  }
+
+  return body as TicketJobLogDetail;
+}
+
 export function JobLogDialog({
   open,
   onOpenChange,
   projectId,
   jobId,
   jobCommand,
-}: JobLogDialogProps) {
+}: JobLogDialogProps): React.JSX.Element {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.projects.jobLogDetail(projectId, jobId ?? 0),
-    queryFn: async (): Promise<TicketJobLogDetail> => {
-      const response = await fetch(`/api/projects/${projectId}/jobs/${jobId}/logs`);
-      const body = await response.json();
-
-      if (!response.ok) {
-        throw new Error(body.error || 'Failed to load execution logs');
-      }
-
-      return body as TicketJobLogDetail;
-    },
+    queryFn: () => fetchJobLogDetail(projectId, jobId ?? 0),
     enabled: open && jobId !== null,
     staleTime: 30000,
     refetchOnWindowFocus: false,
@@ -71,7 +81,7 @@ export function JobLogDialog({
             Execution Logs
           </DialogTitle>
           <DialogDescription>
-            {jobCommand ? `${jobCommand} job execution detail` : 'Full retained execution detail for this job.'}
+            {getJobLogDescription(jobCommand)}
           </DialogDescription>
         </DialogHeader>
 
@@ -123,7 +133,10 @@ export function JobLogDialog({
               <ScrollArea className="h-[420px] rounded-lg border border-border">
                 <div className="space-y-3 p-4">
                   {data.events.map((event) => (
-                    <div key={`${event.sequence}-${event.timestamp}`} className="rounded-lg border border-border/70 bg-card p-3">
+                    <div
+                      key={`${event.sequence}-${event.timestamp}`}
+                      className="rounded-lg border border-border/70 bg-card p-3"
+                    >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">{event.kind}</Badge>

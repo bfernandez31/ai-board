@@ -50,20 +50,31 @@ const STATUS_ICONS: Record<string, StatusConfig> = {
   PENDING: DEFAULT_STATUS,
 };
 
+type JobRowProps = {
+  job: TicketJobWithTelemetry;
+  projectId?: number | undefined;
+  onViewLogs?: (jobId: number, jobCommand: string) => void;
+};
+
+function canViewLogs(availability: TicketJobWithTelemetry['logAvailability']): boolean {
+  return availability === 'AVAILABLE' || availability === 'PARTIAL' || availability === 'PRUNED';
+}
+
+function hasTelemetry(job: TicketJobWithTelemetry): boolean {
+  return (
+    job.inputTokens != null ||
+    job.outputTokens != null ||
+    job.cacheReadTokens != null ||
+    job.cacheCreationTokens != null
+  );
+}
+
 /**
  * JobRow Component
  *
  * Single job entry with expandable token breakdown
  */
-function JobRow({
-  job,
-  projectId,
-  onViewLogs,
-}: {
-  job: TicketJobWithTelemetry;
-  projectId?: number | undefined;
-  onViewLogs?: (jobId: number, jobCommand: string) => void;
-}) {
+function JobRow({ job, projectId, onViewLogs }: JobRowProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const cancelJobMutation = useCancelJob(projectId ?? 0);
@@ -72,19 +83,8 @@ function JobRow({
   const StatusIcon = statusConfig.icon;
   const isRunning = job.status === 'RUNNING';
   const isCancellable = projectId != null && (job.status === 'PENDING' || job.status === 'RUNNING');
-
-  // Check if job has telemetry data to expand
-  const hasTelemetry =
-    job.inputTokens != null ||
-    job.outputTokens != null ||
-    job.cacheReadTokens != null ||
-    job.cacheCreationTokens != null;
   const hasLogSummary = job.logSummary != null;
-  const canViewLogs =
-    job.logAvailability === 'AVAILABLE' ||
-    job.logAvailability === 'PARTIAL' ||
-    job.logAvailability === 'PRUNED';
-  const expandable = hasTelemetry || hasLogSummary;
+  const expandable = hasTelemetry(job) || hasLogSummary;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -148,13 +148,13 @@ function JobRow({
           )}
 
           {/* Expand/Collapse Indicator */}
-          {expandable && (
+          {expandable ? (
             isOpen ? (
               <ChevronDown className="w-4 h-4 text-ctp-overlay0" />
             ) : (
               <ChevronRight className="w-4 h-4 text-ctp-overlay0" />
             )
-          )}
+          ) : null}
         </div>
       </CollapsibleTrigger>
 
@@ -187,7 +187,7 @@ function JobRow({
                       <p className="mt-1 text-xs text-ctp-red">{job.logSummary.errorReason}</p>
                     ) : null}
                   </div>
-                  {canViewLogs && onViewLogs ? (
+                  {canViewLogs(job.logAvailability) && onViewLogs ? (
                     <Button
                       type="button"
                       size="sm"
@@ -272,7 +272,11 @@ interface JobsTimelineProps {
   onViewLogs?: (jobId: number, jobCommand: string) => void;
 }
 
-export function JobsTimeline({ jobs, projectId, onViewLogs }: JobsTimelineProps) {
+export function JobsTimeline({
+  jobs,
+  projectId,
+  onViewLogs,
+}: JobsTimelineProps): React.JSX.Element {
   if (jobs.length === 0) {
     return (
       <div className="text-sm text-ctp-overlay0" data-testid="no-jobs-message">

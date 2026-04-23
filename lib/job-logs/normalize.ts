@@ -145,14 +145,33 @@ function normalizeTitle(event: ProviderEventInput, kind: JobLogEvent['kind']): s
   }
 }
 
+function getBodySource(event: ProviderEventInput): string | null {
+  if (event.body) {
+    return event.body;
+  }
+
+  if (event.message && event.message !== event.title) {
+    return event.message;
+  }
+
+  if (event.content && event.content !== event.title) {
+    return event.content;
+  }
+
+  return null;
+}
+
+function toSummaryEventKind(kind: JobLogEvent['kind']): JobLogSummaryEvent['kind'] {
+  if (kind === 'TOOL_CALL' || kind === 'TOOL_RESULT') {
+    return 'TOOL';
+  }
+
+  return kind;
+}
+
 export function normalizeProviderEvents(events: ProviderEventInput[] | null | undefined): JobLogEvent[] {
   return (events ?? []).map((event, index) => {
     const kind = normalizeKind(event);
-    const bodySource =
-      event.body ??
-      (event.message && event.message !== event.title ? event.message : null) ??
-      (event.content && event.content !== event.title ? event.content : null) ??
-      null;
 
     return {
       sequence: event.sequence ?? index,
@@ -160,7 +179,7 @@ export function normalizeProviderEvents(events: ProviderEventInput[] | null | un
       kind,
       actor: normalizeActor(event),
       title: normalizeTitle(event, kind),
-      body: sanitizeText(bodySource)?.slice(0, 50000) ?? null,
+      body: sanitizeText(getBodySource(event))?.slice(0, 50000) ?? null,
       toolName: sanitizeText(event.toolName ?? event.tool ?? event.name ?? null)?.slice(0, 200) ?? null,
       metadata: sanitizeMetadata(event.metadata),
     };
@@ -173,10 +192,7 @@ export function buildSummaryPreviewEvents(events: JobLogEvent[], maxItems: numbe
     .slice(-maxItems)
     .map((event) => ({
       timestamp: event.timestamp,
-      kind:
-        event.kind === 'TOOL_CALL' || event.kind === 'TOOL_RESULT'
-          ? 'TOOL'
-          : event.kind,
+      kind: toSummaryEventKind(event.kind),
       label: [event.title, event.body].filter(Boolean).join(': ').slice(0, 500),
     }));
 }

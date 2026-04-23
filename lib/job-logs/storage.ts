@@ -49,6 +49,56 @@ type PersistArgs = {
   };
 };
 
+type PersistedJobExecutionLogData = Pick<
+  Prisma.JobExecutionLogUncheckedCreateInput,
+  | 'agent'
+  | 'availability'
+  | 'sourceFormat'
+  | 'summaryJson'
+  | 'eventCount'
+  | 'artifactEncoding'
+  | 'artifactBytes'
+  | 'artifactSha256'
+  | 'artifactSizeBytes'
+  | 'partialReason'
+  | 'unavailableReason'
+  | 'capturedAt'
+  | 'retainedUntil'
+  | 'prunedAt'
+>;
+
+function buildPersistedJobExecutionLogData(args: {
+  payload: JobLogUploadRequest;
+  normalized: PersistArgs['normalized'];
+  capturedAt: Date;
+  retainedUntil: Date;
+}): PersistedJobExecutionLogData {
+  const { payload, normalized, capturedAt, retainedUntil } = args;
+  const shouldPersistArtifact =
+    normalized.availability === 'AVAILABLE' || normalized.availability === 'PARTIAL';
+  const events = normalized.availability === 'UNAVAILABLE' ? [] : normalized.events;
+  const artifactBytes = shouldPersistArtifact ? compressJobLogEvents(events) : null;
+  const artifactSha256 = payload.artifactSha256 ?? (artifactBytes ? computeArtifactSha256(events) : null);
+  const prunedAt = normalized.availability === 'PRUNED' ? capturedAt : null;
+
+  return {
+    agent: payload.agent,
+    availability: normalized.availability,
+    sourceFormat: payload.sourceFormat,
+    summaryJson: normalized.summary,
+    eventCount: events.length,
+    artifactEncoding: artifactBytes ? 'gzip-json' : null,
+    artifactBytes: artifactBytes as Uint8Array<ArrayBuffer> | null,
+    artifactSha256,
+    artifactSizeBytes: artifactBytes ? artifactBytes.byteLength : null,
+    partialReason: normalized.partialReason,
+    unavailableReason: normalized.unavailableReason,
+    capturedAt,
+    retainedUntil,
+    prunedAt,
+  };
+}
+
 export async function upsertJobExecutionLog({
   job,
   payload,
@@ -57,50 +107,22 @@ export async function upsertJobExecutionLog({
   const capturedAt = payload.capturedAt ? new Date(payload.capturedAt) : new Date();
   const retentionAnchor = job.completedAt && job.completedAt > capturedAt ? job.completedAt : capturedAt;
   const retainedUntil = getRetentionDate(retentionAnchor);
-  const events = normalized.availability === 'UNAVAILABLE' ? [] : normalized.events;
-  const artifactBytes: Uint8Array<ArrayBuffer> | null =
-    normalized.availability === 'AVAILABLE' || normalized.availability === 'PARTIAL'
-      ? (compressJobLogEvents(events) as Uint8Array<ArrayBuffer>)
-      : null;
-  const artifactSha256 =
-    payload.artifactSha256 ??
-    (artifactBytes ? computeArtifactSha256(events) : null);
+  const logData = buildPersistedJobExecutionLogData({
+    payload,
+    normalized,
+    capturedAt,
+    retainedUntil,
+  });
 
   const data: Prisma.JobExecutionLogUncheckedCreateInput = {
     jobId: job.id,
     projectId: job.projectId,
     ticketId: job.ticketId,
-    agent: payload.agent,
-    availability: normalized.availability,
-    sourceFormat: payload.sourceFormat,
-    summaryJson: normalized.summary,
-    eventCount: events.length,
-    artifactEncoding: artifactBytes ? 'gzip-json' : null,
-    artifactBytes,
-    artifactSha256,
-    artifactSizeBytes: artifactBytes ? artifactBytes.byteLength : null,
-    partialReason: normalized.partialReason,
-    unavailableReason: normalized.unavailableReason,
-    capturedAt,
-    retainedUntil,
-    prunedAt: normalized.availability === 'PRUNED' ? capturedAt : null,
+    ...logData,
   };
 
   const updateData: Prisma.JobExecutionLogUncheckedUpdateInput = {
-    agent: payload.agent,
-    availability: normalized.availability,
-    sourceFormat: payload.sourceFormat,
-    summaryJson: normalized.summary,
-    eventCount: events.length,
-    artifactEncoding: artifactBytes ? 'gzip-json' : null,
-    artifactBytes,
-    artifactSha256,
-    artifactSizeBytes: artifactBytes ? artifactBytes.byteLength : null,
-    partialReason: normalized.partialReason,
-    unavailableReason: normalized.unavailableReason,
-    capturedAt,
-    retainedUntil,
-    prunedAt: normalized.availability === 'PRUNED' ? capturedAt : null,
+    ...logData,
   };
 
   return prisma.jobExecutionLog.upsert({
