@@ -114,6 +114,27 @@ describe('generateLogSummary', () => {
       const summary = generateLogSummary(entries, 'CANCELLED');
       expect(summary).toContain('1');
     });
+
+    it('includes "Cancelled after N entries" format', () => {
+      const entries: NormalizedLogEntry[] = [
+        makeEntry('message', 'Starting implementation'),
+        makeEntry('tool_invocation', 'Read file: src/index.ts'),
+        makeEntry('tool_invocation', 'Edit file: src/index.ts'),
+        makeEntry('message', 'About to run tests'),
+      ];
+      const summary = generateLogSummary(entries, 'CANCELLED');
+      expect(summary).toMatch(/Cancelled after 4 entries/);
+    });
+
+    it('includes last entry content in cancellation summary', () => {
+      const entries: NormalizedLogEntry[] = [
+        makeEntry('message', 'Initializing...'),
+        makeEntry('tool_invocation', 'Read file: config.ts'),
+        makeEntry('message', 'Halfway through the task'),
+      ];
+      const summary = generateLogSummary(entries, 'CANCELLED');
+      expect(summary).toContain('Halfway through the task');
+    });
   });
 
   describe('summary length', () => {

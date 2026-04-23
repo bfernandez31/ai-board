@@ -148,8 +148,8 @@
 ### Tests for User Story 4
 **RULE: Extend existing test files — do not create new files for this domain.**
 
-- [ ] T034 [US4] Extend `tests/integration/jobs/job-logs.test.ts` — add cancelled job scenarios: upload partial output for a CANCELLED job, verify summary indicates cancellation with entry count, verify GET returns partial entries
-- [ ] T035 [US4] Extend `tests/unit/log-summarizer.test.ts` — add CANCELLED-specific scenarios: verify summary format "Cancelled after N entries" with last entry content
+- [x] T034 [US4] Extend `tests/integration/jobs/job-logs.test.ts` — add cancelled job scenarios: upload partial output for a CANCELLED job, verify summary indicates cancellation with entry count, verify GET returns partial entries
+- [x] T035 [US4] Extend `tests/unit/log-summarizer.test.ts` — add CANCELLED-specific scenarios: verify summary format "Cancelled after N entries" with last entry content
 
 **Checkpoint**: All four job statuses (FAILED, COMPLETED, CANCELLED, and no-log NONE) are handled correctly end-to-end.
 

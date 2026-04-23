@@ -330,4 +330,61 @@ Done.`;
       expect(response.data.entries.every((e) => e.content)).toBe(true);
     });
   });
+
+  describe('Cancelled job logs', () => {
+    let cancelledJobId: number;
+
+    beforeEach(async () => {
+      const createResponse = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Test Cancelled Job Logs',
+          description: 'Test ticket for cancelled job log testing',
+        }
+      );
+      const cancelledTicketId = createResponse.data.id;
+
+      await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/${cancelledTicketId}/transition`, {
+        targetStage: 'SPECIFY',
+      });
+
+      cancelledJobId = await waitForLatestJobId(prisma, cancelledTicketId);
+      await workflowApi.patch(`/api/jobs/${cancelledJobId}/status`, { status: 'RUNNING' });
+      await workflowApi.patch(`/api/jobs/${cancelledJobId}/status`, { status: 'CANCELLED' });
+    });
+
+    it('should upload partial output for cancelled job', async () => {
+      const partialOutput = `Starting implementation...
+
+> Read file: src/main.ts
+
+Analyzing the code structure.`;
+
+      const response = await workflowApi.post<{ jobId: number; entryCount: number }>(
+        `/api/jobs/${cancelledJobId}/logs`,
+        { agentType: 'CLAUDE', rawOutput: partialOutput }
+      );
+
+      expect(response.status).toBe(201);
+      expect(response.data.entryCount).toBeGreaterThan(0);
+
+      const job = await prisma.job.findUnique({ where: { id: cancelledJobId } });
+      expect(job?.logStatus).toBe('AVAILABLE');
+      expect(job?.logSummary).toContain('Cancelled');
+    });
+
+    it('should return partial entries for cancelled job', async () => {
+      await workflowApi.post(`/api/jobs/${cancelledJobId}/logs`, {
+        agentType: 'CLAUDE',
+        rawOutput: 'Partial work before cancellation.\n\n> Read file: src/index.ts\n\nAnalyzing...',
+      });
+
+      const response = await ctx.api.get<{
+        entries: Array<{ eventType: string; content: string }>;
+      }>(`/api/jobs/${cancelledJobId}/logs`);
+
+      expect(response.status).toBe(200);
+      expect(response.data.entries.length).toBeGreaterThan(0);
+    });
+  });
 });
