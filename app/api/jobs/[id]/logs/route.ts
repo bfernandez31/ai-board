@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
+import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { requireAuth } from '@/lib/db/users';
 import { parseAgentOutput } from '@/lib/logs/log-parser';
 import { generateLogSummary } from '@/lib/logs/log-summarizer';
@@ -128,7 +129,6 @@ export async function GET(
     }
 
     try {
-      const { verifyProjectAccess } = await import('@/lib/db/auth-helpers');
       await verifyProjectAccess(job.projectId, request);
     } catch {
       return NextResponse.json(

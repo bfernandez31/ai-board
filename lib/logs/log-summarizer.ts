@@ -28,7 +28,7 @@ function summarizeFailed(entries: NormalizedLogEntry[]): string {
 
 function summarizeCompleted(entries: NormalizedLogEntry[]): string {
   const toolInvocations = entries.filter((e) => e.eventType === 'tool_invocation');
-  const lastEntry = entries.length > 0 ? entries[entries.length - 1] : null;
+  const lastEntry = entries.at(-1)!;
 
   const parts: string[] = [];
 
@@ -37,23 +37,15 @@ function summarizeCompleted(entries: NormalizedLogEntry[]): string {
   }
 
   parts.push(`${entries.length} total entries`);
-
-  if (lastEntry) {
-    parts.push(lastEntry.content);
-  }
+  parts.push(lastEntry.content);
 
   return truncateTo(`Completed: ${parts.join('. ')}`, MAX_SUMMARY_LENGTH);
 }
 
 function summarizeCancelled(entries: NormalizedLogEntry[]): string {
-  const lastEntry = entries.length > 0 ? entries[entries.length - 1] : null;
+  const lastEntry = entries.at(-1)!;
   const base = `Cancelled after ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}`;
-
-  if (lastEntry) {
-    return truncateTo(`${base}. Last: ${lastEntry.content}`, MAX_SUMMARY_LENGTH);
-  }
-
-  return base;
+  return truncateTo(`${base}. Last: ${lastEntry.content}`, MAX_SUMMARY_LENGTH);
 }
 
 export function generateLogSummary(entries: NormalizedLogEntry[], jobStatus: string): string {

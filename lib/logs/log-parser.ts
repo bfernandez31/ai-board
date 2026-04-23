@@ -33,170 +33,109 @@ function isErrorLine(line: string): boolean {
   return ERROR_PATTERNS.some((p) => p.test(line));
 }
 
-function makeTimestamp(): string {
-  return new Date().toISOString();
+function makeEntry(eventType: LogEventType, content: string, metadata?: Record<string, unknown>): NormalizedLogEntry {
+  return { timestamp: new Date().toISOString(), eventType, content, ...(metadata ? { metadata } : {}) };
 }
 
-function makeEntry(eventType: LogEventType, content: string, metadata?: Record<string, unknown>): NormalizedLogEntry {
-  return { timestamp: makeTimestamp(), eventType, content, ...(metadata ? { metadata } : {}) };
+function flushBuffer(buffer: string[], entries: NormalizedLogEntry[]): void {
+  if (buffer.length === 0) return;
+  const text = buffer.join('\n').trim();
+  if (text) {
+    entries.push(makeEntry(isErrorLine(text) ? 'error' : 'message', text));
+  }
+  buffer.length = 0;
+}
+
+function matchTool(line: string, patterns: RegExp[]): RegExpMatchArray | null {
+  for (const pattern of patterns) {
+    const match = line.match(pattern);
+    if (match) return match;
+  }
+  return null;
 }
 
 function parseClaudeOutput(raw: string): NormalizedLogEntry[] {
-  const lines = raw.split('\n');
   const entries: NormalizedLogEntry[] = [];
-  let messageBuffer: string[] = [];
+  const buffer: string[] = [];
 
-  function flushMessage(): void {
-    if (messageBuffer.length > 0) {
-      const text = messageBuffer.join('\n').trim();
-      if (text) {
-        entries.push(makeEntry(isErrorLine(text) ? 'error' : 'message', text));
-      }
-      messageBuffer = [];
+  for (const line of raw.split('\n')) {
+    const match = matchTool(line, TOOL_PATTERNS_CLAUDE);
+    if (match) {
+      flushBuffer(buffer, entries);
+      entries.push(makeEntry('tool_invocation', line.replace(/^>\s*/, ''), { tool: match[1] }));
+    } else {
+      buffer.push(line);
     }
   }
-
-  for (const line of lines) {
-    let matched = false;
-    for (const pattern of TOOL_PATTERNS_CLAUDE) {
-      const match = line.match(pattern);
-      if (match) {
-        flushMessage();
-        entries.push(makeEntry('tool_invocation', line.replace(/^>\s*/, ''), { tool: match[1] }));
-        matched = true;
-        break;
-      }
-    }
-    if (!matched) {
-      messageBuffer.push(line);
-    }
-  }
-  flushMessage();
+  flushBuffer(buffer, entries);
   return entries;
 }
 
 function parseCodexOutput(raw: string): NormalizedLogEntry[] {
-  const lines = raw.split('\n');
   const entries: NormalizedLogEntry[] = [];
-  let messageBuffer: string[] = [];
+  const buffer: string[] = [];
 
-  function flushMessage(): void {
-    if (messageBuffer.length > 0) {
-      const text = messageBuffer.join('\n').trim();
-      if (text) {
-        entries.push(makeEntry(isErrorLine(text) ? 'error' : 'message', text));
-      }
-      messageBuffer = [];
+  for (const line of raw.split('\n')) {
+    const match = matchTool(line, TOOL_PATTERNS_CODEX);
+    if (match) {
+      flushBuffer(buffer, entries);
+      entries.push(makeEntry('tool_invocation', line.trim(), { detail: match[1] }));
+    } else if (line.startsWith('Output:')) {
+      flushBuffer(buffer, entries);
+      entries.push(makeEntry('tool_result', line.replace(/^Output:\s*/, '').trim()));
+    } else {
+      buffer.push(line);
     }
   }
-
-  for (const line of lines) {
-    let matched = false;
-    for (const pattern of TOOL_PATTERNS_CODEX) {
-      const match = line.match(pattern);
-      if (match) {
-        flushMessage();
-        entries.push(makeEntry('tool_invocation', line.trim(), { detail: match[1] }));
-        matched = true;
-        break;
-      }
-    }
-
-    if (!matched) {
-      if (line.startsWith('Output:')) {
-        flushMessage();
-        entries.push(makeEntry('tool_result', line.replace(/^Output:\s*/, '').trim()));
-      } else {
-        messageBuffer.push(line);
-      }
-    }
-  }
-  flushMessage();
+  flushBuffer(buffer, entries);
   return entries;
 }
 
 function parseMistralOutput(raw: string): NormalizedLogEntry[] {
-  const lines = raw.split('\n');
   const entries: NormalizedLogEntry[] = [];
-  let messageBuffer: string[] = [];
+  const buffer: string[] = [];
 
-  function flushMessage(): void {
-    if (messageBuffer.length > 0) {
-      const text = messageBuffer.join('\n').trim();
-      if (text) {
-        entries.push(makeEntry(isErrorLine(text) ? 'error' : 'message', text));
-      }
-      messageBuffer = [];
+  for (const line of raw.split('\n')) {
+    const match = matchTool(line, TOOL_PATTERNS_MISTRAL);
+    if (match) {
+      flushBuffer(buffer, entries);
+      entries.push(makeEntry('tool_invocation', line.trim(), { tool: match[1], args: match[2] }));
+    } else if (line.startsWith('Result:')) {
+      flushBuffer(buffer, entries);
+      entries.push(makeEntry('tool_result', line.replace(/^Result:\s*/, '').trim()));
+    } else {
+      buffer.push(line);
     }
   }
-
-  for (const line of lines) {
-    let matched = false;
-    for (const pattern of TOOL_PATTERNS_MISTRAL) {
-      const match = line.match(pattern);
-      if (match) {
-        flushMessage();
-        entries.push(makeEntry('tool_invocation', line.trim(), { tool: match[1], args: match[2] }));
-        matched = true;
-        break;
-      }
-    }
-
-    if (!matched) {
-      if (line.startsWith('Result:')) {
-        flushMessage();
-        entries.push(makeEntry('tool_result', line.replace(/^Result:\s*/, '').trim()));
-      } else {
-        messageBuffer.push(line);
-      }
-    }
-  }
-  flushMessage();
+  flushBuffer(buffer, entries);
   return entries;
 }
 
 function parseGeminiOutput(raw: string): NormalizedLogEntry[] {
-  const lines = raw.split('\n');
   const entries: NormalizedLogEntry[] = [];
-  let messageBuffer: string[] = [];
+  const buffer: string[] = [];
 
-  function flushMessage(): void {
-    if (messageBuffer.length > 0) {
-      const text = messageBuffer.join('\n').trim();
-      if (text) {
-        entries.push(makeEntry(isErrorLine(text) ? 'error' : 'message', text));
+  for (const line of raw.split('\n')) {
+    const match = matchTool(line, TOOL_PATTERNS_GEMINI);
+    if (match) {
+      flushBuffer(buffer, entries);
+      entries.push(makeEntry('tool_invocation', line.trim(), { tool: match[1] }));
+      continue;
+    }
+
+    if (line.startsWith('Path:')) {
+      const lastEntry = entries.at(-1);
+      if (lastEntry && lastEntry.eventType === 'tool_invocation') {
+        lastEntry.metadata = {
+          ...lastEntry.metadata,
+          path: line.replace(/^Path:\s*/, '').trim(),
+        };
       }
-      messageBuffer = [];
+    } else {
+      buffer.push(line);
     }
   }
-
-  for (const line of lines) {
-    let matched = false;
-    for (const pattern of TOOL_PATTERNS_GEMINI) {
-      const match = line.match(pattern);
-      if (match) {
-        flushMessage();
-        entries.push(makeEntry('tool_invocation', line.trim(), { tool: match[1] }));
-        matched = true;
-        break;
-      }
-    }
-
-    if (!matched) {
-      if (line.startsWith('Path:')) {
-        const lastEntry = entries[entries.length - 1];
-        if (lastEntry && lastEntry.eventType === 'tool_invocation') {
-          lastEntry.metadata = {
-            ...lastEntry.metadata,
-            path: line.replace(/^Path:\s*/, '').trim(),
-          };
-        }
-      } else {
-        messageBuffer.push(line);
-      }
-    }
-  }
-  flushMessage();
+  flushBuffer(buffer, entries);
   return entries;
 }
 

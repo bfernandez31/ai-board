@@ -1,9 +1,9 @@
 'use client';
 
 import { MessageSquare, Wrench, AlertCircle, ArrowRight, FileText } from 'lucide-react';
-import type { NormalizedLogEntry } from '@/lib/logs/types';
+import type { LogEventType, NormalizedLogEntry } from '@/lib/logs/types';
 
-const EVENT_TYPE_CONFIG: Record<string, { icon: typeof MessageSquare; colorClass: string }> = {
+const EVENT_TYPE_CONFIG: Record<LogEventType, { icon: typeof MessageSquare; colorClass: string }> = {
   message: { icon: MessageSquare, colorClass: 'text-blue-400' },
   tool_invocation: { icon: Wrench, colorClass: 'text-amber-400' },
   tool_result: { icon: FileText, colorClass: 'text-zinc-400' },
@@ -24,8 +24,7 @@ interface LogEntryRowProps {
 }
 
 export function LogEntryRow({ entry }: LogEntryRowProps) {
-  const defaultConfig = { icon: MessageSquare, colorClass: 'text-blue-400' };
-  const config = EVENT_TYPE_CONFIG[entry.eventType] ?? defaultConfig;
+  const config = EVENT_TYPE_CONFIG[entry.eventType];
   const Icon = config.icon;
 
   return (
