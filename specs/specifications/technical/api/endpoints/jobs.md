@@ -195,6 +195,94 @@ Invalid transitions return 400 error
 - If the auto-dispatch returns a non-OK result, sets `Ticket.autoMode=false` and logs with the `[AutoMode]` prefix
 - Any hook error is caught and logged; it never fails the outer 200 response (the job row is already persisted)
 
+## Job Log Endpoints
+
+### POST /api/jobs/:id/logs
+
+Ingestion endpoint for the captured agent execution log. Called by the workflow's `run-agent.sh` exit trap once the agent CLI finishes (COMPLETED, FAILED, or CANCELLED).
+
+**Authentication**: Bearer token (`WORKFLOW_API_TOKEN`)
+**Authorization**: Workflow token validation (no project membership check)
+
+**Path Parameters**:
+- `id` (number, required): Job ID
+
+**Request Body**:
+```json
+{
+  "content": "Captured stdout+stderr stream from the agent CLI…",
+  "agent": "CLAUDE"
+}
+```
+
+**Validation**:
+- `content`: Required, string, capped at 4 MB of UTF-8 bytes on input (server re-caps normalized content at 1 MB, keeping the tail)
+- `agent`: Optional, enum `CLAUDE | CODEX | MISTRAL | GEMINI`. When omitted, the server attempts to detect the agent from the stream content.
+
+**Response** (200 OK):
+```json
+{
+  "id": 99,
+  "jobId": 123,
+  "truncated": false,
+  "byteSize": 42511,
+  "eventCount": 27
+}
+```
+
+**Behavior**:
+- Normalizes the raw stream: strips ANSI escapes and carriage-return overwrites, parses JSON stream events (Claude Code `assistant` / `tool_use` / `tool_result` / `error`), and renders each event as a single `[timestamp] kind: content` line
+- Builds a short summary line — preferring the last error-like line, otherwise the tail — stored on `JobLog.summary` and mirrored to `Job.logs` in the same transaction so the jobs-list endpoint can surface an inline preview without joining `JobLog`
+- Upserts by `jobId`, so retries of the same workflow run do not duplicate logs
+- Ingestion is fire-and-forget from the workflow's perspective: upload failures never fail the workflow run (the uploader script always exits 0)
+
+**Errors**:
+- `400`: Invalid JSON body, missing `content`, or content exceeds 4 MB input cap
+- `401`: Invalid or missing workflow token
+- `404`: Job not found
+
+### GET /api/projects/:projectId/tickets/:ticketId/jobs/:jobId/logs
+
+Retrieve the full captured agent execution log for a job. Powers the "View full logs" drill-down in the jobs timeline.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (`verifyProjectAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `ticketId` (number, required): Ticket ID
+- `jobId` (number, required): Job ID
+
+**Response** (200 OK):
+```json
+{
+  "jobId": 123,
+  "command": "implement",
+  "status": "COMPLETED",
+  "log": {
+    "id": 99,
+    "content": "[2026-04-23T10:10:04.120Z] assistant: Reading prisma/schema.prisma…\n[2026-04-23T10:10:05.010Z] tool_use: Read\n…",
+    "summary": "assistant: Done — 3 files modified",
+    "truncated": false,
+    "byteSize": 42511,
+    "eventCount": 27,
+    "agent": "CLAUDE",
+    "createdAt": "2026-04-23T10:11:00.000Z",
+    "updatedAt": "2026-04-23T10:11:00.000Z"
+  }
+}
+```
+
+**Errors**:
+- `400`: Invalid `projectId`, `ticketId`, or `jobId`
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member (`ACCESS_DENIED`)
+- `404`: Job not found (`JOB_NOT_FOUND`) or no log captured yet (`LOG_NOT_FOUND`)
+
+**Notes**:
+- Client hook (`useJobLog`) is lazy — it only fires when the drill-down dialog opens, keeping the main ticket-jobs payload small
+- Response cached for 5 minutes (query `staleTime`); the full content is not included in the jobs listing response
+
 ## Telemetry Endpoints
 
 ### POST /api/telemetry/v1/logs

@@ -335,6 +335,7 @@ model Job {
 
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  jobLog      JobLog?
 
   @@index([ticketId])
   @@index([projectId])
@@ -370,6 +371,7 @@ model Job {
 - `workflowRunId`: GitHub Actions workflow run ID as BigInt (nullable, populated by the workflow's first RUNNING status callback; enables job cancellation via GitHub API)
 - `qualityScore`: Final weighted code quality score 0-100 (nullable, FULL workflow verify jobs only)
 - `qualityScoreDetails`: JSON string containing all five dimension sub-scores, weights, and computed final score (nullable, populated alongside `qualityScore`)
+- `logs`: Short human-readable summary of the captured agent execution log (nullable). Mirrors `JobLog.summary` after log ingestion so listing endpoints can render an inline preview without joining `JobLog`. Full content lives on the related `JobLog` record.
 
 **Relationships**:
 - Belongs to Ticket (required, cascade delete)
@@ -435,6 +437,58 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - When multiple verify jobs exist (rollback-reset cycles), the UI scans completed verify jobs and displays the score from the latest job by `startedAt`
 - The Stats tab always renders the summary score first; dimension rows are shown only when `qualityScoreDetails` contains one or more parsed dimensions and the user expands the disclosure
 - If `qualityScore` exists but `qualityScoreDetails` is absent or cannot be parsed, the UI still shows the overall score and threshold label without the expandable breakdown
+
+### JobLog
+
+Persisted agent execution log captured after a Job reaches a terminal state.
+
+```prisma
+model JobLog {
+  id         Int      @id @default(autoincrement())
+  jobId      Int      @unique
+  content    String
+  summary    String?  @db.VarChar(500)
+  truncated  Boolean  @default(false)
+  byteSize   Int      @default(0)
+  eventCount Int      @default(0)
+  agent      String?  @db.VarChar(20)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+}
+```
+
+**Purpose**: Persist the captured stdout/stderr stream of the agent CLI invocation so users can review what the agent did after the GitHub Actions run expires, without needing access to the underlying repository's Actions tab.
+
+**Fields**:
+- `id`: Auto-incrementing primary key
+- `jobId`: Parent Job (unique — one log per job)
+- `content`: Normalized human-readable log content (timestamped events, tool invocations, errors). Capped at 1 MB per row; larger payloads are truncated with the tail preserved.
+- `summary`: Short single-line summary surfaced in the jobs timeline without a click (max 500 chars, nullable). Prefers the last error-like line; falls back to the last few non-empty lines.
+- `truncated`: `true` when the original stream exceeded 1 MB and `content` contains only the tail plus a truncation marker
+- `byteSize`: Original byte length of the captured stream before truncation (UTF-8 bytes)
+- `eventCount`: Number of normalized events parsed out of the raw stream (assistant messages, tool calls, errors)
+- `agent`: Agent that produced the log (`CLAUDE`, `CODEX`, `MISTRAL`, `GEMINI`, or `UNKNOWN`; max 20 chars, nullable)
+- `createdAt` / `updatedAt`: Timestamps; `createdAt` indexed for retention pruning
+
+**Relationships**:
+- Belongs to Job (required, cascade delete, unique `jobId`)
+
+**Constraints**:
+- Unique `jobId` — a job has at most one log record (upsert on retries)
+- Index on `createdAt` powers the 30-day retention cleanup
+
+**Business Rules**:
+- Written by the workflow token via `POST /api/jobs/:id/logs` after the agent CLI finishes; workflow retries upsert the same row so no duplicates accumulate
+- Upsert is executed in the same transaction as an update of `Job.logs` to mirror `summary` for inline rendering in listing endpoints
+- Raw ingested payload is capped at 4 MB of UTF-8 bytes (server re-caps normalized content at 1 MB)
+- Normalization strips ANSI escapes and `\r` overwrites, parses JSON stream events (Claude Code `assistant` / `tool_use` / `tool_result` / `error`), and renders each event as a single `[timestamp] kind: content` line
+- Logs are retained for 30 days (`JOB_LOG_RETENTION_DAYS`). `pruneOldJobLogs()` (in `lib/logs/retention.ts`) deletes rows older than the cutoff; older logs may be pruned automatically
+- Cascade delete when the parent Job is deleted (e.g., rollback-reset removes the implement job and its log)
+- Log ingestion is fire-and-forget from the workflow's perspective: upload failures never fail the workflow run
 
 ### Comment
 

@@ -174,6 +174,52 @@ Each workflow job captures agent usage metrics through the shared telemetry pipe
 - Batch JSON telemetry remains reserved for Mistral; Gemini batch payloads are rejected
 - Provides total resource usage for the complete workflow execution
 
+### Execution Log Capture
+
+Every workflow job that runs an agent CLI produces a persistent execution log that can be viewed from the ai-board UI, independent of the GitHub Actions run retention window. This gives project members a narrative of what the agent did — especially useful on external repositories where most members cannot access the underlying Actions tab.
+
+**Capture path**:
+- `run-agent.sh` tees every agent invocation's stdout and stderr to a per-job log file under `/tmp/` while still forwarding output to the original streams
+- On script exit (any status), an EXIT trap calls `upload-agent-log.sh`, which POSTs the captured file to `POST /api/jobs/:id/logs` using the workflow Bearer token
+- The uploader is fire-and-forget: network errors, missing env vars, or API failures never fail the workflow run (it always exits 0)
+
+**Payload handling**:
+- Raw upload is capped at 4 MB of UTF-8 bytes; when the log exceeds this limit, only the tail is uploaded (failures usually surface at the end of the stream)
+- Server-side normalization strips ANSI escapes and carriage-return overwrites, parses JSON stream events from Claude Code (`assistant`, `tool_use`, `tool_result`, `error`), and renders each event as a single `[timestamp] kind: content` line
+- Normalized content is stored up to 1 MB per job; larger payloads keep only the tail and set a `truncated` flag
+- A short summary is derived from the normalized content (last error-like line preferred, otherwise the last few non-empty lines) and mirrored onto the Job row so the jobs timeline can render an inline preview without joining the log table
+
+**Supported agents**: Claude Code, Codex, Mistral (vibe), and Gemini. When the uploader does not pass an explicit `agent` value, the server detects the agent from markers in the stream; unknown streams are tagged `UNKNOWN` and still stored.
+
+**Retention**:
+- Logs are retained for 30 days (`JOB_LOG_RETENTION_DAYS`); `pruneOldJobLogs()` deletes rows older than the cutoff
+- Cascade-deleted when the parent Job is removed (e.g., VERIFY → PLAN rollback deletes the implement job and its log)
+
+**Access**:
+- Project owners and members can read logs through the ticket detail modal's Stats tab ("View full logs" action on each job row)
+- Ingestion is restricted to the workflow Bearer token; members never POST logs
+- Out of scope for this feature: real-time streaming during execution, full-text search across jobs, and export to external observability platforms
+
+```mermaid
+sequenceDiagram
+    participant A as Agent CLI
+    participant R as run-agent.sh
+    participant U as upload-agent-log.sh
+    participant EP as POST /api/jobs/:id/logs
+    participant DB as Database (Job + JobLog)
+    participant UI as Ticket Modal
+
+    A->>R: stdout / stderr
+    R->>R: tee to /tmp/agent-log-{jobId}
+    Note over R: EXIT trap fires on any exit code
+    R->>U: upload log file (jobId, agent)
+    U->>EP: POST { content, agent } (Bearer token)
+    EP->>EP: Normalize + truncate + build summary
+    EP->>DB: upsert JobLog, mirror summary on Job.logs
+    UI->>DB: GET /.../jobs/:jobId/logs (on drill-down)
+    DB-->>UI: Full normalized log content
+```
+
 ### Quality Score Computation (All Workflow Types)
 
 For all verify jobs that complete successfully, the code review step produces a quality score alongside its findings. The score reflects code quality (bugs, compliance, comments) independently of the workflow type — it does not depend on spec/plan artifacts.

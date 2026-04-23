@@ -327,6 +327,14 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
   - Cache read tokens
   - Cache creation tokens
 
+**Execution Log Preview & Drill-Down**:
+- When a job has captured agent execution logs, a one-line summary is rendered inline below the job row without requiring a click — this gives at-a-glance context (e.g., the last assistant message, or the error line on failure)
+- A document icon ("View full logs") appears on the job row; clicking it opens a modal showing the complete captured log
+- The full-log modal renders each event on its own line with light syntax highlighting: timestamps muted, tool invocations in blue, assistant messages in mauve, errors in red
+- The modal header shows the agent that produced the log (CLAUDE / CODEX / MISTRAL / GEMINI), the parsed event count, and the original byte size; a "truncated (tail preserved)" badge appears when the original stream exceeded 1 MB
+- Logs are available for all terminal job states (COMPLETED, FAILED, CANCELLED) once the workflow has finished uploading its capture; RUNNING jobs do not expose a "View full logs" action
+- The full content is fetched lazily when the dialog opens, keeping the jobs list payload small
+
 **Tools Usage**:
 - Aggregated count of all tools used across jobs
 - Sorted by frequency (most-used first)

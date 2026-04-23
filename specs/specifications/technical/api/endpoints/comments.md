@@ -186,7 +186,13 @@ Fetch all jobs for a specific ticket with full telemetry data.
       "costUsd": 0.025,
       "durationMs": 300000,
       "model": "claude-sonnet-4-5-20250929",
-      "toolsUsed": ["Read", "Edit", "Write"]
+      "toolsUsed": ["Read", "Edit", "Write"],
+      "hasLog": true,
+      "logSummary": "assistant: Done — 3 files modified",
+      "logTruncated": false,
+      "logByteSize": 42511,
+      "logEventCount": 27,
+      "logAgent": "CLAUDE"
     },
     {
       "id": 124,
@@ -204,7 +210,13 @@ Fetch all jobs for a specific ticket with full telemetry data.
       "costUsd": null,
       "durationMs": null,
       "model": null,
-      "toolsUsed": null
+      "toolsUsed": null,
+      "hasLog": false,
+      "logSummary": null,
+      "logTruncated": false,
+      "logByteSize": null,
+      "logEventCount": null,
+      "logAgent": null
     }
   ]
 }
@@ -217,6 +229,14 @@ Fetch all jobs for a specific ticket with full telemetry data.
 - Model identifier (model)
 - Tools usage array (toolsUsed)
 - Telemetry fields are null for PENDING/RUNNING jobs
+- **Captured log metadata** (populated after a Job terminates and the workflow uploads its log):
+  - `hasLog`: `true` when a `JobLog` record exists for this job
+  - `logSummary`: Short preview (max 500 chars) rendered inline in the timeline without a click; mirrored from `JobLog.summary`
+  - `logTruncated`: `true` when the original stream exceeded 1 MB and only the tail was kept
+  - `logByteSize`: Original byte length of the captured stream (UTF-8 bytes); `null` when no log exists
+  - `logEventCount`: Number of normalized events parsed out of the stream; `null` when no log exists
+  - `logAgent`: Agent that produced the log (`CLAUDE | CODEX | MISTRAL | GEMINI | UNKNOWN`); `null` when no log exists
+  - Full log content is not included here — fetch it via `GET /api/projects/:projectId/tickets/:ticketId/jobs/:jobId/logs`
 
 **Usage**:
 - Powers ticket detail modal with real-time job data
