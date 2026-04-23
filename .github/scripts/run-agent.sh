@@ -57,6 +57,9 @@ log_error() {
   echo "❌ [run-agent] ERROR: $*" >&2
 }
 
+JOB_LOG_OUTPUT_FILE="${RUNNER_TEMP:-/tmp}/job-log-${JOB_ID:-manual}.txt"
+JOB_LOG_BUNDLE_FILE="${RUNNER_TEMP:-/tmp}/job-log-${JOB_ID:-manual}.json"
+
 json_array_from_args() {
   if [[ ${#RAW_ARGS[@]} -eq 0 ]]; then
     echo "[]"
@@ -304,6 +307,105 @@ ${ARGS}
   esac
 
   printf '%s' "$prompt"
+}
+
+run_and_capture_output() {
+  local output_file="$1"
+  shift
+
+  mkdir -p "$(dirname "$output_file")"
+
+  set +e
+  "$@" 2>&1 | tee "$output_file"
+  local status=${PIPESTATUS[0]}
+  set -e
+
+  return "$status"
+}
+
+write_job_log_bundle() {
+  local agent="$1"
+  local exit_code="$2"
+  local output_file="$3"
+
+  if [[ -z "${JOB_ID:-}" ]] || [[ ! -f "$output_file" ]]; then
+    return 0
+  fi
+
+  local status availability headline
+  if [[ "$exit_code" -eq 0 ]]; then
+    status="COMPLETED"
+    availability="AVAILABLE"
+    headline="Agent execution completed successfully."
+  else
+    status="FAILED"
+    availability="PARTIAL"
+    headline="Agent execution exited with a non-zero status."
+  fi
+
+  jq -Rn \
+    --arg agent "$agent" \
+    --arg status "$status" \
+    --arg availability "$availability" \
+    --arg headline "$headline" \
+    --arg sourceFormat "$(echo "$agent" | tr '[:upper:]' '[:lower:]')-runner-capture" \
+    --rawfile rawOutput "$output_file" '
+      def lines_to_events:
+        ($rawOutput | split("\n") | map(select(length > 0)))
+        | to_entries
+        | map({
+            sequence: .key,
+            timestamp: (now | todateiso8601),
+            kind: (
+              if (.value | test("error|failed|exception"; "i")) then "ERROR"
+              elif (.value | test("warning"; "i")) then "WARNING"
+              else "MESSAGE"
+              end
+            ),
+            actor: "system",
+            title: ((.value | if length > 160 then .[:157] + "..." else . end)),
+            body: .value,
+            toolName: null,
+            metadata: null
+          });
+      def preview_events($events):
+        $events
+        | reverse
+        | .[:3]
+        | reverse
+        | map({
+            timestamp: .timestamp,
+            kind: (
+              if .kind == "MESSAGE" then "MESSAGE"
+              elif .kind == "ERROR" then "ERROR"
+              elif .kind == "WARNING" then "WARNING"
+              else "STATUS"
+              end
+            ),
+            label: .title
+          });
+      (lines_to_events) as $events
+      | {
+          agent: $agent,
+          sourceFormat: $sourceFormat,
+          availability: $availability,
+          summary: {
+            headline: $headline,
+            status: $status,
+            latestImportantEvents: preview_events($events),
+            errorReason: (if $status == "FAILED" then $headline else null end),
+            partial: ($availability == "PARTIAL"),
+            unavailable: false,
+            pruned: false,
+            capturedEventCount: ($events | length)
+          },
+          events: $events,
+          partialReason: (if $availability == "PARTIAL" then "Captured runner output ended unexpectedly." else null end),
+          unavailableReason: null
+        }
+    ' > "$JOB_LOG_BUNDLE_FILE"
+
+  log_info "Wrote job log bundle to $JOB_LOG_BUNDLE_FILE"
 }
 
 # --- Command file resolution ---
@@ -746,22 +848,31 @@ case "$AGENT_TYPE" in
   CLAUDE)
     validate_auth
     install_claude
-    invoke_claude
+    claude_exit=0
+    run_and_capture_output "$JOB_LOG_OUTPUT_FILE" invoke_claude || claude_exit=$?
+    write_job_log_bundle "CLAUDE" "$claude_exit" "$JOB_LOG_OUTPUT_FILE"
+    exit "$claude_exit"
     ;;
   CODEX)
     validate_auth
     install_codex
     auth_codex
     setup_codex_telemetry
-    invoke_codex
+    codex_exit=0
+    run_and_capture_output "$JOB_LOG_OUTPUT_FILE" invoke_codex || codex_exit=$?
+    write_job_log_bundle "CODEX" "$codex_exit" "$JOB_LOG_OUTPUT_FILE"
     persist_codex_token
+    exit "$codex_exit"
     ;;
   MISTRAL)
     validate_auth
     install_mistral
     setup_mistral_telemetry
-    invoke_mistral
+    mistral_exit=0
+    run_and_capture_output "$JOB_LOG_OUTPUT_FILE" invoke_mistral || mistral_exit=$?
+    write_job_log_bundle "MISTRAL" "$mistral_exit" "$JOB_LOG_OUTPUT_FILE"
     collect_mistral_telemetry
+    exit "$mistral_exit"
     ;;
   GEMINI)
     validate_auth
@@ -769,7 +880,8 @@ case "$AGENT_TYPE" in
     auth_gemini
     setup_gemini_telemetry
     gemini_exit=0
-    invoke_gemini || gemini_exit=$?
+    run_and_capture_output "$JOB_LOG_OUTPUT_FILE" invoke_gemini || gemini_exit=$?
+    write_job_log_bundle "GEMINI" "$gemini_exit" "$JOB_LOG_OUTPUT_FILE"
     exit $gemini_exit
     ;;
   *)

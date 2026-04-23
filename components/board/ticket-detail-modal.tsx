@@ -49,6 +49,7 @@ import { queryKeys } from '@/app/lib/query-keys';
 import type { TicketWithVersion } from '@/app/lib/types/query-types';
 import { useComparisonCheck } from '@/hooks/use-comparisons';
 import { ComparisonViewer } from '@/components/comparison/comparison-viewer';
+import { JobLogDialog } from '@/components/ticket/job-log-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -199,6 +200,8 @@ export function TicketDetailModal({
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [comparisonViewerOpen, setComparisonViewerOpen] = useState(false);
+  const [jobLogDialogOpen, setJobLogDialogOpen] = useState(false);
+  const [selectedJobLog, setSelectedJobLog] = useState<{ jobId: number; command: string } | null>(null);
 
   // Fetch comment count for badge
   const { data: comments } = useComments({
@@ -819,6 +822,10 @@ export function TicketDetailModal({
 
   const effectiveAgent = localTicket?.agent ?? localTicket?.project?.defaultAgent;
   const isAgentOverride = localTicket?.agent !== null && localTicket?.agent !== undefined;
+  const handleOpenJobLogs = (jobId: number, command: string) => {
+    setSelectedJobLog({ jobId, command });
+    setJobLogDialogOpen(true);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1355,6 +1362,7 @@ export function TicketDetailModal({
                 <ConversationTimeline
                   projectId={projectId}
                   ticketId={ticket.id}
+                  onViewLogs={handleOpenJobLogs}
                 />
               </div>
             </div>
@@ -1381,13 +1389,23 @@ export function TicketDetailModal({
           {/* Stats Tab - only rendered when jobs exist */}
           {hasJobs && (
             <TabsContent value="stats" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4" data-testid="stats-tab-content">
-              <TicketStats jobs={fullJobs} polledJobs={jobs} projectId={projectId} />
+              <TicketStats jobs={fullJobs} polledJobs={jobs} projectId={projectId} onViewLogs={handleOpenJobLogs} />
             </TabsContent>
           )}
         </Tabs>
       </DialogContent>
 
       {/* DocumentationViewer modal - only render when parent dialog is open */}
+      {ticket && open && (
+        <JobLogDialog
+          open={jobLogDialogOpen}
+          onOpenChange={setJobLogDialogOpen}
+          projectId={projectId}
+          jobId={selectedJobLog?.jobId ?? null}
+          jobCommand={selectedJobLog?.command ?? null}
+        />
+      )}
+
       {ticket && open && (
         <DocumentationViewer
           ticketId={ticket.id}

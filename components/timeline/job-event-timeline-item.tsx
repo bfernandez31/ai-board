@@ -8,16 +8,19 @@
 'use client';
 
 import * as React from 'react';
-import { PlayCircle, CheckCircle, XCircle, Ban } from 'lucide-react';
+import { PlayCircle, CheckCircle, XCircle, Ban, FileSearch } from 'lucide-react';
 import { TimelineBadge } from './timeline-badge';
 import { TimelineContent } from './timeline-content';
 import { getJobEventMessage } from '@/app/lib/utils/conversation-events';
-import type { Job, JobStatus } from '@prisma/client';
+import type { JobStatus } from '@prisma/client';
+import type { TimelineJobData } from '@/app/lib/types/conversation-event';
+import { Button } from '@/components/ui/button';
 
 interface JobEventTimelineItemProps {
-  job: Job;
+  job: TimelineJobData;
   eventType: 'start' | 'complete';
   timestamp: string;
+  onViewLogs?: (jobId: number, jobCommand: string) => void;
 }
 
 /**
@@ -131,7 +134,7 @@ function getStatusWord(eventType: 'start' | 'complete', status: JobStatus): stri
  * Memoized for performance (prevents re-renders when other events update)
  */
 export const JobEventTimelineItem = React.memo(
-  function JobEventTimelineItem({ job, eventType, timestamp }: JobEventTimelineItemProps) {
+  function JobEventTimelineItem({ job, eventType, timestamp, onViewLogs }: JobEventTimelineItemProps) {
     // Generate user-friendly message with workflow indicator
     const message = getJobEventMessage(job.command, eventType, job.status);
     const statusWord = getStatusWord(eventType, job.status);
@@ -145,12 +148,39 @@ export const JobEventTimelineItem = React.memo(
           <JobEventIcon eventType={eventType} status={job.status} />
         </TimelineBadge>
         <TimelineContent>
-          <span className="text-sm text-text">
-            {messageBeforeStatus} <strong>{statusWord}</strong>
-            <time className="ml-2 text-xs text-subtext0" dateTime={timestamp}>
-              {formatRelativeTime(timestamp)}
-            </time>
-          </span>
+          <div className="space-y-2">
+            <span className="text-sm text-text">
+              {messageBeforeStatus} <strong>{statusWord}</strong>
+              <time className="ml-2 text-xs text-subtext0" dateTime={timestamp}>
+                {formatRelativeTime(timestamp)}
+              </time>
+            </span>
+            {eventType === 'complete' && job.logSummary ? (
+              <div className="rounded-lg border border-border/60 bg-card/70 p-3">
+                <p className="text-sm font-medium text-foreground">{job.logSummary.headline}</p>
+                {job.logSummary.latestImportantEvents.length > 0 ? (
+                  <div className="mt-2 space-y-1">
+                    {job.logSummary.latestImportantEvents.map((event) => (
+                      <p key={`${event.timestamp}-${event.label}`} className="text-xs text-muted-foreground">
+                        {event.label}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+                {onViewLogs && job.logAvailability && job.logAvailability !== 'UNAVAILABLE' ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="mt-3"
+                    onClick={() => onViewLogs(job.id, job.command)}
+                  >
+                    <FileSearch className="mr-1.5 h-4 w-4" />
+                    View full logs
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </TimelineContent>
       </li>
     );

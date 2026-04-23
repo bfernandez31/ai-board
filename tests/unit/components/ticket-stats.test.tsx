@@ -34,6 +34,11 @@ function createMockJob(
     toolsUsed: ['Read', 'Edit'],
     qualityScore: null,
     qualityScoreDetails: null,
+    logAvailability: null,
+    logCapturedAt: null,
+    logRetainedUntil: null,
+    logPrunedAt: null,
+    logSummary: null,
     ...overrides,
   };
 }
@@ -167,6 +172,41 @@ describe('TicketStats', () => {
 
       // Jobs timeline should be displayed
       expect(screen.getByTestId('jobs-timeline')).toBeInTheDocument();
+    });
+
+    it('shows concise log summaries without hiding telemetry', () => {
+      const jobs = [
+        createMockJob({
+          id: 1,
+          costUsd: 0.09,
+          durationMs: 90000,
+          logAvailability: 'AVAILABLE',
+          logSummary: {
+            headline: 'Job completed after updating the schema and UI.',
+            status: 'COMPLETED',
+            latestImportantEvents: [
+              {
+                timestamp: new Date().toISOString(),
+                kind: 'STATUS',
+                label: 'Migration applied successfully',
+              },
+            ],
+            errorReason: null,
+            partial: false,
+            unavailable: false,
+            pruned: false,
+            capturedEventCount: 4,
+          },
+        }),
+      ];
+
+      renderWithProviders(
+        <TicketStats jobs={jobs} polledJobs={[]} />
+      );
+
+      expect(screen.getByText('Job completed after updating the schema and UI.')).toBeInTheDocument();
+      expect(screen.getByTestId('job-cost-1')).toBeInTheDocument();
+      expect(screen.getByTestId('job-duration-1')).toBeInTheDocument();
     });
   });
 

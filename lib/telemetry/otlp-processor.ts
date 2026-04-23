@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
+import { normalizeProviderEvents, type ProviderEventInput } from '@/lib/job-logs/normalize';
 import {
   otlpLogsSchema,
   type OTLPAttribute,
@@ -13,6 +14,10 @@ export type TelemetryProcessResult = {
   status: number;
   body: Record<string, unknown>;
 };
+
+export function normalizeTelemetryExecutionContext(events: ProviderEventInput[]) {
+  return normalizeProviderEvents(events);
+}
 
 const batchPayloadSchema = z.object({
   jobId: z.number().int().positive().optional(),

@@ -204,5 +204,62 @@ describe('Ticket Jobs API', () => {
       expect(job!.durationMs).toBe(180000);
       expect(job!.toolsUsed).toEqual(['read_file', 'shell']);
     });
+
+    it('returns log summary metadata alongside existing telemetry fields', async () => {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: {
+          status: 'FAILED',
+          completedAt: new Date('2026-04-23T10:05:00Z'),
+          inputTokens: 1200,
+          outputTokens: 600,
+          costUsd: 0.04,
+          durationMs: 300000,
+          model: 'gpt-5.4',
+        },
+      });
+
+      await prisma.jobExecutionLog.create({
+        data: {
+          jobId,
+          ticketId,
+          projectId: ctx.projectId,
+          agent: 'CODEX',
+          availability: 'AVAILABLE',
+          sourceFormat: 'codex-runner-capture',
+          summaryJson: {
+            headline: 'Job failed while updating the API route.',
+            status: 'FAILED',
+            latestImportantEvents: [
+              {
+                timestamp: '2026-04-23T10:04:00.000Z',
+                kind: 'ERROR',
+                label: 'Type check failed on route.ts',
+              },
+            ],
+            errorReason: 'Type check failed on route.ts',
+            partial: false,
+            unavailable: false,
+            pruned: false,
+            capturedEventCount: 4,
+          },
+          eventCount: 4,
+          capturedAt: new Date('2026-04-23T10:05:00Z'),
+          retainedUntil: new Date('2026-05-23T10:05:00Z'),
+        },
+      });
+
+      const response = await ctx.api.get<TicketJobWithTelemetry[]>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs`
+      );
+
+      expect(response.status).toBe(200);
+      const job = response.data.find((candidate) => candidate.id === jobId);
+      expect(job?.inputTokens).toBe(1200);
+      expect(job?.model).toBe('gpt-5.4');
+      expect(job?.logAvailability).toBe('AVAILABLE');
+      expect(job?.logSummary?.headline).toContain('API route');
+      expect(job?.logRetainedUntil).toBeTruthy();
+    });
   });
 });

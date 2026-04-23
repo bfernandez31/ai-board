@@ -1,5 +1,20 @@
 import type { CommentWithUser } from '@/app/lib/types/comment';
-import type { Job, JobStatus } from '@prisma/client';
+import type { JobLogAvailability, JobLogSummary } from '@/app/lib/schemas/job-logs';
+import type { JobStatus } from '@prisma/client';
+
+export interface TimelineJobData {
+  id: number;
+  command: string;
+  status: JobStatus;
+  startedAt: Date | string;
+  completedAt: Date | string | null;
+  workflowRunId: bigint | string | null;
+  logAvailability: JobLogAvailability | null;
+  logSummary: JobLogSummary | null;
+  logCapturedAt: string | null;
+  logRetainedUntil: string | null;
+  logPrunedAt: string | null;
+}
 
 interface BaseConversationEvent {
   type: 'comment' | 'job';
@@ -15,7 +30,7 @@ export interface CommentEvent extends BaseConversationEvent {
 export interface JobEvent extends BaseConversationEvent {
   type: 'job';
   timestamp: string;
-  data: Job;
+  data: TimelineJobData;
   eventType: 'start' | 'complete';
 }
 

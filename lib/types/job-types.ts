@@ -28,6 +28,11 @@ export interface JobTypeConfig {
 }
 
 import type { Job } from '@prisma/client';
+import type {
+  JobExecutionLogDetail,
+  JobLogAvailability,
+  JobLogSummary,
+} from '@/app/lib/schemas/job-logs';
 
 /**
  * DualJobState Interface
@@ -64,4 +69,11 @@ export interface TicketJobWithTelemetry {
   toolsUsed: string[];
   qualityScore: number | null;
   qualityScoreDetails: string | null;
+  logAvailability: JobLogAvailability | null;
+  logCapturedAt: string | null;
+  logRetainedUntil: string | null;
+  logPrunedAt: string | null;
+  logSummary: JobLogSummary | null;
 }
+
+export type TicketJobLogDetail = JobExecutionLogDetail;

@@ -1,68 +1,12 @@
 # Job Log Capture Workflow
 
-## Purpose
+1. A workflow job starts in ai-board and the agent runs through `.github/scripts/run-agent.sh`.
+2. `run-agent.sh` captures the agent stdout/stderr stream into a temporary runner file and writes a normalized bundle to `${RUNNER_TEMP}/job-log-${JOB_ID}.json`.
+3. Before the workflow sends its final `PATCH /api/jobs/:id/status`, it uploads that bundle to `POST /api/jobs/:id/logs` using workflow bearer-token auth.
+4. The upload route normalizes events, builds a bounded preview summary, compresses retained detail, and upserts `JobExecutionLog`.
+5. If the final status callback arrives without any uploaded log row, the status route creates a summary-only `UNAVAILABLE` fallback record so the UI never implies successful capture.
 
-Capture readable terminal execution logs for supported agent-driven ticket jobs and persist them as normalized, prunable artifacts that remain available after the GitHub Actions run ends.
-
-## Trigger
-
-- A supported ticket job finishes agent execution inside `.github/scripts/run-agent.sh`.
-- The surrounding workflow is preparing to send the terminal `PATCH /api/jobs/:id/status` callback.
-
-## Inputs
-
-| Input | Source |
-|-------|--------|
-| `jobId` | Existing workflow input / `JOB_ID` env |
-| `agent` | Existing workflow input (`CLAUDE`, `CODEX`, `MISTRAL`, `GEMINI`) |
-| `terminalStatus` | Workflow success/failure/cancel branch |
-| `providerNativeOutput` | OTLP records, CLI session files, or provider output captured by `run-agent.sh` |
-| `jobTelemetryContext` | Existing job metrics already stored through status/telemetry paths |
-
-## Phases
-
-1. **Collect provider-native output**
-   - Claude/Codex/Gemini: gather the structured output or OTLP-friendly records already emitted during the run.
-   - Mistral: continue reading the session artifacts under `~/.vibe/sessions` and expand the collection to message/error/tool chronology, not just aggregate telemetry.
-
-2. **Normalize**
-   - Convert provider-specific records into ordered `JobLogEvent[]`.
-   - Preserve provider-specific context in `metadata`.
-   - Remove secrets, headers, and credential material before persistence.
-
-3. **Summarize**
-   - Build `JobLogSummary` from the terminal status plus the latest important normalized events.
-   - Mark `PARTIAL` or `UNAVAILABLE` when capture is incomplete or absent.
-
-4. **Upload**
-   - `POST /api/jobs/{jobId}/logs` with workflow bearer token.
-   - Upsert idempotently by `jobId`.
-
-5. **Finalize status**
-   - After upload attempts, call the existing terminal `PATCH /api/jobs/{jobId}/status`.
-   - Upload failure must not suppress the real terminal status.
-
-## Output
-
-- `JobExecutionLog` row for the job in one of:
-  - `AVAILABLE`
-  - `PARTIAL`
-  - `UNAVAILABLE`
-- Compressed detailed events when retained
-- Preview summary ready for ticket timeline/jobs list surfaces
-
-## Error Behavior
-
-| Failure | Behavior |
-|---------|----------|
-| Normalization fails after agent exit | Upload `UNAVAILABLE` with a reason if possible; preserve the real job terminal status |
-| Upload request fails | Log the failure in workflow output, continue to terminal status callback |
-| Provider output is incomplete | Persist `PARTIAL` with the surviving events and explanation |
-| Job already has an artifact | Replace idempotently by `jobId` and checksum-safe logic |
-
-## Callback / Reporting Contract
-
-- Primary callback: `POST /api/jobs/{jobId}/logs`
-- Final status callback remains `PATCH /api/jobs/{jobId}/status`
-- Ordering requirement: upload first, terminal status second
-
+Notes:
+- Upload is allowed while the job is still `RUNNING` because the workflow sends logs before its final terminal callback.
+- Upload is idempotent per `jobId`; retries replace the same artifact row.
+- The runner bundle intentionally stores sanitized readable output, not credential material.

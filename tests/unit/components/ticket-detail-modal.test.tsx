@@ -90,6 +90,11 @@ function createMockJob(
     toolsUsed: ['Read', 'Edit'],
     qualityScore: null,
     qualityScoreDetails: null,
+    logAvailability: null,
+    logCapturedAt: null,
+    logRetainedUntil: null,
+    logPrunedAt: null,
+    logSummary: null,
     ...overrides,
   };
 }
@@ -888,6 +893,109 @@ describe('TicketDetailModal', () => {
 
       expect(await screen.findByTestId('compare-button')).toBeInTheDocument();
       expect(screen.getByText('Compare (2)')).toBeInTheDocument();
+    });
+  });
+
+  describe('Job log dialog', () => {
+    it('opens the full log dialog from the stats tab', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ branch: 'feature/test', stage: 'VERIFY' });
+      const fullJobs = [
+        createMockJob({
+          id: 42,
+          command: 'implement',
+          logAvailability: 'AVAILABLE',
+          logSummary: {
+            headline: 'Job failed while applying the final patch.',
+            status: 'FAILED',
+            latestImportantEvents: [
+              {
+                timestamp: new Date().toISOString(),
+                kind: 'ERROR',
+                label: 'Patch application failed',
+              },
+            ],
+            errorReason: 'Patch application failed',
+            partial: false,
+            unavailable: false,
+            pruned: false,
+            capturedEventCount: 2,
+          },
+        }),
+      ];
+
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/jobs/42/logs')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              jobId: 42,
+              projectId: 1,
+              ticketId: 1,
+              agent: 'CODEX',
+              availability: 'AVAILABLE',
+              capturedAt: new Date().toISOString(),
+              retainedUntil: new Date(Date.now() + 86400000).toISOString(),
+              prunedAt: null,
+              partialReason: null,
+              unavailableReason: null,
+              summary: fullJobs[0].logSummary,
+              events: [
+                {
+                  sequence: 0,
+                  timestamp: new Date().toISOString(),
+                  kind: 'ERROR',
+                  actor: 'system',
+                  title: 'Patch application failed',
+                  body: 'The repository rejected the generated diff.',
+                  toolName: null,
+                  metadata: null,
+                },
+              ],
+            }),
+          });
+        }
+
+        if (url.includes('/comments') || url.includes('/timeline')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ comments: [] }),
+          });
+        }
+
+        if (url.includes('/comparisons/check')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ hasComparisons: false, count: 0, latestComparisonId: null }),
+          });
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({}),
+        });
+      });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={fullJobs}
+          initialTab="stats"
+        />
+      );
+
+      await user.click(screen.getByTestId('job-row-42'));
+      await user.click(screen.getByRole('button', { name: /view full logs/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Execution Logs')).toBeInTheDocument();
+        expect(screen.getByText('The repository rejected the generated diff.')).toBeInTheDocument();
+      });
     });
   });
 });

@@ -1,9 +1,10 @@
 import type { CommentWithUser } from '@/app/lib/types/comment';
-import type { Job, JobStatus } from '@prisma/client';
+import type { JobStatus } from '@prisma/client';
 import type {
   CommentEvent,
   JobEvent,
   ConversationEvent,
+  TimelineJobData,
 } from '@/app/lib/types/conversation-event';
 import { getJobDisplayName } from '@/app/lib/utils/job-display-names';
 
@@ -15,12 +16,12 @@ export function createCommentEvent(comment: CommentWithUser): CommentEvent {
   };
 }
 
-export function createJobEvents(job: Job): JobEvent[] {
+export function createJobEvents(job: TimelineJobData): JobEvent[] {
   const events: JobEvent[] = [];
 
   events.push({
     type: 'job',
-    timestamp: job.startedAt.toISOString(),
+    timestamp: new Date(job.startedAt).toISOString(),
     data: job,
     eventType: 'start',
   });
@@ -28,7 +29,7 @@ export function createJobEvents(job: Job): JobEvent[] {
   if (job.completedAt) {
     events.push({
       type: 'job',
-      timestamp: job.completedAt.toISOString(),
+      timestamp: new Date(job.completedAt).toISOString(),
       data: job,
       eventType: 'complete',
     });
@@ -39,7 +40,7 @@ export function createJobEvents(job: Job): JobEvent[] {
 
 export function mergeConversationEvents(
   comments: CommentWithUser[],
-  jobs: Job[]
+  jobs: TimelineJobData[]
 ): ConversationEvent[] {
   const commentEvents = comments.map(createCommentEvent);
   const jobEvents = jobs.flatMap(createJobEvents);

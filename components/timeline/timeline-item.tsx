@@ -16,6 +16,7 @@ interface TimelineItemProps {
   mentionedUsers: Record<string, User>;
   projectId: number;
   currentUserId: string;
+  onViewLogs?: (jobId: number, jobCommand: string) => void;
 }
 
 /**
@@ -28,7 +29,7 @@ interface TimelineItemProps {
  * <TimelineItem event={commentEvent} /> // → renders CommentTimelineItem
  * <TimelineItem event={jobEvent} />     // → renders JobEventTimelineItem
  */
-export function TimelineItem({ event, mentionedUsers, projectId, currentUserId }: TimelineItemProps) {
+export function TimelineItem({ event, mentionedUsers, projectId, currentUserId, onViewLogs }: TimelineItemProps) {
   switch (event.type) {
     case 'comment':
       return (
@@ -46,6 +47,7 @@ export function TimelineItem({ event, mentionedUsers, projectId, currentUserId }
           job={event.data}
           eventType={event.eventType}
           timestamp={event.timestamp}
+          {...(onViewLogs ? { onViewLogs } : {})}
         />
       );
     default:

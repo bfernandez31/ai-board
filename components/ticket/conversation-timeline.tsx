@@ -16,6 +16,7 @@ import type { ConversationEvent } from '@/app/lib/types/conversation-event';
 interface ConversationTimelineProps {
   ticketId: number;
   projectId: number;
+  onViewLogs?: (jobId: number, jobCommand: string) => void;
 }
 
 /**
@@ -60,7 +61,7 @@ function TimelineSkeleton() {
  * @example
  * <ConversationTimeline ticketId={42} projectId={1} />
  */
-export function ConversationTimeline({ ticketId, projectId }: ConversationTimelineProps) {
+export function ConversationTimeline({ ticketId, projectId, onViewLogs }: ConversationTimelineProps) {
   const { data, isLoading, error } = useConversationTimeline({
     projectId,
     ticketId,
@@ -132,6 +133,7 @@ export function ConversationTimeline({ ticketId, projectId }: ConversationTimeli
             mentionedUsers={data.mentionedUsers}
             projectId={projectId}
             currentUserId={currentUserId}
+            {...(onViewLogs ? { onViewLogs } : {})}
           />
         ))}
       </Timeline>

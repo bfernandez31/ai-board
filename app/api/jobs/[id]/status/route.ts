@@ -9,6 +9,7 @@ import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { sendJobCompletionNotification } from '@/app/lib/push/send-notification';
 import { handleJobCompletionAutoTransition } from '@/app/lib/tickets/auto-mode';
+import { upsertJobExecutionLog, buildUnavailableLogSummary } from '@/lib/job-logs/storage';
 
 /**
  * PATCH /api/jobs/[id]/status
@@ -116,6 +117,8 @@ export async function PATCH(
       where: { id: jobId },
       select: {
         id: true,
+        ticketId: true,
+        projectId: true,
         status: true,
         completedAt: true,
         startedAt: true,
@@ -271,17 +274,55 @@ export async function PATCH(
     });
 
     if (isTerminalState) {
+      const terminalStatus = requestedStatus as 'COMPLETED' | 'FAILED' | 'CANCELLED';
+
+      const existingLog = await prisma.jobExecutionLog.findUnique({
+        where: { jobId },
+        select: { id: true },
+      });
+
+      if (!existingLog) {
+        await upsertJobExecutionLog({
+          job: {
+            id: updatedJob.id,
+            ticketId: job.ticketId,
+            projectId: job.projectId,
+            completedAt: updatedJob.completedAt,
+          },
+          payload: {
+            agent: 'CLAUDE',
+            sourceFormat: 'workflow-status-fallback',
+            availability: 'UNAVAILABLE',
+            summary: buildUnavailableLogSummary(
+              terminalStatus,
+              'Execution logs were unavailable for this job.'
+            ),
+            unavailableReason: 'Execution logs were unavailable for this job.',
+          },
+          normalized: {
+            availability: 'UNAVAILABLE',
+            events: [],
+            summary: buildUnavailableLogSummary(
+              terminalStatus,
+              'Execution logs were unavailable for this job.'
+            ),
+            partialReason: null,
+            unavailableReason: 'Execution logs were unavailable for this job.',
+          },
+        });
+      }
+
       // Send push notification for job completion (non-blocking)
       sendJobCompletionNotification(
         jobId,
-        requestedStatus as 'COMPLETED' | 'FAILED' | 'CANCELLED'
+        terminalStatus
       ).catch((err) => {
         console.error('[Job Status Update] Push notification error:', err);
       });
 
       handleJobCompletionAutoTransition({
         jobId,
-        terminalStatus: requestedStatus as 'COMPLETED' | 'FAILED' | 'CANCELLED',
+        terminalStatus,
       }).catch((err) => {
         console.error('[Job Status Update] Auto-mode hook error:', err);
       });

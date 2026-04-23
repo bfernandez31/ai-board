@@ -151,6 +151,75 @@ describe('Conversation Timeline API', () => {
       expect(jobWithRunId).toBeDefined();
     });
 
+    it('includes preview-safe log summaries on completed job events', async () => {
+      const transitionResponse = await ctx.api.post(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+        { targetStage: 'SPECIFY' }
+      );
+
+      if (transitionResponse.status !== 200) {
+        return;
+      }
+
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        include: { jobs: { orderBy: { createdAt: 'desc' } } },
+      });
+
+      if (!ticket?.jobs[0]) {
+        return;
+      }
+
+      await prisma.job.update({
+        where: { id: ticket.jobs[0].id },
+        data: {
+          status: 'FAILED',
+          completedAt: new Date('2026-04-23T10:05:00Z'),
+        },
+      });
+
+      await prisma.jobExecutionLog.create({
+        data: {
+          jobId: ticket.jobs[0].id,
+          ticketId,
+          projectId: ctx.projectId,
+          agent: 'CLAUDE',
+          availability: 'AVAILABLE',
+          sourceFormat: 'claude-runner-capture',
+          summaryJson: {
+            headline: 'Job failed while writing the migration file.',
+            status: 'FAILED',
+            latestImportantEvents: [
+              {
+                timestamp: '2026-04-23T10:04:00.000Z',
+                kind: 'ERROR',
+                label: 'Migration file could not be written',
+              },
+            ],
+            errorReason: 'Migration file could not be written',
+            partial: false,
+            unavailable: false,
+            pruned: false,
+            capturedEventCount: 2,
+          },
+          eventCount: 2,
+          capturedAt: new Date('2026-04-23T10:05:00Z'),
+          retainedUntil: new Date('2026-05-23T10:05:00Z'),
+        },
+      });
+
+      const response = await ctx.api.get<TimelineResponse>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/timeline`
+      );
+
+      expect(response.status).toBe(200);
+      const completedEvent = response.data.timeline.find(
+        (event) => event.type === 'job' && event.eventType === 'complete'
+      );
+      expect(completedEvent?.data.logAvailability).toBe('AVAILABLE');
+      expect(completedEvent?.data.logSummary?.headline).toContain('migration file');
+    });
+
     it('should return 400 for invalid ticket ID', async () => {
       const response = await ctx.api.get<{ error: string }>(
         `/api/projects/${ctx.projectId}/tickets/abc/timeline`

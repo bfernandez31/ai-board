@@ -13,6 +13,8 @@ import { verifyTicketAccess } from '@/lib/db/auth-helpers';
 import { requireAuth } from '@/lib/db/users';
 import { mergeConversationEvents } from '@/app/lib/utils/conversation-events';
 import { extractMentionUserIds } from '@/app/lib/utils/mention-parser';
+import type { TimelineJobData } from '@/app/lib/types/conversation-event';
+import type { JobLogSummary } from '@/app/lib/schemas/job-logs';
 
 /**
  * Schema for route parameters validation
@@ -115,6 +117,23 @@ export async function GET(
           not: 'ship',
         },
       },
+      select: {
+        id: true,
+        command: true,
+        status: true,
+        startedAt: true,
+        completedAt: true,
+        workflowRunId: true,
+        executionLog: {
+          select: {
+            availability: true,
+            capturedAt: true,
+            retainedUntil: true,
+            prunedAt: true,
+            summaryJson: true,
+          },
+        },
+      },
       orderBy: { startedAt: 'desc' }, // Most recent first
     });
 
@@ -135,7 +154,21 @@ export async function GET(
     }));
 
     // T014: Merge and sort events using utility function
-    const timeline = mergeConversationEvents(commentsWithISOTimestamps, jobs);
+    const jobEvents: TimelineJobData[] = jobs.map((job) => ({
+      id: job.id,
+      command: job.command,
+      status: job.status,
+      startedAt: job.startedAt,
+      completedAt: job.completedAt,
+      workflowRunId: job.workflowRunId,
+      logAvailability: job.executionLog?.availability ?? null,
+      logSummary: (job.executionLog?.summaryJson as JobLogSummary | null) ?? null,
+      logCapturedAt: job.executionLog?.capturedAt.toISOString() ?? null,
+      logRetainedUntil: job.executionLog?.retainedUntil.toISOString() ?? null,
+      logPrunedAt: job.executionLog?.prunedAt?.toISOString() ?? null,
+    }));
+
+    const timeline = mergeConversationEvents(commentsWithISOTimestamps, jobEvents);
 
     // Return unified timeline with mentioned users
     // Use JSON replacer to serialize BigInt fields (workflowRunId) that JSON.stringify cannot handle

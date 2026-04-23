@@ -9,6 +9,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import { fullCloneTicket } from '@/lib/db/tickets';
 
 describe('Ticket Duplication', () => {
   let ctx: TestContext;
@@ -148,6 +149,78 @@ describe('Ticket Duplication', () => {
       expect(response.status).toBe(400);
       expect(response.data.code).toBe('MISSING_BRANCH');
       expect(response.data.error).toContain('branch');
+    });
+
+    it('copies job telemetry but not retained execution log artifacts', async () => {
+      const prisma = getPrismaClient();
+      const sourceTicket = await prisma.ticket.create({
+        data: {
+          title: '[e2e] Clone With Logs',
+          description: 'Has retained execution logs',
+          stage: 'VERIFY',
+          projectId: ctx.projectId,
+          ticketNumber: ++ticketCounter,
+          ticketKey: `T-${ticketCounter}`,
+          workflowType: 'FULL',
+          branch: '123-clone-with-logs',
+        },
+      });
+
+      const sourceJob = await prisma.job.create({
+        data: {
+          ticketId: sourceTicket.id,
+          projectId: ctx.projectId,
+          command: 'implement',
+          status: 'FAILED',
+          inputTokens: 900,
+          outputTokens: 300,
+          costUsd: 0.05,
+          durationMs: 120000,
+          updatedAt: new Date(),
+        },
+      });
+
+      await prisma.jobExecutionLog.create({
+        data: {
+          jobId: sourceJob.id,
+          ticketId: sourceTicket.id,
+          projectId: ctx.projectId,
+          agent: 'CLAUDE',
+          availability: 'AVAILABLE',
+          sourceFormat: 'claude-runner-capture',
+          summaryJson: {
+            headline: 'Job failed while preparing the PR.',
+            status: 'FAILED',
+            latestImportantEvents: [],
+            errorReason: 'PR creation failed',
+            partial: false,
+            unavailable: false,
+            pruned: false,
+            capturedEventCount: 3,
+          },
+          eventCount: 3,
+          capturedAt: new Date(),
+          retainedUntil: new Date(Date.now() + 86400000),
+        },
+      });
+
+      const clonedTicket = await fullCloneTicket(
+        ctx.projectId,
+        sourceTicket.id,
+        '456-cloned-ticket',
+        ++ticketCounter
+      );
+
+      const copiedJobs = await prisma.job.findMany({
+        where: { ticketId: clonedTicket.id },
+      });
+      expect(copiedJobs).toHaveLength(1);
+      expect(copiedJobs[0]?.inputTokens).toBe(900);
+
+      const copiedLogs = await prisma.jobExecutionLog.findMany({
+        where: { ticketId: clonedTicket.id },
+      });
+      expect(copiedLogs).toHaveLength(0);
     });
   });
 

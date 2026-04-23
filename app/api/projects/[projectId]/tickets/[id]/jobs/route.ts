@@ -29,6 +29,7 @@ import {
   hasWorkflowToken,
   verifyWorkflowToken,
 } from '@/app/lib/auth/workflow-auth';
+import type { JobLogSummary } from '@/app/lib/schemas/job-logs';
 
 export async function GET(
   request: NextRequest,
@@ -145,11 +146,48 @@ export async function GET(
         toolsUsed: true,
         qualityScore: true,
         qualityScoreDetails: true,
+        executionLog: {
+          select: {
+            availability: true,
+            capturedAt: true,
+            retainedUntil: true,
+            prunedAt: true,
+            summaryJson: true,
+          },
+        },
       },
       orderBy: { id: 'asc' },
     });
 
-    return NextResponse.json(jobs);
+    return NextResponse.json(
+      jobs.map((job) => {
+        const isPending = job.status === 'PENDING';
+
+        return {
+        id: job.id,
+        command: job.command,
+        status: job.status,
+        branch: job.branch,
+        startedAt: job.startedAt,
+        completedAt: job.completedAt,
+        inputTokens: isPending ? null : job.inputTokens,
+        outputTokens: isPending ? null : job.outputTokens,
+        cacheReadTokens: isPending ? null : job.cacheReadTokens,
+        cacheCreationTokens: isPending ? null : job.cacheCreationTokens,
+        costUsd: isPending ? null : job.costUsd,
+        durationMs: isPending ? null : job.durationMs,
+        model: isPending ? null : job.model,
+        toolsUsed: isPending ? [] : job.toolsUsed,
+        qualityScore: job.qualityScore,
+        qualityScoreDetails: job.qualityScoreDetails,
+        logAvailability: job.executionLog?.availability ?? null,
+        logCapturedAt: job.executionLog?.capturedAt.toISOString() ?? null,
+        logRetainedUntil: job.executionLog?.retainedUntil.toISOString() ?? null,
+        logPrunedAt: job.executionLog?.prunedAt?.toISOString() ?? null,
+        logSummary: (job.executionLog?.summaryJson as JobLogSummary | null) ?? null,
+      };
+      })
+    );
   } catch (error) {
     // Handle session auth errors from verifyProjectAccess
     if (error instanceof Error) {

@@ -680,6 +680,20 @@ jobs:
 
           echo "✅ Cleanup complete (images remain in Cloudinary)"
 
+      - name: Upload Job Logs
+        if: ${{ always() && inputs.job_id }}
+        run: |
+          LOG_BUNDLE_FILE="${RUNNER_TEMP}/job-log-${{ inputs.job_id }}.json"
+          if [ -f "$LOG_BUNDLE_FILE" ]; then
+            curl -X POST "${APP_URL}/api/jobs/${{ inputs.job_id }}/logs" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+              --data @"$LOG_BUNDLE_FILE" \
+              -f -s -S || echo "⚠️ Failed to upload execution logs"
+          else
+            echo "ℹ️ No execution log bundle found at $LOG_BUNDLE_FILE"
+          fi
+
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_SPECKIT_EXECUTION != 'true' }}
         run: |

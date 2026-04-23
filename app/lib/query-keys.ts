@@ -24,6 +24,8 @@ export const queryKeys = {
       ['projects', projectId, 'tickets', 'search', query] as const,
     ticketJobs: (projectId: number, ticketId: number) =>
       ['projects', projectId, 'tickets', ticketId, 'jobs'] as const,
+    jobLogDetail: (projectId: number, jobId: number) =>
+      ['projects', projectId, 'jobs', jobId, 'logs'] as const,
     ticketByKey: (projectId: number, ticketKey: string) =>
       ['projects', projectId, 'tickets', 'by-key', ticketKey] as const,
     shipTotal: (projectId: number) =>

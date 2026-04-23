@@ -209,6 +209,64 @@ describe('Jobs Status', () => {
       expect(response.data.status).toBe('CANCELLED');
     });
 
+    it('creates an UNAVAILABLE execution log when a terminal callback arrives without an upload', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+      const response = await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'FAILED' });
+
+      expect(response.status).toBe(200);
+
+      const executionLog = await prisma.jobExecutionLog.findUnique({
+        where: { jobId },
+      });
+
+      expect(executionLog?.availability).toBe('UNAVAILABLE');
+      expect(executionLog?.sourceFormat).toBe('workflow-status-fallback');
+    });
+
+    it('preserves an uploaded execution log when the terminal callback arrives afterwards', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const uploadResponse = await workflowApi.post(`/api/jobs/${jobId}/logs`, {
+        agent: 'CODEX',
+        sourceFormat: 'codex-runner-capture',
+        availability: 'AVAILABLE',
+        summary: {
+          headline: 'Captured before final status callback.',
+          status: 'FAILED',
+          latestImportantEvents: [],
+          errorReason: 'Captured before final status callback.',
+          partial: false,
+          unavailable: false,
+          pruned: false,
+          capturedEventCount: 1,
+        },
+        events: [
+          {
+            sequence: 0,
+            timestamp: new Date().toISOString(),
+            kind: 'ERROR',
+            actor: 'system',
+            title: 'Captured before final status callback.',
+            body: 'The workflow is about to report failure.',
+            toolName: null,
+            metadata: null,
+          },
+        ],
+      });
+
+      expect(uploadResponse.status).toBe(200);
+
+      const response = await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'FAILED' });
+      expect(response.status).toBe(200);
+
+      const executionLog = await prisma.jobExecutionLog.findUnique({
+        where: { jobId },
+      });
+
+      expect(executionLog?.availability).toBe('AVAILABLE');
+      expect(executionLog?.sourceFormat).toBe('codex-runner-capture');
+    });
+
     it('keeps FAILED authoritative when Gemini telemetry is partial', async () => {
       await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
 

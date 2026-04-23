@@ -13,7 +13,7 @@ import type { User } from '@/app/lib/types/mention';
 /**
  * Response interface for timeline API
  */
-interface TimelineResponse {
+export interface TimelineResponse {
   timeline: ConversationEvent[];
   mentionedUsers: Record<string, User>;
   currentUserId: string;

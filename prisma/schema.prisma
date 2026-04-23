@@ -58,6 +58,7 @@ model Job {
   qualityScore        Int?
   // JSON string containing dimension sub-scores, weights, and threshold label
   qualityScoreDetails String?
+  executionLog        JobExecutionLog?
 
   @@index([projectId])
   @@index([startedAt])
@@ -65,6 +66,35 @@ model Job {
   @@index([ticketId])
   @@index([ticketId, status, startedAt])
   @@index([workflowRunId])
+}
+
+model JobExecutionLog {
+  id               Int                @id @default(autoincrement())
+  jobId            Int                @unique
+  projectId        Int
+  ticketId         Int
+  agent            Agent
+  availability     JobLogAvailability
+  sourceFormat     String             @db.VarChar(100)
+  summaryJson      Json
+  eventCount       Int                @default(0)
+  artifactEncoding String?            @db.VarChar(50)
+  artifactBytes    Bytes?
+  artifactSha256   String?            @db.VarChar(64)
+  artifactSizeBytes Int?
+  partialReason    String?            @db.VarChar(500)
+  unavailableReason String?           @db.VarChar(500)
+  capturedAt       DateTime
+  retainedUntil    DateTime
+  prunedAt         DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  job              Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, capturedAt])
+  @@index([ticketId, capturedAt])
+  @@index([availability, retainedUntil])
+  @@index([prunedAt])
 }
 
 model Project {
@@ -317,6 +347,13 @@ enum Agent {
   CODEX
   MISTRAL
   GEMINI
+}
+
+enum JobLogAvailability {
+  AVAILABLE
+  PARTIAL
+  UNAVAILABLE
+  PRUNED
 }
 
 enum CredentialProvider {

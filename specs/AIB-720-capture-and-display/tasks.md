@@ -16,8 +16,8 @@
 
 **Purpose**: Establish the shared typed contracts and client query hooks that every story will build on.
 
-- [ ] T001 Create shared upload/read Zod schemas and DTO types in `app/lib/schemas/job-logs.ts`
-- [ ] T002 [P] Add job-log detail query keys in `app/lib/query-keys.ts`
+- [X] T001 Create shared upload/read Zod schemas and DTO types in `app/lib/schemas/job-logs.ts`
+- [X] T002 [P] Add job-log detail query keys in `app/lib/query-keys.ts`
 
 ---
 
@@ -27,15 +27,15 @@
 
 **⚠️ CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T003 Extend the persisted data model with `JobExecutionLog` and `JobLogAvailability` in `prisma/schema.prisma`
-- [ ] T004 Create the Prisma migration for `JobExecutionLog` and retention indexes in `prisma/migrations/`
-- [ ] T005 Regenerate the Prisma client for the new log model from `prisma/schema.prisma`
-- [ ] T006 [P] Implement compression, idempotent upsert, decompression, and pruning helpers in `lib/job-logs/storage.ts`
-- [ ] T007 [P] Implement provider-specific transcript normalization for Claude, Codex, Mistral, and Gemini in `lib/job-logs/normalize.ts`
-- [ ] T008 [P] Implement bounded preview-summary construction in `lib/job-logs/summary.ts`
-- [ ] T009 Extend ticket-clone behavior to skip copying detailed log artifacts in `lib/db/tickets.ts`
-- [ ] T010 Extend terminal capture bundling and payload sanitization in `.github/scripts/run-agent.sh`
-- [ ] T011 [P] Insert pre-status log upload steps into `.github/workflows/speckit.yml`, `.github/workflows/quick-impl.yml`, `.github/workflows/iterate.yml`, `.github/workflows/verify.yml`, and `.github/workflows/ai-board-assist.yml`
+- [X] T003 Extend the persisted data model with `JobExecutionLog` and `JobLogAvailability` in `prisma/schema.prisma`
+- [X] T004 Create the Prisma migration for `JobExecutionLog` and retention indexes in `prisma/migrations/`
+- [X] T005 Regenerate the Prisma client for the new log model from `prisma/schema.prisma`
+- [X] T006 [P] Implement compression, idempotent upsert, decompression, and pruning helpers in `lib/job-logs/storage.ts`
+- [X] T007 [P] Implement provider-specific transcript normalization for Claude, Codex, Mistral, and Gemini in `lib/job-logs/normalize.ts`
+- [X] T008 [P] Implement bounded preview-summary construction in `lib/job-logs/summary.ts`
+- [X] T009 Extend ticket-clone behavior to skip copying detailed log artifacts in `lib/db/tickets.ts`
+- [X] T010 Extend terminal capture bundling and payload sanitization in `.github/scripts/run-agent.sh`
+- [X] T011 [P] Insert pre-status log upload steps into `.github/workflows/speckit.yml`, `.github/workflows/quick-impl.yml`, `.github/workflows/iterate.yml`, `.github/workflows/verify.yml`, and `.github/workflows/ai-board-assist.yml`
 
 **Checkpoint**: Persistence, normalization, and workflow capture are ready for story delivery.
 
@@ -49,18 +49,18 @@
 
 ### Tests for User Story 1
 
-- [ ] T012 [P] [US1] Extend terminal callback and idempotent upload sequencing coverage in `tests/integration/jobs/status.test.ts`
-- [ ] T013 [P] [US1] Create workflow-upload and member-scoped log-detail contract coverage in `tests/integration/jobs/logs.test.ts`
-- [ ] T014 [P] [US1] Extend full-log CTA, unavailable-state, and nested-dialog coverage in `tests/unit/components/ticket-detail-modal.test.tsx`
+- [X] T012 [P] [US1] Extend terminal callback and idempotent upload sequencing coverage in `tests/integration/jobs/status.test.ts`
+- [X] T013 [P] [US1] Create workflow-upload and member-scoped log-detail contract coverage in `tests/integration/jobs/logs.test.ts`
+- [X] T014 [P] [US1] Extend full-log CTA, unavailable-state, and nested-dialog coverage in `tests/unit/components/ticket-detail-modal.test.tsx`
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Implement the workflow-authenticated terminal log upload route in `app/api/jobs/[id]/logs/route.ts`
-- [ ] T016 [US1] Extend terminal status handling to coordinate log capture state safely in `app/api/jobs/[id]/status/route.ts`
-- [ ] T017 [US1] Implement the member-scoped full log retrieval route in `app/api/projects/[projectId]/jobs/[jobId]/logs/route.ts`
-- [ ] T018 [US1] Extend ticket job payloads with `logAvailability`, `logSummary`, and retention metadata in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`
-- [ ] T019 [P] [US1] Create the detailed full-log dialog UI in `components/ticket/job-log-dialog.tsx`
-- [ ] T020 [US1] Wire failed-job summary actions and dialog entry points through `components/board/ticket-detail-modal.tsx` and `components/ticket/jobs-timeline.tsx`
+- [X] T015 [US1] Implement the workflow-authenticated terminal log upload route in `app/api/jobs/[id]/logs/route.ts`
+- [X] T016 [US1] Extend terminal status handling to coordinate log capture state safely in `app/api/jobs/[id]/status/route.ts`
+- [X] T017 [US1] Implement the member-scoped full log retrieval route in `app/api/projects/[projectId]/jobs/[jobId]/logs/route.ts`
+- [X] T018 [US1] Extend ticket job payloads with `logAvailability`, `logSummary`, and retention metadata in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`
+- [X] T019 [P] [US1] Create the detailed full-log dialog UI in `components/ticket/job-log-dialog.tsx`
+- [X] T020 [US1] Wire failed-job summary actions and dialog entry points through `components/board/ticket-detail-modal.tsx` and `components/ticket/jobs-timeline.tsx`
 
 **Checkpoint**: Failed jobs can be diagnosed from the ticket modal with both summary and full-detail access.
 
@@ -74,16 +74,16 @@
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] Extend successful-job preview payload coverage in `tests/integration/jobs/ticket-jobs.test.ts`
-- [ ] T022 [P] [US2] Extend timeline preview serialization coverage in `tests/integration/tickets/timeline.test.ts`
-- [ ] T023 [P] [US2] Create multi-agent normalization and summary extraction coverage in `tests/unit/job-log-normalizer.test.ts`
+- [X] T021 [P] [US2] Extend successful-job preview payload coverage in `tests/integration/jobs/ticket-jobs.test.ts`
+- [X] T022 [P] [US2] Extend timeline preview serialization coverage in `tests/integration/tickets/timeline.test.ts`
+- [X] T023 [P] [US2] Create multi-agent normalization and summary extraction coverage in `tests/unit/job-log-normalizer.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] Extend the timeline event types and server-side event enrichment for log previews in `app/lib/types/conversation-event.ts` and `app/lib/utils/conversation-events.ts`
-- [ ] T025 [US2] Extend timeline API serialization and client query consumption for preview-safe job events in `app/api/projects/[projectId]/tickets/[id]/timeline/route.ts` and `app/lib/hooks/queries/use-conversation-timeline.ts`
-- [ ] T026 [US2] Render condensed successful-job previews in `components/timeline/job-event-timeline-item.tsx` and `components/ticket/conversation-timeline.tsx`
-- [ ] T027 [US2] Extend `components/ticket/jobs-timeline.tsx` and `components/ticket/job-log-dialog.tsx` to show concise successful-job summaries and ordered full-event formatting
+- [X] T024 [US2] Extend the timeline event types and server-side event enrichment for log previews in `app/lib/types/conversation-event.ts` and `app/lib/utils/conversation-events.ts`
+- [X] T025 [US2] Extend timeline API serialization and client query consumption for preview-safe job events in `app/api/projects/[projectId]/tickets/[id]/timeline/route.ts` and `app/lib/hooks/queries/use-conversation-timeline.ts`
+- [X] T026 [US2] Render condensed successful-job previews in `components/timeline/job-event-timeline-item.tsx` and `components/ticket/conversation-timeline.tsx`
+- [X] T027 [US2] Extend `components/ticket/jobs-timeline.tsx` and `components/ticket/job-log-dialog.tsx` to show concise successful-job summaries and ordered full-event formatting
 
 **Checkpoint**: Successful jobs remain compact in the timeline while full normalized execution detail is readable on demand.
 
@@ -97,14 +97,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T028 [P] [US3] Extend telemetry-plus-log rendering coverage in `tests/unit/components/ticket-stats.test.tsx`
-- [ ] T029 [P] [US3] Extend API coverage to confirm telemetry fields remain unchanged when log fields are present in `tests/integration/jobs/ticket-jobs.test.ts`
+- [X] T028 [P] [US3] Extend telemetry-plus-log rendering coverage in `tests/unit/components/ticket-stats.test.tsx`
+- [X] T029 [P] [US3] Extend API coverage to confirm telemetry fields remain unchanged when log fields are present in `tests/integration/jobs/ticket-jobs.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Preserve telemetry display while adding log context in `components/ticket/ticket-stats.tsx` and `components/ticket/jobs-timeline.tsx`
-- [ ] T031 [US3] Keep metrics parsing stable while sharing normalized execution context with `lib/telemetry/otlp-processor.ts`
-- [ ] T032 [US3] Ensure ticket job and timeline reads return log metadata alongside existing telemetry fields in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts` and `app/api/projects/[projectId]/tickets/[id]/timeline/route.ts`
+- [X] T030 [US3] Preserve telemetry display while adding log context in `components/ticket/ticket-stats.tsx` and `components/ticket/jobs-timeline.tsx`
+- [X] T031 [US3] Keep metrics parsing stable while sharing normalized execution context with `lib/telemetry/otlp-processor.ts`
+- [X] T032 [US3] Ensure ticket job and timeline reads return log metadata alongside existing telemetry fields in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts` and `app/api/projects/[projectId]/tickets/[id]/timeline/route.ts`
 
 **Checkpoint**: Logs add narrative context without replacing or corrupting existing telemetry.
 
@@ -114,11 +114,11 @@
 
 **Purpose**: Finish retention/audit behavior, clone safety, and final validation across stories.
 
-- [ ] T033 [P] Extend clone-behavior coverage so copied tickets keep job telemetry but not retained log artifacts in `tests/integration/tickets/duplicate.test.ts`
-- [ ] T034 [P] Extend unavailable and pruned audit-state coverage in `tests/integration/jobs/logs.test.ts`
-- [ ] T035 Implement retention-pruning state transitions and summary-only audit preservation in `lib/job-logs/storage.ts`
-- [ ] T036 [P] Document capture, retrieval, and pruning execution details in `specs/AIB-720-capture-and-display/workflows/job-log-capture-workflow.md`, `specs/AIB-720-capture-and-display/workflows/job-log-retrieval-presentation.md`, and `specs/AIB-720-capture-and-display/workflows/job-log-retention-pruning.md`
-- [ ] T037 Validate the completed feature against `prisma/schema.prisma`, `app/api/jobs/[id]/logs/route.ts`, and `components/ticket/job-log-dialog.tsx` with `bun run type-check`, `bun run lint`, `bun run test:unit`, and `bun run test:integration`
+- [X] T033 [P] Extend clone-behavior coverage so copied tickets keep job telemetry but not retained log artifacts in `tests/integration/tickets/duplicate.test.ts`
+- [X] T034 [P] Extend unavailable and pruned audit-state coverage in `tests/integration/jobs/logs.test.ts`
+- [X] T035 Implement retention-pruning state transitions and summary-only audit preservation in `lib/job-logs/storage.ts`
+- [X] T036 [P] Document capture, retrieval, and pruning execution details in `specs/AIB-720-capture-and-display/workflows/job-log-capture-workflow.md`, `specs/AIB-720-capture-and-display/workflows/job-log-retrieval-presentation.md`, and `specs/AIB-720-capture-and-display/workflows/job-log-retention-pruning.md`
+- [X] T037 Validate the completed feature against `prisma/schema.prisma`, `app/api/jobs/[id]/logs/route.ts`, and `components/ticket/job-log-dialog.tsx` with `bun run type-check`, `bun run lint`, `bun run test:unit`, and `bun run test:integration`
 
 ---
 

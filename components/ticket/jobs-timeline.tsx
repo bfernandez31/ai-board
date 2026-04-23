@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronRight,
   X,
+  FileSearch,
 } from 'lucide-react';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import {
@@ -26,6 +27,7 @@ import {
 import { formatCommandName } from '@/lib/utils/format-command';
 import { CancelConfirmationModal } from '@/components/board/cancel-confirmation-modal';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
+import { Button } from '@/components/ui/button';
 
 /**
  * Status configuration type
@@ -53,7 +55,15 @@ const STATUS_ICONS: Record<string, StatusConfig> = {
  *
  * Single job entry with expandable token breakdown
  */
-function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: number | undefined }) {
+function JobRow({
+  job,
+  projectId,
+  onViewLogs,
+}: {
+  job: TicketJobWithTelemetry;
+  projectId?: number | undefined;
+  onViewLogs?: (jobId: number, jobCommand: string) => void;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const cancelJobMutation = useCancelJob(projectId ?? 0);
@@ -69,13 +79,19 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
     job.outputTokens != null ||
     job.cacheReadTokens != null ||
     job.cacheCreationTokens != null;
+  const hasLogSummary = job.logSummary != null;
+  const canViewLogs =
+    job.logAvailability === 'AVAILABLE' ||
+    job.logAvailability === 'PARTIAL' ||
+    job.logAvailability === 'PRUNED';
+  const expandable = hasTelemetry || hasLogSummary;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger
         className="w-full flex items-center justify-between p-3 border border-ctp-mauve/15 rounded-lg transition-colors aurora-bg-muted"
         data-testid={`job-row-${job.id}`}
-        disabled={!hasTelemetry}
+        disabled={!expandable}
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* Status Icon */}
@@ -98,6 +114,12 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
         </div>
 
         <div className="flex items-center gap-4 flex-shrink-0">
+          {job.logSummary ? (
+            <span className="hidden max-w-[240px] truncate text-xs text-muted-foreground md:inline">
+              {job.logSummary.headline}
+            </span>
+          ) : null}
+
           {/* Duration */}
           <span className="text-sm text-ctp-blue" data-testid={`job-duration-${job.id}`}>
             {job.durationMs != null ? formatDuration(job.durationMs) : '-'}
@@ -126,7 +148,7 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
           )}
 
           {/* Expand/Collapse Indicator */}
-          {hasTelemetry && (
+          {expandable && (
             isOpen ? (
               <ChevronDown className="w-4 h-4 text-ctp-overlay0" />
             ) : (
@@ -150,12 +172,52 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
         />
       )}
 
-      {hasTelemetry && (
+      {expandable && (
         <CollapsibleContent className="pt-2">
           <div
             className="bg-card border border-border rounded-lg p-4 ml-8 space-y-3"
             data-testid={`job-details-${job.id}`}
           >
+            {job.logSummary ? (
+              <div className="rounded-lg border border-border/70 bg-background/60 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{job.logSummary.headline}</p>
+                    {job.logSummary.errorReason ? (
+                      <p className="mt-1 text-xs text-ctp-red">{job.logSummary.errorReason}</p>
+                    ) : null}
+                  </div>
+                  {canViewLogs && onViewLogs ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="shrink-0"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onViewLogs(job.id, job.command);
+                      }}
+                    >
+                      <FileSearch className="mr-1.5 h-4 w-4" />
+                      View full logs
+                    </Button>
+                  ) : null}
+                </div>
+                {job.logSummary.latestImportantEvents.length > 0 ? (
+                  <div className="mt-3 space-y-2">
+                    {job.logSummary.latestImportantEvents.map((event) => (
+                      <p key={`${event.timestamp}-${event.label}`} className="text-xs text-muted-foreground">
+                        {event.label}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+                {job.logAvailability === 'UNAVAILABLE' ? (
+                  <p className="mt-2 text-xs text-muted-foreground">Detailed execution logs were unavailable for this run.</p>
+                ) : null}
+              </div>
+            ) : null}
+
             {/* Token Breakdown */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
@@ -207,9 +269,10 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
 interface JobsTimelineProps {
   jobs: TicketJobWithTelemetry[];
   projectId?: number | undefined;
+  onViewLogs?: (jobId: number, jobCommand: string) => void;
 }
 
-export function JobsTimeline({ jobs, projectId }: JobsTimelineProps) {
+export function JobsTimeline({ jobs, projectId, onViewLogs }: JobsTimelineProps) {
   if (jobs.length === 0) {
     return (
       <div className="text-sm text-ctp-overlay0" data-testid="no-jobs-message">
@@ -225,7 +288,12 @@ export function JobsTimeline({ jobs, projectId }: JobsTimelineProps) {
       </h3>
       <div className="space-y-2">
         {jobs.map((job) => (
-          <JobRow key={job.id} job={job} projectId={projectId} />
+          <JobRow
+            key={job.id}
+            job={job}
+            projectId={projectId}
+            {...(onViewLogs ? { onViewLogs } : {})}
+          />
         ))}
       </div>
     </div>
