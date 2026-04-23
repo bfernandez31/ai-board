@@ -9,6 +9,7 @@ import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { sendJobCompletionNotification } from '@/app/lib/push/send-notification';
 import { handleJobCompletionAutoTransition } from '@/app/lib/tickets/auto-mode';
+import { getLogService } from '@/lib/services/log-service';
 
 /**
  * PATCH /api/jobs/[id]/status
@@ -285,6 +286,30 @@ export async function PATCH(
       }).catch((err) => {
         console.error('[Job Status Update] Auto-mode hook error:', err);
       });
+
+      // Capture logs if provided in request (non-blocking)
+      if (validationResult.data.logContent || validationResult.data.logs) {
+        const logContent = validationResult.data.logContent || validationResult.data.logs || '';
+        const agentType = validationResult.data.agentType || 'CLAUDE'; // Default to CLAUDE
+
+        if (logContent) {
+          try {
+            const logService = getLogService();
+            await logService.captureLogs({
+              jobId,
+              agentType,
+              logContent,
+              logFormat: validationResult.data.logFormat || 'text',
+            });
+          } catch (logError) {
+            console.error('[Job Status Update] Log capture error:', {
+              jobId,
+              error: logError,
+            });
+            // Don't fail the job status update if log capture fails
+          }
+        }
+      }
     }
 
     // Return minimal response (id, status, completedAt)

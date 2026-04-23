@@ -27,7 +27,7 @@ export interface JobTypeConfig {
   ariaLabel: string; // Accessibility label template
 }
 
-import type { Job } from '@prisma/client';
+import type { Job, JobLog } from '@prisma/client';
 
 /**
  * DualJobState Interface
@@ -39,6 +39,16 @@ export interface DualJobState {
   workflow: Job | null;
   aiBoard: Job | null;
   deployJob: Job | null;
+}
+
+/**
+ * TicketJobWithTelemetryAndLogs Interface
+ *
+ * Extended job interface with full telemetry data and log information for Stats tab display.
+ * Used to type jobs passed to ticket-stats and jobs-timeline components.
+ */
+export interface TicketJobWithTelemetryAndLogs extends TicketJobWithTelemetry {
+  jobLog?: JobLog | null;
 }
 
 /**

@@ -58,6 +58,7 @@ model Job {
   qualityScore        Int?
   // JSON string containing dimension sub-scores, weights, and threshold label
   qualityScoreDetails String?
+  jobLog              JobLog?
 
   @@index([projectId])
   @@index([startedAt])
@@ -317,6 +318,64 @@ enum Agent {
   CODEX
   MISTRAL
   GEMINI
+}
+
+model JobLog {
+  id                Int      @id @default(autoincrement())
+  jobId             Int      @unique
+  agentType         Agent
+  status            String   @db.VarChar(20)
+  timestamp         DateTime @default(now())
+  previewContent    String   @db.VarChar(2000)
+  fullLogReference  String   @db.VarChar(255)
+  storageLocation   String   @db.VarChar(100)
+  contentSize       Int
+  contentHash       String   @db.VarChar(64)
+  expirationDate    DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  job        Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  logEntries LogEntry[]
+  storage    LogStorage?
+
+  @@index([jobId])
+  @@index([timestamp])
+  @@index([status])
+  @@index([expirationDate])
+}
+
+model LogEntry {
+  id              Int       @id @default(autoincrement())
+  jobLogId        Int
+  sequenceNumber  Int
+  timestamp       DateTime
+  messageType     String    @db.VarChar(10)
+  content         String    @db.Text
+  toolName        String?    @db.VarChar(50)
+  metadata        Json?
+
+  jobLog JobLog @relation(fields: [jobLogId], references: [id], onDelete: Cascade)
+
+  @@index([jobLogId, sequenceNumber])
+  @@index([jobLogId, messageType])
+  @@index([jobLogId, timestamp])
+}
+
+model LogStorage {
+  id              Int       @id @default(autoincrement())
+  jobLogId        Int       @unique
+  storageProvider String    @db.VarChar(50)
+  storageKey      String    @db.VarChar(255)
+  contentSize     Int
+  contentHash     String    @db.VarChar(64)
+  expirationDate  DateTime
+  createdAt       DateTime  @default(now())
+
+  jobLog JobLog @relation(fields: [jobLogId], references: [id], onDelete: Cascade)
+
+  @@index([storageProvider])
+  @@index([expirationDate])
 }
 
 enum CredentialProvider {

@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronRight,
   X,
+  FileText,
 } from 'lucide-react';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import {
@@ -26,6 +27,8 @@ import {
 import { formatCommandName } from '@/lib/utils/format-command';
 import { CancelConfirmationModal } from '@/components/board/cancel-confirmation-modal';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
+import { LogViewerModal } from './log-viewer-modal';
+import { useLogPreview } from '@/lib/hooks/queries/useJobLogs';
 
 /**
  * Status configuration type
@@ -56,12 +59,14 @@ const STATUS_ICONS: Record<string, StatusConfig> = {
 function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: number | undefined }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showLogViewer, setShowLogViewer] = useState(false);
   const cancelJobMutation = useCancelJob(projectId ?? 0);
 
   const statusConfig = STATUS_ICONS[job.status] ?? DEFAULT_STATUS;
   const StatusIcon = statusConfig.icon;
   const isRunning = job.status === 'RUNNING';
   const isCancellable = projectId != null && (job.status === 'PENDING' || job.status === 'RUNNING');
+  const isTerminalState = ['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status);
 
   // Check if job has telemetry data to expand
   const hasTelemetry =
@@ -69,6 +74,14 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
     job.outputTokens != null ||
     job.cacheReadTokens != null ||
     job.cacheCreationTokens != null;
+
+  // Get log preview data
+  const { data: logPreview } = useLogPreview(isTerminalState ? job.id : null, {
+    enabled: isTerminalState && job.id > 0,
+  });
+
+  const hasLogs = logPreview?.hasFullLogs || false;
+  const hasErrors = logPreview?.errorCount && logPreview.errorCount > 0;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -125,6 +138,22 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
             </button>
           )}
 
+          {/* View Logs Button - visible for terminal states with logs */}
+          {isTerminalState && hasLogs && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setShowLogViewer(true);
+              }}
+              className="p-1 rounded hover:bg-ctp-blue/20 text-muted-foreground hover:text-ctp-blue transition-colors"
+              aria-label="View logs"
+              data-testid={`view-logs-${job.id}`}
+            >
+              <FileText className="h-4 w-4" />
+            </button>
+          )}
+
           {/* Expand/Collapse Indicator */}
           {hasTelemetry && (
             isOpen ? (
@@ -147,6 +176,15 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
           }}
           jobCommand={job.command}
           isCancelling={cancelJobMutation.isPending}
+        />
+      )}
+
+      {/* Log Viewer Modal */}
+      {isTerminalState && (
+        <LogViewerModal
+          jobId={job.id}
+          isOpen={showLogViewer}
+          onClose={() => setShowLogViewer(false)}
         />
       )}
 
