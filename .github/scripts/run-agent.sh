@@ -10,6 +10,47 @@ COMMAND="${2:?ERROR: COMMAND is required (e.g., ai-board.specify)}"
 shift 2
 ORIGINAL_ARGS=("$@")
 
+# --- Execution log capture (AIB-723) ---
+# When JOB_ID is present, tee every agent invocation's stdout+stderr to a
+# log file and upload it to the ai-board API on exit. This makes agent
+# output viewable from the UI after the workflow run expires. Failures
+# never block the agent — upload script is always exit 0.
+AGENT_LOG_FILE="${AGENT_LOG_FILE:-/tmp/ai-board-agent-log-${JOB_ID:-nolog}-$$.txt}"
+export AGENT_LOG_FILE
+: > "$AGENT_LOG_FILE"
+
+_upload_agent_log_on_exit() {
+  local script_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  if [[ -x "$script_dir/upload-agent-log.sh" ]] && [[ -n "${JOB_ID:-}" ]]; then
+    "$script_dir/upload-agent-log.sh" "$AGENT_LOG_FILE" "${JOB_ID:-}" "$AGENT_TYPE" || true
+  fi
+}
+trap _upload_agent_log_on_exit EXIT
+
+# Wrap an agent invocation so both stdout and stderr get appended to the log
+# file. stdout is still forwarded to the caller (workflows sometimes capture
+# it via $(...)) and stderr still reaches the GitHub Actions log.
+run_with_log_capture() {
+  set +e
+  "$@" 2> >(tee -a "$AGENT_LOG_FILE" >&2) | tee -a "$AGENT_LOG_FILE"
+  local exit_code=${PIPESTATUS[0]}
+  set -e
+  return "$exit_code"
+}
+
+# Same as run_with_log_capture but pipes a file into the command's stdin.
+# Used for agents (codex) that expect the prompt on stdin.
+run_with_log_capture_stdin() {
+  local stdin_file="$1"
+  shift
+  set +e
+  "$@" < "$stdin_file" 2> >(tee -a "$AGENT_LOG_FILE" >&2) | tee -a "$AGENT_LOG_FILE"
+  local exit_code=${PIPESTATUS[0]}
+  set -e
+  return "$exit_code"
+}
+
 STRUCTURED_INPUT_FILE=""
 STRUCTURED_EXTRA_FILES=()
 STRUCTURED_NOTES=()
@@ -381,7 +422,7 @@ install_claude() {
 
 invoke_claude() {
   log_info "Invoking Claude: /$COMMAND $ORIGINAL_ARGS_STRING"
-  claude --dangerously-skip-permissions "/$COMMAND $ORIGINAL_ARGS_STRING"
+  run_with_log_capture claude --dangerously-skip-permissions "/$COMMAND $ORIGINAL_ARGS_STRING"
 }
 
 # --- Codex functions ---
@@ -505,7 +546,16 @@ invoke_codex() {
   prompt="$(build_non_claude_prompt "$command_file")"
 
   log_info "Model: $model | Reasoning: $reasoning"
-  echo "$prompt" | codex exec --dangerously-bypass-approvals-and-sandbox -m "$model" -c "reasoning_effort=\"$reasoning\"" -
+  # Spool prompt to a file so we can feed codex via stdin while still routing
+  # its stdout/stderr through the log-capture wrapper.
+  local codex_prompt_file
+  codex_prompt_file="$(mktemp /tmp/codex-prompt-XXXXXX.txt)"
+  printf '%s' "$prompt" > "$codex_prompt_file"
+  run_with_log_capture_stdin "$codex_prompt_file" \
+    codex exec --dangerously-bypass-approvals-and-sandbox -m "$model" -c "reasoning_effort=\"$reasoning\"" -
+  local exit_code=$?
+  rm -f "$codex_prompt_file"
+  return $exit_code
 }
 
 # --- Mistral functions ---
@@ -660,7 +710,7 @@ invoke_mistral() {
   # tells it to "propose a plan and wait for confirmation", which in
   # headless mode means it never executes. This override forces action.
   local exec_prefix="IMPORTANT: You are running in CI/CD headless mode. Do NOT just describe a plan — you MUST execute every step using your tools (bash, write_file, read_file, etc.). Do NOT wait for user confirmation. Act immediately and completely. When a step fails, try a different approach — do NOT retry the same command more than twice."
-  vibe --prompt "${exec_prefix}
+  run_with_log_capture vibe --prompt "${exec_prefix}
 
 $(cat "$prompt_file")" --agent auto-approve
   local exit_code=$?
@@ -733,7 +783,7 @@ invoke_gemini() {
   # when the prompt content starts with '-' (e.g. YAML frontmatter '---\n...').
   # The plain `-p "..."` form fails with "Not enough arguments following: p"
   # whenever the value's first character is '-'.
-  gemini "--prompt=$(cat "$prompt_file")" --approval-mode=yolo
+  run_with_log_capture gemini "--prompt=$(cat "$prompt_file")" --approval-mode=yolo
   local exit_code=$?
 
   rm -f "$prompt_file"

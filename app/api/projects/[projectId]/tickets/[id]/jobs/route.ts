@@ -145,11 +145,34 @@ export async function GET(
         toolsUsed: true,
         qualityScore: true,
         qualityScoreDetails: true,
+        // Surface captured log summary + metadata for inline timeline preview.
+        // Full content lives on /.../jobs/[jobId]/logs to keep this payload small.
+        logs: true,
+        jobLog: {
+          select: {
+            truncated: true,
+            byteSize: true,
+            eventCount: true,
+            agent: true,
+          },
+        },
       },
       orderBy: { id: 'asc' },
     });
 
-    return NextResponse.json(jobs);
+    // Flatten jobLog.* into a narrower shape the UI can consume directly.
+    const shaped = jobs.map((job) => ({
+      ...job,
+      hasLog: job.jobLog !== null,
+      logSummary: job.logs,
+      logTruncated: job.jobLog?.truncated ?? false,
+      logByteSize: job.jobLog?.byteSize ?? null,
+      logEventCount: job.jobLog?.eventCount ?? null,
+      logAgent: job.jobLog?.agent ?? null,
+      jobLog: undefined,
+    }));
+
+    return NextResponse.json(shaped);
   } catch (error) {
     // Handle session auth errors from verifyProjectAccess
     if (error instanceof Error) {

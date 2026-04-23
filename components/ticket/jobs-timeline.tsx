@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronRight,
   X,
+  FileText,
 } from 'lucide-react';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import {
@@ -26,6 +27,7 @@ import {
 import { formatCommandName } from '@/lib/utils/format-command';
 import { CancelConfirmationModal } from '@/components/board/cancel-confirmation-modal';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
+import { JobLogDialog } from '@/components/ticket/job-log-dialog';
 
 /**
  * Status configuration type
@@ -53,9 +55,18 @@ const STATUS_ICONS: Record<string, StatusConfig> = {
  *
  * Single job entry with expandable token breakdown
  */
-function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: number | undefined }) {
+function JobRow({
+  job,
+  projectId,
+  ticketId,
+}: {
+  job: TicketJobWithTelemetry;
+  projectId?: number | undefined;
+  ticketId?: number | undefined;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showLogDialog, setShowLogDialog] = useState(false);
   const cancelJobMutation = useCancelJob(projectId ?? 0);
 
   const statusConfig = STATUS_ICONS[job.status] ?? DEFAULT_STATUS;
@@ -70,7 +81,11 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
     job.cacheReadTokens != null ||
     job.cacheCreationTokens != null;
 
+  const hasLog = job.hasLog ?? (job.logSummary != null && job.logSummary.length > 0);
+  const canOpenLog = hasLog && projectId != null && ticketId != null;
+
   return (
+    <div className="space-y-1">
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger
         className="w-full flex items-center justify-between p-3 border border-ctp-mauve/15 rounded-lg transition-colors aurora-bg-muted"
@@ -107,6 +122,23 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
           <span className="text-sm text-ctp-green w-16 text-right" data-testid={`job-cost-${job.id}`}>
             {job.costUsd != null ? formatCost(job.costUsd) : '-'}
           </span>
+
+          {/* View Full Logs Button - visible when logs were captured */}
+          {canOpenLog && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setShowLogDialog(true);
+              }}
+              className="p-1 rounded hover:bg-ctp-blue/20 text-muted-foreground hover:text-ctp-blue transition-colors"
+              aria-label="View full logs"
+              data-testid={`view-logs-${job.id}`}
+              title="View full logs"
+            >
+              <FileText className="h-4 w-4" />
+            </button>
+          )}
 
           {/* Cancel Button - always visible for PENDING/RUNNING jobs */}
           {isCancellable && (
@@ -195,6 +227,30 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
         </CollapsibleContent>
       )}
     </Collapsible>
+
+    {/* Inline log summary — visible without click to give users an at-a-glance
+        sense of what the agent did or why it failed. */}
+    {job.logSummary && (
+      <p
+        className="text-xs text-muted-foreground italic pl-11 pr-3 truncate"
+        data-testid={`job-log-summary-${job.id}`}
+        title={job.logSummary}
+      >
+        {job.logSummary}
+      </p>
+    )}
+
+    {canOpenLog && (
+      <JobLogDialog
+        open={showLogDialog}
+        onOpenChange={setShowLogDialog}
+        projectId={projectId!}
+        ticketId={ticketId!}
+        jobId={job.id}
+        command={job.command}
+      />
+    )}
+    </div>
   );
 }
 
@@ -207,9 +263,10 @@ function JobRow({ job, projectId }: { job: TicketJobWithTelemetry; projectId?: n
 interface JobsTimelineProps {
   jobs: TicketJobWithTelemetry[];
   projectId?: number | undefined;
+  ticketId?: number | undefined;
 }
 
-export function JobsTimeline({ jobs, projectId }: JobsTimelineProps) {
+export function JobsTimeline({ jobs, projectId, ticketId }: JobsTimelineProps) {
   if (jobs.length === 0) {
     return (
       <div className="text-sm text-ctp-overlay0" data-testid="no-jobs-message">
@@ -225,7 +282,7 @@ export function JobsTimeline({ jobs, projectId }: JobsTimelineProps) {
       </h3>
       <div className="space-y-2">
         {jobs.map((job) => (
-          <JobRow key={job.id} job={job} projectId={projectId} />
+          <JobRow key={job.id} job={job} projectId={projectId} ticketId={ticketId} />
         ))}
       </div>
     </div>

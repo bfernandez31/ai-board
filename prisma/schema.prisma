@@ -41,6 +41,7 @@ model Job {
   workflowRunId BigInt?    // GitHub Actions workflow run ID for cancel support
   projectId   Int
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  jobLog      JobLog?
 
   // Claude telemetry metrics (aggregated from all API calls in the job)
   inputTokens         Int? // Total input tokens consumed
@@ -65,6 +66,34 @@ model Job {
   @@index([ticketId])
   @@index([ticketId, status, startedAt])
   @@index([workflowRunId])
+}
+
+/// Captured agent execution log persisted after a Job completes.
+/// Stored in a separate table so the main Job query stays small and
+/// large log blobs don't bloat every projects/tickets fetch.
+model JobLog {
+  id            Int      @id @default(autoincrement())
+  jobId         Int      @unique
+  // Normalized human-readable log content (timestamped events).
+  // Capped at ~1MB per row; larger payloads are truncated upstream.
+  content       String
+  // Short summary surfaced in the timeline without opening the full view.
+  // Typically the last few events or the error line on failure.
+  summary       String?  @db.VarChar(500)
+  // True when the original agent output exceeded the content cap and was truncated.
+  truncated     Boolean  @default(false)
+  // Original byte length of the captured stream before truncation.
+  byteSize      Int      @default(0)
+  // Normalized event count parsed out of the stream (messages, tool calls, errors).
+  eventCount    Int      @default(0)
+  // Agent that produced these logs (CLAUDE | CODEX | MISTRAL | GEMINI).
+  agent         String?  @db.VarChar(20)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
 }
 
 model Project {

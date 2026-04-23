@@ -64,4 +64,12 @@ export interface TicketJobWithTelemetry {
   toolsUsed: string[];
   qualityScore: number | null;
   qualityScoreDetails: string | null;
+  // Captured agent execution log metadata (full content is fetched lazily
+  // via /api/projects/:projectId/tickets/:ticketId/jobs/:jobId/logs).
+  hasLog?: boolean;
+  logSummary?: string | null;
+  logTruncated?: boolean;
+  logByteSize?: number | null;
+  logEventCount?: number | null;
+  logAgent?: string | null;
 }
