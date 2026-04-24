@@ -15,6 +15,9 @@ import type {
   AnalyticsFilters,
   CacheMetrics,
   CompletionMetric,
+  ContextGroupingDatum,
+  ContextHistogramDatum,
+  ContextSizeAnalytics,
   CostDataPoint,
   DimensionComparison,
   NamedAgent,
@@ -30,6 +33,11 @@ import type {
   WorkflowBreakdown,
 } from './types';
 import { parseQualityScoreDetails } from '@/lib/quality-score';
+import {
+  CONTEXT_HISTOGRAM_BUCKETS,
+  getContextHistogramLabel,
+  getQualityScoreBucket,
+} from '@/lib/context-metrics';
 import {
   DEFAULT_ANALYTICS_FILTERS,
   aggregateTools,
@@ -605,6 +613,88 @@ async function getQualityScoreAnalytics(
   };
 }
 
+function buildContextGroupingData(entries: Array<{ label: string; peakContextTokens: number }>): ContextGroupingDatum[] {
+  const grouped = new Map<string, { count: number; totalPeakContext: number }>();
+
+  for (const entry of entries) {
+    const current = grouped.get(entry.label) ?? { count: 0, totalPeakContext: 0 };
+    current.count += 1;
+    current.totalPeakContext += entry.peakContextTokens;
+    grouped.set(entry.label, current);
+  }
+
+  return Array.from(grouped.entries())
+    .map(([label, value]) => ({
+      label,
+      count: value.count,
+      averagePeakContext: Math.round(value.totalPeakContext / value.count),
+    }))
+    .sort((a, b) => b.averagePeakContext - a.averagePeakContext || b.count - a.count);
+}
+
+async function getContextSizeAnalytics(
+  projectId: number,
+  filters: AnalyticsFilters,
+  now: Date
+): Promise<ContextSizeAnalytics> {
+  const jobs = await prisma.job.findMany({
+    where: {
+      ...buildJobWhere(projectId, filters, now),
+      peakContextTokens: { not: null },
+    },
+    select: {
+      command: true,
+      peakContextTokens: true,
+      qualityScore: true,
+      ticket: {
+        select: {
+          workflowType: true,
+        },
+      },
+    },
+  });
+
+  const histogramCounts = new Map<string, number>(
+    CONTEXT_HISTOGRAM_BUCKETS.map((bucket) => [bucket.label, 0])
+  );
+
+  const contextJobs = jobs.flatMap((job) => {
+    if (job.peakContextTokens == null) {
+      return [];
+    }
+
+    const histogramLabel = getContextHistogramLabel(job.peakContextTokens);
+    histogramCounts.set(histogramLabel, (histogramCounts.get(histogramLabel) ?? 0) + 1);
+
+    return [{
+      command: job.command,
+      peakContextTokens: job.peakContextTokens,
+      workflowType: job.ticket.workflowType,
+      qualityBucket: getQualityScoreBucket(job.qualityScore),
+    }];
+  });
+
+  const histogram: ContextHistogramDatum[] = CONTEXT_HISTOGRAM_BUCKETS
+    .map((bucket) => ({
+      label: bucket.label,
+      count: histogramCounts.get(bucket.label) ?? 0,
+    }))
+    .filter((bucket) => bucket.count > 0);
+
+  return {
+    histogram,
+    byCommand: buildContextGroupingData(
+      contextJobs.map((job) => ({ label: job.command, peakContextTokens: job.peakContextTokens }))
+    ),
+    byWorkflowType: buildContextGroupingData(
+      contextJobs.map((job) => ({ label: job.workflowType, peakContextTokens: job.peakContextTokens }))
+    ),
+    byQualityBucket: buildContextGroupingData(
+      contextJobs.map((job) => ({ label: job.qualityBucket, peakContextTokens: job.peakContextTokens }))
+    ),
+  };
+}
+
 function normalizeFilters(
   filters: Partial<AnalyticsFilters> = {},
   availableAgents?: AgentOption[]
@@ -654,6 +744,7 @@ export async function getAnalyticsData(
     topTools,
     workflowDistribution,
     velocity,
+    contextSize,
     qualityScore,
   ] = await Promise.all([
     getOverviewMetrics(projectId, normalizedFilters, now),
@@ -663,6 +754,7 @@ export async function getAnalyticsData(
     getTopTools(projectId, normalizedFilters, now),
     getWorkflowDistribution(projectId, normalizedFilters, now),
     getVelocityData(projectId, normalizedFilters, now),
+    getContextSizeAnalytics(projectId, normalizedFilters, now),
     getQualityScoreAnalytics(projectId, normalizedFilters, now),
   ]);
 
@@ -677,6 +769,7 @@ export async function getAnalyticsData(
     topTools,
     workflowDistribution,
     velocity,
+    contextSize,
     qualityScore,
     filters: normalizedFilters,
     availableAgents,

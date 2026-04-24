@@ -72,6 +72,9 @@ describe('Ticket Jobs API', () => {
           cacheCreationTokens: 100,
           costUsd: 0.05,
           durationMs: 300000,
+          peakContextTokens: 42000,
+          averageContextTokens: 28000,
+          contextTurnCount: 6,
           model: 'claude-3-opus',
           toolsUsed: ['read', 'write', 'bash'],
         },
@@ -95,6 +98,9 @@ describe('Ticket Jobs API', () => {
       expect(job!.cacheCreationTokens).toBe(100);
       expect(Number(job!.costUsd)).toBeCloseTo(0.05, 2);
       expect(job!.durationMs).toBe(300000);
+      expect(job!.peakContextTokens).toBe(42000);
+      expect(job!.averageContextTokens).toBe(28000);
+      expect(job!.contextTurnCount).toBe(6);
       expect(job!.model).toBe('claude-3-opus');
       expect(job!.toolsUsed).toEqual(['read', 'write', 'bash']);
 
@@ -119,6 +125,9 @@ describe('Ticket Jobs API', () => {
       expect(job!.outputTokens).toBeNull();
       expect(job!.costUsd).toBeNull();
       expect(job!.durationMs).toBeNull();
+      expect(job!.peakContextTokens).toBeNull();
+      expect(job!.averageContextTokens).toBeNull();
+      expect(job!.contextTurnCount).toBeNull();
       expect(job!.model).toBeNull();
     });
 

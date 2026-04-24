@@ -8,6 +8,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   CheckCircle2,
   XCircle,
@@ -28,6 +29,7 @@ import {
   formatDuration,
   formatAbbreviatedNumber,
 } from '@/lib/analytics/aggregations';
+import { getContextRiskLabel, getContextRiskLevel } from '@/lib/context-metrics';
 import { formatCommandName } from '@/lib/utils/format-command';
 import { CancelConfirmationModal } from '@/components/board/cancel-confirmation-modal';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
@@ -50,6 +52,17 @@ function disabledLogsReason(log: TicketJobLogSummary | null): string | null {
   if (log?.captureStatus === 'UNAVAILABLE') return 'Logs unavailable for this run';
   if (log?.captureStatus === 'PRUNED') return 'Logs no longer retained';
   return null;
+}
+
+function getContextBadgeClassName(peakContextTokens: number): string {
+  const level = getContextRiskLevel(peakContextTokens);
+  if (level === 'danger') {
+    return 'border-ctp-red/25 bg-ctp-red/10 text-ctp-red';
+  }
+  if (level === 'warning') {
+    return 'border-ctp-yellow/25 bg-ctp-yellow/10 text-ctp-yellow';
+  }
+  return 'border-border bg-secondary text-muted-foreground';
 }
 
 /**
@@ -102,7 +115,10 @@ function JobRow({
     job.inputTokens != null ||
     job.outputTokens != null ||
     job.cacheReadTokens != null ||
-    job.cacheCreationTokens != null;
+    job.cacheCreationTokens != null ||
+    job.peakContextTokens != null ||
+    job.averageContextTokens != null ||
+    job.contextTurnCount != null;
 
   const log = job.log;
   const isTerminal = TERMINAL_STATUSES.has(job.status);
@@ -135,6 +151,16 @@ function JobRow({
             <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded hidden sm:inline">
               {job.model}
             </span>
+          )}
+
+          {job.peakContextTokens != null && (
+            <Badge
+              variant="outline"
+              className={getContextBadgeClassName(job.peakContextTokens)}
+              data-testid={`job-context-badge-${job.id}`}
+            >
+              {getContextRiskLabel(job.peakContextTokens)} {formatAbbreviatedNumber(job.peakContextTokens)}
+            </Badge>
           )}
         </div>
 
@@ -223,6 +249,30 @@ function JobRow({
                   {job.cacheCreationTokens != null ? formatAbbreviatedNumber(job.cacheCreationTokens) : '-'}
                 </span>
               </div>
+              {job.peakContextTokens != null && (
+                <div>
+                  <span className="text-ctp-overlay0">Peak Context:</span>
+                  <span className="ml-2 text-foreground font-medium">
+                    {formatAbbreviatedNumber(job.peakContextTokens)}
+                  </span>
+                </div>
+              )}
+              {job.averageContextTokens != null && (
+                <div>
+                  <span className="text-ctp-overlay0">Average Context:</span>
+                  <span className="ml-2 text-foreground font-medium">
+                    {formatAbbreviatedNumber(job.averageContextTokens)}
+                  </span>
+                </div>
+              )}
+              {job.contextTurnCount != null && (
+                <div>
+                  <span className="text-ctp-overlay0">Turns:</span>
+                  <span className="ml-2 text-foreground font-medium">
+                    {job.contextTurnCount}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Timestamp */}

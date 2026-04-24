@@ -36,6 +36,9 @@ interface TelemetryMetrics {
   thinkingTokens: number | null;
   cacheReadTokens: number;
   cacheCreationTokens: number;
+  peakContextTokens: number | null;
+  totalContextTokens: number;
+  contextTurnCount: number;
   costUsd: number | null;
   durationMs: number;
   model: string | null;
@@ -53,6 +56,9 @@ function createEmptyMetrics(): TelemetryMetrics {
     thinkingTokens: null,
     cacheReadTokens: 0,
     cacheCreationTokens: 0,
+    peakContextTokens: null,
+    totalContextTokens: 0,
+    contextTurnCount: 0,
     costUsd: null,
     durationMs: 0,
     model: null,
@@ -66,6 +72,7 @@ function hasTelemetryData(metrics: TelemetryMetrics): boolean {
     || metrics.thinkingTokens != null
     || metrics.cacheReadTokens > 0
     || metrics.cacheCreationTokens > 0
+    || metrics.contextTurnCount > 0
     || metrics.costUsd != null
     || metrics.durationMs > 0
     || metrics.model != null
@@ -191,6 +198,9 @@ async function updateJobMetrics(
       thinkingTokens: true,
       cacheReadTokens: true,
       cacheCreationTokens: true,
+      peakContextTokens: true,
+      averageContextTokens: true,
+      contextTurnCount: true,
       costUsd: true,
       durationMs: true,
       toolsUsed: true,
@@ -215,6 +225,18 @@ async function updateJobMetrics(
   const mergedThinkingTokens = metrics.thinkingTokens != null
     ? mergeTelemetryValue(job.thinkingTokens, metrics.thinkingTokens, mergeMode)
     : null;
+  const mergedPeakContextTokens = metrics.contextTurnCount > 0
+    ? Math.max(job.peakContextTokens ?? 0, metrics.peakContextTokens ?? 0)
+    : job.peakContextTokens;
+  const existingContextTurns = job.contextTurnCount ?? 0;
+  const existingContextTotal =
+    existingContextTurns > 0 && job.averageContextTokens != null
+      ? job.averageContextTokens * existingContextTurns
+      : 0;
+  const mergedContextTurnCount = existingContextTurns + metrics.contextTurnCount;
+  const mergedAverageContextTokens = mergedContextTurnCount > 0
+    ? Math.round((existingContextTotal + metrics.totalContextTokens) / mergedContextTurnCount)
+    : job.averageContextTokens;
 
   const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
     inputTokens: mergedInputTokens,
@@ -227,6 +249,12 @@ async function updateJobMetrics(
 
   if (mergedThinkingTokens != null) {
     updateData.thinkingTokens = mergedThinkingTokens;
+  }
+
+  if (metrics.contextTurnCount > 0) {
+    updateData.peakContextTokens = mergedPeakContextTokens;
+    updateData.averageContextTokens = mergedAverageContextTokens;
+    updateData.contextTurnCount = mergedContextTurnCount;
   }
 
   if (metrics.costUsd != null) {
@@ -258,6 +286,9 @@ async function updateJobMetrics(
       inputTokens: true,
       outputTokens: true,
       thinkingTokens: true,
+      peakContextTokens: true,
+      averageContextTokens: true,
+      contextTurnCount: true,
       costUsd: true,
     },
   });
@@ -268,6 +299,9 @@ async function updateJobMetrics(
     inputTokens: updatedJob.inputTokens,
     outputTokens: updatedJob.outputTokens,
     thinkingTokens: updatedJob.thinkingTokens,
+    peakContextTokens: updatedJob.peakContextTokens,
+    averageContextTokens: updatedJob.averageContextTokens,
+    contextTurnCount: updatedJob.contextTurnCount,
     costUsd: updatedJob.costUsd,
     toolsCount: metrics.toolsUsed.size,
     elapsedMs: elapsedTime,
@@ -282,6 +316,9 @@ async function updateJobMetrics(
         inputTokens: updatedJob.inputTokens,
         outputTokens: updatedJob.outputTokens,
         thinkingTokens: updatedJob.thinkingTokens,
+        peakContextTokens: updatedJob.peakContextTokens,
+        averageContextTokens: updatedJob.averageContextTokens,
+        contextTurnCount: updatedJob.contextTurnCount,
         costUsd: updatedJob.costUsd,
       },
     },
@@ -656,13 +693,20 @@ export async function processTelemetry(
         const isToolEvent = DELTA_TOOL_EVENTS.includes(eventName);
 
         if (isClaudeApiRequest) {
-          deltaMetrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
+          const inputTokens = parseIntAttribute(findAttribute(attrs, 'input_tokens'));
+          const cacheReadTokens = parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
+          const cacheCreationTokens = parseIntAttribute(findAttribute(attrs, 'cache_creation_tokens'));
+          const contextSize = inputTokens + cacheReadTokens + cacheCreationTokens;
+          deltaMetrics.inputTokens += inputTokens;
           deltaMetrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
-          deltaMetrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
-          deltaMetrics.cacheCreationTokens += parseIntAttribute(findAttribute(attrs, 'cache_creation_tokens'));
+          deltaMetrics.cacheReadTokens += cacheReadTokens;
+          deltaMetrics.cacheCreationTokens += cacheCreationTokens;
           deltaMetrics.costUsd =
             (deltaMetrics.costUsd ?? 0) + parseFloatAttribute(findAttribute(attrs, 'cost_usd'));
           deltaMetrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
+          deltaMetrics.peakContextTokens = Math.max(deltaMetrics.peakContextTokens ?? 0, contextSize);
+          deltaMetrics.totalContextTokens += contextSize;
+          deltaMetrics.contextTurnCount += 1;
           const model = findAttribute(attrs, 'model');
           if (model) deltaMetrics.model = String(model);
         }
@@ -679,6 +723,12 @@ export async function processTelemetry(
           deltaMetrics.inputTokens += nonCachedInputTokens;
           deltaMetrics.outputTokens += outputTokens;
           deltaMetrics.cacheReadTokens += cachedTokens;
+          deltaMetrics.peakContextTokens = Math.max(
+            deltaMetrics.peakContextTokens ?? 0,
+            totalInputTokens
+          );
+          deltaMetrics.totalContextTokens += totalInputTokens;
+          deltaMetrics.contextTurnCount += 1;
           const model = findAttribute(attrs, 'model');
           if (model) deltaMetrics.model = String(model);
 

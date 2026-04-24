@@ -6,7 +6,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
+import { fireEvent } from '@testing-library/react';
+import { renderWithProviders, screen, waitFor } from '@/tests/utils/component-test-utils';
 import { TicketStats } from '@/components/ticket/ticket-stats';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import type { TicketJob } from '@/components/board/ticket-detail-modal';
@@ -30,6 +31,9 @@ function createMockJob(
     cacheCreationTokens: 100,
     costUsd: 0.05,
     durationMs: 300000, // 5 minutes
+    peakContextTokens: 42000,
+    averageContextTokens: 28000,
+    contextTurnCount: 6,
     model: 'claude-opus-4-5',
     toolsUsed: ['Read', 'Edit'],
     qualityScore: null,
@@ -232,6 +236,54 @@ describe('TicketStats', () => {
       expect(screen.getByTestId('view-full-logs-101')).toBeInTheDocument();
       expect(screen.getByTestId('view-full-logs-disabled-104')).toBeInTheDocument();
       expect(screen.getByTestId('view-full-logs-disabled-105')).toBeInTheDocument();
+    });
+  });
+
+  describe('Context telemetry rendering', () => {
+    it('shows a context-risk badge and expanded context metrics when present', async () => {
+      renderWithProviders(
+        <TicketStats
+          jobs={[
+            createMockJob({
+              id: 201,
+              peakContextTokens: 92000,
+              averageContextTokens: 61000,
+              contextTurnCount: 9,
+            }),
+          ]}
+          polledJobs={[]}
+        />
+      );
+
+      expect(screen.getByTestId('job-context-badge-201')).toHaveTextContent('92.0K');
+      expect(screen.getByTestId('job-context-badge-201')).toHaveTextContent('Danger');
+
+      fireEvent.click(screen.getByTestId('job-row-201'));
+
+      await waitFor(() => expect(screen.getByText('Peak Context:')).toBeInTheDocument());
+      expect(screen.getByText('Average Context:')).toBeInTheDocument();
+      expect(screen.getByText('Turns:')).toBeInTheDocument();
+      expect(screen.getByText('61.0K')).toBeInTheDocument();
+      expect(screen.getByText('9')).toBeInTheDocument();
+    });
+
+    it('hides context telemetry UI when the fields are unset', () => {
+      renderWithProviders(
+        <TicketStats
+          jobs={[
+            createMockJob({
+              id: 202,
+              peakContextTokens: null,
+              averageContextTokens: null,
+              contextTurnCount: null,
+            }),
+          ]}
+          polledJobs={[]}
+        />
+      );
+
+      expect(screen.queryByTestId('job-context-badge-202')).not.toBeInTheDocument();
+      expect(screen.queryByText('Peak Context')).not.toBeInTheDocument();
     });
   });
 });

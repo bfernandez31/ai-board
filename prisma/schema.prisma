@@ -59,6 +59,11 @@ model Job {
   // JSON string containing dimension sub-scores, weights, and threshold label
   qualityScoreDetails String?
 
+  // Per-turn context size rollups derived from token telemetry
+  peakContextTokens    Int?
+  averageContextTokens Int?
+  contextTurnCount     Int?
+
   log JobLog?
 
   @@index([projectId])

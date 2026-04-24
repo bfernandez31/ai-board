@@ -100,6 +100,9 @@ describe('Analytics Route', () => {
           updatedAt: daysAgo(3),
           costUsd: 1.5,
           durationMs: 1000,
+          peakContextTokens: 42000,
+          averageContextTokens: 24000,
+          contextTurnCount: 4,
           inputTokens: 100,
           outputTokens: 50,
           cacheReadTokens: 20,
@@ -116,6 +119,9 @@ describe('Analytics Route', () => {
           updatedAt: daysAgo(2),
           costUsd: 2.5,
           durationMs: 2000,
+          peakContextTokens: 88000,
+          averageContextTokens: 62000,
+          contextTurnCount: 7,
           inputTokens: 200,
           outputTokens: 60,
           cacheReadTokens: 15,
@@ -132,6 +138,9 @@ describe('Analytics Route', () => {
           updatedAt: daysAgo(5),
           costUsd: 3.5,
           durationMs: 3000,
+          peakContextTokens: 54000,
+          averageContextTokens: 33000,
+          contextTurnCount: 5,
           inputTokens: 300,
           outputTokens: 70,
           cacheReadTokens: 30,
@@ -148,6 +157,9 @@ describe('Analytics Route', () => {
           updatedAt: daysAgo(4),
           costUsd: 4.0,
           durationMs: 4000,
+          peakContextTokens: 97000,
+          averageContextTokens: 71000,
+          contextTurnCount: 8,
           inputTokens: 400,
           outputTokens: 80,
           cacheReadTokens: 40,
@@ -164,6 +176,9 @@ describe('Analytics Route', () => {
           updatedAt: daysAgo(40),
           costUsd: 6.0,
           durationMs: 5000,
+          peakContextTokens: 39000,
+          averageContextTokens: 21000,
+          contextTurnCount: 3,
           inputTokens: 500,
           outputTokens: 90,
           cacheReadTokens: 50,
@@ -516,6 +531,59 @@ describe('Analytics Route', () => {
       { value: 'CODEX', label: 'Codex', jobCount: 1, isDefault: false },
       { value: 'GEMINI', label: 'Gemini', jobCount: 2, isDefault: false },
     ]);
+  });
+
+  it('exposes peak-context distribution grouped by command, workflow, and quality bucket', async () => {
+    await seedAnalyticsFixtures(ctx.projectId);
+
+    await prisma.job.updateMany({
+      where: { projectId: ctx.projectId, command: 'verify' },
+      data: { qualityScore: 48 },
+    });
+
+    const responseRaw = await GET(
+      new NextRequest(
+        `http://localhost/api/projects/${ctx.projectId}/analytics?outcome=all-completed`
+      ),
+      { params: Promise.resolve({ projectId: String(ctx.projectId) }) }
+    );
+    const response = (await responseRaw.json()) as {
+      contextSize: {
+        histogram: Array<{ label: string; count: number }>;
+        byCommand: Array<{ label: string; count: number; averagePeakContext: number }>;
+        byWorkflowType: Array<{ label: string; count: number; averagePeakContext: number }>;
+        byQualityBucket: Array<{ label: string; count: number; averagePeakContext: number }>;
+      };
+    };
+
+    expect(responseRaw.status).toBe(200);
+    expect(response.contextSize.histogram).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: '32K-48K', count: 1 }),
+        expect.objectContaining({ label: '48K-64K', count: 1 }),
+        expect.objectContaining({ label: '80K-96K', count: 1 }),
+        expect.objectContaining({ label: '96K+', count: 1 }),
+      ])
+    );
+    expect(response.contextSize.byCommand).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'implement', count: 2, averagePeakContext: 69500 }),
+        expect.objectContaining({ label: 'verify', count: 1, averagePeakContext: 88000 }),
+      ])
+    );
+    expect(response.contextSize.byWorkflowType).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'FULL', count: 2, averagePeakContext: 69500 }),
+        expect.objectContaining({ label: 'QUICK', count: 1, averagePeakContext: 88000 }),
+        expect.objectContaining({ label: 'CLEAN', count: 1, averagePeakContext: 54000 }),
+      ])
+    );
+    expect(response.contextSize.byQualityBucket).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: '0-49', count: 1, averagePeakContext: 88000 }),
+        expect.objectContaining({ label: 'Unscored', count: 3, averagePeakContext: 64333 }),
+      ])
+    );
   });
 
   it('rejects invalid analytics filters', async () => {

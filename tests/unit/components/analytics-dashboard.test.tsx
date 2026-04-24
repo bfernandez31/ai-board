@@ -170,6 +170,18 @@ vi.mock('@/components/analytics/velocity-chart', () => ({
   ),
 }));
 
+vi.mock('@/components/analytics/peak-context-histogram-chart', () => ({
+  PeakContextHistogramChart: ({ emptyMessage }: { emptyMessage?: string }) => (
+    <div>{emptyMessage ?? 'peak-context-histogram'}</div>
+  ),
+}));
+
+vi.mock('@/components/analytics/context-size-breakdown-chart', () => ({
+  ContextSizeBreakdownChart: ({ emptyMessage }: { emptyMessage?: string }) => (
+    <div>{emptyMessage ?? 'context-size-breakdown'}</div>
+  ),
+}));
+
 function makeAnalyticsData(filters: Partial<AnalyticsFilters> = {}, overrides: Partial<AnalyticsData> = {}): AnalyticsData {
   const resolvedFilters: AnalyticsFilters = {
     range: filters.range ?? '30d',
@@ -199,6 +211,12 @@ function makeAnalyticsData(filters: Partial<AnalyticsFilters> = {}, overrides: P
     topTools: [{ tool: 'Read', count: 2 }],
     workflowDistribution: [{ type: 'FULL', count: 1, percentage: 100 }],
     velocity: [{ week: '2026-W10', ticketsShipped: 1 }],
+    contextSize: {
+      histogram: [{ label: '32K-48K', count: 1 }],
+      byCommand: [{ label: 'implement', count: 1, averagePeakContext: 42000 }],
+      byWorkflowType: [{ label: 'FULL', count: 1, averagePeakContext: 42000 }],
+      byQualityBucket: [{ label: 'Unscored', count: 1, averagePeakContext: 42000 }],
+    },
     filters: resolvedFilters,
     availableAgents: [
       { value: 'all', label: 'All agents', jobCount: 3, isDefault: true },
@@ -324,6 +342,12 @@ describe('AnalyticsDashboard', () => {
             topTools: [],
             workflowDistribution: [],
             velocity: [],
+            contextSize: {
+              histogram: [],
+              byCommand: [],
+              byWorkflowType: [],
+              byQualityBucket: [],
+            },
           }
         )}
       />

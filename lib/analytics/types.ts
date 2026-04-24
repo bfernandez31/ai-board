@@ -130,6 +130,24 @@ export interface QualityScoreAnalytics {
   totalScoredJobs: number;
 }
 
+export interface ContextHistogramDatum {
+  label: string;
+  count: number;
+}
+
+export interface ContextGroupingDatum {
+  label: string;
+  count: number;
+  averagePeakContext: number;
+}
+
+export interface ContextSizeAnalytics {
+  histogram: ContextHistogramDatum[];
+  byCommand: ContextGroupingDatum[];
+  byWorkflowType: ContextGroupingDatum[];
+  byQualityBucket: ContextGroupingDatum[];
+}
+
 export interface AnalyticsData {
   overview: OverviewMetrics;
   costOverTime: CostDataPoint[];
@@ -139,6 +157,7 @@ export interface AnalyticsData {
   topTools: ToolUsage[];
   workflowDistribution: WorkflowBreakdown[];
   velocity: WeeklyVelocity[];
+  contextSize: ContextSizeAnalytics;
   qualityScore?: QualityScoreAnalytics | null;
   filters: AnalyticsFilters;
   availableAgents: AgentOption[];

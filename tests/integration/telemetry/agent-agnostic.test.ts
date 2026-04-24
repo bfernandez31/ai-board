@@ -247,6 +247,35 @@ describe('Agent-Agnostic Telemetry', () => {
       expect(job!.model).toBe('claude-sonnet-4-6-20250514');
     });
 
+    it('derives peak and average context size plus turn count from Claude per-call telemetry', async () => {
+      const payload = buildOtlpPayload(jobId, [
+        {
+          body: { stringValue: 'claude_code.api_request' },
+          attributes: [
+            { key: 'input_tokens', value: { stringValue: '1000' } },
+            { key: 'cache_read_tokens', value: { stringValue: '200' } },
+            { key: 'cache_creation_tokens', value: { stringValue: '100' } },
+          ],
+        },
+        {
+          body: { stringValue: 'claude_code.api_request' },
+          attributes: [
+            { key: 'input_tokens', value: { stringValue: '2000' } },
+            { key: 'cache_read_tokens', value: { stringValue: '400' } },
+            { key: 'cache_creation_tokens', value: { stringValue: '100' } },
+          ],
+        },
+      ]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.peakContextTokens).toBe(2500);
+      expect(job!.averageContextTokens).toBe(1900);
+      expect(job!.contextTurnCount).toBe(2);
+    });
+
     it('T009: Claude tool_result and tool_decision events still track tool usage', async () => {
       const payload = buildOtlpPayload(jobId, [
         {
@@ -343,6 +372,37 @@ describe('Agent-Agnostic Telemetry', () => {
       const job = await prisma.job.findUnique({ where: { id: jobId } });
       expect(job!.model).toBe('codex-mini-latest');
     });
+
+    it('derives context metrics from Codex per-response input token counts', async () => {
+      const payload = buildOtlpPayload(jobId, [
+        {
+          body: { stringValue: 'codex.sse_event' },
+          attributes: [
+            { key: 'event.kind', value: { stringValue: 'response.completed' } },
+            { key: 'input_token_count', value: { stringValue: '600' } },
+            { key: 'output_token_count', value: { stringValue: '150' } },
+            { key: 'cached_token_count', value: { stringValue: '100' } },
+          ],
+        },
+        {
+          body: { stringValue: 'codex.sse_event' },
+          attributes: [
+            { key: 'event.kind', value: { stringValue: 'response.completed' } },
+            { key: 'input_token_count', value: { stringValue: '900' } },
+            { key: 'output_token_count', value: { stringValue: '200' } },
+            { key: 'cached_token_count', value: { stringValue: '250' } },
+          ],
+        },
+      ]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.peakContextTokens).toBe(900);
+      expect(job!.averageContextTokens).toBe(750);
+      expect(job!.contextTurnCount).toBe(2);
+    });
   });
 
   describe('US4: Mistral (vibe) Batch Telemetry', () => {
@@ -369,6 +429,9 @@ describe('Agent-Agnostic Telemetry', () => {
       expect(job!.toolsUsed).toContain('bash');
       expect(job!.toolsUsed).toContain('write_file');
       expect(job!.toolsUsed).toContain('read_file');
+      expect(job!.peakContextTokens).toBeNull();
+      expect(job!.averageContextTokens).toBeNull();
+      expect(job!.contextTurnCount).toBeNull();
     });
 
     it('should accumulate batch metrics with existing job data', async () => {
