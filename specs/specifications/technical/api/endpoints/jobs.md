@@ -352,6 +352,13 @@ env:
 - Updates corresponding Job record with aggregated metrics
 - Missing or null metric attributes default to zero (no errors)
 
+**Context Metrics Computation** (per-turn analysis):
+- On each `claude_code.api_request` event: extracts `input_tokens` and updates `peakContextTokens` (via `Math.max`), accumulates into `contextTokensSum` (running sum), and increments `turnCount`
+- On each `codex.sse_event` with `response.completed`: uses `totalInputTokens` (before subtracting cached) for the same peak/sum/count tracking
+- On `updateJobMetrics()`: merges context metrics across batches — peak via `Math.max` with existing, average recomputed from `(existingAvg × existingTurnCount + newSum) / totalTurnCount`, turn count via addition
+- Context fields are only written when `turnCount > 0` in the batch — agents without per-turn events (Gemini, Mistral) leave all three fields null
+- Partial data preserved for failed jobs — metrics computed from whatever spans were received before failure
+
 **Response** (200 OK):
 ```json
 {
@@ -602,7 +609,7 @@ Retention prune of `JobLog` rows and their Blob artifacts. Invoked daily by `.gi
 
 ### Extended: GET /api/projects/:projectId/tickets/:ticketId/jobs
 
-The ticket jobs listing includes a `log` object on each row so the timeline can render the preview without an N+1 fetch:
+The ticket jobs listing includes a `log` object and context metrics on each row so the timeline can render the preview and context-health indicator without additional fetches:
 
 ```json
 {
@@ -611,6 +618,9 @@ The ticket jobs listing includes a `log` object on each row so the timeline can 
       "id": 4321,
       "status": "FAILED",
       "command": "implement",
+      "peakContextTokens": 82000,
+      "avgContextTokens": 41000,
+      "turnCount": 12,
       "log": {
         "captureStatus": "CAPTURED",
         "preview": "Build failed: Prisma migration 20260422 not applied to target DB"
@@ -620,7 +630,7 @@ The ticket jobs listing includes a `log` object on each row so the timeline can 
 }
 ```
 
-`log` is `null` when no log record exists yet (e.g., a still-RUNNING job or capture in flight).
+`log` is `null` when no log record exists yet (e.g., a still-RUNNING job or capture in flight). `peakContextTokens`, `avgContextTokens`, and `turnCount` are `null` for jobs from agents without per-turn telemetry or historical pre-feature jobs.
 
 ```mermaid
 sequenceDiagram

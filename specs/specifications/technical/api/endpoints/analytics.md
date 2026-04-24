@@ -120,6 +120,17 @@ sequenceDiagram
     ],
     "hasData": true
   },
+  "contextHealth": {
+    "distribution": [
+      { "bucket": "0–25K", "count": 12 },
+      { "bucket": "25–50K", "count": 8 },
+      { "bucket": "50–75K", "count": 5 },
+      { "bucket": "75–100K", "count": 3 },
+      { "bucket": "100–150K", "count": 2 }
+    ],
+    "averagePeak": 42000,
+    "totalJobsWithData": 30
+  },
   "generatedAt": "2025-11-28T10:30:00Z",
   "jobCount": 45,
   "hasData": true
@@ -173,6 +184,10 @@ sequenceDiagram
     - `weight`: Dimension weight in final score computation
     - `averageScore`: Average dimension score across all scored jobs in range
   - `hasData`: False if no COMPLETED verify jobs with quality scores exist in range
+- `contextHealth`: Context-size distribution analytics (gated behind `advancedAnalytics` subscription; null when no jobs have context metrics)
+  - `distribution`: Array of `{ bucket, count }` objects representing peak context size distribution across completed jobs. Buckets: 0–25K, 25–50K, 50–75K, 75–100K, 100–150K, 150K+. Only non-empty buckets are included.
+  - `averagePeak`: Average peak context tokens across all qualifying jobs (null when no data)
+  - `totalJobsWithData`: Count of completed jobs with non-null `peakContextTokens` in the filtered range
 - `generatedAt`: Timestamp when analytics were generated
 - `jobCount`: Total filtered jobs in range, including completed and failed jobs
 - `hasData`: False if the filtered selection contains no completed jobs with telemetry data
@@ -189,6 +204,7 @@ sequenceDiagram
   - `CLOSED` uses `ticket.closedAt`
 - Velocity groups filtered shipped and/or closed tickets into ISO weeks based on their terminal event date
 - Top tools limited to 10 entries
+- Context health distribution includes only `COMPLETED` jobs with non-null `peakContextTokens`; jobs with null context metrics (incompatible agents or pre-feature jobs) are excluded rather than treated as zero
 
 **Empty State**:
 - Returns zeroed or empty chart sections when the filtered selection has no completed telemetry-backed jobs

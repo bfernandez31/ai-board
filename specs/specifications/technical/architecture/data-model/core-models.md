@@ -333,6 +333,11 @@ model Job {
   qualityScore        Int?      // Final weighted quality score (0-100)
   qualityScoreDetails String?   @db.Text  // JSON with dimension sub-scores and weights
 
+  // Per-turn context metrics (computed from per-turn telemetry spans)
+  peakContextTokens   Int?      // Maximum input tokens in any single turn
+  avgContextTokens    Int?      // Mean input tokens across all turns
+  turnCount           Int?      // Total number of model calls
+
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   log         JobLog?
@@ -371,6 +376,9 @@ model Job {
 - `workflowRunId`: GitHub Actions workflow run ID as BigInt (nullable, populated by the workflow's first RUNNING status callback; enables job cancellation via GitHub API)
 - `qualityScore`: Final weighted code quality score 0-100 (nullable, FULL workflow verify jobs only)
 - `qualityScoreDetails`: JSON string containing all five dimension sub-scores, weights, and computed final score (nullable, populated alongside `qualityScore`)
+- `peakContextTokens`: Maximum input tokens observed in any single turn during job execution (nullable, computed from per-turn telemetry; null for agents without per-turn data)
+- `avgContextTokens`: Mean input tokens across all turns during job execution (nullable, computed from per-turn telemetry)
+- `turnCount`: Total number of model API calls during job execution (nullable, computed from per-turn telemetry)
 
 **Relationships**:
 - Belongs to Ticket (required, cascade delete)
@@ -416,6 +424,15 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - Tools usage aggregated from `toolsUsed` arrays across all jobs
 - Null telemetry values treated as 0 for aggregation
 - Real-time updates via existing 2-second job polling mechanism
+
+**Context Metrics Data**:
+- `peakContextTokens`, `avgContextTokens`, `turnCount` computed from per-turn telemetry spans during job execution
+- Populated for Claude (from `claude_code.api_request` events) and Codex (from `codex.sse_event` with `response.completed`) agents
+- Remain null for Gemini and Mistral agents (no per-turn telemetry) and historical pre-feature jobs
+- Partial data preserved for failed jobs — metrics computed from whatever spans were received
+- Merged across OTLP batches: peak via `Math.max`, average recomputed from running sums, turn count via addition
+- Context health tier (healthy/warning/danger) derived at render time from `peakContextTokens` — not stored
+- Displayed as a color-coded pill on the job timeline (hidden when null) and in the expanded job detail view
 
 **Quality Score Data**:
 - `qualityScore` populated only when: `command = "verify"` and `status = "COMPLETED"` (all workflow types)

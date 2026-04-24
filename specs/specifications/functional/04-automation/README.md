@@ -174,6 +174,32 @@ Each workflow job captures agent usage metrics through the shared telemetry pipe
 - Batch JSON telemetry remains reserved for Mistral; Gemini batch payloads are rejected
 - Provides total resource usage for the complete workflow execution
 
+**Context Metrics** (per-turn analysis):
+
+For agents that report per-turn telemetry (Claude and Codex), the system computes three context-size metrics from individual API request events:
+
+- **Peak context tokens**: Maximum input tokens observed in any single turn (proxy for context window pressure)
+- **Average context tokens**: Mean input tokens across all turns
+- **Turn count**: Total number of model calls in the job
+
+These metrics are derived from `input_tokens` on each `claude_code.api_request` event (Claude) or `totalInputTokens` on each `codex.sse_event` with `response.completed` (Codex). Metrics merge correctly across multiple OTLP batches: peak via `Math.max`, average recomputed from running sums, turn count via addition.
+
+Agents without per-turn telemetry (Gemini, Mistral) leave all three fields null — the system never writes zero as a substitute for missing data. Partial data from failed jobs is preserved.
+
+**Context Health Indicator** (job timeline):
+
+Each job in the timeline displays a color-coded context-health pill when context metrics are available:
+
+| Tier | Peak Context Range | Color |
+|------|-------------------|-------|
+| Healthy | < 50,000 tokens | Green |
+| Warning | 50,000 – 99,999 tokens | Yellow |
+| Danger | ≥ 100,000 tokens | Red |
+
+The pill shows the abbreviated peak value and turn count (e.g., "82.0K ctx · 12 turns"). It is hidden entirely for jobs without context metrics (incompatible agents, historical jobs, or pre-feature data).
+
+Expanding a job row reveals the full context metrics (peak, average, turn count) alongside existing telemetry fields (tokens, cost, duration). The context metrics section is hidden when all three values are null.
+
 ### Quality Score Computation (All Workflow Types)
 
 For all verify jobs that complete successfully, the code review step produces a quality score alongside its findings. The score reflects code quality (bugs, compliance, comments) independently of the workflow type — it does not depend on spec/plan artifacts.
