@@ -2,6 +2,11 @@ export const CONTEXT_WARNING_TOKENS = 60_000;
 export const CONTEXT_DANGER_TOKENS = 90_000;
 
 export type ContextRiskLevel = 'healthy' | 'warning' | 'danger';
+const CONTEXT_RISK_LABELS: Record<ContextRiskLevel, string> = {
+  healthy: 'Healthy',
+  warning: 'Warning',
+  danger: 'Danger',
+};
 
 export type ContextHistogramBucket = {
   minTokens: number;
@@ -30,20 +35,17 @@ export function getContextRiskLevel(tokens: number): ContextRiskLevel {
 }
 
 export function getContextRiskLabel(tokens: number): string {
-  const level = getContextRiskLevel(tokens);
-  if (level === 'danger') return 'Danger';
-  if (level === 'warning') return 'Warning';
-  return 'Healthy';
+  return CONTEXT_RISK_LABELS[getContextRiskLevel(tokens)];
 }
 
 export function getContextHistogramLabel(tokens: number): string {
-  for (const bucket of CONTEXT_HISTOGRAM_BUCKETS) {
-    if (tokens >= bucket.minTokens && (bucket.maxTokens == null || tokens < bucket.maxTokens)) {
-      return bucket.label;
-    }
-  }
+  const bucket = CONTEXT_HISTOGRAM_BUCKETS.find(
+    (candidate) =>
+      tokens >= candidate.minTokens &&
+      (candidate.maxTokens == null || tokens < candidate.maxTokens)
+  );
 
-  return CONTEXT_HISTOGRAM_BUCKETS[CONTEXT_HISTOGRAM_BUCKETS.length - 1]!.label;
+  return bucket?.label ?? CONTEXT_HISTOGRAM_BUCKETS[CONTEXT_HISTOGRAM_BUCKETS.length - 1]!.label;
 }
 
 export function getQualityScoreBucket(score: number | null): string {

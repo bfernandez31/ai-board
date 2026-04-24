@@ -86,20 +86,25 @@ const STATUS_ICONS: Record<string, StatusConfig> = {
   PENDING: DEFAULT_STATUS,
 };
 
-/**
- * JobRow Component
- *
- * Single job entry with expandable token breakdown
- */
-function JobRow({
-  job,
-  projectId,
-  ticketId,
-}: {
+function hasTelemetryMetrics(job: TicketJobWithTelemetry): boolean {
+  return (
+    job.inputTokens != null ||
+    job.outputTokens != null ||
+    job.cacheReadTokens != null ||
+    job.cacheCreationTokens != null ||
+    job.peakContextTokens != null ||
+    job.averageContextTokens != null ||
+    job.contextTurnCount != null
+  );
+}
+
+interface JobRowProps {
   job: TicketJobWithTelemetry;
   projectId?: number | undefined;
   ticketId?: number | undefined;
-}) {
+}
+
+function JobRow({ job, projectId, ticketId }: JobRowProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showLogViewer, setShowLogViewer] = useState(false);
@@ -107,18 +112,10 @@ function JobRow({
 
   const statusConfig = STATUS_ICONS[job.status] ?? DEFAULT_STATUS;
   const StatusIcon = statusConfig.icon;
+  const ExpandIcon = isOpen ? ChevronDown : ChevronRight;
   const isRunning = job.status === 'RUNNING';
   const isCancellable = projectId != null && (job.status === 'PENDING' || job.status === 'RUNNING');
-
-  // Check if job has telemetry data to expand
-  const hasTelemetry =
-    job.inputTokens != null ||
-    job.outputTokens != null ||
-    job.cacheReadTokens != null ||
-    job.cacheCreationTokens != null ||
-    job.peakContextTokens != null ||
-    job.averageContextTokens != null ||
-    job.contextTurnCount != null;
+  const hasTelemetry = hasTelemetryMetrics(job);
 
   const log = job.log;
   const isTerminal = TERMINAL_STATUSES.has(job.status);
@@ -126,6 +123,7 @@ function JobRow({
   const showPreview = isTerminal && log != null;
   const previewToneClass = previewTone(job.status, log);
   const viewerDisabledReason = disabledLogsReason(log);
+  const commandLabel = formatCommandName(job.command);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -135,18 +133,13 @@ function JobRow({
         disabled={!hasTelemetry}
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          {/* Status Icon */}
           <StatusIcon
             className={`w-5 h-5 flex-shrink-0 ${statusConfig.color} ${isRunning ? 'animate-spin' : ''}`}
             aria-label={statusConfig.label}
           />
 
-          {/* Command Name */}
-          <span className="font-medium text-foreground truncate">
-            {formatCommandName(job.command)}
-          </span>
+          <span className="font-medium text-foreground truncate">{commandLabel}</span>
 
-          {/* Model Badge */}
           {job.model && (
             <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded hidden sm:inline">
               {job.model}
@@ -165,17 +158,14 @@ function JobRow({
         </div>
 
         <div className="flex items-center gap-4 flex-shrink-0">
-          {/* Duration */}
           <span className="text-sm text-ctp-blue" data-testid={`job-duration-${job.id}`}>
             {job.durationMs != null ? formatDuration(job.durationMs) : '-'}
           </span>
 
-          {/* Cost */}
           <span className="text-sm text-ctp-green w-16 text-right" data-testid={`job-cost-${job.id}`}>
             {job.costUsd != null ? formatCost(job.costUsd) : '-'}
           </span>
 
-          {/* Cancel Button - always visible for PENDING/RUNNING jobs */}
           {isCancellable && (
             <button
               onClick={(e) => {
@@ -192,18 +182,10 @@ function JobRow({
             </button>
           )}
 
-          {/* Expand/Collapse Indicator */}
-          {hasTelemetry && (
-            isOpen ? (
-              <ChevronDown className="w-4 h-4 text-ctp-overlay0" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-ctp-overlay0" />
-            )
-          )}
+          {hasTelemetry && <ExpandIcon className="w-4 h-4 text-ctp-overlay0" />}
         </div>
       </CollapsibleTrigger>
 
-      {/* Cancel Confirmation Modal */}
       {isCancellable && (
         <CancelConfirmationModal
           open={showCancelModal}
@@ -223,7 +205,6 @@ function JobRow({
             className="bg-card border border-border rounded-lg p-4 ml-8 space-y-3"
             data-testid={`job-details-${job.id}`}
           >
-            {/* Token Breakdown */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-ctp-overlay0">Input Tokens:</span>
@@ -275,7 +256,6 @@ function JobRow({
               )}
             </div>
 
-            {/* Timestamp */}
             <div className="text-xs text-ctp-overlay0 border-t border-border pt-3">
               Started {formatDistanceToNow(new Date(job.startedAt), { addSuffix: true })}
               {job.completedAt && (
@@ -331,19 +311,13 @@ function JobRow({
           projectId={projectId}
           ticketId={ticketId}
           jobId={job.id}
-          commandLabel={formatCommandName(job.command)}
+          commandLabel={commandLabel}
         />
       )}
     </Collapsible>
   );
 }
 
-/**
- * JobsTimeline Component
- *
- * Displays chronological list of all jobs with individual metrics
- * and expandable token breakdown
- */
 interface JobsTimelineProps {
   jobs: TicketJobWithTelemetry[];
   projectId?: number | undefined;

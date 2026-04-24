@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { queryKeys } from '@/app/lib/query-keys';
-import type { AgentFilter, AnalyticsData, AnalyticsFilters, TicketOutcomeFilter, TimeRange } from '@/lib/analytics/types';
+import type {
+  AgentFilter,
+  AnalyticsData,
+  AnalyticsFilters,
+  TicketOutcomeFilter,
+  TimeRange,
+} from '@/lib/analytics/types';
 import {
   buildAnalyticsEmptyMessage,
   DEFAULT_ANALYTICS_FILTERS,
@@ -61,14 +67,17 @@ function filtersMatch(left: AnalyticsFilters, right: AnalyticsFilters): boolean 
 
 function getInitialFilters(searchParams: URLSearchParams, initialData: AnalyticsData): AnalyticsFilters {
   return {
-    range: (searchParams.get('range') as TimeRange) || initialData.filters.range || DEFAULT_ANALYTICS_FILTERS.range,
+    range:
+      (searchParams.get('range') as TimeRange | null) ??
+      initialData.filters.range ??
+      DEFAULT_ANALYTICS_FILTERS.range,
     outcome:
-      (searchParams.get('outcome') as TicketOutcomeFilter) ||
-      initialData.filters.outcome ||
+      (searchParams.get('outcome') as TicketOutcomeFilter | null) ??
+      initialData.filters.outcome ??
       DEFAULT_ANALYTICS_FILTERS.outcome,
     agent:
-      (searchParams.get('agent') as AgentFilter) ||
-      initialData.filters.agent ||
+      (searchParams.get('agent') as AgentFilter | null) ??
+      initialData.filters.agent ??
       DEFAULT_ANALYTICS_FILTERS.agent,
   };
 }
@@ -103,14 +112,36 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
 
   const { data: subscription } = useSubscription();
   const analytics = data ?? (shouldUseInitialData ? initialData : undefined);
+  const emptyMessage = buildAnalyticsEmptyMessage(analytics?.filters ?? filters);
+  const agentOptions = analytics?.availableAgents ?? initialData.availableAgents;
+  const emptyStateTitle = isLoading ? 'Loading analytics' : 'Analytics unavailable';
+  const emptyStateDescription = isLoading
+    ? 'Refreshing dashboard data for the current filters.'
+    : emptyMessage;
 
   const updateFilters = (nextFilters: AnalyticsFilters) => {
     setFilters(nextFilters);
     const params = buildFilterSearchParams(searchParams, nextFilters);
     router.push(`?${params.toString()}`, { scroll: false });
   };
-
-  const emptyMessage = buildAnalyticsEmptyMessage(analytics?.filters ?? filters);
+  const updateOutcome = (outcome: TicketOutcomeFilter) => {
+    updateFilters({
+      ...filters,
+      outcome,
+    });
+  };
+  const updateAgent = (agent: AgentFilter) => {
+    updateFilters({
+      ...filters,
+      agent,
+    });
+  };
+  const updateRange = (range: TimeRange) => {
+    updateFilters({
+      ...filters,
+      range,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -118,12 +149,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
         <div className="grid gap-3 sm:grid-cols-2 lg:flex">
           <Select
             value={filters.outcome}
-            onValueChange={(value) =>
-              updateFilters({
-                ...filters,
-                outcome: value as TicketOutcomeFilter,
-              })
-            }
+            onValueChange={(value) => updateOutcome(value as TicketOutcomeFilter)}
           >
             <SelectTrigger className="w-full lg:w-[180px]" data-testid="analytics-outcome-filter">
               <SelectValue placeholder="Outcome" />
@@ -139,18 +165,13 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
 
           <Select
             value={filters.agent}
-            onValueChange={(value) =>
-              updateFilters({
-                ...filters,
-                agent: value as AgentFilter,
-              })
-            }
+            onValueChange={(value) => updateAgent(value as AgentFilter)}
           >
             <SelectTrigger className="w-full lg:w-[180px]" data-testid="analytics-agent-filter">
               <SelectValue placeholder="Agent" />
             </SelectTrigger>
             <SelectContent>
-              {(analytics?.availableAgents ?? initialData.availableAgents).map((option) => (
+              {agentOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
@@ -161,12 +182,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
 
         <TimeRangeSelector
           value={filters.range}
-          onChange={(range) =>
-            updateFilters({
-              ...filters,
-              range,
-            })
-          }
+          onChange={updateRange}
         />
       </div>
 
@@ -244,10 +260,8 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
         </>
       ) : (
         <EmptyState
-          title={isLoading ? 'Loading analytics' : 'Analytics unavailable'}
-          description={
-            isLoading ? 'Refreshing dashboard data for the current filters.' : emptyMessage
-          }
+          title={emptyStateTitle}
+          description={emptyStateDescription}
         />
       )}
 

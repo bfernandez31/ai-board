@@ -25,9 +25,25 @@ function getGroupingData(
   analytics: ContextSizeAnalytics,
   grouping: GroupingMode
 ): ContextGroupingDatum[] {
-  if (grouping === 'command') return analytics.byCommand;
-  if (grouping === 'workflow') return analytics.byWorkflowType;
-  return analytics.byQualityBucket;
+  switch (grouping) {
+    case 'command':
+      return analytics.byCommand;
+    case 'workflow':
+      return analytics.byWorkflowType;
+    case 'quality':
+      return analytics.byQualityBucket;
+  }
+}
+
+function parseGroupingMode(value: string): GroupingMode {
+  if (value === 'workflow') {
+    return 'workflow';
+  }
+  if (value === 'quality') {
+    return 'quality';
+  }
+
+  return 'command';
 }
 
 interface ContextSizeBreakdownChartProps {
@@ -61,7 +77,7 @@ export function ContextSizeBreakdownChart({
     <Card className="aurora-bg-subtle">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="text-base text-foreground">Context Size Breakdown</CardTitle>
-        <Select value={grouping} onValueChange={(value) => setGrouping(value as GroupingMode)}>
+        <Select value={grouping} onValueChange={(value) => setGrouping(parseGroupingMode(value))}>
           <SelectTrigger className="w-full sm:w-[180px]" data-testid="context-grouping-filter">
             <SelectValue placeholder="Grouping" />
           </SelectTrigger>
