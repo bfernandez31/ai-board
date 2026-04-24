@@ -17,6 +17,9 @@ const PUBLIC_PREFIXES = ["/auth", "/api/auth", "/api/push", "/api/telemetry/", "
 
 const PUBLIC_PATTERNS = [
   /^\/api\/jobs\/\d+\/status$/,
+  /^\/api\/jobs\/\d+\/logs$/,
+  /^\/api\/jobs\/\d+\/logs\/artifact$/,
+  /^\/api\/maintenance\/prune-logs$/,
   /^\/api\/projects\/\d+\/jobs$/,
   /^\/api\/projects\/\d+\/tickets\/[^/]+\/comments\/ai-board$/,
   /^\/api\/projects\/\d+\/tickets\/[^/]+\/comparisons$/,

@@ -143,12 +143,20 @@ describe('POST /api/jobs/:id/logs', () => {
   });
 
   it('re-redacts before truncation so partial secrets are not stored', async () => {
-    const longPrefix = `${'x'.repeat(249)} `;
+    // Secret spans input positions [257, 281), crossing the 280-char truncation
+    // boundary. A naive `.slice(0, 280)` of the raw input would leak the first
+    // 23 characters of the secret. The server must redact first (replacing the
+    // 24-char secret with the 23-char `[REDACTED:github_token]` marker), then
+    // truncate — preserving the full marker within the first 280 characters.
+    // Total input length stays within PREVIEW_INPUT_MAX_CHARS (320).
+    const longPrefix = `${'x'.repeat(256)} `;
     const secret = 'ghp_1234567890abcdefghij';
-    const trailing = 'y'.repeat(80);
+    const trailing = 'y'.repeat(36);
+    const preview = `${longPrefix}${secret}${trailing}`;
+    expect(preview.length).toBe(317);
     const res = await postLog(jobId, {
       captureStatus: 'CAPTURED',
-      preview: `${longPrefix}${secret}${trailing}`,
+      preview,
       schemaVersion: 1,
       eventCount: 1,
       errorCount: 0,
