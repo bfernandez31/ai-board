@@ -131,6 +131,37 @@ export function buildAnalyticsEmptyMessage(filters: AnalyticsFilters): string {
   return `No ${outcomeLabel} analytics for ${agentLabel} in ${rangeLabel}.`;
 }
 
+export type ContextHealthTier = 'healthy' | 'warning' | 'danger';
+
+export function getContextHealthTier(peakContextTokens: number): ContextHealthTier {
+  if (peakContextTokens >= 100_000) return 'danger';
+  if (peakContextTokens >= 50_000) return 'warning';
+  return 'healthy';
+}
+
+export const CONTEXT_HEALTH_CONFIG: Record<ContextHealthTier, { color: string; label: string }> = {
+  healthy: { color: 'text-ctp-green', label: 'Healthy' },
+  warning: { color: 'text-ctp-yellow', label: 'Warning' },
+  danger: { color: 'text-ctp-red', label: 'Danger' },
+};
+
+export function getContextSizeBucket(peakContextTokens: number): string {
+  if (peakContextTokens < 25_000) return '0–25K';
+  if (peakContextTokens < 50_000) return '25–50K';
+  if (peakContextTokens < 75_000) return '50–75K';
+  if (peakContextTokens < 100_000) return '75–100K';
+  if (peakContextTokens < 150_000) return '100–150K';
+  return '150K+';
+}
+
+export function getQualityScoreBucket(score: number): string {
+  if (score >= 90) return 'Excellent';
+  if (score >= 70) return 'Good';
+  if (score >= 50) return 'Fair';
+  if (score >= 30) return 'Poor';
+  return 'Critical';
+}
+
 /**
  * Format date for grouping based on granularity
  */

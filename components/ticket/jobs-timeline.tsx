@@ -27,6 +27,8 @@ import {
   formatCost,
   formatDuration,
   formatAbbreviatedNumber,
+  getContextHealthTier,
+  CONTEXT_HEALTH_CONFIG,
 } from '@/lib/analytics/aggregations';
 import { formatCommandName } from '@/lib/utils/format-command';
 import { CancelConfirmationModal } from '@/components/board/cancel-confirmation-modal';
@@ -136,6 +138,17 @@ function JobRow({
               {job.model}
             </span>
           )}
+
+          {/* Context Health Pill */}
+          {job.peakContextTokens != null && (() => {
+            const tier = getContextHealthTier(job.peakContextTokens);
+            const config = CONTEXT_HEALTH_CONFIG[tier];
+            return (
+              <span className={`text-xs px-2 py-0.5 rounded ${config.color} bg-secondary hidden sm:inline`}>
+                {formatAbbreviatedNumber(job.peakContextTokens)} ctx · {job.turnCount} turns
+              </span>
+            );
+          })()}
         </div>
 
         <div className="flex items-center gap-4 flex-shrink-0">

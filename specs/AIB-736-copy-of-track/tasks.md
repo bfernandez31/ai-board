@@ -56,12 +56,12 @@
 
 ### Tests for User Story 1
 
-- [ ] T010 [US1] Create unit tests for getContextHealthTier() verifying threshold boundaries (49999→healthy, 50000→warning, 99999→warning, 100000→danger) and CONTEXT_HEALTH_CONFIG mapping in `tests/unit/context-health.test.ts` (no existing file covers this domain)
+- [x] T010 [US1] Create unit tests for getContextHealthTier() verifying threshold boundaries (49999→healthy, 50000→warning, 99999→warning, 100000→danger) and CONTEXT_HEALTH_CONFIG mapping in `tests/unit/context-health.test.ts` (no existing file covers this domain)
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Add getContextHealthTier() function and CONTEXT_HEALTH_CONFIG record (healthy/warning/danger with ctp color classes and labels) to `lib/analytics/aggregations.ts`
-- [ ] T012 [US1] Add context-health pill to the JobRow header in `components/ticket/jobs-timeline.tsx`: render after the model badge when job.peakContextTokens != null, showing abbreviated peak value and turn count, colored by tier — hidden when null (FR-006)
+- [x] T011 [US1] Add getContextHealthTier() function and CONTEXT_HEALTH_CONFIG record (healthy/warning/danger with ctp color classes and labels) to `lib/analytics/aggregations.ts`
+- [x] T012 [US1] Add context-health pill to the JobRow header in `components/ticket/jobs-timeline.tsx`: render after the model badge when job.peakContextTokens != null, showing abbreviated peak value and turn count, colored by tier — hidden when null (FR-006)
 
 **Checkpoint**: Job timeline shows at-a-glance context health indicators. US1 acceptance scenarios pass.
 
