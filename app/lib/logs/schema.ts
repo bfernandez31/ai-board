@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const SCHEMA_VERSION = 1 as const;
 export const PREVIEW_MAX_CHARS = 280;
-export const PREVIEW_INPUT_MAX_CHARS = 4096;
+export const PREVIEW_INPUT_MAX_CHARS = 320;
 export const ARTIFACT_MAX_BYTES = 25 * 1024 * 1024;
 
 export const AgentIdSchema = z.enum(['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']);

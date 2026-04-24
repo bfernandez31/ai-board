@@ -120,8 +120,11 @@ const events = lines.map(l => { try { return JSON.parse(l); } catch { return nul
 const status = process.env.CAPTURE_END_KIND === 'cancelled' ? 'CANCELLED'
   : events.some(e => e.type === 'error') ? 'FAILED'
   : 'COMPLETED';
+const PREVIEW_MAX_CHARS = 280;
 function truncate(v) {
-  return v.replace(/\s+/g, ' ').trim();
+  const collapsed = v.replace(/\s+/g, ' ').trim();
+  if (collapsed.length <= PREVIEW_MAX_CHARS) return collapsed;
+  return collapsed.slice(0, PREVIEW_MAX_CHARS - 1).trimEnd() + '…';
 }
 let preview = '';
 if (status === 'FAILED') {
