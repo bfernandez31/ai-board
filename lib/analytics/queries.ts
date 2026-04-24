@@ -43,7 +43,6 @@ import {
   getGranularity,
   getISOWeek,
   getPreviousPeriodStart,
-  getQualityScoreBucket,
   getRangeLabel,
   getStageFromCommand,
   hasAnalyticsData,
@@ -609,55 +608,22 @@ async function getQualityScoreAnalytics(
   };
 }
 
+const CONTEXT_BUCKET_ORDER = ['0–25K', '25–50K', '50–75K', '75–100K', '100–150K', '150K+'];
+
 async function getContextHealthAnalytics(
   projectId: number,
   filters: AnalyticsFilters,
-  now: Date,
-  options?: {
-    contextCommand?: string;
-    contextWorkflowType?: string;
-    contextQualityBucket?: string;
-  }
+  now: Date
 ): Promise<ContextHealthAnalytics> {
-  const baseWhere = buildJobWhere(projectId, filters, now, [JobStatus.COMPLETED]);
-
-  const additionalFilters: Prisma.JobWhereInput = {
-    peakContextTokens: { not: null },
-  };
-
-  if (options?.contextCommand) {
-    additionalFilters.command = options.contextCommand;
-  }
-
-  if (options?.contextWorkflowType) {
-    additionalFilters.ticket = {
-      is: {
-        ...((baseWhere.ticket as Prisma.JobWhereInput['ticket'])?.is ?? {}),
-        workflowType: options.contextWorkflowType as 'FULL' | 'QUICK',
-      },
-    };
-  }
-
   const jobs = await prisma.job.findMany({
     where: {
-      ...baseWhere,
-      ...additionalFilters,
+      ...buildJobWhere(projectId, filters, now, [JobStatus.COMPLETED]),
+      peakContextTokens: { not: null },
     },
-    select: {
-      peakContextTokens: true,
-      qualityScore: true,
-    },
+    select: { peakContextTokens: true },
   });
 
-  let filteredJobs = jobs;
-  if (options?.contextQualityBucket) {
-    filteredJobs = jobs.filter((job) => {
-      if (job.qualityScore == null) return false;
-      return getQualityScoreBucket(job.qualityScore) === options.contextQualityBucket;
-    });
-  }
-
-  if (filteredJobs.length === 0) {
+  if (jobs.length === 0) {
     return {
       distribution: [],
       averagePeak: null,
@@ -668,22 +634,21 @@ async function getContextHealthAnalytics(
   const bucketCounts = new Map<string, number>();
   let peakSum = 0;
 
-  for (const job of filteredJobs) {
+  for (const job of jobs) {
     const peak = job.peakContextTokens!;
     const bucket = getContextSizeBucket(peak);
     bucketCounts.set(bucket, (bucketCounts.get(bucket) ?? 0) + 1);
     peakSum += peak;
   }
 
-  const bucketOrder = ['0–25K', '25–50K', '50–75K', '75–100K', '100–150K', '150K+'];
-  const distribution: ContextBucket[] = bucketOrder
+  const distribution: ContextBucket[] = CONTEXT_BUCKET_ORDER
     .map((bucket) => ({ bucket, count: bucketCounts.get(bucket) ?? 0 }))
     .filter((b) => b.count > 0);
 
   return {
     distribution,
-    averagePeak: Math.round(peakSum / filteredJobs.length),
-    totalJobsWithData: filteredJobs.length,
+    averagePeak: Math.round(peakSum / jobs.length),
+    totalJobsWithData: jobs.length,
   };
 }
 

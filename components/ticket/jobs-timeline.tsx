@@ -75,6 +75,21 @@ const STATUS_ICONS: Record<string, StatusConfig> = {
   PENDING: DEFAULT_STATUS,
 };
 
+function ContextHealthPill({
+  peakContextTokens,
+  turnCount,
+}: {
+  peakContextTokens: number;
+  turnCount: number | null;
+}) {
+  const config = CONTEXT_HEALTH_CONFIG[getContextHealthTier(peakContextTokens)];
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded ${config.color} bg-secondary hidden sm:inline`}>
+      {formatAbbreviatedNumber(peakContextTokens)} ctx · {turnCount} turns
+    </span>
+  );
+}
+
 /**
  * JobRow Component
  *
@@ -140,15 +155,12 @@ function JobRow({
           )}
 
           {/* Context Health Pill */}
-          {job.peakContextTokens != null && (() => {
-            const tier = getContextHealthTier(job.peakContextTokens);
-            const config = CONTEXT_HEALTH_CONFIG[tier];
-            return (
-              <span className={`text-xs px-2 py-0.5 rounded ${config.color} bg-secondary hidden sm:inline`}>
-                {formatAbbreviatedNumber(job.peakContextTokens)} ctx · {job.turnCount} turns
-              </span>
-            );
-          })()}
+          {job.peakContextTokens != null && (
+            <ContextHealthPill
+              peakContextTokens={job.peakContextTokens}
+              turnCount={job.turnCount}
+            />
+          )}
         </div>
 
         <div className="flex items-center gap-4 flex-shrink-0">
