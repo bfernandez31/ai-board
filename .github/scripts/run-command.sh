@@ -34,25 +34,33 @@ CONFIG="${TARGET_DIR}/.ai-board/config.yml"
 # ─── Fallback Defaults ───────────────────────────────────────────────────────
 # When a target repo has no .ai-board/config.yml, these defaults preserve
 # backward compatibility for ai-board itself and any repo not yet onboarded.
+#
+# Implemented as a case statement rather than an associative array so the
+# script runs on bash 3.2 (the system bash on macOS). `declare -A` requires
+# bash 4+, and combined with `set -u` it fails with "unbound variable" at
+# load time on older bash.
 
-declare -A DEFAULTS=(
-  [install]="bun install --frozen-lockfile"
-  [build]="bun run build"
-  [lint]="bun run lint"
-  [type_check]="bun run type-check"
-  [test_unit]="bun run test:unit"
-  [test_integration]="bun run test:integration"
-  [test_e2e]="bun run test:e2e"
-  [db_setup]="bunx prisma generate && if [ -n \"\${DATABASE_URL:-}\" ]; then bunx prisma migrate deploy; fi"
-  [db_seed]="npx tsx tests/global-setup.ts"
-)
+lookup_default() {
+  case "$1" in
+    install) echo "bun install --frozen-lockfile" ;;
+    build) echo "bun run build" ;;
+    lint) echo "bun run lint" ;;
+    type_check) echo "bun run type-check" ;;
+    test_unit) echo "bun run test:unit" ;;
+    test_integration) echo "bun run test:integration" ;;
+    test_e2e) echo "bun run test:e2e" ;;
+    db_setup) echo "bunx prisma generate && if [ -n \"\${DATABASE_URL:-}\" ]; then bunx prisma migrate deploy; fi" ;;
+    db_seed) echo "npx tsx tests/global-setup.ts" ;;
+    *) return 1 ;;
+  esac
+}
 
 # ─── Missing Config = Use Fallback Defaults ──────────────────────────────────
 
 if [[ ! -f "$CONFIG" ]]; then
-  if [[ -n "${DEFAULTS[$COMMAND_KEY]+_}" ]]; then
+  if DEFAULT_CMD=$(lookup_default "$COMMAND_KEY"); then
     echo "ℹ️  No .ai-board/config.yml found, using fallback default for '$COMMAND_KEY'" >&2
-    cd "$TARGET_DIR" && eval "${DEFAULTS[$COMMAND_KEY]}"
+    cd "$TARGET_DIR" && eval "$DEFAULT_CMD"
     exit $?
   fi
   # No config and no default for this key — silent skip

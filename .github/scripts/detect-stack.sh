@@ -64,7 +64,8 @@ detect_project_name() {
   # Try Cargo.toml
   if [[ -f "$REPO_DIR/Cargo.toml" ]]; then
     local name
-    name=$(grep -m1 '^name\s*=' "$REPO_DIR/Cargo.toml" | sed 's/.*=\s*"\(.*\)".*/\1/' 2>/dev/null || true)
+    # Use POSIX [[:space:]] instead of \s so BSD sed (macOS) also matches.
+    name=$(grep -m1 '^name[[:space:]]*=' "$REPO_DIR/Cargo.toml" | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/' 2>/dev/null || true)
     if [[ -n "$name" ]]; then
       PROJECT_NAME="$name"
       return
@@ -87,7 +88,8 @@ detect_project_name() {
   # Try pyproject.toml
   if [[ -f "$REPO_DIR/pyproject.toml" ]]; then
     local name
-    name=$(grep -m1 '^name\s*=' "$REPO_DIR/pyproject.toml" | sed 's/.*=\s*"\(.*\)".*/\1/' 2>/dev/null || true)
+    # Use POSIX [[:space:]] instead of \s so BSD sed (macOS) also matches.
+    name=$(grep -m1 '^name[[:space:]]*=' "$REPO_DIR/pyproject.toml" | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/' 2>/dev/null || true)
     if [[ -n "$name" ]]; then
       PROJECT_NAME="$name"
       return
@@ -783,7 +785,8 @@ detect_runtime_versions() {
   # Rust version from rust-toolchain.toml
   if [[ -f "$REPO_DIR/rust-toolchain.toml" ]]; then
     local rust_ver
-    rust_ver=$(grep -m1 'channel\s*=' "$REPO_DIR/rust-toolchain.toml" | sed 's/.*=\s*"\(.*\)".*/\1/' 2>/dev/null || true)
+    # Use POSIX [[:space:]] instead of \s so BSD sed (macOS) also matches.
+    rust_ver=$(grep -m1 'channel[[:space:]]*=' "$REPO_DIR/rust-toolchain.toml" | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/' 2>/dev/null || true)
     if [[ -n "$rust_ver" ]]; then
       versions=$(echo "$versions" | jq --arg v "$rust_ver" '. + {rust: $v}')
     fi

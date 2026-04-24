@@ -186,27 +186,29 @@ parse_playwright_report() {
   fi
 }
 
-# pytest: grep "N passed" and "N failed" from text output
+# pytest: grep "N passed" and "N failed" from text output.
+# Uses POSIX-compatible sed extraction instead of grep -oP (BSD grep has no -P).
 parse_pytest_report() {
   local output="$1"
   local passed=0 failed=0 total
-  passed=$(echo "$output" | grep -oP '\d+(?= passed)' | tail -1 || echo 0)
-  failed=$(echo "$output" | grep -oP '\d+(?= failed)' | tail -1 || echo 0)
+  passed=$(echo "$output" | grep -oE '[0-9]+ passed' | tail -1 | grep -oE '[0-9]+' || echo 0)
+  failed=$(echo "$output" | grep -oE '[0-9]+ failed' | tail -1 | grep -oE '[0-9]+' || echo 0)
   [ -z "$passed" ] && passed=0
   [ -z "$failed" ] && failed=0
   total=$((passed + failed))
   echo "$passed $failed $total"
 }
 
-# cargo-test: grep "test result:" line for passed/failed counts
+# cargo-test: grep "test result:" line for passed/failed counts.
+# Uses POSIX-compatible grep -oE + post-filter instead of grep -oP lookahead.
 parse_cargo_report() {
   local output="$1"
   local passed=0 failed=0 total
   local result_line
   result_line=$(echo "$output" | grep 'test result:' | tail -1)
   if [ -n "$result_line" ]; then
-    passed=$(echo "$result_line" | grep -oP '\d+(?= passed)' || echo 0)
-    failed=$(echo "$result_line" | grep -oP '\d+(?= failed)' || echo 0)
+    passed=$(echo "$result_line" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' || echo 0)
+    failed=$(echo "$result_line" | grep -oE '[0-9]+ failed' | grep -oE '[0-9]+' || echo 0)
     [ -z "$passed" ] && passed=0
     [ -z "$failed" ] && failed=0
   fi
@@ -279,13 +281,18 @@ parse_zig_report() {
   local output="$1"
   local passed=0 failed=0 total=0
 
-  # Primary: Build Summary line — anchor failed-count on "tests passed;" to skip steps-failed
+  # Primary: Build Summary line — anchor failed-count on "tests passed;" to skip
+  # steps-failed. Uses sed with POSIX BREs (works with BSD sed on macOS and GNU
+  # sed in CI) instead of grep -oP lookaheads.
   local summary_line
   summary_line=$(echo "$output" | grep 'Build Summary:' | tail -1)
   if [ -n "$summary_line" ]; then
-    passed=$(echo "$summary_line" | grep -oP '\d+(?=/\d+ tests passed)' | tail -1)
-    total=$(echo "$summary_line" | grep -oP '\d+/\K\d+(?= tests passed)' | tail -1)
-    failed=$(echo "$summary_line" | grep -oP 'tests passed;\s+\K\d+(?=\s+failed)' | tail -1)
+    # Match "P/T tests passed" — capture P and T in one sed pass.
+    passed=$(echo "$summary_line" | sed -n 's#.*[^0-9]\([0-9]\{1,\}\)/[0-9]\{1,\}[[:space:]]*tests passed.*#\1#p' | tail -1)
+    total=$(echo "$summary_line" | sed -n 's#.*[^0-9][0-9]\{1,\}/\([0-9]\{1,\}\)[[:space:]]*tests passed.*#\1#p' | tail -1)
+    # Match "tests passed;  N failed" (the failed count after the tests clause,
+    # NOT the steps-failed count earlier in the line).
+    failed=$(echo "$summary_line" | sed -n 's#.*tests passed;[[:space:]]*\([0-9]\{1,\}\)[[:space:]]*failed.*#\1#p' | tail -1)
     [ -z "$passed" ] && passed=0
     [ -z "$total" ] && total=0
     [ -z "$failed" ] && failed=0
@@ -298,7 +305,7 @@ parse_zig_report() {
 
   # Fallback 1: "All N tests passed."
   local all_passed
-  all_passed=$(echo "$output" | grep -oP 'All \K\d+(?= tests? passed)' | tail -1)
+  all_passed=$(echo "$output" | sed -n 's#.*All[[:space:]]\{1,\}\([0-9]\{1,\}\)[[:space:]]\{1,\}tests\{0,1\}[[:space:]]passed.*#\1#p' | tail -1)
   if [ -n "$all_passed" ]; then
     echo "$all_passed 0 $all_passed"
     return
@@ -306,12 +313,12 @@ parse_zig_report() {
 
   # Fallback 2: "X passed; Y skipped; Z failed."
   local mix_line
-  mix_line=$(echo "$output" | grep -oP '\d+ passed; \d+ skipped; \d+ failed' | tail -1)
+  mix_line=$(echo "$output" | grep -oE '[0-9]+ passed; [0-9]+ skipped; [0-9]+ failed' | tail -1)
   if [ -n "$mix_line" ]; then
-    passed=$(echo "$mix_line" | grep -oP '^\d+')
+    passed=$(echo "$mix_line" | sed -n 's#^\([0-9]\{1,\}\)[[:space:]]\{1,\}passed.*#\1#p')
     local skipped
-    skipped=$(echo "$mix_line" | grep -oP 'passed;\s+\K\d+(?=\s+skipped)')
-    failed=$(echo "$mix_line" | grep -oP 'skipped;\s+\K\d+(?=\s+failed)')
+    skipped=$(echo "$mix_line" | sed -n 's#.*passed;[[:space:]]*\([0-9]\{1,\}\)[[:space:]]*skipped.*#\1#p')
+    failed=$(echo "$mix_line" | sed -n 's#.*skipped;[[:space:]]*\([0-9]\{1,\}\)[[:space:]]*failed.*#\1#p')
     [ -z "$passed" ] && passed=0
     [ -z "$skipped" ] && skipped=0
     [ -z "$failed" ] && failed=0
