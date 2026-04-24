@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
-import { JobLogSubmissionSchema } from '@/app/lib/logs/schema';
+import { buildJobLogRawUrl } from '@/app/lib/logs/artifact-key';
+import { JobLogSubmissionSchema, PREVIEW_MAX_CHARS } from '@/app/lib/logs/schema';
 import { redactString } from '@/app/lib/logs/redactor';
 
 export async function POST(
@@ -50,7 +51,7 @@ export async function POST(
     );
   }
 
-  const safePreview = redactString(submission.preview).slice(0, 280);
+  const safePreview = redactString(submission.preview).slice(0, PREVIEW_MAX_CHARS);
 
   const data = {
     captureStatus: submission.captureStatus,
@@ -72,7 +73,7 @@ export async function POST(
 
     const rawUrl =
       row.captureStatus === 'CAPTURED'
-        ? `/api/projects/${job.projectId}/tickets/${job.ticketId}/jobs/${jobId}/logs/raw`
+        ? buildJobLogRawUrl(job.projectId, job.ticketId, jobId)
         : null;
 
     return NextResponse.json(

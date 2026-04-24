@@ -35,10 +35,6 @@ const PATTERNS: Pattern[] = [
     kind: 'google_key',
     regex: /\bAIza[A-Za-z0-9_\-]{20,}\b/g,
   },
-  {
-    kind: 'mistral_key',
-    regex: /\b[A-Za-z0-9]{32}\b(?=\s*(?:#|\/\/|$))/g,
-  },
 ];
 
 const ENV_SECRET_REGEX =
@@ -68,8 +64,8 @@ function deepRedact(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(deepRedact);
   if (typeof value === 'object') {
     const result: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      result[k] = deepRedact(v);
+    for (const [key, nestedValue] of Object.entries(value as Record<string, unknown>)) {
+      result[key] = deepRedact(nestedValue);
     }
     return result;
   }

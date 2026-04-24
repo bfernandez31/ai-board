@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { verifyTicketAccess } from '@/lib/db/auth-helpers';
+import { buildJobLogRawUrl } from '@/app/lib/logs/artifact-key';
 
 export async function GET(
   request: NextRequest,
@@ -29,11 +30,11 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
-  const job = await prisma.job.findFirst({
-    where: { id: jobId, ticketId, projectId },
-    select: { id: true },
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    select: { id: true, ticketId: true, projectId: true },
   });
-  if (!job) {
+  if (!job || job.ticketId !== ticketId || job.projectId !== projectId) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 
@@ -45,9 +46,7 @@ export async function GET(
   }
 
   const rawUrl =
-    log.captureStatus === 'CAPTURED'
-      ? `/api/projects/${projectId}/tickets/${ticketId}/jobs/${jobId}/logs/raw`
-      : null;
+    log.captureStatus === 'CAPTURED' ? buildJobLogRawUrl(projectId, ticketId, jobId) : null;
 
   return NextResponse.json(
     {

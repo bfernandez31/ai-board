@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { deleteJobLogArtifact, uploadJobLogArtifact } from '@/app/lib/blob/client';
 import { ARTIFACT_MAX_BYTES } from '@/app/lib/logs/schema';
+import { buildJobLogArtifactKey } from '@/app/lib/logs/artifact-key';
 
 export async function PUT(
   request: NextRequest,
@@ -61,7 +62,17 @@ export async function PUT(
     );
   }
 
-  const artifactKey = `logs/${job.projectId}/${job.ticketId}/${jobId}.jsonl.gz`;
+  const artifactKey = buildJobLogArtifactKey(job.projectId, job.ticketId, jobId);
+  const existingLog = await prisma.jobLog.findUnique({
+    where: { jobId },
+    select: { captureStatus: true, artifactKey: true },
+  });
+  if (existingLog?.captureStatus === 'CAPTURED' && existingLog.artifactKey === artifactKey) {
+    console.info('[PUT /jobs/:id/logs/artifact] Overwriting existing artifact for retried job run', {
+      jobId,
+      artifactKey,
+    });
+  }
   try {
     await uploadJobLogArtifact(artifactKey, buffer, buffer.byteLength);
   } catch (error) {
@@ -101,7 +112,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 
-  const artifactKey = `logs/${job.projectId}/${job.ticketId}/${jobId}.jsonl.gz`;
+  const artifactKey = buildJobLogArtifactKey(job.projectId, job.ticketId, jobId);
   try {
     const result = await deleteJobLogArtifact(artifactKey);
     return NextResponse.json({ deleted: result.deleted }, { status: 200 });
