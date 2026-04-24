@@ -130,6 +130,17 @@ export interface QualityScoreAnalytics {
   totalScoredJobs: number;
 }
 
+export interface ContextBucket {
+  bucket: string;
+  count: number;
+}
+
+export interface ContextHealthAnalytics {
+  distribution: ContextBucket[];
+  averagePeak: number | null;
+  totalJobsWithData: number;
+}
+
 export interface AnalyticsData {
   overview: OverviewMetrics;
   costOverTime: CostDataPoint[];
@@ -140,6 +151,7 @@ export interface AnalyticsData {
   workflowDistribution: WorkflowBreakdown[];
   velocity: WeeklyVelocity[];
   qualityScore?: QualityScoreAnalytics | null;
+  contextHealth?: ContextHealthAnalytics | null;
   filters: AnalyticsFilters;
   availableAgents: AgentOption[];
   /** ISO timestamp of when data was generated */

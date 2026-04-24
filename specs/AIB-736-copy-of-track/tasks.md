@@ -75,16 +75,16 @@
 
 ### Tests for User Story 3
 
-- [ ] T013 [P] [US3] Extend `tests/integration/analytics/analytics-route.test.ts` with scenarios that seed jobs with known context metrics and verify the contextHealth distribution buckets, averagePeak, totalJobsWithData, filtering by contextCommand/contextWorkflowType/contextQualityBucket, null-exclusion, and empty-state response
-- [ ] T014 [P] [US3] Extend `tests/unit/components/analytics-dashboard.test.tsx` to verify the context-health chart renders when contextHealth data is present and advancedAnalytics is enabled, and is hidden when advancedAnalytics is disabled or data is null/empty
+- [x] T013 [P] [US3] Extend `tests/integration/analytics/analytics-route.test.ts` with scenarios that seed jobs with known context metrics and verify the contextHealth distribution buckets, averagePeak, totalJobsWithData, filtering by contextCommand/contextWorkflowType/contextQualityBucket, null-exclusion, and empty-state response
+- [x] T014 [P] [US3] Extend `tests/unit/components/analytics-dashboard.test.tsx` to verify the context-health chart renders when contextHealth data is present and advancedAnalytics is enabled, and is hidden when advancedAnalytics is disabled or data is null/empty
 
 ### Implementation for User Story 3
 
-- [ ] T015 [P] [US3] Add ContextBucket interface ({ bucket: string; count: number }), ContextHealthAnalytics interface ({ distribution, averagePeak, totalJobsWithData }), and extend AnalyticsData with optional contextHealth field in `lib/analytics/types.ts`
-- [ ] T016 [P] [US3] Add getContextSizeBucket() helper (0–25K, 25–50K, 50–75K, 75–100K, 100–150K, 150K+) and getQualityScoreBucket() helper (Excellent 90–100, Good 70–89, Fair 50–69, Poor 30–49, Critical 0–29) to `lib/analytics/aggregations.ts`
-- [ ] T017 [US3] Add getContextHealthAnalytics() query function following the getQualityScoreAnalytics pattern — query completed jobs with peakContextTokens not null, apply optional command/workflowType/qualityBucket filters, bucket into distribution ranges, compute averagePeak — and integrate into getAnalyticsData() Promise.all in `lib/analytics/queries.ts`
-- [ ] T018 [P] [US3] Create context-health distribution bar chart component following the CostByStageChart pattern: BarChart with bucket labels on X-axis, count on Y-axis, bars colored by health tier (green for 0–50K, yellow for 50–100K, red for 100K+), empty state card, custom tooltip in `components/analytics/context-health-chart.tsx`
-- [ ] T019 [US3] Integrate ContextHealthChart into the analytics dashboard grid, gated behind advancedAnalytics subscription and non-null contextHealth data, spanning md:col-span-2 in `components/analytics/analytics-dashboard.tsx`
+- [x] T015 [P] [US3] Add ContextBucket interface ({ bucket: string; count: number }), ContextHealthAnalytics interface ({ distribution, averagePeak, totalJobsWithData }), and extend AnalyticsData with optional contextHealth field in `lib/analytics/types.ts`
+- [x] T016 [P] [US3] Add getContextSizeBucket() helper (0–25K, 25–50K, 50–75K, 75–100K, 100–150K, 150K+) and getQualityScoreBucket() helper (Excellent 90–100, Good 70–89, Fair 50–69, Poor 30–49, Critical 0–29) to `lib/analytics/aggregations.ts`
+- [x] T017 [US3] Add getContextHealthAnalytics() query function following the getQualityScoreAnalytics pattern — query completed jobs with peakContextTokens not null, apply optional command/workflowType/qualityBucket filters, bucket into distribution ranges, compute averagePeak — and integrate into getAnalyticsData() Promise.all in `lib/analytics/queries.ts`
+- [x] T018 [P] [US3] Create context-health distribution bar chart component following the CostByStageChart pattern: BarChart with bucket labels on X-axis, count on Y-axis, bars colored by health tier (green for 0–50K, yellow for 50–100K, red for 100K+), empty state card, custom tooltip in `components/analytics/context-health-chart.tsx`
+- [x] T019 [US3] Integrate ContextHealthChart into the analytics dashboard grid, gated behind advancedAnalytics subscription and non-null contextHealth data, spanning md:col-span-2 in `components/analytics/analytics-dashboard.tsx`
 
 **Checkpoint**: Analytics dashboard shows context-health distribution chart with filtering. US3 acceptance scenarios pass.
 

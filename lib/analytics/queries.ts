@@ -15,6 +15,8 @@ import type {
   AnalyticsFilters,
   CacheMetrics,
   CompletionMetric,
+  ContextBucket,
+  ContextHealthAnalytics,
   CostDataPoint,
   DimensionComparison,
   NamedAgent,
@@ -35,11 +37,13 @@ import {
   aggregateTools,
   calculateTrend,
   formatDateForGrouping,
+  getContextSizeBucket,
   getDateRangeStart,
   getAgentLabel,
   getGranularity,
   getISOWeek,
   getPreviousPeriodStart,
+  getQualityScoreBucket,
   getRangeLabel,
   getStageFromCommand,
   hasAnalyticsData,
@@ -605,6 +609,84 @@ async function getQualityScoreAnalytics(
   };
 }
 
+async function getContextHealthAnalytics(
+  projectId: number,
+  filters: AnalyticsFilters,
+  now: Date,
+  options?: {
+    contextCommand?: string;
+    contextWorkflowType?: string;
+    contextQualityBucket?: string;
+  }
+): Promise<ContextHealthAnalytics> {
+  const baseWhere = buildJobWhere(projectId, filters, now, [JobStatus.COMPLETED]);
+
+  const additionalFilters: Prisma.JobWhereInput = {
+    peakContextTokens: { not: null },
+  };
+
+  if (options?.contextCommand) {
+    additionalFilters.command = options.contextCommand;
+  }
+
+  if (options?.contextWorkflowType) {
+    additionalFilters.ticket = {
+      is: {
+        ...((baseWhere.ticket as Prisma.JobWhereInput['ticket'])?.is ?? {}),
+        workflowType: options.contextWorkflowType as 'FULL' | 'QUICK',
+      },
+    };
+  }
+
+  const jobs = await prisma.job.findMany({
+    where: {
+      ...baseWhere,
+      ...additionalFilters,
+    },
+    select: {
+      peakContextTokens: true,
+      qualityScore: true,
+    },
+  });
+
+  let filteredJobs = jobs;
+  if (options?.contextQualityBucket) {
+    filteredJobs = jobs.filter((job) => {
+      if (job.qualityScore == null) return false;
+      return getQualityScoreBucket(job.qualityScore) === options.contextQualityBucket;
+    });
+  }
+
+  if (filteredJobs.length === 0) {
+    return {
+      distribution: [],
+      averagePeak: null,
+      totalJobsWithData: 0,
+    };
+  }
+
+  const bucketCounts = new Map<string, number>();
+  let peakSum = 0;
+
+  for (const job of filteredJobs) {
+    const peak = job.peakContextTokens!;
+    const bucket = getContextSizeBucket(peak);
+    bucketCounts.set(bucket, (bucketCounts.get(bucket) ?? 0) + 1);
+    peakSum += peak;
+  }
+
+  const bucketOrder = ['0–25K', '25–50K', '50–75K', '75–100K', '100–150K', '150K+'];
+  const distribution: ContextBucket[] = bucketOrder
+    .map((bucket) => ({ bucket, count: bucketCounts.get(bucket) ?? 0 }))
+    .filter((b) => b.count > 0);
+
+  return {
+    distribution,
+    averagePeak: Math.round(peakSum / filteredJobs.length),
+    totalJobsWithData: filteredJobs.length,
+  };
+}
+
 function normalizeFilters(
   filters: Partial<AnalyticsFilters> = {},
   availableAgents?: AgentOption[]
@@ -655,6 +737,7 @@ export async function getAnalyticsData(
     workflowDistribution,
     velocity,
     qualityScore,
+    contextHealth,
   ] = await Promise.all([
     getOverviewMetrics(projectId, normalizedFilters, now),
     getCostOverTime(projectId, normalizedFilters, now),
@@ -664,6 +747,7 @@ export async function getAnalyticsData(
     getWorkflowDistribution(projectId, normalizedFilters, now),
     getVelocityData(projectId, normalizedFilters, now),
     getQualityScoreAnalytics(projectId, normalizedFilters, now),
+    getContextHealthAnalytics(projectId, normalizedFilters, now),
   ]);
 
   const cacheEfficiency = getCacheEfficiency(tokenUsage);
@@ -678,6 +762,7 @@ export async function getAnalyticsData(
     workflowDistribution,
     velocity,
     qualityScore,
+    contextHealth,
     filters: normalizedFilters,
     availableAgents,
     generatedAt: now.toISOString(),

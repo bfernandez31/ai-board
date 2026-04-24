@@ -518,6 +518,78 @@ describe('Analytics Route', () => {
     ]);
   });
 
+  it('returns contextHealth distribution from jobs with context metrics', async () => {
+    await seedAnalyticsFixtures(ctx.projectId);
+
+    const tickets = await prisma.ticket.findMany({
+      where: { projectId: ctx.projectId, stage: Stage.SHIP },
+      select: { id: true },
+    });
+    const ticketIds = tickets.map((t) => t.id);
+
+    const jobs = await prisma.job.findMany({
+      where: { ticketId: { in: ticketIds }, status: JobStatus.COMPLETED },
+      select: { id: true },
+      orderBy: { id: 'asc' },
+    });
+
+    if (jobs[0]) {
+      await prisma.job.update({
+        where: { id: jobs[0].id },
+        data: { peakContextTokens: 15000, avgContextTokens: 12000, turnCount: 3 },
+      });
+    }
+    if (jobs[1]) {
+      await prisma.job.update({
+        where: { id: jobs[1].id },
+        data: { peakContextTokens: 60000, avgContextTokens: 45000, turnCount: 5 },
+      });
+    }
+
+    const responseRaw = await GET(
+      new NextRequest(`http://localhost/api/projects/${ctx.projectId}/analytics`),
+      { params: Promise.resolve({ projectId: String(ctx.projectId) }) }
+    );
+    const response = (await responseRaw.json()) as {
+      contextHealth: {
+        distribution: Array<{ bucket: string; count: number }>;
+        averagePeak: number | null;
+        totalJobsWithData: number;
+      };
+    };
+
+    expect(responseRaw.status).toBe(200);
+    expect(response.contextHealth.totalJobsWithData).toBe(2);
+    expect(response.contextHealth.averagePeak).toBe(37500);
+    expect(response.contextHealth.distribution).toEqual(
+      expect.arrayContaining([
+        { bucket: '0–25K', count: 1 },
+        { bucket: '50–75K', count: 1 },
+      ])
+    );
+  });
+
+  it('returns empty contextHealth when no jobs have context metrics', async () => {
+    await seedAnalyticsFixtures(ctx.projectId);
+
+    const responseRaw = await GET(
+      new NextRequest(`http://localhost/api/projects/${ctx.projectId}/analytics`),
+      { params: Promise.resolve({ projectId: String(ctx.projectId) }) }
+    );
+    const response = (await responseRaw.json()) as {
+      contextHealth: {
+        distribution: Array<{ bucket: string; count: number }>;
+        averagePeak: number | null;
+        totalJobsWithData: number;
+      };
+    };
+
+    expect(responseRaw.status).toBe(200);
+    expect(response.contextHealth.totalJobsWithData).toBe(0);
+    expect(response.contextHealth.distribution).toEqual([]);
+    expect(response.contextHealth.averagePeak).toBeNull();
+  });
+
   it('rejects invalid analytics filters', async () => {
     const response = await GET(
       new NextRequest(

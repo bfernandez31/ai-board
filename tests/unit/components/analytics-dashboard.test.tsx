@@ -170,6 +170,12 @@ vi.mock('@/components/analytics/velocity-chart', () => ({
   ),
 }));
 
+vi.mock('@/components/analytics/context-health-chart', () => ({
+  ContextHealthChart: ({ data, emptyMessage }: { data: unknown[]; emptyMessage?: string }) => (
+    <div data-testid="context-health-chart">{data.length > 0 ? 'context-health' : emptyMessage}</div>
+  ),
+}));
+
 function makeAnalyticsData(filters: Partial<AnalyticsFilters> = {}, overrides: Partial<AnalyticsData> = {}): AnalyticsData {
   const resolvedFilters: AnalyticsFilters = {
     range: filters.range ?? '30d',
@@ -340,6 +346,74 @@ describe('AnalyticsDashboard', () => {
     expect(
       screen.getByText(/completion cards still reflect the active period/i)
     ).toBeInTheDocument();
+  });
+
+  it('renders context-health chart when advancedAnalytics is enabled and data is present', () => {
+    renderWithProviders(
+      <AnalyticsDashboard
+        projectId={1}
+        initialData={makeAnalyticsData({}, {
+          contextHealth: {
+            distribution: [
+              { bucket: '0–25K', count: 5 },
+              { bucket: '25–50K', count: 3 },
+            ],
+            averagePeak: 30000,
+            totalJobsWithData: 8,
+          },
+        })}
+      />
+    );
+
+    expect(screen.getByTestId('context-health-chart')).toBeInTheDocument();
+    expect(screen.getByText('context-health')).toBeInTheDocument();
+  });
+
+  it('hides context-health chart when advancedAnalytics is disabled', () => {
+    mockUseSubscription.mockReturnValue({ data: { limits: { advancedAnalytics: false } } });
+
+    renderWithProviders(
+      <AnalyticsDashboard
+        projectId={1}
+        initialData={makeAnalyticsData({}, {
+          contextHealth: {
+            distribution: [{ bucket: '0–25K', count: 5 }],
+            averagePeak: 20000,
+            totalJobsWithData: 5,
+          },
+        })}
+      />
+    );
+
+    expect(screen.queryByTestId('context-health-chart')).not.toBeInTheDocument();
+  });
+
+  it('hides context-health chart when contextHealth data is empty', () => {
+    renderWithProviders(
+      <AnalyticsDashboard
+        projectId={1}
+        initialData={makeAnalyticsData({}, {
+          contextHealth: {
+            distribution: [],
+            averagePeak: null,
+            totalJobsWithData: 0,
+          },
+        })}
+      />
+    );
+
+    expect(screen.queryByTestId('context-health-chart')).not.toBeInTheDocument();
+  });
+
+  it('hides context-health chart when contextHealth is null', () => {
+    renderWithProviders(
+      <AnalyticsDashboard
+        projectId={1}
+        initialData={makeAnalyticsData({}, { contextHealth: null })}
+      />
+    );
+
+    expect(screen.queryByTestId('context-health-chart')).not.toBeInTheDocument();
   });
 
   it('updates completion-card labels when the active range changes', async () => {

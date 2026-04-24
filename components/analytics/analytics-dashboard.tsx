@@ -23,6 +23,7 @@ import { WorkflowDistributionChart } from './workflow-distribution-chart';
 import { VelocityChart } from './velocity-chart';
 import { QualityScoreTrendChart } from './quality-score-trend-chart';
 import { DimensionComparisonChart } from './dimension-comparison-chart';
+import { ContextHealthChart } from './context-health-chart';
 import { useSubscription } from '@/hooks/use-subscription';
 import { UpgradePrompt } from '@/components/billing/upgrade-prompt';
 import {
@@ -212,6 +213,15 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
             <div className="md:col-span-2">
               <VelocityChart data={analytics.velocity} emptyMessage={emptyMessage} />
             </div>
+
+            {subscription?.limits.advancedAnalytics && analytics.contextHealth && analytics.contextHealth.distribution.length > 0 && (
+              <div className="md:col-span-2">
+                <ContextHealthChart
+                  data={analytics.contextHealth.distribution}
+                  emptyMessage={emptyMessage}
+                />
+              </div>
+            )}
 
             {subscription?.limits.advancedAnalytics && analytics.qualityScore && (
               <>
