@@ -98,7 +98,7 @@
 
 ### Implementation for User Story 4
 
-- [ ] T020 [US4] Add a context metrics grid section (peak context, avg context, turn count with formatAbbreviatedNumber formatting) to the CollapsibleContent in `components/ticket/jobs-timeline.tsx`, rendered after the token breakdown grid only when job.peakContextTokens != null — hidden for null-metric jobs (FR-006)
+- [x] T020 [US4] Add a context metrics grid section (peak context, avg context, turn count with formatAbbreviatedNumber formatting) to the CollapsibleContent in `components/ticket/jobs-timeline.tsx`, rendered after the token breakdown grid only when job.peakContextTokens != null — hidden for null-metric jobs (FR-006)
 
 **Checkpoint**: Expanded job detail shows context metrics alongside existing telemetry. US4 acceptance scenarios pass.
 

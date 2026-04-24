@@ -238,6 +238,30 @@ function JobRow({
               </div>
             </div>
 
+            {/* Context Metrics */}
+            {job.peakContextTokens != null && (
+              <div className="grid grid-cols-2 gap-4 text-sm border-t border-border pt-3">
+                <div>
+                  <span className="text-ctp-overlay0">Peak Context:</span>
+                  <span className="ml-2 text-foreground font-medium">
+                    {formatAbbreviatedNumber(job.peakContextTokens)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-ctp-overlay0">Avg Context:</span>
+                  <span className="ml-2 text-foreground font-medium">
+                    {job.avgContextTokens != null ? formatAbbreviatedNumber(job.avgContextTokens) : '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-ctp-overlay0">Turn Count:</span>
+                  <span className="ml-2 text-foreground font-medium">
+                    {job.turnCount ?? '-'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Timestamp */}
             <div className="text-xs text-ctp-overlay0 border-t border-border pt-3">
               Started {formatDistanceToNow(new Date(job.startedAt), { addSuffix: true })}
