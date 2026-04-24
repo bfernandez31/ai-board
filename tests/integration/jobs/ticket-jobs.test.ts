@@ -167,6 +167,43 @@ describe('Ticket Jobs API', () => {
       expect(response.data[0]!.id).toBeLessThan(response.data[1]!.id);
     });
 
+    it('should return context metric fields when populated', async () => {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: {
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          peakContextTokens: 82000,
+          avgContextTokens: 41000,
+          turnCount: 12,
+        },
+      });
+
+      const response = await ctx.api.get<TicketJobWithTelemetry[]>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs`
+      );
+
+      expect(response.status).toBe(200);
+      const job = response.data.find((j) => j.id === jobId);
+      expect(job).toBeDefined();
+      expect(job!.peakContextTokens).toBe(82000);
+      expect(job!.avgContextTokens).toBe(41000);
+      expect(job!.turnCount).toBe(12);
+    });
+
+    it('should return null context metrics for jobs without context data', async () => {
+      const response = await ctx.api.get<TicketJobWithTelemetry[]>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs`
+      );
+
+      expect(response.status).toBe(200);
+      const job = response.data.find((j) => j.id === jobId);
+      expect(job).toBeDefined();
+      expect(job!.peakContextTokens).toBeNull();
+      expect(job!.avgContextTokens).toBeNull();
+      expect(job!.turnCount).toBeNull();
+    });
+
     it('surfaces Gemini-native telemetry fields through the ticket jobs API', async () => {
       await prisma.job.update({
         where: { id: jobId },

@@ -42,6 +42,9 @@ interface TelemetryMetrics {
   toolsUsed: Set<string>;
   /** When set, Gemini cost is estimated from merged token values using this model */
   geminiCostModel?: string | null;
+  peakContextTokens: number;
+  contextTokensSum: number;
+  turnCount: number;
 }
 
 type TelemetryMergeMode = 'DELTA' | 'CUMULATIVE';
@@ -57,6 +60,9 @@ function createEmptyMetrics(): TelemetryMetrics {
     durationMs: 0,
     model: null,
     toolsUsed: new Set<string>(),
+    peakContextTokens: 0,
+    contextTokensSum: 0,
+    turnCount: 0,
   };
 }
 
@@ -194,6 +200,9 @@ async function updateJobMetrics(
       costUsd: true,
       durationMs: true,
       toolsUsed: true,
+      peakContextTokens: true,
+      avgContextTokens: true,
+      turnCount: true,
     },
   });
 
@@ -248,6 +257,18 @@ async function updateJobMetrics(
 
   if (metrics.model) {
     updateData.model = metrics.model;
+  }
+
+  if (metrics.turnCount > 0) {
+    const newPeak = Math.max(job.peakContextTokens ?? 0, metrics.peakContextTokens);
+    const existingTurnCount = job.turnCount ?? 0;
+    const existingSum = (job.avgContextTokens ?? 0) * existingTurnCount;
+    const totalTurnCount = existingTurnCount + metrics.turnCount;
+    const totalSum = existingSum + metrics.contextTokensSum;
+
+    updateData.peakContextTokens = newPeak;
+    updateData.avgContextTokens = Math.round(totalSum / totalTurnCount);
+    updateData.turnCount = totalTurnCount;
   }
 
   const updatedJob = await prisma.job.update({
@@ -656,7 +677,8 @@ export async function processTelemetry(
         const isToolEvent = DELTA_TOOL_EVENTS.includes(eventName);
 
         if (isClaudeApiRequest) {
-          deltaMetrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
+          const turnInputTokens = parseIntAttribute(findAttribute(attrs, 'input_tokens'));
+          deltaMetrics.inputTokens += turnInputTokens;
           deltaMetrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
           deltaMetrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
           deltaMetrics.cacheCreationTokens += parseIntAttribute(findAttribute(attrs, 'cache_creation_tokens'));
@@ -665,6 +687,12 @@ export async function processTelemetry(
           deltaMetrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
           const model = findAttribute(attrs, 'model');
           if (model) deltaMetrics.model = String(model);
+
+          if (turnInputTokens > 0) {
+            deltaMetrics.peakContextTokens = Math.max(deltaMetrics.peakContextTokens, turnInputTokens);
+            deltaMetrics.contextTokensSum += turnInputTokens;
+            deltaMetrics.turnCount += 1;
+          }
         }
 
         if (isCodexTokenEvent) {
@@ -691,6 +719,12 @@ export async function processTelemetry(
               outputTokens,
               cachedTokens
             );
+
+          if (totalInputTokens > 0) {
+            deltaMetrics.peakContextTokens = Math.max(deltaMetrics.peakContextTokens, totalInputTokens);
+            deltaMetrics.contextTokensSum += totalInputTokens;
+            deltaMetrics.turnCount += 1;
+          }
         }
 
         if (isToolEvent) {

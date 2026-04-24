@@ -32,17 +32,17 @@
 
 ### Tests for User Story 2
 
-- [ ] T002 [US2] Extend `tests/integration/jobs/status.test.ts` with scenarios that simulate OTLP telemetry containing per-turn input_tokens on `claude_code.api_request` events, then verify peakContextTokens, avgContextTokens, and turnCount are correctly computed and persisted on the job record — include multi-batch merge, single-turn, and Mistral/Gemini null-preservation cases
-- [ ] T003 [P] [US2] Extend `tests/integration/jobs/ticket-jobs.test.ts` to verify the three new context metric fields are returned in the GET `/api/projects/:projectId/tickets/:id/jobs` response when populated, and are null when the job has no context metrics
+- [x] T002 [US2] Extend `tests/integration/jobs/status.test.ts` with scenarios that simulate OTLP telemetry containing per-turn input_tokens on `claude_code.api_request` events, then verify peakContextTokens, avgContextTokens, and turnCount are correctly computed and persisted on the job record — include multi-batch merge, single-turn, and Mistral/Gemini null-preservation cases
+- [x] T003 [P] [US2] Extend `tests/integration/jobs/ticket-jobs.test.ts` to verify the three new context metric fields are returned in the GET `/api/projects/:projectId/tickets/:id/jobs` response when populated, and are null when the job has no context metrics
 
 ### Implementation for User Story 2
 
-- [ ] T004 [US2] Extend TelemetryMetrics interface to add peakContextTokens (number), contextTokensSum (number), and turnCount (number) fields, and update createEmptyMetrics() to initialize them to 0 in `lib/telemetry/otlp-processor.ts`
-- [ ] T005 [US2] Extend Claude event processing: on each `claude_code.api_request` event, extract input_tokens and update deltaMetrics.peakContextTokens (via Math.max), deltaMetrics.contextTokensSum (running sum), and deltaMetrics.turnCount (increment) in `lib/telemetry/otlp-processor.ts`
-- [ ] T006 [US2] Extend Codex event processing: on each `codex.sse_event` with `response.completed`, use totalInputTokens (before subtracting cached) to update peakContextTokens, contextTokensSum, and turnCount in `lib/telemetry/otlp-processor.ts`
-- [ ] T007 [US2] Extend updateJobMetrics() to merge context metrics across batches: peak via Math.max with existing, avg recomputed from (existingAvg × existingTurnCount + newSum) / totalTurnCount, turnCount via addition — only write fields when metrics.turnCount > 0 in `lib/telemetry/otlp-processor.ts`
-- [ ] T008 [P] [US2] Add peakContextTokens (number | null), avgContextTokens (number | null), and turnCount (number | null) to the TicketJobWithTelemetry interface in `lib/types/job-types.ts`
-- [ ] T009 [P] [US2] Add `peakContextTokens: true`, `avgContextTokens: true`, `turnCount: true` to the Prisma select clause in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`
+- [x] T004 [US2] Extend TelemetryMetrics interface to add peakContextTokens (number), contextTokensSum (number), and turnCount (number) fields, and update createEmptyMetrics() to initialize them to 0 in `lib/telemetry/otlp-processor.ts`
+- [x] T005 [US2] Extend Claude event processing: on each `claude_code.api_request` event, extract input_tokens and update deltaMetrics.peakContextTokens (via Math.max), deltaMetrics.contextTokensSum (running sum), and deltaMetrics.turnCount (increment) in `lib/telemetry/otlp-processor.ts`
+- [x] T006 [US2] Extend Codex event processing: on each `codex.sse_event` with `response.completed`, use totalInputTokens (before subtracting cached) to update peakContextTokens, contextTokensSum, and turnCount in `lib/telemetry/otlp-processor.ts`
+- [x] T007 [US2] Extend updateJobMetrics() to merge context metrics across batches: peak via Math.max with existing, avg recomputed from (existingAvg × existingTurnCount + newSum) / totalTurnCount, turnCount via addition — only write fields when metrics.turnCount > 0 in `lib/telemetry/otlp-processor.ts`
+- [x] T008 [P] [US2] Add peakContextTokens (number | null), avgContextTokens (number | null), and turnCount (number | null) to the TicketJobWithTelemetry interface in `lib/types/job-types.ts`
+- [x] T009 [P] [US2] Add `peakContextTokens: true`, `avgContextTokens: true`, `turnCount: true` to the Prisma select clause in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`
 
 **Checkpoint**: Context metrics are computed from telemetry and persisted on jobs. The API returns them. US2 acceptance scenarios pass.
 

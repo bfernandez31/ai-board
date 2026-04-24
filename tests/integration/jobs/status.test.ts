@@ -419,6 +419,122 @@ describe('Jobs Status', () => {
     });
   });
 
+  describe('Context metrics from OTLP telemetry', () => {
+    function buildOtlpPayload(targetJobId: number, events: Array<{ inputTokens: number; outputTokens?: number }>) {
+      return {
+        resourceLogs: [{
+          resource: {
+            attributes: [
+              { key: 'job_id', value: { stringValue: String(targetJobId) } },
+              { key: 'service.name', value: { stringValue: 'claude-code' } },
+            ],
+          },
+          scopeLogs: [{
+            logRecords: events.map((ev) => ({
+              body: { stringValue: 'claude_code.api_request' },
+              attributes: [
+                { key: 'input_tokens', value: { stringValue: String(ev.inputTokens) } },
+                { key: 'output_tokens', value: { stringValue: String(ev.outputTokens ?? 100) } },
+                { key: 'cost_usd', value: { stringValue: '0.01' } },
+                { key: 'duration_ms', value: { stringValue: '500' } },
+                { key: 'model', value: { stringValue: 'claude-sonnet-4-6' } },
+              ],
+            })),
+          }],
+        }],
+      };
+    }
+
+    it('should compute context metrics from multi-turn Claude telemetry', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const payload = buildOtlpPayload(jobId, [
+        { inputTokens: 10000 },
+        { inputTokens: 25000 },
+        { inputTokens: 80000 },
+        { inputTokens: 45000 },
+      ]);
+
+      const telemetryResponse = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(telemetryResponse.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.peakContextTokens).toBe(80000);
+      expect(job?.avgContextTokens).toBe(40000);
+      expect(job?.turnCount).toBe(4);
+    });
+
+    it('should handle single-turn telemetry (peak equals average)', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const payload = buildOtlpPayload(jobId, [{ inputTokens: 30000 }]);
+      await workflowApi.post('/api/telemetry/v1/logs', payload);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.peakContextTokens).toBe(30000);
+      expect(job?.avgContextTokens).toBe(30000);
+      expect(job?.turnCount).toBe(1);
+    });
+
+    it('should merge context metrics across multiple OTLP batches', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const batch1 = buildOtlpPayload(jobId, [
+        { inputTokens: 10000 },
+        { inputTokens: 20000 },
+      ]);
+      await workflowApi.post('/api/telemetry/v1/logs', batch1);
+
+      const batch2 = buildOtlpPayload(jobId, [
+        { inputTokens: 50000 },
+        { inputTokens: 40000 },
+      ]);
+      await workflowApi.post('/api/telemetry/v1/logs', batch2);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.peakContextTokens).toBe(50000);
+      expect(job?.turnCount).toBe(4);
+      // avg = (10000+20000+50000+40000)/4 = 30000
+      expect(job?.avgContextTokens).toBe(30000);
+    });
+
+    it('should preserve null context fields for Mistral batch telemetry', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const mistralPayload = {
+        jobId,
+        agent: 'MISTRAL',
+        inputTokens: 5000,
+        outputTokens: 2000,
+        model: 'mistral-large-latest',
+      };
+      await workflowApi.post('/api/telemetry/v1/logs', mistralPayload);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.peakContextTokens).toBeNull();
+      expect(job?.avgContextTokens).toBeNull();
+      expect(job?.turnCount).toBeNull();
+      expect(job?.inputTokens).toBe(5000);
+    });
+
+    it('should not alter existing telemetry fields when computing context metrics', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const payload = buildOtlpPayload(jobId, [
+        { inputTokens: 15000, outputTokens: 3000 },
+        { inputTokens: 25000, outputTokens: 5000 },
+      ]);
+      await workflowApi.post('/api/telemetry/v1/logs', payload);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.inputTokens).toBe(40000);
+      expect(job?.outputTokens).toBe(8000);
+      expect(job?.peakContextTokens).toBe(25000);
+      expect(job?.avgContextTokens).toBe(20000);
+      expect(job?.turnCount).toBe(2);
+    });
+  });
+
   describe('Multiple jobs per ticket', () => {
     it('should handle multiple jobs for same ticket', async () => {
       // Complete the first job using workflow API
