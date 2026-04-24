@@ -14,6 +14,11 @@ import { prisma } from '@/lib/db/client';
  * 3. Users can create projects without FK errors
  */
 
+// Tests share a fixed testEmail constant. Under fullyParallel=true,
+// Playwright would otherwise distribute tests across workers and race
+// on the shared unique `email` column.
+test.describe.configure({ mode: 'serial' });
+
 test.describe('First-Time User Creation', () => {
   const testEmail = 'new-user-test@e2e.local';
   const testUserId = 'test-user-new-' + Date.now();
