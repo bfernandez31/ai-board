@@ -18,7 +18,7 @@
 
 **Purpose**: Add the three context metric columns to the Job model so all downstream work has its data foundation.
 
-- [ ] T001 Add peakContextTokens (Int?), avgContextTokens (Int?), and turnCount (Int?) fields to the Job model in `prisma/schema.prisma` and run `bunx prisma migrate dev --name add_context_metrics` to generate the migration
+- [x] T001 Add peakContextTokens (Int?), avgContextTokens (Int?), and turnCount (Int?) fields to the Job model in `prisma/schema.prisma` and run `bunx prisma migrate dev --name add_context_metrics` to generate the migration
 
 **Checkpoint**: Schema updated — three nullable integer columns exist on the Job table.
 

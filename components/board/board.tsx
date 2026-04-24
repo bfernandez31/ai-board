@@ -147,6 +147,9 @@ function toBoardSnapshotJobs(
       toolsUsed: job.toolsUsed,
       qualityScore: job.qualityScore,
       qualityScoreDetails: job.qualityScoreDetails,
+      peakContextTokens: null,
+      avgContextTokens: null,
+      turnCount: null,
     } satisfies Job;
   });
 }

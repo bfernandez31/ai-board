@@ -59,6 +59,11 @@ model Job {
   // JSON string containing dimension sub-scores, weights, and threshold label
   qualityScoreDetails String?
 
+  // Per-turn context metrics (computed from per-turn telemetry spans)
+  peakContextTokens   Int?
+  avgContextTokens    Int?
+  turnCount           Int?
+
   log JobLog?
 
   @@index([projectId])
