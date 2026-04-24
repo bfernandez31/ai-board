@@ -1,0 +1,175 @@
+openapi: 3.1.0
+info:
+  title: AIB-734 Project Context Analytics API
+  version: 1.0.0
+  description: |
+    Extension of the project analytics endpoint to expose peak-context
+    distribution data and context/quality comparison slices.
+
+paths:
+  /api/projects/{projectId}/analytics:
+    get:
+      summary: Return analytics data including context-size reporting
+      operationId: getProjectContextAnalytics
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: range
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, all]
+        - in: query
+          name: outcome
+          schema:
+            type: string
+            enum: [shipped, closed, all-completed]
+        - in: query
+          name: agent
+          schema:
+            type: string
+        - in: query
+          name: command
+          schema:
+            type: string
+            description: Command filter for context analytics. `all` means no command filter.
+        - in: query
+          name: workflowType
+          schema:
+            type: string
+            enum: [all, FULL, QUICK, CLEAN]
+        - in: query
+          name: qualityBucket
+          schema:
+            type: string
+            enum: [all, HIGH, MEDIUM, LOW]
+      responses:
+        '200':
+          description: Analytics data for the selected project and filter slice.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextAnalyticsResponse'
+        '400':
+          description: Invalid analytics filters.
+        '403':
+          description: Access denied.
+        '404':
+          description: Project not found.
+        '500':
+          description: Internal server error.
+
+components:
+  schemas:
+    ContextRiskBand:
+      type: string
+      enum: [HEALTHY, WARNING, DANGER]
+
+    ContextAnalyticsFilters:
+      type: object
+      required: [range, outcome, agent, command, workflowType, qualityBucket]
+      properties:
+        range:
+          type: string
+          enum: [7d, 30d, 90d, all]
+        outcome:
+          type: string
+          enum: [shipped, closed, all-completed]
+        agent:
+          type: string
+        command:
+          type: string
+        workflowType:
+          type: string
+          enum: [all, FULL, QUICK, CLEAN]
+        qualityBucket:
+          type: string
+          enum: [all, HIGH, MEDIUM, LOW]
+
+    PeakContextBucket:
+      type: object
+      required: [label, minInclusive, maxExclusive, jobCount]
+      properties:
+        label:
+          type: string
+        minInclusive:
+          type: integer
+        maxExclusive:
+          type: [integer, 'null']
+        jobCount:
+          type: integer
+
+    ContextRiskSummary:
+      type: object
+      required: [band, jobCount]
+      properties:
+        band:
+          $ref: '#/components/schemas/ContextRiskBand'
+        jobCount:
+          type: integer
+
+    QualityBucketContextSummary:
+      type: object
+      required: [bucket, jobCount, averagePeakContextSize]
+      properties:
+        bucket:
+          type: string
+          enum: [HIGH, MEDIUM, LOW]
+        jobCount:
+          type: integer
+        averagePeakContextSize:
+          type: integer
+
+    ContextAnalytics:
+      type: object
+      required:
+        - eligibleJobCount
+        - excludedMissingContextCount
+        - excludedMissingQualityScoreCount
+        - peakDistribution
+        - riskSummary
+        - byQualityBucket
+      properties:
+        eligibleJobCount:
+          type: integer
+        excludedMissingContextCount:
+          type: integer
+        excludedMissingQualityScoreCount:
+          type: integer
+        peakDistribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/PeakContextBucket'
+        riskSummary:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextRiskSummary'
+        byQualityBucket:
+          type: array
+          items:
+            $ref: '#/components/schemas/QualityBucketContextSummary'
+
+    ContextAnalyticsResponse:
+      type: object
+      required:
+        - filters
+        - generatedAt
+        - jobCount
+        - hasData
+        - context
+      properties:
+        filters:
+          $ref: '#/components/schemas/ContextAnalyticsFilters'
+        generatedAt:
+          type: string
+          format: date-time
+        jobCount:
+          type: integer
+        hasData:
+          type: boolean
+        context:
+          $ref: '#/components/schemas/ContextAnalytics'

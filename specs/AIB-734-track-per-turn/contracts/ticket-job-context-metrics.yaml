@@ -1,0 +1,141 @@
+openapi: 3.1.0
+info:
+  title: AIB-734 Ticket Job Context Metrics API
+  version: 1.0.0
+  description: |
+    Extension of the existing ticket jobs endpoint to expose nullable
+    per-job context metrics derived from supported turn-level telemetry.
+
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/jobs:
+    get:
+      summary: Return ticket jobs with normalized telemetry and nullable context metrics
+      operationId: getTicketJobsWithContextMetrics
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: path
+          name: ticketId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Jobs found for the ticket.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TicketJob'
+        '400':
+          description: Invalid project or ticket identifier.
+        '401':
+          description: Unauthorized workflow token or missing session.
+        '403':
+          description: Ticket belongs to a different project or user lacks access.
+        '404':
+          description: Project or ticket not found.
+        '500':
+          description: Internal server error.
+
+components:
+  schemas:
+    ContextRiskBand:
+      type: string
+      enum: [HEALTHY, WARNING, DANGER]
+
+    TicketJobLogSummary:
+      type: object
+      required: [captureStatus, preview]
+      properties:
+        captureStatus:
+          type: string
+          enum: [CAPTURED, UNAVAILABLE, PRUNED]
+        preview:
+          type: string
+
+    TicketJob:
+      type: object
+      required:
+        - id
+        - command
+        - status
+        - branch
+        - startedAt
+        - completedAt
+        - inputTokens
+        - outputTokens
+        - cacheReadTokens
+        - cacheCreationTokens
+        - costUsd
+        - durationMs
+        - model
+        - toolsUsed
+        - qualityScore
+        - qualityScoreDetails
+        - peakContextSize
+        - averageContextSize
+        - turnCount
+        - contextRiskBand
+        - log
+      properties:
+        id:
+          type: integer
+        command:
+          type: string
+        status:
+          type: string
+        branch:
+          type: [string, 'null']
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: [string, 'null']
+          format: date-time
+        inputTokens:
+          type: [integer, 'null']
+        outputTokens:
+          type: [integer, 'null']
+        cacheReadTokens:
+          type: [integer, 'null']
+        cacheCreationTokens:
+          type: [integer, 'null']
+        costUsd:
+          type: [number, 'null']
+        durationMs:
+          type: [integer, 'null']
+        model:
+          type: [string, 'null']
+        toolsUsed:
+          type: array
+          items:
+            type: string
+        qualityScore:
+          type: [integer, 'null']
+        qualityScoreDetails:
+          type: [string, 'null']
+        peakContextSize:
+          type: [integer, 'null']
+          description: Peak per-turn context size for supported telemetry sources.
+        averageContextSize:
+          type: [integer, 'null']
+          description: Average per-turn context size for supported telemetry sources.
+        turnCount:
+          type: [integer, 'null']
+          description: Number of turns used to derive the context metrics.
+        contextRiskBand:
+          oneOf:
+            - $ref: '#/components/schemas/ContextRiskBand'
+            - type: 'null'
+          description: Null when `peakContextSize` is absent.
+        log:
+          oneOf:
+            - $ref: '#/components/schemas/TicketJobLogSummary'
+            - type: 'null'
