@@ -108,8 +108,8 @@
 
 **Purpose**: Final validation across all stories.
 
-- [ ] T021 [P] Run `bun run type-check` and `bun run lint` to verify no type errors or lint violations across all modified files
-- [ ] T022 Run `bun run test:unit` and `bun run test:integration` to verify all new and existing tests pass with no regressions
+- [x] T021 [P] Run `bun run type-check` and `bun run lint` to verify no type errors or lint violations across all modified files
+- [x] T022 Run `bun run test:unit` and `bun run test:integration` to verify all new and existing tests pass with no regressions
 
 ---
 
