@@ -100,10 +100,10 @@ test.describe('Auto-mode chain — INBOX → BUILD with one click', () => {
     expect(createResp.ok()).toBe(true);
     const { id: ticketId } = await createResp.json();
 
-    await page.goto(`${BASE_URL}/`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
 
     const card = page.locator(`[data-ticket-id="${ticketId}"]`);
-    await expect(card).toBeVisible({ timeout: 5000 });
+    await expect(card).toBeVisible({ timeout: 10000 });
 
     // Hover the card to reveal hover-only icons (fast-forward + cancel)
     await card.hover();

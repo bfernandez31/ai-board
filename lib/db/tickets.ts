@@ -520,7 +520,16 @@ export async function createTicket(
  * SHIP stage is paginated: only the first `shipLimit` tickets are returned.
  */
 export async function getTicketsWithJobs(projectId: number, shipLimit: number = 50) {
-  const jobsInclude = { jobs: { orderBy: { startedAt: 'desc' as const } } };
+  // Include log relation so the SSR-seeded React Query cache for `ticketJobs`
+  // has the same shape as the API (`GET /api/projects/:id/tickets/:id/jobs`),
+  // which selects `log: { captureStatus, preview }`. Without this, the Stats
+  // tab's inline log preview never renders because the cached jobs lack `log`.
+  const jobsInclude = {
+    jobs: {
+      orderBy: { startedAt: 'desc' as const },
+      include: { log: { select: { captureStatus: true, preview: true } } },
+    },
+  };
 
   const [nonShipTickets, shipTickets, shipTotal] = await Promise.all([
     prisma.ticket.findMany({

@@ -65,9 +65,9 @@ test.describe('AIB-715 capture and display logs', () => {
     });
 
     // Navigate to the project board and open the ticket modal.
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/projects/${projectId}/board`);
     const card = page.locator(`[data-ticket-id="${ticket.id}"]`);
-    await card.waitFor({ state: 'visible' });
+    await card.waitFor({ state: 'visible', timeout: 10000 });
     await card.click();
 
     // Open the Stats tab where the timeline + preview live.
