@@ -321,11 +321,14 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
   - Duration (formatted time)
   - Cost (formatted USD)
   - Model used (e.g., "claude-sonnet-4-5")
+  - Peak context pill — compact badge showing the maximum per-turn context size observed during the run (formatted as an abbreviated token count). Hover reveals the absolute token count and the percentage of the model's context window. The pill uses neutral styling below 60% of the model's context window, warning styling between 60% and 80%, and danger styling at or above 80%. The pill is hidden entirely (no placeholder, no zero) for jobs run with agents that expose no per-turn telemetry (Mistral), for jobs whose model has no registered context window, and for jobs that predate per-turn ingestion
 - Jobs are expandable to reveal detailed token breakdown:
   - Input tokens
   - Output tokens
   - Cache read tokens
   - Cache creation tokens
+  - Average per-turn context size — shown only when the job recorded per-turn telemetry; row is hidden entirely (not "—" or "0") otherwise
+  - Turn count — shown only when the job recorded per-turn telemetry; row is hidden entirely otherwise
 
 **Tools Usage**:
 - Aggregated count of all tools used across jobs

@@ -329,6 +329,11 @@ model Job {
   model               String?   @db.VarChar(50)  // Primary model used
   toolsUsed           String[]  @default([])     // List of tools used (Edit, Write, Bash, etc.)
 
+  // Per-turn context-size metrics (derived from per-call OTLP events)
+  peakContextTokens   Int?      // Maximum per-turn context tokens attended
+  avgContextTokens    Int?      // Mean per-turn context tokens attended (rounded)
+  turnCount           Int?      // Number of per-turn events successfully parsed
+
   // Quality score (FULL workflow verify jobs only)
   qualityScore        Int?      // Final weighted quality score (0-100)
   qualityScoreDetails String?   @db.Text  // JSON with dimension sub-scores and weights
@@ -368,6 +373,9 @@ model Job {
 - `durationMs`: Total duration of Claude API calls in milliseconds (nullable)
 - `model`: Primary Claude model used (max 50 chars, nullable)
 - `toolsUsed`: Array of Claude tools used during execution (default: empty array)
+- `peakContextTokens`: Maximum per-turn context size observed during the job (nullable). Derived as `input_tokens + cache_read_tokens + cache_creation_tokens` for Claude turns, `input_token_count` for Codex turns, and the max cumulative snapshot for Gemini. Null for agents with no per-turn telemetry (Mistral) and for jobs that predate per-turn ingestion.
+- `avgContextTokens`: Arithmetic mean of per-turn context size across parsed turns, rounded to integer (nullable). Null under the same conditions as `peakContextTokens`, plus null for Gemini (cumulative snapshots are not per-turn deltas).
+- `turnCount`: Count of per-turn events successfully parsed during the job (nullable). Null under the same conditions as `avgContextTokens`.
 - `workflowRunId`: GitHub Actions workflow run ID as BigInt (nullable, populated by the workflow's first RUNNING status callback; enables job cancellation via GitHub API)
 - `qualityScore`: Final weighted code quality score 0-100 (nullable, FULL workflow verify jobs only)
 - `qualityScoreDetails`: JSON string containing all five dimension sub-scores, weights, and computed final score (nullable, populated alongside `qualityScore`)
@@ -416,6 +424,14 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - Tools usage aggregated from `toolsUsed` arrays across all jobs
 - Null telemetry values treated as 0 for aggregation
 - Real-time updates via existing 2-second job polling mechanism
+
+**Per-Turn Context Metrics**:
+- `peakContextTokens`, `avgContextTokens`, and `turnCount` are written by the OTLP processor in the same atomic `UPDATE` that writes the existing aggregated tokens — never split across multiple writes
+- A `null` value is never replaced with another `null`: a batch with no parseable per-turn events leaves the prior values untouched
+- A `0` is never stored as a stand-in for "unknown" — the contract is strictly "null when no per-turn telemetry was observed"
+- No backfill is run on historical jobs; jobs that predate per-turn ingestion stay null
+- Gemini jobs may populate `peakContextTokens` while leaving `avgContextTokens` and `turnCount` null, because Gemini emits cumulative snapshots rather than per-turn deltas
+- Mistral jobs leave all three fields null (batch payload exposes no per-turn data)
 
 **Quality Score Data**:
 - `qualityScore` populated only when: `command = "verify"` and `status = "COMPLETED"` (all workflow types)
