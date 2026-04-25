@@ -114,8 +114,7 @@ function JobRow({
   // Per-turn peak context pill (AIB-725). Only renders for jobs whose model
   // we can resolve to a known context window (FR-008: no placeholder).
   const peakContextWindow = getContextWindow(job.model);
-  const showPeakContextPill =
-    job.peakContextTokens != null && job.model != null && peakContextWindow != null;
+  const showPeakContextPill = job.peakContextTokens != null && peakContextWindow != null;
   const peakContextState = getPeakContextThresholdState(job.peakContextTokens, job.model);
   const peakContextClasses = getPeakContextColor(peakContextState);
   const peakContextPercent =

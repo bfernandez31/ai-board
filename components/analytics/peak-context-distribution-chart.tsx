@@ -77,11 +77,7 @@ export function PeakContextDistributionChart({ data }: PeakContextDistributionCh
   const [qualityBucket, setQualityBucket] = useState<QualityBucket>('all');
 
   const commandOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const job of data.jobs) {
-      set.add(job.command);
-    }
-    return Array.from(set).sort();
+    return Array.from(new Set(data.jobs.map((job) => job.command))).sort();
   }, [data.jobs]);
 
   const filteredJobs = useMemo(() => {

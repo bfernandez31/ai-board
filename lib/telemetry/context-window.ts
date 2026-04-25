@@ -61,13 +61,8 @@ export function getContextWindow(model: string | null): number | null {
   }
 
   const normalized = model.toLowerCase();
-  if (normalized.includes('gemini-2.5-pro')) {
-    return GEMINI_CONTEXT_WINDOW;
-  }
-  if (normalized.includes('gemini-2.5-flash')) {
-    return GEMINI_CONTEXT_WINDOW;
-  }
-  if (normalized.includes('gemini-2.0-flash')) {
+  const geminiFamilies = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+  if (geminiFamilies.some((family) => normalized.includes(family))) {
     return GEMINI_CONTEXT_WINDOW;
   }
 
