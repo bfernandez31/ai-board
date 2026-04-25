@@ -31,6 +31,12 @@ import {
 import { formatCommandName } from '@/lib/utils/format-command';
 import { CancelConfirmationModal } from '@/components/board/cancel-confirmation-modal';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
+import { Badge } from '@/components/ui/badge';
+import {
+  getContextWindow,
+  getPeakContextThresholdState,
+  getPeakContextColor,
+} from '@/lib/telemetry/context-window';
 import { LogViewerSheet } from './log-viewer-sheet';
 
 const TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED', 'CANCELLED']);
@@ -102,7 +108,24 @@ function JobRow({
     job.inputTokens != null ||
     job.outputTokens != null ||
     job.cacheReadTokens != null ||
-    job.cacheCreationTokens != null;
+    job.cacheCreationTokens != null ||
+    job.turnCount != null;
+
+  // Per-turn peak context pill (AIB-725). Only renders for jobs whose model
+  // we can resolve to a known context window (FR-008: no placeholder).
+  const peakContextWindow = getContextWindow(job.model);
+  const showPeakContextPill =
+    job.peakContextTokens != null && job.model != null && peakContextWindow != null;
+  const peakContextState = getPeakContextThresholdState(job.peakContextTokens, job.model);
+  const peakContextClasses = getPeakContextColor(peakContextState);
+  const peakContextPercent =
+    showPeakContextPill && peakContextWindow
+      ? Math.round((job.peakContextTokens! / peakContextWindow) * 100)
+      : 0;
+  const peakContextTitle =
+    showPeakContextPill && peakContextWindow
+      ? `${formatAbbreviatedNumber(job.peakContextTokens!)} tokens · ${peakContextPercent}% of ${formatAbbreviatedNumber(peakContextWindow)} context window`
+      : '';
 
   const log = job.log;
   const isTerminal = TERMINAL_STATUSES.has(job.status);
@@ -148,6 +171,18 @@ function JobRow({
           <span className="text-sm text-ctp-green w-16 text-right" data-testid={`job-cost-${job.id}`}>
             {job.costUsd != null ? formatCost(job.costUsd) : '-'}
           </span>
+
+          {/* Peak per-turn context pill (AIB-725) */}
+          {showPeakContextPill && (
+            <Badge
+              variant="outline"
+              className={`${peakContextClasses.text} ${peakContextClasses.bg}`}
+              title={peakContextTitle}
+              data-testid={`job-peak-context-${job.id}`}
+            >
+              {formatAbbreviatedNumber(job.peakContextTokens!)}
+            </Badge>
+          )}
 
           {/* Cancel Button - always visible for PENDING/RUNNING jobs */}
           {isCancellable && (
@@ -223,6 +258,22 @@ function JobRow({
                   {job.cacheCreationTokens != null ? formatAbbreviatedNumber(job.cacheCreationTokens) : '-'}
                 </span>
               </div>
+              {job.avgContextTokens != null && (
+                <div>
+                  <span className="text-ctp-overlay0">Avg Context:</span>
+                  <span className="ml-2 text-foreground font-medium">
+                    {formatAbbreviatedNumber(job.avgContextTokens)}
+                  </span>
+                </div>
+              )}
+              {job.turnCount != null && (
+                <div>
+                  <span className="text-ctp-overlay0">Turn Count:</span>
+                  <span className="ml-2 text-foreground font-medium">
+                    {formatAbbreviatedNumber(job.turnCount)}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Timestamp */}

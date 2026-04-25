@@ -145,6 +145,9 @@ export async function GET(
         toolsUsed: true,
         qualityScore: true,
         qualityScoreDetails: true,
+        peakContextTokens: true,
+        avgContextTokens: true,
+        turnCount: true,
         log: {
           select: {
             captureStatus: true,
