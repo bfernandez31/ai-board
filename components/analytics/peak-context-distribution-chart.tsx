@@ -41,9 +41,9 @@ const BUCKET_FILLS: Record<BucketKey, string> = {
   'unknown': 'hsl(var(--muted-foreground))',
 };
 
-function bucketFor(job: PeakContextJob): BucketKey {
+function bucketFor(job: PeakContextJob): BucketKey | null {
   if (job.peakContextTokens == null) {
-    return 'unknown';
+    return null;
   }
   const window = getContextWindow(job.model);
   if (window == null || window <= 0) {
@@ -96,6 +96,7 @@ export function PeakContextDistributionChart({ data }: PeakContextDistributionCh
     const counts = new Map<BucketKey, number>(BUCKET_ORDER.map((b) => [b, 0]));
     for (const job of filteredJobs) {
       const bucket = bucketFor(job);
+      if (bucket == null) continue;
       counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
     }
     return BUCKET_ORDER.map((bucket) => ({

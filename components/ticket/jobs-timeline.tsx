@@ -269,7 +269,7 @@ function JobRow({
                 <div>
                   <span className="text-ctp-overlay0">Turn Count:</span>
                   <span className="ml-2 text-foreground font-medium">
-                    {formatAbbreviatedNumber(job.turnCount)}
+                    {job.turnCount.toLocaleString()}
                   </span>
                 </div>
               )}

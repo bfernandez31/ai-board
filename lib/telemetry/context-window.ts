@@ -46,9 +46,12 @@ export const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
  * Resolve the context window for a model string.
  *
  * Tries an exact-match lookup first, then falls back to a substring match
- * for the Gemini family (mirrors `normalizeGeminiModel` in otlp-processor.ts).
- * Returns `null` when the model is unknown so callers can hide UI rather
- * than render a misleading percentage.
+ * across every registered family so versioned identifiers from OTLP
+ * (e.g. `claude-sonnet-4-6-20250514`, `gpt-5-codex-2026...`) still resolve
+ * to their base family's window. Keys are checked longest-first so more
+ * specific entries (e.g. `gpt-5.4`) win over their shorter prefixes
+ * (e.g. `gpt-5`). Returns `null` when no family matches so callers can
+ * hide UI rather than render a misleading percentage.
  */
 export function getContextWindow(model: string | null): number | null {
   if (!model) {
@@ -61,9 +64,13 @@ export function getContextWindow(model: string | null): number | null {
   }
 
   const normalized = model.toLowerCase();
-  const geminiFamilies = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'];
-  if (geminiFamilies.some((family) => normalized.includes(family))) {
-    return GEMINI_CONTEXT_WINDOW;
+  const sortedKeys = Object.keys(MODEL_CONTEXT_WINDOWS).sort(
+    (a, b) => b.length - a.length
+  );
+  for (const key of sortedKeys) {
+    if (normalized.includes(key.toLowerCase())) {
+      return MODEL_CONTEXT_WINDOWS[key]!;
+    }
   }
 
   return null;
