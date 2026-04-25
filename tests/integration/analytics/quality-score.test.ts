@@ -56,7 +56,7 @@ describe('Analytics Route - Quality Score', () => {
           stage: Stage.SHIP,
           workflowType: WorkflowType.FULL,
           ticketNumber: 1,
-          ticketKey: 'E2E-1',
+          ticketKey: `E2E-${projectId}-1`,
           updatedAt: daysAgo(3),
         },
         {
@@ -66,7 +66,7 @@ describe('Analytics Route - Quality Score', () => {
           stage: Stage.SHIP,
           workflowType: WorkflowType.FULL,
           ticketNumber: 2,
-          ticketKey: 'E2E-2',
+          ticketKey: `E2E-${projectId}-2`,
           updatedAt: daysAgo(5),
         },
         {
@@ -76,7 +76,7 @@ describe('Analytics Route - Quality Score', () => {
           stage: Stage.SHIP,
           workflowType: WorkflowType.QUICK,
           ticketNumber: 3,
-          ticketKey: 'E2E-3',
+          ticketKey: `E2E-${projectId}-3`,
           updatedAt: daysAgo(2),
         },
       ],
@@ -87,7 +87,7 @@ describe('Analytics Route - Quality Score', () => {
     await prisma.job.createMany({
       data: [
         {
-          ticketId: idByKey.get('E2E-1')!,
+          ticketId: idByKey.get(`E2E-${projectId}-1`)!,
           projectId,
           command: 'verify',
           status: JobStatus.COMPLETED,
@@ -100,9 +100,12 @@ describe('Analytics Route - Quality Score', () => {
           outputTokens: 50,
           qualityScore: 82,
           qualityScoreDetails,
+          peakContextSize: 120000,
+          averageContextSize: 90000,
+          turnCount: 4,
         },
         {
-          ticketId: idByKey.get('E2E-2')!,
+          ticketId: idByKey.get(`E2E-${projectId}-2`)!,
           projectId,
           command: 'verify',
           status: JobStatus.COMPLETED,
@@ -115,9 +118,12 @@ describe('Analytics Route - Quality Score', () => {
           outputTokens: 60,
           qualityScore: 72,
           qualityScoreDetails: qualityScoreDetails2,
+          peakContextSize: 80000,
+          averageContextSize: 70000,
+          turnCount: 3,
         },
         {
-          ticketId: idByKey.get('E2E-3')!,
+          ticketId: idByKey.get(`E2E-${projectId}-3`)!,
           projectId,
           command: 'quick-impl',
           status: JobStatus.COMPLETED,
@@ -167,6 +173,11 @@ describe('Analytics Route - Quality Score', () => {
     expect(bugDetection).toBeDefined();
     expect(bugDetection!.averageScore).toBe(80); // (85 + 75) / 2
     expect(bugDetection!.weight).toBe(0.3);
+    expect(data.context.byQualityBucket).toEqual([
+      { bucket: 'HIGH', jobCount: 1, averagePeakContextSize: 120000 },
+      { bucket: 'MEDIUM', jobCount: 1, averagePeakContextSize: 80000 },
+    ]);
+    expect(data.context.excludedMissingQualityScoreCount).toBe(0);
   });
 
   it('returns empty quality score data when no scored jobs exist', async () => {
@@ -184,7 +195,7 @@ describe('Analytics Route - Quality Score', () => {
         stage: Stage.SHIP,
         workflowType: WorkflowType.FULL,
         ticketNumber: 1,
-        ticketKey: 'E2E-1',
+        ticketKey: `E2E-${ctx.projectId}-1`,
       },
     });
 
@@ -219,5 +230,6 @@ describe('Analytics Route - Quality Score', () => {
     expect(data.qualityScore.overallAverage).toBeNull();
     expect(data.qualityScore.scoreTrend).toEqual([]);
     expect(data.qualityScore.dimensionComparison).toEqual([]);
+    expect(data.context.byQualityBucket).toEqual([]);
   });
 });

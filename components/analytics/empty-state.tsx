@@ -3,6 +3,9 @@
 import { BarChart3 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
+export const NO_CONTEXT_EMPTY_MESSAGE =
+  'No compatible context telemetry for the current analytics slice.';
+
 interface EmptyStateProps {
   title?: string;
   description?: string;

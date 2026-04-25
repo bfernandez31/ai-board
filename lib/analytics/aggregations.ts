@@ -42,6 +42,9 @@ export const DEFAULT_ANALYTICS_FILTERS: AnalyticsFilters = {
   range: '30d',
   outcome: 'shipped',
   agent: 'all',
+  command: 'all',
+  workflowType: 'all',
+  qualityBucket: 'all',
 };
 
 /**

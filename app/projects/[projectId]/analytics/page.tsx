@@ -9,8 +9,10 @@ import { Button } from '@/components/ui/button';
 import {
   AGENT_FILTER_VALUES,
   type AgentFilter,
+  type QualityBucketFilter,
   type TicketOutcomeFilter,
   type TimeRange,
+  type WorkflowTypeFilter,
 } from '@/lib/analytics/types';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +21,8 @@ export const revalidate = 0;
 const VALID_RANGES = new Set<TimeRange>(['7d', '30d', '90d', 'all']);
 const VALID_OUTCOMES = new Set<TicketOutcomeFilter>(['shipped', 'closed', 'all-completed']);
 const VALID_AGENTS = new Set<AgentFilter>(AGENT_FILTER_VALUES);
+const VALID_WORKFLOW_TYPES = new Set<WorkflowTypeFilter>(['all', 'FULL', 'QUICK', 'CLEAN']);
+const VALID_QUALITY_BUCKETS = new Set<QualityBucketFilter>(['all', 'HIGH', 'MEDIUM', 'LOW']);
 
 function parseProjectId(projectIdString: string): number {
   const projectId = parseInt(projectIdString, 10);
@@ -51,7 +55,14 @@ export default async function AnalyticsPage({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ range?: string; outcome?: string; agent?: string }>;
+  searchParams: Promise<{
+    range?: string;
+    outcome?: string;
+    agent?: string;
+    command?: string;
+    workflowType?: string;
+    qualityBucket?: string;
+  }>;
 }): Promise<JSX.Element> {
   const { projectId: projectIdString } = await params;
   const search = await searchParams;
@@ -75,6 +86,17 @@ export default async function AnalyticsPage({
       DEFAULT_ANALYTICS_FILTERS.outcome
     ),
     agent: getSearchParamValue(search.agent, VALID_AGENTS, DEFAULT_ANALYTICS_FILTERS.agent),
+    command: search.command?.trim() ? search.command.trim() : DEFAULT_ANALYTICS_FILTERS.command,
+    workflowType: getSearchParamValue(
+      search.workflowType,
+      VALID_WORKFLOW_TYPES,
+      DEFAULT_ANALYTICS_FILTERS.workflowType
+    ),
+    qualityBucket: getSearchParamValue(
+      search.qualityBucket,
+      VALID_QUALITY_BUCKETS,
+      DEFAULT_ANALYTICS_FILTERS.qualityBucket
+    ),
   };
 
   const initialData = await getAnalyticsData(projectId, filters);

@@ -11,9 +11,9 @@
 
 **Purpose**: Establish the persistent schema and shared classification helper used by the ticket timeline and analytics.
 
-- [ ] T001 Add nullable `peakContextSize`, `averageContextSize`, and `turnCount` fields to `prisma/schema.prisma`
-- [ ] T002 Generate the Prisma migration for the new job context columns in `prisma/migrations/`
-- [ ] T003 [P] Create shared context-risk and quality-bucket utilities in `lib/analytics/context-metrics.ts`
+- [x] T001 Add nullable `peakContextSize`, `averageContextSize`, and `turnCount` fields to `prisma/schema.prisma` ✅ DONE
+- [x] T002 Generate the Prisma migration for the new job context columns in `prisma/migrations/` ✅ DONE
+- [x] T003 [P] Create shared context-risk and quality-bucket utilities in `lib/analytics/context-metrics.ts` ✅ DONE
 
 ---
 
@@ -23,9 +23,9 @@
 
 **⚠️ CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T004 [P] Extend `TicketJobWithTelemetry` with nullable context metrics and `contextRiskBand` in `lib/types/job-types.ts`
-- [ ] T005 [P] Extend analytics filter and response contracts for command, workflow type, quality bucket, distributions, and excluded counts in `lib/analytics/types.ts`
-- [ ] T006 Extend analytics query parsing and validation for context filters in `app/api/projects/[projectId]/analytics/route.ts`
+- [x] T004 [P] Extend `TicketJobWithTelemetry` with nullable context metrics and `contextRiskBand` in `lib/types/job-types.ts` ✅ DONE
+- [x] T005 [P] Extend analytics filter and response contracts for command, workflow type, quality bucket, distributions, and excluded counts in `lib/analytics/types.ts` ✅ DONE
+- [x] T006 Extend analytics query parsing and validation for context filters in `app/api/projects/[projectId]/analytics/route.ts` ✅ DONE
 
 **Checkpoint**: Database, shared classifiers, and public TypeScript contracts are ready.
 
@@ -39,15 +39,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Extend supported/unsupported/partial turn-level telemetry ingestion coverage in `tests/integration/telemetry/agent-agnostic.test.ts`
-- [ ] T008 [P] [US1] Extend ticket jobs API coverage for nullable context fields and derived risk bands in `tests/integration/jobs/ticket-jobs.test.ts`
-- [ ] T009 [P] [US1] Extend ticket stats rendering coverage for per-job context metrics and hidden indicators in `tests/unit/components/ticket-stats.test.tsx`
+- [x] T007 [P] [US1] Extend supported/unsupported/partial turn-level telemetry ingestion coverage in `tests/integration/telemetry/agent-agnostic.test.ts` ✅ DONE
+- [x] T008 [P] [US1] Extend ticket jobs API coverage for nullable context fields and derived risk bands in `tests/integration/jobs/ticket-jobs.test.ts` ✅ DONE
+- [x] T009 [P] [US1] Extend ticket stats rendering coverage for per-job context metrics and hidden indicators in `tests/unit/components/ticket-stats.test.tsx` ✅ DONE
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Persist normalized peak context size, average context size, and turn count during telemetry ingestion in `lib/telemetry/otlp-processor.ts`
-- [ ] T011 [US1] Extend ticket job selection and response shaping with context metrics and `contextRiskBand` in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`
-- [ ] T012 [US1] Render context metrics, units, and healthy/warning/danger badges in `components/ticket/jobs-timeline.tsx`
+- [x] T010 [US1] Persist normalized peak context size, average context size, and turn count during telemetry ingestion in `lib/telemetry/otlp-processor.ts` ✅ DONE
+- [x] T011 [US1] Extend ticket job selection and response shaping with context metrics and `contextRiskBand` in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts` ✅ DONE
+- [x] T012 [US1] Render context metrics, units, and healthy/warning/danger badges in `components/ticket/jobs-timeline.tsx` ✅ DONE
 
 **Checkpoint**: Ticket job history exposes and renders context-risk data without inventing values for unsupported jobs.
 
@@ -61,16 +61,16 @@
 
 ### Tests for User Story 2
 
-- [ ] T013 [P] [US2] Extend context analytics route coverage for command and workflow filtering plus peak-context distributions in `tests/integration/analytics/analytics-route.test.ts`
-- [ ] T014 [P] [US2] Extend quality-bucket comparison coverage for context metrics in `tests/integration/analytics/quality-score.test.ts`
-- [ ] T015 [P] [US2] Extend dashboard filter and chart rendering coverage for context analytics controls in `tests/unit/components/analytics-dashboard.test.tsx`
+- [x] T013 [P] [US2] Extend context analytics route coverage for command and workflow filtering plus peak-context distributions in `tests/integration/analytics/analytics-route.test.ts` ✅ DONE
+- [x] T014 [P] [US2] Extend quality-bucket comparison coverage for context metrics in `tests/integration/analytics/quality-score.test.ts` ✅ DONE
+- [x] T015 [P] [US2] Extend dashboard filter and chart rendering coverage for context analytics controls in `tests/unit/components/analytics-dashboard.test.tsx` ✅ DONE
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Extend filter-aware context aggregations, peak distributions, and quality-bucket summaries in `lib/analytics/queries.ts`
-- [ ] T017 [P] [US2] Create the peak-context distribution chart in `components/analytics/context-peak-distribution-chart.tsx`
-- [ ] T018 [P] [US2] Create the quality-bucket context comparison chart in `components/analytics/context-quality-bucket-chart.tsx`
-- [ ] T019 [US2] Add command, workflow type, and quality bucket controls plus the new context charts to `components/analytics/analytics-dashboard.tsx`
+- [x] T016 [US2] Extend filter-aware context aggregations, peak distributions, and quality-bucket summaries in `lib/analytics/queries.ts` ✅ DONE
+- [x] T017 [P] [US2] Create the peak-context distribution chart in `components/analytics/context-peak-distribution-chart.tsx` ✅ DONE
+- [x] T018 [P] [US2] Create the quality-bucket context comparison chart in `components/analytics/context-quality-bucket-chart.tsx` ✅ DONE
+- [x] T019 [US2] Add command, workflow type, and quality bucket controls plus the new context charts to `components/analytics/analytics-dashboard.tsx` ✅ DONE
 
 **Checkpoint**: Analytics shows context-risk distributions and filterable project-level comparisons.
 
@@ -84,15 +84,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T020 [P] [US3] Extend analytics empty-slice and excluded-count coverage for missing context or quality data in `tests/integration/analytics/analytics-route.test.ts`
-- [ ] T021 [P] [US3] Extend ticket jobs API coverage for historical and unsupported jobs remaining null-safe in `tests/integration/jobs/ticket-jobs.test.ts`
-- [ ] T022 [P] [US3] Extend dashboard empty-state coverage for slices with no compatible context telemetry in `tests/unit/components/analytics-dashboard.test.tsx`
+- [x] T020 [P] [US3] Extend analytics empty-slice and excluded-count coverage for missing context or quality data in `tests/integration/analytics/analytics-route.test.ts` ✅ DONE
+- [x] T021 [P] [US3] Extend ticket jobs API coverage for historical and unsupported jobs remaining null-safe in `tests/integration/jobs/ticket-jobs.test.ts` ✅ DONE
+- [x] T022 [P] [US3] Extend dashboard empty-state coverage for slices with no compatible context telemetry in `tests/unit/components/analytics-dashboard.test.tsx` ✅ DONE
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] Enforce null-safe context eligibility, excluded counts, and empty-slice metadata in `lib/analytics/queries.ts`
-- [ ] T024 [US3] Reuse explicit no-context empty-state messaging in `components/analytics/analytics-dashboard.tsx` and `components/analytics/empty-state.tsx`
-- [ ] T025 [US3] Keep unsupported and historical jobs visually neutral when context metrics are absent in `components/ticket/jobs-timeline.tsx`
+- [x] T023 [US3] Enforce null-safe context eligibility, excluded counts, and empty-slice metadata in `lib/analytics/queries.ts` ✅ DONE
+- [x] T024 [US3] Reuse explicit no-context empty-state messaging in `components/analytics/analytics-dashboard.tsx` and `components/analytics/empty-state.tsx` ✅ DONE
+- [x] T025 [US3] Keep unsupported and historical jobs visually neutral when context metrics are absent in `components/ticket/jobs-timeline.tsx` ✅ DONE
 
 **Checkpoint**: Missing context data is handled consistently and transparently across both ticket and analytics experiences.
 
@@ -102,8 +102,8 @@
 
 **Purpose**: Final consistency work after the story slices are in place.
 
-- [ ] T026 Regenerate the Prisma client after the schema update from `prisma/schema.prisma`
-- [ ] T027 [P] Align context metric labels, threshold copy, and shared terminology across `lib/analytics/context-metrics.ts`, `components/ticket/jobs-timeline.tsx`, and `components/analytics/analytics-dashboard.tsx`
+- [x] T026 Regenerate the Prisma client after the schema update from `prisma/schema.prisma` ✅ DONE
+- [x] T027 [P] Align context metric labels, threshold copy, and shared terminology across `lib/analytics/context-metrics.ts`, `components/ticket/jobs-timeline.tsx`, and `components/analytics/analytics-dashboard.tsx` ✅ DONE
 
 ---
 

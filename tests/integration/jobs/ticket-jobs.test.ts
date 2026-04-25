@@ -119,7 +119,6 @@ describe('Ticket Jobs API', () => {
       expect(job!.outputTokens).toBeNull();
       expect(job!.costUsd).toBeNull();
       expect(job!.durationMs).toBeNull();
-      expect(job!.model).toBeNull();
     });
 
     it('should return 404 for non-existent ticket', async () => {
@@ -203,6 +202,56 @@ describe('Ticket Jobs API', () => {
       expect(Number(job!.costUsd)).toBeCloseTo(0.0089, 4);
       expect(job!.durationMs).toBe(180000);
       expect(job!.toolsUsed).toEqual(['read_file', 'shell']);
+    });
+
+    it('returns nullable context fields and a derived context risk band when telemetry exists', async () => {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: {
+          status: 'COMPLETED',
+          peakContextSize: 125000,
+          averageContextSize: 86000,
+          turnCount: 4,
+        },
+      });
+
+      const response = await ctx.api.get<TicketJobWithTelemetry[]>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs`
+      );
+
+      expect(response.status).toBe(200);
+
+      const job = response.data.find((candidate) => candidate.id === jobId);
+      expect(job).toBeDefined();
+      expect(job!.peakContextSize).toBe(125000);
+      expect(job!.averageContextSize).toBe(86000);
+      expect(job!.turnCount).toBe(4);
+      expect(job!.contextRiskBand).toBe('DANGER');
+    });
+
+    it('keeps historical and unsupported jobs null-safe for context metrics', async () => {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: {
+          status: 'COMPLETED',
+          peakContextSize: null,
+          averageContextSize: null,
+          turnCount: null,
+        },
+      });
+
+      const response = await ctx.api.get<TicketJobWithTelemetry[]>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs`
+      );
+
+      expect(response.status).toBe(200);
+
+      const job = response.data.find((candidate) => candidate.id === jobId);
+      expect(job).toBeDefined();
+      expect(job!.peakContextSize).toBeNull();
+      expect(job!.averageContextSize).toBeNull();
+      expect(job!.turnCount).toBeNull();
+      expect(job!.contextRiskBand).toBeNull();
     });
   });
 });

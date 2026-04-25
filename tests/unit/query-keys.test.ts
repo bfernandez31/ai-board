@@ -124,26 +124,35 @@ describe('Query Keys Factory', () => {
     });
 
     it('should return correct key for analytics data with all filter dimensions', () => {
-      expect(queryKeys.analytics.data(1, '7d', 'shipped', 'all')).toEqual([
+      expect(queryKeys.analytics.data(1, '7d', 'shipped', 'all', 'all', 'all', 'all')).toEqual([
         'analytics',
         1,
         '7d',
         'shipped',
         'all',
+        'all',
+        'all',
+        'all',
       ]);
-      expect(queryKeys.analytics.data(2, '30d', 'closed', 'CLAUDE')).toEqual([
+      expect(queryKeys.analytics.data(2, '30d', 'closed', 'CLAUDE', 'verify', 'FULL', 'HIGH')).toEqual([
         'analytics',
         2,
         '30d',
         'closed',
         'CLAUDE',
+        'verify',
+        'FULL',
+        'HIGH',
       ]);
-      expect(queryKeys.analytics.data(3, '90d', 'all-completed', 'CODEX')).toEqual([
+      expect(queryKeys.analytics.data(3, '90d', 'all-completed', 'CODEX', 'implement', 'QUICK', 'MEDIUM')).toEqual([
         'analytics',
         3,
         '90d',
         'all-completed',
         'CODEX',
+        'implement',
+        'QUICK',
+        'MEDIUM',
       ]);
     });
   });

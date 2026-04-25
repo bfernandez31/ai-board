@@ -8,6 +8,9 @@ const querySchema = z.object({
   range: z.enum(['7d', '30d', '90d', 'all']).default('30d'),
   outcome: z.enum(['shipped', 'closed', 'all-completed']).default('shipped'),
   agent: z.enum(AGENT_FILTER_VALUES).default('all'),
+  command: z.string().trim().min(1).max(50).default('all'),
+  workflowType: z.enum(['all', 'FULL', 'QUICK', 'CLEAN']).default('all'),
+  qualityBucket: z.enum(['all', 'HIGH', 'MEDIUM', 'LOW']).default('all'),
 });
 
 export async function GET(
@@ -29,6 +32,9 @@ export async function GET(
       range: searchParams.get('range') || undefined,
       outcome: searchParams.get('outcome') || undefined,
       agent: searchParams.get('agent') || undefined,
+      command: searchParams.get('command') || undefined,
+      workflowType: searchParams.get('workflowType') || undefined,
+      qualityBucket: searchParams.get('qualityBucket') || undefined,
     });
 
     const data = await getAnalyticsData(projectId, filters);

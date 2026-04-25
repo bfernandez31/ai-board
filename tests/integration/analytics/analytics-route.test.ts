@@ -36,7 +36,7 @@ describe('Analytics Route', () => {
           stage: Stage.SHIP,
           workflowType: WorkflowType.FULL,
           ticketNumber: 1,
-          ticketKey: 'E2E-1',
+          ticketKey: `E2E-${projectId}-1`,
           updatedAt: daysAgo(3),
         },
         {
@@ -46,7 +46,7 @@ describe('Analytics Route', () => {
           stage: Stage.SHIP,
           workflowType: WorkflowType.QUICK,
           ticketNumber: 2,
-          ticketKey: 'E2E-2',
+          ticketKey: `E2E-${projectId}-2`,
           updatedAt: daysAgo(2),
           agent: Agent.CODEX,
         },
@@ -57,7 +57,7 @@ describe('Analytics Route', () => {
           stage: Stage.CLOSED,
           workflowType: WorkflowType.CLEAN,
           ticketNumber: 3,
-          ticketKey: 'E2E-3',
+          ticketKey: `E2E-${projectId}-3`,
           updatedAt: daysAgo(5),
           closedAt: daysAgo(5),
         },
@@ -68,7 +68,7 @@ describe('Analytics Route', () => {
           stage: Stage.CLOSED,
           workflowType: WorkflowType.FULL,
           ticketNumber: 4,
-          ticketKey: 'E2E-4',
+          ticketKey: `E2E-${projectId}-4`,
           updatedAt: daysAgo(4),
           closedAt: daysAgo(4),
           agent: Agent.CODEX,
@@ -80,7 +80,7 @@ describe('Analytics Route', () => {
           stage: Stage.SHIP,
           workflowType: WorkflowType.FULL,
           ticketNumber: 5,
-          ticketKey: 'E2E-5',
+          ticketKey: `E2E-${projectId}-5`,
           updatedAt: daysAgo(40),
         },
       ],
@@ -91,7 +91,7 @@ describe('Analytics Route', () => {
     await prisma.job.createMany({
       data: [
         {
-          ticketId: idByKey.get('E2E-1')!,
+          ticketId: idByKey.get(`E2E-${projectId}-1`)!,
           projectId,
           command: 'implement',
           status: JobStatus.COMPLETED,
@@ -105,9 +105,12 @@ describe('Analytics Route', () => {
           cacheReadTokens: 20,
           cacheCreationTokens: 10,
           toolsUsed: ['Read', 'Edit'],
+          peakContextSize: 70000,
+          averageContextSize: 60000,
+          turnCount: 3,
         },
         {
-          ticketId: idByKey.get('E2E-2')!,
+          ticketId: idByKey.get(`E2E-${projectId}-2`)!,
           projectId,
           command: 'verify',
           status: JobStatus.COMPLETED,
@@ -121,9 +124,13 @@ describe('Analytics Route', () => {
           cacheReadTokens: 15,
           cacheCreationTokens: 5,
           toolsUsed: ['Bash'],
+          qualityScore: 85,
+          peakContextSize: 130000,
+          averageContextSize: 100000,
+          turnCount: 4,
         },
         {
-          ticketId: idByKey.get('E2E-3')!,
+          ticketId: idByKey.get(`E2E-${projectId}-3`)!,
           projectId,
           command: 'plan',
           status: JobStatus.COMPLETED,
@@ -137,9 +144,13 @@ describe('Analytics Route', () => {
           cacheReadTokens: 30,
           cacheCreationTokens: 10,
           toolsUsed: ['Read'],
+          qualityScore: 65,
+          peakContextSize: 35000,
+          averageContextSize: 30000,
+          turnCount: 2,
         },
         {
-          ticketId: idByKey.get('E2E-4')!,
+          ticketId: idByKey.get(`E2E-${projectId}-4`)!,
           projectId,
           command: 'implement',
           status: JobStatus.FAILED,
@@ -153,9 +164,13 @@ describe('Analytics Route', () => {
           cacheReadTokens: 40,
           cacheCreationTokens: 10,
           toolsUsed: ['Edit'],
+          qualityScore: 45,
+          peakContextSize: 90000,
+          averageContextSize: 80000,
+          turnCount: 3,
         },
         {
-          ticketId: idByKey.get('E2E-5')!,
+          ticketId: idByKey.get(`E2E-${projectId}-5`)!,
           projectId,
           command: 'implement',
           status: JobStatus.COMPLETED,
@@ -169,6 +184,9 @@ describe('Analytics Route', () => {
           cacheReadTokens: 50,
           cacheCreationTokens: 15,
           toolsUsed: ['Write'],
+          peakContextSize: 150000,
+          averageContextSize: 120000,
+          turnCount: 5,
         },
       ],
     });
@@ -192,7 +210,7 @@ describe('Analytics Route', () => {
           stage: Stage.SHIP,
           workflowType: WorkflowType.FULL,
           ticketNumber: 11,
-          ticketKey: 'E2E-11',
+          ticketKey: `E2E-${projectId}-11`,
           updatedAt: daysAgo(2),
         },
         {
@@ -202,7 +220,7 @@ describe('Analytics Route', () => {
           stage: Stage.SHIP,
           workflowType: WorkflowType.FULL,
           ticketNumber: 12,
-          ticketKey: 'E2E-12',
+          ticketKey: `E2E-${projectId}-12`,
           updatedAt: daysAgo(1),
         },
         {
@@ -212,7 +230,7 @@ describe('Analytics Route', () => {
           stage: Stage.CLOSED,
           workflowType: WorkflowType.QUICK,
           ticketNumber: 13,
-          ticketKey: 'E2E-13',
+          ticketKey: `E2E-${projectId}-13`,
           updatedAt: daysAgo(3),
           closedAt: daysAgo(3),
           agent: Agent.CODEX,
@@ -225,7 +243,7 @@ describe('Analytics Route', () => {
     await prisma.job.createMany({
       data: [
         {
-          ticketId: idByKey.get('E2E-11')!,
+          ticketId: idByKey.get(`E2E-${projectId}-11`)!,
           projectId,
           command: 'implement',
           status: JobStatus.COMPLETED,
@@ -243,7 +261,7 @@ describe('Analytics Route', () => {
           toolsUsed: ['shell'],
         },
         {
-          ticketId: idByKey.get('E2E-12')!,
+          ticketId: idByKey.get(`E2E-${projectId}-12`)!,
           projectId,
           command: 'verify',
           status: JobStatus.COMPLETED,
@@ -261,7 +279,7 @@ describe('Analytics Route', () => {
           toolsUsed: ['read_file'],
         },
         {
-          ticketId: idByKey.get('E2E-13')!,
+          ticketId: idByKey.get(`E2E-${projectId}-13`)!,
           projectId,
           command: 'verify',
           status: JobStatus.COMPLETED,
@@ -303,6 +321,9 @@ describe('Analytics Route', () => {
       range: '30d',
       outcome: 'shipped',
       agent: 'all',
+      command: 'all',
+      workflowType: 'all',
+      qualityBucket: 'all',
     });
     expect(shipped.jobCount).toBe(2);
     expect(shipped.overview.ticketsShipped.count).toBe(2);
@@ -529,5 +550,101 @@ describe('Analytics Route', () => {
 
     expect(response.status).toBe(400);
     expect(body.error).toBe('Invalid analytics filters');
+  });
+
+  it('filters context analytics by command and workflow type and returns peak distributions', async () => {
+    await seedAnalyticsFixtures(ctx.projectId);
+
+    const responseRaw = await GET(
+      new NextRequest(
+        `http://localhost/api/projects/${ctx.projectId}/analytics?outcome=all-completed&command=implement&workflowType=FULL`
+      ),
+      { params: Promise.resolve({ projectId: String(ctx.projectId) }) }
+    );
+    const response = (await responseRaw.json()) as {
+      filters: { command: string; workflowType: string };
+      context: {
+        eligibleJobCount: number;
+        excludedMissingContextCount: number;
+        peakDistribution: Array<{ label: string; jobCount: number }>;
+        riskSummary: Array<{ band: string; jobCount: number }>;
+      };
+    };
+
+    expect(responseRaw.status).toBe(200);
+    expect(response.filters.command).toBe('implement');
+    expect(response.filters.workflowType).toBe('FULL');
+    expect(response.context.eligibleJobCount).toBe(2);
+    expect(response.context.excludedMissingContextCount).toBe(0);
+    expect(response.context.peakDistribution).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: '40K-79K', jobCount: 1 }),
+        expect.objectContaining({ label: '80K-119K', jobCount: 1 }),
+      ])
+    );
+    expect(response.context.riskSummary).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ band: 'HEALTHY', jobCount: 1 }),
+        expect.objectContaining({ band: 'WARNING', jobCount: 1 }),
+      ])
+    );
+  });
+
+  it('filters context analytics by quality bucket and reports excluded quality counts', async () => {
+    await seedAnalyticsFixtures(ctx.projectId);
+
+    const responseRaw = await GET(
+      new NextRequest(
+        `http://localhost/api/projects/${ctx.projectId}/analytics?outcome=all-completed&qualityBucket=HIGH`
+      ),
+      { params: Promise.resolve({ projectId: String(ctx.projectId) }) }
+    );
+    const response = (await responseRaw.json()) as {
+      filters: { qualityBucket: string };
+      context: {
+        eligibleJobCount: number;
+        excludedMissingQualityScoreCount: number;
+        byQualityBucket: Array<{ bucket: string; jobCount: number; averagePeakContextSize: number }>;
+      };
+    };
+
+    expect(responseRaw.status).toBe(200);
+    expect(response.filters.qualityBucket).toBe('HIGH');
+    expect(response.context.eligibleJobCount).toBe(1);
+    expect(response.context.excludedMissingQualityScoreCount).toBe(1);
+    expect(response.context.byQualityBucket).toEqual([
+      { bucket: 'HIGH', jobCount: 1, averagePeakContextSize: 130000 },
+    ]);
+  });
+
+  it('returns explicit empty context slices and excluded counts when filtered jobs lack context telemetry', async () => {
+    await seedGeminiAnalyticsFixtures(ctx.projectId);
+
+    const responseRaw = await GET(
+      new NextRequest(
+        `http://localhost/api/projects/${ctx.projectId}/analytics?outcome=shipped&command=verify`
+      ),
+      { params: Promise.resolve({ projectId: String(ctx.projectId) }) }
+    );
+    const response = (await responseRaw.json()) as {
+      jobCount: number;
+      context: {
+        eligibleJobCount: number;
+        excludedMissingContextCount: number;
+        excludedMissingQualityScoreCount: number;
+        peakDistribution: unknown[];
+        riskSummary: unknown[];
+        byQualityBucket: unknown[];
+      };
+    };
+
+    expect(responseRaw.status).toBe(200);
+    expect(response.jobCount).toBe(1);
+    expect(response.context.eligibleJobCount).toBe(0);
+    expect(response.context.excludedMissingContextCount).toBe(1);
+    expect(response.context.excludedMissingQualityScoreCount).toBe(0);
+    expect(response.context.peakDistribution).toEqual([]);
+    expect(response.context.riskSummary).toEqual([]);
+    expect(response.context.byQualityBucket).toEqual([]);
   });
 });

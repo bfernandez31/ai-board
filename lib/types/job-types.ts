@@ -28,6 +28,7 @@ export interface JobTypeConfig {
 }
 
 import type { Job } from '@prisma/client';
+import type { ContextRiskBand } from '@/lib/analytics/context-metrics';
 
 /**
  * DualJobState Interface
@@ -69,5 +70,9 @@ export interface TicketJobWithTelemetry {
   toolsUsed: string[];
   qualityScore: number | null;
   qualityScoreDetails: string | null;
+  peakContextSize: number | null;
+  averageContextSize: number | null;
+  turnCount: number | null;
+  contextRiskBand: ContextRiskBand | null;
   log: TicketJobLogSummary | null;
 }

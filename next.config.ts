@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next'
 
+const shouldExternalizePrisma = process.env.NODE_ENV === 'production'
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
@@ -9,7 +11,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  serverExternalPackages: ['@prisma/client', 'prisma'],
+  serverExternalPackages: shouldExternalizePrisma ? ['@prisma/client', 'prisma'] : [],
   turbopack: {},
   webpack: (config, { isServer }) => {
     if (isServer) {

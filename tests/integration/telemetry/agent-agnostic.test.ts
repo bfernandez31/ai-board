@@ -217,6 +217,60 @@ describe('Agent-Agnostic Telemetry', () => {
       expect(job!.outputTokens).toBe(0);
       expect(job!.cacheReadTokens).toBe(0);
     });
+
+    it('tracks peak context size, average context size, and turn count from supported turn telemetry', async () => {
+      const payload = buildOtlpPayload(jobId, [
+        {
+          body: { stringValue: 'codex.sse_event' },
+          attributes: [
+            { key: 'event.kind', value: { stringValue: 'turn.completed' } },
+            { key: 'context_size', value: { stringValue: '32000' } },
+          ],
+        },
+        {
+          body: { stringValue: 'codex.sse_event' },
+          attributes: [
+            { key: 'event.kind', value: { stringValue: 'turn.completed' } },
+            { key: 'context_size', value: { stringValue: '64000' } },
+          ],
+        },
+        {
+          body: { stringValue: 'codex.sse_event' },
+          attributes: [
+            { key: 'event.kind', value: { stringValue: 'turn.completed' } },
+            { key: 'context_size', value: { stringValue: '96000' } },
+          ],
+        },
+      ]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.peakContextSize).toBe(96000);
+      expect(job!.averageContextSize).toBe(64000);
+      expect(job!.turnCount).toBe(3);
+    });
+
+    it('leaves context metrics null for unsupported or unusable turn-level payloads', async () => {
+      const payload = buildOtlpPayload(jobId, [
+        {
+          body: { stringValue: 'codex.sse_event' },
+          attributes: [
+            { key: 'event.kind', value: { stringValue: 'turn.completed' } },
+            { key: 'context_size', value: { stringValue: 'unknown' } },
+          ],
+        },
+      ]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.peakContextSize).toBeNull();
+      expect(job!.averageContextSize).toBeNull();
+      expect(job!.turnCount).toBeNull();
+    });
   });
 
   describe('US2: Claude Telemetry Backward Compatibility', () => {

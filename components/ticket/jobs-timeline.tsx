@@ -28,6 +28,10 @@ import {
   formatDuration,
   formatAbbreviatedNumber,
 } from '@/lib/analytics/aggregations';
+import {
+  formatContextSize,
+  getContextRiskConfig,
+} from '@/lib/analytics/context-metrics';
 import { formatCommandName } from '@/lib/utils/format-command';
 import { CancelConfirmationModal } from '@/components/board/cancel-confirmation-modal';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
@@ -102,7 +106,15 @@ function JobRow({
     job.inputTokens != null ||
     job.outputTokens != null ||
     job.cacheReadTokens != null ||
-    job.cacheCreationTokens != null;
+    job.cacheCreationTokens != null ||
+    job.peakContextSize != null ||
+    job.averageContextSize != null ||
+    job.turnCount != null;
+  const contextRisk = getContextRiskConfig(job.peakContextSize);
+  const hasContextMetrics =
+    job.peakContextSize != null &&
+    job.averageContextSize != null &&
+    job.turnCount != null;
 
   const log = job.log;
   const isTerminal = TERMINAL_STATUSES.has(job.status);
@@ -134,6 +146,14 @@ function JobRow({
           {job.model && (
             <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded hidden sm:inline">
               {job.model}
+            </span>
+          )}
+
+          {contextRisk && (
+            <span
+              className={`hidden sm:inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${contextRisk.badgeClassName}`}
+            >
+              {contextRisk.label}
             </span>
           )}
         </div>
@@ -224,6 +244,29 @@ function JobRow({
                 </span>
               </div>
             </div>
+
+            {hasContextMetrics && (
+              <div className="grid grid-cols-1 gap-2 border-t border-border pt-3 text-sm sm:grid-cols-3">
+                <div>
+                  <span className="text-ctp-overlay0">Peak Context:</span>
+                  <span className="ml-2 text-foreground font-medium">
+                    {formatContextSize(job.peakContextSize)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-ctp-overlay0">Average Context:</span>
+                  <span className="ml-2 text-foreground font-medium">
+                    {formatContextSize(job.averageContextSize)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-ctp-overlay0">Turn Count:</span>
+                  <span className="ml-2 text-foreground font-medium">
+                    {job.turnCount}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Timestamp */}
             <div className="text-xs text-ctp-overlay0 border-t border-border pt-3">

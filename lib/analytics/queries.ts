@@ -31,6 +31,12 @@ import type {
 } from './types';
 import { parseQualityScoreDetails } from '@/lib/quality-score';
 import {
+  classifyContextRiskBand,
+  classifyQualityBucket,
+  getPeakContextBucket,
+  PEAK_CONTEXT_BUCKETS,
+} from './context-metrics';
+import {
   DEFAULT_ANALYTICS_FILTERS,
   aggregateTools,
   calculateTrend,
@@ -110,6 +116,10 @@ function buildTicketMembershipWhere(filters: AnalyticsFilters): Prisma.TicketWhe
     clauses.push(agentWhere);
   }
 
+  if (filters.workflowType !== 'all') {
+    clauses.push({ workflowType: filters.workflowType });
+  }
+
   return clauses.length === 1 ? clauses[0]! : { AND: clauses };
 }
 
@@ -155,6 +165,7 @@ function buildJobWhere(
   return {
     projectId,
     status: { in: statuses },
+    ...(filters.command !== 'all' ? { command: filters.command } : {}),
     ticket: {
       is: buildTicketMembershipWhere(filters),
     },
@@ -605,6 +616,87 @@ async function getQualityScoreAnalytics(
   };
 }
 
+async function getContextAnalytics(
+  projectId: number,
+  filters: AnalyticsFilters,
+  now: Date
+): Promise<AnalyticsData['context']> {
+  const jobs = await prisma.job.findMany({
+    where: buildJobWhere(projectId, filters, now),
+    select: {
+      peakContextSize: true,
+      qualityScore: true,
+    },
+  });
+
+  const contextEligibleJobs = jobs.filter((job) => job.peakContextSize != null);
+  const excludedMissingQualityScoreCount = contextEligibleJobs.filter(
+    (job) => classifyQualityBucket(job.qualityScore) == null
+  ).length;
+
+  const filteredEligibleJobs = contextEligibleJobs.filter((job) => {
+    if (filters.qualityBucket === 'all') {
+      return true;
+    }
+
+    return classifyQualityBucket(job.qualityScore) === filters.qualityBucket;
+  });
+
+  const peakDistribution = PEAK_CONTEXT_BUCKETS
+    .map((bucket) => ({
+      ...bucket,
+      jobCount: filteredEligibleJobs.filter(
+        (job) => getPeakContextBucket(job.peakContextSize)?.label === bucket.label
+      ).length,
+    }))
+    .filter((bucket) => bucket.jobCount > 0);
+
+  const riskSummary = (['HEALTHY', 'WARNING', 'DANGER'] as const)
+    .map((band) => ({
+      band,
+      jobCount: filteredEligibleJobs.filter(
+        (job) => classifyContextRiskBand(job.peakContextSize) === band
+      ).length,
+    }))
+    .filter((summary) => summary.jobCount > 0);
+
+  const byQualityBucket = (['HIGH', 'MEDIUM', 'LOW'] as const)
+    .map((bucket) => {
+      const matchingJobs = contextEligibleJobs.filter(
+        (job) => classifyQualityBucket(job.qualityScore) === bucket
+      );
+
+      if (filters.qualityBucket !== 'all' && filters.qualityBucket !== bucket) {
+        return null;
+      }
+
+      if (matchingJobs.length === 0) {
+        return null;
+      }
+
+      const totalPeakContextSize = matchingJobs.reduce(
+        (sum, job) => sum + (job.peakContextSize ?? 0),
+        0
+      );
+
+      return {
+        bucket,
+        jobCount: matchingJobs.length,
+        averagePeakContextSize: Math.round(totalPeakContextSize / matchingJobs.length),
+      };
+    })
+    .filter((summary): summary is NonNullable<typeof summary> => summary != null);
+
+  return {
+    eligibleJobCount: filteredEligibleJobs.length,
+    excludedMissingContextCount: jobs.length - contextEligibleJobs.length,
+    excludedMissingQualityScoreCount,
+    peakDistribution,
+    riskSummary,
+    byQualityBucket,
+  };
+}
+
 function normalizeFilters(
   filters: Partial<AnalyticsFilters> = {},
   availableAgents?: AgentOption[]
@@ -613,6 +705,9 @@ function normalizeFilters(
     range: filters.range ?? DEFAULT_ANALYTICS_FILTERS.range,
     outcome: filters.outcome ?? DEFAULT_ANALYTICS_FILTERS.outcome,
     agent: filters.agent ?? DEFAULT_ANALYTICS_FILTERS.agent,
+    command: filters.command ?? DEFAULT_ANALYTICS_FILTERS.command,
+    workflowType: filters.workflowType ?? DEFAULT_ANALYTICS_FILTERS.workflowType,
+    qualityBucket: filters.qualityBucket ?? DEFAULT_ANALYTICS_FILTERS.qualityBucket,
   };
 
   if (
@@ -655,6 +750,7 @@ export async function getAnalyticsData(
     workflowDistribution,
     velocity,
     qualityScore,
+    context,
   ] = await Promise.all([
     getOverviewMetrics(projectId, normalizedFilters, now),
     getCostOverTime(projectId, normalizedFilters, now),
@@ -664,6 +760,7 @@ export async function getAnalyticsData(
     getWorkflowDistribution(projectId, normalizedFilters, now),
     getVelocityData(projectId, normalizedFilters, now),
     getQualityScoreAnalytics(projectId, normalizedFilters, now),
+    getContextAnalytics(projectId, normalizedFilters, now),
   ]);
 
   const cacheEfficiency = getCacheEfficiency(tokenUsage);
@@ -678,6 +775,7 @@ export async function getAnalyticsData(
     workflowDistribution,
     velocity,
     qualityScore,
+    context,
     filters: normalizedFilters,
     availableAgents,
     generatedAt: now.toISOString(),

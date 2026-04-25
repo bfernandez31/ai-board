@@ -29,6 +29,7 @@ import {
   hasWorkflowToken,
   verifyWorkflowToken,
 } from '@/app/lib/auth/workflow-auth';
+import { classifyContextRiskBand } from '@/lib/analytics/context-metrics';
 
 export async function GET(
   request: NextRequest,
@@ -145,6 +146,9 @@ export async function GET(
         toolsUsed: true,
         qualityScore: true,
         qualityScoreDetails: true,
+        peakContextSize: true,
+        averageContextSize: true,
+        turnCount: true,
         log: {
           select: {
             captureStatus: true,
@@ -155,7 +159,12 @@ export async function GET(
       orderBy: { id: 'asc' },
     });
 
-    return NextResponse.json(jobs);
+    return NextResponse.json(
+      jobs.map((job) => ({
+        ...job,
+        contextRiskBand: classifyContextRiskBand(job.peakContextSize),
+      }))
+    );
   } catch (error) {
     // Handle session auth errors from verifyProjectAccess
     if (error instanceof Error) {

@@ -58,6 +58,9 @@ model Job {
   qualityScore        Int?
   // JSON string containing dimension sub-scores, weights, and threshold label
   qualityScoreDetails String?
+  peakContextSize     Int?
+  averageContextSize  Int?
+  turnCount           Int?
 
   log JobLog?
 

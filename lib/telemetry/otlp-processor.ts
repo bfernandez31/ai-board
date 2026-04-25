@@ -40,6 +40,8 @@ interface TelemetryMetrics {
   durationMs: number;
   model: string | null;
   toolsUsed: Set<string>;
+  contextSizes: number[];
+  hasInvalidContextTelemetry: boolean;
   /** When set, Gemini cost is estimated from merged token values using this model */
   geminiCostModel?: string | null;
 }
@@ -57,6 +59,8 @@ function createEmptyMetrics(): TelemetryMetrics {
     durationMs: 0,
     model: null,
     toolsUsed: new Set<string>(),
+    contextSizes: [],
+    hasInvalidContextTelemetry: false,
   };
 }
 
@@ -69,7 +73,8 @@ function hasTelemetryData(metrics: TelemetryMetrics): boolean {
     || metrics.costUsd != null
     || metrics.durationMs > 0
     || metrics.model != null
-    || metrics.toolsUsed.size > 0;
+    || metrics.toolsUsed.size > 0
+    || metrics.contextSizes.length > 0;
 }
 
 const GEMINI_INPUT_TOKEN_KEYS = [
@@ -110,6 +115,13 @@ const GEMINI_CACHE_CREATION_TOKEN_KEYS = [
 ] as const;
 const GEMINI_DURATION_KEYS = ['duration_ms', 'durationMs'] as const;
 const GEMINI_COST_KEYS = ['cost_usd', 'costUsd'] as const;
+const CONTEXT_SIZE_KEYS = [
+  'context_size',
+  'context_tokens',
+  'context_window_size',
+  'turn_context_size',
+  'turnContextSize',
+] as const;
 const DELTA_TOOL_EVENTS: readonly string[] = [
   'claude_code.tool_result',
   'claude_code.tool_decision',
@@ -172,6 +184,35 @@ function mergeTelemetryValue(
   return (existing ?? 0) + incoming;
 }
 
+function deriveContextMetrics(contextSizes: number[]): {
+  peakContextSize: number;
+  averageContextSize: number;
+  turnCount: number;
+} | null {
+  if (contextSizes.length === 0) {
+    return null;
+  }
+
+  const peakContextSize = Math.max(...contextSizes);
+  const totalContextSize = contextSizes.reduce((sum, value) => sum + value, 0);
+
+  return {
+    peakContextSize,
+    averageContextSize: Math.round(totalContextSize / contextSizes.length),
+    turnCount: contextSizes.length,
+  };
+}
+
+function extractContextSize(attrs: OTLPAttribute[] | undefined): number | null {
+  const attribute = findFirstAttribute(attrs, CONTEXT_SIZE_KEYS);
+  if (attribute == null) {
+    return null;
+  }
+
+  const parsed = parseIntAttribute(attribute);
+  return parsed > 0 ? parsed : null;
+}
+
 /**
  * Look up the job, merge accumulated metrics, persist, and return the response.
  */
@@ -194,6 +235,9 @@ async function updateJobMetrics(
       costUsd: true,
       durationMs: true,
       toolsUsed: true,
+      peakContextSize: true,
+      averageContextSize: true,
+      turnCount: true,
     },
   });
 
@@ -224,6 +268,28 @@ async function updateJobMetrics(
     durationMs: mergeTelemetryValue(job.durationMs, metrics.durationMs, mergeMode),
     toolsUsed: mergedTools,
   };
+
+  const nextContextMetrics = deriveContextMetrics(metrics.contextSizes);
+  if (nextContextMetrics && !metrics.hasInvalidContextTelemetry) {
+    if (mergeMode === 'CUMULATIVE') {
+      updateData.peakContextSize = nextContextMetrics.peakContextSize;
+      updateData.averageContextSize = nextContextMetrics.averageContextSize;
+      updateData.turnCount = nextContextMetrics.turnCount;
+    } else {
+      const existingTurnCount = job.turnCount ?? 0;
+      const existingAverageContextSize = job.averageContextSize ?? 0;
+      const existingTotalContextSize = existingTurnCount * existingAverageContextSize;
+      const nextTotalContextSize =
+        metrics.contextSizes.reduce((sum, value) => sum + value, 0) + existingTotalContextSize;
+      const mergedTurnCount = existingTurnCount + nextContextMetrics.turnCount;
+
+      updateData.peakContextSize = Math.max(job.peakContextSize ?? 0, nextContextMetrics.peakContextSize);
+      updateData.averageContextSize = mergedTurnCount > 0
+        ? Math.round(nextTotalContextSize / mergedTurnCount)
+        : null;
+      updateData.turnCount = mergedTurnCount;
+    }
+  }
 
   if (mergedThinkingTokens != null) {
     updateData.thinkingTokens = mergedThinkingTokens;
@@ -704,6 +770,15 @@ export async function processTelemetry(
           if (isGeminiToolEvent) {
             const toolName = findFirstAttribute(attrs, ['tool_name', 'tool']);
             if (toolName) cumulativeMetrics.toolsUsed.add(String(toolName));
+          }
+        }
+
+        if (eventKind === 'turn.completed') {
+          const contextSize = extractContextSize(attrs);
+          if (contextSize != null) {
+            deltaMetrics.contextSizes.push(contextSize);
+          } else if (findFirstAttribute(attrs, CONTEXT_SIZE_KEYS) != null) {
+            deltaMetrics.hasInvalidContextTelemetry = true;
           }
         }
       }

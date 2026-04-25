@@ -170,11 +170,26 @@ vi.mock('@/components/analytics/velocity-chart', () => ({
   ),
 }));
 
+vi.mock('@/components/analytics/context-peak-distribution-chart', () => ({
+  ContextPeakDistributionChart: ({ emptyMessage }: { emptyMessage?: string }) => (
+    <div>{emptyMessage ?? 'context-peak-distribution'}</div>
+  ),
+}));
+
+vi.mock('@/components/analytics/context-quality-bucket-chart', () => ({
+  ContextQualityBucketChart: ({ emptyMessage }: { emptyMessage?: string }) => (
+    <div>{emptyMessage ?? 'context-quality-bucket'}</div>
+  ),
+}));
+
 function makeAnalyticsData(filters: Partial<AnalyticsFilters> = {}, overrides: Partial<AnalyticsData> = {}): AnalyticsData {
   const resolvedFilters: AnalyticsFilters = {
     range: filters.range ?? '30d',
     outcome: filters.outcome ?? 'shipped',
     agent: filters.agent ?? 'all',
+    command: filters.command ?? 'all',
+    workflowType: filters.workflowType ?? 'all',
+    qualityBucket: filters.qualityBucket ?? 'all',
   };
 
   return {
@@ -199,6 +214,16 @@ function makeAnalyticsData(filters: Partial<AnalyticsFilters> = {}, overrides: P
     topTools: [{ tool: 'Read', count: 2 }],
     workflowDistribution: [{ type: 'FULL', count: 1, percentage: 100 }],
     velocity: [{ week: '2026-W10', ticketsShipped: 1 }],
+    context: {
+      eligibleJobCount: 2,
+      excludedMissingContextCount: 1,
+      excludedMissingQualityScoreCount: 1,
+      peakDistribution: [
+        { label: '40K-79K', minInclusive: 40000, maxExclusive: 80000, jobCount: 1 },
+      ],
+      riskSummary: [{ band: 'WARNING', jobCount: 1 }],
+      byQualityBucket: [{ bucket: 'HIGH', jobCount: 1, averagePeakContextSize: 120000 }],
+    },
     filters: resolvedFilters,
     availableAgents: [
       { value: 'all', label: 'All agents', jobCount: 3, isDefault: true },
@@ -229,6 +254,9 @@ describe('AnalyticsDashboard', () => {
 
     expect(screen.getByTestId('analytics-outcome-filter')).toHaveValue('shipped');
     expect(screen.getByTestId('analytics-agent-filter')).toHaveValue('all');
+    expect(screen.getByTestId('analytics-command-filter')).toHaveValue('all');
+    expect(screen.getByTestId('analytics-workflow-filter')).toHaveValue('all');
+    expect(screen.getByTestId('analytics-quality-filter')).toHaveValue('all');
     expect(screen.getByTestId('analytics-range-filter')).toHaveValue('30d');
     expect(screen.getByText('Tickets Shipped')).toBeInTheDocument();
   });
@@ -294,13 +322,80 @@ describe('AnalyticsDashboard', () => {
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
-        '/api/projects/1/analytics?range=30d&outcome=closed&agent=all'
+        '/api/projects/1/analytics?range=30d&outcome=closed&agent=all&command=all&workflowType=all&qualityBucket=all'
       )
     );
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('?range=30d&outcome=closed&agent=all', { scroll: false }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('?range=30d&outcome=closed&agent=all&command=all&workflowType=all&qualityBucket=all', { scroll: false }));
     await waitFor(() => expect(screen.getByText('50.0%')).toBeInTheDocument());
     expect(screen.queryByText('80.0%')).not.toBeInTheDocument();
+  });
+
+  it('updates context filter controls and includes them in fetch and router state', async () => {
+    const filteredData = makeAnalyticsData({
+      command: 'verify',
+      workflowType: 'QUICK',
+      qualityBucket: 'HIGH',
+    });
+
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify(filteredData), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+    renderWithProviders(<AnalyticsDashboard projectId={1} initialData={makeAnalyticsData()} />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('analytics-command-filter'), { target: { value: 'verify' } });
+    });
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('analytics-workflow-filter'), { target: { value: 'QUICK' } });
+    });
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('analytics-quality-filter'), { target: { value: 'HIGH' } });
+    });
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenLastCalledWith(
+        '/api/projects/1/analytics?range=30d&outcome=shipped&agent=all&command=verify&workflowType=QUICK&qualityBucket=HIGH'
+      )
+    );
+
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenLastCalledWith(
+        '?range=30d&outcome=shipped&agent=all&command=verify&workflowType=QUICK&qualityBucket=HIGH',
+        { scroll: false }
+      )
+    );
+  });
+
+  it('shows explicit empty-state messaging when a slice has jobs but no compatible context telemetry', () => {
+    renderWithProviders(
+      <AnalyticsDashboard
+        projectId={1}
+        initialData={makeAnalyticsData(
+          { command: 'verify' },
+          {
+            context: {
+              eligibleJobCount: 0,
+              excludedMissingContextCount: 2,
+              excludedMissingQualityScoreCount: 0,
+              peakDistribution: [],
+              riskSummary: [],
+              byQualityBucket: [],
+            },
+          }
+        )}
+      />
+    );
+
+    expect(
+      screen.getAllByText('No compatible context telemetry for the current analytics slice.').length
+    ).toBeGreaterThan(0);
   });
 
   it('renders available agent options and filter-aware empty state while keeping overview cards visible', () => {

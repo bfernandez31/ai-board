@@ -41,6 +41,9 @@ export function createSnapshotJob(polledJob: JobStatusDto, projectId: number): J
     toolsUsed: [],
     qualityScore: null,
     qualityScoreDetails: null,
+    peakContextSize: null,
+    averageContextSize: null,
+    turnCount: null,
   };
 }
 

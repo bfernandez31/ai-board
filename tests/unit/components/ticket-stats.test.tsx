@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
 import { TicketStats } from '@/components/ticket/ticket-stats';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
@@ -34,6 +35,10 @@ function createMockJob(
     toolsUsed: ['Read', 'Edit'],
     qualityScore: null,
     qualityScoreDetails: null,
+    peakContextSize: null,
+    averageContextSize: null,
+    turnCount: null,
+    contextRiskBand: null,
     log: null,
     ...overrides,
   };
@@ -232,6 +237,61 @@ describe('TicketStats', () => {
       expect(screen.getByTestId('view-full-logs-101')).toBeInTheDocument();
       expect(screen.getByTestId('view-full-logs-disabled-104')).toBeInTheDocument();
       expect(screen.getByTestId('view-full-logs-disabled-105')).toBeInTheDocument();
+    });
+  });
+
+  describe('Context metrics rendering', () => {
+    it('renders per-job context metrics and a risk badge when telemetry exists', async () => {
+      const user = userEvent.setup();
+      const jobs: TicketJobWithTelemetry[] = [
+        createMockJob({
+          id: 201,
+          peakContextSize: 125000,
+          averageContextSize: 86000,
+          turnCount: 4,
+          contextRiskBand: 'DANGER',
+        }),
+      ];
+
+      renderWithProviders(
+        <TicketStats jobs={jobs} polledJobs={[]} />
+      );
+
+      await user.click(screen.getByTestId('job-row-201'));
+
+      expect(screen.getByText('Danger')).toBeInTheDocument();
+      expect(screen.getByText('Peak Context:')).toBeInTheDocument();
+      expect(screen.getByText('125.0K tokens')).toBeInTheDocument();
+      expect(screen.getByText('Average Context:')).toBeInTheDocument();
+      expect(screen.getByText('86.0K tokens')).toBeInTheDocument();
+      expect(screen.getByText('Turn Count:')).toBeInTheDocument();
+      expect(screen.getByText('4')).toBeInTheDocument();
+    });
+
+    it('hides context metrics and indicators when the job has no context telemetry', async () => {
+      const user = userEvent.setup();
+      const jobs: TicketJobWithTelemetry[] = [
+        createMockJob({
+          id: 202,
+          peakContextSize: null,
+          averageContextSize: null,
+          turnCount: null,
+          contextRiskBand: null,
+        }),
+      ];
+
+      renderWithProviders(
+        <TicketStats jobs={jobs} polledJobs={[]} />
+      );
+
+      await user.click(screen.getByTestId('job-row-202'));
+
+      expect(screen.queryByText('Peak Context:')).not.toBeInTheDocument();
+      expect(screen.queryByText('Average Context:')).not.toBeInTheDocument();
+      expect(screen.queryByText('Turn Count:')).not.toBeInTheDocument();
+      expect(screen.queryByText('Danger')).not.toBeInTheDocument();
+      expect(screen.queryByText('Warning')).not.toBeInTheDocument();
+      expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
     });
   });
 });

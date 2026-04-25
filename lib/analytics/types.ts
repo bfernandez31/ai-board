@@ -6,6 +6,7 @@
  */
 
 import type { Agent } from '@prisma/client';
+import type { ContextRiskBand, QualityBucket } from './context-metrics';
 import { ALL_AGENTS } from '@/app/lib/utils/agent-resolution';
 
 export type TimeRange = '7d' | '30d' | '90d' | 'all';
@@ -14,11 +15,16 @@ export const NAMED_AGENTS = ALL_AGENTS;
 export const AGENT_FILTER_VALUES = ['all', ...ALL_AGENTS] as const;
 export type NamedAgent = Agent;
 export type AgentFilter = (typeof AGENT_FILTER_VALUES)[number];
+export type WorkflowTypeFilter = 'all' | WorkflowTypeKey;
+export type QualityBucketFilter = 'all' | QualityBucket;
 
 export interface AnalyticsFilters {
   range: TimeRange;
   outcome: TicketOutcomeFilter;
   agent: AgentFilter;
+  command: string;
+  workflowType: WorkflowTypeFilter;
+  qualityBucket: QualityBucketFilter;
 }
 
 export interface CompletionMetric {
@@ -130,6 +136,33 @@ export interface QualityScoreAnalytics {
   totalScoredJobs: number;
 }
 
+export interface PeakContextDistributionBucket {
+  label: string;
+  minInclusive: number;
+  maxExclusive: number | null;
+  jobCount: number;
+}
+
+export interface ContextRiskSummary {
+  band: ContextRiskBand;
+  jobCount: number;
+}
+
+export interface QualityBucketContextSummary {
+  bucket: QualityBucket;
+  jobCount: number;
+  averagePeakContextSize: number;
+}
+
+export interface ContextAnalytics {
+  eligibleJobCount: number;
+  excludedMissingContextCount: number;
+  excludedMissingQualityScoreCount: number;
+  peakDistribution: PeakContextDistributionBucket[];
+  riskSummary: ContextRiskSummary[];
+  byQualityBucket: QualityBucketContextSummary[];
+}
+
 export interface AnalyticsData {
   overview: OverviewMetrics;
   costOverTime: CostDataPoint[];
@@ -140,6 +173,7 @@ export interface AnalyticsData {
   workflowDistribution: WorkflowBreakdown[];
   velocity: WeeklyVelocity[];
   qualityScore?: QualityScoreAnalytics | null;
+  context: ContextAnalytics;
   filters: AnalyticsFilters;
   availableAgents: AgentOption[];
   /** ISO timestamp of when data was generated */
