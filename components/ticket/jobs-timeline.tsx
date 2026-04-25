@@ -39,6 +39,26 @@ import { LogViewerSheet } from './log-viewer-sheet';
 
 const TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED', 'CANCELLED']);
 
+function hasExpandableTelemetry(job: TicketJobWithTelemetry): boolean {
+  return (
+    job.inputTokens != null ||
+    job.outputTokens != null ||
+    job.cacheReadTokens != null ||
+    job.cacheCreationTokens != null ||
+    job.peakContextSize != null ||
+    job.averageContextSize != null ||
+    job.turnCount != null
+  );
+}
+
+function hasCompleteContextMetrics(job: TicketJobWithTelemetry): boolean {
+  return (
+    job.peakContextSize != null &&
+    job.averageContextSize != null &&
+    job.turnCount != null
+  );
+}
+
 function previewTone(status: string, log: TicketJobLogSummary | null): string {
   if (!log) return 'text-muted-foreground';
   if (log.captureStatus === 'UNAVAILABLE' || log.captureStatus === 'PRUNED') {
@@ -101,20 +121,9 @@ function JobRow({
   const isRunning = job.status === 'RUNNING';
   const isCancellable = projectId != null && (job.status === 'PENDING' || job.status === 'RUNNING');
 
-  // Check if job has telemetry data to expand
-  const hasTelemetry =
-    job.inputTokens != null ||
-    job.outputTokens != null ||
-    job.cacheReadTokens != null ||
-    job.cacheCreationTokens != null ||
-    job.peakContextSize != null ||
-    job.averageContextSize != null ||
-    job.turnCount != null;
+  const hasTelemetry = hasExpandableTelemetry(job);
   const contextRisk = getContextRiskConfig(job.peakContextSize);
-  const hasContextMetrics =
-    job.peakContextSize != null &&
-    job.averageContextSize != null &&
-    job.turnCount != null;
+  const hasContextMetrics = hasCompleteContextMetrics(job);
 
   const log = job.log;
   const isTerminal = TERMINAL_STATUSES.has(job.status);

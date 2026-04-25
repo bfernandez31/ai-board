@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import {
   AGENT_FILTER_VALUES,
   type AgentFilter,
+  type AnalyticsFilters,
   type QualityBucketFilter,
   type TicketOutcomeFilter,
   type TimeRange,
@@ -23,6 +24,14 @@ const VALID_OUTCOMES = new Set<TicketOutcomeFilter>(['shipped', 'closed', 'all-c
 const VALID_AGENTS = new Set<AgentFilter>(AGENT_FILTER_VALUES);
 const VALID_WORKFLOW_TYPES = new Set<WorkflowTypeFilter>(['all', 'FULL', 'QUICK', 'CLEAN']);
 const VALID_QUALITY_BUCKETS = new Set<QualityBucketFilter>(['all', 'HIGH', 'MEDIUM', 'LOW']);
+type AnalyticsSearchParams = {
+  range?: string;
+  outcome?: string;
+  agent?: string;
+  command?: string;
+  workflowType?: string;
+  qualityBucket?: string;
+};
 
 function parseProjectId(projectIdString: string): number {
   const projectId = parseInt(projectIdString, 10);
@@ -50,19 +59,45 @@ function getSearchParamValue<T extends string>(
   return fallback;
 }
 
+function getCommandFilterValue(value: string | undefined): AnalyticsFilters['command'] {
+  const trimmedValue = value?.trim();
+
+  if (!trimmedValue) {
+    return DEFAULT_ANALYTICS_FILTERS.command;
+  }
+
+  return trimmedValue;
+}
+
+function getAnalyticsFilters(search: AnalyticsSearchParams): AnalyticsFilters {
+  return {
+    range: getSearchParamValue(search.range, VALID_RANGES, DEFAULT_ANALYTICS_FILTERS.range),
+    outcome: getSearchParamValue(
+      search.outcome,
+      VALID_OUTCOMES,
+      DEFAULT_ANALYTICS_FILTERS.outcome
+    ),
+    agent: getSearchParamValue(search.agent, VALID_AGENTS, DEFAULT_ANALYTICS_FILTERS.agent),
+    command: getCommandFilterValue(search.command),
+    workflowType: getSearchParamValue(
+      search.workflowType,
+      VALID_WORKFLOW_TYPES,
+      DEFAULT_ANALYTICS_FILTERS.workflowType
+    ),
+    qualityBucket: getSearchParamValue(
+      search.qualityBucket,
+      VALID_QUALITY_BUCKETS,
+      DEFAULT_ANALYTICS_FILTERS.qualityBucket
+    ),
+  };
+}
+
 export default async function AnalyticsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{
-    range?: string;
-    outcome?: string;
-    agent?: string;
-    command?: string;
-    workflowType?: string;
-    qualityBucket?: string;
-  }>;
+  searchParams: Promise<AnalyticsSearchParams>;
 }): Promise<JSX.Element> {
   const { projectId: projectIdString } = await params;
   const search = await searchParams;
@@ -78,26 +113,7 @@ export default async function AnalyticsPage({
     throw error;
   });
 
-  const filters = {
-    range: getSearchParamValue(search.range, VALID_RANGES, DEFAULT_ANALYTICS_FILTERS.range),
-    outcome: getSearchParamValue(
-      search.outcome,
-      VALID_OUTCOMES,
-      DEFAULT_ANALYTICS_FILTERS.outcome
-    ),
-    agent: getSearchParamValue(search.agent, VALID_AGENTS, DEFAULT_ANALYTICS_FILTERS.agent),
-    command: search.command?.trim() ? search.command.trim() : DEFAULT_ANALYTICS_FILTERS.command,
-    workflowType: getSearchParamValue(
-      search.workflowType,
-      VALID_WORKFLOW_TYPES,
-      DEFAULT_ANALYTICS_FILTERS.workflowType
-    ),
-    qualityBucket: getSearchParamValue(
-      search.qualityBucket,
-      VALID_QUALITY_BUCKETS,
-      DEFAULT_ANALYTICS_FILTERS.qualityBucket
-    ),
-  };
+  const filters = getAnalyticsFilters(search);
 
   const initialData = await getAnalyticsData(projectId, filters);
 

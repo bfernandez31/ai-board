@@ -7,6 +7,19 @@
 
 import { describe, it, expect } from 'vitest';
 import { queryKeys } from '@/app/lib/query-keys';
+import type { AnalyticsFilters } from '@/lib/analytics/types';
+
+function createAnalyticsFilters(overrides: Partial<AnalyticsFilters> = {}): AnalyticsFilters {
+  return {
+    range: '30d',
+    outcome: 'shipped',
+    agent: 'all',
+    command: 'all',
+    workflowType: 'all',
+    qualityBucket: 'all',
+    ...overrides,
+  };
+}
 
 describe('Query Keys Factory', () => {
   describe('projects', () => {
@@ -124,7 +137,12 @@ describe('Query Keys Factory', () => {
     });
 
     it('should return correct key for analytics data with all filter dimensions', () => {
-      expect(queryKeys.analytics.data(1, '7d', 'shipped', 'all', 'all', 'all', 'all')).toEqual([
+      expect(
+        queryKeys.analytics.data(
+          1,
+          createAnalyticsFilters({ range: '7d' })
+        )
+      ).toEqual([
         'analytics',
         1,
         '7d',
@@ -134,7 +152,18 @@ describe('Query Keys Factory', () => {
         'all',
         'all',
       ]);
-      expect(queryKeys.analytics.data(2, '30d', 'closed', 'CLAUDE', 'verify', 'FULL', 'HIGH')).toEqual([
+      expect(
+        queryKeys.analytics.data(
+          2,
+          createAnalyticsFilters({
+            outcome: 'closed',
+            agent: 'CLAUDE',
+            command: 'verify',
+            workflowType: 'FULL',
+            qualityBucket: 'HIGH',
+          })
+        )
+      ).toEqual([
         'analytics',
         2,
         '30d',
@@ -144,7 +173,19 @@ describe('Query Keys Factory', () => {
         'FULL',
         'HIGH',
       ]);
-      expect(queryKeys.analytics.data(3, '90d', 'all-completed', 'CODEX', 'implement', 'QUICK', 'MEDIUM')).toEqual([
+      expect(
+        queryKeys.analytics.data(
+          3,
+          createAnalyticsFilters({
+            range: '90d',
+            outcome: 'all-completed',
+            agent: 'CODEX',
+            command: 'implement',
+            workflowType: 'QUICK',
+            qualityBucket: 'MEDIUM',
+          })
+        )
+      ).toEqual([
         'analytics',
         3,
         '90d',

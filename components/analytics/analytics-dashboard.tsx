@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { queryKeys } from '@/app/lib/query-keys';
-import type { AgentFilter, AnalyticsData, AnalyticsFilters, TicketOutcomeFilter, TimeRange } from '@/lib/analytics/types';
+import type {
+  AgentFilter,
+  AnalyticsData,
+  AnalyticsFilters,
+  TicketOutcomeFilter,
+  TimeRange,
+} from '@/lib/analytics/types';
 import {
   buildAnalyticsEmptyMessage,
   DEFAULT_ANALYTICS_FILTERS,
@@ -44,16 +50,17 @@ const OUTCOME_OPTIONS = ['shipped', 'closed', 'all-completed'] as const;
 const COMMAND_OPTIONS = ['all', 'specify', 'plan', 'implement', 'verify', 'quick-impl'] as const;
 const WORKFLOW_OPTIONS = ['all', 'FULL', 'QUICK', 'CLEAN'] as const;
 const QUALITY_BUCKET_OPTIONS = ['all', 'HIGH', 'MEDIUM', 'LOW'] as const;
+const FILTER_PARAM_KEYS = [
+  'range',
+  'outcome',
+  'agent',
+  'command',
+  'workflowType',
+  'qualityBucket',
+] as const;
 
 async function fetchAnalytics(projectId: number, filters: AnalyticsFilters): Promise<AnalyticsData> {
-  const params = new URLSearchParams({
-    range: filters.range,
-    outcome: filters.outcome,
-    agent: filters.agent,
-    command: filters.command,
-    workflowType: filters.workflowType,
-    qualityBucket: filters.qualityBucket,
-  });
+  const params = buildFilterSearchParams(new URLSearchParams(), filters);
   const response = await fetch(`/api/projects/${projectId}/analytics?${params.toString()}`);
   if (!response.ok) {
     throw new Error('Failed to fetch analytics');
@@ -98,13 +105,20 @@ function buildFilterSearchParams(
   filters: AnalyticsFilters
 ): URLSearchParams {
   const params = new URLSearchParams(searchParams.toString());
-  params.set('range', filters.range);
-  params.set('outcome', filters.outcome);
-  params.set('agent', filters.agent);
-  params.set('command', filters.command);
-  params.set('workflowType', filters.workflowType);
-  params.set('qualityBucket', filters.qualityBucket);
+
+  for (const key of FILTER_PARAM_KEYS) {
+    params.set(key, filters[key]);
+  }
+
   return params;
+}
+
+function getSelectLabel(value: string, allLabel: string): string {
+  if (value === 'all') {
+    return allLabel;
+  }
+
+  return value;
 }
 
 export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboardProps) {
@@ -117,15 +131,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
   const shouldUseInitialData = filtersMatch(filters, initialData.filters);
 
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.analytics.data(
-      projectId,
-      filters.range,
-      filters.outcome,
-      filters.agent,
-      filters.command,
-      filters.workflowType,
-      filters.qualityBucket
-    ),
+    queryKey: queryKeys.analytics.data(projectId, filters),
     queryFn: () => fetchAnalytics(projectId, filters),
     initialData: shouldUseInitialData ? initialData : undefined,
     refetchInterval: 15000,
@@ -135,11 +141,21 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
   const { data: subscription } = useSubscription();
   const analytics = data ?? (shouldUseInitialData ? initialData : undefined);
 
-  const updateFilters = (nextFilters: AnalyticsFilters) => {
+  function updateFilters(nextFilters: AnalyticsFilters): void {
     setFilters(nextFilters);
     const params = buildFilterSearchParams(searchParams, nextFilters);
     router.push(`?${params.toString()}`, { scroll: false });
-  };
+  }
+
+  function updateFilter<K extends keyof AnalyticsFilters>(
+    key: K,
+    value: AnalyticsFilters[K]
+  ): void {
+    updateFilters({
+      ...filters,
+      [key]: value,
+    });
+  }
 
   const emptyMessage = buildAnalyticsEmptyMessage(analytics?.filters ?? filters);
 
@@ -149,12 +165,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
         <div className="grid gap-3 sm:grid-cols-2 lg:flex">
           <Select
             value={filters.outcome}
-            onValueChange={(value) =>
-              updateFilters({
-                ...filters,
-                outcome: value as TicketOutcomeFilter,
-              })
-            }
+            onValueChange={(value) => updateFilter('outcome', value as TicketOutcomeFilter)}
           >
             <SelectTrigger className="w-full lg:w-[180px]" data-testid="analytics-outcome-filter">
               <SelectValue placeholder="Outcome" />
@@ -170,12 +181,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
 
           <Select
             value={filters.agent}
-            onValueChange={(value) =>
-              updateFilters({
-                ...filters,
-                agent: value as AgentFilter,
-              })
-            }
+            onValueChange={(value) => updateFilter('agent', value as AgentFilter)}
           >
             <SelectTrigger className="w-full lg:w-[180px]" data-testid="analytics-agent-filter">
               <SelectValue placeholder="Agent" />
@@ -191,12 +197,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
 
           <Select
             value={filters.command}
-            onValueChange={(value) =>
-              updateFilters({
-                ...filters,
-                command: value,
-              })
-            }
+            onValueChange={(value) => updateFilter('command', value)}
           >
             <SelectTrigger className="w-full lg:w-[180px]" data-testid="analytics-command-filter">
               <SelectValue placeholder="Command" />
@@ -204,7 +205,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
             <SelectContent>
               {COMMAND_OPTIONS.map((command) => (
                 <SelectItem key={command} value={command}>
-                  {command === 'all' ? 'All commands' : command}
+                  {getSelectLabel(command, 'All commands')}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -213,10 +214,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
           <Select
             value={filters.workflowType}
             onValueChange={(value) =>
-              updateFilters({
-                ...filters,
-                workflowType: value as AnalyticsFilters['workflowType'],
-              })
+              updateFilter('workflowType', value as AnalyticsFilters['workflowType'])
             }
           >
             <SelectTrigger className="w-full lg:w-[180px]" data-testid="analytics-workflow-filter">
@@ -225,7 +223,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
             <SelectContent>
               {WORKFLOW_OPTIONS.map((workflowType) => (
                 <SelectItem key={workflowType} value={workflowType}>
-                  {workflowType === 'all' ? 'All workflows' : workflowType}
+                  {getSelectLabel(workflowType, 'All workflows')}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -234,10 +232,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
           <Select
             value={filters.qualityBucket}
             onValueChange={(value) =>
-              updateFilters({
-                ...filters,
-                qualityBucket: value as AnalyticsFilters['qualityBucket'],
-              })
+              updateFilter('qualityBucket', value as AnalyticsFilters['qualityBucket'])
             }
           >
             <SelectTrigger className="w-full lg:w-[180px]" data-testid="analytics-quality-filter">
@@ -246,7 +241,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
             <SelectContent>
               {QUALITY_BUCKET_OPTIONS.map((qualityBucket) => (
                 <SelectItem key={qualityBucket} value={qualityBucket}>
-                  {qualityBucket === 'all' ? 'All quality buckets' : qualityBucket}
+                  {getSelectLabel(qualityBucket, 'All quality buckets')}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -255,12 +250,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
 
         <TimeRangeSelector
           value={filters.range}
-          onChange={(range) =>
-            updateFilters({
-              ...filters,
-              range,
-            })
-          }
+          onChange={(range) => updateFilter('range', range)}
         />
       </div>
 

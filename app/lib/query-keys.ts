@@ -1,3 +1,5 @@
+import type { AnalyticsFilters } from '@/lib/analytics/types';
+
 export const queryKeys = {
   projects: {
     all: ['projects'] as const,
@@ -50,15 +52,17 @@ export const queryKeys = {
 
   analytics: {
     all: (projectId: number) => ['analytics', projectId] as const,
-    data: (
-      projectId: number,
-      range: string,
-      outcome: string,
-      agent: string,
-      command: string,
-      workflowType: string,
-      qualityBucket: string
-    ) => ['analytics', projectId, range, outcome, agent, command, workflowType, qualityBucket] as const,
+    data: (projectId: number, filters: AnalyticsFilters) =>
+      [
+        'analytics',
+        projectId,
+        filters.range,
+        filters.outcome,
+        filters.agent,
+        filters.command,
+        filters.workflowType,
+        filters.qualityBucket,
+      ] as const,
   },
 
   heatmap: {
