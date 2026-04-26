@@ -109,7 +109,7 @@ fi
 CAPTURE_STATUS="${CAPTURE_STATUS_FORCED:-CAPTURED}"
 EVENT_COUNT=$(($(wc -l < "${REDACTED}" 2>/dev/null || echo 0) - 1))
 if [[ "${EVENT_COUNT}" -lt 0 ]]; then EVENT_COUNT=0; fi
-ERROR_COUNT=$(grep -c '"type":"error"' "${REDACTED}" 2>/dev/null || echo 0)
+ERROR_COUNT=$(grep -c '"type":"error"' "${REDACTED}" 2>/dev/null) || ERROR_COUNT=0
 
 derive_preview() {
   node --input-type=module -e "
