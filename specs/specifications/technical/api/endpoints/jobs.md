@@ -352,6 +352,21 @@ env:
 - Updates corresponding Job record with aggregated metrics
 - Missing or null metric attributes default to zero (no errors)
 
+**Per-turn context tracking** (Job columns `peakContextTokens`, `avgContextTokens`, `turnCount`):
+
+| Agent | Per-turn event | `peakContextTokens` | `avgContextTokens` | `turnCount` |
+|-------|----------------|---------------------|--------------------|-------------|
+| Claude | `claude_code.api_request` (one per turn) | `max(prev, max(input + cacheRead + cacheCreation per event))` | `round(totalSum / totalTurnCount)` | `prev + batchTurns` |
+| Codex | `codex.sse_event` with `event.kind="response.completed"` | `max(prev, max(input_token_count per event))` | `round(totalSum / totalTurnCount)` | `prev + batchTurns` |
+| Gemini | any cumulative `gemini_cli.*` snapshot | `max(prev, snapshot.input + cacheRead + cacheCreation)` | not written (stays `null`) | not written (stays `null`) |
+| Mistral (batch) | n/a | not written (stays `null`) | not written (stays `null`) | not written (stays `null`) |
+
+**Null-preservation rule**: A batch never overwrites a non-null prior value with `null`. If the incoming batch carries no parseable per-turn events, the three fields are excluded from the `UPDATE`'s `SET` list and retain their prior values.
+
+**Atomicity**: The three new fields and all existing aggregated telemetry fields are written in the same `prisma.job.update` call. No split transactions.
+
+**Cross-batch merge**: Each OTLP POST is an incremental batch. The processor reads the prior `peakContextTokens` / `avgContextTokens` / `turnCount` for the job, computes `oldSum = prevAvg * prevTurnCount`, adds the incoming batch's sum and turn count, and writes the new merged peak, average, and turn count. CUMULATIVE batches (Gemini) update only `peakContextTokens` via `Math.max`.
+
 **Response** (200 OK):
 ```json
 {
@@ -611,6 +626,9 @@ The ticket jobs listing includes a `log` object on each row so the timeline can 
       "id": 4321,
       "status": "FAILED",
       "command": "implement",
+      "peakContextTokens": 142000,
+      "avgContextTokens": 86500,
+      "turnCount": 17,
       "log": {
         "captureStatus": "CAPTURED",
         "preview": "Build failed: Prisma migration 20260422 not applied to target DB"
@@ -621,6 +639,11 @@ The ticket jobs listing includes a `log` object on each row so the timeline can 
 ```
 
 `log` is `null` when no log record exists yet (e.g., a still-RUNNING job or capture in flight).
+
+**Per-turn context fields** (`peakContextTokens`, `avgContextTokens`, `turnCount`):
+- All three are `null` for jobs run with agents that expose no per-turn telemetry (Mistral today), for jobs whose OTLP stream produced zero successfully-parsed per-turn events, and for jobs that predate per-turn ingestion (no backfill).
+- Gemini jobs may populate `peakContextTokens` while leaving `avgContextTokens` and `turnCount` `null` — Gemini emits cumulative snapshots rather than per-turn deltas, so an average and a turn count are not derivable.
+- All three values are integer token counts. `avgContextTokens` is rounded.
 
 ```mermaid
 sequenceDiagram

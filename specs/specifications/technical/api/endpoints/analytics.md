@@ -120,6 +120,13 @@ sequenceDiagram
     ],
     "hasData": true
   },
+  "peakContextDistribution": {
+    "jobs": [
+      { "jobId": 4321, "peakContextTokens": 142000, "model": "claude-sonnet-4-6", "command": "implement", "workflowType": "FULL", "qualityScore": 82 },
+      { "jobId": 4322, "peakContextTokens": 38000, "model": "claude-opus-4-7", "command": "verify", "workflowType": "FULL", "qualityScore": 91 }
+    ],
+    "hasData": true
+  },
   "generatedAt": "2025-11-28T10:30:00Z",
   "jobCount": 45,
   "hasData": true
@@ -173,6 +180,15 @@ sequenceDiagram
     - `weight`: Dimension weight in final score computation
     - `averageScore`: Average dimension score across all scored jobs in range
   - `hasData`: False if no COMPLETED verify jobs with quality scores exist in range
+- `peakContextDistribution`: Per-job peak context size for the filtered completed jobs, used to render the project's peak-context histogram
+  - `jobs`: One entry per completed job in the dashboard-filtered set, with the fields needed for client-side bucketing and chart-local filtering
+    - `jobId`: Completed Job ID within the filtered range
+    - `peakContextTokens`: Integer peak context tokens observed during the job, or `null` for agents without per-turn telemetry (Mistral) and pre-feature jobs
+    - `model`: Model used by the job — drives the per-job percent-of-context-window bucket
+    - `command`: Job command (specify, plan, implement, quick-impl, verify, ship, iterate) — drives the chart-local command filter
+    - `workflowType`: Workflow type of the parent ticket (`FULL` | `QUICK` | `CLEAN`) — drives the chart-local workflow filter
+    - `qualityScore`: Integer 0-100 or `null` — drives the chart-local quality bucket filter
+  - `hasData`: True when at least one job in the filtered set has a non-null `peakContextTokens`. False for Mistral-only projects and projects whose only completed jobs predate per-turn ingestion
 - `generatedAt`: Timestamp when analytics were generated
 - `jobCount`: Total filtered jobs in range, including completed and failed jobs
 - `hasData`: False if the filtered selection contains no completed jobs with telemetry data
@@ -189,6 +205,7 @@ sequenceDiagram
   - `CLOSED` uses `ticket.closedAt`
 - Velocity groups filtered shipped and/or closed tickets into ISO weeks based on their terminal event date
 - Top tools limited to 10 entries
+- `peakContextDistribution.jobs` is scoped server-side by the dashboard-level filters (`range`, `outcome`, `agent`) just like every other analytics field. The chart's per-job bucketing (percent of context window) and its local `command` / `workflowType` / `qualityBucket` filters are applied client-side over the returned `jobs` array
 
 **Empty State**:
 - Returns zeroed or empty chart sections when the filtered selection has no completed telemetry-backed jobs

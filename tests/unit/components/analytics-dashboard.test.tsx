@@ -170,6 +170,18 @@ vi.mock('@/components/analytics/velocity-chart', () => ({
   ),
 }));
 
+vi.mock('@/components/analytics/peak-context-distribution-chart', () => ({
+  PeakContextDistributionChart: ({
+    data,
+  }: {
+    data: { hasData: boolean };
+  }) => (
+    <div data-testid="peak-context-chart">
+      {data.hasData ? 'peak-context-chart' : 'No per-turn data for this selection yet'}
+    </div>
+  ),
+}));
+
 function makeAnalyticsData(filters: Partial<AnalyticsFilters> = {}, overrides: Partial<AnalyticsData> = {}): AnalyticsData {
   const resolvedFilters: AnalyticsFilters = {
     range: filters.range ?? '30d',
@@ -199,6 +211,19 @@ function makeAnalyticsData(filters: Partial<AnalyticsFilters> = {}, overrides: P
     topTools: [{ tool: 'Read', count: 2 }],
     workflowDistribution: [{ type: 'FULL', count: 1, percentage: 100 }],
     velocity: [{ week: '2026-W10', ticketsShipped: 1 }],
+    peakContextDistribution: {
+      jobs: [
+        {
+          jobId: 1,
+          peakContextTokens: 100_000,
+          model: 'claude-sonnet-4-6',
+          command: 'specify',
+          workflowType: 'FULL',
+          qualityScore: 85,
+        },
+      ],
+      hasData: true,
+    },
     filters: resolvedFilters,
     availableAgents: [
       { value: 'all', label: 'All agents', jobCount: 3, isDefault: true },
@@ -340,6 +365,27 @@ describe('AnalyticsDashboard', () => {
     expect(
       screen.getByText(/completion cards still reflect the active period/i)
     ).toBeInTheDocument();
+  });
+
+  it('renders the peak-context distribution chart when hasData is true', () => {
+    renderWithProviders(
+      <AnalyticsDashboard projectId={1} initialData={makeAnalyticsData()} />
+    );
+    expect(screen.getByTestId('peak-context-chart')).toHaveTextContent('peak-context-chart');
+  });
+
+  it('renders the empty-state message in the peak-context chart slot when hasData is false', () => {
+    renderWithProviders(
+      <AnalyticsDashboard
+        projectId={1}
+        initialData={makeAnalyticsData({}, {
+          peakContextDistribution: { jobs: [], hasData: false },
+        })}
+      />
+    );
+    expect(screen.getByTestId('peak-context-chart')).toHaveTextContent(
+      'No per-turn data for this selection yet'
+    );
   });
 
   it('updates completion-card labels when the active range changes', async () => {

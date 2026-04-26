@@ -1,0 +1,3 @@
+ALTER TABLE "Job" ADD COLUMN "peakContextTokens" INTEGER;
+ALTER TABLE "Job" ADD COLUMN "avgContextTokens" INTEGER;
+ALTER TABLE "Job" ADD COLUMN "turnCount" INTEGER;

@@ -533,6 +533,13 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - **Top Tools**: Horizontal bar chart ranking most-used AI tools (Edit, Read, Bash, etc.)
 - **Workflow Distribution**: Donut chart showing proportion of FULL and QUICK workflows
 - **Velocity**: Bar chart displaying tickets shipped per week
+- **Peak Context Distribution**: Histogram of completed jobs bucketed by peak per-turn context size as a percentage of the model's context window (`<20%`, `20-40%`, `40-60%`, `60-80%`, `80-95%`, `≥95%`, plus an `unknown` bucket for jobs whose model has no registered context window)
+  - Provides three chart-local filters scoped to this card only — they do not affect other charts on the dashboard:
+    - **Command**: any command observed in the filtered set, or "All commands"
+    - **Workflow**: All / FULL / QUICK
+    - **Quality**: All / Poor / Fair / Good / Excellent (matches the ticket Stats quality thresholds)
+  - Empty states distinguish "no jobs match the filters" from "no per-turn data for this selection yet" (e.g., a Mistral-only project or pre-feature historical data)
+  - Mistral jobs and historical jobs without per-turn telemetry are excluded from the histogram (they leave `peakContextTokens` null on the underlying `Job` record)
 
 **Dashboard Filters**:
 - **Time Range**: 7 days, 30 days, 90 days, or all time

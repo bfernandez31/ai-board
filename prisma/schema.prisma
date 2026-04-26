@@ -53,6 +53,11 @@ model Job {
   model               String?  @db.VarChar(50) // Primary model used
   toolsUsed           String[] @default([]) // List of tools used (Edit, Write, Bash, etc.)
 
+  // Per-turn context size (AIB-725)
+  peakContextTokens   Int? // Peak per-turn context tokens attended
+  avgContextTokens    Int? // Mean per-turn context tokens attended (rounded)
+  turnCount           Int? // Number of per-turn events successfully parsed
+
   // Quality score (0-100) computed from code review agent dimension scores
   // Only populated for COMPLETED verify jobs of FULL workflow tickets
   qualityScore        Int?

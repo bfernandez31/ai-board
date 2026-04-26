@@ -42,6 +42,11 @@ interface TelemetryMetrics {
   toolsUsed: Set<string>;
   /** When set, Gemini cost is estimated from merged token values using this model */
   geminiCostModel?: string | null;
+  /** Per-turn context tracking (AIB-725). DELTA accumulates peak/sum/turnCount;
+   *  CUMULATIVE tracks peak only (Gemini snapshots aren't per-turn deltas). */
+  peakContext: number;
+  contextSum: number;
+  turnCount: number;
 }
 
 type TelemetryMergeMode = 'DELTA' | 'CUMULATIVE';
@@ -57,6 +62,9 @@ function createEmptyMetrics(): TelemetryMetrics {
     durationMs: 0,
     model: null,
     toolsUsed: new Set<string>(),
+    peakContext: 0,
+    contextSum: 0,
+    turnCount: 0,
   };
 }
 
@@ -69,7 +77,9 @@ function hasTelemetryData(metrics: TelemetryMetrics): boolean {
     || metrics.costUsd != null
     || metrics.durationMs > 0
     || metrics.model != null
-    || metrics.toolsUsed.size > 0;
+    || metrics.toolsUsed.size > 0
+    || metrics.peakContext > 0
+    || metrics.turnCount > 0;
 }
 
 const GEMINI_INPUT_TOKEN_KEYS = [
@@ -141,6 +151,14 @@ function mergeGeminiTelemetryRecord(
   metrics.cacheCreationTokens = Math.max(metrics.cacheCreationTokens, cacheCreationTokens);
   metrics.durationMs = Math.max(metrics.durationMs, durationMs);
 
+  // Per-turn context (AIB-725): Gemini emits cumulative snapshots, so we can
+  // only track the peak attended window (input + cacheRead + cacheCreation).
+  // turnCount and contextSum stay at 0 (the merge layer leaves the columns null).
+  const cumulativePeak = inputTokens + cacheReadTokens + cacheCreationTokens;
+  if (cumulativePeak > metrics.peakContext) {
+    metrics.peakContext = cumulativePeak;
+  }
+
   if (thinkingTokens > 0) {
     metrics.thinkingTokens = Math.max(metrics.thinkingTokens ?? 0, thinkingTokens);
   }
@@ -194,6 +212,9 @@ async function updateJobMetrics(
       costUsd: true,
       durationMs: true,
       toolsUsed: true,
+      peakContextTokens: true,
+      avgContextTokens: true,
+      turnCount: true,
     },
   });
 
@@ -248,6 +269,28 @@ async function updateJobMetrics(
 
   if (metrics.model) {
     updateData.model = metrics.model;
+  }
+
+  // Per-turn context merge (AIB-725).
+  //
+  // Peak is always max(db, batch) regardless of mode.
+  // DELTA path adds turnCount + reconstructs avg from `db.avg * db.turnCount`.
+  // CUMULATIVE path (Gemini snapshots) leaves turnCount/avgContextTokens null
+  // because the snapshots aren't per-turn events. Never overwrite a non-null
+  // stored value with null (FR-004) — both branches gate on `metrics.peakContext > 0`
+  // / `metrics.turnCount > 0` so a batch with no per-turn events is a no-op.
+  if (metrics.peakContext > 0) {
+    updateData.peakContextTokens = Math.max(job.peakContextTokens ?? 0, metrics.peakContext);
+  }
+
+  if (mergeMode !== 'CUMULATIVE' && metrics.turnCount > 0) {
+    const newTurnCount = (job.turnCount ?? 0) + metrics.turnCount;
+    const oldSum = (job.avgContextTokens ?? 0) * (job.turnCount ?? 0);
+    const newSum = oldSum + metrics.contextSum;
+    updateData.turnCount = newTurnCount;
+    if (newTurnCount > 0) {
+      updateData.avgContextTokens = Math.round(newSum / newTurnCount);
+    }
   }
 
   const updatedJob = await prisma.job.update({
@@ -656,15 +699,27 @@ export async function processTelemetry(
         const isToolEvent = DELTA_TOOL_EVENTS.includes(eventName);
 
         if (isClaudeApiRequest) {
-          deltaMetrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
+          const claudeInput = parseIntAttribute(findAttribute(attrs, 'input_tokens'));
+          const claudeCacheRead = parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
+          const claudeCacheCreation = parseIntAttribute(findAttribute(attrs, 'cache_creation_tokens'));
+          deltaMetrics.inputTokens += claudeInput;
           deltaMetrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
-          deltaMetrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
-          deltaMetrics.cacheCreationTokens += parseIntAttribute(findAttribute(attrs, 'cache_creation_tokens'));
+          deltaMetrics.cacheReadTokens += claudeCacheRead;
+          deltaMetrics.cacheCreationTokens += claudeCacheCreation;
           deltaMetrics.costUsd =
             (deltaMetrics.costUsd ?? 0) + parseFloatAttribute(findAttribute(attrs, 'cost_usd'));
           deltaMetrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
           const model = findAttribute(attrs, 'model');
           if (model) deltaMetrics.model = String(model);
+
+          // Per-turn context (AIB-725): the attended window for this turn is
+          // input + cache_read + cache_creation (output is produced, not attended).
+          const turnContext = claudeInput + claudeCacheRead + claudeCacheCreation;
+          if (turnContext > deltaMetrics.peakContext) {
+            deltaMetrics.peakContext = turnContext;
+          }
+          deltaMetrics.contextSum += turnContext;
+          deltaMetrics.turnCount += 1;
         }
 
         if (isCodexTokenEvent) {
@@ -691,6 +746,14 @@ export async function processTelemetry(
               outputTokens,
               cachedTokens
             );
+
+          // Per-turn context (AIB-725): input_token_count is already inclusive
+          // of cached for Codex, so it IS the attended window for this turn.
+          if (totalInputTokens > deltaMetrics.peakContext) {
+            deltaMetrics.peakContext = totalInputTokens;
+          }
+          deltaMetrics.contextSum += totalInputTokens;
+          deltaMetrics.turnCount += 1;
         }
 
         if (isToolEvent) {

@@ -654,6 +654,226 @@ describe('Agent-Agnostic Telemetry', () => {
     });
   });
 
+  describe('AIB-725: Per-turn context tracking', () => {
+    it('Claude — single batch of 3 api_request events accumulates peak/avg/turnCount', async () => {
+      const turns = [
+        { input: 1000, cacheRead: 200, cacheCreation: 100 }, // turnContext = 1300
+        { input: 5000, cacheRead: 500, cacheCreation: 100 }, // turnContext = 5600
+        { input: 10000, cacheRead: 1000, cacheCreation: 200 }, // turnContext = 11200
+      ];
+      const expected = turns.map(t => t.input + t.cacheRead + t.cacheCreation);
+      const expectedPeak = Math.max(...expected);
+      const expectedAvg = Math.round(expected.reduce((a, b) => a + b, 0) / expected.length);
+
+      const payload = buildOtlpPayload(
+        jobId,
+        turns.map(t => ({
+          body: { stringValue: 'claude_code.api_request' },
+          attributes: [
+            { key: 'input_tokens', value: { stringValue: String(t.input) } },
+            { key: 'output_tokens', value: { stringValue: '100' } },
+            { key: 'cache_read_tokens', value: { stringValue: String(t.cacheRead) } },
+            { key: 'cache_creation_tokens', value: { stringValue: String(t.cacheCreation) } },
+            { key: 'model', value: { stringValue: 'claude-sonnet-4-6' } },
+          ],
+        }))
+      );
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.peakContextTokens).toBe(expectedPeak);
+      expect(job!.avgContextTokens).toBe(expectedAvg);
+      expect(job!.turnCount).toBe(3);
+    });
+
+    it('Claude — two consecutive batches accumulate across batches', async () => {
+      // Batch 1: turns of 1000 and 3000 → peak=3000, sum=4000, turnCount=2
+      const batch1 = buildOtlpPayload(jobId, [
+        {
+          body: { stringValue: 'claude_code.api_request' },
+          attributes: [
+            { key: 'input_tokens', value: { stringValue: '1000' } },
+            { key: 'output_tokens', value: { stringValue: '100' } },
+            { key: 'model', value: { stringValue: 'claude-sonnet-4-6' } },
+          ],
+        },
+        {
+          body: { stringValue: 'claude_code.api_request' },
+          attributes: [
+            { key: 'input_tokens', value: { stringValue: '3000' } },
+            { key: 'output_tokens', value: { stringValue: '100' } },
+            { key: 'model', value: { stringValue: 'claude-sonnet-4-6' } },
+          ],
+        },
+      ]);
+      await workflowApi.post('/api/telemetry/v1/logs', batch1);
+
+      // Batch 2: turns of 5000 and 2000 → peak=5000, sum=7000, turnCount=2
+      const batch2 = buildOtlpPayload(jobId, [
+        {
+          body: { stringValue: 'claude_code.api_request' },
+          attributes: [
+            { key: 'input_tokens', value: { stringValue: '5000' } },
+            { key: 'output_tokens', value: { stringValue: '100' } },
+            { key: 'model', value: { stringValue: 'claude-sonnet-4-6' } },
+          ],
+        },
+        {
+          body: { stringValue: 'claude_code.api_request' },
+          attributes: [
+            { key: 'input_tokens', value: { stringValue: '2000' } },
+            { key: 'output_tokens', value: { stringValue: '100' } },
+            { key: 'model', value: { stringValue: 'claude-sonnet-4-6' } },
+          ],
+        },
+      ]);
+      await workflowApi.post('/api/telemetry/v1/logs', batch2);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      // running max(3000, 5000) = 5000
+      expect(job!.peakContextTokens).toBe(5000);
+      // total turn count = 4
+      expect(job!.turnCount).toBe(4);
+      // avg = round((1000+3000+5000+2000)/4) = 2750
+      expect(job!.avgContextTokens).toBe(2750);
+    });
+
+    it('Codex — input_token_count events populate peak/avg/turnCount', async () => {
+      const payload = buildOtlpPayload(jobId, [
+        {
+          body: { stringValue: 'codex.sse_event' },
+          attributes: [
+            { key: 'event.kind', value: { stringValue: 'response.completed' } },
+            { key: 'input_token_count', value: { stringValue: '4000' } },
+            { key: 'output_token_count', value: { stringValue: '200' } },
+            { key: 'cached_token_count', value: { stringValue: '500' } },
+            { key: 'model', value: { stringValue: 'gpt-5-codex' } },
+          ],
+        },
+        {
+          body: { stringValue: 'codex.sse_event' },
+          attributes: [
+            { key: 'event.kind', value: { stringValue: 'response.completed' } },
+            { key: 'input_token_count', value: { stringValue: '8000' } },
+            { key: 'output_token_count', value: { stringValue: '300' } },
+            { key: 'cached_token_count', value: { stringValue: '1000' } },
+            { key: 'model', value: { stringValue: 'gpt-5-codex' } },
+          ],
+        },
+      ]);
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.peakContextTokens).toBe(8000); // max single-turn input_token_count
+      expect(job!.turnCount).toBe(2);
+      expect(job!.avgContextTokens).toBe(6000); // (4000+8000)/2
+    });
+
+    it('Gemini — cumulative snapshots update peak via Math.max but leave avg/turnCount null', async () => {
+      // First snapshot: input=10000, cacheRead=2000, cacheCreation=500 → peak=12500
+      await workflowApi.post(
+        '/api/telemetry/v1/logs',
+        buildGeminiNativePayload(jobId, [
+          {
+            body: 'gemini_cli.api_response',
+            attributes: [
+              { key: 'model', value: { stringValue: 'gemini-2.5-pro' } },
+              { key: 'input_tokens', value: { intValue: '10000' } },
+              { key: 'output_tokens', value: { intValue: '200' } },
+              { key: 'cache_read_tokens', value: { intValue: '2000' } },
+              { key: 'cache_creation_tokens', value: { intValue: '500' } },
+            ],
+          },
+        ])
+      );
+
+      // Second cumulative snapshot is larger: input=20000, cacheRead=3000, cacheCreation=1000 → peak=24000
+      await workflowApi.post(
+        '/api/telemetry/v1/logs',
+        buildGeminiNativePayload(jobId, [
+          {
+            body: 'gemini_cli.api_response',
+            attributes: [
+              { key: 'model', value: { stringValue: 'gemini-2.5-pro' } },
+              { key: 'input_tokens', value: { intValue: '20000' } },
+              { key: 'output_tokens', value: { intValue: '500' } },
+              { key: 'cache_read_tokens', value: { intValue: '3000' } },
+              { key: 'cache_creation_tokens', value: { intValue: '1000' } },
+            ],
+          },
+        ])
+      );
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.peakContextTokens).toBe(24000);
+      expect(job!.avgContextTokens).toBeNull();
+      expect(job!.turnCount).toBeNull();
+    });
+
+    it('Mistral batch payload leaves all three fields null (FR-004)', async () => {
+      const payload = {
+        jobId,
+        inputTokens: 10000,
+        outputTokens: 4000,
+        cacheReadTokens: 500,
+        model: 'mistral-large-latest',
+        toolsUsed: ['bash'],
+      };
+
+      const response = await workflowApi.post('/api/telemetry/v1/logs', payload);
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job!.peakContextTokens).toBeNull();
+      expect(job!.avgContextTokens).toBeNull();
+      expect(job!.turnCount).toBeNull();
+    });
+
+    it('preserves prior per-turn fields when a later batch has no per-turn events (FR-004)', async () => {
+      // Seed with a Claude per-turn batch
+      await workflowApi.post(
+        '/api/telemetry/v1/logs',
+        buildOtlpPayload(jobId, [
+          {
+            body: { stringValue: 'claude_code.api_request' },
+            attributes: [
+              { key: 'input_tokens', value: { stringValue: '5000' } },
+              { key: 'output_tokens', value: { stringValue: '100' } },
+              { key: 'cache_read_tokens', value: { stringValue: '500' } },
+              { key: 'cache_creation_tokens', value: { stringValue: '0' } },
+              { key: 'model', value: { stringValue: 'claude-sonnet-4-6' } },
+            ],
+          },
+        ])
+      );
+
+      const seeded = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(seeded!.peakContextTokens).toBe(5500);
+      expect(seeded!.turnCount).toBe(1);
+      expect(seeded!.avgContextTokens).toBe(5500);
+
+      // Send a tool-only batch (no claude_code.api_request, no codex.sse_event)
+      await workflowApi.post(
+        '/api/telemetry/v1/logs',
+        buildOtlpPayload(jobId, [
+          {
+            body: { stringValue: 'claude_code.tool_result' },
+            attributes: [{ key: 'tool_name', value: { stringValue: 'Read' } }],
+          },
+        ])
+      );
+
+      const after = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(after!.peakContextTokens).toBe(5500);
+      expect(after!.turnCount).toBe(1);
+      expect(after!.avgContextTokens).toBe(5500);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('T014: unrecognized event names are silently skipped without error', async () => {
       const payload = buildOtlpPayload(jobId, [
