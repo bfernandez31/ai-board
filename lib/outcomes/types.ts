@@ -4,6 +4,19 @@
 
 export const FRICTION_FREE_QUALITY_THRESHOLD = 80;
 
+/**
+ * Subset of the project `config` blob the outcome pipeline reads.
+ *
+ * Defined here (rather than imported from validations) so the outcome modules
+ * stay decoupled from the full config shape — they only need language,
+ * services, and testing-framework hints to drive semantic-tag inference.
+ */
+export interface ProjectConfigLike {
+  project?: { language?: string | null; framework?: string | null };
+  services?: Array<{ type?: string }>;
+  testing?: { framework?: string; e2e?: boolean; e2e_framework?: string };
+}
+
 /** A single file change extracted from a commit/PR diff. */
 export interface FileChange {
   path: string;

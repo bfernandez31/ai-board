@@ -7,17 +7,11 @@
  * and a generic lookup table — no per-project hardcoding.
  */
 
-import type { FileChange } from './types';
+import type { FileChange, ProjectConfigLike } from './types';
 
 export const TAG_DB_SCHEMA = 'touched_db_schema';
 export const TAG_TESTS = 'touched_tests';
 export const TAG_CI = 'touched_ci';
-
-interface ProjectConfigLike {
-  project?: { language?: string | null; framework?: string | null };
-  services?: Array<{ type?: string }>;
-  testing?: { framework?: string; e2e?: boolean; e2e_framework?: string };
-}
 
 const TEST_FRAMEWORK_PATH_FRAGMENTS: Record<string, string[]> = {
   vitest: ['vitest.config', 'tests/', '.test.', '.spec.'],
@@ -111,7 +105,7 @@ function fragmentsForServices(services: Array<{ type?: string }> | undefined): s
 }
 
 /**
- * Build the per-project test-path matchers for `isTestFile`.
+ * Build the per-project test-path matchers.
  * Combines the declared testing framework, e2e framework, and language defaults.
  */
 function buildTestFragments(config: ProjectConfigLike | null | undefined): string[] {
@@ -135,19 +129,9 @@ function buildDbSchemaFragments(config: ProjectConfigLike | null | undefined): s
   return Array.from(new Set([...fromServices, 'migrations/']));
 }
 
-export function isTestFile(path: string, fragments: string[]): boolean {
+function pathMatchesAny(path: string, fragments: readonly string[]): boolean {
   if (!path) return false;
   return fragments.some((f) => path.includes(f));
-}
-
-export function isDbSchemaFile(path: string, fragments: string[]): boolean {
-  if (!path) return false;
-  return fragments.some((f) => path.includes(f));
-}
-
-export function isCiFile(path: string): boolean {
-  if (!path) return false;
-  return CI_PATH_FRAGMENTS.some((f) => path.includes(f));
 }
 
 export interface SemanticTagsResult {
@@ -181,9 +165,9 @@ export function computeSemanticTags(
 
   for (const file of files) {
     const path = file.path ?? '';
-    const isTest = isTestFile(path, testFragments);
-    const isCi = isCiFile(path);
-    const isDb = isDbSchemaFile(path, dbFragments);
+    const isTest = pathMatchesAny(path, testFragments);
+    const isCi = pathMatchesAny(path, CI_PATH_FRAGMENTS);
+    const isDb = pathMatchesAny(path, dbFragments);
 
     if (isTest) {
       touchedTests = true;

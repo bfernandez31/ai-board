@@ -5,15 +5,9 @@
  * decides how to combine them into the final shape persisted to TicketOutcome.
  */
 
-import type { ComputedOutcome, DiffStats, JobSignals } from './types';
+import type { ComputedOutcome, DiffStats, JobSignals, ProjectConfigLike } from './types';
 import { FRICTION_FREE_QUALITY_THRESHOLD } from './types';
 import { computeSemanticTags, extractStructuralDomains } from './domain';
-
-interface ProjectConfigLike {
-  project?: { language?: string | null; framework?: string | null };
-  services?: Array<{ type?: string }>;
-  testing?: { framework?: string; e2e?: boolean; e2e_framework?: string };
-}
 
 export interface BuildOutcomeInput {
   jobSignals: JobSignals;

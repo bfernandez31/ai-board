@@ -11,7 +11,7 @@ import { prisma } from '@/lib/db/client';
 import { buildOutcome } from './compute';
 import { computeJobSignals } from './jobs';
 import { fetchTicketDiff } from './diff';
-import type { ComputedOutcome } from './types';
+import type { ComputedOutcome, ProjectConfigLike } from './types';
 
 export interface CaptureOutcomeOptions {
   /** Force recompute even if a row already exists (used by debug/testing). */
@@ -73,7 +73,7 @@ export async function captureOutcomeForTicket(
   const outcome = buildOutcome({
     jobSignals,
     diff,
-    projectConfig: (ticket.project.config ?? null) as Parameters<typeof buildOutcome>[0]['projectConfig'],
+    projectConfig: (ticket.project.config ?? null) as ProjectConfigLike | null,
   });
 
   // Upsert handles the force=true case (overwrite) without changing the
