@@ -251,6 +251,7 @@ jobs:
       # doesn't reject with 422 JOB_NOT_TERMINAL while the job is RUNNING.
       - name: Capture Agent Execution Logs
         if: ${{ always() && inputs.job_id }}
+        working-directory: target
         env:
           JOB_ID: ${{ inputs.job_id }}
           PROJECT_ID: ${{ inputs.project_id }}
