@@ -191,6 +191,7 @@ model Ticket {
   winnerComparisons      ComparisonRecord[]        @relation("ComparisonWinnerTicket")
   comparisonParticipants ComparisonParticipant[]
   decisionVerdicts       DecisionPointEvaluation[] @relation("DecisionVerdictTicket")
+  outcome                TicketOutcome?
 
   @@unique([projectId, ticketNumber])
   @@index([projectId])
@@ -670,4 +671,46 @@ model ProjectSetupJob {
   @@index([projectId, status])
   @@index([projectId, createdAt(sort: Desc)])
   @@index([projectId, command, status])
+}
+
+// Outcome snapshot captured once when a ticket reaches SHIP. Never updated:
+// represents the historical record of what actually happened on a ticket.
+// Drives analytics and grounding for prediction features.
+model TicketOutcome {
+  id                  Int      @id @default(autoincrement())
+  ticketId            Int      @unique
+  projectId           Int
+
+  // Aggregated job telemetry (across all non-comment jobs on the ticket)
+  totalCostUsd        Float    @default(0)
+  totalDurationMs     Int      @default(0)
+  pipelineJobCount    Int      @default(0)
+  frictionJobCount    Int      @default(0)
+
+  // Verify-stage final quality score (0-100)
+  finalQualityScore   Int?
+
+  // Change shape (null when commit data is unavailable)
+  filesTouched        Int?
+  linesAdded          Int?
+  linesRemoved        Int?
+  codeFilesChanged    Int?
+  testFilesChanged    Int?
+
+  // Structural domain: top-level path segments touched
+  // Semantic tags: e.g. ["touched_db_schema", "touched_tests", "touched_ci"]
+  structuralDomains   String[] @default([])
+  semanticTags        String[] @default([])
+
+  // Derived signals
+  frictionFree        Boolean  @default(false)
+  hasCommitData       Boolean  @default(false)
+
+  computedAt          DateTime @default(now())
+
+  ticket              Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([projectId, frictionFree])
+  @@index([projectId, computedAt(sort: Desc)])
 }

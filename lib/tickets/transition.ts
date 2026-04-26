@@ -14,6 +14,7 @@ import { handleTicketTransition, cleanupOrphanedJob, resolveEffectiveAgent } fro
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
 import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
+import { captureOutcomeForTicket } from '@/lib/outcomes/capture';
 
 type TicketWithJobsAndProject = Ticket & {
   project: Project;
@@ -350,6 +351,16 @@ export async function executeTicketTransition(
       where: { id: ticket.id, version: currentVersion },
       data: { stage: targetStage, version: { increment: 1 } },
     });
+
+    if (targetStage === Stage.SHIP) {
+      // Outcome capture is best-effort: a thrown error (network, GitHub
+      // rate-limit, etc.) must not roll back a successful SHIP transition.
+      try {
+        await captureOutcomeForTicket(updatedTicket.id);
+      } catch (outcomeError) {
+        console.error('[Transition] Failed to capture SHIP outcome:', outcomeError);
+      }
+    }
 
     return {
       ok: true,
