@@ -204,8 +204,7 @@ export async function fetchCommitFiles(
   } else if (
     allFailed &&
     params.shas.length > 0 &&
-    successfulShas.length === 0 &&
-    notFoundShas.length === 0
+    successfulShas.length === 0
   ) {
     failure = 'fetch_failed_after_retry';
   }

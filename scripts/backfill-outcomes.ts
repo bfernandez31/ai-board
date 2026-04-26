@@ -80,7 +80,11 @@ async function markFailed(
 ): Promise<void> {
   await prisma.backfillProgress.update({
     where: { projectId },
-    data: { status: 'FAILED', lastError: message.substring(0, 2000) },
+    data: {
+      status: 'FAILED',
+      lastError: message.substring(0, 2000),
+      completedAt: null,
+    },
   });
 }
 
@@ -126,10 +130,10 @@ export async function runBackfill(opts: CliArgs): Promise<void> {
     let version = await readVersion(prisma, opts.projectId);
 
     while (true) {
-      // Phase 2: enumerate next page of unfilled SHIP tickets
+      // Phase 2: enumerate next page of unfilled SHIP/CLOSED tickets
       const where = {
         projectId: opts.projectId,
-        stage: Stage.SHIP,
+        stage: { in: [Stage.SHIP, Stage.CLOSED] },
         outcome: { is: null },
         ...(cursor !== null ? { id: { lt: cursor } } : {}),
       };
@@ -159,7 +163,9 @@ export async function runBackfill(opts: CliArgs): Promise<void> {
             version
           );
           if (!advanced.ok) {
-            console.warn('[backfill] optimistic-lock collision; another worker is advancing — exiting');
+            const collisionMsg = `optimistic-lock collision at ticket ${ticket.id}; another worker is advancing`;
+            console.warn(`[backfill] ${collisionMsg} — exiting`);
+            await markFailed(prisma, opts.projectId, collisionMsg);
             return;
           }
           version = advanced.newVersion;

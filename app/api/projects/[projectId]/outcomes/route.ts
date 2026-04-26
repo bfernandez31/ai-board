@@ -90,8 +90,8 @@ export async function GET(
     }
     if (message === 'Project not found') {
       return NextResponse.json(
-        { error: 'Forbidden', code: 'ACCESS_DENIED' },
-        { status: 403 }
+        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+        { status: 404 }
       );
     }
     console.error('[api/outcomes] error', err);

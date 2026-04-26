@@ -10,7 +10,7 @@ import picomatch from 'picomatch';
 
 export const STACK_INDICATORS = {
   services: {
-    postgres: { db_schema: ['prisma/schema.prisma', 'migrations/**', '*.sql', 'db/migrate/**'] },
+    postgres: { db_schema: ['prisma/schema.prisma', 'prisma/migrations/**', 'migrations/**', '*.sql', 'db/migrate/**'] },
     mysql: { db_schema: ['migrations/**', '*.sql', 'db/migrate/**'] },
     sqlite: { db_schema: ['migrations/**', '*.sql'] },
     mongodb: { db_schema: ['migrations/**', 'models/**.ts', 'schemas/**'] },

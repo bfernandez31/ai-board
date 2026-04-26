@@ -51,10 +51,16 @@ export async function GET(
         { status: 401 }
       );
     }
-    if (message === 'Project not found' || message === 'Ticket not found') {
+    if (message === 'Project not found') {
       return NextResponse.json(
-        { error: 'Forbidden', code: 'ACCESS_DENIED' },
-        { status: 403 }
+        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+        { status: 404 }
+      );
+    }
+    if (message === 'Ticket not found') {
+      return NextResponse.json(
+        { error: 'Ticket not found', code: 'TICKET_NOT_FOUND' },
+        { status: 404 }
       );
     }
     console.error('[api/outcome] error', err);

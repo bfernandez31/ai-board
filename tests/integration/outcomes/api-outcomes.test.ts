@@ -201,15 +201,15 @@ describe('GET /api/projects/:projectId/outcomes (list)', () => {
     expect(res.data.code).toBe('VALIDATION_ERROR');
   });
 
-  it('rejects unknown projectId with 403 ACCESS_DENIED for an authenticated non-member', async () => {
+  it('rejects unknown projectId with 404 PROJECT_NOT_FOUND for an authenticated non-member', async () => {
     // Use a project id this worker does not own. We just probe the list endpoint.
     const otherProjectId = ctx.projectId === 1 ? 2 : 1;
     const res = await ctx.api.get<{ error: string; code: string }>(
       `/api/projects/${otherProjectId}/outcomes`
     );
-    // Either 403 ACCESS_DENIED or it returned 200 if the test user happens to own that
+    // Either 404 PROJECT_NOT_FOUND or it returned 200 if the test user happens to own that
     // project too — in either case it should not be 500.
-    expect([200, 403]).toContain(res.status);
+    expect([200, 404]).toContain(res.status);
   });
 
   it('returns immutable rows even when older than 30 days (T044)', async () => {

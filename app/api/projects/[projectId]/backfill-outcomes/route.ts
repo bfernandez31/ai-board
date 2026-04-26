@@ -92,6 +92,7 @@ export async function POST(
           : {
               status: 'IN_PROGRESS',
               lastError: null,
+              completedAt: null,
               version: { increment: 1 },
             };
 
