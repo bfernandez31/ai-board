@@ -136,8 +136,6 @@ export async function fetchCommitFiles(
   let allFailed = true;
 
   for (const sha of params.shas) {
-    let success = false;
-    let attemptsExhausted = false;
     let lastErrorWas404OnRepo = false;
 
     for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
@@ -156,7 +154,6 @@ export async function fetchCommitFiles(
         }));
         files.push(...commitFiles);
         successfulShas.push(sha);
-        success = true;
         allFailed = false;
         break;
       } catch (err) {
@@ -191,7 +188,6 @@ export async function fetchCommitFiles(
           continue;
         }
 
-        attemptsExhausted = true;
         break;
       }
     }
@@ -200,20 +196,18 @@ export async function fetchCommitFiles(
       repoUnreachable = true;
       break;
     }
-    if (!success && !attemptsExhausted) {
-      // Skipped via 404 path — already recorded
-    }
   }
 
   let failure: FetchFailureReason | null = null;
   if (repoUnreachable) {
     failure = 'repository_unreachable';
-  } else if (allFailed && params.shas.length > 0 && successfulShas.length === 0 && notFoundShas.length === 0) {
+  } else if (
+    allFailed &&
+    params.shas.length > 0 &&
+    successfulShas.length === 0 &&
+    notFoundShas.length === 0
+  ) {
     failure = 'fetch_failed_after_retry';
-  } else if (allFailed && params.shas.length > 0 && successfulShas.length === 0) {
-    // Every SHA was 404; treat as fetch_failed_after_retry only if absolutely nothing
-    // came back. With pure-404s we still proceed with empty file set (no failure flag).
-    failure = null;
   }
 
   return { files, successfulShas, notFoundShas, failure };

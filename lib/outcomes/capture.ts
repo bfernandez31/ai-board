@@ -9,7 +9,7 @@
 import type { Job, Project, Ticket } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { ensureFreshConfig, isConfigStale } from '@/lib/config-sync';
-import { aggregateJobCounts } from './classification';
+import { aggregateJobCounts, type JobCountAggregation } from './classification';
 import { extractChangeShape } from './derivation';
 import {
   deriveSemanticTags,
@@ -46,19 +46,17 @@ function logPhase(ticketId: number, phase: number, durationMs: number, extra?: R
   );
 }
 
-function emptyChangeShape() {
-  return {
-    filesTouched: [] as string[],
-    linesAdded: null as number | null,
-    linesRemoved: null as number | null,
-    testCodeRatio: null as number | null,
-    domains: [] as string[],
-    domainFileCounts: {} as Record<string, number>,
-    touchedDbSchema: false,
-    touchedTests: false,
-    touchedCi: false,
-  };
-}
+const EMPTY_CHANGE_SHAPE = {
+  filesTouched: [] as string[],
+  linesAdded: null as number | null,
+  linesRemoved: null as number | null,
+  testCodeRatio: null as number | null,
+  domains: [] as string[],
+  domainFileCounts: {} as Record<string, number>,
+  touchedDbSchema: false,
+  touchedTests: false,
+  touchedCi: false,
+} as const;
 
 /**
  * Sum a numeric column across jobs, returning null if every contributing value is null.
@@ -84,18 +82,19 @@ function unionTools(jobs: Job[]): string[] {
   return Array.from(set).sort();
 }
 
-function buildPartialOutcome(
-  input: CaptureInput,
-  reason: PartialReason,
-  jobs: Job[]
-): DerivedOutcome {
-  const counts = aggregateJobCounts(jobs);
+interface JobMetrics extends JobCountAggregation {
+  totalCostUsd: number | null;
+  totalDurationMs: number | null;
+  totalInputTokens: number | null;
+  totalOutputTokens: number | null;
+  totalThinkingTokens: number | null;
+  totalCacheReadTokens: number | null;
+  totalCacheCreationTokens: number | null;
+  toolsUsed: string[];
+}
+
+function aggregateJobMetrics(jobs: Job[]): JobMetrics {
   return {
-    ticketId: input.ticketId,
-    projectId: input.projectId,
-    workflowType: input.workflowType,
-    shippedAt: input.shippedAt,
-    ruleSetVersion: RULE_SET_VERSION,
     totalCostUsd: sumOrNull(jobs, (j) => j.costUsd),
     totalDurationMs: sumOrNull(jobs, (j) => j.durationMs),
     totalInputTokens: sumOrNull(jobs, (j) => j.inputTokens),
@@ -104,15 +103,42 @@ function buildPartialOutcome(
     totalCacheReadTokens: sumOrNull(jobs, (j) => j.cacheReadTokens),
     totalCacheCreationTokens: sumOrNull(jobs, (j) => j.cacheCreationTokens),
     toolsUsed: unionTools(jobs),
-    pipelineJobCount: counts.pipelineJobCount,
-    frictionJobCount: counts.frictionJobCount,
-    totalJobCount: counts.totalJobCount,
-    jobCountByPrefix: counts.jobCountByPrefix,
+    ...aggregateJobCounts(jobs),
+  };
+}
+
+function buildPartialOutcome(
+  input: CaptureInput,
+  reason: PartialReason,
+  jobs: Job[]
+): DerivedOutcome {
+  return {
+    ticketId: input.ticketId,
+    projectId: input.projectId,
+    workflowType: input.workflowType,
+    shippedAt: input.shippedAt,
+    ruleSetVersion: RULE_SET_VERSION,
+    ...aggregateJobMetrics(jobs),
     qualityScore: null,
-    ...emptyChangeShape(),
+    ...EMPTY_CHANGE_SHAPE,
     frictionFree: false,
     partial: true,
     partialReason: reason,
+  };
+}
+
+async function persistPartial(
+  input: CaptureInput,
+  reason: PartialReason,
+  jobs: Job[],
+  startedAt: number
+): Promise<CaptureResult> {
+  const result = await persistOutcome(buildPartialOutcome(input, reason, jobs));
+  return {
+    status: result.created ? 'created' : 'duplicate',
+    partial: true,
+    partialReason: reason,
+    durationMs: Date.now() - startedAt,
   };
 }
 
@@ -167,14 +193,7 @@ export async function captureOutcomeOnShip(input: CaptureInput): Promise<Capture
   // Phase 2: Aggregate job telemetry
   const jobs = await prisma.job.findMany({ where: { ticketId: input.ticketId } });
   if (jobs.length === 0) {
-    const partial = buildPartialOutcome(input, 'no_jobs', []);
-    const result = await persistOutcome(partial);
-    return {
-      status: result.created ? 'created' : 'duplicate',
-      partial: true,
-      partialReason: 'no_jobs',
-      durationMs: Date.now() - t0,
-    };
+    return persistPartial(input, 'no_jobs', [], t0);
   }
   logPhase(input.ticketId, 2, Date.now() - t1, { jobs: jobs.length });
 
@@ -199,14 +218,7 @@ export async function captureOutcomeOnShip(input: CaptureInput): Promise<Capture
   );
 
   if (uniqueShas.length === 0) {
-    const partial = buildPartialOutcome(input, 'no_commit_reference', jobs);
-    const result = await persistOutcome(partial);
-    return {
-      status: result.created ? 'created' : 'duplicate',
-      partial: true,
-      partialReason: 'no_commit_reference',
-      durationMs: Date.now() - t0,
-    };
+    return persistPartial(input, 'no_commit_reference', jobs, t0);
   }
 
   // Load project (with config) for stack metadata
@@ -240,26 +252,8 @@ export async function captureOutcomeOnShip(input: CaptureInput): Promise<Capture
     shas: uniqueShas,
   });
 
-  if (fetched.failure === 'repository_unreachable') {
-    const partial = buildPartialOutcome(input, 'repository_unreachable', jobs);
-    const result = await persistOutcome(partial);
-    return {
-      status: result.created ? 'created' : 'duplicate',
-      partial: true,
-      partialReason: 'repository_unreachable',
-      durationMs: Date.now() - t0,
-    };
-  }
-
-  if (fetched.failure === 'fetch_failed_after_retry') {
-    const partial = buildPartialOutcome(input, 'fetch_failed_after_retry', jobs);
-    const result = await persistOutcome(partial);
-    return {
-      status: result.created ? 'created' : 'duplicate',
-      partial: true,
-      partialReason: 'fetch_failed_after_retry',
-      durationMs: Date.now() - t0,
-    };
+  if (fetched.failure !== null) {
+    return persistPartial(input, fetched.failure, jobs, t0);
   }
   logPhase(input.ticketId, 5, Date.now() - t5, {
     shas: uniqueShas.length,
@@ -290,18 +284,7 @@ export async function captureOutcomeOnShip(input: CaptureInput): Promise<Capture
     workflowType: input.workflowType,
     shippedAt: input.shippedAt,
     ruleSetVersion: RULE_SET_VERSION,
-    totalCostUsd: sumOrNull(jobs, (j) => j.costUsd),
-    totalDurationMs: sumOrNull(jobs, (j) => j.durationMs),
-    totalInputTokens: sumOrNull(jobs, (j) => j.inputTokens),
-    totalOutputTokens: sumOrNull(jobs, (j) => j.outputTokens),
-    totalThinkingTokens: sumOrNull(jobs, (j) => j.thinkingTokens),
-    totalCacheReadTokens: sumOrNull(jobs, (j) => j.cacheReadTokens),
-    totalCacheCreationTokens: sumOrNull(jobs, (j) => j.cacheCreationTokens),
-    toolsUsed: unionTools(jobs),
-    pipelineJobCount: counts.pipelineJobCount,
-    frictionJobCount: counts.frictionJobCount,
-    totalJobCount: counts.totalJobCount,
-    jobCountByPrefix: counts.jobCountByPrefix,
+    ...aggregateJobMetrics(jobs),
     qualityScore,
     filesTouched: shape.filesTouched,
     linesAdded: shape.linesAdded,

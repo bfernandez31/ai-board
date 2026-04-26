@@ -102,15 +102,15 @@ export function deriveSemanticTags(
   const testFramework = projectConfig?.testing?.framework ?? null;
   const language = projectConfig?.project?.language ?? null;
 
-  const dbPatterns: string[] = [
-    ...services.flatMap((s) => Array.from(lookupServicePatterns(s?.type))),
-    ...Array.from(lookupLanguageDbPatterns(language)),
+  const dbPatterns = [
+    ...services.flatMap((s) => lookupServicePatterns(s?.type)),
+    ...lookupLanguageDbPatterns(language),
   ];
-  const testPatterns: string[] = [
-    ...Array.from(lookupTestingPatterns(testFramework)),
-    ...Array.from(lookupLanguageTestPatterns(language)),
+  const testPatterns = [
+    ...lookupTestingPatterns(testFramework),
+    ...lookupLanguageTestPatterns(language),
   ];
-  const ciPatterns: string[] = Array.from(STACK_INDICATORS.ci.generic);
+  const ciPatterns = STACK_INDICATORS.ci.generic;
 
   return {
     touchedDbSchema: files.some((f) => matchesAny(f, dbPatterns)),
@@ -125,7 +125,7 @@ export function getTestPatternsForProject(
   const testFramework = projectConfig?.testing?.framework ?? null;
   const language = projectConfig?.project?.language ?? null;
   return [
-    ...Array.from(lookupTestingPatterns(testFramework)),
-    ...Array.from(lookupLanguageTestPatterns(language)),
+    ...lookupTestingPatterns(testFramework),
+    ...lookupLanguageTestPatterns(language),
   ];
 }

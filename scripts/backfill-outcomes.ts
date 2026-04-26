@@ -114,15 +114,14 @@ export async function runBackfill(opts: CliArgs): Promise<void> {
     await ensureProgressRow(prisma, opts.projectId);
 
     // Initial cursor (the resume point). On first run this is null = start from newest.
-    let cursor =
-      opts.resumeCursor ??
-      (
-        await prisma.backfillProgress.findUnique({
-          where: { projectId: opts.projectId },
-          select: { lastProcessedTicketId: true },
-        })
-      )?.lastProcessedTicketId ??
-      null;
+    let cursor: number | null = opts.resumeCursor;
+    if (cursor === null) {
+      const progress = await prisma.backfillProgress.findUnique({
+        where: { projectId: opts.projectId },
+        select: { lastProcessedTicketId: true },
+      });
+      cursor = progress?.lastProcessedTicketId ?? null;
+    }
 
     let version = await readVersion(prisma, opts.projectId);
 
