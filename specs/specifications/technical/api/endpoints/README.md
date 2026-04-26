@@ -9,7 +9,7 @@ Complete REST API documentation with authentication, request/response formats, a
 - [Comments, Timeline & Attachments](./comments.md) — Ticket activity endpoints
 - [Notifications](./notifications.md) — In-app and Push notification endpoints
 - [Jobs & Telemetry](./jobs.md) — Job status polling and telemetry ingestion endpoints
-- [Analytics & Activity](./analytics.md) — Analytics dashboard and activity feed endpoints
+- [Analytics & Activity](./analytics.md) — Analytics dashboard, ticket outcomes, and activity feed endpoints
 - [Documentation & Comparison](./documentation.md) — Documentation, Comparison, Constitution endpoints
 - [Health](./health.md) — Health dashboard endpoints
 - [Billing](./billing.md) — Billing, subscription, and usage endpoints

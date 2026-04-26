@@ -8,6 +8,7 @@ User
 │   ├── tickets (one-to-many) → Ticket
 │   │   ├── jobs (one-to-many) → Job
 │   │   │   └── log (one-to-one, optional) → JobLog
+│   │   ├── outcome (one-to-one, optional) → TicketOutcome
 │   │   ├── comments (one-to-many) → Comment
 │   │   │   └── notifications (one-to-many) → Notification
 │   │   ├── notifications (one-to-many) → Notification
@@ -52,6 +53,12 @@ User
 - `JobLog(jobId)` - Unique one-to-one lookup from a job
 - `JobLog(captureStatus, createdAt)` - Retention prune scan (filter on age + skip already-PRUNED rows)
 - `JobLog(createdAt)` - Prune ordering
+
+**Ticket Outcome Queries**:
+- `TicketOutcome(ticketId)` - Unique one-to-one lookup from a ticket
+- `TicketOutcome(projectId)` - Project-scoped outcome listings
+- `TicketOutcome(projectId, frictionFree)` - Friction-status filtering
+- `TicketOutcome(projectId, computedAt DESC)` - Chronological listing for analytics
 
 **Comment Queries**:
 - `Comment(ticketId, createdAt)` - Chronological sorting

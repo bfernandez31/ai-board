@@ -474,3 +474,49 @@ When tests cannot be fixed automatically:
 - Structured failure reports enable systematic analysis
 - Quality gates prevent introducing new issues
 
+## Outcome Capture (VERIFY → SHIP)
+
+When a ticket transitions to SHIP, the system records a single delivery snapshot — the `TicketOutcome` row — that captures, for that ticket, what actually happened across its full lifecycle. This is pure instrumentation: the SHIP transition itself is unaffected by capture success or failure, and capture has no user-facing UI.
+
+### What gets captured
+
+For each shipped ticket the outcome stores:
+
+- **Resource consumption**: total cost (USD) and total duration (ms) summed across every job on the ticket — pipeline, friction, and infrastructure jobs all contribute
+- **Pipeline vs friction split**: count of standard delivery jobs vs friction jobs (any `iterate` run, any `comment-*` re-run at any stage)
+- **Final quality score**: the score from the most recent COMPLETED `verify` or `iterate` job; null when the ticket has no scored verify (e.g., quick-impl)
+- **Change shape**: number of files touched, lines added/removed, and the test-vs-code split, derived from comparing the ticket's branch against the project's default branch
+- **Structural domains**: sorted unique top-level path segments touched (e.g., `app`, `lib`, `tests`); files at repo root collapse to `(root)`
+- **Semantic tags**: any of `touched_db_schema`, `touched_tests`, `touched_ci`, derived from the project's declared language, testing framework, and services
+- **Friction-free flag**: a single boolean — true when the ticket ran zero friction jobs AND (its quality score is missing OR ≥ 80)
+- **Commit-data flag**: false when the diff couldn't be fetched (missing branch, missing token, GitHub 404/422, rate limit); diff-derived fields are null in that case so consumers can detect partial rows
+
+### Capture trigger
+
+- Capture runs synchronously inside the SHIP stage transition, immediately after the ticket's stage is persisted
+- Exactly one outcome per ticket — re-entering the transition (idempotent path) does not recompute the existing snapshot
+- Failures inside capture (network errors, GitHub rate limits, missing credentials) are caught and logged so they cannot roll back the SHIP transition
+- A diff fetch failure produces a partial row with `hasCommitData: false` rather than no row at all — analytics consumers detect partial cases instead of seeing a missing entry
+
+### Domain inference
+
+Domain extraction is fully generic — it works on every project regardless of stack and never reads per-project hardcoded paths.
+
+- Structural domains are derived purely from the diff: each touched file contributes its top-level path segment
+- Semantic tags are derived from the project's declared `.ai-board/config.yml` (language, testing framework / e2e framework, services) against a built-in fragment lookup that covers TypeScript/JavaScript, Python, Go, Rust, Java, Kotlin, Ruby, PHP, Zig, plus common testing frameworks (Vitest, Jest, Mocha, Pytest, Go test, Cargo, RSpec, PHPUnit, Playwright, Cypress) and database services (Postgres, MySQL, Mongo)
+- Generic `migrations/` paths always count as `touched_db_schema`; generic CI paths (`.github/workflows/`, `.gitlab-ci`, `.circleci/`, `Jenkinsfile`, etc.) always count as `touched_ci`
+
+### Backfill
+
+Outcomes can be populated for historical shipped tickets so the dataset starts already grounded:
+
+- A backfill pass processes every SHIP-stage ticket in the project that doesn't yet have an outcome
+- Idempotent and resumable: re-running after a partial failure picks up only the missing rows
+- Rate-limited: a small inter-ticket delay (default 200 ms, only between GitHub-touching captures) keeps the run well under the GitHub authenticated quota
+- Owner-only: backfill consumes shared rate-limit budget, so non-owner members cannot trigger it
+- Configurable per-pass: `limit` to chunk the run, `delayMs` to tune the inter-ticket sleep
+
+### Querying outcomes
+
+Outcomes are read-only after capture and queryable per project, filtered by friction status (`frictionFree=true|false`) or by structural domain (`domain=app`, etc.). Results are paginated and ordered most-recently-captured first.
+

@@ -198,6 +198,7 @@ model Ticket {
   winnerComparisons      ComparisonRecord[]        @relation("ComparisonWinnerTicket")
   comparisonParticipants ComparisonParticipant[]
   decisionVerdicts       DecisionPointEvaluation[] @relation("DecisionVerdictTicket")
+  outcome                TicketOutcome?
 
   @@unique([projectId, ticketNumber])
   @@index([projectId])
@@ -250,6 +251,7 @@ model Ticket {
 **Relationships**:
 - Belongs to Project (required, cascade delete)
 - One-to-many: Jobs, Comments, Notifications, ComparisonParticipants, DecisionPointEvaluations (as verdict ticket)
+- One-to-one (optional): TicketOutcome (created at SHIP)
 - Referenced by: ComparisonRecord (as sourceTicket or winnerTicket)
 
 **Constraints**:
@@ -513,6 +515,83 @@ model JobLog {
 - Prune order per record: delete Blob artifact first (404 treated as success), then delete Postgres row
 - Access for read endpoints follows the parent ticket's ownership and membership rules via `verifyTicketAccess`
 - Blob artifact pathname is never rendered client-side — reads are proxied through the authenticated API
+
+### TicketOutcome
+
+Snapshot of a ticket's delivery signals captured once when the ticket reaches SHIP. Drives delivery analytics and grounds prediction features on actual historical outcomes rather than re-aggregated raw signals.
+
+```prisma
+model TicketOutcome {
+  id                  Int      @id @default(autoincrement())
+  ticketId            Int      @unique
+  projectId           Int
+
+  totalCostUsd        Float    @default(0)
+  totalDurationMs     Int      @default(0)
+  pipelineJobCount    Int      @default(0)
+  frictionJobCount    Int      @default(0)
+  finalQualityScore   Int?
+
+  filesTouched        Int?
+  linesAdded          Int?
+  linesRemoved        Int?
+  codeFilesChanged    Int?
+  testFilesChanged    Int?
+
+  structuralDomains   String[] @default([])
+  semanticTags        String[] @default([])
+
+  frictionFree        Boolean  @default(false)
+  hasCommitData       Boolean  @default(false)
+
+  computedAt          DateTime @default(now())
+
+  ticket              Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([projectId, frictionFree])
+  @@index([projectId, computedAt(sort: Desc)])
+}
+```
+
+**Purpose**: Append-only record of what actually happened on a shipped ticket — total resource consumption, friction signals, change shape, structural domain, and semantic tags — so analytics and prediction features can query a single canonical row instead of re-deriving signals from `Job`, commits, and comments.
+
+**Fields**:
+- `id`: Auto-incrementing primary key
+- `ticketId`: Source ticket (unique — exactly one outcome per ticket)
+- `projectId`: Parent project (denormalized for project-scoped queries and indexes)
+- `totalCostUsd`: Sum of `Job.costUsd` across every job on the ticket (pipeline, friction, and infrastructure jobs all contribute)
+- `totalDurationMs`: Sum of `Job.durationMs` across every job on the ticket
+- `pipelineJobCount`: Count of standard delivery jobs (`specify`, `plan`, `implement`, `quick-impl`, `verify`, `ship`)
+- `frictionJobCount`: Count of friction jobs (`iterate` and any `comment-*` re-run)
+- `finalQualityScore`: Quality score (0–100) of the most recent COMPLETED `verify` or `iterate` job; null when no scored verify job exists (e.g., quick-impl tickets)
+- `filesTouched`: Number of distinct files in the ticket's branch diff against `project.defaultBranch`; null when commit data is unavailable
+- `linesAdded` / `linesRemoved`: Aggregate additions / deletions across the diff; null when commit data is unavailable
+- `codeFilesChanged`: Files in the diff that match neither test nor CI fragments
+- `testFilesChanged`: Files in the diff that match the project's test fragments
+- `structuralDomains`: Sorted unique top-level path segments touched (e.g., `['app', 'lib', 'tests']`); files at repo root collapse to `(root)`
+- `semanticTags`: Subset of `touched_db_schema`, `touched_tests`, `touched_ci`, sorted alphabetically
+- `frictionFree`: True when `frictionJobCount === 0` AND (`finalQualityScore IS NULL` OR `finalQualityScore >= 80`)
+- `hasCommitData`: True when the GitHub diff was fetched successfully; false when the branch is missing, the token is unavailable, or the API call failed — diff fields are null in that case
+- `computedAt`: When the outcome was computed (set on insert, refreshed only on the rare forced recompute)
+
+**Relationships**:
+- Belongs to Ticket (unique, cascade delete)
+
+**Constraints**:
+- Unique `ticketId` — exactly one outcome per ticket
+- Index on `projectId` for per-project listings
+- Composite index `(projectId, frictionFree)` for friction-status filtering
+- Composite index `(projectId, computedAt DESC)` for chronological listing
+
+**Business Rules**:
+- Created exactly once when a ticket transitions to SHIP — never updated or recomputed by the live capture path
+- Capture is best-effort: a thrown error during outcome computation is caught and logged so it cannot roll back a successful SHIP transition
+- Diff fetch (`GET /repos/{owner}/{repo}/compare/{base}...{head}` via Octokit) is best-effort: missing branch / token / 404 / 422 / rate-limit fall through to `hasCommitData: false` rather than failing the capture
+- Job classification: `iterate` and any command starting with `comment-` are friction; `specify`, `plan`, `implement`, `quick-impl`, `verify`, `ship` are pipeline; `deploy-preview`, `rollback-reset`, `health-scan`, and unknown commands are infrastructure (counted in totals but in neither pipeline nor friction buckets)
+- `finalQualityScore` resolution: scan jobs newest→oldest, take the first COMPLETED `verify` or `iterate` job's `qualityScore`
+- Domain inference is generic: structural domains are top-level path segments; semantic tags are derived from the project's declared `config.project.language`, `config.testing.framework`/`e2e_framework`, and `config.services[].type` against a built-in fragment lookup table — no per-project hardcoding
+- Cascade delete when the ticket is deleted (FK `onDelete: Cascade`)
 
 ### Comment
 

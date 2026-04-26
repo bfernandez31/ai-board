@@ -222,6 +222,143 @@ sequenceDiagram
 **Performance**: Optimized with database aggregation, <3s for projects with up to 1,000 jobs
 
 
+## Outcomes Endpoints
+
+Ticket outcomes are append-only delivery snapshots written when a ticket reaches SHIP (see `TicketOutcome` in `core-models.md`). These endpoints expose the captured rows for analytics and grounding queries.
+
+### GET /api/projects/:projectId/outcomes
+
+List captured outcomes for a project, filtered by friction status or structural domain.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters**:
+- `frictionFree` (string, optional): `"true"` or `"false"` — filter to outcomes matching the boolean. Any other value is ignored.
+- `domain` (string, optional): Filter to outcomes whose `structuralDomains` array contains the value (e.g., `app`, `lib`, `(root)`).
+- `limit` (number, optional): Page size (default 50, clamped to `[1, 200]`)
+- `offset` (number, optional): Pagination offset (default 0)
+
+**Response** (200 OK):
+```json
+{
+  "outcomes": [
+    {
+      "id": 17,
+      "ticketId": 482,
+      "projectId": 3,
+      "totalCostUsd": 1.42,
+      "totalDurationMs": 312000,
+      "pipelineJobCount": 4,
+      "frictionJobCount": 0,
+      "finalQualityScore": 88,
+      "filesTouched": 12,
+      "linesAdded": 240,
+      "linesRemoved": 65,
+      "codeFilesChanged": 8,
+      "testFilesChanged": 4,
+      "structuralDomains": ["app", "lib", "tests"],
+      "semanticTags": ["touched_tests"],
+      "frictionFree": true,
+      "hasCommitData": true,
+      "computedAt": "2026-04-26T10:30:00.000Z",
+      "ticket": {
+        "id": 482,
+        "ticketKey": "AIB-482",
+        "title": "Capture ticket outcomes at SHIP",
+        "branch": "AIB-482-capture-ticket-outcomes"
+      }
+    }
+  ],
+  "total": 1,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+**Ordering**: Results are sorted by `computedAt` DESC (most recently captured first).
+
+**Errors**:
+- `400`: Invalid project ID
+- `401`: Not authenticated
+- `404`: Project not found
+- `500`: Database error
+
+### POST /api/projects/:projectId/outcomes/backfill
+
+Run a backfill pass that captures outcomes for SHIP-stage tickets in the project that don't yet have one. Idempotent and resumable — re-running picks up only missing rows.
+
+**Authentication**: Required (session)
+**Authorization**: Project owner only — backfill consumes external GitHub rate-limit budget, so members cannot trigger it.
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body** (optional JSON, strict schema):
+```json
+{
+  "limit": 200,
+  "delayMs": 200
+}
+```
+
+- `limit` (number, optional): Process at most N tickets in this pass (positive integer, max 1000). Omit to process every shipped ticket without an outcome.
+- `delayMs` (number, optional): Sleep between GitHub-touching captures, in ms (`[0, 5000]`, default 200). Tickets without a branch don't sleep.
+
+**Response** (200 OK):
+```json
+{
+  "scanned": 42,
+  "created": 41,
+  "skipped": 0,
+  "failed": 1,
+  "failures": [
+    { "ticketId": 19, "error": "..." }
+  ]
+}
+```
+
+- `scanned`: Tickets considered in this pass
+- `created`: Outcomes written
+- `skipped`: Tickets that already had an outcome (race-condition safety; normally 0 because the query pre-filters them)
+- `failed`: Tickets where capture threw an unexpected error
+- `failures`: Per-ticket error details for the failed entries
+
+**Errors**:
+- `400`: Invalid project ID, malformed JSON body, or schema validation failure (`issues` array attached for schema errors)
+- `401`: Not authenticated
+- `404`: Project not found
+- `403`: Caller is a member but not the owner (returned by `verifyProjectOwnership`)
+
+**Sequence**:
+```mermaid
+sequenceDiagram
+    participant C as Owner
+    participant API as Backfill Route
+    participant Cap as captureOutcomeForTicket
+    participant DB as Database
+    participant GH as GitHub API
+
+    C->>API: POST /outcomes/backfill { limit, delayMs }
+    API->>API: verifyProjectOwnership
+    API->>DB: Find SHIP tickets without outcome
+    loop per ticket
+        API->>Cap: capture (shared Octokit)
+        Cap->>DB: Load ticket + jobs
+        alt ticket.branch present
+            Cap->>GH: compareCommits(base, head)
+            GH-->>Cap: diff stats or error
+        end
+        Cap->>DB: Upsert TicketOutcome
+        Cap-->>API: status (created | skipped_existing)
+        API->>API: sleep(delayMs) if branch present
+    end
+    API-->>C: { scanned, created, skipped, failed, failures }
+```
+
 ## Activity Endpoints
 
 ### GET /api/projects/:projectId/activity
