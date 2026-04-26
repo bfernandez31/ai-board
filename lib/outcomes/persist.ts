@@ -135,36 +135,9 @@ export async function persistOutcome(derived: DerivedOutcome): Promise<PersistRe
   const parsed = derivedOutcomeSchema.parse(derived);
 
   const data: Prisma.TicketOutcomeUncheckedCreateInput = {
-    ticketId: parsed.ticketId,
-    projectId: parsed.projectId,
-    workflowType: parsed.workflowType,
-    shippedAt: parsed.shippedAt,
-    ruleSetVersion: parsed.ruleSetVersion,
-    totalCostUsd: parsed.totalCostUsd,
-    totalDurationMs: parsed.totalDurationMs,
-    totalInputTokens: parsed.totalInputTokens,
-    totalOutputTokens: parsed.totalOutputTokens,
-    totalThinkingTokens: parsed.totalThinkingTokens,
-    totalCacheReadTokens: parsed.totalCacheReadTokens,
-    totalCacheCreationTokens: parsed.totalCacheCreationTokens,
-    toolsUsed: parsed.toolsUsed,
-    pipelineJobCount: parsed.pipelineJobCount,
-    frictionJobCount: parsed.frictionJobCount,
-    totalJobCount: parsed.totalJobCount,
+    ...parsed,
     jobCountByPrefix: parsed.jobCountByPrefix as Prisma.InputJsonValue,
-    qualityScore: parsed.qualityScore,
-    filesTouched: parsed.filesTouched,
-    linesAdded: parsed.linesAdded,
-    linesRemoved: parsed.linesRemoved,
-    testCodeRatio: parsed.testCodeRatio,
-    domains: parsed.domains,
     domainFileCounts: parsed.domainFileCounts as Prisma.InputJsonValue,
-    touchedDbSchema: parsed.touchedDbSchema,
-    touchedTests: parsed.touchedTests,
-    touchedCi: parsed.touchedCi,
-    frictionFree: parsed.frictionFree,
-    partial: parsed.partial,
-    partialReason: parsed.partialReason,
   };
 
   try {

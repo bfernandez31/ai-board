@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { dispatchBackfillOutcomes } from '@/lib/workflows/dispatch-backfill-outcomes';
@@ -75,41 +76,28 @@ export async function POST(
       progress = await prisma.backfillProgress.create({
         data: { projectId, status: 'IN_PROGRESS', startedAt: now },
       });
-    } else if (resume === false) {
-      const result = await prisma.backfillProgress.updateMany({
-        where: { projectId, version: existing.version },
-        data: {
-          status: 'IN_PROGRESS',
-          lastProcessedTicketId: null,
-          ticketsProcessed: 0,
-          ticketsWithPartial: 0,
-          startedAt: now,
-          completedAt: null,
-          lastError: null,
-          version: { increment: 1 },
-        },
-      });
-      if (result.count === 0) {
-        return NextResponse.json(
-          {
-            error: 'Backfill state changed concurrently',
-            code: 'BACKFILL_IN_PROGRESS',
-          },
-          { status: 409 }
-        );
-      }
-      progress = await prisma.backfillProgress.findUnique({
-        where: { projectId },
-      });
     } else {
-      // resume from existing cursor — flip status to IN_PROGRESS
+      const updateData: Prisma.BackfillProgressUpdateManyMutationInput =
+        resume === false
+          ? {
+              status: 'IN_PROGRESS',
+              lastProcessedTicketId: null,
+              ticketsProcessed: 0,
+              ticketsWithPartial: 0,
+              startedAt: now,
+              completedAt: null,
+              lastError: null,
+              version: { increment: 1 },
+            }
+          : {
+              status: 'IN_PROGRESS',
+              lastError: null,
+              version: { increment: 1 },
+            };
+
       const result = await prisma.backfillProgress.updateMany({
         where: { projectId, version: existing.version },
-        data: {
-          status: 'IN_PROGRESS',
-          lastError: null,
-          version: { increment: 1 },
-        },
+        data: updateData,
       });
       if (result.count === 0) {
         return NextResponse.json(
@@ -120,9 +108,7 @@ export async function POST(
           { status: 409 }
         );
       }
-      progress = await prisma.backfillProgress.findUnique({
-        where: { projectId },
-      });
+      progress = await prisma.backfillProgress.findUnique({ where: { projectId } });
     }
 
     let dispatchResult;

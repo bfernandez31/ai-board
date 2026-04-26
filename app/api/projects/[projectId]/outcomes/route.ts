@@ -36,10 +36,7 @@ export async function GET(
     await verifyProjectAccess(projectId, request);
 
     const url = new URL(request.url);
-    const rawQuery: Record<string, string> = {};
-    url.searchParams.forEach((v, k) => {
-      rawQuery[k] = v;
-    });
+    const rawQuery = Object.fromEntries(url.searchParams);
     const parsed = querySchema.safeParse(rawQuery);
     if (!parsed.success) {
       const first = parsed.error.issues[0];
@@ -64,25 +61,16 @@ export async function GET(
       if (q.until !== undefined) where.shippedAt.lt = new Date(q.until);
     }
 
-    const findArgs: Prisma.TicketOutcomeFindManyArgs = {
+    const rows = await prisma.ticketOutcome.findMany({
       where,
       orderBy: { id: 'desc' },
       take: q.limit,
       include: { ticket: { select: { ticketKey: true } } },
-    };
-    if (q.cursor) {
-      findArgs.cursor = { id: q.cursor };
-      findArgs.skip = 1;
-    }
-
-    const rows = (await prisma.ticketOutcome.findMany(findArgs)) as Array<
-      Awaited<ReturnType<typeof prisma.ticketOutcome.findUnique>> & {
-        ticket: { ticketKey: string };
-      }
-    >;
+      ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
+    });
 
     const outcomes = rows.map((row) =>
-      serializeOutcome(row, { ticketKey: row.ticket?.ticketKey })
+      serializeOutcome(row, { ticketKey: row.ticket.ticketKey })
     );
     const nextCursor =
       outcomes.length === q.limit ? outcomes[outcomes.length - 1]!.id : null;

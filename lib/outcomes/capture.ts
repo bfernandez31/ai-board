@@ -234,17 +234,18 @@ export async function captureOutcomeOnShip(input: CaptureInput): Promise<Capture
   }
 
   // Refresh project config if stale (best-effort; capture continues with whatever metadata exists).
+  let projectForStack = project;
   if (isConfigStale(project)) {
     try {
       await ensureFreshConfig(project);
+      projectForStack =
+        (await prisma.project.findUnique({ where: { id: input.projectId } })) ?? project;
     } catch (err) {
       console.warn(`[outcome-capture] config sync failed (non-fatal)`, err);
     }
   }
 
-  // Re-read after potential config refresh
-  const refreshedProject = await prisma.project.findUnique({ where: { id: input.projectId } });
-  const stackConfig = readProjectStackConfig(refreshedProject);
+  const stackConfig = readProjectStackConfig(projectForStack);
 
   const fetched = await fetchCommitFiles({
     owner: project.githubOwner,
