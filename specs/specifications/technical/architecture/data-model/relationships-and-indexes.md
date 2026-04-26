@@ -11,7 +11,10 @@ User
 │   │   ├── comments (one-to-many) → Comment
 │   │   │   └── notifications (one-to-many) → Notification
 │   │   ├── notifications (one-to-many) → Notification
-│   │   └── comparisonParticipants (one-to-many) → ComparisonParticipant
+│   │   ├── comparisonParticipants (one-to-many) → ComparisonParticipant
+│   │   └── outcome (one-to-one, optional) → TicketOutcome
+│   ├── outcomes (one-to-many) → TicketOutcome
+│   ├── backfillProgress (one-to-one, optional) → BackfillProgress
 │   ├── comparisonRecords (one-to-many) → ComparisonRecord
 │   │   ├── participants (one-to-many) → ComparisonParticipant
 │   │   │   ├── metricSnapshot (one-to-one) → TicketMetricSnapshot
@@ -67,6 +70,17 @@ User
 - `ProjectMember(userId)` - User's projects
 - `ProjectMember(projectId, userId)` - Unique constraint + lookup
 
+**Outcome Queries**:
+- `TicketOutcome(ticketId)` - Unique 1:1 with Ticket; idempotency guard
+- `TicketOutcome(projectId, shippedAt DESC)` - Project outcomes listing newest-first
+- `TicketOutcome(projectId, frictionFree)` - Fraction-frictionFree aggregate per project
+- `TicketOutcome(projectId, partial)` - Filter partial rows out of analytics
+- `TicketOutcome(shippedAt)` - Cross-project time-window queries
+
+**Backfill Queries**:
+- `BackfillProgress(projectId)` - Unique 1:1 with Project; resume cursor lookup
+- `BackfillProgress(status)` - Operator queries for in-progress / failed runs
+
 **Comparison Queries**:
 - `ComparisonRecord(projectId, generatedAt DESC)` - Project comparisons listing
 - `ComparisonRecord(sourceTicketId, generatedAt DESC)` - Source ticket lookups
@@ -87,4 +101,7 @@ Used for multi-column queries with optimal performance:
 - `ProjectMember(projectId, userId)`: Unique membership constraint
 - `Notification(recipientId, read, createdAt)`: Unread notification queries with sorting
 - `Notification(recipientId, deletedAt)`: Active notification filtering (soft delete)
+- `TicketOutcome(projectId, shippedAt DESC)`: Newest-first project outcome listing
+- `TicketOutcome(projectId, frictionFree)`: Index-supported fraction-frictionFree aggregate
+- `TicketOutcome(projectId, partial)`: Filter partial rows out of analytics queries
 

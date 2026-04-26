@@ -325,3 +325,21 @@ enum SubscriptionStatus {
 }
 ```
 
+### BackfillStatus
+
+Lifecycle of a per-project historical outcome backfill run.
+
+```prisma
+enum BackfillStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+```
+
+| Value | Description | Transitions To |
+|-------|-------------|----------------|
+| IN_PROGRESS | Run is enumerating and writing outcomes (or a prior run was interrupted) | COMPLETED, FAILED |
+| COMPLETED | No tickets remain to process; `completedAt` set, `lastError` cleared | IN_PROGRESS (re-dispatch is a no-op that returns to COMPLETED) |
+| FAILED | Unhandled error after retries; `lastError` populated | IN_PROGRESS (re-dispatch resumes from `lastProcessedTicketId`) |
+

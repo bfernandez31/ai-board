@@ -1044,6 +1044,72 @@ Transition ticket to target stage with workflow dispatch.
 ```
 
 
+### GET /api/projects/:projectId/tickets/:id/outcome
+
+Fetch the immutable delivery outcome record for a shipped ticket.
+
+**Authentication**: Required (session)
+**Authorization**: `verifyTicketAccess` — caller must be owner or member of the parent project
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID (numeric `Ticket.id`, not `ticketKey`)
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "ticketId": 1234,
+  "projectId": 7,
+  "workflowType": "FULL",
+  "shippedAt": "2026-04-25T14:30:21.000Z",
+  "capturedAt": "2026-04-25T14:31:02.000Z",
+  "ruleSetVersion": 1,
+
+  "totalCostUsd": 1.7234,
+  "totalDurationMs": 482000,
+  "totalInputTokens": 51234,
+  "totalOutputTokens": 8421,
+  "totalThinkingTokens": 1200,
+  "totalCacheReadTokens": 91234,
+  "totalCacheCreationTokens": 12345,
+  "toolsUsed": ["Edit", "Read", "Bash", "Grep"],
+
+  "pipelineJobCount": 4,
+  "frictionJobCount": 0,
+  "totalJobCount": 4,
+  "jobCountByPrefix": { "specify": 1, "plan": 1, "implement": 1, "verify": 1 },
+
+  "qualityScore": 88,
+
+  "filesTouched": ["app/api/foo.ts", "lib/billing/charge.ts", "tests/integration/foo.test.ts"],
+  "linesAdded": 142,
+  "linesRemoved": 38,
+  "testCodeRatio": 0.41,
+
+  "domains": ["app", "lib", "tests"],
+  "domainFileCounts": { "app": 1, "lib": 1, "tests": 1 },
+
+  "touchedDbSchema": false,
+  "touchedTests": true,
+  "touchedCi": false,
+
+  "frictionFree": true,
+
+  "partial": false,
+  "partialReason": null
+}
+```
+
+**Errors**:
+- `401`: `{ "error": "Unauthorized", "code": "UNAUTHENTICATED" }`
+- `403`: `{ "error": "Forbidden", "code": "ACCESS_DENIED" }`
+- `404`: `{ "error": "Outcome not found for ticket", "code": "OUTCOME_NOT_FOUND" }` — ticket exists but has no outcome (still being captured, never reached SHIP, or capture failed terminally)
+
+**Notes**:
+- Read-only — no `PUT`, `PATCH`, or `DELETE` is exposed; outcome immutability is enforced at the HTTP layer in addition to the unique constraint on `TicketOutcome.ticketId`
+- Capture is asynchronous after the SHIP transition; consumers may receive `OUTCOME_NOT_FOUND` for a ticket that just transitioned and should retry within a few minutes
+
 ## Ticket Lookup Endpoints
 
 ### GET /api/ticket/:key
