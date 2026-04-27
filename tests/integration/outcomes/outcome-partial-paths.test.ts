@@ -6,7 +6,7 @@
  *   (b) ticket with no branch reference             → partialReason='no_branch_reference'
  *   (c) Octokit failure after retries               → partialReason='fetch_failed_after_retry'
  *   (d) repo unreachable                            → partialReason='repository_unreachable'
- *   (e) no merged PR found and branch ref missing   → partialReason='merge_not_found'
+ *   (e) fetchBranchDiff returns merge_not_found     → partialReason='merge_not_found'
  *
  * In all five the change-shape fields are null/empty and job aggregates remain populated
  * (where possible).
@@ -198,7 +198,7 @@ describe('Outcome partial-state paths (US1 #4)', () => {
     expect(row!.partialReason).toBe('repository_unreachable');
   });
 
-  it('(e) no merged PR + branch ref missing → partialReason=merge_not_found', async () => {
+  it('(e) fetchBranchDiff returns merge_not_found → partialReason=merge_not_found', async () => {
     const ticketId = await seedTicket({ ticketNumber: 304 });
 
     await prisma.job.create({

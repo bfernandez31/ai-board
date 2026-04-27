@@ -28,7 +28,16 @@ import type { CommitFile } from './types';
 export type FetchFailureReason =
   | 'merge_not_found'
   | 'repository_unreachable'
-  | 'fetch_failed_after_retry';
+  | 'fetch_failed_after_retry'
+  | 'diff_truncated';
+
+/**
+ * GitHub's `getCommit` and `compareCommits` REST endpoints cap the returned `files`
+ * array at 300 entries with no explicit truncated flag in the response. We treat any
+ * payload at or above the cap as truncated and surface a partial outcome rather than
+ * silently understating change-shape metrics.
+ */
+const GITHUB_FILES_CAP = 300;
 
 export interface FetchBranchDiffParams {
   owner: string;
@@ -111,6 +120,7 @@ async function maybeYieldOnRateLimit(headers: Record<string, string | undefined>
 type RetryOutcome<T> =
   | { kind: 'ok'; value: T }
   | { kind: 'not_found' }
+  | { kind: 'unauthorized' }
   | { kind: 'transient' };
 
 async function callWithRetry<T>(
@@ -132,6 +142,11 @@ async function callWithRetry<T>(
       if (status === 403 && isRateLimitMessage(message)) {
         await sleep(60_000);
         continue;
+      }
+      // 401 or non-rate-limit 403 are auth/permission failures — retrying won't help
+      // and they should surface as `repository_unreachable`, not transient errors.
+      if (status === 401 || status === 403) {
+        return { kind: 'unauthorized' };
       }
       const isTransient = status === 0 || status >= 500;
       if (isTransient && attempt < RETRY_DELAYS_MS.length) {
@@ -181,19 +196,21 @@ export async function fetchBranchDiff(
 
   const octokit = new Octokit({ auth: token });
 
-  // 1. Find the merged PR for branch → defaultBranch.
+  // 1. Find the merged PR whose head is `branch`. We do NOT constrain `base` here:
+  //    a repository may have renamed its default branch since the ticket shipped,
+  //    in which case filtering by the *current* default branch would miss the real
+  //    merged PR and force every historical ticket through the fallback path.
   const prLookup = await callWithRetry(() =>
     octokit.rest.pulls.list({
       owner: params.owner,
       repo: params.repo,
       head: `${params.owner}:${params.branch}`,
-      base: params.defaultBranch,
       state: 'closed',
       per_page: 50,
     })
   );
 
-  if (prLookup.kind === 'not_found') {
+  if (prLookup.kind === 'not_found' || prLookup.kind === 'unauthorized') {
     return { files: [], mergeCommitSha: null, failure: 'repository_unreachable' };
   }
   if (prLookup.kind === 'transient') {
@@ -220,11 +237,18 @@ export async function fetchBranchDiff(
       })
     );
     if (commitResp.kind === 'ok') {
+      const rawFiles = commitResp.value.files ?? [];
+      if (rawFiles.length >= GITHUB_FILES_CAP) {
+        return { files: [], mergeCommitSha: sha, failure: 'diff_truncated' };
+      }
       return {
-        files: toCommitFiles(commitResp.value.files),
+        files: toCommitFiles(rawFiles),
         mergeCommitSha: sha,
         failure: null,
       };
+    }
+    if (commitResp.kind === 'unauthorized') {
+      return { files: [], mergeCommitSha: sha, failure: 'repository_unreachable' };
     }
     if (commitResp.kind === 'transient') {
       return { files: [], mergeCommitSha: sha, failure: 'fetch_failed_after_retry' };
@@ -243,8 +267,20 @@ export async function fetchBranchDiff(
   );
 
   if (compareResp.kind === 'ok') {
+    // GitHub returns 200 with `status='behind' | 'identical'` when the branch is
+    // not ahead of base — common when a PR has been merged via merge-commit but
+    // the head ref still exists. Treating that as a successful empty diff would
+    // record a non-partial outcome with zero change-shape, silently corrupting
+    // analytics. Surface it as `merge_not_found` instead.
+    if (compareResp.value.status !== 'ahead' && compareResp.value.status !== 'diverged') {
+      return { files: [], mergeCommitSha: null, failure: 'merge_not_found' };
+    }
+    const rawFiles = compareResp.value.files ?? [];
+    if (rawFiles.length >= GITHUB_FILES_CAP) {
+      return { files: [], mergeCommitSha: null, failure: 'diff_truncated' };
+    }
     return {
-      files: toCommitFiles(compareResp.value.files),
+      files: toCommitFiles(rawFiles),
       mergeCommitSha: null,
       failure: null,
     };
@@ -252,6 +288,9 @@ export async function fetchBranchDiff(
   if (compareResp.kind === 'not_found') {
     // Branch is gone and PR lookup also failed → no merge contribution discoverable.
     return { files: [], mergeCommitSha: null, failure: 'merge_not_found' };
+  }
+  if (compareResp.kind === 'unauthorized') {
+    return { files: [], mergeCommitSha: null, failure: 'repository_unreachable' };
   }
   return { files: [], mergeCommitSha: null, failure: 'fetch_failed_after_retry' };
 }

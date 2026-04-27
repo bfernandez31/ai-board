@@ -1045,8 +1045,8 @@ model TicketOutcome {
 - `domainFileCounts`: JSON frequency map of segment → file count
 - `touchedDbSchema` / `touchedTests` / `touchedCi`: Booleans derived from `STACK_INDICATORS` against the project's declared `services`, `testing.framework`, and `language`; missing stack coverage yields `false` (never errors)
 - `frictionFree`: True iff `frictionJobCount === 0` AND `qualityScore !== null` AND `qualityScore >= 75`
-- `partial`: True when change-shape data could not be derived (no jobs, ticket has no `branch`, no merged PR found for the branch, repository unreachable, or fetches exhausted retries)
-- `partialReason`: One of `no_jobs`, `no_branch_reference`, `merge_not_found`, `repository_unreachable`, `fetch_failed_after_retry`; null when `partial = false`
+- `partial`: True when change-shape data could not be derived (no jobs, ticket has no `branch`, no merged PR found for the branch, repository unreachable, fetches exhausted retries, or the diff exceeded GitHub's 300-file response cap)
+- `partialReason`: One of `no_jobs`, `no_branch_reference`, `merge_not_found`, `repository_unreachable`, `fetch_failed_after_retry`, `diff_truncated`; null when `partial = false`
 
 **Relationships**:
 - Belongs to Ticket (required, cascade delete)

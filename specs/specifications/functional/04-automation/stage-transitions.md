@@ -491,7 +491,7 @@ When a ticket transitions into the SHIP stage (from VERIFY for FULL workflows or
 **Behavior guarantees**:
 - Exactly one outcome row per ticket (database unique constraint on `ticketId`); the first SHIP transition is outcome-defining, and subsequent SHIPs (e.g., post-rollback re-ship) do not modify the existing row
 - Capture is fire-and-forget after the SHIP transition commits — if outcome computation fails, the ticket still ships
-- When the merge diff cannot be resolved (ticket has no `branch`, no merged PR is found for the branch against the default branch, the repository is unreachable, or fetches exhausted retries), the row is still written with `partial = true`, a `partialReason` code, and job-level signals fully populated; change-shape and domain fields are left empty
+- When the merge diff cannot be resolved (ticket has no `branch`, no merged PR is found for the branch, the repository is unreachable, fetches exhausted retries, or the diff exceeded GitHub's 300-file response cap), the row is still written with `partial = true`, a `partialReason` code, and job-level signals (including `qualityScore` and `frictionFree`) fully populated when known; change-shape and domain fields are left empty
 - Both FULL and QUICK workflow tickets are captured; QUICK rows have `qualityScore = null` and `frictionFree = false` by definition
 - Outcomes are never updated after creation — rule-set version is pinned per row so future analyses can interpret historical rows under their original rules
 

@@ -110,18 +110,27 @@ function aggregateJobMetrics(jobs: Job[]): JobMetrics {
 function buildPartialOutcome(
   input: CaptureInput,
   reason: PartialReason,
-  jobs: Job[]
+  jobs: Job[],
+  qualityScore: number | null = null
 ): DerivedOutcome {
+  const metrics = aggregateJobMetrics(jobs);
+  // Quality score and frictionFree depend only on jobs, not on the diff fetch, so we
+  // preserve them on partial outcomes whenever they're known. The contract documented
+  // in stage-transitions.md guarantees "job-level signals fully populated" on partials.
+  const frictionFree =
+    metrics.frictionJobCount === 0 &&
+    qualityScore !== null &&
+    qualityScore >= QUALITY_THRESHOLD_FRICTION_FREE;
   return {
     ticketId: input.ticketId,
     projectId: input.projectId,
     workflowType: input.workflowType,
     shippedAt: input.shippedAt,
     ruleSetVersion: RULE_SET_VERSION,
-    ...aggregateJobMetrics(jobs),
-    qualityScore: null,
+    ...metrics,
+    qualityScore,
     ...EMPTY_CHANGE_SHAPE,
-    frictionFree: false,
+    frictionFree,
     partial: true,
     partialReason: reason,
   };
@@ -131,9 +140,10 @@ async function persistPartial(
   input: CaptureInput,
   reason: PartialReason,
   jobs: Job[],
-  startedAt: number
+  startedAt: number,
+  qualityScore: number | null = null
 ): Promise<CaptureResult> {
-  const result = await persistOutcome(buildPartialOutcome(input, reason, jobs));
+  const result = await persistOutcome(buildPartialOutcome(input, reason, jobs, qualityScore));
   return {
     status: result.created ? 'created' : 'duplicate',
     partial: true,
@@ -215,7 +225,7 @@ export async function captureOutcomeOnShip(input: CaptureInput): Promise<Capture
   });
   const branch = ticket?.branch;
   if (!branch) {
-    return persistPartial(input, 'no_branch_reference', jobs, t0);
+    return persistPartial(input, 'no_branch_reference', jobs, t0, qualityScore);
   }
 
   // Load project (with config) for stack metadata + repo coordinates
@@ -252,7 +262,7 @@ export async function captureOutcomeOnShip(input: CaptureInput): Promise<Capture
   });
 
   if (fetched.failure !== null) {
-    return persistPartial(input, fetched.failure, jobs, t0);
+    return persistPartial(input, fetched.failure, jobs, t0, qualityScore);
   }
   logPhase(input.ticketId, 5, Date.now() - t5, {
     branch,

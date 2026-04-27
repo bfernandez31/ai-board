@@ -11,7 +11,8 @@ export type PartialReason =
   | 'no_branch_reference'
   | 'merge_not_found'
   | 'repository_unreachable'
-  | 'fetch_failed_after_retry';
+  | 'fetch_failed_after_retry'
+  | 'diff_truncated';
 
 export interface DerivedOutcome {
   ticketId: number;
