@@ -92,6 +92,8 @@ model Project {
   healthScans          HealthScan[]
   healthScore          HealthScore?
   setupJobs            ProjectSetupJob[]
+  outcomes             TicketOutcome[]
+  backfillProgress     BackfillProgress?
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -198,6 +200,7 @@ model Ticket {
   winnerComparisons      ComparisonRecord[]        @relation("ComparisonWinnerTicket")
   comparisonParticipants ComparisonParticipant[]
   decisionVerdicts       DecisionPointEvaluation[] @relation("DecisionVerdictTicket")
+  outcome                TicketOutcome?
 
   @@unique([projectId, ticketNumber])
   @@index([projectId])
@@ -962,4 +965,155 @@ model UserCredential {
 - Workflow dispatch blocked when the project owner has no credential for the target provider
 - Team projects use the project owner's credential regardless of which member triggers the workflow
 - Cascade delete when user is deleted
+
+### TicketOutcome
+
+Immutable per-ticket snapshot written exactly once when a ticket reaches the SHIP stage. Aggregates job telemetry, change-shape signals, structural domains, and semantic tags for analytics and prediction grounding.
+
+```prisma
+model TicketOutcome {
+  id                       Int          @id @default(autoincrement())
+
+  ticketId                 Int          @unique
+  projectId                Int
+  workflowType             WorkflowType
+  shippedAt                DateTime
+  capturedAt               DateTime     @default(now())
+  ruleSetVersion           Int
+
+  totalCostUsd             Float?
+  totalDurationMs          Int?
+  totalInputTokens         Int?
+  totalOutputTokens        Int?
+  totalThinkingTokens      Int?
+  totalCacheReadTokens     Int?
+  totalCacheCreationTokens Int?
+  toolsUsed                String[]     @default([])
+
+  pipelineJobCount         Int          @default(0)
+  frictionJobCount         Int          @default(0)
+  totalJobCount            Int          @default(0)
+  jobCountByPrefix         Json         @default("{}")
+
+  qualityScore             Int?
+
+  filesTouched             String[]     @default([])
+  linesAdded               Int?
+  linesRemoved             Int?
+  testCodeRatio            Float?
+
+  domains                  String[]     @default([])
+  domainFileCounts         Json         @default("{}")
+
+  touchedDbSchema          Boolean      @default(false)
+  touchedTests             Boolean      @default(false)
+  touchedCi                Boolean      @default(false)
+
+  frictionFree             Boolean      @default(false)
+
+  partial                  Boolean      @default(false)
+  partialReason            String?      @db.VarChar(40)
+
+  ticket                   Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  project                  Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, shippedAt(sort: Desc)])
+  @@index([projectId, frictionFree])
+  @@index([projectId, partial])
+  @@index([shippedAt])
+}
+```
+
+**Purpose**: Append-only delivery record per shipped ticket — the canonical source for "what was delivered, at what cost, in what shape" without re-aggregating across jobs and commits.
+
+**Fields**:
+- `ticketId`: Parent ticket (unique — at most one outcome per ticket)
+- `projectId`: Denormalized for project-scoped analytics queries
+- `workflowType`: Snapshot of the ticket's workflow type at SHIP time (`FULL`, `QUICK`, or `CLEAN` for legacy rows)
+- `shippedAt`: Moment the SHIP transition committed
+- `capturedAt`: Moment this row was written (always `>= shippedAt`)
+- `ruleSetVersion`: Pinned version of the classification, threshold, and stack-indicator rules used to derive this row
+- `totalCostUsd`, `totalDurationMs`, `total{Input,Output,Thinking,CacheRead,CacheCreation}Tokens`: Sums across all jobs of the ticket; null only when every contributing job had a null value
+- `toolsUsed`: Union of `Job.toolsUsed` across all jobs
+- `pipelineJobCount` / `frictionJobCount` / `totalJobCount`: Job counts by classification (invariant: `pipelineJobCount + frictionJobCount === totalJobCount`)
+- `jobCountByPrefix`: JSON map of command-prefix → count (e.g., `{ "specify": 1, "implement": 1, "iterate": 2 }`)
+- `qualityScore`: `Job.qualityScore` from the latest COMPLETED verify job (nullable; null for QUICK tickets and verify-without-score cases)
+- `filesTouched`: Sorted, deduplicated list of file paths touched across the ticket's commits
+- `linesAdded` / `linesRemoved`: Sums of additions and deletions across the deduplicated file set
+- `testCodeRatio`: `linesInTestPaths / max(linesAdded + linesRemoved, 1)`, where test paths come from `STACK_INDICATORS` for the project's language and testing framework
+- `domains`: Unique top-level path segments touched (e.g., `["app", "lib", "tests"]`)
+- `domainFileCounts`: JSON frequency map of segment → file count
+- `touchedDbSchema` / `touchedTests` / `touchedCi`: Booleans derived from `STACK_INDICATORS` against the project's declared `services`, `testing.framework`, and `language`; missing stack coverage yields `false` (never errors)
+- `frictionFree`: True iff `frictionJobCount === 0` AND `qualityScore !== null` AND `qualityScore >= 75`
+- `partial`: True when change-shape data could not be derived (no jobs, no commit reference, repository unreachable, or fetches exhausted retries)
+- `partialReason`: One of `no_jobs`, `no_commit_reference`, `repository_unreachable`, `fetch_failed_after_retry`; null when `partial = false`
+
+**Relationships**:
+- Belongs to Ticket (required, cascade delete)
+- Belongs to Project (required, cascade delete) — denormalized for query convenience
+
+**Constraints**:
+- Unique `ticketId` enforces 1:1 with Ticket and protects against duplicate writes from concurrent live-capture and backfill paths (P2002 catch in `lib/outcomes/persist.ts` collapses races to a no-op)
+- `(projectId, shippedAt DESC)` index serves the project list/analytics query
+- `(projectId, frictionFree)` and `(projectId, partial)` indexes serve aggregate filters
+- `(shippedAt)` index serves cross-project time-window queries
+
+**Business Rules**:
+- Written by `lib/outcomes/capture.ts` after the SHIP transition commits (fire-and-forget — capture failure does not block or revert SHIP)
+- Immutable after creation: never updated, only deleted on cascade if the parent ticket is hard-deleted
+- The first SHIP transition for a ticket is the outcome-defining one; rolled-back-then-re-shipped tickets do not get a new row
+- Capture covers both FULL and QUICK workflows; QUICK rows have `qualityScore = null` and `frictionFree = false` by definition
+- `partial = true` rows still populate job-level signals fully; only change-shape and domain fields are empty/null
+- Rule-set version is captured per row so older rows remain interpretable under their original rules; outcomes are never recomputed when rules later change
+
+### BackfillProgress
+
+Per-project resume cursor for the historical outcome backfill workflow.
+
+```prisma
+model BackfillProgress {
+  id                    Int            @id @default(autoincrement())
+  projectId             Int            @unique
+  status                BackfillStatus @default(IN_PROGRESS)
+  lastProcessedTicketId Int?
+  ticketsProcessed      Int            @default(0)
+  ticketsWithPartial    Int            @default(0)
+  startedAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  completedAt           DateTime?
+  version               Int            @default(1)
+  lastError             String?        @db.VarChar(2000)
+
+  project               Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+```
+
+**Purpose**: Track progress and enable safe resume of the per-project historical outcome backfill across runner timeouts, network blips, and concurrent workflow dispatches.
+
+**Fields**:
+- `projectId`: Parent project (unique — one progress row per project across all runs)
+- `status`: Current backfill state (`IN_PROGRESS`, `COMPLETED`, or `FAILED`)
+- `lastProcessedTicketId`: Cursor — the most recently processed `Ticket.id`; the next chunk resumes by selecting tickets with `id < lastProcessedTicketId` (newest-first order)
+- `ticketsProcessed`: Running count of tickets whose outcome was written by this or a prior run
+- `ticketsWithPartial`: Running count of `partial = true` rows produced (operator-visible signal of repository reachability)
+- `startedAt`: When the first run for this project began
+- `completedAt`: Set when `status = COMPLETED`
+- `version`: Optimistic-lock counter — every cursor advance uses `updateMany({ where: { projectId, version }, data: { ..., version: { increment: 1 } } })`; collisions cause the losing worker to exit cleanly
+- `lastError`: Operator-visible error message; cleared on successful resume
+
+**Relationships**:
+- Belongs to Project (required, cascade delete)
+
+**Constraints**:
+- Unique `projectId`
+- Index on `status` to scope retention or operator queries
+
+**Business Rules**:
+- Created by `POST /api/projects/:projectId/backfill-outcomes` and updated by the backfill runner (`scripts/backfill-outcomes.ts`)
+- Re-dispatching against a `COMPLETED` row is a no-op (enumeration finds zero remaining tickets and returns to `COMPLETED`)
+- Re-dispatching against a `FAILED` row resumes from `lastProcessedTicketId`
+- Two concurrent dispatches collide on `version`; the losing worker exits cleanly and the unique constraint on `TicketOutcome.ticketId` prevents duplicate rows even if both happen to pick the same ticket simultaneously
+- Idempotent against existing rows: tickets that already have a `TicketOutcome` are skipped during enumeration
 

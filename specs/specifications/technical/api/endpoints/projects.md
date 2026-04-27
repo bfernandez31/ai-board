@@ -622,6 +622,170 @@ List organizations the authenticated user belongs to.
 - `403`: `{ "error": "GitHub token lacks repo scope", "code": "MISSING_SCOPE" }`
 
 
+## Project Outcome Endpoints
+
+### GET /api/projects/:projectId/outcomes
+
+List immutable delivery outcomes for a project with optional filters. Powers analytics queries over shipped tickets.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (`verifyProjectAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters** (all optional, validated via Zod):
+
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `frictionFree` | `'true' \| 'false'` | unset | Filter by `TicketOutcome.frictionFree` |
+| `partial` | `'true' \| 'false'` | unset | Filter by `TicketOutcome.partial` |
+| `domain` | string | unset | Returns outcomes whose `domains` array contains this top-level path segment (case-sensitive) |
+| `workflowType` | `'FULL' \| 'QUICK' \| 'CLEAN'` | unset | |
+| `since` | ISO-8601 date | unset | `shippedAt >= since` |
+| `until` | ISO-8601 date | unset | `shippedAt < until` |
+| `limit` | integer (1–500) | 100 | |
+| `cursor` | integer | unset | `TicketOutcome.id` — returns rows with `id < cursor`, ordered `id DESC` |
+
+All filters AND together. Pagination is cursor-based by `id` (descending) — callers stop when `nextCursor === null`.
+
+**Response** (200 OK):
+```json
+{
+  "outcomes": [
+    {
+      "id": 42,
+      "ticketId": 1234,
+      "ticketKey": "AIB-742",
+      "projectId": 7,
+      "workflowType": "FULL",
+      "shippedAt": "2026-04-25T14:30:21.000Z",
+      "capturedAt": "2026-04-25T14:31:02.000Z",
+      "ruleSetVersion": 1,
+      "totalCostUsd": 1.7234,
+      "totalDurationMs": 482000,
+      "totalInputTokens": 51234,
+      "totalOutputTokens": 8421,
+      "totalThinkingTokens": 1200,
+      "totalCacheReadTokens": 91234,
+      "totalCacheCreationTokens": 12345,
+      "toolsUsed": ["Edit", "Read", "Bash", "Grep"],
+      "pipelineJobCount": 4,
+      "frictionJobCount": 0,
+      "totalJobCount": 4,
+      "jobCountByPrefix": { "specify": 1, "plan": 1, "implement": 1, "verify": 1 },
+      "qualityScore": 88,
+      "filesTouched": ["app/api/foo.ts"],
+      "linesAdded": 142,
+      "linesRemoved": 38,
+      "testCodeRatio": 0.41,
+      "domains": ["app", "lib", "tests"],
+      "domainFileCounts": { "app": 1, "lib": 1, "tests": 1 },
+      "touchedDbSchema": false,
+      "touchedTests": true,
+      "touchedCi": false,
+      "frictionFree": true,
+      "partial": false,
+      "partialReason": null
+    }
+  ],
+  "nextCursor": 41,
+  "totalReturned": 100
+}
+```
+
+`ticketKey` is denormalised in the list response by joining to `Ticket` (avoids N+1 in dashboards). The endpoint is read-only — no write methods are exposed.
+
+**Errors**:
+- `400`: `{ "error": "...", "code": "VALIDATION_ERROR" }` (e.g., `limit > 500`, malformed `since`)
+- `401`: `UNAUTHENTICATED`
+- `403`: `ACCESS_DENIED`
+- `404`: Project not found
+
+**Performance**: SC-003 budget — fraction-frictionFree returns < 1 s per project, supported by the composite index `(projectId, frictionFree)`. List ordering is supported by `(projectId, shippedAt DESC)`.
+
+### POST /api/projects/:projectId/backfill-outcomes
+
+Start a per-project historical outcome backfill. Dispatches `.github/workflows/backfill-outcomes.yml` with the project ID and resume cursor.
+
+**Authentication**: Required (session)
+**Authorization**: Project owner only (`verifyProjectOwnership`) — backfill can consume external repository API budget.
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{ "resume": true }
+```
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `resume` | boolean | `true` | When `true`, picks up from existing `BackfillProgress.lastProcessedTicketId`. When `false`, resets cursor to start from the newest ticket. Resetting does NOT delete existing outcome rows — they remain skipped by the unique-constraint guard. |
+
+**Behavior**:
+1. Validates project exists and the caller is the owner.
+2. Looks up or creates `BackfillProgress` for the project. Returns 409 if `status === IN_PROGRESS` (one run at a time per project).
+3. If `resume === false` and a row exists, resets `lastProcessedTicketId = null`, `ticketsProcessed = 0`, `status = IN_PROGRESS`, increments `version`.
+4. Dispatches the GitHub Actions workflow with inputs `{ project_id, resume_cursor }`.
+5. If dispatch fails after the DB row was prepared, the row is marked `FAILED` and the error is returned (no silent inconsistent state).
+
+**Response** (202 Accepted):
+```json
+{
+  "projectId": 7,
+  "status": "IN_PROGRESS",
+  "startedAt": "2026-04-26T10:11:12.000Z",
+  "workflowRunUrl": "https://github.com/anthropics/ai-board/actions/runs/12345"
+}
+```
+
+**Errors**:
+- `400`: `VALIDATION_ERROR` — body validation failed
+- `401`: `UNAUTHENTICATED`
+- `403`: `{ "error": "Project owner only", "code": "OWNERSHIP_REQUIRED" }`
+- `409`: `{ "error": "Backfill already in progress for this project", "code": "BACKFILL_IN_PROGRESS" }`
+- `500`: `{ "error": "...", "code": "BACKFILL_DISPATCH_FAILED" }` — workflow dispatch failed; `BackfillProgress.status = FAILED` with `lastError` populated
+
+### GET /api/projects/:projectId/backfill-outcomes/status
+
+Return the current `BackfillProgress` for a project. Operators poll this endpoint to track progress.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (`verifyProjectAccess`) — members can observe progress.
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Response** (200 OK — backfill exists):
+```json
+{
+  "status": "IN_PROGRESS",
+  "ticketsProcessed": 42,
+  "ticketsRemaining": 78,
+  "ticketsWithPartial": 3,
+  "lastProcessedTicketId": 1234,
+  "startedAt": "2026-04-26T10:11:12.000Z",
+  "updatedAt": "2026-04-26T10:25:33.000Z",
+  "completedAt": null,
+  "lastError": null
+}
+```
+
+`ticketsRemaining` is computed at request time as `COUNT(Ticket WHERE projectId = X AND stage = 'SHIP' AND id NOT IN (SELECT ticketId FROM TicketOutcome WHERE projectId = X))`.
+
+**Response** (200 OK — no backfill ever started):
+```json
+{
+  "status": "NEVER_STARTED",
+  "ticketsRemaining": 700
+}
+```
+
+`status: "NEVER_STARTED"` is a sentinel returned when no `BackfillProgress` row exists.
+
+**Errors**: `401`, `403` (no access), `404` (project not found)
+
 ## Project Member Endpoints
 
 ### GET /api/projects/:projectId/members

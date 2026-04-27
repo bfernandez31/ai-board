@@ -128,6 +128,8 @@ model Project {
   healthScans         HealthScan[]
   healthScore         HealthScore?
   setupJobs           ProjectSetupJob[]
+  outcomes            TicketOutcome[]
+  backfillProgress    BackfillProgress?
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -186,6 +188,7 @@ model Ticket {
   comments               Comment[]
   jobs                   Job[]
   notifications          Notification[]
+  outcome                TicketOutcome?
   project                Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   sourceComparisons      ComparisonRecord[]        @relation("ComparisonSourceTicket")
   winnerComparisons      ComparisonRecord[]        @relation("ComparisonWinnerTicket")
@@ -670,4 +673,90 @@ model ProjectSetupJob {
   @@index([projectId, status])
   @@index([projectId, createdAt(sort: Desc)])
   @@index([projectId, command, status])
+}
+
+model TicketOutcome {
+  id                       Int          @id @default(autoincrement())
+
+  // Identity & lookup
+  ticketId                 Int          @unique
+  projectId                Int
+  workflowType             WorkflowType
+  shippedAt                DateTime
+  capturedAt               DateTime     @default(now())
+  ruleSetVersion           Int
+
+  // Job-aggregate telemetry
+  totalCostUsd             Float?
+  totalDurationMs          Int?
+  totalInputTokens         Int?
+  totalOutputTokens        Int?
+  totalThinkingTokens      Int?
+  totalCacheReadTokens     Int?
+  totalCacheCreationTokens Int?
+  toolsUsed                String[]     @default([])
+
+  // Job-count classification
+  pipelineJobCount         Int          @default(0)
+  frictionJobCount         Int          @default(0)
+  totalJobCount            Int          @default(0)
+  jobCountByPrefix         Json         @default("{}")
+
+  // Quality
+  qualityScore             Int?
+
+  // Change-shape
+  filesTouched             String[]     @default([])
+  linesAdded               Int?
+  linesRemoved             Int?
+  testCodeRatio            Float?
+
+  // Structural domains
+  domains                  String[]     @default([])
+  domainFileCounts         Json         @default("{}")
+
+  // Semantic tags
+  touchedDbSchema          Boolean      @default(false)
+  touchedTests             Boolean      @default(false)
+  touchedCi                Boolean      @default(false)
+
+  // Derived booleans
+  frictionFree             Boolean      @default(false)
+
+  // Partial-state flags
+  partial                  Boolean      @default(false)
+  partialReason            String?      @db.VarChar(40)
+
+  // Relations
+  ticket                   Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  project                  Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, shippedAt(sort: Desc)])
+  @@index([projectId, frictionFree])
+  @@index([projectId, partial])
+  @@index([shippedAt])
+}
+
+model BackfillProgress {
+  id                    Int            @id @default(autoincrement())
+  projectId             Int            @unique
+  status                BackfillStatus @default(IN_PROGRESS)
+  lastProcessedTicketId Int?
+  ticketsProcessed      Int            @default(0)
+  ticketsWithPartial    Int            @default(0)
+  startedAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  completedAt           DateTime?
+  version               Int            @default(1)
+  lastError             String?        @db.VarChar(2000)
+
+  project               Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+enum BackfillStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
 }

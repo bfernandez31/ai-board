@@ -14,6 +14,7 @@ import { handleTicketTransition, cleanupOrphanedJob, resolveEffectiveAgent } fro
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
 import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
+import { captureOutcomeOnShip } from '@/lib/outcomes/capture';
 
 type TicketWithJobsAndProject = Ticket & {
   project: Project;
@@ -350,6 +351,17 @@ export async function executeTicketTransition(
       where: { id: ticket.id, version: currentVersion },
       data: { stage: targetStage, version: { increment: 1 } },
     });
+
+    if (targetStage === Stage.SHIP) {
+      void captureOutcomeOnShip({
+        ticketId: updatedTicket.id,
+        projectId: updatedTicket.projectId,
+        workflowType: updatedTicket.workflowType,
+        shippedAt: updatedTicket.updatedAt,
+      }).catch((err) => {
+        console.error('[outcome-capture] unhandled', { ticketId: updatedTicket.id, err });
+      });
+    }
 
     return {
       ok: true,

@@ -725,3 +725,37 @@ export async function getAnalyticsData(
     hasData,
   };
 }
+
+/**
+ * Outcome aggregates for SC-003 ("fraction frictionFree" < 1s per project).
+ *
+ * All four queries are index-supported by the indexes declared on TicketOutcome
+ * (`@@index([projectId, frictionFree])`, `@@index([projectId, partial])`).
+ */
+export interface OutcomeAggregates {
+  totalShipped: number;
+  frictionFreeCount: number;
+  partialCount: number;
+  byDomain: Record<string, number>;
+}
+
+export async function getOutcomeAggregates(projectId: number): Promise<OutcomeAggregates> {
+  const [totalShipped, frictionFreeCount, partialCount, rows] = await Promise.all([
+    prisma.ticketOutcome.count({ where: { projectId } }),
+    prisma.ticketOutcome.count({ where: { projectId, frictionFree: true } }),
+    prisma.ticketOutcome.count({ where: { projectId, partial: true } }),
+    prisma.ticketOutcome.findMany({
+      where: { projectId },
+      select: { domains: true },
+    }),
+  ]);
+
+  const byDomain: Record<string, number> = {};
+  for (const row of rows) {
+    for (const d of row.domains) {
+      byDomain[d] = (byDomain[d] ?? 0) + 1;
+    }
+  }
+
+  return { totalShipped, frictionFreeCount, partialCount, byDomain };
+}
