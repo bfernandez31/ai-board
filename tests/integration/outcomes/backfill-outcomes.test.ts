@@ -156,10 +156,9 @@ describe('Backfill outcomes', () => {
       { filename: 'app/foo.ts', additions: 5, deletions: 1 },
     ]);
 
-    // Seed SHIP / CLOSED / SHIP. With the bug, ticketsProcessed would be 3
-    // and the cursor would have walked past the CLOSED ticket. With the fix,
-    // CLOSED is filtered at the query level — only the two SHIP tickets are
-    // enumerated and processed.
+    // SHIP / CLOSED / SHIP ordering verifies that CLOSED is filtered at the
+    // query level — if it were filtered post-fetch, the CLOSED ticket would
+    // advance the id-descending cursor and skip the later SHIP ticket.
     const shipA = await seedShippedTicket(640);
     await seedTicket(641, Stage.CLOSED);
     const shipB = await seedShippedTicket(642);
