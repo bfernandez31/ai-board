@@ -1112,6 +1112,7 @@ model BackfillProgress {
 
 **Business Rules**:
 - Created by `POST /api/projects/:projectId/backfill-outcomes` and updated by the backfill runner (`scripts/backfill-outcomes.ts`)
+- Enumeration is restricted to tickets in stage `SHIP` (matches the live capture path); tickets in stage `CLOSED` are never selected, fetched, or processed
 - Re-dispatching against a `COMPLETED` row is a no-op (enumeration finds zero remaining tickets and returns to `COMPLETED`)
 - Re-dispatching against a `FAILED` row resumes from `lastProcessedTicketId`
 - Two concurrent dispatches collide on `version`; the losing worker exits cleanly and the unique constraint on `TicketOutcome.ticketId` prevents duplicate rows even if both happen to pick the same ticket simultaneously
