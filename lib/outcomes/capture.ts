@@ -213,7 +213,7 @@ export async function captureOutcomeOnShip(input: CaptureInput): Promise<Capture
     where: { id: input.ticketId },
     select: { branch: true },
   });
-  const branch = ticket?.branch ?? null;
+  const branch = ticket?.branch;
   if (!branch) {
     return persistPartial(input, 'no_branch_reference', jobs, t0);
   }

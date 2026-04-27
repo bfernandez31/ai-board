@@ -111,16 +111,15 @@ async function maybeYieldOnRateLimit(headers: Record<string, string | undefined>
 type RetryOutcome<T> =
   | { kind: 'ok'; value: T }
   | { kind: 'not_found' }
-  | { kind: 'repo_unreachable' }
   | { kind: 'transient' };
 
 async function callWithRetry<T>(
-  fn: () => Promise<{ data: T; headers: Record<string, string | undefined> }>
+  fn: () => Promise<{ data: T; headers: object }>
 ): Promise<RetryOutcome<T>> {
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
     try {
       const response = await fn();
-      await maybeYieldOnRateLimit(response.headers);
+      await maybeYieldOnRateLimit(response.headers as Record<string, string | undefined>);
       return { kind: 'ok', value: response.data };
     } catch (err) {
       const e = asOctokitError(err);
@@ -159,15 +158,6 @@ function toCommitFiles(
   });
 }
 
-interface OctokitResponse<T> {
-  data: T;
-  headers: Record<string, string | undefined>;
-}
-
-function asResponse<T>(r: { data: T; headers: object }): OctokitResponse<T> {
-  return { data: r.data, headers: r.headers as Record<string, string | undefined> };
-}
-
 /**
  * Resolve the diff that the ticket's branch contributed to the default branch.
  * Returns either the file list (success) or a `failure` reason (partial outcome).
@@ -192,49 +182,42 @@ export async function fetchBranchDiff(
   const octokit = new Octokit({ auth: token });
 
   // 1. Find the merged PR for branch → defaultBranch.
-  const prLookup = await callWithRetry(async () =>
-    asResponse(
-      await octokit.rest.pulls.list({
-        owner: params.owner,
-        repo: params.repo,
-        head: `${params.owner}:${params.branch}`,
-        base: params.defaultBranch,
-        state: 'closed',
-        per_page: 50,
-      })
-    )
+  const prLookup = await callWithRetry(() =>
+    octokit.rest.pulls.list({
+      owner: params.owner,
+      repo: params.repo,
+      head: `${params.owner}:${params.branch}`,
+      base: params.defaultBranch,
+      state: 'closed',
+      per_page: 50,
+    })
   );
 
   if (prLookup.kind === 'not_found') {
-    return { files: [], mergeCommitSha: null, failure: 'repository_unreachable' };
-  }
-  if (prLookup.kind === 'repo_unreachable') {
     return { files: [], mergeCommitSha: null, failure: 'repository_unreachable' };
   }
   if (prLookup.kind === 'transient') {
     return { files: [], mergeCommitSha: null, failure: 'fetch_failed_after_retry' };
   }
 
-  const prs = prLookup.value;
   // Pick the most recent merged PR that has a merge_commit_sha.
-  const mergedPr = prs
-    .filter((pr) => pr.merged_at !== null && typeof pr.merge_commit_sha === 'string' && pr.merge_commit_sha.length > 0)
-    .sort((a, b) => {
-      const aT = a.merged_at ? Date.parse(a.merged_at) : 0;
-      const bT = b.merged_at ? Date.parse(b.merged_at) : 0;
-      return bT - aT;
-    })[0];
+  const mergedPr = prLookup.value
+    .filter(
+      (pr): pr is typeof pr & { merge_commit_sha: string; merged_at: string } =>
+        typeof pr.merged_at === 'string' &&
+        typeof pr.merge_commit_sha === 'string' &&
+        pr.merge_commit_sha.length > 0
+    )
+    .sort((a, b) => Date.parse(b.merged_at) - Date.parse(a.merged_at))[0];
 
-  if (mergedPr && mergedPr.merge_commit_sha) {
+  if (mergedPr) {
     const sha = mergedPr.merge_commit_sha;
-    const commitResp = await callWithRetry(async () =>
-      asResponse(
-        await octokit.rest.repos.getCommit({
-          owner: params.owner,
-          repo: params.repo,
-          ref: sha,
-        })
-      )
+    const commitResp = await callWithRetry(() =>
+      octokit.rest.repos.getCommit({
+        owner: params.owner,
+        repo: params.repo,
+        ref: sha,
+      })
     );
     if (commitResp.kind === 'ok') {
       return {
@@ -243,23 +226,20 @@ export async function fetchBranchDiff(
         failure: null,
       };
     }
-    if (commitResp.kind === 'not_found') {
-      // The merge commit was rewritten or pruned — try fallback.
-    } else if (commitResp.kind === 'transient') {
+    if (commitResp.kind === 'transient') {
       return { files: [], mergeCommitSha: sha, failure: 'fetch_failed_after_retry' };
     }
+    // commitResp.kind === 'not_found' — merge commit pruned/rewritten; fall through to compare.
   }
 
   // 2. Fallback: compare branch tip with default branch tip if branch ref still exists.
-  const compareResp = await callWithRetry(async () =>
-    asResponse(
-      await octokit.rest.repos.compareCommits({
-        owner: params.owner,
-        repo: params.repo,
-        base: params.defaultBranch,
-        head: params.branch,
-      })
-    )
+  const compareResp = await callWithRetry(() =>
+    octokit.rest.repos.compareCommits({
+      owner: params.owner,
+      repo: params.repo,
+      base: params.defaultBranch,
+      head: params.branch,
+    })
   );
 
   if (compareResp.kind === 'ok') {
@@ -272,9 +252,6 @@ export async function fetchBranchDiff(
   if (compareResp.kind === 'not_found') {
     // Branch is gone and PR lookup also failed → no merge contribution discoverable.
     return { files: [], mergeCommitSha: null, failure: 'merge_not_found' };
-  }
-  if (compareResp.kind === 'repo_unreachable') {
-    return { files: [], mergeCommitSha: null, failure: 'repository_unreachable' };
   }
   return { files: [], mergeCommitSha: null, failure: 'fetch_failed_after_retry' };
 }
