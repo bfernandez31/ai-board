@@ -49,7 +49,7 @@ describe('buildPartialOutcome', () => {
         qualityScore: null,
       } as unknown as Parameters<typeof buildPartialOutcome>[2][0],
     ];
-    const out = buildPartialOutcome(baseInput, 'no_commit_reference', jobs);
+    const out = buildPartialOutcome(baseInput, 'no_branch_reference', jobs);
     expect(out.frictionJobCount).toBe(1);
     expect(out.pipelineJobCount).toBe(0);
     expect(out.totalJobCount).toBe(1);
@@ -77,7 +77,7 @@ describe('buildPartialOutcome', () => {
         qualityScore: null,
       } as unknown as Parameters<typeof buildPartialOutcome>[2][0],
     ];
-    const out = buildPartialOutcome(baseInput, 'no_commit_reference', jobs);
+    const out = buildPartialOutcome(baseInput, 'no_branch_reference', jobs);
     expect(out.totalCostUsd).toBeNull();
     expect(out.totalDurationMs).toBeNull();
     expect(out.totalInputTokens).toBeNull();

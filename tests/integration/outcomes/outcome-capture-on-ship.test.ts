@@ -23,7 +23,6 @@ afterEach(() => {
 interface SeedJob {
   command: string;
   status?: JobStatus;
-  commitSha?: string | null;
   costUsd?: number | null;
   durationMs?: number | null;
   inputTokens?: number | null;
@@ -40,6 +39,7 @@ async function seedTicketWithJobs(
     ticketNumber: number;
     workflowType?: WorkflowType;
     stage?: Stage;
+    branch?: string | null;
     jobs: SeedJob[];
     projectConfig?: Prisma.InputJsonValue;
   }
@@ -52,7 +52,11 @@ async function seedTicketWithJobs(
       stage: opts.stage ?? Stage.SHIP,
       workflowType: opts.workflowType ?? WorkflowType.FULL,
       ticketNumber: opts.ticketNumber,
-      ticketKey: `E2E-OUT-${opts.ticketNumber}-${Date.now()}`,
+      ticketKey: `E2E-O${opts.ticketNumber}-${Date.now().toString().slice(-6)}`,
+      branch:
+        opts.branch === undefined
+          ? `${opts.ticketNumber}-feature-branch`
+          : opts.branch,
       updatedAt: new Date(),
     },
   });
@@ -71,7 +75,6 @@ async function seedTicketWithJobs(
         projectId,
         command: job.command,
         status: job.status ?? JobStatus.COMPLETED,
-        commitSha: job.commitSha ?? null,
         costUsd: job.costUsd ?? 0.1,
         durationMs: job.durationMs ?? 1000,
         inputTokens: job.inputTokens ?? 100,
@@ -123,10 +126,10 @@ describe('Outcome capture on SHIP', () => {
       ticketNumber: 100,
       workflowType: WorkflowType.FULL,
       jobs: [
-        { command: 'specify', commitSha: 'sha-aaa1' },
-        { command: 'plan', commitSha: 'sha-bbb2' },
-        { command: 'implement', commitSha: 'sha-ccc3' },
-        { command: 'verify', commitSha: 'sha-ccc3', qualityScore: 90 },
+        { command: 'specify' },
+        { command: 'plan' },
+        { command: 'implement' },
+        { command: 'verify', qualityScore: 90 },
       ],
     });
 
@@ -164,10 +167,10 @@ describe('Outcome capture on SHIP', () => {
       ticketNumber: 101,
       workflowType: WorkflowType.FULL,
       jobs: [
-        { command: 'verify', commitSha: 'sha-x1', qualityScore: 95 },
-        { command: 'iterate', commitSha: 'sha-x2' },
-        { command: 'iterate', commitSha: 'sha-x3' },
-        { command: 'comment-build', commitSha: 'sha-x4' },
+        { command: 'verify', qualityScore: 95 },
+        { command: 'iterate' },
+        { command: 'iterate' },
+        { command: 'comment-build' },
       ],
     });
 
@@ -191,7 +194,7 @@ describe('Outcome capture on SHIP', () => {
     const { ticketId } = await seedTicketWithJobs(prisma, ctx.projectId, {
       ticketNumber: 102,
       workflowType: WorkflowType.QUICK,
-      jobs: [{ command: 'quick-impl', commitSha: 'sha-q1' }],
+      jobs: [{ command: 'quick-impl' }],
     });
 
     await captureOutcomeOnShip({
@@ -223,7 +226,7 @@ describe('Outcome capture on SHIP', () => {
         services: [{ type: 'postgres' }],
         testing: { framework: 'pytest' },
       },
-      jobs: [{ command: 'verify', commitSha: 'sha-py', qualityScore: 80 }],
+      jobs: [{ command: 'verify', qualityScore: 80 }],
     });
 
     await captureOutcomeOnShip({
@@ -253,7 +256,7 @@ describe('Outcome capture on SHIP', () => {
         services: [],
         testing: { framework: 'rust-test' },
       },
-      jobs: [{ command: 'verify', commitSha: 'sha-rs', qualityScore: 85 }],
+      jobs: [{ command: 'verify', qualityScore: 85 }],
     });
 
     await captureOutcomeOnShip({
@@ -280,7 +283,7 @@ describe('Outcome capture on SHIP', () => {
     const { ticketId } = await seedTicketWithJobs(prisma, ctx.projectId, {
       ticketNumber: 112,
       workflowType: WorkflowType.FULL,
-      jobs: [{ command: 'verify', commitSha: 'sha-ts', qualityScore: 85 }],
+      jobs: [{ command: 'verify', qualityScore: 85 }],
     });
 
     await captureOutcomeOnShip({
@@ -308,7 +311,7 @@ describe('Outcome capture on SHIP', () => {
 
     const { ticketId } = await seedTicketWithJobs(prisma, ctx.projectId, {
       ticketNumber: 113,
-      jobs: [{ command: 'verify', commitSha: 'sha-bare', qualityScore: 80 }],
+      jobs: [{ command: 'verify', qualityScore: 80 }],
     });
 
     await captureOutcomeOnShip({

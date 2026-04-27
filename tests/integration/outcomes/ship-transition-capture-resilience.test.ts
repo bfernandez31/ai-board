@@ -60,7 +60,6 @@ describe('SHIP transition is resilient to capture failure (T019, FR-019)', () =>
         projectId: ctx.projectId,
         command: 'verify',
         status: JobStatus.COMPLETED,
-        commitSha: 'sha-resil',
         qualityScore: 85,
         startedAt: new Date(),
         completedAt: new Date(),

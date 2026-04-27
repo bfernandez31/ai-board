@@ -16,7 +16,7 @@ import {
   getTestPatternsForProject,
   type ProjectStackConfig,
 } from './stack-indicator-lookup';
-import { fetchCommitFiles } from './github-files';
+import { fetchBranchDiff } from './github-files';
 import { persistOutcome } from './persist';
 import {
   QUALITY_THRESHOLD_FRICTION_FREE,
@@ -207,21 +207,18 @@ export async function captureOutcomeOnShip(input: CaptureInput): Promise<Capture
   const qualityScore = await getQualityScore(input.ticketId);
   logPhase(input.ticketId, 4, Date.now() - t4, { qualityScore });
 
-  // Phase 5: Resolve commit references and fetch files
+  // Phase 5: Resolve the branch's merge contribution and fetch files
   const t5 = Date.now();
-  const uniqueShas = Array.from(
-    new Set(
-      jobs
-        .map((j) => j.commitSha)
-        .filter((sha): sha is string => typeof sha === 'string' && sha.length > 0)
-    )
-  );
-
-  if (uniqueShas.length === 0) {
-    return persistPartial(input, 'no_commit_reference', jobs, t0);
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: input.ticketId },
+    select: { branch: true },
+  });
+  const branch = ticket?.branch ?? null;
+  if (!branch) {
+    return persistPartial(input, 'no_branch_reference', jobs, t0);
   }
 
-  // Load project (with config) for stack metadata
+  // Load project (with config) for stack metadata + repo coordinates
   const project = await prisma.project.findUnique({ where: { id: input.projectId } });
   if (!project) {
     // The ticket exists but the project does not — return an error rather than a partial.
@@ -247,17 +244,19 @@ export async function captureOutcomeOnShip(input: CaptureInput): Promise<Capture
 
   const stackConfig = readProjectStackConfig(projectForStack);
 
-  const fetched = await fetchCommitFiles({
-    owner: project.githubOwner,
-    repo: project.githubRepo,
-    shas: uniqueShas,
+  const fetched = await fetchBranchDiff({
+    owner: projectForStack.githubOwner,
+    repo: projectForStack.githubRepo,
+    branch,
+    defaultBranch: projectForStack.defaultBranch,
   });
 
   if (fetched.failure !== null) {
     return persistPartial(input, fetched.failure, jobs, t0);
   }
   logPhase(input.ticketId, 5, Date.now() - t5, {
-    shas: uniqueShas.length,
+    branch,
+    mergeCommitSha: fetched.mergeCommitSha,
     fetchedFiles: fetched.files.length,
   });
 

@@ -32,6 +32,9 @@ describe('Backfill API endpoints', () => {
   beforeEach(async () => {
     ctx = await getTestContext();
     await ctx.cleanup();
+    // ctx.cleanup() does not clean BackfillProgress, so a row from a previous
+    // test in the same project would collide with `create({ projectId })`.
+    await prisma.backfillProgress.deleteMany({ where: { projectId: ctx.projectId } });
     vi.spyOn(dispatchModule, 'dispatchBackfillOutcomes').mockResolvedValue({
       workflowRunUrl: 'https://example.com/run/1',
     });
@@ -49,7 +52,7 @@ describe('Backfill API endpoints', () => {
             stage: Stage.SHIP,
             workflowType: WorkflowType.FULL,
             ticketNumber: 800 + i,
-            ticketKey: `E2E-BFS-${i}-${Date.now()}`,
+            ticketKey: `E2E-BFS${i}-${Date.now().toString().slice(-6)}`,
             updatedAt: new Date(),
           },
         });

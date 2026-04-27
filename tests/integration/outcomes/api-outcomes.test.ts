@@ -42,7 +42,7 @@ async function seedOutcomeRow(
       stage: Stage.SHIP,
       workflowType: opts.workflowType ?? WorkflowType.FULL,
       ticketNumber: opts.ticketNumber,
-      ticketKey: `E2E-API-${opts.ticketNumber}-${Date.now()}`,
+      ticketKey: `E2E-A${opts.ticketNumber}-${Date.now().toString().slice(-6)}`,
       updatedAt: new Date(),
     },
   });
@@ -69,7 +69,7 @@ async function seedOutcomeRow(
       touchedCi: false,
       frictionFree: opts.frictionFree ?? true,
       partial: opts.partial ?? false,
-      partialReason: opts.partial ? 'no_commit_reference' : null,
+      partialReason: opts.partial ? 'no_branch_reference' : null,
     },
   });
   return { ticketId: ticket.id };
@@ -106,7 +106,7 @@ describe('GET /api/projects/:projectId/tickets/:id/outcome', () => {
         stage: Stage.SHIP,
         workflowType: WorkflowType.FULL,
         ticketNumber: 401,
-        ticketKey: `E2E-API-401-${Date.now()}`,
+        ticketKey: `E2E-A401-${Date.now().toString().slice(-6)}`,
         updatedAt: new Date(),
       },
     });

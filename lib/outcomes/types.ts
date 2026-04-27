@@ -8,7 +8,8 @@ export const QUALITY_THRESHOLD_FRICTION_FREE = 75 as const;
 
 export type PartialReason =
   | 'no_jobs'
-  | 'no_commit_reference'
+  | 'no_branch_reference'
+  | 'merge_not_found'
   | 'repository_unreachable'
   | 'fetch_failed_after_retry';
 

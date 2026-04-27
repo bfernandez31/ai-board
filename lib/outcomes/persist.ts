@@ -15,7 +15,8 @@ import type { DerivedOutcome } from './types';
 
 const PARTIAL_REASONS = [
   'no_jobs',
-  'no_commit_reference',
+  'no_branch_reference',
+  'merge_not_found',
   'repository_unreachable',
   'fetch_failed_after_retry',
 ] as const;

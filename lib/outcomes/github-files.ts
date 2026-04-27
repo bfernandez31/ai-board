@@ -1,40 +1,47 @@
 /**
- * Octokit `repos.getCommit` adapter for outcome capture. Fetches the per-commit file diff
- * for each unique commit SHA on a shipped ticket.
+ * Octokit adapter for outcome capture. Resolves the diff for a ticket via its branch:
+ *
+ *   1. Look up the merged pull request whose head is `branch` and whose base is the
+ *      project's default branch. The PR's `merge_commit_sha` persists even after the
+ *      feature branch is deleted (auto-delete enabled).
+ *   2. Fetch the file diff for that single merge commit.
+ *   3. Fallback: if no merged PR can be located but the branch ref still exists,
+ *      compare the branch tip with the default-branch tip.
+ *
+ * This replaces the previous per-`Job.commitSha` aggregation: only one PR-lookup and
+ * one diff fetch per ticket, regardless of job count.
  *
  * Behaviour:
- * - In test mode (`process.env.TEST_MODE === 'true'`), returns a deterministic mock
- *   based on the SHA so integration tests can run offline.
+ * - In test mode (`process.env.TEST_MODE === 'true'`), returns a deterministic mock so
+ *   integration tests can run offline. Tests can override via `TEST_OUTCOME_FILES`.
  * - Auth uses the `accessToken` arg if provided, otherwise falls back to
  *   `process.env.GITHUB_TOKEN`. No new env vars or credentials.
- * - Per-commit retries with backoff `[1s, 4s, 16s]` for transient errors.
- * - Distinguishes 404 on the repo (`repository_unreachable`) from 404 on a single SHA
- *   (skip but proceed).
- * - Backfill rate-limit handling: if `x-ratelimit-remaining` < 100, sleep until reset
- *   before the next call.
+ * - Per-call retries with backoff `[1s, 4s, 16s]` for transient errors.
+ * - Distinguishes 404 on the repo (`repository_unreachable`) from "no merged PR found"
+ *   (`merge_not_found`).
+ * - Backfill rate-limit handling: if `x-ratelimit-remaining` < 100, sleep until reset.
  */
 
 import { Octokit } from '@octokit/rest';
 import type { CommitFile } from './types';
 
 export type FetchFailureReason =
+  | 'merge_not_found'
   | 'repository_unreachable'
   | 'fetch_failed_after_retry';
 
-export interface FetchCommitFilesParams {
+export interface FetchBranchDiffParams {
   owner: string;
   repo: string;
-  shas: readonly string[];
+  branch: string;
+  defaultBranch: string;
   accessToken?: string;
 }
 
-export interface FetchCommitFilesResult {
+export interface FetchBranchDiffResult {
   files: CommitFile[];
-  /** SHAs that were fetched successfully (200 + files present). */
-  successfulShas: string[];
-  /** SHAs that returned 404 individually (skipped but recorded). */
-  notFoundShas: string[];
-  /** A terminal failure that prevented any usable data. Null if at least one SHA returned data. */
+  /** The merge commit SHA (when resolved via a merged PR). Null when fallback compare path was used. */
+  mergeCommitSha: string | null;
   failure: FetchFailureReason | null;
 }
 
@@ -49,14 +56,10 @@ function isTestMode(): boolean {
 }
 
 /**
- * Generate a deterministic mock files payload for a SHA so integration tests can rely on
- * stable change-shape derivations without touching GitHub. The mock uses a fixed list of
- * paths regardless of SHA so test fixtures stay simple.
+ * Generate a deterministic mock files payload for a branch so integration tests can rely
+ * on stable change-shape derivations without touching GitHub.
  */
-function mockFilesForSha(sha: string): CommitFile[] {
-  // Tests can short-circuit by setting the env var TEST_OUTCOME_FILES to a JSON list of
-  // {filename, additions, deletions}. This keeps individual tests in control of the
-  // change-shape they assert on.
+function mockFilesForBranch(branch: string): CommitFile[] {
   const override = process.env.TEST_OUTCOME_FILES;
   if (override) {
     try {
@@ -67,8 +70,9 @@ function mockFilesForSha(sha: string): CommitFile[] {
     }
   }
   // Default deterministic mock — used unless a test overrides it.
+  const slug = branch.replace(/[^a-z0-9]/gi, '').slice(0, 6) || 'branch';
   return [
-    { filename: `app/api/${sha.substring(0, 6)}.ts`, additions: 10, deletions: 2 },
+    { filename: `app/api/${slug}.ts`, additions: 10, deletions: 2 },
     { filename: 'lib/foo.ts', additions: 5, deletions: 1 },
   ];
 }
@@ -104,110 +108,173 @@ async function maybeYieldOnRateLimit(headers: Record<string, string | undefined>
   }
 }
 
-export async function fetchCommitFiles(
-  params: FetchCommitFilesParams
-): Promise<FetchCommitFilesResult> {
+type RetryOutcome<T> =
+  | { kind: 'ok'; value: T }
+  | { kind: 'not_found' }
+  | { kind: 'repo_unreachable' }
+  | { kind: 'transient' };
+
+async function callWithRetry<T>(
+  fn: () => Promise<{ data: T; headers: Record<string, string | undefined> }>
+): Promise<RetryOutcome<T>> {
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      const response = await fn();
+      await maybeYieldOnRateLimit(response.headers);
+      return { kind: 'ok', value: response.data };
+    } catch (err) {
+      const e = asOctokitError(err);
+      const status = e.status ?? 0;
+      const message = e.message;
+
+      if (status === 404) {
+        return { kind: 'not_found' };
+      }
+      if (status === 403 && isRateLimitMessage(message)) {
+        await sleep(60_000);
+        continue;
+      }
+      const isTransient = status === 0 || status >= 500;
+      if (isTransient && attempt < RETRY_DELAYS_MS.length) {
+        await sleep(RETRY_DELAYS_MS[attempt]!);
+        continue;
+      }
+      return { kind: 'transient' };
+    }
+  }
+  return { kind: 'transient' };
+}
+
+function toCommitFiles(
+  files: ReadonlyArray<{ filename: string; additions?: number; deletions?: number; status?: string }> | undefined
+): CommitFile[] {
+  return (files ?? []).map((f) => {
+    const file: CommitFile = {
+      filename: f.filename,
+      additions: f.additions ?? 0,
+      deletions: f.deletions ?? 0,
+    };
+    if (f.status !== undefined) file.status = f.status;
+    return file;
+  });
+}
+
+interface OctokitResponse<T> {
+  data: T;
+  headers: Record<string, string | undefined>;
+}
+
+function asResponse<T>(r: { data: T; headers: object }): OctokitResponse<T> {
+  return { data: r.data, headers: r.headers as Record<string, string | undefined> };
+}
+
+/**
+ * Resolve the diff that the ticket's branch contributed to the default branch.
+ * Returns either the file list (success) or a `failure` reason (partial outcome).
+ */
+export async function fetchBranchDiff(
+  params: FetchBranchDiffParams
+): Promise<FetchBranchDiffResult> {
   // Test-mode short-circuit
   if (isTestMode()) {
-    const files: CommitFile[] = [];
-    const successfulShas: string[] = [];
-    for (const sha of params.shas) {
-      files.push(...mockFilesForSha(sha));
-      successfulShas.push(sha);
-    }
-    return { files, successfulShas, notFoundShas: [], failure: null };
+    return {
+      files: mockFilesForBranch(params.branch),
+      mergeCommitSha: `mock-merge-${params.branch}`,
+      failure: null,
+    };
   }
 
   const token = params.accessToken ?? process.env.GITHUB_TOKEN;
   if (!token) {
-    return {
-      files: [],
-      successfulShas: [],
-      notFoundShas: [],
-      failure: 'repository_unreachable',
-    };
+    return { files: [], mergeCommitSha: null, failure: 'repository_unreachable' };
   }
 
   const octokit = new Octokit({ auth: token });
-  const files: CommitFile[] = [];
-  const successfulShas: string[] = [];
-  const notFoundShas: string[] = [];
-  let repoUnreachable = false;
-  let allFailed = true;
 
-  for (const sha of params.shas) {
-    let lastErrorWas404OnRepo = false;
+  // 1. Find the merged PR for branch → defaultBranch.
+  const prLookup = await callWithRetry(async () =>
+    asResponse(
+      await octokit.rest.pulls.list({
+        owner: params.owner,
+        repo: params.repo,
+        head: `${params.owner}:${params.branch}`,
+        base: params.defaultBranch,
+        state: 'closed',
+        per_page: 50,
+      })
+    )
+  );
 
-    for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
-      try {
-        const response = await octokit.repos.getCommit({
+  if (prLookup.kind === 'not_found') {
+    return { files: [], mergeCommitSha: null, failure: 'repository_unreachable' };
+  }
+  if (prLookup.kind === 'repo_unreachable') {
+    return { files: [], mergeCommitSha: null, failure: 'repository_unreachable' };
+  }
+  if (prLookup.kind === 'transient') {
+    return { files: [], mergeCommitSha: null, failure: 'fetch_failed_after_retry' };
+  }
+
+  const prs = prLookup.value;
+  // Pick the most recent merged PR that has a merge_commit_sha.
+  const mergedPr = prs
+    .filter((pr) => pr.merged_at !== null && typeof pr.merge_commit_sha === 'string' && pr.merge_commit_sha.length > 0)
+    .sort((a, b) => {
+      const aT = a.merged_at ? Date.parse(a.merged_at) : 0;
+      const bT = b.merged_at ? Date.parse(b.merged_at) : 0;
+      return bT - aT;
+    })[0];
+
+  if (mergedPr && mergedPr.merge_commit_sha) {
+    const sha = mergedPr.merge_commit_sha;
+    const commitResp = await callWithRetry(async () =>
+      asResponse(
+        await octokit.rest.repos.getCommit({
           owner: params.owner,
           repo: params.repo,
           ref: sha,
-        });
-        await maybeYieldOnRateLimit(response.headers as Record<string, string | undefined>);
-        const commitFiles = (response.data.files ?? []).map((f) => ({
-          filename: f.filename,
-          additions: f.additions ?? 0,
-          deletions: f.deletions ?? 0,
-          status: f.status,
-        }));
-        files.push(...commitFiles);
-        successfulShas.push(sha);
-        allFailed = false;
-        break;
-      } catch (err) {
-        const e = asOctokitError(err);
-        const status = e.status ?? 0;
-        const message = e.message;
-
-        if (status === 404) {
-          // Distinguish: was the *commit* not found, or the *repo*?
-          // A repo-level 404 typically reports "Not Found" for the repository path; we
-          // can't fully distinguish, so we attempt a one-time `repos.get` to confirm.
-          try {
-            await octokit.repos.get({ owner: params.owner, repo: params.repo });
-            // repo exists → SHA is just missing; record and move on
-            notFoundShas.push(sha);
-          } catch {
-            lastErrorWas404OnRepo = true;
-          }
-          break;
-        }
-
-        // Handle rate-limit-related 403 specially: sleep then retry once
-        if (status === 403 && isRateLimitMessage(message)) {
-          await sleep(60_000);
-          continue;
-        }
-
-        // Transient errors (network, 5xx) → retry with backoff
-        const isTransient = status === 0 || status >= 500;
-        if (isTransient && attempt < RETRY_DELAYS_MS.length) {
-          await sleep(RETRY_DELAYS_MS[attempt]!);
-          continue;
-        }
-
-        break;
-      }
+        })
+      )
+    );
+    if (commitResp.kind === 'ok') {
+      return {
+        files: toCommitFiles(commitResp.value.files),
+        mergeCommitSha: sha,
+        failure: null,
+      };
     }
-
-    if (lastErrorWas404OnRepo) {
-      repoUnreachable = true;
-      break;
+    if (commitResp.kind === 'not_found') {
+      // The merge commit was rewritten or pruned — try fallback.
+    } else if (commitResp.kind === 'transient') {
+      return { files: [], mergeCommitSha: sha, failure: 'fetch_failed_after_retry' };
     }
   }
 
-  let failure: FetchFailureReason | null = null;
-  if (repoUnreachable) {
-    failure = 'repository_unreachable';
-  } else if (
-    allFailed &&
-    params.shas.length > 0 &&
-    successfulShas.length === 0
-  ) {
-    failure = 'fetch_failed_after_retry';
-  }
+  // 2. Fallback: compare branch tip with default branch tip if branch ref still exists.
+  const compareResp = await callWithRetry(async () =>
+    asResponse(
+      await octokit.rest.repos.compareCommits({
+        owner: params.owner,
+        repo: params.repo,
+        base: params.defaultBranch,
+        head: params.branch,
+      })
+    )
+  );
 
-  return { files, successfulShas, notFoundShas, failure };
+  if (compareResp.kind === 'ok') {
+    return {
+      files: toCommitFiles(compareResp.value.files),
+      mergeCommitSha: null,
+      failure: null,
+    };
+  }
+  if (compareResp.kind === 'not_found') {
+    // Branch is gone and PR lookup also failed → no merge contribution discoverable.
+    return { files: [], mergeCommitSha: null, failure: 'merge_not_found' };
+  }
+  if (compareResp.kind === 'repo_unreachable') {
+    return { files: [], mergeCommitSha: null, failure: 'repository_unreachable' };
+  }
+  return { files: [], mergeCommitSha: null, failure: 'fetch_failed_after_retry' };
 }
