@@ -53,7 +53,8 @@ describe('Outcome immutability (US1 #5)', () => {
         stage: Stage.SHIP,
         workflowType: WorkflowType.FULL,
         ticketNumber: 200,
-        ticketKey: `E2E-IMM-${Date.now()}`,
+        ticketKey: `E2E-IMM-${Date.now().toString().slice(-6)}`,
+        branch: 'branch-imm',
         updatedAt: new Date(),
       },
     });
@@ -63,7 +64,6 @@ describe('Outcome immutability (US1 #5)', () => {
         projectId: ctx.projectId,
         command: 'verify',
         status: JobStatus.COMPLETED,
-        commitSha: 'sha-imm',
         qualityScore: 85,
         startedAt: new Date(),
         completedAt: new Date(),

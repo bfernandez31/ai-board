@@ -482,7 +482,7 @@ When a ticket transitions into the SHIP stage (from VERIFY for FULL workflows or
 - Job-aggregate telemetry (total cost, duration, input/output/thinking/cache tokens, union of tools used)
 - Job classification counts: pipeline jobs, friction jobs (commands starting with `iterate` or `comment-`), total jobs, and a per-prefix breakdown
 - Final quality score from the latest COMPLETED verify job (null for QUICK tickets and verify-without-score cases)
-- Change-shape signals from the ticket's commits: files touched, lines added, lines removed, test-vs-code line ratio
+- Change-shape signals derived from the ticket's branch merge contribution against the project's default branch: files touched, lines added, lines removed, test-vs-code line ratio
 - Structural domains: unique top-level path segments touched and a frequency map of files-per-segment
 - Semantic tags: `touched_db_schema`, `touched_tests`, `touched_ci`, derived from a system-maintained stack-indicator lookup that maps each project's declared `services`, `testing.framework`, and `language` to file-pattern indicators (works generically across TypeScript/Next, Python, Go, Rust, and Zig with no per-project configuration)
 - Derived `frictionFree` boolean: `true` only when there are zero friction jobs and the verify quality score is at least 75
@@ -491,12 +491,12 @@ When a ticket transitions into the SHIP stage (from VERIFY for FULL workflows or
 **Behavior guarantees**:
 - Exactly one outcome row per ticket (database unique constraint on `ticketId`); the first SHIP transition is outcome-defining, and subsequent SHIPs (e.g., post-rollback re-ship) do not modify the existing row
 - Capture is fire-and-forget after the SHIP transition commits — if outcome computation fails, the ticket still ships
-- When commit metadata is unreachable (deleted repository, no commit refs on any job, or fetches exhausted retries), the row is still written with `partial = true`, a `partialReason` code, and job-level signals fully populated; change-shape and domain fields are left empty
+- When the merge diff cannot be resolved (ticket has no `branch`, no merged PR is found for the branch, the repository is unreachable, fetches exhausted retries, or the diff exceeded GitHub's 300-file response cap), the row is still written with `partial = true`, a `partialReason` code, and job-level signals (including `qualityScore` and `frictionFree`) fully populated when known; change-shape and domain fields are left empty
 - Both FULL and QUICK workflow tickets are captured; QUICK rows have `qualityScore = null` and `frictionFree = false` by definition
 - Outcomes are never updated after creation — rule-set version is pinned per row so future analyses can interpret historical rows under their original rules
 
 **Operator-triggered backfill**:
-- A separate per-project backfill workflow (`.github/workflows/backfill-outcomes.yml`) populates outcomes for tickets that shipped before this feature was deployed or before commit metadata was reachable
+- A separate per-project backfill workflow (`.github/workflows/backfill-outcomes.yml`) populates outcomes for tickets that shipped before this feature was deployed or before their merge diff was reachable
 - Backfill enumerates tickets in stage `SHIP` only — the same population the live capture path covers; tickets in stage `CLOSED` are never enumerated, so abandoned tickets do not produce outcome rows
 - Backfill is owner-triggered, idempotent, resumable, rate-limit-aware, and safe to run alongside live SHIP-driven capture (the unique constraint collapses races to a no-op)
 

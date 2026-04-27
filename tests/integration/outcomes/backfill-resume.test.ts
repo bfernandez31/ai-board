@@ -27,6 +27,9 @@ describe('Backfill resume from cursor (US3 #4)', () => {
   beforeEach(async () => {
     ctx = await getTestContext();
     await ctx.cleanup();
+    // ctx.cleanup() does not clean BackfillProgress, so a stale row from a
+    // previous test would collide with `create({ projectId })` below.
+    await prisma.backfillProgress.deleteMany({ where: { projectId: ctx.projectId } });
     await prisma.project.update({
       where: { id: ctx.projectId },
       data: {
@@ -57,7 +60,8 @@ describe('Backfill resume from cursor (US3 #4)', () => {
           stage: Stage.SHIP,
           workflowType: WorkflowType.FULL,
           ticketNumber: 700 + i,
-          ticketKey: `E2E-RES-${i}-${Date.now()}`,
+          ticketKey: `E2E-R${i}-${Date.now().toString().slice(-6)}`,
+          branch: `branch-res-${i}`,
           updatedAt: new Date(),
         },
       });
@@ -67,7 +71,6 @@ describe('Backfill resume from cursor (US3 #4)', () => {
           projectId: ctx.projectId,
           command: 'verify',
           status: JobStatus.COMPLETED,
-          commitSha: `sha-res-${i}`,
           qualityScore: 80,
           startedAt: new Date(),
           completedAt: new Date(),

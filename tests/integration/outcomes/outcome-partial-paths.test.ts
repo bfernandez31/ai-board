@@ -1,12 +1,14 @@
 /**
  * Integration tests for partial-state paths (T017, US1 #4; spec edge cases).
  *
- * Three sub-cases:
- *   (a) ticket with zero jobs            → partialReason='no_jobs'
- *   (b) jobs with no commitSha           → partialReason='no_commit_reference'
- *   (c) Octokit failure after retries    → partialReason='fetch_failed_after_retry'
+ * Sub-cases (branch-centric model after AIB-748):
+ *   (a) ticket with zero jobs                       → partialReason='no_jobs'
+ *   (b) ticket with no branch reference             → partialReason='no_branch_reference'
+ *   (c) Octokit failure after retries               → partialReason='fetch_failed_after_retry'
+ *   (d) repo unreachable                            → partialReason='repository_unreachable'
+ *   (e) fetchBranchDiff returns merge_not_found     → partialReason='merge_not_found'
  *
- * In all three the change-shape fields are null/empty and job aggregates remain populated
+ * In all five the change-shape fields are null/empty and job aggregates remain populated
  * (where possible).
  */
 
@@ -49,6 +51,7 @@ describe('Outcome partial-state paths (US1 #4)', () => {
   async function seedTicket(opts: {
     ticketNumber: number;
     workflowType?: WorkflowType;
+    branch?: string | null;
   }): Promise<number> {
     const t = await prisma.ticket.create({
       data: {
@@ -58,7 +61,8 @@ describe('Outcome partial-state paths (US1 #4)', () => {
         stage: Stage.SHIP,
         workflowType: opts.workflowType ?? WorkflowType.FULL,
         ticketNumber: opts.ticketNumber,
-        ticketKey: `E2E-PART-${opts.ticketNumber}-${Date.now()}`,
+        ticketKey: `E2E-P${opts.ticketNumber}-${Date.now().toString().slice(-6)}`,
+        branch: opts.branch === undefined ? `branch-${opts.ticketNumber}` : opts.branch,
         updatedAt: new Date(),
       },
     });
@@ -87,8 +91,8 @@ describe('Outcome partial-state paths (US1 #4)', () => {
     expect(row!.totalJobCount).toBe(0);
   });
 
-  it('(b) jobs with no commitSha → partialReason=no_commit_reference; aggregates still populated', async () => {
-    const ticketId = await seedTicket({ ticketNumber: 301 });
+  it('(b) ticket with no branch reference → partialReason=no_branch_reference; aggregates still populated', async () => {
+    const ticketId = await seedTicket({ ticketNumber: 301, branch: null });
 
     await prisma.job.create({
       data: {
@@ -96,7 +100,6 @@ describe('Outcome partial-state paths (US1 #4)', () => {
         projectId: ctx.projectId,
         command: 'verify',
         status: JobStatus.COMPLETED,
-        commitSha: null,
         costUsd: 0.5,
         durationMs: 2000,
         startedAt: new Date(),
@@ -114,7 +117,7 @@ describe('Outcome partial-state paths (US1 #4)', () => {
 
     const row = await prisma.ticketOutcome.findUnique({ where: { ticketId } });
     expect(row!.partial).toBe(true);
-    expect(row!.partialReason).toBe('no_commit_reference');
+    expect(row!.partialReason).toBe('no_branch_reference');
     // Job aggregates still populated
     expect(row!.totalJobCount).toBe(1);
     expect(row!.totalCostUsd).toBe(0.5);
@@ -133,7 +136,6 @@ describe('Outcome partial-state paths (US1 #4)', () => {
         projectId: ctx.projectId,
         command: 'verify',
         status: JobStatus.COMPLETED,
-        commitSha: 'sha-fails',
         qualityScore: 80,
         startedAt: new Date(),
         completedAt: new Date(),
@@ -141,10 +143,9 @@ describe('Outcome partial-state paths (US1 #4)', () => {
       },
     });
 
-    vi.spyOn(githubFiles, 'fetchCommitFiles').mockResolvedValueOnce({
+    vi.spyOn(githubFiles, 'fetchBranchDiff').mockResolvedValueOnce({
       files: [],
-      successfulShas: [],
-      notFoundShas: [],
+      mergeCommitSha: null,
       failure: 'fetch_failed_after_retry',
     });
 
@@ -172,7 +173,6 @@ describe('Outcome partial-state paths (US1 #4)', () => {
         projectId: ctx.projectId,
         command: 'verify',
         status: JobStatus.COMPLETED,
-        commitSha: 'sha-x',
         qualityScore: 80,
         startedAt: new Date(),
         completedAt: new Date(),
@@ -180,10 +180,9 @@ describe('Outcome partial-state paths (US1 #4)', () => {
       },
     });
 
-    vi.spyOn(githubFiles, 'fetchCommitFiles').mockResolvedValueOnce({
+    vi.spyOn(githubFiles, 'fetchBranchDiff').mockResolvedValueOnce({
       files: [],
-      successfulShas: [],
-      notFoundShas: [],
+      mergeCommitSha: null,
       failure: 'repository_unreachable',
     });
 
@@ -197,5 +196,41 @@ describe('Outcome partial-state paths (US1 #4)', () => {
     const row = await prisma.ticketOutcome.findUnique({ where: { ticketId } });
     expect(row!.partial).toBe(true);
     expect(row!.partialReason).toBe('repository_unreachable');
+  });
+
+  it('(e) fetchBranchDiff returns merge_not_found → partialReason=merge_not_found', async () => {
+    const ticketId = await seedTicket({ ticketNumber: 304 });
+
+    await prisma.job.create({
+      data: {
+        ticketId,
+        projectId: ctx.projectId,
+        command: 'verify',
+        status: JobStatus.COMPLETED,
+        qualityScore: 80,
+        startedAt: new Date(),
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    vi.spyOn(githubFiles, 'fetchBranchDiff').mockResolvedValueOnce({
+      files: [],
+      mergeCommitSha: null,
+      failure: 'merge_not_found',
+    });
+
+    await captureOutcomeOnShip({
+      ticketId,
+      projectId: ctx.projectId,
+      workflowType: WorkflowType.FULL,
+      shippedAt: new Date(),
+    });
+
+    const row = await prisma.ticketOutcome.findUnique({ where: { ticketId } });
+    expect(row!.partial).toBe(true);
+    expect(row!.partialReason).toBe('merge_not_found');
+    expect(row!.linesAdded).toBeNull();
+    expect(row!.filesTouched).toEqual([]);
   });
 });

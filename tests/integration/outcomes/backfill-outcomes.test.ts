@@ -38,6 +38,7 @@ describe('Backfill outcomes', () => {
         workflowType: WorkflowType.FULL,
         ticketNumber: num,
         ticketKey: `E2E-BF-${num}-${Date.now().toString().slice(-6)}`,
+        branch: `branch-bf-${num}`,
         updatedAt: new Date(),
       },
     });
@@ -47,7 +48,6 @@ describe('Backfill outcomes', () => {
         projectId: ctx.projectId,
         command: 'verify',
         status: JobStatus.COMPLETED,
-        commitSha: `sha-bf-${num}`,
         qualityScore: 85,
         startedAt: new Date(),
         completedAt: new Date(),
@@ -108,14 +108,14 @@ describe('Backfill outcomes', () => {
     expect(after2).toBe(5);
   });
 
-  it('partial rows for tickets whose commit fetch fails (T033)', async () => {
+  it('partial rows for tickets whose branch diff fetch fails (T033)', async () => {
     const okId = await seedShippedTicket(610);
     const failId = await seedShippedTicket(611);
 
-    const original = githubFiles.fetchCommitFiles;
-    vi.spyOn(githubFiles, 'fetchCommitFiles').mockImplementation(async (params) => {
-      if (params.shas.includes(`sha-bf-611`)) {
-        return { files: [], successfulShas: [], notFoundShas: [], failure: 'fetch_failed_after_retry' };
+    const original = githubFiles.fetchBranchDiff;
+    vi.spyOn(githubFiles, 'fetchBranchDiff').mockImplementation(async (params) => {
+      if (params.branch === 'branch-bf-611') {
+        return { files: [], mergeCommitSha: null, failure: 'fetch_failed_after_retry' };
       }
       return original.call(githubFiles, params);
     });
