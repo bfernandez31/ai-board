@@ -57,6 +57,51 @@ describe('normalizeClaude', () => {
     expect(inner[0]?.type).toBe('tool_invocation');
     expect(inner[1]?.type).toBe('tool_result');
   });
+
+  it('preserves the native timestamp when the event provides one', () => {
+    const ts = '2026-04-14T18:35:35.095Z';
+    const raw = JSON.stringify({
+      type: 'assistant',
+      timestamp: ts,
+      message: {
+        role: 'assistant',
+        content: [{ type: 'text', text: 'hello' }],
+      },
+    });
+    const out = normalizeClaude({ ...baseInput, raw });
+    const message = out.events.find((e) => e.type === 'message');
+    expect(message?.ts).toBe(ts);
+  });
+
+  it('handles user messages whose content is a plain string', () => {
+    const raw = JSON.stringify({
+      type: 'user',
+      message: { role: 'user', content: 'sauvegarde le docker compose' },
+    });
+    const out = normalizeClaude({ ...baseInput, raw });
+    const message = out.events.find((e) => e.type === 'message');
+    expect(message).toBeDefined();
+    expect(message?.payload).toMatchObject({ role: 'user', text: 'sauvegarde le docker compose' });
+  });
+
+  it('skips isMeta caveats and file-history snapshots', () => {
+    const lines = [
+      JSON.stringify({ type: 'file-history-snapshot', snapshot: { trackedFileBackups: {} } }),
+      JSON.stringify({
+        type: 'user',
+        isMeta: true,
+        message: { role: 'user', content: '<local-command-caveat>...' },
+      }),
+      JSON.stringify({
+        type: 'assistant',
+        message: { role: 'assistant', content: [{ type: 'text', text: 'real reply' }] },
+      }),
+    ].join('\n');
+    const out = normalizeClaude({ ...baseInput, raw: lines });
+    const inner = out.events.slice(1, -1);
+    expect(inner).toHaveLength(1);
+    expect(inner[0]?.payload).toMatchObject({ text: 'real reply' });
+  });
 });
 
 describe('normalizeCodex', () => {

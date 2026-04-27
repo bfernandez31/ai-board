@@ -31,12 +31,6 @@ import {
 import { formatCommandName } from '@/lib/utils/format-command';
 import { CancelConfirmationModal } from '@/components/board/cancel-confirmation-modal';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
-import { Badge } from '@/components/ui/badge';
-import {
-  getContextWindow,
-  getPeakContextThresholdState,
-  getPeakContextColor,
-} from '@/lib/telemetry/context-window';
 import { LogViewerSheet } from './log-viewer-sheet';
 
 const TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED', 'CANCELLED']);
@@ -103,7 +97,6 @@ function JobRow({
   const isRunning = job.status === 'RUNNING';
   const isCancellable = projectId != null && (job.status === 'PENDING' || job.status === 'RUNNING');
 
-  // Check if job has telemetry data to expand
   const hasTelemetry =
     job.inputTokens != null ||
     job.outputTokens != null ||
@@ -111,34 +104,20 @@ function JobRow({
     job.cacheCreationTokens != null ||
     job.turnCount != null;
 
-  // Per-turn peak context pill (AIB-725). Only renders for jobs whose model
-  // we can resolve to a known context window (FR-008: no placeholder).
-  const peakContextWindow = getContextWindow(job.model);
-  const showPeakContextPill = job.peakContextTokens != null && peakContextWindow != null;
-  const peakContextState = getPeakContextThresholdState(job.peakContextTokens, job.model);
-  const peakContextClasses = getPeakContextColor(peakContextState);
-  const peakContextPercent =
-    showPeakContextPill && peakContextWindow
-      ? Math.round((job.peakContextTokens! / peakContextWindow) * 100)
-      : 0;
-  const peakContextTitle =
-    showPeakContextPill && peakContextWindow
-      ? `${formatAbbreviatedNumber(job.peakContextTokens!)} tokens · ${peakContextPercent}% of ${formatAbbreviatedNumber(peakContextWindow)} context window`
-      : '';
-
   const log = job.log;
   const isTerminal = TERMINAL_STATUSES.has(job.status);
   const canViewLogs = log?.captureStatus === 'CAPTURED' && projectId != null && ticketId != null;
   const showPreview = isTerminal && log != null;
   const previewToneClass = previewTone(job.status, log);
   const viewerDisabledReason = disabledLogsReason(log);
+  const canExpand = hasTelemetry || showPreview;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger
         className="w-full flex items-center justify-between p-3 border border-ctp-mauve/15 rounded-lg transition-colors aurora-bg-muted"
         data-testid={`job-row-${job.id}`}
-        disabled={!hasTelemetry}
+        disabled={!canExpand}
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* Status Icon */}
@@ -171,18 +150,6 @@ function JobRow({
             {job.costUsd != null ? formatCost(job.costUsd) : '-'}
           </span>
 
-          {/* Peak per-turn context pill (AIB-725) */}
-          {showPeakContextPill && (
-            <Badge
-              variant="outline"
-              className={`${peakContextClasses.text} ${peakContextClasses.bg}`}
-              title={peakContextTitle}
-              data-testid={`job-peak-context-${job.id}`}
-            >
-              {formatAbbreviatedNumber(job.peakContextTokens!)}
-            </Badge>
-          )}
-
           {/* Cancel Button - always visible for PENDING/RUNNING jobs */}
           {isCancellable && (
             <button
@@ -201,7 +168,7 @@ function JobRow({
           )}
 
           {/* Expand/Collapse Indicator */}
-          {hasTelemetry && (
+          {canExpand && (
             isOpen ? (
               <ChevronDown className="w-4 h-4 text-ctp-overlay0" />
             ) : (
@@ -225,103 +192,105 @@ function JobRow({
         />
       )}
 
-      {hasTelemetry && (
+      {canExpand && (
         <CollapsibleContent className="pt-2">
           <div
             className="bg-card border border-border rounded-lg p-4 ml-8 space-y-3"
             data-testid={`job-details-${job.id}`}
           >
-            {/* Token Breakdown */}
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-ctp-overlay0">Input Tokens:</span>
-                <span className="ml-2 text-foreground font-medium">
-                  {job.inputTokens != null ? formatAbbreviatedNumber(job.inputTokens) : '-'}
-                </span>
-              </div>
-              <div>
-                <span className="text-ctp-overlay0">Output Tokens:</span>
-                <span className="ml-2 text-foreground font-medium">
-                  {job.outputTokens != null ? formatAbbreviatedNumber(job.outputTokens) : '-'}
-                </span>
-              </div>
-              <div>
-                <span className="text-ctp-overlay0">Cache Read:</span>
-                <span className="ml-2 text-foreground font-medium">
-                  {job.cacheReadTokens != null ? formatAbbreviatedNumber(job.cacheReadTokens) : '-'}
-                </span>
-              </div>
-              <div>
-                <span className="text-ctp-overlay0">Cache Creation:</span>
-                <span className="ml-2 text-foreground font-medium">
-                  {job.cacheCreationTokens != null ? formatAbbreviatedNumber(job.cacheCreationTokens) : '-'}
-                </span>
-              </div>
-              {job.avgContextTokens != null && (
-                <div>
-                  <span className="text-ctp-overlay0">Avg Context:</span>
-                  <span className="ml-2 text-foreground font-medium">
-                    {formatAbbreviatedNumber(job.avgContextTokens)}
-                  </span>
+            {hasTelemetry && (
+              <>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-ctp-overlay0">Input Tokens:</span>
+                    <span className="ml-2 text-foreground font-medium">
+                      {job.inputTokens != null ? formatAbbreviatedNumber(job.inputTokens) : '-'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-ctp-overlay0">Output Tokens:</span>
+                    <span className="ml-2 text-foreground font-medium">
+                      {job.outputTokens != null ? formatAbbreviatedNumber(job.outputTokens) : '-'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-ctp-overlay0">Cache Read:</span>
+                    <span className="ml-2 text-foreground font-medium">
+                      {job.cacheReadTokens != null ? formatAbbreviatedNumber(job.cacheReadTokens) : '-'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-ctp-overlay0">Cache Creation:</span>
+                    <span className="ml-2 text-foreground font-medium">
+                      {job.cacheCreationTokens != null ? formatAbbreviatedNumber(job.cacheCreationTokens) : '-'}
+                    </span>
+                  </div>
+                  {job.avgContextTokens != null && (
+                    <div>
+                      <span className="text-ctp-overlay0">Avg Context:</span>
+                      <span className="ml-2 text-foreground font-medium">
+                        {formatAbbreviatedNumber(job.avgContextTokens)}
+                      </span>
+                    </div>
+                  )}
+                  {job.turnCount != null && (
+                    <div>
+                      <span className="text-ctp-overlay0">Turn Count:</span>
+                      <span className="ml-2 text-foreground font-medium">
+                        {job.turnCount.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
-              {job.turnCount != null && (
-                <div>
-                  <span className="text-ctp-overlay0">Turn Count:</span>
-                  <span className="ml-2 text-foreground font-medium">
-                    {job.turnCount.toLocaleString()}
-                  </span>
-                </div>
-              )}
-            </div>
 
-            {/* Timestamp */}
-            <div className="text-xs text-ctp-overlay0 border-t border-border pt-3">
-              Started {formatDistanceToNow(new Date(job.startedAt), { addSuffix: true })}
-              {job.completedAt && (
-                <> · Completed {formatDistanceToNow(new Date(job.completedAt), { addSuffix: true })}</>
-              )}
-            </div>
+                <div className="text-xs text-ctp-overlay0 border-t border-border pt-3">
+                  Started {formatDistanceToNow(new Date(job.startedAt), { addSuffix: true })}
+                  {job.completedAt && (
+                    <> · Completed {formatDistanceToNow(new Date(job.completedAt), { addSuffix: true })}</>
+                  )}
+                </div>
+              </>
+            )}
+
+            {showPreview && (
+              <div
+                className={`flex items-start justify-between gap-3 ${hasTelemetry ? 'border-t border-border pt-3' : ''}`}
+                data-testid={`job-log-preview-${job.id}`}
+              >
+                <p className={`text-xs line-clamp-3 flex-1 ${previewToneClass}`}>
+                  {log?.preview}
+                </p>
+                {canViewLogs && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={() => setShowLogViewer(true)}
+                    data-testid={`view-full-logs-${job.id}`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    View full logs
+                  </Button>
+                )}
+                {!canViewLogs && viewerDisabledReason && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled
+                    aria-label={viewerDisabledReason}
+                    className="h-7 px-2 text-xs gap-1 cursor-not-allowed"
+                    data-testid={`view-full-logs-disabled-${job.id}`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    View full logs
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </CollapsibleContent>
-      )}
-
-      {showPreview && (
-        <div
-          className="ml-8 mt-2 flex items-start justify-between gap-3"
-          data-testid={`job-log-preview-${job.id}`}
-        >
-          <p className={`text-xs line-clamp-2 flex-1 ${previewToneClass}`}>
-            {log?.preview}
-          </p>
-          {canViewLogs && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs gap-1"
-              onClick={() => setShowLogViewer(true)}
-              data-testid={`view-full-logs-${job.id}`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              View full logs
-            </Button>
-          )}
-          {!canViewLogs && viewerDisabledReason && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled
-              aria-label={viewerDisabledReason}
-              className="h-7 px-2 text-xs gap-1 cursor-not-allowed"
-              data-testid={`view-full-logs-disabled-${job.id}`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              View full logs
-            </Button>
-          )}
-        </div>
       )}
 
       {projectId != null && ticketId != null && showLogViewer && (

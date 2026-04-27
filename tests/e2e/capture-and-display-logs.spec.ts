@@ -76,7 +76,12 @@ test.describe('AIB-715 capture and display logs', () => {
       await statsTab.click();
     }
 
-    // Inline preview visible on the job row.
+    // Preview now lives inside the expanded job row — open it first.
+    const jobRow = page.locator(`[data-testid="job-row-${job.id}"]`);
+    await expect(jobRow).toBeVisible();
+    await jobRow.click();
+
+    // Inline preview visible inside the expanded job block.
     const preview = page.locator(`[data-testid="job-log-preview-${job.id}"]`);
     await expect(preview).toBeVisible();
     await expect(preview).toContainText('Bash command failed');

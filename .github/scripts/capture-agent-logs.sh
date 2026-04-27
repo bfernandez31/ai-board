@@ -39,6 +39,7 @@ ENDED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ 2>/dev/null || date -u +%Y-%m-%dT%H:
 cleanup() {
   rm -f "${NORMALIZED}" "${REDACTED}" "${ARTIFACT}" 2>/dev/null || true
   rm -f "${RAW_LOG}" 2>/dev/null || true
+  [[ -n "${CLAUDE_AGGREGATED:-}" ]] && rm -f "${CLAUDE_AGGREGATED}" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -46,6 +47,32 @@ trap cleanup EXIT
 
 if [[ ! -s "${RAW_LOG}" ]]; then
   : > "${RAW_LOG}"
+fi
+
+NORMALIZER_INPUT="${RAW_LOG}"
+CLAUDE_AGGREGATED=""
+
+# Claude Code persists each session as
+# ~/.claude/projects/<cwd-with-/.-replaced-by->/<sessionId>.jsonl. Use those
+# instead of stdout so the artifact captures tool_use, thinking and
+# tool_result events — stdout only carries the final rendered text.
+if [[ "${AGENT_UPPER}" == "CLAUDE" ]]; then
+  CLAUDE_SESSIONS_DIR="${HOME}/.claude/projects/$(pwd | tr '/.' '--')"
+  if [[ -d "${CLAUDE_SESSIONS_DIR}" ]]; then
+    CLAUDE_AGGREGATED="${TMPDIR}/agent-claude-sessions-${JOB_ID}.jsonl"
+    : > "${CLAUDE_AGGREGATED}"
+    # Trailing newline between sessions: session JSONLs aren't guaranteed
+    # to end in \n, and readLines would join the last line of one session
+    # to the first of the next.
+    while IFS= read -r session_file; do
+      [[ -s "${session_file}" ]] || continue
+      cat "${session_file}" >> "${CLAUDE_AGGREGATED}"
+      echo >> "${CLAUDE_AGGREGATED}"
+    done < <(find "${CLAUDE_SESSIONS_DIR}" -maxdepth 1 -type f -name '*.jsonl' -print 2>/dev/null | sort)
+    if [[ -s "${CLAUDE_AGGREGATED}" ]]; then
+      NORMALIZER_INPUT="${CLAUDE_AGGREGATED}"
+    fi
+  fi
 fi
 
 # ---------- Phase 2: Normalize ----------
@@ -68,7 +95,7 @@ JSON
 
 {
   echo "${HEADER}"
-  node "${NORMALIZER}" "${RAW_LOG}" 2>/dev/null || true
+  node "${NORMALIZER}" "${NORMALIZER_INPUT}" 2>/dev/null || true
 } > "${NORMALIZED}"
 
 # If normalization produced no events, synthesize lifecycle pair

@@ -34,23 +34,29 @@ function buildHeader(agent: AgentId, input: NormalizerInput): ArtifactHeader {
   };
 }
 
+interface ClaudeContentBlock {
+  type: string;
+  text?: string;
+  thinking?: string;
+  name?: string;
+  id?: string;
+  input?: unknown;
+  tool_use_id?: string;
+  content?: unknown;
+  is_error?: boolean;
+}
+
 interface ClaudeStreamEvent {
   type?: string;
+  isMeta?: boolean;
+  timestamp?: string;
   message?: {
     role?: 'assistant' | 'user' | 'system';
-    content?: Array<{
-      type: string;
-      text?: string;
-      thinking?: string;
-      name?: string;
-      id?: string;
-      input?: unknown;
-      tool_use_id?: string;
-      content?: unknown;
-      is_error?: boolean;
-    }>;
+    content?: string | ClaudeContentBlock[];
   };
 }
+
+const CLAUDE_SKIPPED_TYPES = new Set(['file-history-snapshot', 'system', 'summary']);
 
 function normalizeAgentStream(
   agent: AgentId,
@@ -105,34 +111,60 @@ export function normalizeClaude(input: NormalizerInput): NormalizerOutput {
         },
       ];
     }
+
+    // Session-file housekeeping: synthetic caveats and file-history snapshots
+    // injected by the CLI are not part of the agent narrative.
+    if (event.isMeta) return [];
+    if (event.type && CLAUDE_SKIPPED_TYPES.has(event.type)) return [];
+
+    const eventTs = typeof event.timestamp === 'string' ? event.timestamp : ts;
+    const message = event.message;
+    if (!message) return [];
+
+    const role = message.role === 'user' ? 'user' : 'agent';
+    const content = message.content;
+
+    if (typeof content === 'string') {
+      const trimmed = content.trim();
+      if (!trimmed) return [];
+      return [
+        {
+          ts: eventTs,
+          type: 'message',
+          agent: 'CLAUDE',
+          payload: { role, text: trimmed },
+        },
+      ];
+    }
+
+    if (!Array.isArray(content)) return [];
+
     const out: NormalizedEvent[] = [];
-    const content = event.message?.content ?? [];
-    const role = event.message?.role === 'user' ? 'user' : 'agent';
     for (const block of content) {
       if (block.type === 'text' && typeof block.text === 'string') {
         out.push({
-          ts,
+          ts: eventTs,
           type: 'message',
           agent: 'CLAUDE',
           payload: { role, text: block.text },
         });
       } else if (block.type === 'thinking' && typeof block.thinking === 'string') {
         out.push({
-          ts,
+          ts: eventTs,
           type: 'message',
           agent: 'CLAUDE',
           payload: { role: 'agent', text: '', thinking: block.thinking },
         });
       } else if (block.type === 'tool_use' && block.name && block.id) {
         out.push({
-          ts,
+          ts: eventTs,
           type: 'tool_invocation',
           agent: 'CLAUDE',
           payload: { toolName: block.name, toolCallId: String(block.id), input: block.input },
         });
       } else if (block.type === 'tool_result' && block.tool_use_id) {
         out.push({
-          ts,
+          ts: eventTs,
           type: 'tool_result',
           agent: 'CLAUDE',
           payload: {

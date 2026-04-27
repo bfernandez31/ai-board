@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
+import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
 import { TicketStats } from '@/components/ticket/ticket-stats';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import type { TicketJob } from '@/components/board/ticket-detail-modal';
@@ -188,7 +188,7 @@ describe('TicketStats', () => {
   });
 
   describe('JobLog preview rendering (AIB-715 US2)', () => {
-    it('renders distinct preview text across FAILED / COMPLETED / CANCELLED / UNAVAILABLE / PRUNED', () => {
+    it('renders distinct preview text across FAILED / COMPLETED / CANCELLED / UNAVAILABLE / PRUNED when expanded', async () => {
       const jobs: TicketJobWithTelemetry[] = [
         createMockJob({
           id: 101,
@@ -221,6 +221,11 @@ describe('TicketStats', () => {
       renderWithProviders(
         <TicketStats jobs={jobs} polledJobs={polledJobs} projectId={1} ticketId={42} />
       );
+
+      // Preview lives inside the expanded job row — open each one first.
+      for (const id of [101, 102, 103, 104, 105]) {
+        await userEvent.click(screen.getByTestId(`job-row-${id}`));
+      }
 
       expect(screen.getByTestId('job-log-preview-101')).toHaveTextContent('Bash command failed');
       expect(screen.getByTestId('job-log-preview-102')).toHaveTextContent('All tasks complete');
