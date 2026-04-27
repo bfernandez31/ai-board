@@ -1038,15 +1038,15 @@ model TicketOutcome {
 - `pipelineJobCount` / `frictionJobCount` / `totalJobCount`: Job counts by classification (invariant: `pipelineJobCount + frictionJobCount === totalJobCount`)
 - `jobCountByPrefix`: JSON map of command-prefix → count (e.g., `{ "specify": 1, "implement": 1, "iterate": 2 }`)
 - `qualityScore`: `Job.qualityScore` from the latest COMPLETED verify job (nullable; null for QUICK tickets and verify-without-score cases)
-- `filesTouched`: Sorted, deduplicated list of file paths touched across the ticket's commits
-- `linesAdded` / `linesRemoved`: Sums of additions and deletions across the deduplicated file set
+- `filesTouched`: Sorted, deduplicated list of file paths in the ticket's branch merge contribution against the project's default branch (resolved via the merged PR's `merge_commit_sha`, or a branch-vs-default-branch compare fallback)
+- `linesAdded` / `linesRemoved`: Sums of additions and deletions across the merge-diff file set
 - `testCodeRatio`: `linesInTestPaths / max(linesAdded + linesRemoved, 1)`, where test paths come from `STACK_INDICATORS` for the project's language and testing framework
 - `domains`: Unique top-level path segments touched (e.g., `["app", "lib", "tests"]`)
 - `domainFileCounts`: JSON frequency map of segment → file count
 - `touchedDbSchema` / `touchedTests` / `touchedCi`: Booleans derived from `STACK_INDICATORS` against the project's declared `services`, `testing.framework`, and `language`; missing stack coverage yields `false` (never errors)
 - `frictionFree`: True iff `frictionJobCount === 0` AND `qualityScore !== null` AND `qualityScore >= 75`
-- `partial`: True when change-shape data could not be derived (no jobs, no commit reference, repository unreachable, or fetches exhausted retries)
-- `partialReason`: One of `no_jobs`, `no_commit_reference`, `repository_unreachable`, `fetch_failed_after_retry`; null when `partial = false`
+- `partial`: True when change-shape data could not be derived (no jobs, ticket has no `branch`, no merged PR found for the branch, repository unreachable, or fetches exhausted retries)
+- `partialReason`: One of `no_jobs`, `no_branch_reference`, `merge_not_found`, `repository_unreachable`, `fetch_failed_after_retry`; null when `partial = false`
 
 **Relationships**:
 - Belongs to Ticket (required, cascade delete)
