@@ -497,5 +497,6 @@ When a ticket transitions into the SHIP stage (from VERIFY for FULL workflows or
 
 **Operator-triggered backfill**:
 - A separate per-project backfill workflow (`.github/workflows/backfill-outcomes.yml`) populates outcomes for tickets that shipped before this feature was deployed or before commit metadata was reachable
+- Backfill enumerates tickets in stage `SHIP` only — the same population the live capture path covers; tickets in stage `CLOSED` are never enumerated, so abandoned tickets do not produce outcome rows
 - Backfill is owner-triggered, idempotent, resumable, rate-limit-aware, and safe to run alongside live SHIP-driven capture (the unique constraint collapses races to a no-op)
 

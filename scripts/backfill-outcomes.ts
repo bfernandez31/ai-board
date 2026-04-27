@@ -130,10 +130,13 @@ export async function runBackfill(opts: CliArgs): Promise<void> {
     let version = await readVersion(prisma, opts.projectId);
 
     while (true) {
-      // Phase 2: enumerate next page of unfilled SHIP/CLOSED tickets
+      // Phase 2: enumerate next page of unfilled SHIP tickets.
+      // CLOSED is intentionally excluded — it diverges from the live capture path,
+      // which only fires on the SHIP transition, and produces meaningless rows for
+      // tickets that were never delivered.
       const where = {
         projectId: opts.projectId,
-        stage: { in: [Stage.SHIP, Stage.CLOSED] },
+        stage: Stage.SHIP,
         outcome: { is: null },
         ...(cursor !== null ? { id: { lt: cursor } } : {}),
       };
