@@ -232,14 +232,18 @@ Success criteria must be:
 
 **Good examples**:
 
+<good_success_criteria>
 - "Users can complete checkout in under 3 minutes"
 - "System supports 10,000 concurrent users"
 - "95% of searches return results in under 1 second"
 - "Task completion rate improves by 40%"
+</good_success_criteria>
 
 **Bad examples** (implementation-focused):
 
+<bad_success_criteria>
 - "API response time is under 200ms" (too technical, use "Users see results instantly")
 - "Database can handle 1000 TPS" (implementation detail, use user-facing metric)
 - "React components render efficiently" (framework-specific)
 - "Redis cache hit rate above 80%" (technology-specific)
+</bad_success_criteria>
