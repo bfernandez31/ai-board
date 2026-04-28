@@ -14,7 +14,7 @@ export interface InboxAnalysisButtonProps {
 }
 
 function formatUsd(value: number): string {
-  return value < 1 ? `$${value.toFixed(2)}` : `$${value.toFixed(2)}`;
+  return `$${value.toFixed(2)}`;
 }
 
 function formatResetTime(iso: string | null): string {

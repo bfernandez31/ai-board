@@ -58,25 +58,30 @@ async function filterAnchorsByAccess(
   if (anchors.length === 0) return [];
 
   const ticketIds = anchors.map((a) => a.ticketId);
-  const accessible = await prisma.ticket.findMany({
-    where: {
-      id: { in: ticketIds },
+  const tickets = await prisma.ticket.findMany({
+    where: { id: { in: ticketIds } },
+    select: {
+      id: true,
       project: {
-        OR: [
-          { userId: viewerUserId },
-          { members: { some: { userId: viewerUserId } } },
-        ],
+        select: {
+          userId: true,
+          members: {
+            where: { userId: viewerUserId },
+            select: { userId: true },
+          },
+        },
       },
     },
-    select: { id: true },
   });
-  const accessibleSet = new Set(accessible.map((t) => t.id));
 
-  const allExisting = await prisma.ticket.findMany({
-    where: { id: { in: ticketIds } },
-    select: { id: true },
-  });
-  const existingSet = new Set(allExisting.map((t) => t.id));
+  const existingSet = new Set(tickets.map((t) => t.id));
+  const accessibleSet = new Set(
+    tickets
+      .filter(
+        (t) => t.project.userId === viewerUserId || t.project.members.length > 0
+      )
+      .map((t) => t.id)
+  );
 
   const result: SerializedAnchor[] = [];
   for (const a of anchors) {

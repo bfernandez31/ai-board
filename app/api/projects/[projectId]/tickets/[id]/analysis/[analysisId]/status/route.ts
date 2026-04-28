@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, TicketAnalysis } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { AnalysisOutputSchema, ColdStartOutputSchema } from '@/lib/analysis/output-schema';
@@ -42,6 +42,28 @@ function noStore(json: unknown, init: ResponseInit = {}): NextResponse {
   const res = NextResponse.json(json, init);
   res.headers.set('Cache-Control', 'no-store');
   return res;
+}
+
+type TelemetryInput = z.infer<typeof TelemetrySchema>;
+
+function telemetryUpdateFields(t: TelemetryInput): Prisma.TicketAnalysisUpdateInput {
+  return {
+    costUsd: t.costUsd,
+    durationMs: t.durationMs,
+    inputTokens: t.inputTokens ?? null,
+    outputTokens: t.outputTokens ?? null,
+    thinkingTokens: t.thinkingTokens ?? null,
+    cacheReadTokens: t.cacheReadTokens ?? null,
+  };
+}
+
+function analysisStatusPayload(row: TicketAnalysis | null) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    status: row.status,
+    endedAt: row.endedAt ? row.endedAt.toISOString() : null,
+  };
 }
 
 export async function PATCH(
@@ -89,13 +111,7 @@ export async function PATCH(
     }
 
     if (row.status !== 'running') {
-      return noStore({
-        analysis: {
-          id: row.id,
-          status: row.status,
-          endedAt: row.endedAt ? row.endedAt.toISOString() : null,
-        },
-      });
+      return noStore({ analysis: analysisStatusPayload(row) });
     }
 
     if (data.status === 'success') {
@@ -119,12 +135,7 @@ export async function PATCH(
         status: 'success',
         endedAt: now,
         output: data.output as unknown as Prisma.InputJsonValue,
-        costUsd: data.telemetry.costUsd,
-        durationMs: data.telemetry.durationMs,
-        inputTokens: data.telemetry.inputTokens ?? null,
-        outputTokens: data.telemetry.outputTokens ?? null,
-        thinkingTokens: data.telemetry.thinkingTokens ?? null,
-        cacheReadTokens: data.telemetry.cacheReadTokens ?? null,
+        ...telemetryUpdateFields(data.telemetry),
       };
     } else if (data.status === 'cold_start') {
       updateData = {
@@ -132,12 +143,7 @@ export async function PATCH(
         endedAt: now,
         coldStartReason: data.coldStartReason,
         output: data.output as unknown as Prisma.InputJsonValue,
-        costUsd: data.telemetry.costUsd,
-        durationMs: data.telemetry.durationMs,
-        inputTokens: data.telemetry.inputTokens ?? null,
-        outputTokens: data.telemetry.outputTokens ?? null,
-        thinkingTokens: data.telemetry.thinkingTokens ?? null,
-        cacheReadTokens: data.telemetry.cacheReadTokens ?? null,
+        ...telemetryUpdateFields(data.telemetry),
       };
     } else {
       updateData = {
@@ -155,15 +161,7 @@ export async function PATCH(
 
     if (result.count === 0) {
       const fresh = await prisma.ticketAnalysis.findUnique({ where: { id: analysisId } });
-      return noStore({
-        analysis: fresh
-          ? {
-              id: fresh.id,
-              status: fresh.status,
-              endedAt: fresh.endedAt ? fresh.endedAt.toISOString() : null,
-            }
-          : null,
-      });
+      return noStore({ analysis: analysisStatusPayload(fresh) });
     }
 
     const updated = await prisma.ticketAnalysis.findUnique({ where: { id: analysisId } });
@@ -172,15 +170,7 @@ export async function PATCH(
       `[api/analysis] PATCH → id=${analysisId} status=${updated?.status} durationMs=${updated?.durationMs ?? 'n/a'}`
     );
 
-    return noStore({
-      analysis: updated
-        ? {
-            id: updated.id,
-            status: updated.status,
-            endedAt: updated.endedAt ? updated.endedAt.toISOString() : null,
-          }
-        : null,
-    });
+    return noStore({ analysis: analysisStatusPayload(updated) });
   } catch (error) {
     console.error('[api/analysis/status] PATCH error:', error);
     return noStore({ error: 'Internal server error', code: 'INTERNAL_ERROR' }, { status: 500 });

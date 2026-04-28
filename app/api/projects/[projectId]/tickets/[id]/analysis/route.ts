@@ -27,7 +27,7 @@ interface RouteParams {
   params: Promise<{ projectId: string; id: string }>;
 }
 
-async function parseIds(params: { projectId: string; id: string }) {
+function parseIds(params: { projectId: string; id: string }) {
   const projectId = parseInt(params.projectId, 10);
   const ticketId = parseInt(params.id, 10);
   if (isNaN(projectId) || projectId <= 0 || isNaN(ticketId) || ticketId <= 0) {
@@ -59,7 +59,7 @@ async function rateLimitWindow(userId: string) {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const ids = await parseIds(await params);
+    const ids = parseIds(await params);
     if (!ids) return noStore({ error: 'Invalid ID', code: 'VALIDATION_ERROR' }, { status: 400 });
 
     await verifyProjectAccess(ids.projectId, request);
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const ids = await parseIds(await params);
+    const ids = parseIds(await params);
     if (!ids) return noStore({ error: 'Invalid ID', code: 'VALIDATION_ERROR' }, { status: 400 });
 
     await verifyProjectAccess(ids.projectId, request);
