@@ -1110,6 +1110,369 @@ Fetch the immutable delivery outcome record for a shipped ticket.
 - Read-only — no `PUT`, `PATCH`, or `DELETE` is exposed; outcome immutability is enforced at the HTTP layer in addition to the unique constraint on `TicketOutcome.ticketId`
 - Capture is asynchronous after the SHIP transition; consumers may receive `OUTCOME_NOT_FOUND` for a ticket that just transitioned and should retry within a few minutes
 
+## Ticket Analysis Endpoints
+
+### GET /api/projects/:projectId/tickets/:id/analysis
+
+Returns the latest persisted analysis for the ticket plus pre-click eligibility metadata so the panel can render in a single round-trip.
+
+**Authentication**: Required (session or Bearer PAT)
+**Authorization**: `verifyTicketAccess` — caller must be owner or member of the parent project
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Response** (200 OK):
+```json
+{
+  "latest": {
+    "id": 142,
+    "ticketId": 5031,
+    "projectId": 7,
+    "userId": "usr_abc",
+    "status": "success",
+    "ruleSetVersion": 1,
+    "agent": "CLAUDE",
+    "modelId": "claude-opus-4-7",
+    "startedAt": "2026-04-27T11:32:08.231Z",
+    "endedAt": "2026-04-27T11:32:23.119Z",
+    "titleSnapshot": "Add export-to-CSV button",
+    "descriptionSnapshot": "...",
+    "stackSnapshot": {
+      "language": "typescript",
+      "framework": "nextjs",
+      "services": [{ "type": "postgres", "version": "14" }],
+      "testingFramework": "vitest",
+      "e2e": true,
+      "e2eFramework": "playwright",
+      "agent": { "cli": "claude-code", "model": "claude-opus-4-7" }
+    },
+    "telemetry": {
+      "costUsd": 0.046,
+      "durationMs": 14888,
+      "inputTokens": 12044,
+      "outputTokens": 1812,
+      "thinkingTokens": 0,
+      "cacheReadTokens": 9802
+    },
+    "coldStartReason": null,
+    "errorReason": null,
+    "errorMessage": null,
+    "output": {
+      "frictionRisk": "medium",
+      "qualityGateRange": { "lower": 72, "upper": 85 },
+      "recommendation": {
+        "choice": "FULL",
+        "confidence": "high",
+        "justification": "..."
+      },
+      "costRange": {
+        "baselineLowerUsd": 0.50,
+        "baselineUpperUsd": 1.20,
+        "marginalFrictionLowerUsd": 0.10,
+        "marginalFrictionUpperUsd": 0.40
+      },
+      "scopeWarnings": [
+        { "category": "missing_acceptance_criteria", "message": "..." }
+      ],
+      "anchors": [
+        {
+          "ticketId": 5012,
+          "ticketKey": "AIB-712",
+          "frictionFree": true,
+          "qualityScore": 88,
+          "overlapStrength": 2,
+          "tombstoned": false
+        }
+      ]
+    },
+    "stale": false
+  },
+  "eligibility": {
+    "triggerable": true,
+    "estimatedCostUsd": { "lower": 0.04, "upper": 0.08 },
+    "rateLimit": {
+      "limitPerHour": 10,
+      "remaining": 7,
+      "nextResetAt": "2026-04-27T12:11:08.231Z"
+    }
+  }
+}
+```
+
+**Response Notes**:
+- `latest` is `null` when no analysis has ever run for the ticket
+- `stale` is server-computed: `true` when current `title + description` differs (whitespace-tolerant) from the snapshot
+- Anchors pointing to tickets the requesting user can no longer access are stripped server-side before serialisation
+- Anchors whose source ticket has been hard-deleted are returned with `tombstoned: true` so the panel can render the degraded state
+- `output` is `null` when status is `running` or `failed`; conforms to the cold-start shape (`{ scopeWarnings: [] }`) when status is `cold_start`
+- `Cache-Control: no-store` is set on every response
+
+**Errors**:
+- `401`: Not authenticated (`UNAUTHENTICATED`)
+- `403`: User is neither project owner nor member (`ACCESS_DENIED`)
+- `404`: Ticket not found (`TICKET_NOT_FOUND`)
+
+### POST /api/projects/:projectId/tickets/:id/analysis
+
+Creates a new `running` analysis row, dispatches the workflow, and returns 202 with the row identifier for the client to start polling. Always creates a new row — never overwrites or upserts.
+
+**Authentication**: Required (session or Bearer PAT)
+**Authorization**: `verifyTicketAccess` — caller must be owner or member of the parent project
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body**: Empty `{}` — all inputs are derived server-side from the ticket and project state. Client-supplied snapshots, model IDs, and anchor lists are ignored.
+
+**Server-side flow**:
+1. Verify project + ticket access; reject with 401/403/404 on failure
+2. Reject with 422 `STAGE_NOT_INBOX` when `ticket.stage !== 'INBOX'`
+3. Rate-limit check: count successful + cold-start runs by the user in the last rolling hour. If `>= 10`, reject with 429
+4. Resolve project config and extract the bounded stack snapshot
+5. Compute the candidate anchor set (up to 50 ticketIds) from the project's outcome dataset
+6. Resolve the project owner's `ANTHROPIC` credential. If missing, reject with 412 — no row is created in this case
+7. INSERT a new `TicketAnalysis` row with `status='running'`, frozen input snapshots, stack snapshot, candidate anchor IDs, agent, model ID, and rule-set version
+8. Dispatch the `inbox-analysis.yml` workflow. On dispatch failure, transition the row to `failed` with `errorReason='dispatch_failed'` and return 500
+
+**Response** (202 Accepted):
+```json
+{
+  "analysis": {
+    "id": 143,
+    "status": "running",
+    "startedAt": "2026-04-27T11:34:01.000Z"
+  }
+}
+```
+
+**Errors**:
+
+| HTTP | Code | When |
+|------|------|------|
+| `400` | `VALIDATION_ERROR` | Malformed projectId / ticketId in path |
+| `401` | `UNAUTHENTICATED` | No valid session or token |
+| `403` | `ACCESS_DENIED` | User is neither project owner nor member |
+| `404` | `TICKET_NOT_FOUND` | Ticket missing |
+| `412` | `CREDENTIAL_MISSING` | Owner has no `ANTHROPIC` `UserCredential` |
+| `422` | `STAGE_NOT_INBOX` | Ticket stage is not INBOX |
+| `429` | `RATE_LIMIT_EXCEEDED` | 10 successful runs in last hour; body includes `nextResetAt` |
+| `500` | `INTERNAL_ERROR` | Dispatch failure (row marked `failed` first) |
+
+**Rate-limit response body**:
+```json
+{
+  "error": "Hourly analysis budget exhausted. Capacity returns at 12:11 UTC.",
+  "code": "RATE_LIMIT_EXCEEDED",
+  "nextResetAt": "2026-04-27T12:11:08.231Z"
+}
+```
+
+**Concurrency**: Two POSTs from two tabs both succeed; each creates its own `running` row. Both count against the user's budget on success.
+
+### PATCH /api/projects/:projectId/tickets/:id/analysis/:analysisId/status
+
+Workflow-only endpoint that transitions a `running` row to a terminal status with the LLM result and telemetry.
+
+**Authentication**: Bearer token (`WORKFLOW_API_TOKEN`)
+**Authorization**: Workflow token validation only — session auth rejected
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+- `analysisId` (number, required): TicketAnalysis row ID
+
+**Request Body** (discriminated union by `status`):
+
+Success:
+```json
+{
+  "status": "success",
+  "output": { "...": "AnalysisOutputSchema" },
+  "telemetry": {
+    "costUsd": 0.046,
+    "durationMs": 14888,
+    "inputTokens": 12044,
+    "outputTokens": 1812,
+    "thinkingTokens": 0,
+    "cacheReadTokens": 9802
+  }
+}
+```
+
+Cold start:
+```json
+{
+  "status": "cold_start",
+  "coldStartReason": "insufficient_comparable_history",
+  "output": { "scopeWarnings": [] },
+  "telemetry": { "costUsd": 0.011, "durationMs": 2400 }
+}
+```
+
+Failure:
+```json
+{
+  "status": "failed",
+  "errorReason": "scoping_pass_failed",
+  "errorMessage": "..."
+}
+```
+
+**Validation**:
+- `status` discriminator selects which sibling fields are required
+- On `success`, `output.anchors[*].ticketId` must be a subset of the row's `anchorIdsAttempted` (custom refinement)
+- `output.scopeWarnings.length <= 5`, `output.anchors.length <= 5`
+- Range refinements: `qualityGateRange.lower <= upper`; both cost ranges have `lower <= upper`
+- Recommendation justification: 1–1000 chars
+- `errorReason` must be one of: `scoping_pass_failed`, `grounded_pass_failed`, `dispatch_failed`, `timeout`, `invalid_model_output`, `credential_missing`, `other`
+- `coldStartReason` must be `insufficient_comparable_history`
+
+**Allowed transitions**:
+```
+running → success
+running → cold_start
+running → failed
+* → terminal (PATCH on terminal row): idempotent 200, no DB write
+```
+
+**Server-side flow**:
+1. Validate workflow token
+2. Parse body against discriminated union schema
+3. Look up row by `(projectId, ticketId, analysisId)`; 404 if missing
+4. If row already in a terminal state, return 200 with current row state (idempotent — supports workflow retries)
+5. Update row with `WHERE id = ? AND status = 'running'`. If affected count is 0 (race), return 200 idempotent
+6. Set `endedAt = now()` and persist telemetry on success/cold_start
+7. Failed rows do not record cost or telemetry — `costUsd` stays `NULL`, which is the signal the rate-limit query relies on
+
+**Response** (200 OK): Returns the updated row with all fields in the same shape as `GET /analysis`'s `latest` object.
+
+**Errors**:
+
+| HTTP | Code | When |
+|------|------|------|
+| `400` | `VALIDATION_ERROR` | Body fails Zod or anchor IDs not in `anchorIdsAttempted` |
+| `401` | `UNAUTHORIZED` | Invalid `WORKFLOW_API_TOKEN` |
+| `404` | `ANALYSIS_NOT_FOUND` | Row missing |
+
+### GET /api/projects/:projectId/tickets/:id/analysis/eligibility
+
+Lightweight endpoint returning only the eligibility block (button label + rate-limit budget) for ticket-card or list-view tooltip use cases.
+
+**Authentication**: Required (session or Bearer PAT)
+**Authorization**: `verifyTicketAccess`
+
+**Response** (200 OK):
+```json
+{
+  "triggerable": true,
+  "estimatedCostUsd": { "lower": 0.04, "upper": 0.08 },
+  "rateLimit": {
+    "limitPerHour": 10,
+    "remaining": 7,
+    "nextResetAt": null
+  }
+}
+```
+
+**Notes**:
+- `triggerable` reflects `ticket.stage === 'INBOX'`
+- `estimatedCostUsd` derives from the static per-analysis cost reference table keyed on the project's resolved agent
+- `nextResetAt` is `null` when the user has remaining budget; populated with the exact reset timestamp when budget is exhausted
+
+### GET /api/internal/analysis-context
+
+Workflow-only endpoint that bundles the row's input snapshot, stack snapshot, and the candidate-anchor projection into a single payload for the agent skill running the 2-stage pipeline. This is the only new internal endpoint introduced for analysis.
+
+**Authentication**: Bearer token (`WORKFLOW_API_TOKEN`)
+**Authorization**: Workflow token validation only
+
+**Query Parameters**:
+- `analysisId` (number, required): TicketAnalysis row ID
+
+**Response** (200 OK):
+```json
+{
+  "ticket": {
+    "id": 5031,
+    "title": "Add export-to-CSV button",
+    "description": "..."
+  },
+  "stack": {
+    "language": "typescript",
+    "framework": "nextjs",
+    "services": [{ "type": "postgres", "version": "14" }],
+    "testingFramework": "vitest",
+    "e2e": true,
+    "e2eFramework": "playwright",
+    "agent": { "cli": "claude-code", "model": "claude-opus-4-7" }
+  },
+  "candidates": [
+    {
+      "outcomeId": 412,
+      "ticketId": 5012,
+      "ticketKey": "AIB-712",
+      "domains": ["app", "lib", "tests"],
+      "frictionFree": true,
+      "qualityScore": 88,
+      "touchedDbSchema": false,
+      "touchedTests": true,
+      "touchedCi": false,
+      "shippedAt": "2026-04-20T..."
+    }
+  ],
+  "ruleSetVersion": 1
+}
+```
+
+**Notes**:
+- `ticket.title` and `ticket.description` are read from the row's frozen snapshots, never the current ticket values — input is immutable for the duration of a run
+- `candidates` are the `TicketOutcome` rows projected from the row's `anchorIdsAttempted` (up to 50)
+- The endpoint never accepts session auth
+
+**Errors**:
+- `401`: Invalid token
+- `404`: Row not found
+- `410`: Row is no longer `running` (workflow ran twice; second invocation aborts cleanly)
+
+### Inbox Analysis Workflow Sequence
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant API as Analysis API
+    participant DB as Database
+    participant GH as GitHub Actions
+    participant Skill as inbox-analysis skill
+
+    U->>API: POST /analysis
+    API->>API: Verify access + INBOX gating
+    API->>API: Rate-limit check
+    API->>DB: INSERT row (status=running)
+    API->>GH: Dispatch inbox-analysis.yml
+    API-->>U: 202 { analysisId }
+
+    GH->>API: GET /api/internal/credentials
+    API-->>GH: Decrypted credential
+    GH->>Skill: Run ai-board.inbox-analysis
+    Skill->>API: GET /analysis-context
+    API-->>Skill: ticket + stack + candidates
+    Skill->>Skill: Phase B (scoping LLM)
+    Skill->>Skill: Phase C (anchor retrieval)
+    Skill->>Skill: Phase D (grounded LLM)
+    Skill-->>GH: result.json (success | cold_start | failed)
+
+    GH->>API: PATCH /analysis/:id/status
+    API->>DB: UPDATE row (terminal)
+    API-->>GH: 200 OK
+
+    U->>API: GET /analysis (polling)
+    API->>DB: findFirst latest row
+    API-->>U: Latest row + eligibility
+```
+
 ## Ticket Lookup Endpoints
 
 ### GET /api/ticket/:key

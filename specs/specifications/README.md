@@ -107,6 +107,7 @@ This gives you access to all `/ai-board.*` commands locally.
 | UI/UX | [Interface](./functional/06-user-interface.md) | [State Management](./technical/implementation/state-management.md) |
 | Billing | [Billing & Subscriptions](./functional/07-billing.md) | [Stripe Integration](./technical/implementation/integrations/stripe.md) |
 | Health Dashboard | [Health Dashboard](./functional/08-health-dashboard.md) | [Health Endpoints](./technical/api/endpoints/health.md), [Health Models](./technical/architecture/data-model/health-models.md) |
+| Inbox Ticket Analysis | [Inbox Analysis Panel](./functional/02-ticket-management.md#inbox-analysis-panel) | [Analysis Endpoints](./technical/api/endpoints/tickets.md#ticket-analysis-endpoints), [TicketAnalysis Model](./technical/architecture/data-model/core-models.md#ticketanalysis) |
 
 ### By Task
 

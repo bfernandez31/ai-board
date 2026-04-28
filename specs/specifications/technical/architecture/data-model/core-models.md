@@ -26,6 +26,7 @@ model User {
   pushSubscriptions     PushSubscription[]
   personalAccessTokens  PersonalAccessToken[]
   subscription          Subscription?
+  ticketAnalyses        TicketAnalysis[]
 
   @@index([email])
 }
@@ -94,6 +95,7 @@ model Project {
   setupJobs            ProjectSetupJob[]
   outcomes             TicketOutcome[]
   backfillProgress     BackfillProgress?
+  analyses             TicketAnalysis[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -201,6 +203,7 @@ model Ticket {
   comparisonParticipants ComparisonParticipant[]
   decisionVerdicts       DecisionPointEvaluation[] @relation("DecisionVerdictTicket")
   outcome                TicketOutcome?
+  analyses               TicketAnalysis[]
 
   @@unique([projectId, ticketNumber])
   @@index([projectId])
@@ -1065,6 +1068,124 @@ model TicketOutcome {
 - Capture covers both FULL and QUICK workflows; QUICK rows have `qualityScore = null` and `frictionFree = false` by definition
 - `partial = true` rows still populate job-level signals fully; only change-shape and domain fields are empty/null
 - Rule-set version is captured per row so older rows remain interpretable under their original rules; outcomes are never recomputed when rules later change
+
+### TicketAnalysis
+
+Append-only row created on every on-demand inbox analysis run. The latest row drives the analysis panel; older rows are retained indefinitely for audit and future calibration.
+
+```prisma
+model TicketAnalysis {
+  id                  Int                   @id @default(autoincrement())
+
+  ticketId            Int
+  projectId           Int
+  userId              String
+
+  status              TicketAnalysisStatus  @default(running)
+  startedAt           DateTime              @default(now())
+  endedAt             DateTime?
+  createdAt           DateTime              @default(now())
+
+  ruleSetVersion      Int
+  agent               Agent
+  modelId             String?               @db.VarChar(50)
+
+  titleSnapshot       String                @db.VarChar(100)
+  descriptionSnapshot String                @db.VarChar(10000)
+
+  stackSnapshot       Json
+  anchorIdsAttempted  Int[]                 @default([])
+
+  costUsd             Float?
+  durationMs          Int?
+  inputTokens         Int?
+  outputTokens        Int?
+  thinkingTokens      Int?
+  cacheReadTokens     Int?
+
+  coldStartReason     String?               @db.VarChar(40)
+  errorReason         String?               @db.VarChar(40)
+  errorMessage        String?               @db.VarChar(2000)
+
+  output              Json?
+
+  ticket              Ticket                @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  project             Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt(sort: Desc)])
+  @@index([userId, status, endedAt])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([status, startedAt])
+}
+```
+
+**Purpose**: Append-only audit trail of inbox ticket analyses, capturing the input snapshot, stack snapshot, anchor candidate set, panel output, and measured telemetry for each run. Powers the inbox analysis panel, the description-changed banner, and the per-user hourly rate limit.
+
+**Fields**:
+- `ticketId`: Parent ticket (cascade delete)
+- `projectId`: Parent project, denormalised for project-scoped analytics queries (cascade delete)
+- `userId`: User who triggered the run, captured at POST time and never re-derived (cascade delete)
+- `status`: Lifecycle (`running`, `success`, `cold_start`, `failed`); rows are immutable once terminal
+- `startedAt`: Set at insert time
+- `endedAt`: Populated when status transitions to a terminal value; powers the rolling-hour rate-limit query
+- `ruleSetVersion`: Stamped from the `ANALYSIS_RULE_SET_VERSION` constant at insert time so older rows remain interpretable under their original schema
+- `agent` / `modelId`: Resolved from project config and ticket model overrides at insert time (frozen for audit)
+- `titleSnapshot`: Frozen ticket title at run time (max 100 chars, matches `Ticket.title`)
+- `descriptionSnapshot`: Frozen ticket description at run time (max 10000 chars, matches `Ticket.description`)
+- `stackSnapshot`: JSON `StackContext` (language, framework, services, testing framework, e2e flag, agent CLI/model); read-only audit, not used for live re-prompting
+- `anchorIdsAttempted`: Candidate anchor `Ticket.id` array (up to 50) computed by `selectAnchors()` at trigger time; persisted so the workflow's PATCH can enforce `output.anchors[*].ticketId ⊆ anchorIdsAttempted`
+- `costUsd`, `durationMs`, `inputTokens`, `outputTokens`, `thinkingTokens`, `cacheReadTokens`: Telemetry filled when status transitions to `success` or `cold_start`; remain NULL on `failed` (the rate-limit query relies on this signal)
+- `coldStartReason`: Enum-like string (`insufficient_comparable_history`); NULL unless `status = cold_start`
+- `errorReason`: Enum-like string in `{scoping_pass_failed, grounded_pass_failed, dispatch_failed, timeout, invalid_model_output, credential_missing, other}`; NULL unless `status = failed`
+- `errorMessage`: Free-form trace excerpt (max 2000 chars); NULL unless `status = failed`
+- `output`: JSON payload conforming to `AnalysisOutputSchema` when `status = success`, to `ColdStartOutputSchema` (`{ scopeWarnings: ScopeWarning[] }`) when `status = cold_start`, and NULL when `status = running` or `status = failed`. The discriminator is implicit in `status` — the API serialiser inspects status before parsing the column
+
+**Output payload shape** (`AnalysisOutputSchema`):
+- `frictionRisk`: `'low' | 'medium' | 'high'`
+- `qualityGateRange`: `{ lower: 0..100, upper: 0..100 }` with `lower <= upper`
+- `recommendation`: `{ choice: 'QUICK' | 'FULL', confidence: 'low' | 'medium' | 'high', justification: 1..1000 chars }`
+- `costRange`: `{ baselineLowerUsd, baselineUpperUsd, marginalFrictionLowerUsd, marginalFrictionUpperUsd }` with both lower bounds ≤ upper bounds
+- `scopeWarnings`: `ScopeWarning[]` (max 5), each `{ category, message: 1..280 chars }` with category in `{ambiguity_core_requirement, multi_feature_bundling, missing_acceptance_criteria, missing_scope_boundary, other}`
+- `anchors`: `AnchorCitation[]` (max 5), each `{ ticketId, ticketKey: /^[A-Z]{2,6}-\d+$/, frictionFree, qualityScore: 0..100 | null, overlapStrength: int >= 1 }`
+
+**Relationships**:
+- Belongs to Ticket (required, cascade delete)
+- Belongs to Project (required, cascade delete) — denormalized for query convenience
+- Belongs to User (required, cascade delete)
+
+**Constraints**:
+- `[ticketId, createdAt DESC]` index serves the panel render query (`findFirst({ where: { ticketId }, orderBy: { createdAt: 'desc' } })`)
+- `[userId, status, endedAt]` index serves the rolling-hour rate-limit query (`count({ where: { userId, status: { in: ['success', 'cold_start'] }, endedAt: { gt: oneHourAgo } } })`)
+- `[projectId, createdAt DESC]` index serves future analytics aggregations
+- `[status, startedAt]` index serves observability queries for orphaned `running` rows
+
+**State Machine**:
+```
+              POST /analysis
+                    │
+                    ▼
+                ┌────────┐
+                │ running│  (workflow_dispatch fired)
+                └───┬────┘
+                    │
+       ┌────────────┼────────────┐
+       ▼            ▼            ▼
+   ┌───────┐  ┌───────────┐  ┌──────┐
+   │success│  │cold_start │  │failed│
+   └───────┘  └───────────┘  └──────┘
+   (terminal — never UPDATE again)
+```
+
+**Business Rules**:
+- INSERT only by `POST /api/projects/:projectId/tickets/:id/analysis`; row is born `running`
+- The single allowed UPDATE is the `running → terminal` transition performed by `PATCH /analysis/:id/status` with the assertion `WHERE id = ? AND status = 'running'`. PATCH on a row already in a terminal state is idempotent (200, no DB write)
+- Append-only: never modified after reaching a terminal status
+- Failed runs do not consume the user's hourly budget — `costUsd` stays NULL on failures, and the rate-limit query only counts rows in `success` or `cold_start` status
+- Two `running` rows for the same ticket are allowed to coexist (concurrent triggers from multiple tabs); the panel reads the latest row by `createdAt` order
+- The `anchorIdsAttempted` array is the ground truth for validating the workflow PATCH — outcomes can change between trigger and completion, so re-querying at PATCH time is rejected as a design choice
+- Older rows retain their original stack snapshot for audit; later project stack changes do not retroactively rewrite past analyses
+- No automatic re-runs occur — every analysis run requires an explicit user action
 
 ### BackfillProgress
 
