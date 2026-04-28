@@ -13,7 +13,8 @@ function normalize(s: string): string {
 }
 
 export function isStale(ticket: TicketTextLike, snapshot: SnapshotLike): boolean {
-  const current = normalize(`${ticket.title}\n${ticket.description}`);
-  const snap = normalize(`${snapshot.titleSnapshot}\n${snapshot.descriptionSnapshot}`);
-  return current !== snap;
+  return (
+    normalize(ticket.title) !== normalize(snapshot.titleSnapshot) ||
+    normalize(ticket.description) !== normalize(snapshot.descriptionSnapshot)
+  );
 }

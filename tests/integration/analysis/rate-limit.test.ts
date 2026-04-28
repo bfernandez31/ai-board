@@ -79,7 +79,7 @@ describe('Rate limit (US6 / FR-019)', () => {
     for (let i = 0; i < 10; i++) {
       await seedTerminalRow({
         userId,
-        status: i % 2 === 0 ? 'success' : 'cold_start',
+        status: 'success',
         endedAtMinutesAgo: i * 2,
       });
     }
@@ -93,6 +93,20 @@ describe('Rate limit (US6 / FR-019)', () => {
     const body = (await res.json()) as { code: string; nextResetAt: string };
     expect(body.code).toBe('RATE_LIMIT_EXCEEDED');
     expect(body.nextResetAt).toBeTruthy();
+  });
+
+  it('cold_start runs do NOT count against the budget', async () => {
+    const userId = await getTestUserId();
+    for (let i = 0; i < 15; i++) {
+      await seedTerminalRow({ userId, status: 'cold_start', endedAtMinutesAgo: i });
+    }
+    const ticket = await ctx.createTicket({
+      title: '[e2e] rate-coldstart',
+      description: 'x',
+      stage: Stage.INBOX,
+    });
+    const res = await postFor(ticket.id);
+    expect(res.status).toBe(202);
   });
 
   it('failed runs do NOT count against the budget', async () => {

@@ -108,7 +108,7 @@ export function InboxAnalysisPanel({
     estimatedCostUsd: { lower: 0, upper: 0 },
     rateLimit: { limitPerHour: 10, remaining: 10, nextResetAt: null },
   };
-  const showBanner = !!latest && latest.stale && latest.status !== 'running';
+  const showBanner = !!latest && latest.stale && latest.status !== 'running' && triggerable;
 
   if (isLoading && !data) {
     return <div className="mb-6" data-testid="inbox-analysis-panel" />;

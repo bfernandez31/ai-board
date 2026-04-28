@@ -74,7 +74,6 @@ async function filterAnchorsByAccess(
     },
   });
 
-  const existingSet = new Set(tickets.map((t) => t.id));
   const accessibleSet = new Set(
     tickets
       .filter(
@@ -85,10 +84,6 @@ async function filterAnchorsByAccess(
 
   const result: SerializedAnchor[] = [];
   for (const a of anchors) {
-    if (!existingSet.has(a.ticketId)) {
-      result.push({ ...a, tombstoned: true });
-      continue;
-    }
     if (accessibleSet.has(a.ticketId)) {
       result.push({ ...a, tombstoned: false });
     }

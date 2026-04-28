@@ -18,7 +18,7 @@ describe('AnchorCitationList', () => {
       />
     );
     const link = screen.getByRole('link');
-    expect(link).toHaveAttribute('href', '/projects/7/tickets/AIB-100');
+    expect(link).toHaveAttribute('href', '/projects/7/board?ticket=AIB-100&modal=open');
   });
 
   it('shows a "no score" placeholder for null qualityScore', () => {

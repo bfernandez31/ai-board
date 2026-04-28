@@ -28,7 +28,7 @@ export type ScopeWarning = z.infer<typeof ScopeWarningSchema>;
 export const AnchorCitationSchema = z
   .object({
     ticketId: z.number().int().positive(),
-    ticketKey: z.string().regex(/^[A-Z]{2,6}-\d+$/),
+    ticketKey: z.string().regex(/^[A-Z][A-Z0-9]{1,5}-\d+$/),
     frictionFree: z.boolean(),
     qualityScore: z.number().int().min(0).max(100).nullable(),
     overlapStrength: z.number().int().min(1),

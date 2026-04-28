@@ -10,6 +10,7 @@ import { dispatchInboxAnalysisWorkflow } from '@/lib/analysis/dispatch-analysis'
 import { serializeAnalysisRow } from '@/lib/analysis/serialize';
 import { estimateAnalysisCostUsd } from '@/lib/analysis/cost-table';
 import { getOwnerCredential, getMissingCredentialError } from '@/lib/ai-credentials/workflow';
+import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
 import type { ProjectConfig } from '@/lib/validations/config';
 
 export const dynamic = 'force-dynamic';
@@ -41,7 +42,7 @@ async function rateLimitWindow(userId: string) {
   const rows = await prisma.ticketAnalysis.findMany({
     where: {
       userId,
-      status: { in: ['success', 'cold_start'] },
+      status: 'success',
       endedAt: { gt: cutoff },
     },
     orderBy: { endedAt: 'asc' },
@@ -50,9 +51,11 @@ async function rateLimitWindow(userId: string) {
   const used = rows.length;
   const remaining = Math.max(0, RATE_LIMIT_PER_HOUR - used);
   let nextResetAt: string | null = null;
-  const oldest = rows[0]?.endedAt;
-  if (used > 0 && oldest) {
-    nextResetAt = new Date(oldest.getTime() + ONE_HOUR_MS).toISOString();
+  if (remaining === 0) {
+    const oldest = rows[0]?.endedAt;
+    if (oldest) {
+      nextResetAt = new Date(oldest.getTime() + ONE_HOUR_MS).toISOString();
+    }
   }
   return { used, remaining, nextResetAt };
 }
@@ -64,6 +67,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     await verifyProjectAccess(ids.projectId, request);
     const ticket = await verifyTicketAccess(ids.ticketId, request);
+    if (ticket.projectId !== ids.projectId) {
+      return noStore({ error: 'Not found', code: 'TICKET_NOT_FOUND' }, { status: 404 });
+    }
     const userId = await requireAuth(request);
 
     const latest = await prisma.ticketAnalysis.findFirst({
@@ -116,12 +122,26 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     await verifyProjectAccess(ids.projectId, request);
     const ticket = await verifyTicketAccess(ids.ticketId, request);
+    if (ticket.projectId !== ids.projectId) {
+      return noStore({ error: 'Not found', code: 'TICKET_NOT_FOUND' }, { status: 404 });
+    }
     const userId = await requireAuth(request);
 
     if (ticket.stage !== 'INBOX') {
       return noStore(
         { error: 'Analysis is only available on INBOX-stage tickets', code: 'STAGE_NOT_INBOX' },
         { status: 422 }
+      );
+    }
+
+    const existingRunning = await prisma.ticketAnalysis.findFirst({
+      where: { ticketId: ids.ticketId, status: 'running' },
+      select: { id: true },
+    });
+    if (existingRunning) {
+      return noStore(
+        { error: 'An analysis is already running for this ticket', code: 'ANALYSIS_IN_PROGRESS' },
+        { status: 409 }
       );
     }
 
@@ -158,11 +178,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const config = (project.config as unknown as ProjectConfig | null) ?? null;
     const stack = extractStackContext(config);
     const agent: Agent = project.defaultAgent;
+    const provider = AGENT_PROVIDER_MAP[agent];
 
-    const credential = await getOwnerCredential(ids.projectId, 'ANTHROPIC');
+    const credential = await getOwnerCredential(ids.projectId, provider);
     if (!credential) {
       return noStore(
-        { error: getMissingCredentialError('ANTHROPIC'), code: 'CREDENTIAL_MISSING' },
+        { error: getMissingCredentialError(provider), code: 'CREDENTIAL_MISSING' },
         { status: 412 }
       );
     }

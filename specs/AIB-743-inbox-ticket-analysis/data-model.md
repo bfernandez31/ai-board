@@ -106,7 +106,7 @@ model User {
 | `titleSnapshot` | Length ≤ 100 (Zod min(1).max(100)) — matches `Ticket.title @db.VarChar(100)`. | Constitution IV ("Zod constraints MUST match DB column constraints"). |
 | `descriptionSnapshot` | Length ≤ 10 000 — matches `Ticket.description @db.VarChar(10000)`. | Same. |
 | `stackSnapshot` | JSON conforming to `StackContextSchema` (Zod). Stripped of secrets. | D4. |
-| `output` | NULL when status = running/failed. JSON conforming to `AnalysisOutputSchema` when status = success. NULL when status = cold_start (panel reads `coldStartReason` + scope warnings only — see §3 below). | FR-014, D7. |
+| `output` | NULL when status = running/failed. JSON conforming to `AnalysisOutputSchema` when status = success. JSON conforming to `ColdStartOutputSchema` (`{ scopeWarnings: [...] }`) when status = cold_start — panel reads `coldStartReason` + the embedded scope warnings (see §3 below). | FR-014, D7. |
 | `coldStartReason` | NULL unless `status = cold_start`. Enum-like string in `{ insufficient_comparable_history }`. | FR-014. |
 | `errorReason` | NULL unless `status = failed`. Enum-like string in `{ scoping_pass_failed, grounded_pass_failed, dispatch_failed, timeout, invalid_model_output, credential_missing, other }`. | FR-023. |
 | `costUsd`, `durationMs`, tokens | Filled from workflow PATCH on success/cold_start. NULL on failure. | FR-022. |

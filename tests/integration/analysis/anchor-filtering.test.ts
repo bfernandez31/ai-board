@@ -117,8 +117,7 @@ describe('Anchor access filtering and tombstones (US4)', () => {
     const ticketIds = anchors.map((a) => a.ticketId);
     expect(ticketIds).toContain(accessibleTicket.id);
     expect(ticketIds).not.toContain(inaccessibleTicket.id);
-    const tomb = anchors.find((a) => a.ticketId === tombstonedTicketId);
-    expect(tomb?.tombstoned).toBe(true);
+    expect(ticketIds).not.toContain(tombstonedTicketId);
 
     await prisma.project.delete({ where: { id: otherProject.id } });
   });

@@ -50,7 +50,7 @@ export function AnchorCitationList({ projectId, anchors }: AnchorCitationListPro
         return (
           <li key={anchor.ticketId} data-testid={`anchor-${anchor.ticketKey}`}>
             <Link
-              href={`/projects/${projectId}/tickets/${anchor.ticketKey}`}
+              href={`/projects/${projectId}/board?ticket=${anchor.ticketKey}&modal=open`}
               className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={`Anchor ${anchor.ticketKey}, ${frictionLabel(anchor.frictionFree)}, quality score ${anchor.qualityScore ?? 'no score'}`}
             >
