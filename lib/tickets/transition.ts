@@ -50,7 +50,7 @@ async function rollbackTransaction(
   ticketId: number,
   updateData: Prisma.TicketUpdateInput,
   mostRecentJob: Job | null
-) {
+): Promise<Ticket> {
   return prisma.$transaction(async (tx) => {
     const updated = await tx.ticket.update({ where: { id: ticketId }, data: updateData });
     if (mostRecentJob) {

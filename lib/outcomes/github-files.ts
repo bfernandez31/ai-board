@@ -101,7 +101,7 @@ function isRateLimitMessage(msg: string | undefined): boolean {
   return /rate limit/i.test(msg) || /secondary rate limit/i.test(msg);
 }
 
-async function maybeYieldOnRateLimit(headers: Record<string, string | undefined> | undefined) {
+async function maybeYieldOnRateLimit(headers: Record<string, string | undefined> | undefined): Promise<void> {
   if (!headers) return;
   const remaining = Number(headers['x-ratelimit-remaining']);
   const resetAt = Number(headers['x-ratelimit-reset']);

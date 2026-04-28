@@ -39,7 +39,7 @@ export interface CaptureResult {
   durationMs: number;
 }
 
-function logPhase(ticketId: number, phase: number, durationMs: number, extra?: Record<string, unknown>) {
+function logPhase(ticketId: number, phase: number, durationMs: number, extra?: Record<string, unknown>): void {
   console.log(
     `[outcome-capture] phase=${phase} ticketId=${ticketId} durationMs=${durationMs}`,
     extra ?? {}
