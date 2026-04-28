@@ -49,14 +49,16 @@ Given that feature description, do this:
 1. Parse the command payload to extract ticket info and the effective clarification policy:
    - If `$ARGUMENTS` is empty ➜ ERROR "No feature description provided".
    - Trim leading whitespace; if the first non-blank character is `{`, treat `$ARGUMENTS` as JSON with shape:
+     <payload_schema>
      ```json
      {
        "ticketKey": "...",              // required string (e.g., "ABC-123")
        "title": "...",                  // required string
        "description": "...",            // optional string
-       "clarificationPolicy": "..."     // optional enum: AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE
+       "clarificationPolicy": "..."     // optional enum: AUTO|CONSERVATIVE|PRAGMATIC
      }
      ```
+     </payload_schema>
    - Use `jq` (or `python - json`) to parse the payload safely. Enforce string output for `ticketKey` and `title`; ERROR if missing/empty.
    - Set `PAYLOAD_KIND = 'JSON'` when parsing succeeds (else leave as `'TEXT'`).
    - Store `TICKET_KEY` for branch naming, `TITLE` for branch naming and spec header.
@@ -80,12 +82,12 @@ Given that feature description, do this:
     2. Extract key concepts from `FEATURE_DESCRIPTION`: actors, actions, data, constraints.
     3. Determine the effective clarification policy:
        - If `POLICY_INPUT` is set, use that value.
-       - Else if `PAYLOAD_KIND = 'TEXT'`, treat the run as `INTERACTIVE` (legacy behavior).
-       - Else default to `AUTO` (JSON payload without explicit policy).
+       - Else default to `AUTO`.
        - Record the effective policy for later logging (`EFFECTIVE_POLICY`).
     4. Apply clarification guardrails based on the effective policy:
        - For explicit `CONSERVATIVE` or `PRAGMATIC` policies, resolve ambiguities according to that stance while honoring all non-negotiable rules from the constitution (security, testing, data integrity).
        - For `AUTO`, score context signals using the weighting model from `specs/vision/auto-resolution-clarifications.md`:
+         <auto_resolution_scoring>
          - Sensitive/compliance keywords (+3), scalability/reliability (+2), neutral feature context (+1), internal/speed keywords (-2), explicit speed directives (-3).
          - Compute `netScore` (sum of weights), `absScore = |netScore|`, and derive confidence:
            - `absScore >= 5` & ≤1 conflicting buckets → confidence 0.9 (High)
@@ -93,10 +95,12 @@ Given that feature description, do this:
            - else confidence 0.3 (Low)
          - Suggested policy: CONSERVATIVE when `netScore >= 0`, PRAGMATIC when `netScore < 0`.
          - If confidence < 0.5 or there are ≥2 conflicting signal buckets, fall back to CONSERVATIVE.
+         </auto_resolution_scoring>
        - Ticket-level overrides always win even if AUTO recommends otherwise.
     5. Auto-resolve ambiguities whenever the effective policy (or AUTO recommendation with sufficient confidence) gives a clear answer. Document each resolution in the `Auto-Resolved Decisions` section with:
        - Decision summary, policy applied, confidence (High/Medium/Low plus score), whether fallback triggered, trade-offs, reviewer notes.
-    6. Only leave `[NEEDS CLARIFICATION: ...]` markers when, after applying the guardrails above, a decision still lacks a defensible default or would create major scope/UX/security risk. Respect the **maximum of 3 markers** and prioritize by impact (scope > security/privacy > user experience > technical details). If more than 3 uncertainties remain, resolve the lowest-impact ones automatically and capture assumptions.
+       - Each entry must be ≤ 6 lines total (one line per field). Trade-offs and reviewer notes ≤ 2 short sentences each.
+    6. **NEVER emit `[NEEDS CLARIFICATION: ...]` markers in the spec.** Every ambiguity must be resolved in this phase. When confidence is low or signals conflict, fall back to CONSERVATIVE and flag the fallback in the corresponding `Auto-Resolved Decisions` entry — but always make a decision. Prioritize the most cautious defaults for the highest-impact axes (scope > security/privacy > user experience > technical details).
     7. Populate the spec sections:
        - Fill **Auto-Resolved Decisions** first (even if the list is "None" when no automated decisions were needed).
        - Complete **User Scenarios & Testing**; if no clear user flow exists: ERROR "Cannot determine user scenarios".
@@ -112,6 +116,7 @@ Given that feature description, do this:
 
    a. **Create Spec Quality Checklist**: Generate a checklist file at `FEATURE_DIR/checklists/requirements.md` using the checklist template structure with these validation items:
 
+      <checklist_template>
       ```markdown
       # Specification Quality Checklist: [FEATURE NAME]
 
@@ -148,8 +153,9 @@ Given that feature description, do this:
 
       ## Notes
 
-      - Items marked incomplete require spec updates before `/ai-board.clarify` or `/ai-board.plan`
+      - Items marked incomplete require spec updates before `/ai-board.plan`
       ```
+      </checklist_template>
 
    b. **Run Validation Check**: Review the spec against each checklist item:
       - For each item, determine if it passes or fails
@@ -157,56 +163,25 @@ Given that feature description, do this:
 
    c. **Handle Validation Results**:
 
-      - **If all items pass**: Mark checklist complete and proceed to step 7
+      - **If all items pass**: Mark checklist complete and proceed to step 7.
+      - **If any item fails** (including a stray `[NEEDS CLARIFICATION]` marker, which must never reach the spec):
+        1. List the failing items and specific issues.
+        2. Update the spec to address each issue. For any `[NEEDS CLARIFICATION]` marker found, replace it with an auto-resolved value (CONSERVATIVE fallback when uncertain) and append an entry to `Auto-Resolved Decisions` documenting the resolution.
+        3. Re-run validation until all items pass (max 3 iterations).
+        4. If still failing after 3 iterations, document remaining issues in checklist notes and warn user.
 
-      - **If items fail (excluding [NEEDS CLARIFICATION])**:
-        1. List the failing items and specific issues
-        2. Update the spec to address each issue
-        3. Re-run validation until all items pass (max 3 iterations)
-        4. If still failing after 3 iterations, document remaining issues in checklist notes and warn user
+   d. **Update Checklist**: After each validation iteration, update the checklist file with current pass/fail status.
 
-      - **If [NEEDS CLARIFICATION] markers remain**:
-        1. Extract all [NEEDS CLARIFICATION: ...] markers from the spec
-        2. **LIMIT CHECK**: If more than 3 markers exist, keep only the 3 most critical (by scope/security/UX impact) and make informed guesses for the rest
-        3. For each clarification needed (max 3), present options to user in this format:
-
-           ```markdown
-           ## Question [N]: [Topic]
-
-           **Context**: [Quote relevant spec section]
-
-           **What we need to know**: [Specific question from NEEDS CLARIFICATION marker]
-
-           **Suggested Answers**:
-
-           | Option | Answer | Implications |
-           |--------|--------|--------------|
-           | A      | [First suggested answer] | [What this means for the feature] |
-           | B      | [Second suggested answer] | [What this means for the feature] |
-           | C      | [Third suggested answer] | [What this means for the feature] |
-           | Custom | Provide your own answer | [Explain how to provide custom input] |
-
-           **Your choice**: _[Wait for user response]_
-           ```
-
-        4. **CRITICAL - Table Formatting**: Ensure markdown tables are properly formatted:
-           - Use consistent spacing with pipes aligned
-           - Each cell should have spaces around content: `| Content |` not `|Content|`
-           - Header separator must have at least 3 dashes: `|--------|`
-           - Test that the table renders correctly in markdown preview
-        5. Number questions sequentially (Q1, Q2, Q3 - max 3 total)
-        6. Present all questions together before waiting for responses
-        7. Wait for user to respond with their choices for all questions (e.g., "Q1: A, Q2: Custom - [details], Q3: B")
-        8. Update the spec by replacing each [NEEDS CLARIFICATION] marker with the user's selected or provided answer and append an entry to `Auto-Resolved Decisions` noting the policy used to incorporate the response
-        9. Re-run validation after all clarifications are resolved
-
-   d. **Update Checklist**: After each validation iteration, update the checklist file with current pass/fail status
-
-7. Report completion with branch name, spec file path, provided policy input (if any), effective clarification policy, Auto-Resolved Decisions summary, checklist results, and readiness for the next phase (`/ai-board.clarify` or `/ai-board.plan`).
+7. Report completion as a markdown bullet list, in this exact order, ≤ 12 lines total:
+   - **Branch**: <BRANCH_NAME>
+   - **Spec file**: <SPEC_FILE absolute path>
+   - **Policy input**: <provided value or "none">
+   - **Effective policy**: <EFFECTIVE_POLICY>
+   - **Auto-Resolved Decisions**: <count> entries (or "None")
+   - **Checklist**: <pass>/<total> items passing (note any remaining failures in ≤ 1 line)
+   - **Next phase**: `/ai-board.plan`
 
 **NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
-
-## General Guidelines
 
 ## Quick Guidelines
 
@@ -214,7 +189,7 @@ Given that feature description, do this:
 - Avoid HOW to implement (no tech stack, APIs, code structure).
 - Written for business stakeholders, not developers.
 - DO NOT create any checklists that are embedded in the spec. That will be a separate command.
-- Respect clarification guardrails: honor the provided policy (default to AUTO when none supplied) and fall back to CONSERVATIVE when confidence is low or risk signals conflict.
+- Resolve every ambiguity in this phase. Never emit `[NEEDS CLARIFICATION]` markers; honor the provided policy (default AUTO) and fall back to CONSERVATIVE when confidence is low or risk signals conflict.
 - PRAGMATIC policy never removes security, data integrity, or testing obligations—only polish.
 - Log every automated decision in the Auto-Resolved Decisions section with policy, confidence, fallback status, trade-offs, and reviewer guidance.
 
@@ -230,13 +205,10 @@ When creating this spec from a user prompt:
 
 1. **Make informed guesses**: Use context, industry standards, and common patterns to fill gaps
 2. **Document assumptions**: Record reasonable defaults in the Assumptions section
-3. **Limit clarifications**: Maximum 3 [NEEDS CLARIFICATION] markers - use only for critical decisions that:
-   - Significantly impact feature scope or user experience
-   - Have multiple reasonable interpretations with different implications
-   - Lack any reasonable default
-4. **Prioritize clarifications**: scope > security/privacy > user experience > technical details
-5. **Think like a tester**: Every vague requirement should fail the "testable and unambiguous" checklist item
-6. **Common areas needing clarification** (only if no reasonable default exists):
+3. **Never emit clarification markers**: every ambiguity must be auto-resolved in this phase. When uncertain, apply the CONSERVATIVE fallback and document the decision in `Auto-Resolved Decisions`.
+4. **Prioritize careful resolution**: apply more cautious defaults to higher-impact axes (scope > security/privacy > user experience > technical details).
+5. **Think like a tester**: every vague requirement should fail the "testable and unambiguous" checklist item.
+6. **Areas warranting CONSERVATIVE fallback** (when the description gives no clear signal):
    - Feature scope and boundaries (include/exclude specific use cases)
    - User types and permissions (if multiple conflicting interpretations possible)
    - Security/compliance requirements (when legally/financially significant)
