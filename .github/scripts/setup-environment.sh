@@ -376,7 +376,7 @@ if ! validate_manager_on_path; then
 fi
 
 # Check symlinks exist and targets are readable (both phases)
-for link in "commands" "skills"; do
+for link in "commands"; do
   link_path="${TARGET_DIR}/.claude/${link}"
   if [[ ! -L "$link_path" ]]; then
     error "Validation failed: symlink not found: $link_path"
