@@ -890,4 +890,38 @@ describe('TicketDetailModal', () => {
       expect(screen.getByText('Compare (2)')).toBeInTheDocument();
     });
   });
+
+  describe('AIB-743: InboxAnalysisPanel mount', () => {
+    it('mounts the panel inside the Details tab', () => {
+      const ticket = createMockTicket({ stage: 'INBOX' });
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+      expect(screen.getByTestId('inbox-analysis-panel')).toBeInTheDocument();
+    });
+
+    it('renders the panel for non-INBOX tickets too (read-only persisted view)', () => {
+      const ticket = createMockTicket({ stage: 'BUILD' });
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+      expect(screen.getByTestId('inbox-analysis-panel')).toBeInTheDocument();
+    });
+  });
 });

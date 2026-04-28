@@ -8,6 +8,7 @@ import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import { TicketStats } from '@/components/ticket/ticket-stats';
+import { InboxAnalysisPanel } from '@/components/ticket/inbox-analysis-panel';
 import {
   Dialog,
   DialogClose,
@@ -1117,6 +1118,11 @@ export function TicketDetailModal({
           <TabsContent value="details" className="flex-1 min-h-0 flex flex-col max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)]">
             {/* Description section with inline editing - scrollable */}
             <div className="flex-1 min-h-0 overflow-y-auto pr-2" data-testid="description-container">
+              <InboxAnalysisPanel
+                projectId={projectId}
+                ticketId={ticket.id}
+                triggerable={ticket.stage === 'INBOX'}
+              />
               <div className="group">
                 <h3 className="text-sm text-muted-foreground uppercase tracking-wider mb-4 font-bold">
                   Description
