@@ -131,7 +131,7 @@ See `.github/workflows/` for implementation. Key workflows:
 
 **Test locations**: `tests/unit/`, `tests/unit/components/`, `tests/integration/`, `tests/e2e/`
 
-For test type decision tree, see constitution.md §III. For patterns (RTL, MSW, worker isolation), see `.claude-plugin/skills/testing/patterns/`.
+For test type decision tree, see constitution.md §III.
 
 ## Deep Reference
 

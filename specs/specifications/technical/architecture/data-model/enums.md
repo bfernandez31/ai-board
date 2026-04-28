@@ -343,3 +343,25 @@ enum BackfillStatus {
 | COMPLETED | No tickets remain to process; `completedAt` set, `lastError` cleared | IN_PROGRESS (re-dispatch is a no-op that returns to COMPLETED) |
 | FAILED | Unhandled error after retries; `lastError` populated | IN_PROGRESS (re-dispatch resumes from `lastProcessedTicketId`) |
 
+### TicketAnalysisStatus
+
+Lifecycle of an inbox ticket analysis run.
+
+```prisma
+enum TicketAnalysisStatus {
+  running
+  success
+  cold_start
+  failed
+}
+```
+
+| Value | Description | Terminal? | Transitions To |
+|-------|-------------|-----------|----------------|
+| `running` | Row inserted by POST trigger; workflow dispatched | No | `success`, `cold_start`, `failed` |
+| `success` | Grounded estimation produced a valid panel payload; telemetry recorded | Yes | — |
+| `cold_start` | Fewer than 3 comparable past outcomes available; panel renders qualitative-only view with scope warnings; telemetry recorded | Yes | — |
+| `failed` | Scoping or grounded LLM call failed, dispatch failed, credential missing, model output invalid, or workflow timed out; telemetry NULL (the rate-limit query relies on this signal so failures do not consume budget) | Yes | — |
+
+Terminal rows are immutable. The single allowed transition is enforced by the PATCH handler with `WHERE id = ? AND status = 'running'`; PATCH on a row already terminal is idempotent (200, no DB write).
+

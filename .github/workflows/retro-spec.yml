@@ -226,7 +226,6 @@ jobs:
         run: |
           mkdir -p .claude
           ln -sf ../../ai-board/.claude-plugin/commands .claude/commands
-          ln -sf ../../ai-board/.claude-plugin/skills .claude/skills
 
       # ── Step 7: Execute retro-spec agent command ────────────────────
       - name: Generate specifications

@@ -343,6 +343,129 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
 - Modal content (including Stats tab) updates automatically when jobs transition to terminal states
 - Real-time synchronization ensures branch name, documentation buttons, and job telemetry are always current
 
+### Inbox Analysis Panel
+
+INBOX tickets show an on-demand analysis panel that surfaces a friction-risk rating, expected quality-gate range, QUICK-vs-FULL recommendation with confidence, decomposed cost range, scope warnings, and clickable anchor citations grounded on past delivery outcomes.
+
+**Visibility**:
+- Analysis trigger button appears only on tickets in INBOX stage
+- Persisted analysis results remain readable from any stage; only the trigger is hidden after the ticket leaves INBOX
+- Panel renders inside the Details tab of the ticket detail modal
+
+**Trigger Button**:
+- Single button labelled with an estimated USD cost range for the run (e.g., "Analyze · $0.02–$0.04")
+- Cost estimate derived before the click from token estimates × per-million pricing of the analysis model. The analysis always runs on Claude Sonnet 4.6, regardless of the project's declared agent — same pattern as code review (a different agent reviewing the implementation, lower cost than Opus, adequate reasoning for this task)
+- Disabled with explanatory tooltip when the user has reached the hourly rate limit
+
+**Run Behavior**:
+- Triggering returns immediately; the panel shows a "running" placeholder until results arrive
+- The browser is not blocked during the run
+- Reloading the page mid-run re-attaches to the running analysis; on completion the panel updates without further user action
+- Failures display an actionable error message and a retry button; failed runs do not consume the user's hourly budget
+
+**Successful Analysis Display**:
+The panel renders the following fields when sufficient comparable history exists:
+
+- **Friction Risk**: One of `low`, `medium`, `high` with a colour-coded label (text label always present alongside colour)
+- **Expected Quality-Gate Range**: Lower–upper bounds (0–100) derived from anchor outcomes
+- **Recommendation**: Either `QUICK` or `FULL` with:
+  - Confidence level: `low`, `medium`, or `high` (text label always present alongside colour)
+  - Short justification text (≤ 1000 characters) referencing stack-relevant signals
+- **Expected Cost Range**: Decomposed into:
+  - Baseline pipeline cost (lower–upper USD)
+  - Marginal friction cost (lower–upper USD)
+- **Scope Warnings**: Up to 5 single-sentence warnings, prioritised in this order:
+  1. Ambiguity in core requirement
+  2. Multi-feature bundling
+  3. Missing acceptance criteria
+  4. Missing scope boundary
+  5. Other
+- **Anchor Citations**: Up to 5 clickable past tickets, each displaying:
+  - Ticket key
+  - Friction status indicator with text label (frictionFree yes/no)
+  - Quality score (0–100) or an explicit "no score" placeholder for QUICK tickets that shipped without a score
+  - Click navigates to the past ticket page within the current project
+  - Anchors pointing to tickets the requesting user no longer has access to are filtered out before render
+  - Anchors whose source ticket has been hard-deleted render in a degraded "ticket no longer available" state without breaking the panel
+
+**Cold-Start Path**:
+
+When fewer than 3 comparable past outcomes are available for the analyzed ticket's predicted domain, the panel renders a qualitative-only view:
+
+- Explicit cold-start notice naming the cause (e.g., "Not enough comparable shipped tickets in the same domain yet")
+- Scope warnings derived from the ticket text alone (still capped at 5)
+- No numeric quality-gate or cost ranges
+- No friction-risk rating, recommendation, or anchor list
+- "Not enough data" classification activates whenever the project has 0, 1, or 2 comparable outcomes; "early data" may be noted in the text when 1 or 2 anchors exist
+
+**Comparable History**:
+
+A past ticket qualifies as "comparable" when all of these hold:
+- Same project as the analyzed ticket
+- Has a non-`partial` outcome record
+- Shares at least one structural domain (top-level path segment) with the analyzed ticket's predicted domain set
+- Tie-breakers (in order): semantic-tag overlap (`touched_db_schema`, `touched_tests`, `touched_ci`), then recency
+- Cross-project anchoring is never used; only same-project history is considered
+
+**Persistence and Re-display**:
+
+- Each run persists exactly one row to an append-only analysis store
+- Older rows are retained indefinitely for audit; the most recent row drives the panel
+- Reopening an already-analyzed ticket renders the panel instantly without invoking any LLM call
+- No background recomputation runs — neither on description changes, nor on stage transitions, nor on a schedule
+
+**Description-Changed Banner**:
+
+After an analysis has been persisted, the panel displays a banner whenever the ticket's `title + description` (whitespace-tolerant comparison) differs from the snapshot stored on the latest analysis row.
+
+- Banner offers a one-click "Re-analyze" action
+- Until the user clicks, the prior analysis remains visible and labelled as the current displayed result
+- Reverting the edits to match the stored snapshot dismisses the banner automatically
+- Clicking "Re-analyze" runs the full pipeline and creates a new row; the previous row is preserved for audit
+- Comments on the ticket do not count as description changes — the banner only reacts to title or description edits
+- Banner is suppressed during an in-progress re-analyze and re-evaluates against the new snapshot afterwards
+- Banner is announced to screen readers as a live region update when it appears
+
+**Re-analysis Behavior**:
+
+- Always user-triggered (button click or banner action)
+- Each run produces a new row; existing rows are never overwritten
+- Concurrent runs from two browser tabs are both allowed to complete; each is its own row, the latest completion wins for display, and both count against the user's hourly budget
+- A re-analysis after the project's outcome dataset has grown above the cold-start threshold produces a non-cold-start panel on next run
+
+**Rate Limit**:
+
+- 10 successful analyses per user per rolling hour, project-agnostic
+- The 11th attempt within the window is rejected with a clear message stating when capacity returns (e.g., "Hourly analysis budget exhausted. Capacity returns at 12:11 UTC.")
+- Failed runs (LLM error, timeout, dispatch failure, missing credential) do not count against the budget — the user can retry immediately
+- Rate-limit state visible to the panel as a remaining-runs counter and a next-reset timestamp
+
+**Cost Recording**:
+
+- The pre-click button label shows an estimated USD range derived from the static cost reference table
+- Each successful run records the actual measured USD cost on the persisted row, captured from the LLM provider's response, alongside duration and token telemetry
+- Older rows retain their original stack snapshot for audit; a project's later stack changes do not retroactively rewrite past analyses
+
+**Stack Awareness**:
+
+The same code path produces an analysis regardless of the project's language, framework, or services. The grounded estimation prompt receives, alongside the ticket text:
+
+- Language (e.g., `typescript`, `python`)
+- Framework (e.g., `nextjs`, `fastapi`)
+- Services list (e.g., `postgres`, `redis`) — capped at 10
+- Testing framework (e.g., `vitest`, `pytest`)
+- E2E flag and e2e framework (e.g., `playwright`)
+- Resolved agent and model
+
+Missing optional fields are gracefully omitted without error; the bounded extract keeps prompt size predictable and stable across projects.
+
+**Accessibility**:
+
+- All colour-coded signals (friction risk, recommendation confidence) are accompanied by accessible text labels
+- The description-changed banner is announced to screen readers as a live-region update
+- Analysis button, banner action, and every anchor link are reachable and operable via keyboard
+- WCAG AA contrast (4.5:1) maintained across all states
+
 ### Closing the Modal
 
 Users can close the detail modal by:

@@ -94,7 +94,7 @@ Core implementation patterns and code organization.
 - Security considerations
 
 **[plugin-architecture.md](implementation/plugin-architecture.md)**
-- Plugin structure (commands, templates, scripts, skills)
+- Plugin structure (commands, templates, scripts)
 - Complete command catalog with stage mapping
 - Workflow loading mechanism (sparse double checkout + symlinks)
 - Multi-agent command execution (Claude Code vs Codex)

@@ -27,20 +27,20 @@ model Account {
 }
 
 model Job {
-  id          Int       @id @default(autoincrement())
-  ticketId    Int
-  command     String    @db.VarChar(50)
-  status      JobStatus @default(PENDING)
-  branch      String?   @db.VarChar(200)
-  commitSha   String?   @db.VarChar(40)
-  logs        String?
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime
-  workflowRunId BigInt?    // GitHub Actions workflow run ID for cancel support
-  projectId   Int
-  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  id            Int       @id @default(autoincrement())
+  ticketId      Int
+  command       String    @db.VarChar(50)
+  status        JobStatus @default(PENDING)
+  branch        String?   @db.VarChar(200)
+  commitSha     String?   @db.VarChar(40)
+  logs          String?
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
+  workflowRunId BigInt? // GitHub Actions workflow run ID for cancel support
+  projectId     Int
+  ticket        Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   // Claude telemetry metrics (aggregated from all API calls in the job)
   inputTokens         Int? // Total input tokens consumed
@@ -54,9 +54,9 @@ model Job {
   toolsUsed           String[] @default([]) // List of tools used (Edit, Write, Bash, etc.)
 
   // Per-turn context size (AIB-725)
-  peakContextTokens   Int? // Peak per-turn context tokens attended
-  avgContextTokens    Int? // Mean per-turn context tokens attended (rounded)
-  turnCount           Int? // Number of per-turn events successfully parsed
+  peakContextTokens Int? // Peak per-turn context tokens attended
+  avgContextTokens  Int? // Mean per-turn context tokens attended (rounded)
+  turnCount         Int? // Number of per-turn events successfully parsed
 
   // Quality score (0-100) computed from code review agent dimension scores
   // Only populated for COMPLETED verify jobs of FULL workflow tickets
@@ -129,6 +129,7 @@ model Project {
   healthScore         HealthScore?
   setupJobs           ProjectSetupJob[]
   outcomes            TicketOutcome[]
+  analyses            TicketAnalysis[]
   backfillProgress    BackfillProgress?
 
   @@unique([githubOwner, githubRepo])
@@ -189,6 +190,7 @@ model Ticket {
   jobs                   Job[]
   notifications          Notification[]
   outcome                TicketOutcome?
+  analyses               TicketAnalysis[]
   project                Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   sourceComparisons      ComparisonRecord[]        @relation("ComparisonSourceTicket")
   winnerComparisons      ComparisonRecord[]        @relation("ComparisonWinnerTicket")
@@ -223,6 +225,7 @@ model User {
   personalAccessTokens  PersonalAccessToken[]
   credentials           UserCredential[]
   subscription          Subscription?
+  ticketAnalyses        TicketAnalysis[]
 
   @@index([email])
 }
@@ -461,10 +464,10 @@ model ComparisonRecord {
   participants          ComparisonParticipant[]
   decisionPoints        DecisionPointEvaluation[]
 
+  @@unique([projectId, sourceTicketId, compareRunKey])
   @@index([projectId, generatedAt(sort: Desc)])
   @@index([sourceTicketId, generatedAt(sort: Desc)])
   @@index([winnerTicketId, generatedAt(sort: Desc)])
-  @@unique([projectId, sourceTicketId, compareRunKey])
 }
 
 model ComparisonParticipant {
@@ -552,37 +555,37 @@ enum HealthScanStatus {
 }
 
 model HealthScan {
-  id           Int              @id @default(autoincrement())
-  projectId    Int
-  scanType     HealthScanType
-  status       HealthScanStatus @default(PENDING)
+  id        Int              @id @default(autoincrement())
+  projectId Int
+  scanType  HealthScanType
+  status    HealthScanStatus @default(PENDING)
 
   // Results
-  score        Int?
-  report       String?
-  issuesFound  Int?
-  issuesFixed  Int?
+  score       Int?
+  report      String?
+  issuesFound Int?
+  issuesFixed Int?
 
   // Commit range (for incremental scanning)
-  baseCommit   String?          @db.VarChar(40)
-  headCommit   String?          @db.VarChar(40)
+  baseCommit String? @db.VarChar(40)
+  headCommit String? @db.VarChar(40)
 
   // Operational telemetry
-  durationMs   Int?
-  tokensUsed   Int?
-  costUsd      Float?
+  durationMs Int?
+  tokensUsed Int?
+  costUsd    Float?
 
   // Error tracking
-  errorMessage String?          @db.VarChar(2000)
+  errorMessage String? @db.VarChar(2000)
 
   // Timestamps
-  startedAt    DateTime?
-  completedAt  DateTime?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Relations
-  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, scanType, createdAt(sort: Desc)])
   @@index([projectId, scanType, status])
@@ -591,33 +594,33 @@ model HealthScan {
 }
 
 model HealthScore {
-  id                 Int       @id @default(autoincrement())
-  projectId          Int       @unique
+  id        Int @id @default(autoincrement())
+  projectId Int @unique
 
   // Global aggregate
-  globalScore        Int?
+  globalScore Int?
 
   // Per-module sub-scores (null = never scanned)
-  securityScore      Int?
-  complianceScore    Int?
-  testsScore         Int?
-  specSyncScore      Int?
-  qualityGate        Int?
+  securityScore   Int?
+  complianceScore Int?
+  testsScore      Int?
+  specSyncScore   Int?
+  qualityGate     Int?
 
   // Last scan timestamps per type
-  lastSecurityScan   DateTime?
-  lastComplianceScan DateTime?
-  lastTestsScan      DateTime?
-  lastSpecSyncScan   DateTime?
-  reviewQualityScore Int?
+  lastSecurityScan      DateTime?
+  lastComplianceScan    DateTime?
+  lastTestsScan         DateTime?
+  lastSpecSyncScan      DateTime?
+  reviewQualityScore    Int?
   lastReviewQualityScan DateTime?
 
   // Timestamps
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  project            Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
 }
@@ -641,34 +644,34 @@ enum SetupJobDepth {
 }
 
 model ProjectSetupJob {
-  id              Int             @id @default(autoincrement())
-  projectId       Int
-  agent           Agent
-  status          SetupJobStatus  @default(PENDING)
-  command         SetupJobCommand @default(ONBOARD)
+  id        Int             @id @default(autoincrement())
+  projectId Int
+  agent     Agent
+  status    SetupJobStatus  @default(PENDING)
+  command   SetupJobCommand @default(ONBOARD)
 
   // Retro-spec specific inputs (nullable, only for RETRO_SPEC jobs)
-  depth           SetupJobDepth?
-  docUrl          String?         @db.VarChar(2000)
-  context         String?         @db.Text
+  depth   SetupJobDepth?
+  docUrl  String?        @db.VarChar(2000)
+  context String?        @db.Text
 
   // Workflow tracking
-  workflowRunId   BigInt?
+  workflowRunId BigInt?
 
   // Error tracking
-  errorMessage    String?         @db.VarChar(2000)
+  errorMessage String? @db.VarChar(2000)
 
   // Artifacts produced by workflow
   artifactSummary Json?
 
   // Timestamps
-  startedAt       DateTime?
-  completedAt     DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Relations
-  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, status])
   @@index([projectId, createdAt(sort: Desc)])
@@ -676,15 +679,15 @@ model ProjectSetupJob {
 }
 
 model TicketOutcome {
-  id                       Int          @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   // Identity & lookup
-  ticketId                 Int          @unique
-  projectId                Int
-  workflowType             WorkflowType
-  shippedAt                DateTime
-  capturedAt               DateTime     @default(now())
-  ruleSetVersion           Int
+  ticketId       Int          @unique
+  projectId      Int
+  workflowType   WorkflowType
+  shippedAt      DateTime
+  capturedAt     DateTime     @default(now())
+  ruleSetVersion Int
 
   // Job-aggregate telemetry
   totalCostUsd             Float?
@@ -694,42 +697,42 @@ model TicketOutcome {
   totalThinkingTokens      Int?
   totalCacheReadTokens     Int?
   totalCacheCreationTokens Int?
-  toolsUsed                String[]     @default([])
+  toolsUsed                String[] @default([])
 
   // Job-count classification
-  pipelineJobCount         Int          @default(0)
-  frictionJobCount         Int          @default(0)
-  totalJobCount            Int          @default(0)
-  jobCountByPrefix         Json         @default("{}")
+  pipelineJobCount Int  @default(0)
+  frictionJobCount Int  @default(0)
+  totalJobCount    Int  @default(0)
+  jobCountByPrefix Json @default("{}")
 
   // Quality
-  qualityScore             Int?
+  qualityScore Int?
 
   // Change-shape
-  filesTouched             String[]     @default([])
-  linesAdded               Int?
-  linesRemoved             Int?
-  testCodeRatio            Float?
+  filesTouched  String[] @default([])
+  linesAdded    Int?
+  linesRemoved  Int?
+  testCodeRatio Float?
 
   // Structural domains
-  domains                  String[]     @default([])
-  domainFileCounts         Json         @default("{}")
+  domains          String[] @default([])
+  domainFileCounts Json     @default("{}")
 
   // Semantic tags
-  touchedDbSchema          Boolean      @default(false)
-  touchedTests             Boolean      @default(false)
-  touchedCi                Boolean      @default(false)
+  touchedDbSchema Boolean @default(false)
+  touchedTests    Boolean @default(false)
+  touchedCi       Boolean @default(false)
 
   // Derived booleans
-  frictionFree             Boolean      @default(false)
+  frictionFree Boolean @default(false)
 
   // Partial-state flags
-  partial                  Boolean      @default(false)
-  partialReason            String?      @db.VarChar(40)
+  partial       Boolean @default(false)
+  partialReason String? @db.VarChar(40)
 
   // Relations
-  ticket                   Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  project                  Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ticket  Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, shippedAt(sort: Desc)])
   @@index([projectId, frictionFree])
@@ -750,7 +753,7 @@ model BackfillProgress {
   version               Int            @default(1)
   lastError             String?        @db.VarChar(2000)
 
-  project               Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([status])
 }
@@ -759,4 +762,58 @@ enum BackfillStatus {
   IN_PROGRESS
   COMPLETED
   FAILED
+}
+
+enum TicketAnalysisStatus {
+  running
+  success
+  cold_start
+  failed
+}
+
+model TicketAnalysis {
+  id Int @id @default(autoincrement())
+
+  ticketId  Int
+  projectId Int
+  userId    String
+
+  status    TicketAnalysisStatus @default(running)
+  startedAt DateTime             @default(now())
+  endedAt   DateTime?
+  createdAt DateTime             @default(now())
+
+  ruleSetVersion Int
+  agent          Agent
+  modelId        String? @db.VarChar(50)
+
+  titleSnapshot       String @db.VarChar(100)
+  descriptionSnapshot String @db.VarChar(10000)
+
+  stackSnapshot Json
+
+  costUsd         Float?
+  durationMs      Int?
+  inputTokens     Int?
+  outputTokens    Int?
+  thinkingTokens  Int?
+  cacheReadTokens Int?
+
+  coldStartReason String? @db.VarChar(40)
+
+  errorReason  String? @db.VarChar(40)
+  errorMessage String? @db.VarChar(2000)
+
+  output Json?
+
+  anchorIdsAttempted Int[] @default([])
+
+  ticket  Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt(sort: Desc)])
+  @@index([userId, status, endedAt])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([status, startedAt])
 }

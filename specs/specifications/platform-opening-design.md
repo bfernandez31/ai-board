@@ -128,7 +128,7 @@ ai-board/.github/scripts/setup-environment.sh <target-dir> [--phase lightweight|
 **Phase `lightweight`** (specify, plan, clarify, iterate, assist):
 1. Parse config — read `.ai-board/config.yml` from target repo
 2. Install runtime — node/bun/python based on `runtime.manager`
-3. Symlink plugin — `.claude/commands` and `.claude/skills`
+3. Symlink plugin — `.claude/commands`
 4. Validation — verify runtime and symlinks in place
 
 **Phase `full`** (implement, quick-impl, verify, health-scan TESTS) — all of lightweight, plus:
@@ -176,7 +176,6 @@ Minimal change: instead of hardcoding `bun add -g @anthropic-ai/claude-code`, it
 - run: cd target && bun install
 - run: mkdir -p target/.claude
 - run: ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
-- run: ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
 ```
 
 **After** (2-3 lines):

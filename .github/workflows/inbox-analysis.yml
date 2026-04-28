@@ -1,0 +1,145 @@
+name: Inbox Analysis
+
+on:
+  workflow_dispatch:
+    inputs:
+      analysis_id:
+        description: 'TicketAnalysis row id'
+        required: true
+        type: string
+      project_id:
+        description: 'Project id'
+        required: true
+        type: string
+      ticket_id:
+        description: 'Ticket id'
+        required: true
+        type: string
+      githubRepository:
+        description: 'Target repository in format owner/repo (informational; no clone needed)'
+        required: true
+        type: string
+      agent:
+        description: 'Agent type (CLAUDE | CODEX | MISTRAL | GEMINI)'
+        required: false
+        type: string
+        default: 'CLAUDE'
+      model:
+        description: 'Model id (e.g. claude-opus-4-7)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    env:
+      APP_URL: ${{ vars.APP_URL }}
+      WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+      ANTHROPIC_MODEL: ${{ inputs.model || 'claude-opus-4-7' }}
+      INPUT_ANALYSIS_ID: ${{ inputs.analysis_id }}
+      INPUT_PROJECT_ID: ${{ inputs.project_id }}
+      INPUT_TICKET_ID: ${{ inputs.ticket_id }}
+      INPUT_AGENT: ${{ inputs.agent }}
+
+    steps:
+      - name: Checkout ai-board (sparse - plugin and scripts)
+        uses: actions/checkout@v4
+        with:
+          path: ai-board
+          sparse-checkout: |
+            .claude-plugin
+            .github/scripts
+          sparse-checkout-cone-mode: true
+
+      - name: Fetch Owner AI Credential
+        run: |
+          if [[ "${INPUT_AGENT}" == "CODEX" ]]; then
+            PROVIDER="OPENAI"
+          elif [[ "${INPUT_AGENT}" == "MISTRAL" ]]; then
+            PROVIDER="MISTRAL"
+          elif [[ "${INPUT_AGENT}" == "GEMINI" ]]; then
+            PROVIDER="GOOGLE"
+          else
+            PROVIDER="ANTHROPIC"
+          fi
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "${APP_URL}/api/internal/credentials?projectId=${INPUT_PROJECT_ID}&provider=${PROVIDER}" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ No owner credential available — failing analysis"
+            curl -X PATCH "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets/${INPUT_TICKET_ID}/analysis/${INPUT_ANALYSIS_ID}/status" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+              -d '{"status":"failed","errorReason":"credential_missing","errorMessage":"No AI credential available"}'
+            exit 1
+          fi
+          CRED_TYPE=$(echo "$BODY" | jq -r '.credentialType')
+          ENV_VAR=$(echo "$BODY" | jq -r '.envVar')
+          CRED_VALUE_B64=$(echo "$BODY" | jq -r '.value')
+          echo "::add-mask::${CRED_VALUE_B64}"
+          CRED_VALUE=$(echo "$CRED_VALUE_B64" | base64 -d)
+          echo "::add-mask::${CRED_VALUE}"
+          {
+            echo "${ENV_VAR}<<CREDENTIAL_EOF"
+            echo "${CRED_VALUE}"
+            echo "CREDENTIAL_EOF"
+          } >> "$GITHUB_ENV"
+          echo "✅ Owner credential loaded (type: ${CRED_TYPE}, envVar: ${ENV_VAR})"
+
+      - name: Run Inbox Analysis Agent
+        id: run-agent
+        timeout-minutes: 5
+        run: |
+          SECONDS=0
+          if ai-board/.github/scripts/run-agent.sh \
+              "$INPUT_AGENT" \
+              "ai-board.inbox-analysis" \
+              "--analysis-id ${INPUT_ANALYSIS_ID} --project-id ${INPUT_PROJECT_ID} --ticket-id ${INPUT_TICKET_ID}" \
+              2>&1 | tee /tmp/analysis_log.txt; then
+            DURATION_MS=$((SECONDS * 1000))
+            echo "duration_ms=$DURATION_MS" >> $GITHUB_OUTPUT
+            echo "agent_success=true" >> $GITHUB_OUTPUT
+          else
+            DURATION_MS=$((SECONDS * 1000))
+            echo "duration_ms=$DURATION_MS" >> $GITHUB_OUTPUT
+            echo "agent_success=false" >> $GITHUB_OUTPUT
+            {
+              echo "error_msg<<EOF_ERR"
+              tail -c 2000 /tmp/analysis_log.txt
+              echo
+              echo "EOF_ERR"
+            } >> $GITHUB_OUTPUT
+          fi
+
+      - name: PATCH Analysis Status
+        if: always()
+        run: |
+          if [ "${{ steps.run-agent.outputs.agent_success }}" = "true" ] \
+             && [ -f /tmp/inbox-analysis-result.json ] \
+             && jq empty /tmp/inbox-analysis-result.json 2>/dev/null; then
+            BODY=$(jq -c '.' /tmp/inbox-analysis-result.json)
+          else
+            if [ "${{ steps.run-agent.outcome }}" = "cancelled" ]; then
+              REASON="timeout"
+            elif [ "${{ steps.run-agent.outputs.agent_success }}" = "true" ]; then
+              REASON="invalid_model_output"
+            else
+              REASON="grounded_pass_failed"
+            fi
+            BODY=$(jq -nc \
+              --arg reason "$REASON" \
+              --arg msg "$(jq -Rs '.' < /tmp/analysis_log.txt 2>/dev/null | tail -c 2000)" \
+              '{status:"failed", errorReason:$reason, errorMessage:$msg}')
+          fi
+          curl -X PATCH "${APP_URL}/api/projects/${INPUT_PROJECT_ID}/tickets/${INPUT_TICKET_ID}/analysis/${INPUT_ANALYSIS_ID}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d "$BODY" \
+            --fail-with-body \
+          || echo "⚠️ PATCH failed — DB row will be reaped by janitor"

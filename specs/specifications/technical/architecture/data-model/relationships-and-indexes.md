@@ -12,8 +12,10 @@ User
 │   │   │   └── notifications (one-to-many) → Notification
 │   │   ├── notifications (one-to-many) → Notification
 │   │   ├── comparisonParticipants (one-to-many) → ComparisonParticipant
-│   │   └── outcome (one-to-one, optional) → TicketOutcome
+│   │   ├── outcome (one-to-one, optional) → TicketOutcome
+│   │   └── analyses (one-to-many) → TicketAnalysis
 │   ├── outcomes (one-to-many) → TicketOutcome
+│   ├── analyses (one-to-many) → TicketAnalysis
 │   ├── backfillProgress (one-to-one, optional) → BackfillProgress
 │   ├── comparisonRecords (one-to-many) → ComparisonRecord
 │   │   ├── participants (one-to-many) → ComparisonParticipant
@@ -29,6 +31,7 @@ User
 ├── subscription (one-to-one) → Subscription
 ├── credentials (one-to-many) → UserCredential
 │   └── unique on (userId, provider)
+├── ticketAnalyses (one-to-many) → TicketAnalysis (as trigger)
 └── accounts/sessions (one-to-many) → NextAuth tables
 ```
 
@@ -81,6 +84,12 @@ User
 - `BackfillProgress(projectId)` - Unique 1:1 with Project; resume cursor lookup
 - `BackfillProgress(status)` - Operator queries for in-progress / failed runs
 
+**Analysis Queries**:
+- `TicketAnalysis(ticketId, createdAt DESC)` - Latest analysis lookup for the panel render path
+- `TicketAnalysis(userId, status, endedAt)` - Rolling-hour rate-limit count (filtered to `success` and `cold_start`)
+- `TicketAnalysis(projectId, createdAt DESC)` - Project-scoped analytics over historical analyses
+- `TicketAnalysis(status, startedAt)` - Observability for orphaned `running` rows (workflow timeouts)
+
 **Comparison Queries**:
 - `ComparisonRecord(projectId, generatedAt DESC)` - Project comparisons listing
 - `ComparisonRecord(sourceTicketId, generatedAt DESC)` - Source ticket lookups
@@ -104,4 +113,6 @@ Used for multi-column queries with optimal performance:
 - `TicketOutcome(projectId, shippedAt DESC)`: Newest-first project outcome listing
 - `TicketOutcome(projectId, frictionFree)`: Index-supported fraction-frictionFree aggregate
 - `TicketOutcome(projectId, partial)`: Filter partial rows out of analytics queries
+- `TicketAnalysis(ticketId, createdAt DESC)`: Latest-row lookup serving the panel render path
+- `TicketAnalysis(userId, status, endedAt)`: Per-user rolling-hour rate-limit count
 
