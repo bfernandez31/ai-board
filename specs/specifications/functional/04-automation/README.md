@@ -145,7 +145,9 @@ Each workflow job captures agent usage metrics through the shared telemetry pipe
 | Model | Input (per 1M tokens) | Output (per 1M tokens) | Cached Input (per 1M tokens) |
 |-------|----------------------|------------------------|------------------------------|
 | gpt-5-codex | $1.25 | $10.00 | $0.625 |
-| gpt-5.3-codex | $1.75 | $14.00 | $0.875 |
+| gpt-5 | $2.00 | $8.00 | $1.00 |
+| gpt-5.4 | $2.50 | $15.00 | $0.25 |
+| gpt-5.5 | $5.00 | $30.00 | $0.50 |
 
 - Gemini cumulative OTLP events may include cost directly; when they do not, cost is estimated from supported Gemini pricing tables based on merged token counts. Unsupported Gemini model identifiers preserve usage metrics while leaving cost unavailable.
 - Mistral batch telemetry is costed server-side from Mistral pricing data unless the batch explicitly marks cost as unavailable.

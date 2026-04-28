@@ -29,7 +29,7 @@ describe('estimateAnalysisCostUsd', () => {
 
   it('returns the same value for the default-model and explicit-default', () => {
     const a = estimateAnalysisCostUsd('CLAUDE', null);
-    const b = estimateAnalysisCostUsd('CLAUDE', 'claude-opus-4-7');
+    const b = estimateAnalysisCostUsd('CLAUDE', 'claude-sonnet-4-6');
     expect(a).toEqual(b);
   });
 });

@@ -268,9 +268,7 @@ install_package_manager
 info "Creating plugin symlinks..."
 mkdir -p "${TARGET_DIR}/.claude"
 ln -sf "../../ai-board/.claude-plugin/commands" "${TARGET_DIR}/.claude/commands"
-ln -sf "../../ai-board/.claude-plugin/skills" "${TARGET_DIR}/.claude/skills"
 success "ai-board commands linked to ${TARGET_DIR}/.claude/commands"
-success "ai-board skills linked to ${TARGET_DIR}/.claude/skills"
 
 # ─── Full Phase: Dependency installation is handled by workflows via run-command.sh ──
 

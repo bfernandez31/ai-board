@@ -18,6 +18,12 @@ export const dynamic = 'force-dynamic';
 const RATE_LIMIT_PER_HOUR = 10;
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
+// Inbox analysis always runs on Claude — same pattern as code review (verify.yml),
+// where a different agent reviewing the implementation is preferred over the
+// project's primary work agent. Independent of project.defaultAgent.
+const ANALYSIS_AGENT: Agent = 'CLAUDE';
+const ANALYSIS_MODEL = 'claude-sonnet-4-6';
+
 function noStore(json: unknown, init: ResponseInit = {}): NextResponse {
   const res = NextResponse.json(json, init);
   res.headers.set('Cache-Control', 'no-store');
@@ -77,14 +83,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       orderBy: { createdAt: 'desc' },
     });
 
-    const project = await prisma.project.findUnique({
-      where: { id: ids.projectId },
-      select: { config: true, defaultAgent: true, specifyModel: true },
-    });
-    const config = (project?.config as unknown as ProjectConfig | null) ?? null;
-    const stack = extractStackContext(config);
-    const agent: Agent = project?.defaultAgent ?? 'CLAUDE';
-    const cost = estimateAnalysisCostUsd(agent, stack.agent.model);
+    const cost = estimateAnalysisCostUsd(ANALYSIS_AGENT, ANALYSIS_MODEL);
     const window = await rateLimitWindow(userId);
 
     const serialized = latest
@@ -177,8 +176,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const config = (project.config as unknown as ProjectConfig | null) ?? null;
     const stack = extractStackContext(config);
-    const agent: Agent = project.defaultAgent;
-    const provider = AGENT_PROVIDER_MAP[agent];
+    const provider = AGENT_PROVIDER_MAP[ANALYSIS_AGENT];
 
     const credential = await getOwnerCredential(ids.projectId, provider);
     if (!credential) {
@@ -202,8 +200,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       ticketId: ids.ticketId,
       projectId: ids.projectId,
       userId,
-      agent,
-      modelId: stack.agent.model,
+      agent: ANALYSIS_AGENT,
+      modelId: ANALYSIS_MODEL,
       titleSnapshot: ticket.title,
       descriptionSnapshot: ticket.description ?? '',
       stackSnapshot: stack,
@@ -216,8 +214,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         project_id: String(ids.projectId),
         ticket_id: String(ids.ticketId),
         githubRepository: `${project.githubOwner}/${project.githubRepo}`,
-        agent,
-        model: stack.agent.model ?? '',
+        agent: ANALYSIS_AGENT,
+        model: ANALYSIS_MODEL,
       });
     } catch (dispatchError) {
       await prisma.ticketAnalysis.update({

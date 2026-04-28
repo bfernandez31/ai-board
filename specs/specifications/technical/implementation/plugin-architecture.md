@@ -1,6 +1,6 @@
 # Plugin Architecture
 
-AI-Board plugin system: commands, scripts, templates, and skills distributed as a Claude Code plugin for both CI/CD workflows and local development.
+AI-Board plugin system: commands, scripts, and templates distributed as a Claude Code plugin for both CI/CD workflows and local development.
 
 ## Plugin Overview
 
@@ -63,15 +63,6 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 │   │   ├── run-health-tests.sh          # Generic test orchestrator for health scans
 │   │   └── run-tests-with-reports.sh    # Config-driven test runner with framework parsers
 │   └── generate-test-report.js          # Generate test execution report
-└── skills/                              # Claude Code skills
-    └── testing/
-        ├── SKILL.md                     # Testing skill entry point
-        └── patterns/
-            ├── unit.md                  # Unit test patterns
-            ├── component.md             # Component test patterns
-            ├── frontend-integration.md  # Frontend integration patterns
-            ├── backend-integration.md   # Backend integration patterns
-            └── e2e.md                   # E2E test patterns
 ```
 
 ## Command Catalog
@@ -98,6 +89,7 @@ Each command is designed to run at a specific workflow stage. Commands are invok
 | `ai-board.assist` | Any (SPECIFY/PLAN/BUILD/VERIFY) | `ai-board-assist.yml` | AI assistance via @ai-board mentions |
 | `ai-board.compare` | Any | `ai-board-assist.yml` | Compare tickets (telemetry + specs) |
 | `ai-board.fix` | VERIFY | `ai-board-assist.yml` | Fix PR review findings from all sources (ai-board, Codex, Copilot) via `/fix` command |
+| `ai-board.inbox-analysis` | INBOX | `inbox-analysis.yml` | Two-stage friction-risk analysis on an INBOX ticket (always Claude/Sonnet 4.6) |
 | `ai-board.analyze` | Local only | — | Cross-artifact consistency analysis |
 | `ai-board.constitution` | Local only | — | Create/update project constitution |
 | `ai-board.health-security` | Health scan | `health-scan.yml` | OWASP Top 10 security analysis; outputs `SecurityReport` JSON |
@@ -146,12 +138,11 @@ This makes all `/ai-board.*` commands available in Claude Code sessions. Command
 
 ### Self-Management (ai-board repo)
 
-AI-Board manages itself using symlinks to the plugin directory:
+AI-Board manages itself using a symlink to the plugin directory:
 
 ```
 .claude/
-├── commands → ../.claude-plugin/commands    # Symlink
-└── skills   → ../.claude-plugin/skills      # Symlink (testing/)
+└── commands → ../.claude-plugin/commands    # Symlink
 ```
 
 This allows running `/ai-board.specify`, `/ai-board.implement`, etc. directly in the ai-board repository.
@@ -171,12 +162,11 @@ All workflows use a **sparse double checkout** to load ai-board commands into th
 ```
 GitHub Actions Runner
 ├── ai-board/                          # Sparse checkout (main branch, always stable)
-│   ├── .claude-plugin/                # Commands, templates, scripts, skills
+│   ├── .claude-plugin/                # Commands, templates, scripts
 │   └── .github/scripts/              # Workflow support scripts
 └── target/                           # Full checkout (target project, feature branch)
     └── .claude/
-        ├── commands → ../../ai-board/.claude-plugin/commands   # Symlink
-        └── skills   → ../../ai-board/.claude-plugin/skills     # Symlink
+        └── commands → ../../ai-board/.claude-plugin/commands   # Symlink
 ```
 
 ### Step-by-Step Execution Flow
@@ -199,7 +189,6 @@ sequenceDiagram
         GH->>TGT: Full checkout (feature branch)
         GH->>TGT: mkdir -p target/.claude
         GH->>TGT: ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
-        GH->>TGT: ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
     end
 
     rect rgb(240, 255, 240)
@@ -343,20 +332,6 @@ Support scripts called by workflows and commands. All scripts source `common.sh`
 | `generate-test-report.js` | `.claude-plugin/scripts/` | Parse test results and generate formatted report |
 
 **Note**: `run-all-tests.sh` and `run-integration-tests.sh` are project-level scripts (referenced by `package.json`), not plugin scripts. They live at `scripts/` in the project root because they are specific to each project's test infrastructure (dev server, ports, test runners). The `generate-test-report.js` script remains in the plugin because it is used by workflows across all projects.
-
-## Skills
-
-The plugin includes one skill: **testing**.
-
-The testing skill (`skills/testing/SKILL.md`) provides test writing patterns for the project's Testing Trophy strategy. It includes specialized patterns for:
-
-- **Unit tests**: Pure function testing, mocking patterns
-- **Component tests**: React component testing with RTL
-- **Frontend integration**: API mocking, user flow testing
-- **Backend integration**: Database testing, API contract testing
-- **E2E tests**: Playwright browser automation patterns
-
-Invoked automatically when commands need to write tests, or manually via the `/ai-board:testing` skill.
 
 ## External Project Requirements
 

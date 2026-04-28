@@ -1134,7 +1134,7 @@ Returns the latest persisted analysis for the ticket plus pre-click eligibility 
     "status": "success",
     "ruleSetVersion": 1,
     "agent": "CLAUDE",
-    "modelId": "claude-opus-4-7",
+    "modelId": "claude-sonnet-4-6",
     "startedAt": "2026-04-27T11:32:08.231Z",
     "endedAt": "2026-04-27T11:32:23.119Z",
     "titleSnapshot": "Add export-to-CSV button",
@@ -1191,7 +1191,7 @@ Returns the latest persisted analysis for the ticket plus pre-click eligibility 
   },
   "eligibility": {
     "triggerable": true,
-    "estimatedCostUsd": { "lower": 0.04, "upper": 0.08 },
+    "estimatedCostUsd": { "lower": 0.021, "upper": 0.042 },
     "rateLimit": {
       "limitPerHour": 10,
       "remaining": 7,
@@ -1234,8 +1234,8 @@ Creates a new `running` analysis row, dispatches the workflow, and returns 202 w
 4. Resolve project config and extract the bounded stack snapshot
 5. Compute the candidate anchor set (up to 50 ticketIds) from the project's outcome dataset
 6. Resolve the project owner's `ANTHROPIC` credential. If missing, reject with 412 — no row is created in this case
-7. INSERT a new `TicketAnalysis` row with `status='running'`, frozen input snapshots, stack snapshot, candidate anchor IDs, agent, model ID, and rule-set version
-8. Dispatch the `inbox-analysis.yml` workflow. On dispatch failure, transition the row to `failed` with `errorReason='dispatch_failed'` and return 500
+7. INSERT a new `TicketAnalysis` row with `status='running'`, frozen input snapshots, stack snapshot, candidate anchor IDs, `agent='CLAUDE'`, `modelId='claude-sonnet-4-6'`, and rule-set version. The analysis agent and model are forced to Claude/Sonnet 4.6 regardless of the project's `defaultAgent` — same pattern as code review (a different agent reviewing the implementation)
+8. Dispatch the `inbox-analysis.yml` workflow with the forced agent and model. On dispatch failure, transition the row to `failed` with `errorReason='dispatch_failed'` and return 500
 
 **Response** (202 Accepted):
 ```json
@@ -1445,7 +1445,7 @@ sequenceDiagram
     participant API as Analysis API
     participant DB as Database
     participant GH as GitHub Actions
-    participant Skill as inbox-analysis skill
+    participant Cmd as ai-board.inbox-analysis command
 
     U->>API: POST /analysis
     API->>API: Verify access + INBOX gating
@@ -1456,13 +1456,13 @@ sequenceDiagram
 
     GH->>API: GET /api/internal/credentials
     API-->>GH: Decrypted credential
-    GH->>Skill: Run ai-board.inbox-analysis
-    Skill->>API: GET /analysis-context
-    API-->>Skill: ticket + stack + candidates
-    Skill->>Skill: Phase B (scoping LLM)
-    Skill->>Skill: Phase C (anchor retrieval)
-    Skill->>Skill: Phase D (grounded LLM)
-    Skill-->>GH: result.json (success | cold_start | failed)
+    GH->>Cmd: Run /ai-board.inbox-analysis
+    Cmd->>API: GET /analysis-context
+    API-->>Cmd: ticket + stack + candidates
+    Cmd->>Cmd: Phase B (scoping LLM)
+    Cmd->>Cmd: Phase C (anchor retrieval)
+    Cmd->>Cmd: Phase D (grounded LLM)
+    Cmd-->>GH: result.json (success | cold_start | failed)
 
     GH->>API: PATCH /analysis/:id/status
     API->>DB: UPDATE row (terminal)

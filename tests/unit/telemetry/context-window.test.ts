@@ -17,8 +17,8 @@ describe('MODEL_CONTEXT_WINDOWS', () => {
   it('seeds GPT-5 family at 400k', () => {
     expect(MODEL_CONTEXT_WINDOWS['gpt-5']).toBe(400_000);
     expect(MODEL_CONTEXT_WINDOWS['gpt-5.4']).toBe(400_000);
+    expect(MODEL_CONTEXT_WINDOWS['gpt-5.5']).toBe(400_000);
     expect(MODEL_CONTEXT_WINDOWS['gpt-5-codex']).toBe(400_000);
-    expect(MODEL_CONTEXT_WINDOWS['gpt-5.3-codex']).toBe(400_000);
   });
 
   it('seeds Gemini 2.x family at 1M', () => {

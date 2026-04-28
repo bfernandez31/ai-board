@@ -373,8 +373,8 @@ async function persistOtlpMetrics(
  */
 const OPENAI_PRICING: Record<string, { input: number; output: number; cached: number }> = {
   'gpt-5-codex':   { input: 1.25, output: 10.00, cached: 0.625 },
-  'gpt-5.3-codex': { input: 1.75, output: 14.00, cached: 0.875 },
   'gpt-5.4':       { input: 2.50, output: 15.00, cached: 0.25 },
+  'gpt-5.5':       { input: 5.00, output: 30.00, cached: 0.50 },
   'gpt-5':         { input: 2.00, output: 8.00,  cached: 1.00 },
 };
 

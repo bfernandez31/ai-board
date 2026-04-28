@@ -33,8 +33,8 @@ export const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   // OpenAI Codex / GPT-5 family
   'gpt-5': OPENAI_CONTEXT_WINDOW,
   'gpt-5.4': OPENAI_CONTEXT_WINDOW,
+  'gpt-5.5': OPENAI_CONTEXT_WINDOW,
   'gpt-5-codex': OPENAI_CONTEXT_WINDOW,
-  'gpt-5.3-codex': OPENAI_CONTEXT_WINDOW,
 
   // Google Gemini 2.5 / 2.0 families (1M-token context window)
   'gemini-2.5-pro': GEMINI_CONTEXT_WINDOW,

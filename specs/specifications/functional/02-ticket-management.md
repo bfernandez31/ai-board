@@ -353,8 +353,8 @@ INBOX tickets show an on-demand analysis panel that surfaces a friction-risk rat
 - Panel renders inside the Details tab of the ticket detail modal
 
 **Trigger Button**:
-- Single button labelled with an estimated USD cost range for the run (e.g., "Analyze · $0.04–$0.08")
-- Cost estimate derived before the click from a static per-analysis cost reference table keyed on the project's declared agent
+- Single button labelled with an estimated USD cost range for the run (e.g., "Analyze · $0.02–$0.04")
+- Cost estimate derived before the click from token estimates × per-million pricing of the analysis model. The analysis always runs on Claude Sonnet 4.6, regardless of the project's declared agent — same pattern as code review (a different agent reviewing the implementation, lower cost than Opus, adequate reasoning for this task)
 - Disabled with explanatory tooltip when the user has reached the hourly rate limit
 
 **Run Behavior**:

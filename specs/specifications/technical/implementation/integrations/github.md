@@ -641,7 +641,7 @@ agent:
 1. Bootstraps `yq` v4 if not already present on the runner
 2. Validates `.ai-board/config.yml` — fails with specific error for missing required fields (`runtime.manager`, `commands.install`, `agent.cli`)
 3. Installs the specified runtime at the configured version (see Supported Runtimes table below)
-4. Creates `.claude/commands` and `.claude/skills` symlinks in the target directory pointing to ai-board plugin directories
+4. Creates the `.claude/commands` symlink in the target directory pointing to the ai-board plugin commands directory
 5. Validates runtime on PATH and symlinks readable
 
 **Phase `full`** (implement, quick-impl, verify, health-scan TESTS) — all of lightweight, plus:
