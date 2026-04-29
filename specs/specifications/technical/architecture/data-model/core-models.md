@@ -1120,7 +1120,7 @@ model TicketAnalysis {
 }
 ```
 
-**Purpose**: Append-only audit trail of inbox ticket analyses, capturing the input snapshot, stack snapshot, anchor candidate set, panel output, and measured telemetry for each run. Powers the inbox analysis panel, the description-changed banner, and the per-user hourly rate limit.
+**Purpose**: Append-only audit trail of inbox ticket analyses, capturing the input snapshot, stack snapshot, anchor candidate set, panel output, and measured telemetry for each run. Powers the inbox analysis panel (including its stale indicator on the collapsed success row) and the per-user hourly rate limit.
 
 **Fields**:
 - `ticketId`: Parent ticket (cascade delete)
