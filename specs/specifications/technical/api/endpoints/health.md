@@ -158,8 +158,10 @@ Returns paginated scan history for a project.
 
 **Query params**:
 - `type` (optional): `"SECURITY" | "COMPLIANCE" | "TESTS" | "SPEC_SYNC" | "REVIEW_QUALITY"` — filter by scan type
+- `status` (optional): `"PENDING" | "RUNNING" | "COMPLETED" | "FAILED"` — filter by scan status
 - `limit` (optional): integer 1–100, default 20
-- `cursor` (optional): scan ID for cursor-based pagination
+- `cursor` (optional): scan ID for cursor-based pagination (returns scans with `id < cursor`)
+- `scanId` (optional): integer — return only the scan with this ID (scoped to `projectId` and other filters). Used by the drawer to fetch a specific historical scan's report. Mutually exclusive with `cursor`; when both are supplied, `scanId` wins.
 - `includeReport` (optional): `"true"` — include the `report` JSON string in each scan object (omitted by default for performance)
 
 **Response** (200 OK):

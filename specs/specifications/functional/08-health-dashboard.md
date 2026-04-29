@@ -153,11 +153,19 @@ For active modules, the drawer lists any tickets that were generated from the sc
 
 ### Score Trend Section (Active Modules)
 
-For active modules with at least one completed scan, the drawer displays an area chart showing the module's score evolution over time. SKIPPED scans are excluded from the trend chart — they do not appear as data points. The X-axis displays dates in chronological order (oldest on the left, most recent on the right). The chart includes date and score (0–100) axes and interactive hover tooltips showing the scan date and score at each data point. It uses the same visual pattern as the Quality Gate score chart. Trend data is fetched once on dashboard mount and is not re-fetched during the 2-second scan polling cycle. The API returns the most recent N scans sorted chronologically (ascending) for chart display.
+For active modules with at least one completed scan, the drawer displays an area chart showing the module's score evolution over time. SKIPPED scans are excluded from the trend chart — they do not appear as data points. The X-axis displays dates in chronological order (oldest on the left, most recent on the right). The chart includes date and score (0–100) axes and interactive hover tooltips showing the scan date and score at each data point. It uses the same visual pattern as the Quality Gate score chart. Trend data is fetched once on dashboard mount and is not re-fetched during the 2-second scan polling cycle. The API returns the most recent N scans sorted chronologically (ascending) for chart display. The chart always covers the full available period and does not narrow when a historical scan is selected in the History section.
 
 ### History Section
 
-The History section lists previous scans for the selected module in reverse chronological order. Each entry shows the scan date, a color-coded score badge, and up to four compact metric icons for issues found (AlertTriangle), cost in USD (Coins), tokens consumed (Zap), and execution duration (Clock). Each metric icon displays a tooltip on hover explaining the metric. Icons are shown only when the corresponding data value is available; null values are hidden. History is loaded in pages of 20 with a "Load more" button at the bottom. Modules with no scan history display "No scan history."
+The History section lists previous scans for the selected module in reverse chronological order. Each entry shows the scan date, the analyzed commit range (`baseCommit..headCommit`) when available, a friction-colored issue count badge, the execution duration, and a color-coded score badge.
+
+**Issue count colorization**: The issue count uses the unified friction badge palette (`variant="attribute-tc"`, `kind="friction"`) and maps the count to a level — `0` → `low` (green / reassuring), `1`–`2` → `med` (yellow / warning), `3`+ → `high` (red / regression). This colorization applies only to history rows; the current scan's detailed report retains its standard rendering.
+
+**Clickable rows**: Each row is clickable, focusable via keyboard, and exposes hover/focus styling. Selecting a row replaces the Issues and Generated Tickets sections with the report from that historical scan, with no page reload. The selected row is visually distinguished. While viewing a historical scan, a banner above the report shows the scan's date alongside a **Latest** button that returns the drawer to the most recent scan; clicking the most recent row again has the same effect. The Score Trend chart is unaffected by selection. Historical reports are read directly from the persisted scan records.
+
+**Hidden metrics**: Cost (USD) and token consumption are persisted on each scan but are not surfaced in history rows; only date, commit range, issue count, duration, and score are displayed.
+
+History is loaded in pages of 10 with a "Load more" button at the bottom. Each metric icon displays a tooltip on hover explaining the metric. Icons are shown only when the corresponding data value is available; null values are hidden. Modules with no scan history display "No scan history."
 
 ### Content Refresh
 
