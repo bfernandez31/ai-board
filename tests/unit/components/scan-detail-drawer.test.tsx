@@ -209,4 +209,26 @@ describe('ScanDetailDrawer', () => {
     expect(screen.getByText('Generated Tickets')).toBeInTheDocument();
     expect(screen.getByText('AIB-123')).toBeInTheDocument();
   });
+
+  it('passes selectedScanId=null to useScanReport by default', () => {
+    mockUseScanReport.mockReturnValue({
+      data: { scan: completedScan, report: securityReport },
+      isLoading: false,
+    });
+
+    renderWithProviders(
+      <ScanDetailDrawer
+        projectId={1}
+        moduleType="SECURITY"
+        moduleStatus={completedStatus}
+        isScanning={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    // 3rd positional arg is selectedScanId
+    expect(mockUseScanReport).toHaveBeenCalledWith(1, 'SECURITY', null);
+    // No "Viewing scan from ..." banner when looking at the latest
+    expect(screen.queryByText(/Viewing scan from/)).not.toBeInTheDocument();
+  });
 });

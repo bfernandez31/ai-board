@@ -12,14 +12,25 @@ interface ScanReportResult {
   report: ScanReport | null;
 }
 
-export function useScanReport(projectId: number, moduleType: HealthModuleType | null) {
+export function useScanReport(
+  projectId: number,
+  moduleType: HealthModuleType | null,
+  scanId: number | null = null,
+) {
   return useQuery({
-    queryKey: ['health', projectId, 'scan-report', moduleType],
+    queryKey: ['health', projectId, 'scan-report', moduleType, scanId],
     queryFn: async (): Promise<ScanReportResult> => {
       if (!moduleType) return { scan: null, report: null };
 
+      const params = new URLSearchParams({
+        type: moduleType,
+        limit: '1',
+        includeReport: 'true',
+      });
+      if (scanId !== null) params.set('scanId', String(scanId));
+
       const response = await fetch(
-        `/api/projects/${projectId}/health/scans?type=${moduleType}&limit=1&includeReport=true`,
+        `/api/projects/${projectId}/health/scans?${params}`,
         { cache: 'no-store' }
       );
 

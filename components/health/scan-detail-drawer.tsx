@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -37,7 +38,17 @@ export function ScanDetailDrawer({
   onTriggerScan,
   trendData,
 }: ScanDetailDrawerProps) {
-  const { data, isLoading } = useScanReport(projectId, moduleType);
+  const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
+  const [prevModuleType, setPrevModuleType] = useState(moduleType);
+
+  // Reset selection when the user switches to a different module's drawer.
+  // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (prevModuleType !== moduleType) {
+    setPrevModuleType(moduleType);
+    setSelectedScanId(null);
+  }
+
+  const { data, isLoading } = useScanReport(projectId, moduleType, selectedScanId);
   const isOpen = moduleType !== null;
 
   const moduleMeta = moduleType ? MODULE_METADATA[moduleType] : null;
@@ -53,6 +64,8 @@ export function ScanDetailDrawer({
     moduleStatus?.scanStatus === 'FAILED' ||
     !data?.scan
   );
+
+  const isViewingHistorical = selectedScanId !== null;
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -115,6 +128,25 @@ export function ScanDetailDrawer({
               </div>
             )}
 
+            {isViewingHistorical && data?.scan && (
+              <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2">
+                <p className="text-xs text-muted-foreground">
+                  Viewing scan from{' '}
+                  <span className="font-medium text-foreground">
+                    {new Date(data.scan.completedAt ?? data.scan.createdAt).toLocaleDateString()}
+                  </span>
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setSelectedScanId(null)}
+                >
+                  Latest
+                </Button>
+              </div>
+            )}
+
             {hasReport && data?.report && (
               <>
                 <DrawerIssues report={data.report} />
@@ -131,7 +163,12 @@ export function ScanDetailDrawer({
             )}
 
             {!isLoading && (
-              <DrawerHistory projectId={projectId} moduleType={moduleType} />
+              <DrawerHistory
+                projectId={projectId}
+                moduleType={moduleType}
+                selectedScanId={selectedScanId}
+                onSelectScan={setSelectedScanId}
+              />
             )}
           </div>
         )}

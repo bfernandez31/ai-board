@@ -166,6 +166,51 @@ describe('Scan History GET Endpoint', () => {
       expect(data.scans[0].report).toBeNull();
     });
 
+    it('returns a single scan when scanId filter is provided', async () => {
+      const scan1 = await prisma.healthScan.create({
+        data: {
+          projectId: ctx.projectId,
+          scanType: 'SECURITY',
+          status: 'COMPLETED',
+          score: 80,
+          report: JSON.stringify({ type: 'SECURITY', issues: [], generatedTickets: [] }),
+        },
+      });
+      const scan2 = await prisma.healthScan.create({
+        data: {
+          projectId: ctx.projectId,
+          scanType: 'SECURITY',
+          status: 'COMPLETED',
+          score: 95,
+          report: JSON.stringify({
+            type: 'SECURITY',
+            issues: [{ id: 'sec-1', severity: 'high', description: 'X' }],
+            generatedTickets: [],
+          }),
+        },
+      });
+
+      const response = await makeRequest(
+        ctx.projectId,
+        `type=SECURITY&scanId=${scan1.id}&includeReport=true`
+      );
+      const data = await response.json();
+
+      expect(data.scans).toHaveLength(1);
+      expect(data.scans[0].id).toBe(scan1.id);
+      expect(data.scans[0].score).toBe(80);
+      expect(data.scans[0]).toHaveProperty('report');
+
+      // Sanity: a different scanId returns the other scan
+      const response2 = await makeRequest(
+        ctx.projectId,
+        `type=SECURITY&scanId=${scan2.id}&includeReport=true`
+      );
+      const data2 = await response2.json();
+      expect(data2.scans[0].id).toBe(scan2.id);
+      expect(data2.scans[0].score).toBe(95);
+    });
+
     it('combines includeReport with type filter', async () => {
       await prisma.healthScan.create({
         data: {

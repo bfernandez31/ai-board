@@ -1,8 +1,9 @@
 'use client';
 
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { History, ChevronDown, AlertTriangle, Coins, Zap, Clock } from 'lucide-react';
+import { History, ChevronDown, AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
@@ -11,15 +12,33 @@ import {
 } from '@/components/ui/tooltip';
 import { getScoreColor } from '@/lib/quality-score';
 import { queryKeys } from '@/app/lib/query-keys';
-import { formatCost, formatTokens, formatDuration } from '@/lib/health/format';
+import { formatDuration } from '@/lib/health/format';
+import { cn } from '@/lib/utils';
 import type { HealthModuleType, ScanHistoryItem, ScanHistoryResponse } from '@/lib/health/types';
 
 interface DrawerHistoryProps {
   projectId: number;
   moduleType: HealthModuleType;
+  selectedScanId?: number | null;
+  onSelectScan?: (scanId: number | null) => void;
 }
 
-export function DrawerHistory({ projectId, moduleType }: DrawerHistoryProps) {
+/**
+ * Map an issue count to the unified badge friction level.
+ * 0 → low (green, no friction); 1–2 → med (warning); 3+ → high (red).
+ */
+function issuesToLevel(count: number): 'low' | 'med' | 'high' {
+  if (count <= 0) return 'low';
+  if (count <= 2) return 'med';
+  return 'high';
+}
+
+export function DrawerHistory({
+  projectId,
+  moduleType,
+  selectedScanId = null,
+  onSelectScan,
+}: DrawerHistoryProps) {
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: [...queryKeys.health.scanHistory(projectId, moduleType), 'drawer'],
     queryFn: async ({ pageParam }): Promise<ScanHistoryResponse> => {
@@ -53,6 +72,17 @@ export function DrawerHistory({ projectId, moduleType }: DrawerHistoryProps) {
     return null;
   }
 
+  const latestScan = allScans[0];
+  const latestScanId = latestScan?.id ?? null;
+  // When no explicit selection, the latest scan is the one being shown.
+  const effectiveSelectedId = selectedScanId ?? latestScanId;
+
+  const handleSelect = (scanId: number) => {
+    if (!onSelectScan) return;
+    // Clicking the latest row toggles back to "default" (no explicit selection).
+    onSelectScan(scanId === latestScanId ? null : scanId);
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5">
@@ -62,7 +92,12 @@ export function DrawerHistory({ projectId, moduleType }: DrawerHistoryProps) {
 
       <div className="space-y-1.5">
         {allScans.map((scan) => (
-          <HistoryEntry key={scan.id} scan={scan} />
+          <HistoryEntry
+            key={scan.id}
+            scan={scan}
+            isSelected={scan.id === effectiveSelectedId}
+            onSelect={onSelectScan ? () => handleSelect(scan.id) : undefined}
+          />
         ))}
       </div>
 
@@ -82,12 +117,26 @@ export function DrawerHistory({ projectId, moduleType }: DrawerHistoryProps) {
   );
 }
 
-function HistoryEntry({ scan }: { scan: ScanHistoryItem }) {
+interface HistoryEntryProps {
+  scan: ScanHistoryItem;
+  isSelected: boolean;
+  onSelect?: (() => void) | undefined;
+}
+
+function HistoryEntry({ scan, isSelected, onSelect }: HistoryEntryProps) {
   const scoreColors = scan.score !== null ? getScoreColor(scan.score) : null;
   const date = scan.completedAt ?? scan.createdAt;
 
-  return (
-    <div className="aurora-glass rounded-md px-3 py-2 flex items-center justify-between">
+  const interactive = typeof onSelect === 'function';
+
+  const rowClasses = cn(
+    'aurora-glass rounded-md px-3 py-2 flex items-center justify-between w-full text-left transition-colors',
+    interactive && 'cursor-pointer hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+    isSelected && 'ring-1 ring-primary bg-accent/30',
+  );
+
+  const content = (
+    <>
       <div className="space-y-0.5">
         <p className="text-xs text-foreground">
           {new Date(date).toLocaleDateString()}
@@ -104,34 +153,17 @@ function HistoryEntry({ scan }: { scan: ScanHistoryItem }) {
             {scan.issuesFound !== null && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                    <AlertTriangle className="h-3 w-3" />
+                  <Badge
+                    variant="attribute-tc"
+                    kind="friction"
+                    level={issuesToLevel(scan.issuesFound)}
+                    aria-label={`${scan.issuesFound} issues found`}
+                  >
+                    <AlertTriangle className="h-3 w-3" aria-hidden="true" />
                     {scan.issuesFound}
-                  </span>
+                  </Badge>
                 </TooltipTrigger>
                 <TooltipContent><p>Issues found</p></TooltipContent>
-              </Tooltip>
-            )}
-            {scan.costUsd !== null && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                    <Coins className="h-3 w-3" />
-                    {formatCost(scan.costUsd)}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent><p>Cost in USD</p></TooltipContent>
-              </Tooltip>
-            )}
-            {scan.tokensUsed !== null && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                    <Zap className="h-3 w-3" />
-                    {formatTokens(scan.tokensUsed)}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent><p>Tokens consumed</p></TooltipContent>
               </Tooltip>
             )}
             {scan.durationMs !== null && (
@@ -155,6 +187,21 @@ function HistoryEntry({ scan }: { scan: ScanHistoryItem }) {
           <span className="text-xs text-muted-foreground">—</span>
         )}
       </div>
-    </div>
+    </>
   );
+
+  if (interactive) {
+    return (
+      <button
+        type="button"
+        className={rowClasses}
+        aria-pressed={isSelected}
+        onClick={onSelect}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={rowClasses}>{content}</div>;
 }

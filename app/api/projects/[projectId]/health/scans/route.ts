@@ -14,6 +14,7 @@ const scanHistorySchema = z.object({
   status: z.enum(['PENDING', 'RUNNING', 'COMPLETED', 'FAILED']).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   cursor: z.coerce.number().int().positive().optional(),
+  scanId: z.coerce.number().int().positive().optional(),
   includeReport: z.enum(['true', 'false']).optional(),
 });
 
@@ -152,6 +153,7 @@ export async function GET(
       status: searchParams.get('status') || undefined,
       limit: searchParams.get('limit') || undefined,
       cursor: searchParams.get('cursor') || undefined,
+      scanId: searchParams.get('scanId') || undefined,
       includeReport: searchParams.get('includeReport') || undefined,
     });
 
@@ -162,13 +164,14 @@ export async function GET(
       );
     }
 
-    const { type, status, limit, cursor, includeReport } = parsed.data;
+    const { type, status, limit, cursor, scanId, includeReport } = parsed.data;
     const shouldIncludeReport = includeReport === 'true';
 
     const where: Record<string, unknown> = { projectId };
     if (type) where.scanType = type;
     if (status) where.status = status;
-    if (cursor) where.id = { lt: cursor };
+    if (scanId) where.id = scanId;
+    else if (cursor) where.id = { lt: cursor };
 
     const scans = await prisma.healthScan.findMany({
       where,
