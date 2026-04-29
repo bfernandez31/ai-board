@@ -347,30 +347,62 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
 
 INBOX tickets show an on-demand analysis panel that surfaces a friction-risk rating, expected quality-gate range, QUICK-vs-FULL recommendation with confidence, decomposed cost range, scope warnings, and clickable anchor citations grounded on past delivery outcomes.
 
+The panel is presented as a single-line strip by default in every state, so the optional analysis never dominates the Details tab. All data remains accessible — users expand the row to reveal the full content when they need it.
+
 **Visibility**:
 - Analysis trigger button appears only on tickets in INBOX stage
 - Persisted analysis results remain readable from any stage; only the trigger is hidden after the ticket leaves INBOX
 - Panel renders inside the Details tab of the ticket detail modal
+- A ticket that has never been analyzed and is not currently triggerable (e.g., post-INBOX without a prior run) renders nothing at all — no placeholder text, no header
+
+**Collapsed Row by State**:
+
+| State | Single-line content |
+|---|---|
+| Empty + triggerable | Right-aligned `Run analysis` action button only — no "INBOX ANALYSIS" label, no inline cost on the label |
+| Empty + not triggerable | Nothing rendered |
+| Running | Spinner + `Analyzing…` on one line, `aria-busy="true"`; no expand toggle, no card underneath |
+| Failed + triggerable | Warning icon + `Analysis failed` + `Retry` button on one line; the error message is exposed via tooltip on the warning icon |
+| Failed + not triggerable | Warning icon + `Analysis failed` on one line; tooltip carries the error message |
+| Cold start | Snowflake icon + `Cold start — not enough comparable tickets` + expand toggle |
+| Success | Three colour-coded chips (recommendation, friction risk, confidence) + `analyzed N ago` meta + expand toggle |
+| Success + stale | Same as Success plus an amber warning indicator and an inline `Re-analyze` action on the same row |
 
 **Trigger Button**:
-- Single button labelled with an estimated USD cost range for the run (e.g., "Analyze · $0.02–$0.04")
+- Compact `Run analysis` button with a sparkles icon — the visible label never includes the cost
+- Estimated USD cost range is exposed only on hover/focus (tooltip) and via the button's accessible label so screen readers can announce it
 - Cost estimate derived before the click from token estimates × per-million pricing of the analysis model. The analysis always runs on Claude Sonnet 4.6, regardless of the project's declared agent — same pattern as code review (a different agent reviewing the implementation, lower cost than Opus, adequate reasoning for this task)
-- Disabled with explanatory tooltip when the user has reached the hourly rate limit
+- Disabled with an explanatory tooltip when the user has reached the hourly rate limit (tooltip includes the next reset time)
+
+**Tooltips for Clarity**:
+
+Every chip and meta element on the collapsed row carries a plain-language tooltip so users can learn the meaning without leaving the modal:
+
+- **Recommendation chip** (`QUICK` / `FULL`): explains what each workflow does and when each is preferred
+- **Friction risk chip** (`low` / `medium` / `high`): explains that the score estimates implementation difficulty derived from anchor outcomes
+- **Confidence chip** (`low` / `medium` / `high`): explains that confidence reflects how many comparable anchors were found
+- **`analyzed N ago` meta**: shows the absolute completion timestamp and the actual measured cost paid for the run
+- **Stale indicator** (warning icon): explains that the description has changed since the analysis ran
+- **Failed icon**: shows the full error message
+- **Run analysis button**: shows the estimated cost range — the only place the cost surfaces visually
 
 **Run Behavior**:
-- Triggering returns immediately; the panel shows a "running" placeholder until results arrive
+- Triggering returns immediately; the panel collapses to the single-line "running" row until results arrive
 - The browser is not blocked during the run
 - Reloading the page mid-run re-attaches to the running analysis; on completion the panel updates without further user action
-- Failures display an actionable error message and a retry button; failed runs do not consume the user's hourly budget
+- Failures collapse to a single-line "Analysis failed" row with an inline retry; failed runs do not consume the user's hourly budget
 
-**Successful Analysis Display**:
-The panel renders the following fields when sufficient comparable history exists:
+**Expanded View**:
 
-- **Friction Risk**: One of `low`, `medium`, `high` with a colour-coded label (text label always present alongside colour)
+Clicking the expand toggle on a Success or Cold-start row reveals the full content underneath. All data shown in the previous full-card layout remains accessible — only its default visibility changes. Running, failed, and empty states are not expandable.
+
+**Successful Analysis — Expanded Content**:
+
+When the user expands a successful row, the panel reveals the following fields:
+
+- **Recommendation**: `QUICK` or `FULL` with confidence level and short justification text (≤ 1000 characters) referencing stack-relevant signals. The chip on the collapsed row matches the choice; confidence is its own chip.
+- **Friction Risk**: `low`, `medium`, or `high` with a colour-coded label (text label always present alongside colour). Shown as a chip on the collapsed row and described in plain language via tooltip.
 - **Expected Quality-Gate Range**: Lower–upper bounds (0–100) derived from anchor outcomes
-- **Recommendation**: Either `QUICK` or `FULL` with:
-  - Confidence level: `low`, `medium`, or `high` (text label always present alongside colour)
-  - Short justification text (≤ 1000 characters) referencing stack-relevant signals
 - **Expected Cost Range**: Decomposed into:
   - Baseline pipeline cost (lower–upper USD)
   - Marginal friction cost (lower–upper USD)
@@ -390,13 +422,13 @@ The panel renders the following fields when sufficient comparable history exists
 
 **Cold-Start Path**:
 
-When fewer than 3 comparable past outcomes are available for the analyzed ticket's predicted domain, the panel renders a qualitative-only view:
+When fewer than 3 comparable past outcomes are available for the analyzed ticket's predicted domain, the panel renders a qualitative-only view that follows the same single-line collapsed pattern:
 
-- Explicit cold-start notice naming the cause (e.g., "Not enough comparable shipped tickets in the same domain yet")
-- Scope warnings derived from the ticket text alone (still capped at 5)
+- The collapsed row shows `Cold start — not enough comparable tickets` with an expand toggle
+- Expanding the row reveals the cause text (e.g., "Not enough comparable shipped tickets in the same domain yet") and the scope warnings derived from the ticket text alone (capped at 5)
 - No numeric quality-gate or cost ranges
-- No friction-risk rating, recommendation, or anchor list
-- "Not enough data" classification activates whenever the project has 0, 1, or 2 comparable outcomes; "early data" may be noted in the text when 1 or 2 anchors exist
+- No friction-risk chip, recommendation, or anchor list — those chips only appear in the Success state
+- "Not enough data" classification activates whenever the project has 0, 1, or 2 comparable outcomes; "early data" may be noted in the expanded text when 1 or 2 anchors exist
 
 **Comparable History**:
 
@@ -414,21 +446,21 @@ A past ticket qualifies as "comparable" when all of these hold:
 - Reopening an already-analyzed ticket renders the panel instantly without invoking any LLM call
 - No background recomputation runs — neither on description changes, nor on stage transitions, nor on a schedule
 
-**Description-Changed Banner**:
+**Stale Indicator**:
 
-After an analysis has been persisted, the panel displays a banner whenever the ticket's `title + description` (whitespace-tolerant comparison) differs from the snapshot stored on the latest analysis row.
+After an analysis has been persisted, the panel marks the row as stale whenever the ticket's `title + description` (whitespace-tolerant comparison) differs from the snapshot stored on the latest analysis row. The staleness signal lives on the collapsed row itself.
 
-- Banner offers a one-click "Re-analyze" action
-- Until the user clicks, the prior analysis remains visible and labelled as the current displayed result
-- Reverting the edits to match the stored snapshot dismisses the banner automatically
-- Clicking "Re-analyze" runs the full pipeline and creates a new row; the previous row is preserved for audit
-- Comments on the ticket do not count as description changes — the banner only reacts to title or description edits
-- Banner is suppressed during an in-progress re-analyze and re-evaluates against the new snapshot afterwards
-- Banner is announced to screen readers as a live region update when it appears
+- An amber warning icon appears at the start of the success row; its tooltip explains that the description has changed since the analysis ran
+- An inline `Re-analyze` action appears on the same row whenever the ticket is triggerable
+- Until the user clicks, the prior analysis remains visible and is still the current displayed result
+- Reverting the edits to match the stored snapshot dismisses the indicator and the inline action automatically
+- Clicking `Re-analyze` runs the full pipeline and creates a new row; the previous row is preserved for audit
+- Comments on the ticket do not count as description changes — the indicator only reacts to title or description edits
+- The indicator is suppressed while a re-analysis is in progress and re-evaluates against the new snapshot afterwards
 
 **Re-analysis Behavior**:
 
-- Always user-triggered (button click or banner action)
+- Always user-triggered (the trigger button or the inline re-analyze action on a stale success row)
 - Each run produces a new row; existing rows are never overwritten
 - Concurrent runs from two browser tabs are both allowed to complete; each is its own row, the latest completion wins for display, and both count against the user's hourly budget
 - A re-analysis after the project's outcome dataset has grown above the cold-start threshold produces a non-cold-start panel on next run
@@ -442,8 +474,8 @@ After an analysis has been persisted, the panel displays a banner whenever the t
 
 **Cost Recording**:
 
-- The pre-click button label shows an estimated USD range derived from the static cost reference table
-- Each successful run records the actual measured USD cost on the persisted row, captured from the LLM provider's response, alongside duration and token telemetry
+- The trigger button surfaces the pre-click estimated USD range only on hover/focus (tooltip) and via its accessible label, never in the visible button text
+- Each successful run records the actual measured USD cost on the persisted row, captured from the LLM provider's response, alongside duration and token telemetry. The measured cost is exposed on the collapsed success row's `analyzed N ago` tooltip
 - Older rows retain their original stack snapshot for audit; a project's later stack changes do not retroactively rewrite past analyses
 
 **Stack Awareness**:
@@ -461,9 +493,11 @@ Missing optional fields are gracefully omitted without error; the bounded extrac
 
 **Accessibility**:
 
-- All colour-coded signals (friction risk, recommendation confidence) are accompanied by accessible text labels
-- The description-changed banner is announced to screen readers as a live-region update
-- Analysis button, banner action, and every anchor link are reachable and operable via keyboard
+- All colour-coded signals (recommendation, friction risk, recommendation confidence) are accompanied by accessible text labels and tooltips that describe what each value means in plain language
+- The running row carries `aria-busy="true"`; the failed row uses `role="alert"` so screen readers announce it
+- Every collapsed-row chip is focusable via keyboard so its tooltip is reachable; the expand toggle exposes `aria-expanded` and a descriptive `aria-label`
+- Analysis button, retry, inline re-analyze action, expand toggle, and every anchor link are reachable and operable via keyboard
+- The trigger button's accessible label always includes the estimated cost range, so the cost is discoverable to assistive tech even though it is not in the visible label
 - WCAG AA contrast (4.5:1) maintained across all states
 
 ### Closing the Modal
