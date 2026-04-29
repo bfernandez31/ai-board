@@ -74,7 +74,7 @@ export const queryKeys = {
   health: {
     score: (projectId: number) => ['health', projectId, 'score'] as const,
     scans: (projectId: number) => ['health', projectId, 'scans'] as const,
-    scan: (projectId: number, scanId: number) =>
+    scan: (projectId: number, scanId: number | null) =>
       ['health', projectId, 'scan', scanId] as const,
     scanHistory: (projectId: number, type?: string) =>
       type
