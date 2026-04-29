@@ -157,7 +157,15 @@ For active modules with at least one completed scan, the drawer displays an area
 
 ### History Section
 
-The History section lists previous scans for the selected module in reverse chronological order. Each entry shows the scan date, a color-coded score badge, and up to four compact metric icons for issues found (AlertTriangle), cost in USD (Coins), tokens consumed (Zap), and execution duration (Clock). Each metric icon displays a tooltip on hover explaining the metric. Icons are shown only when the corresponding data value is available; null values are hidden. History is loaded in pages of 20 with a "Load more" button at the bottom. Modules with no scan history display "No scan history."
+The History section lists previous scans for the selected module in reverse chronological order. Each entry shows the scan date, a color-coded score badge, an issue-count badge, and the execution duration. The issue-count badge uses the unified friction palette: green (low) when issues found = 0, yellow (med) when 1–2, red (high) when 3 or more. Cost and token metrics are not rendered in the row; the underlying values remain stored in the database. History is loaded in pages of 20 with a "Load more" button at the bottom. Modules with no scan history display "No scan history."
+
+**Selecting a historic scan**: Each history row is interactive. Clicking a row, or focusing it and pressing Enter or Space, replaces the report area (Issues / Recommendations / Fixes) with that scan's detailed report. The selected row is visually distinguished by a left accent border, a bolder date, and a selected-state background; assistive technologies receive `aria-pressed="true"`. The Score Trend chart does not change — it remains pinned to the full period regardless of selection.
+
+**Returning to the latest scan**: A "Latest" affordance is rendered next to the "Scan History" header. Activating it returns the report area and the selection to the most recent scan. The control is disabled when the latest scan is already the selected one. When the drawer is opened, when the user switches modules, or when the active ticket changes, the selection resets to the latest scan; selection is not persisted across reopens.
+
+**Selected historic scan with no detailed report**: When a selected historic scan has no associated report (e.g., a legacy scan that predates structured reporting), the report area shows the neutral empty state "No detailed report available for this scan" and the user can return to the latest scan via the "Latest" control without reloading. When the latest scan itself has no report, the existing legacy phrase ("Report data unavailable — scan predates structured reporting") is shown instead.
+
+**Cross-module consistency**: Clickability, selection styling, friction-colored issue counts, removed cost/token columns, and keyboard operability behave identically across every module that uses the shared scan-detail drawer (Compliance, Security, Tests, Spec Sync, Review Quality).
 
 ### Content Refresh
 
