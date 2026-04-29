@@ -1436,6 +1436,7 @@ Workflow-only endpoint that bundles the row's input snapshot, stack snapshot, an
 - `401`: Invalid token
 - `404`: Row not found
 - `410`: Row is no longer `running` (workflow ran twice; second invocation aborts cleanly)
+- `500`: `{ "error": "Failed to load analysis context" }` — database read failure while fetching the row or candidate outcomes
 
 ### Inbox Analysis Workflow Sequence
 
