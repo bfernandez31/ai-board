@@ -23,10 +23,7 @@ interface DrawerHistoryProps {
   onSelectScan?: (scanId: number | null) => void;
 }
 
-/**
- * Map an issue count to the unified badge friction level.
- * 0 → low (green, no friction); 1–2 → med (warning); 3+ → high (red).
- */
+// Friction thresholds: 0 = low, 1–2 = med, 3+ = high.
 function issuesToLevel(count: number): 'low' | 'med' | 'high' {
   if (count <= 0) return 'low';
   if (count <= 2) return 'med';
@@ -72,14 +69,12 @@ export function DrawerHistory({
     return null;
   }
 
-  const latestScan = allScans[0];
-  const latestScanId = latestScan?.id ?? null;
-  // When no explicit selection, the latest scan is the one being shown.
+  const latestScanId = allScans[0]?.id ?? null;
   const effectiveSelectedId = selectedScanId ?? latestScanId;
 
+  // Clicking the latest row toggles back to the default (no explicit selection).
   const handleSelect = (scanId: number) => {
     if (!onSelectScan) return;
-    // Clicking the latest row toggles back to "default" (no explicit selection).
     onSelectScan(scanId === latestScanId ? null : scanId);
   };
 

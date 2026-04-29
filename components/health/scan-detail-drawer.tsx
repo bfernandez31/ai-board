@@ -41,8 +41,7 @@ export function ScanDetailDrawer({
   const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
   const [prevModuleType, setPrevModuleType] = useState(moduleType);
 
-  // Reset selection when the user switches to a different module's drawer.
-  // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  // Reset selection when switching modules (React derived-state pattern).
   if (prevModuleType !== moduleType) {
     setPrevModuleType(moduleType);
     setSelectedScanId(null);
