@@ -109,10 +109,7 @@ export function InboxAnalysisPanel({
     rateLimit: { limitPerHour: 10, remaining: 10, nextResetAt: null },
   };
   const showBanner = !!latest && latest.stale && latest.status !== 'running' && triggerable;
-
-  if (isLoading && !data) {
-    return <div className="mb-6" data-testid="inbox-analysis-panel" />;
-  }
+  const showCostLabel = !!data;
 
   return (
     <div className="mb-6 space-y-3" data-testid="inbox-analysis-panel">
@@ -131,8 +128,9 @@ export function InboxAnalysisPanel({
             estimatedCostUsd={eligibility.estimatedCostUsd}
             rateLimit={eligibility.rateLimit}
             onTrigger={handleTrigger}
-            isPending={isPending}
+            isPending={isPending || (isLoading && !data)}
             busy={latest?.status === 'running'}
+            showCost={showCostLabel}
           />
         </div>
       )}

@@ -11,6 +11,7 @@ export interface InboxAnalysisButtonProps {
   onTrigger: () => void;
   isPending?: boolean;
   busy?: boolean;
+  showCost?: boolean;
 }
 
 function formatUsd(value: number): string {
@@ -34,11 +35,14 @@ export function InboxAnalysisButton({
   onTrigger,
   isPending,
   busy,
+  showCost = true,
 }: InboxAnalysisButtonProps) {
   const exhausted = rateLimit.remaining <= 0;
   const disabled = !triggerable || exhausted || !!isPending || !!busy;
   const costLabel = `${formatUsd(estimatedCostUsd.lower)}–${formatUsd(estimatedCostUsd.upper)}`;
-  const accessibleLabel = `Analyze ticket — estimated cost ${costLabel}`;
+  const accessibleLabel = showCost
+    ? `Analyze ticket — estimated cost ${costLabel}`
+    : 'Analyze ticket';
 
   const button = (
     <Button
@@ -52,9 +56,11 @@ export function InboxAnalysisButton({
     >
       <Sparkles className="h-4 w-4" aria-hidden="true" />
       <span>Analyze</span>
-      <span className="text-xs text-muted-foreground" aria-hidden="true">
-        ({costLabel})
-      </span>
+      {showCost && (
+        <span className="text-xs text-primary-foreground/70" aria-hidden="true">
+          ({costLabel})
+        </span>
+      )}
     </Button>
   );
 
