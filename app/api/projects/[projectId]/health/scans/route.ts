@@ -15,6 +15,7 @@ const scanHistorySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   cursor: z.coerce.number().int().positive().optional(),
   includeReport: z.enum(['true', 'false']).optional(),
+  scanId: z.coerce.number().int().positive().optional(),
 });
 
 export async function POST(
@@ -153,6 +154,7 @@ export async function GET(
       limit: searchParams.get('limit') || undefined,
       cursor: searchParams.get('cursor') || undefined,
       includeReport: searchParams.get('includeReport') || undefined,
+      scanId: searchParams.get('scanId') || undefined,
     });
 
     if (!parsed.success) {
@@ -162,7 +164,37 @@ export async function GET(
       );
     }
 
-    const { type, status, limit, cursor, includeReport } = parsed.data;
+    const { type, status, limit, cursor, includeReport, scanId } = parsed.data;
+
+    if (scanId !== undefined) {
+      const scan = await prisma.healthScan.findFirst({
+        where: { id: scanId, projectId },
+        select: {
+          id: true,
+          scanType: true,
+          status: true,
+          score: true,
+          issuesFound: true,
+          issuesFixed: true,
+          baseCommit: true,
+          headCommit: true,
+          durationMs: true,
+          tokensUsed: true,
+          costUsd: true,
+          errorMessage: true,
+          startedAt: true,
+          completedAt: true,
+          createdAt: true,
+          report: true,
+        },
+      });
+      return NextResponse.json({
+        scans: scan ? [scan] : [],
+        nextCursor: null,
+        hasMore: false,
+      });
+    }
+
     const shouldIncludeReport = includeReport === 'true';
 
     const where: Record<string, unknown> = { projectId };

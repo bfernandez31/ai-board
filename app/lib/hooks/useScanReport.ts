@@ -12,16 +12,24 @@ interface ScanReportResult {
   report: ScanReport | null;
 }
 
-export function useScanReport(projectId: number, moduleType: HealthModuleType | null) {
+export function useScanReport(
+  projectId: number,
+  moduleType: HealthModuleType | null,
+  scanId: number | null = null
+) {
   return useQuery({
-    queryKey: ['health', projectId, 'scan-report', moduleType],
+    queryKey: ['health', projectId, 'scan-report', moduleType, scanId],
     queryFn: async (): Promise<ScanReportResult> => {
       if (!moduleType) return { scan: null, report: null };
 
-      const response = await fetch(
-        `/api/projects/${projectId}/health/scans?type=${moduleType}&limit=1&includeReport=true`,
-        { cache: 'no-store' }
-      );
+      let url: string;
+      if (scanId !== null) {
+        url = `/api/projects/${projectId}/health/scans?scanId=${scanId}&includeReport=true`;
+      } else {
+        url = `/api/projects/${projectId}/health/scans?type=${moduleType}&limit=1&includeReport=true`;
+      }
+
+      const response = await fetch(url, { cache: 'no-store' });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

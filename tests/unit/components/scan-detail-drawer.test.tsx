@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
+import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
 import { ScanDetailDrawer } from '@/components/health/scan-detail-drawer';
 import type { HealthModuleStatus } from '@/lib/health/types';
 
@@ -8,6 +8,18 @@ import type { HealthModuleStatus } from '@/lib/health/types';
 const mockUseScanReport = vi.fn();
 vi.mock('@/app/lib/hooks/useScanReport', () => ({
   useScanReport: (...args: unknown[]) => mockUseScanReport(...args),
+}));
+
+// Mock DrawerHistory to avoid useInfiniteQuery dependency
+vi.mock('@/components/health/drawer/drawer-history', () => ({
+  DrawerHistory: ({ selectedScanId, onSelectScan }: { selectedScanId: number | null; onSelectScan: (id: number | null) => void }) => (
+    <div data-testid="drawer-history" data-selected-scan-id={selectedScanId ?? ''}>
+      <button onClick={() => onSelectScan(42)}>Select scan 42</button>
+      {selectedScanId !== null && (
+        <button onClick={() => onSelectScan(null)}>Back to latest</button>
+      )}
+    </div>
+  ),
 }));
 
 const completedStatus: HealthModuleStatus = {
@@ -208,5 +220,53 @@ describe('ScanDetailDrawer', () => {
     expect(screen.getByText(/SQL injection vulnerability/)).toBeInTheDocument();
     expect(screen.getByText('Generated Tickets')).toBeInTheDocument();
     expect(screen.getByText('AIB-123')).toBeInTheDocument();
+  });
+
+  it('passes selectedScanId as third argument to useScanReport', async () => {
+    mockUseScanReport.mockReturnValue({
+      data: { scan: completedScan, report: securityReport },
+      isLoading: false,
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ScanDetailDrawer
+        projectId={1}
+        moduleType="SECURITY"
+        moduleStatus={completedStatus}
+        isScanning={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    // Initially called with null scanId
+    expect(mockUseScanReport).toHaveBeenCalledWith(1, 'SECURITY', null);
+
+    // Simulate selecting scan 42 via DrawerHistory
+    await user.click(screen.getByText('Select scan 42'));
+    expect(mockUseScanReport).toHaveBeenCalledWith(1, 'SECURITY', 42);
+  });
+
+  it('shows "Report not available for this scan" when historical scan has null report', async () => {
+    mockUseScanReport.mockReturnValue({
+      data: { scan: completedScan, report: null },
+      isLoading: false,
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ScanDetailDrawer
+        projectId={1}
+        moduleType="SECURITY"
+        moduleStatus={completedStatus}
+        isScanning={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    // Select a historical scan
+    await user.click(screen.getByText('Select scan 42'));
+
+    expect(screen.getByText(/report not available for this scan/i)).toBeInTheDocument();
   });
 });

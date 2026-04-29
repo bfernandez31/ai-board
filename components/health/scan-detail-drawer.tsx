@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -37,8 +38,11 @@ export function ScanDetailDrawer({
   onTriggerScan,
   trendData,
 }: ScanDetailDrawerProps) {
-  const { data, isLoading } = useScanReport(projectId, moduleType);
+  const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
+  const { data: latestData } = useScanReport(projectId, moduleType, null);
+  const { data, isLoading } = useScanReport(projectId, moduleType, selectedScanId);
   const isOpen = moduleType !== null;
+  const latestScanId = latestData?.scan?.id ?? null;
 
   const moduleMeta = moduleType ? MODULE_METADATA[moduleType] : null;
 
@@ -122,7 +126,7 @@ export function ScanDetailDrawer({
               </>
             )}
 
-            {hasCompletedScan && !hasReport && (
+            {hasCompletedScan && !hasReport && selectedScanId === null && (
               <div className="text-center py-4">
                 <p className="text-xs text-muted-foreground">
                   Report data unavailable — scan predates structured reporting
@@ -130,8 +134,22 @@ export function ScanDetailDrawer({
               </div>
             )}
 
+            {selectedScanId !== null && !isLoading && data?.scan?.status === 'COMPLETED' && !data?.report && (
+              <div className="text-center py-4">
+                <p className="text-xs text-muted-foreground">
+                  Report not available for this scan
+                </p>
+              </div>
+            )}
+
             {!isLoading && (
-              <DrawerHistory projectId={projectId} moduleType={moduleType} />
+              <DrawerHistory
+                projectId={projectId}
+                moduleType={moduleType}
+                selectedScanId={selectedScanId}
+                latestScanId={latestScanId}
+                onSelectScan={setSelectedScanId}
+              />
             )}
           </div>
         )}

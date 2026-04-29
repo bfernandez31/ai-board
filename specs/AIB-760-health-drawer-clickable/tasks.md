@@ -18,8 +18,8 @@
 
 **Purpose**: No new dependencies, no schema changes. This phase handles the shared backend and data-layer enhancements that multiple user stories depend on.
 
-- [ ] T001 [P] Add optional `scanId` query parameter to scan history API endpoint in `app/api/projects/[projectId]/health/scans/route.ts` — add `scanId: z.coerce.number().int().positive().optional()` to `scanHistorySchema`, implement conditional single-scan fetch with report when `scanId` is present (return `{ scans: [result], nextCursor: null, hasMore: false }`), preserve existing pagination behavior when absent
-- [ ] T002 [P] Extend `useScanReport` hook in `app/lib/hooks/useScanReport.ts` — add optional third parameter `scanId: number | null = null`, include `scanId` in query key `['health', projectId, 'scan-report', moduleType, scanId]`, append `&scanId=${scanId}` to fetch URL when provided, keep existing latest-scan behavior when null
+- [x] T001 [P] Add optional `scanId` query parameter to scan history API endpoint in `app/api/projects/[projectId]/health/scans/route.ts` — add `scanId: z.coerce.number().int().positive().optional()` to `scanHistorySchema`, implement conditional single-scan fetch with report when `scanId` is present (return `{ scans: [result], nextCursor: null, hasMore: false }`), preserve existing pagination behavior when absent
+- [x] T002 [P] Extend `useScanReport` hook in `app/lib/hooks/useScanReport.ts` — add optional third parameter `scanId: number | null = null`, include `scanId` in query key `['health', projectId, 'scan-report', moduleType, scanId]`, append `&scanId=${scanId}` to fetch URL when provided, keep existing latest-scan behavior when null
 
 **Checkpoint**: API and data layer ready — user story implementation can begin
 
@@ -34,13 +34,13 @@
 ### Tests for User Story 1
 **RULE: Extend existing test files where they cover the domain; create new files only when no existing file covers it.**
 
-- [ ] T003 [P] [US1] Create `tests/unit/components/drawer-history.test.tsx` — no existing test file for DrawerHistory component. Tests for row interactivity: clicking a row calls `onSelectScan` with scan ID; selected row has `aria-pressed="true"` and ring/bg-primary classes; "Back to latest" button visible when non-latest scan selected; "Back to latest" hidden when latest is active; clicking "Back to latest" calls `onSelectScan(null)`. Mock `useInfiniteQuery`, use `renderWithProviders` + `userEvent`.
-- [ ] T004 [P] [US1] Extend `tests/unit/components/scan-detail-drawer.test.tsx` — add tests: passes `selectedScanId` to `useScanReport` hook (verify third argument); shows "Report not available for this scan" when historical scan has null report and `selectedScanId` is set. Extend existing `mockUseScanReport` mock to verify `scanId` argument.
+- [x] T003 [P] [US1] Create `tests/unit/components/drawer-history.test.tsx` — no existing test file for DrawerHistory component. Tests for row interactivity: clicking a row calls `onSelectScan` with scan ID; selected row has `aria-pressed="true"` and ring/bg-primary classes; "Back to latest" button visible when non-latest scan selected; "Back to latest" hidden when latest is active; clicking "Back to latest" calls `onSelectScan(null)`. Mock `useInfiniteQuery`, use `renderWithProviders` + `userEvent`.
+- [x] T004 [P] [US1] Extend `tests/unit/components/scan-detail-drawer.test.tsx` — add tests: passes `selectedScanId` to `useScanReport` hook (verify third argument); shows "Report not available for this scan" when historical scan has null report and `selectedScanId` is set. Extend existing `mockUseScanReport` mock to verify `scanId` argument.
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Add `selectedScanId` state and orchestration wiring in `components/health/scan-detail-drawer.tsx` — add `const [selectedScanId, setSelectedScanId] = useState<number | null>(null)`; pass `selectedScanId` to `useScanReport(projectId, moduleType, selectedScanId)`; derive `latestScanId` from initial hook result; pass `selectedScanId`, `latestScanId`, and `onSelectScan={setSelectedScanId}` to `DrawerHistory`; show "Report not available for this scan" when `selectedScanId` is set and report is null (FR-012)
-- [ ] T006 [US1] Make DrawerHistory rows interactive in `components/health/drawer/drawer-history.tsx` — extend `DrawerHistoryProps` with `selectedScanId: number | null`, `latestScanId: number | null`, `onSelectScan: (scanId: number | null) => void`; transform `HistoryEntry` from passive `<div>` to interactive element with `role="button"`, `tabIndex={0}`, `aria-pressed={isSelected}`, `onClick`, `cursor-pointer`; add selected state visual (`ring-2 ring-primary/50 bg-primary/5`) when `scan.id === selectedScanId` (FR-003); add "Back to latest" `<Button variant="ghost" size="sm">` above history list when `selectedScanId !== null && selectedScanId !== latestScanId` (FR-004, FR-005)
+- [x] T005 [US1] Add `selectedScanId` state and orchestration wiring in `components/health/scan-detail-drawer.tsx` — add `const [selectedScanId, setSelectedScanId] = useState<number | null>(null)`; pass `selectedScanId` to `useScanReport(projectId, moduleType, selectedScanId)`; derive `latestScanId` from initial hook result; pass `selectedScanId`, `latestScanId`, and `onSelectScan={setSelectedScanId}` to `DrawerHistory`; show "Report not available for this scan" when `selectedScanId` is set and report is null (FR-012)
+- [x] T006 [US1] Make DrawerHistory rows interactive in `components/health/drawer/drawer-history.tsx` — extend `DrawerHistoryProps` with `selectedScanId: number | null`, `latestScanId: number | null`, `onSelectScan: (scanId: number | null) => void`; transform `HistoryEntry` from passive `<div>` to interactive element with `role="button"`, `tabIndex={0}`, `aria-pressed={isSelected}`, `onClick`, `cursor-pointer`; add selected state visual (`ring-2 ring-primary/50 bg-primary/5`) when `scan.id === selectedScanId` (FR-003); add "Back to latest" `<Button variant="ghost" size="sm">` above history list when `selectedScanId !== null && selectedScanId !== latestScanId` (FR-004, FR-005)
 
 **Checkpoint**: Users can click scan rows to view historical reports and return to latest — core feature complete
 
@@ -54,11 +54,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T007 [P] [US2] Extend `tests/unit/components/drawer-history.test.tsx` — add tests: issue count badge shows green (`level="low"`) for 0 issues; yellow (`level="med"`) for 1-2 issues; red (`level="high"`) for 3+ issues; null `issuesFound` treated as 0 (green); badge uses `kind="friction"` (not hardcoded colors) (FR-008)
+- [x] T007 [P] [US2] Extend `tests/unit/components/drawer-history.test.tsx` — add tests: issue count badge shows green (`level="low"`) for 0 issues; yellow (`level="med"`) for 1-2 issues; red (`level="high"`) for 3+ issues; null `issuesFound` treated as 0 (green); badge uses `kind="friction"` (not hardcoded colors) (FR-008)
 
 ### Implementation for User Story 2
 
-- [ ] T008 [US2] Add `getIssueCountLevel` helper and friction badge rendering in `components/health/drawer/drawer-history.tsx` — add inline `getIssueCountLevel(issuesFound: number | null): 'low' | 'med' | 'high'` function (0→low, 1-2→med, 3+→high, null→0); replace plain `<span>` issue count display with `<Badge variant="attribute" kind="friction" level={getIssueCountLevel(scan.issuesFound)}>{scan.issuesFound ?? 0}</Badge>`; import `Badge` from `components/ui/badge`
+- [x] T008 [US2] Add `getIssueCountLevel` helper and friction badge rendering in `components/health/drawer/drawer-history.tsx` — add inline `getIssueCountLevel(issuesFound: number | null): 'low' | 'med' | 'high'` function (0→low, 1-2→med, 3+→high, null→0); replace plain `<span>` issue count display with `<Badge variant="attribute" kind="friction" level={getIssueCountLevel(scan.issuesFound)}>{scan.issuesFound ?? 0}</Badge>`; import `Badge` from `components/ui/badge`
 
 **Checkpoint**: Issue counts are color-coded across all module types
 
@@ -72,11 +72,11 @@
 
 ### Tests for User Story 3
 
-- [ ] T009 [P] [US3] Extend `tests/unit/components/drawer-history.test.tsx` — add tests: scan history rows do NOT render cost values (no coin icon, no "$X.XX"); scan history rows do NOT render token values (no zap icon, no token count); remaining columns (date, commit range, issue count, duration, score) are all present
+- [x] T009 [P] [US3] Extend `tests/unit/components/drawer-history.test.tsx` — add tests: scan history rows do NOT render cost values (no coin icon, no "$X.XX"); scan history rows do NOT render token values (no zap icon, no token count); remaining columns (date, commit range, issue count, duration, score) are all present
 
 ### Implementation for User Story 3
 
-- [ ] T010 [US3] Remove cost/token display from `components/health/drawer/drawer-history.tsx` — delete `costUsd` and `tokensUsed` tooltip blocks (around lines 115-136); remove `Coins` and `Zap` icon imports from lucide-react; remove `formatCost` and `formatTokens` imports from `lib/health/format`
+- [x] T010 [US3] Remove cost/token display from `components/health/drawer/drawer-history.tsx` — delete `costUsd` and `tokensUsed` tooltip blocks (around lines 115-136); remove `Coins` and `Zap` icon imports from lucide-react; remove `formatCost` and `formatTokens` imports from `lib/health/format`
 
 **Checkpoint**: Scan history rows show only relevant metrics — no misleading zero-value telemetry
 
@@ -90,11 +90,11 @@
 
 ### Tests for User Story 4
 
-- [ ] T011 [P] [US4] Extend `tests/unit/components/drawer-history.test.tsx` — add tests: pressing Enter on focused row calls `onSelectScan` with scan ID; pressing Space on focused row calls `onSelectScan` with scan ID; rows are focusable via Tab (`tabIndex={0}`); focused row shows visible focus ring classes
+- [x] T011 [P] [US4] Extend `tests/unit/components/drawer-history.test.tsx` — add tests: pressing Enter on focused row calls `onSelectScan` with scan ID; pressing Space on focused row calls `onSelectScan` with scan ID; rows are focusable via Tab (`tabIndex={0}`); focused row shows visible focus ring classes
 
 ### Implementation for User Story 4
 
-- [ ] T012 [US4] Add keyboard event handling and focus styles in `components/health/drawer/drawer-history.tsx` — add `onKeyDown` handler for Enter and Space keys (call `onSelectScan(scan.id)` and `e.preventDefault()` for Space to prevent scroll); add `focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none` classes to each row element (FR-010, WCAG 2.1 SC 2.4.7)
+- [x] T012 [US4] Add keyboard event handling and focus styles in `components/health/drawer/drawer-history.tsx` — add `onKeyDown` handler for Enter and Space keys (call `onSelectScan(scan.id)` and `e.preventDefault()` for Space to prevent scroll); add `focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none` classes to each row element (FR-010, WCAG 2.1 SC 2.4.7)
 
 **Checkpoint**: Full keyboard accessibility for scan history navigation
 
@@ -104,9 +104,9 @@
 
 **Purpose**: Verification and final consistency checks
 
-- [ ] T013 Verify score trend chart independence in `components/health/drawer/score-trend-chart.tsx` — confirm no accidental coupling to `selectedScanId`; the chart receives `trendData` from parent which is independent of scan selection (FR-006). No code changes expected — verification only.
-- [ ] T014 Run `bun run type-check` and `bun run lint` to verify all changes pass static analysis
-- [ ] T015 Run `bun run test:unit tests/unit/components/drawer-history.test.tsx tests/unit/components/scan-detail-drawer.test.tsx` to verify all new and extended tests pass
+- [x] T013 Verify score trend chart independence in `components/health/drawer/score-trend-chart.tsx` — confirm no accidental coupling to `selectedScanId`; the chart receives `trendData` from parent which is independent of scan selection (FR-006). No code changes expected — verification only.
+- [x] T014 Run `bun run type-check` and `bun run lint` to verify all changes pass static analysis
+- [x] T015 Run `bun run test:unit tests/unit/components/drawer-history.test.tsx tests/unit/components/scan-detail-drawer.test.tsx` to verify all new and extended tests pass
 
 ---
 
