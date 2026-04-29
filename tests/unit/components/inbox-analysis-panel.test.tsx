@@ -292,6 +292,81 @@ describe('InboxAnalysisPanel', () => {
     expect(screen.getByTestId('analysis-failed-icon')).toBeInTheDocument();
   });
 
+  it('renders failed branch without retry button when not triggerable', async () => {
+    mockFetchOnce({
+      latest: {
+        id: 6,
+        ticketId: TICKET_ID,
+        projectId: PROJECT_ID,
+        userId: 'u1',
+        status: 'failed',
+        ruleSetVersion: 1,
+        agent: 'CLAUDE',
+        modelId: null,
+        startedAt: new Date().toISOString(),
+        endedAt: new Date().toISOString(),
+        titleSnapshot: 'T',
+        descriptionSnapshot: 'D',
+        stackSnapshot: null,
+        telemetry: { costUsd: null, durationMs: null, inputTokens: null, outputTokens: null, thinkingTokens: null, cacheReadTokens: null },
+        coldStartReason: null,
+        errorReason: 'grounded_pass_failed',
+        errorMessage: 'LLM error',
+        output: null,
+        stale: false,
+      },
+      eligibility: { ...emptyEligibility(), triggerable: false },
+    });
+    renderWithProviders(
+      <InboxAnalysisPanel projectId={PROJECT_ID} ticketId={TICKET_ID} triggerable={false} />
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId('analysis-failed-row')).toBeInTheDocument();
+    });
+    // Warning icon and "Analysis failed" label still render (error tooltip remains accessible)…
+    expect(screen.getByTestId('analysis-failed-icon')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/Analysis failed/i);
+    // …but the inline retry action is hidden because the ticket is no longer triggerable.
+    expect(screen.queryByTestId('analysis-retry')).not.toBeInTheDocument();
+  });
+
+  it('disables retry on the failed row when the hourly rate limit is exhausted', async () => {
+    mockFetchOnce({
+      latest: {
+        id: 8,
+        ticketId: TICKET_ID,
+        projectId: PROJECT_ID,
+        userId: 'u1',
+        status: 'failed',
+        ruleSetVersion: 1,
+        agent: 'CLAUDE',
+        modelId: null,
+        startedAt: new Date().toISOString(),
+        endedAt: new Date().toISOString(),
+        titleSnapshot: 'T',
+        descriptionSnapshot: 'D',
+        stackSnapshot: null,
+        telemetry: { costUsd: null, durationMs: null, inputTokens: null, outputTokens: null, thinkingTokens: null, cacheReadTokens: null },
+        coldStartReason: null,
+        errorReason: 'grounded_pass_failed',
+        errorMessage: 'LLM error',
+        output: null,
+        stale: false,
+      },
+      eligibility: {
+        ...emptyEligibility(),
+        rateLimit: { limitPerHour: 10, remaining: 0, nextResetAt: '2026-01-01T01:00:00Z' },
+      },
+    });
+    renderWithProviders(
+      <InboxAnalysisPanel projectId={PROJECT_ID} ticketId={TICKET_ID} triggerable={true} />
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId('analysis-retry')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('analysis-retry')).toBeDisabled();
+  });
+
   it('hides trigger when not triggerable but still renders the persisted analysis row', async () => {
     mockFetchOnce({
       latest: {

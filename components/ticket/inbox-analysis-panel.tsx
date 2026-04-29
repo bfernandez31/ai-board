@@ -184,7 +184,8 @@ export function InboxAnalysisPanel({
     rateLimit: { limitPerHour: 10, remaining: 10, nextResetAt: null },
   };
   const showCostLabel = !!data;
-  const stale = !!latest?.stale && latest.status !== 'running' && triggerable;
+  const stale = !!latest?.stale && latest.status !== 'running';
+  const rateLimitExhausted = eligibility.rateLimit.remaining <= 0;
 
   if (!latest) {
     if (!triggerable) {
@@ -244,17 +245,16 @@ export function InboxAnalysisPanel({
             </ChipTooltip>
             <span className="text-foreground">Analysis failed</span>
             {triggerable && (
-              <Button
-                size="sm"
-                variant="ghost"
+              <RateLimitedTriggerButton
                 onClick={handleTrigger}
                 disabled={isPending}
-                data-testid="analysis-retry"
-                aria-label="Retry analysis"
-                className="h-7 gap-1.5 px-2 text-xs"
-              >
-                <RefreshCw className="h-3 w-3" aria-hidden="true" /> Retry
-              </Button>
+                rateLimit={eligibility.rateLimit}
+                exhausted={rateLimitExhausted}
+                testId="analysis-retry"
+                ariaLabel="Retry analysis"
+                icon={<RefreshCw className="h-3 w-3" aria-hidden="true" />}
+                label="Retry"
+              />
             )}
           </div>
         )}
@@ -315,6 +315,8 @@ export function InboxAnalysisPanel({
                 triggerable={triggerable}
                 onReanalyze={handleTrigger}
                 isPending={isPending}
+                rateLimit={eligibility.rateLimit}
+                rateLimitExhausted={rateLimitExhausted}
               />
             }
           >
@@ -366,18 +368,84 @@ function CollapsibleRow({
   );
 }
 
+function formatResetTime(iso: string | null): string {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return iso;
+  }
+}
+
+function RateLimitedTriggerButton({
+  onClick,
+  disabled,
+  rateLimit,
+  exhausted,
+  testId,
+  ariaLabel,
+  icon,
+  label,
+  className,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  rateLimit: { remaining: number; nextResetAt: string | null };
+  exhausted: boolean;
+  testId: string;
+  ariaLabel: string;
+  icon: React.ReactNode;
+  label: string;
+  className?: string;
+}) {
+  const button = (
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={onClick}
+      disabled={disabled || exhausted}
+      data-testid={testId}
+      aria-label={ariaLabel}
+      className={`h-7 gap-1.5 px-2 text-xs${className ? ` ${className}` : ''}`}
+    >
+      {icon} {label}
+    </Button>
+  );
+
+  if (exhausted) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={className}>{button}</span>
+        </TooltipTrigger>
+        <TooltipContent>
+          {rateLimit.nextResetAt
+            ? `Hourly budget exhausted. Capacity returns at ${formatResetTime(rateLimit.nextResetAt)}.`
+            : 'Hourly budget exhausted. Try again later.'}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return button;
+}
+
 function SuccessRow({
   latest,
   stale,
   triggerable,
   onReanalyze,
   isPending,
+  rateLimit,
+  rateLimitExhausted,
 }: {
   latest: SerializedAnalysisDTO & { output: SuccessOutput };
   stale: boolean;
   triggerable: boolean;
   onReanalyze: () => void;
   isPending: boolean;
+  rateLimit: { remaining: number; nextResetAt: string | null };
+  rateLimitExhausted: boolean;
 }) {
   const { recommendation, frictionRisk } = latest.output;
   const endedAt = latest.endedAt;
@@ -455,18 +523,17 @@ function SuccessRow({
       )}
 
       {stale && triggerable && (
-        <Button
-          size="sm"
-          variant="ghost"
+        <RateLimitedTriggerButton
           onClick={onReanalyze}
           disabled={isPending}
-          data-testid="reanalyze-button"
-          aria-label="Re-analyze ticket"
-          className="ml-auto h-7 gap-1.5 px-2 text-xs"
-        >
-          <RefreshCcw className="h-3 w-3" aria-hidden="true" />
-          Re-analyze
-        </Button>
+          rateLimit={rateLimit}
+          exhausted={rateLimitExhausted}
+          testId="reanalyze-button"
+          ariaLabel="Re-analyze ticket"
+          icon={<RefreshCcw className="h-3 w-3" aria-hidden="true" />}
+          label="Re-analyze"
+          className="ml-auto"
+        />
       )}
     </div>
   );
