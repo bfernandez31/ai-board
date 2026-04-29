@@ -995,7 +995,7 @@ Timestamps display in user-friendly formats:
   - Set once during first BUILD transition
   - Immutable after being set
   - Visual badges distinguish workflow types on ticket cards:
-    - QUICK: ⚡ Quick badge (amber styling)
+    - QUICK: ⚡ Quick label in mauve (compact `attribute-tc` variant — text + lightning icon, no background)
 
 ### Optional Configuration
 

@@ -289,9 +289,15 @@ A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion it
 
 ### Ticket Card Badges
 
+**Ticket Key**:
+- Rendered as monospaced text in the form `#AIB-123` — no background, no border
+- `#` and the numeric portion use the mauve color (`--ctp-mauve`); the `AIB-` project prefix uses the muted overlay color (`--ctp-overlay-0`)
+- Font weights: `#` 700, prefix 400, number 600 (12px, letter-spacing 0.08em)
+- This compact treatment intentionally replaces the previous boxed badge: the ticket key is an identifier, not a tag
+
 **Workflow Type Badges**:
-- QUICK: ⚡ Quick badge with amber background (amber-100/amber-900 dark)
-- CLEAN: ✨ Clean badge with sparkles icon and purple background (purple-100/purple-900 dark)
+- QUICK: ⚡ Quick label in mauve using the compact `attribute-tc` variant — text + lightning icon, no background, no border
+- CLEAN: ✨ Clean badge with sparkles icon (legacy only — `CLEAN` is retained in the enum for historical tickets and is no longer assignable)
 - FULL: No workflow type badge displayed
 
 **Agent Badge**:
