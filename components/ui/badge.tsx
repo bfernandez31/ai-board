@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
+import { Zap } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -32,7 +33,13 @@ import { cn } from '@/lib/utils';
  *
  *  - `ticket`      → Ticket ID (AIB-123). Mono, mauve teinté.
  *
- *  - `count`       → Pastille numérique (workflow column count).
+ *  - `count`       → Pastille numérique soft tinted (workflow column count,
+ *                    ambiant). Pour une notif isolée attention-grabbing,
+ *                    voir `count-notification`.
+ *
+ *  - `count-notification` → Pastille aurora plein. Notif unread count sur
+ *                    une cloche, pour attirer l'œil. UN par contexte de
+ *                    notification.
  *
  *  - `attribute`   → ★ Variante CRITIQUE pour tags qualifiants
  *                    (FULL/QUICK, friction, confidence, quality). La couleur
@@ -44,9 +51,15 @@ import { cn } from '@/lib/utils';
  *                        best=green — pour les scores 0-100 où on veut
  *                        distinguer "passing avec marge" (best ≥90) de
  *                        "passing tout juste" (high 70-89).
- *                      - scope: binary FULL/QUICK
+ *                      - scope: binary FULL/QUICK (FULL=blue posé,
+ *                        QUICK=mauve énergique avec icône éclair auto).
  *                    C'est ce qui remplace les tags violets aléatoires
  *                    illisibles.
+ *
+ *  - `attribute-tc` → Version compacte de `attribute` pour ticket cards
+ *                    (kanban). Pas de fond, pas de bordure, juste la couleur
+ *                    de texte sémantique + icône optionnelle. Mêmes kinds
+ *                    et levels que `attribute`.
  *
  * ---------------------------------------------------------------------------
  * PRÉREQUIS : `badge-styles.css` doit être intégré dans app/globals.css.
@@ -56,16 +69,18 @@ import { cn } from '@/lib/utils';
 const badgeVariants = cva('ab-badge', {
   variants: {
     variant: {
-      default:     'ab-badge-default',
-      secondary:   'ab-badge-secondary',
-      destructive: 'ab-badge-destructive',
-      outline:     'ab-badge-outline',
-      stage:       'ab-badge-stage',
-      status:      'ab-badge-status',
-      promo:       'ab-badge-promo',
-      ticket:      'ab-badge-ticket',
-      count:       'ab-badge-count',
-      attribute:   'ab-badge-attr',
+      default:              'ab-badge-default',
+      secondary:            'ab-badge-secondary',
+      destructive:          'ab-badge-destructive',
+      outline:              'ab-badge-outline',
+      stage:                'ab-badge-stage',
+      status:               'ab-badge-status',
+      promo:                'ab-badge-promo',
+      ticket:               'ab-badge-ticket',
+      count:                'ab-badge-count',
+      'count-notification': 'ab-badge-count-notification',
+      attribute:            'ab-badge-attr',
+      'attribute-tc':       'ab-badge-attr-tc',
     },
   },
   defaultVariants: { variant: 'default' },
@@ -145,16 +160,20 @@ const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
     if (variant === 'stage' && stage)   classes.push(STAGE_CLASS[stage]);
     if (variant === 'status' && status) classes.push(STATUS_CLASS[status]);
 
-    if (variant === 'attribute') {
+    const isAttribute = variant === 'attribute' || variant === 'attribute-tc';
+    if (isAttribute) {
       if (kind === 'confidence' && level) classes.push(LEVEL_CONFIDENCE_CLASS[level]);
       else if (kind === 'quality' && level) classes.push(LEVEL_QUALITY_CLASS[level]);
       else if (kind === 'scope' && scope) classes.push('ab-attr-scope', LEVEL_SCOPE_CLASS[scope]);
       else if (level)                     classes.push(LEVEL_FRICTION_CLASS[level]); // friction = default
     }
 
+    const showQuickIcon = isAttribute && kind === 'scope' && scope === 'quick';
+
     return (
       <span ref={ref} className={cn(...classes, className)} {...props}>
         {variant === 'status' && <span className="ab-dot" aria-hidden="true" />}
+        {showQuickIcon && <Zap className="ab-scope-icon" aria-hidden="true" />}
         {children}
       </span>
     );

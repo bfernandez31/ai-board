@@ -27,7 +27,7 @@ export function NotificationBell() {
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge
-              variant="count"
+              variant="count-notification"
               className="absolute -top-1 -right-1"
               data-testid="notification-badge"
             >

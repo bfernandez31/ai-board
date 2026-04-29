@@ -304,7 +304,7 @@
     text-transform: uppercase;
   }
 
-  /* ---------- COUNT — Pastille numérique (workflow column count) ---------- */
+  /* ---------- COUNT — Pastille numérique soft tinted (ambiant) ---------- */
   .ab-badge-count {
     background: hsl(var(--ctp-mauve) / 0.15);
     color: hsl(var(--ctp-lavender));
@@ -315,6 +315,28 @@
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     box-shadow: none;
+  }
+
+  /* ---------- COUNT-NOTIFICATION — Aurora plein, attention-grabbing ---------- */
+  .ab-badge-count-notification {
+    background: linear-gradient(135deg,
+      hsl(var(--ctp-mauve)) 0%,
+      hsl(var(--primary))   55%,
+      hsl(var(--ctp-blue))  100%);
+    color: #fff;
+    border-color: transparent;
+    min-width: 20px;
+    height: 20px;
+    justify-content: center;
+    padding: 0 6px;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 10.5px;
+    font-weight: 700;
+    border-radius: 7px;
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.22),
+      0 2px 8px hsl(var(--primary) / 0.35);
   }
 
   /* =============================================================================
@@ -369,9 +391,51 @@
   .ab-level-quality-high { --attr-h: var(--ctp-blue);   --attr-on: 217 92% 76%; }
   .ab-level-quality-best { --attr-h: var(--ctp-green);  --attr-on: 115 54% 76%; }
 
-  /* Scope binaire — neutral tonal pair */
-  .ab-level-scope-full  { --attr-h: var(--ctp-mauve); --attr-on: 267 84% 81%; }
-  .ab-level-scope-quick { --attr-h: var(--ctp-blue);  --attr-on: 217 92% 76%; }
+  /* Scope binaire — FULL=blue (posé), QUICK=mauve (énergique).
+     QUICK reçoit aussi une icône éclair via `<Zap>` injecté par badge.tsx. */
+  .ab-level-scope-full  { --attr-h: var(--ctp-blue);  --attr-on: 217 92% 76%; }
+  .ab-level-scope-quick { --attr-h: var(--ctp-mauve); --attr-on: 267 84% 81%; }
+
+  /* Icône éclair pour QUICK — réutilise --attr-h pour rester sémantique */
+  .ab-scope-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    color: hsl(var(--attr-h));
+    filter: drop-shadow(0 0 3px hsl(var(--attr-h) / 0.5));
+  }
+
+  /* =============================================================================
+     ATTRIBUTE-TC — Variante compacte pour ticket cards (kanban)
+     =============================================================================
+     Pas de fond, pas de bordure, pas de dot. Juste la couleur de texte
+     sémantique + icône optionnelle. Réutilise les rampes --attr-h / --attr-on
+     définies plus haut (low/med/high/best, conf-*, quality-*, scope-*).
+     ============================================================================= */
+  .ab-badge-attr-tc {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: hsl(var(--attr-on));
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    padding: 0;
+    height: auto;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .ab-badge-attr-tc.ab-attr-scope {
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-size: 10px;
+  }
+  .ab-badge-attr-tc::before { display: none; }
 }
 
 @layer utilities {

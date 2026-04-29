@@ -1,10 +1,13 @@
 'use client';
 
+import type * as React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { getScoreThreshold, getScoreLevel } from '@/lib/quality-score';
 
 interface QualityScoreBadgeProps {
   score: number | null;
+  /** When true, render as the compact ticket-card variant (no bg/border, just colored text). */
+  compact?: boolean;
 }
 
 /**
@@ -13,8 +16,11 @@ interface QualityScoreBadgeProps {
  *   Good (70-89)    → high (blue)
  *   Fair (50-69)    → med  (yellow)
  *   Poor (0-49)     → low  (red)
+ *
+ * Use `compact` for ticket cards / kanban density. Default renders the
+ * full-block attribute badge with dot + border.
  */
-export function QualityScoreBadge({ score }: QualityScoreBadgeProps) {
+export function QualityScoreBadge({ score, compact = false }: QualityScoreBadgeProps): React.ReactElement | null {
   if (score == null) return null;
 
   const threshold = getScoreThreshold(score);
@@ -23,7 +29,7 @@ export function QualityScoreBadge({ score }: QualityScoreBadgeProps) {
 
   return (
     <Badge
-      variant="attribute"
+      variant={compact ? 'attribute-tc' : 'attribute'}
       kind="quality"
       level={level}
       className="shrink-0"

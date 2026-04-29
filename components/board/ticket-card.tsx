@@ -176,15 +176,15 @@ export const TicketCard = React.memo(
           <div className="flex items-start justify-between mb-3">
             <Badge variant="ticket">{ticket.ticketKey}</Badge>
             <div className="flex items-center gap-2">
-              <QualityScoreBadge score={qualityScore ?? null} />
+              <QualityScoreBadge score={qualityScore ?? null} compact />
               {ticket.workflowType === 'QUICK' && (
                 <Badge
-                  variant="attribute"
+                  variant="attribute-tc"
                   kind="scope"
                   scope="quick"
                   className="shrink-0"
                 >
-                  Quick
+                  QUICK
                 </Badge>
               )}
               {ticket.workflowType === 'CLEAN' && (
