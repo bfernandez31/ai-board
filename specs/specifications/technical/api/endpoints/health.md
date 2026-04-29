@@ -161,6 +161,7 @@ Returns paginated scan history for a project.
 - `limit` (optional): integer 1–100, default 20
 - `cursor` (optional): scan ID for cursor-based pagination
 - `includeReport` (optional): `"true"` — include the `report` JSON string in each scan object (omitted by default for performance)
+- `scanId` (optional): positive integer — when provided, returns only that single scan (with report included); pagination params are ignored; returns `{ scans: [], nextCursor: null, hasMore: false }` if the scan is not found or does not belong to the project
 
 **Response** (200 OK):
 ```json

@@ -134,7 +134,7 @@ The drawer renders content appropriate to the module's current state:
 
 ### Issues Section (Completed Scans)
 
-Issues from the latest scan are displayed in groups according to the module's grouping strategy:
+Issues are displayed in groups according to the module's grouping strategy. By default the latest scan's report is shown. When the user selects a historical scan row in the History section, the issues panel immediately updates to display that scan's persisted report without a page reload. If the selected historical scan has no persisted report, the panel shows "Report not available for this scan" instead of an empty or error state.
 
 | Module | Grouping |
 |--------|---------|
@@ -157,7 +157,13 @@ For active modules with at least one completed scan, the drawer displays an area
 
 ### History Section
 
-The History section lists previous scans for the selected module in reverse chronological order. Each entry shows the scan date, a color-coded score badge, and up to four compact metric icons for issues found (AlertTriangle), cost in USD (Coins), tokens consumed (Zap), and execution duration (Clock). Each metric icon displays a tooltip on hover explaining the metric. Icons are shown only when the corresponding data value is available; null values are hidden. History is loaded in pages of 20 with a "Load more" button at the bottom. Modules with no scan history display "No scan history."
+The History section lists previous scans for the selected module in reverse chronological order. Each row is interactive: clicking it (or pressing Enter/Space when focused) selects that scan, causing the issues panel to update to that scan's persisted report. The currently selected row is visually distinguished by a background and border treatment that is distinct from both the unselected and hover states. When a historical (non-latest) scan is selected, a "Back to latest" control appears above the list; activating it restores the latest scan's report and clears the selection. "Back to latest" is hidden when the latest scan is already active (the default state). The selection resets when the drawer is closed and reopened.
+
+All rows are keyboard-accessible: Tab moves focus between rows with a visible focus ring; Enter and Space activate the focused row.
+
+Each row shows: scan date, commit range, issue count, execution duration, and score. The issue count is color-coded using the friction badge system — green (0 issues), yellow (1–2 issues), red (3 or more issues) — uniformly across all module types. Null or missing issue counts are treated as 0 (green).
+
+History is loaded in pages of 20 with a "Load more" button at the bottom. Modules with no scan history display "No scan history."
 
 ### Content Refresh
 
