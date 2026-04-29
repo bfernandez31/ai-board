@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -15,6 +16,7 @@ import { DrawerStates } from './drawer/drawer-states';
 import { ScoreTrendChart } from './drawer/score-trend-chart';
 import { Button } from '@/components/ui/button';
 import { useScanReport } from '@/app/lib/hooks/useScanReport';
+import { useScanById } from '@/app/lib/hooks/useScanById';
 import { MODULE_METADATA } from '@/lib/health/types';
 import type { HealthModuleType, HealthModuleStatus, TrendDataPoint } from '@/lib/health/types';
 
@@ -37,22 +39,37 @@ export function ScanDetailDrawer({
   onTriggerScan,
   trendData,
 }: ScanDetailDrawerProps) {
-  const { data, isLoading } = useScanReport(projectId, moduleType);
-  const isOpen = moduleType !== null;
+  const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
+  // FR-004: reset selection whenever the active module changes (the React-recommended
+  // "adjust state during render when a prop changes" pattern — avoids the cascading
+  // render an effect-based reset would trigger).
+  const [prevModuleType, setPrevModuleType] = useState<HealthModuleType | null>(moduleType);
+  if (prevModuleType !== moduleType) {
+    setPrevModuleType(moduleType);
+    setSelectedScanId(null);
+  }
 
+  const { data: latestData, isLoading } = useScanReport(projectId, moduleType);
+  const { data: selectedData } = useScanById(projectId, moduleType, selectedScanId);
+
+  const isOpen = moduleType !== null;
   const moduleMeta = moduleType ? MODULE_METADATA[moduleType] : null;
 
-  // Determine if we have a completed scan with report data
-  const hasCompletedScan = !isLoading && data?.scan?.status === 'COMPLETED';
-  const hasReport = hasCompletedScan && data?.report !== null;
-  const isSkipped = !isLoading && data?.scan?.status === 'SKIPPED';
+  const displayedScan =
+    selectedScanId === null ? latestData?.scan ?? null : selectedData?.scan ?? null;
+  const displayedReport =
+    selectedScanId === null ? latestData?.report ?? null : selectedData?.report ?? null;
+  const latestScanId = latestData?.scan?.id ?? null;
 
-  // Determine if we should show non-standard states
-  const showStates = !isLoading && !hasCompletedScan && !isSkipped && (
-    isScanning ||
-    moduleStatus?.scanStatus === 'FAILED' ||
-    !data?.scan
-  );
+  const hasCompletedScan = !isLoading && displayedScan?.status === 'COMPLETED';
+  const hasReport = hasCompletedScan && displayedReport !== null;
+  const isSkipped = !isLoading && displayedScan?.status === 'SKIPPED';
+
+  const showStates =
+    !isLoading &&
+    !hasCompletedScan &&
+    !isSkipped &&
+    (isScanning || moduleStatus?.scanStatus === 'FAILED' || !displayedScan);
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -71,7 +88,7 @@ export function ScanDetailDrawer({
             <DrawerHeader
               moduleType={moduleType}
               moduleStatus={moduleStatus}
-              scan={data?.scan ?? null}
+              scan={displayedScan}
               isLoading={isLoading}
             />
 
@@ -86,7 +103,7 @@ export function ScanDetailDrawer({
                 moduleType={moduleType}
                 moduleStatus={moduleStatus}
                 isScanning={isScanning}
-                errorMessage={data?.scan?.errorMessage}
+                errorMessage={displayedScan?.errorMessage}
                 onTriggerScan={onTriggerScan}
               />
             )}
@@ -115,23 +132,31 @@ export function ScanDetailDrawer({
               </div>
             )}
 
-            {hasReport && data?.report && (
+            {hasReport && displayedReport && (
               <>
-                <DrawerIssues report={data.report} />
-                <DrawerTickets report={data.report} projectId={projectId} />
+                <DrawerIssues report={displayedReport} />
+                <DrawerTickets report={displayedReport} projectId={projectId} />
               </>
             )}
 
             {hasCompletedScan && !hasReport && (
               <div className="text-center py-4">
                 <p className="text-xs text-muted-foreground">
-                  Report data unavailable — scan predates structured reporting
+                  {selectedScanId === null
+                    ? 'Report data unavailable — scan predates structured reporting'
+                    : 'No detailed report available for this scan'}
                 </p>
               </div>
             )}
 
             {!isLoading && (
-              <DrawerHistory projectId={projectId} moduleType={moduleType} />
+              <DrawerHistory
+                projectId={projectId}
+                moduleType={moduleType}
+                selectedScanId={selectedScanId}
+                latestScanId={latestScanId}
+                onSelect={setSelectedScanId}
+              />
             )}
           </div>
         )}
