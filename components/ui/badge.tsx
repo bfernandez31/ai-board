@@ -76,6 +76,50 @@ type Status = 'running' | 'ok' | 'idle';
 type Level  = 'low' | 'med' | 'high' | 'best';
 type AttrKind = 'friction' | 'confidence' | 'quality' | 'scope';
 
+// IMPORTANT: full literal class strings — Tailwind's purger cannot detect
+// dynamic template literals like `ab-stage-${stage}`. Maps below MUST list
+// every class verbatim or the rules get tree-shaken in production builds.
+const STAGE_CLASS: Record<Stage, string> = {
+  inbox:   'ab-stage-inbox',
+  specify: 'ab-stage-specify',
+  plan:    'ab-stage-plan',
+  build:   'ab-stage-build',
+  verify:  'ab-stage-verify',
+  ship:    'ab-stage-ship',
+};
+
+const STATUS_CLASS: Record<Status, string> = {
+  running: 'ab-status-running',
+  ok:      'ab-status-ok',
+  idle:    'ab-status-idle',
+};
+
+const LEVEL_FRICTION_CLASS: Record<Level, string> = {
+  low:  'ab-level-low',
+  med:  'ab-level-med',
+  high: 'ab-level-high',
+  best: 'ab-level-low', // friction has no "best" — fold to low (no friction = good)
+};
+
+const LEVEL_CONFIDENCE_CLASS: Record<Level, string> = {
+  low:  'ab-level-conf-low',
+  med:  'ab-level-conf-med',
+  high: 'ab-level-conf-high',
+  best: 'ab-level-conf-high', // confidence is 3-tier — best folds to high
+};
+
+const LEVEL_QUALITY_CLASS: Record<Level, string> = {
+  low:  'ab-level-quality-low',
+  med:  'ab-level-quality-med',
+  high: 'ab-level-quality-high',
+  best: 'ab-level-quality-best',
+};
+
+const LEVEL_SCOPE_CLASS: Record<'full' | 'quick', string> = {
+  full:  'ab-level-scope-full',
+  quick: 'ab-level-scope-quick',
+};
+
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof badgeVariants> {
@@ -92,17 +136,20 @@ export interface BadgeProps
 }
 
 const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
-  ({ className, variant, stage, status, level, kind, scope, children, ...props }, ref) => {
-    const classes = [badgeVariants({ variant })];
+  (
+    { className, variant, stage, status, level, kind, scope, children, ...props },
+    ref
+  ): React.ReactElement => {
+    const classes: string[] = [badgeVariants({ variant })];
 
-    if (variant === 'stage' && stage)   classes.push(`ab-stage-${stage}`);
-    if (variant === 'status' && status) classes.push(`ab-status-${status}`);
+    if (variant === 'stage' && stage)   classes.push(STAGE_CLASS[stage]);
+    if (variant === 'status' && status) classes.push(STATUS_CLASS[status]);
 
     if (variant === 'attribute') {
-      if (kind === 'confidence' && level) classes.push(`ab-level-conf-${level}`);
-      else if (kind === 'quality' && level) classes.push(`ab-level-quality-${level}`);
-      else if (kind === 'scope' && scope) classes.push('ab-attr-scope', `ab-level-scope-${scope}`);
-      else if (level)                     classes.push(`ab-level-${level}`); // friction = default
+      if (kind === 'confidence' && level) classes.push(LEVEL_CONFIDENCE_CLASS[level]);
+      else if (kind === 'quality' && level) classes.push(LEVEL_QUALITY_CLASS[level]);
+      else if (kind === 'scope' && scope) classes.push('ab-attr-scope', LEVEL_SCOPE_CLASS[scope]);
+      else if (level)                     classes.push(LEVEL_FRICTION_CLASS[level]); // friction = default
     }
 
     return (
