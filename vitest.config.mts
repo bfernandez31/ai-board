@@ -31,10 +31,23 @@ export default defineConfig({
     // Timeout configuration
     testTimeout: isIntegration ? 30000 : 5000,
     hookTimeout: isIntegration ? 30000 : 10000,
+    // Inline next-auth so Vite's resolver (and our `next/server` alias) applies
+    // when its lib/env.js does `from "next/server"` without the .js suffix.
+    // Without this, externalized next-auth hits Node's strict ESM resolver
+    // which can't find the extensionless bare specifier in next v16.
+    server: {
+      deps: {
+        inline: ['next-auth', '@auth/core'],
+      },
+    },
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
+      // next-auth v5-beta.29 imports `from "next/server"` as ESM, but
+      // next v16 has no `exports` map, so Node's strict ESM resolver
+      // refuses to fall back on `server.js`. Force the .js suffix.
+      'next/server': path.resolve(__dirname, 'node_modules/next/server.js'),
     },
   },
 });

@@ -261,16 +261,14 @@ test.describe('Quick-Impl Visual Feedback', () => {
     await expect(ticketCard).toBeVisible();
 
     // Verify badge is visible with correct text and styling
-    const badge = ticketCard.locator('text=⚡ Quick');
+    const badge = ticketCard.getByTestId('quick-badge');
     await expect(badge).toBeVisible();
+    await expect(badge).toHaveText(/QUICK/);
 
-    // Verify amber styling (light theme)
-    const badgeElement = await badge.elementHandle();
-    if (badgeElement) {
-      const classes = await badgeElement.getAttribute('class');
-      expect(classes).toContain('bg-amber-100');
-      expect(classes).toContain('text-amber-800');
-    }
+    // Verify it uses the unified badge system + scope=quick semantic level
+    const classes = await badge.getAttribute('class');
+    expect(classes).toContain('ab-badge-attr-tc');
+    expect(classes).toContain('ab-level-scope-quick');
   });
 
   /**
@@ -308,8 +306,8 @@ test.describe('Quick-Impl Visual Feedback', () => {
     await expect(ticketCard).toBeVisible();
 
     // Verify badge is NOT visible
-    const badge = ticketCard.locator('text=⚡ Quick');
-    await expect(badge).not.toBeVisible();
+    const badge = ticketCard.getByTestId('quick-badge');
+    await expect(badge).toHaveCount(0);
   });
 
   /**
@@ -329,8 +327,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
     await expect(inboxTicket).toBeVisible();
 
     // Verify badge is NOT visible initially (workflowType=FULL by default)
-    let badge = inboxTicket.locator('text=⚡ Quick');
-    await expect(badge).not.toBeVisible();
+    await expect(inboxTicket.getByTestId('quick-badge')).toHaveCount(0);
 
     // Get ticket ID for API transition
     const ticketIdAttr = await inboxTicket.getAttribute('data-ticket-id');
@@ -357,16 +354,14 @@ test.describe('Quick-Impl Visual Feedback', () => {
     await expect(buildTicket).toBeVisible();
 
     // CRITICAL: Verify badge appears immediately without page refresh
-    badge = buildTicket.locator('text=⚡ Quick');
+    const badge = buildTicket.getByTestId('quick-badge');
     await expect(badge).toBeVisible();
+    await expect(badge).toHaveText(/QUICK/);
 
     // Verify badge styling
-    const badgeElement = await badge.elementHandle();
-    if (badgeElement) {
-      const classes = await badgeElement.getAttribute('class');
-      expect(classes).toContain('bg-amber-100');
-      expect(classes).toContain('text-amber-800');
-    }
+    const classes = await badge.getAttribute('class');
+    expect(classes).toContain('ab-badge-attr-tc');
+    expect(classes).toContain('ab-level-scope-quick');
   });
 
   /**
@@ -413,8 +408,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
     // Verify badge is visible in BUILD stage
     let ticketCard = page.locator('[data-testid="column-BUILD"] [data-testid="ticket-card"]').first();
     await expect(ticketCard).toBeVisible();
-    let badge = ticketCard.locator('text=⚡ Quick');
-    await expect(badge).toBeVisible();
+    await expect(ticketCard.getByTestId('quick-badge')).toBeVisible();
 
     // Transition to VERIFY using API (simpler than drag-and-drop with modal)
     const ticketData = await prisma.ticket.findUnique({ where: { id: ticket.id } });
@@ -429,8 +423,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
     // Verify badge is still visible in VERIFY stage
     ticketCard = page.locator('[data-testid="column-VERIFY"] [data-testid="ticket-card"]').first();
     await expect(ticketCard).toBeVisible();
-    badge = ticketCard.locator('text=⚡ Quick');
-    await expect(badge).toBeVisible();
+    await expect(ticketCard.getByTestId('quick-badge')).toBeVisible();
 
     // Transition to SHIP
     const updatedTicketData = await prisma.ticket.findUnique({ where: { id: ticket.id } });
@@ -445,7 +438,6 @@ test.describe('Quick-Impl Visual Feedback', () => {
     // Verify badge is still visible in SHIP stage
     ticketCard = page.locator('[data-testid="column-SHIP"] [data-testid="ticket-card"]').first();
     await expect(ticketCard).toBeVisible();
-    badge = ticketCard.locator('text=⚡ Quick');
-    await expect(badge).toBeVisible();
+    await expect(ticketCard.getByTestId('quick-badge')).toBeVisible();
   });
 });

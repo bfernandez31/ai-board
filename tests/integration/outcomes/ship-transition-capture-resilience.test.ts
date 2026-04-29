@@ -12,6 +12,7 @@ import { JobStatus, Stage, WorkflowType } from '@prisma/client';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import * as captureModule from '@/lib/outcomes/capture';
+import { executeTicketTransition } from '@/lib/tickets/transition';
 
 beforeAll(() => {
   process.env.TEST_MODE = 'true';
@@ -31,32 +32,30 @@ describe('SHIP transition is resilient to capture failure (T019, FR-019)', () =>
   });
 
   it('returns 200 even when captureOutcomeOnShip throws', async () => {
+    // We call executeTicketTransition() directly (in-process) instead of going
+    // through the HTTP API, so vi.spyOn actually intercepts the captureModule
+    // import — a spy applied here would never reach a separate dev-server
+    // process bound to port 3000.
     const captureSpy = vi
       .spyOn(captureModule, 'captureOutcomeOnShip')
       .mockRejectedValueOnce(new Error('boom'));
 
     // Build a ticket in VERIFY stage with COMPLETED jobs ready for SHIP.
-    const create = await ctx.api.post<{ id: number }>(
-      `/api/projects/${ctx.projectId}/tickets`,
-      {
-        title: '[e2e] capture resilience',
-        description: 'x',
-      }
-    );
-    expect(create.status).toBe(201);
-    const ticketId = create.data.id;
+    const ticket = await ctx.createTicket({
+      title: '[e2e] capture resilience',
+      description: 'x',
+    });
 
     await prisma.ticket.update({
-      where: { id: ticketId },
+      where: { id: ticket.id },
       data: {
         stage: Stage.VERIFY,
         workflowType: WorkflowType.FULL,
-        version: { increment: 4 },
       },
     });
     await prisma.job.create({
       data: {
-        ticketId,
+        ticketId: ticket.id,
         projectId: ctx.projectId,
         command: 'verify',
         status: JobStatus.COMPLETED,
@@ -67,19 +66,23 @@ describe('SHIP transition is resilient to capture failure (T019, FR-019)', () =>
       },
     });
 
-    const res = await ctx.api.post<{ stage: string }>(
-      `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
-      { targetStage: 'SHIP' }
+    const result = await executeTicketTransition(
+      ctx.projectId,
+      String(ticket.id),
+      Stage.SHIP
     );
 
-    expect(res.status).toBe(200);
-    expect(res.data.stage).toBe('SHIP');
+    expect(result.ok).toBe(true);
+    expect(result.status).toBe(200);
+    if (result.ok) {
+      expect(result.body.stage).toBe('SHIP');
+    }
 
-    // The fire-and-forget call ran (and rejected) — the response was returned regardless.
+    // The fire-and-forget call ran (and rejected) — the result was returned regardless.
     // The mocked rejection was caught by the .catch() in transition.ts.
     expect(captureSpy).toHaveBeenCalled();
 
-    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
-    expect(ticket?.stage).toBe(Stage.SHIP);
+    const persisted = await prisma.ticket.findUnique({ where: { id: ticket.id } });
+    expect(persisted?.stage).toBe(Stage.SHIP);
   });
 });

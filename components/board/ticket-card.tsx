@@ -183,6 +183,7 @@ export const TicketCard = React.memo(
                   kind="scope"
                   scope="quick"
                   className="shrink-0"
+                  data-testid="quick-badge"
                 >
                   QUICK
                 </Badge>

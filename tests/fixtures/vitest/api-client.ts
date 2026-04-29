@@ -79,6 +79,13 @@ export interface APIClient {
    * @param options - Fetch options (headers will be merged)
    */
   fetch(path: string, options?: APIRequestOptions): Promise<Response>;
+
+  /**
+   * Build the auth headers used by this client (test user + override flag).
+   * Useful when a test needs to construct a `NextRequest` directly and pass
+   * the same headers the client would attach to a regular call.
+   */
+  getHeaders(options?: APIRequestOptions): Record<string, string>;
 }
 
 const DEFAULT_BASE_URL = 'http://localhost:3000';
@@ -194,6 +201,8 @@ export function createAPIClient(config?: APIClientConfig): APIClient {
       const headers = getHeaders(options);
       return fetch(url, { ...options, headers });
     },
+
+    getHeaders,
   };
 }
 

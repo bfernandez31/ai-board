@@ -132,7 +132,24 @@ export async function getTestUserOverrideResolution(
 }
 
 async function resolveSessionUser(): Promise<AuthenticatedUser | null> {
-  const session = await auth()
+  let session
+  try {
+    session = await auth()
+  } catch (error) {
+    // `auth()` reads from AsyncLocalStorage via next/headers. When a route
+    // handler is invoked outside Next.js's request scope (e.g. directly from
+    // a Vitest integration test), `headers()` throws. That's not a real auth
+    // failure — there simply is no session in this context. Fall through so
+    // alternative resolvers (test-override header, Bearer token) get a chance.
+    if (
+      error instanceof Error &&
+      error.message.includes("called outside a request scope")
+    ) {
+      return null
+    }
+    throw error
+  }
+
   if (!session?.user?.id) {
     return null
   }
