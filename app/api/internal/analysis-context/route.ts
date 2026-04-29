@@ -24,41 +24,46 @@ export async function GET(request: NextRequest) {
     return noStore({ error: 'Invalid analysisId' }, { status: 400 });
   }
 
-  const row = await prisma.ticketAnalysis.findUnique({ where: { id: analysisId } });
-  if (!row) {
-    return noStore({ error: 'Analysis not found' }, { status: 404 });
+  try {
+    const row = await prisma.ticketAnalysis.findUnique({ where: { id: analysisId } });
+    if (!row) {
+      return noStore({ error: 'Analysis not found' }, { status: 404 });
+    }
+
+    if (row.status !== 'running') {
+      return noStore({ error: 'Analysis is no longer running' }, { status: 410 });
+    }
+
+    const candidates = await prisma.ticketOutcome.findMany({
+      where: { ticketId: { in: row.anchorIdsAttempted } },
+      include: { ticket: { select: { ticketKey: true } } },
+    });
+
+    return noStore({
+      ticket: {
+        id: row.ticketId,
+        title: row.titleSnapshot,
+        description: row.descriptionSnapshot,
+      },
+      stack: row.stackSnapshot as unknown as StackContext,
+      candidates: candidates.map((c) => ({
+        outcomeId: c.id,
+        ticketId: c.ticketId,
+        ticketKey: c.ticket.ticketKey,
+        domains: c.domains,
+        frictionFree: c.frictionFree,
+        qualityScore: c.qualityScore,
+        touchedDbSchema: c.touchedDbSchema,
+        touchedTests: c.touchedTests,
+        touchedCi: c.touchedCi,
+        shippedAt: c.shippedAt.toISOString(),
+        totalCostUsd: c.totalCostUsd,
+        totalDurationMs: c.totalDurationMs,
+      })),
+      ruleSetVersion: row.ruleSetVersion,
+    });
+  } catch (error) {
+    console.error('Failed to load analysis context:', error instanceof Error ? error.message : String(error));
+    return noStore({ error: 'Failed to load analysis context' }, { status: 500 });
   }
-
-  if (row.status !== 'running') {
-    return noStore({ error: 'Analysis is no longer running' }, { status: 410 });
-  }
-
-  const candidates = await prisma.ticketOutcome.findMany({
-    where: { ticketId: { in: row.anchorIdsAttempted } },
-    include: { ticket: { select: { ticketKey: true } } },
-  });
-
-  return noStore({
-    ticket: {
-      id: row.ticketId,
-      title: row.titleSnapshot,
-      description: row.descriptionSnapshot,
-    },
-    stack: row.stackSnapshot as unknown as StackContext,
-    candidates: candidates.map((c) => ({
-      outcomeId: c.id,
-      ticketId: c.ticketId,
-      ticketKey: c.ticket.ticketKey,
-      domains: c.domains,
-      frictionFree: c.frictionFree,
-      qualityScore: c.qualityScore,
-      touchedDbSchema: c.touchedDbSchema,
-      touchedTests: c.touchedTests,
-      touchedCi: c.touchedCi,
-      shippedAt: c.shippedAt.toISOString(),
-      totalCostUsd: c.totalCostUsd,
-      totalDurationMs: c.totalDurationMs,
-    })),
-    ruleSetVersion: row.ruleSetVersion,
-  });
 }
