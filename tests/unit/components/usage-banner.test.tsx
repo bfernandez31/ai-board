@@ -82,7 +82,7 @@ describe('UsageBanner', () => {
     expect(screen.getByText('TEAM')).toBeInTheDocument();
     expect(screen.getByText('2 projects · 18 tickets this month')).toBeInTheDocument();
     expect(screen.getByTestId('usage-banner-card')).toHaveClass('from-indigo-500/15');
-    expect(screen.getByTestId('usage-banner-badge')).toHaveClass('bg-violet-500/15');
+    expect(screen.getByTestId('usage-banner-badge')).toHaveClass('ab-badge-default');
   });
 
   it('shows the past-due warning when payment is overdue', () => {

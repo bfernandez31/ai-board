@@ -121,7 +121,7 @@ export function ComparisonDecisionPoints(
                       {point.participantApproaches.map((approach) => (
                         <div key={approach.ticketId}>
                           <div className="text-sm font-medium text-foreground">
-                            <Badge variant="outline" className="mr-2 border-ctp-mauve/20">
+                            <Badge variant="ticket" className="mr-2">
                               {approach.ticketKey}
                             </Badge>
                           </div>

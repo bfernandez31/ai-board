@@ -174,24 +174,21 @@ export const TicketCard = React.memo(
         >
           {/* Header: Ticket Key and Badges */}
           <div className="flex items-start justify-between mb-3">
-            <span className="text-xs text-muted-foreground font-mono font-semibold">
-              {ticket.ticketKey}
-            </span>
+            <Badge variant="ticket">{ticket.ticketKey}</Badge>
             <div className="flex items-center gap-2">
               <QualityScoreBadge score={qualityScore ?? null} />
               {ticket.workflowType === 'QUICK' && (
                 <Badge
-                  variant="outline"
-                  className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 shrink-0 px-1.5 py-0.5 font-semibold"
+                  variant="attribute"
+                  kind="scope"
+                  scope="quick"
+                  className="shrink-0"
                 >
-                  ⚡ Quick
+                  Quick
                 </Badge>
               )}
               {ticket.workflowType === 'CLEAN' && (
-                <Badge
-                  variant="outline"
-                  className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 shrink-0 px-1.5 py-0.5 font-semibold flex items-center gap-1"
-                >
+                <Badge variant="secondary" className="shrink-0 inline-flex items-center gap-1">
                   <Sparkles className="h-3 w-3" />
                   Clean
                 </Badge>

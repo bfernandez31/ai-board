@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
@@ -26,8 +27,13 @@ import type {
   AnalysisOutput,
   Confidence,
   FrictionRisk,
-  Recommendation,
 } from '@/lib/analysis/output-schema';
+
+type AttrLevel = 'low' | 'med' | 'high';
+
+function toAttrLevel(value: FrictionRisk | Confidence): AttrLevel {
+  return value === 'medium' ? 'med' : value;
+}
 
 export interface InboxAnalysisPanelProps {
   projectId: number;
@@ -46,36 +52,6 @@ const CONFIDENCE_TOOLTIP =
 
 const STALE_TOOLTIP =
   'The ticket description has changed since this analysis ran — re-analyze for an up-to-date signal.';
-
-const CHIP_CLASS = 'rounded-full border px-2 py-0.5 text-[11px] font-semibold';
-
-function recommendationClasses(choice: Recommendation): string {
-  return choice === 'QUICK'
-    ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
-    : 'bg-violet-500/15 text-violet-600 border-violet-500/30';
-}
-
-function frictionRiskClasses(risk: FrictionRisk): string {
-  switch (risk) {
-    case 'low':
-      return 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30';
-    case 'medium':
-      return 'bg-amber-500/15 text-amber-600 border-amber-500/30';
-    case 'high':
-      return 'bg-red-500/15 text-red-600 border-red-500/30';
-  }
-}
-
-function confidenceClasses(confidence: Confidence): string {
-  switch (confidence) {
-    case 'low':
-      return 'bg-zinc-500/15 text-zinc-600 border-zinc-500/30';
-    case 'medium':
-      return 'bg-blue-500/15 text-blue-600 border-blue-500/30';
-    case 'high':
-      return 'bg-violet-500/15 text-violet-600 border-violet-500/30';
-  }
-}
 
 function formatUsd(value: number): string {
   return `$${value.toFixed(2)}`;
@@ -478,36 +454,42 @@ function SuccessRow({
       )}
 
       <ChipTooltip content={RECOMMENDATION_TOOLTIP}>
-        <span
-          className={`${CHIP_CLASS} ${recommendationClasses(recommendation.choice)}`}
+        <Badge
+          variant="attribute"
+          kind="scope"
+          scope={recommendation.choice === 'QUICK' ? 'quick' : 'full'}
           data-testid="recommendation-chip"
           aria-label={`Recommendation ${recommendation.choice}`}
           tabIndex={0}
         >
           {recommendation.choice}
-        </span>
+        </Badge>
       </ChipTooltip>
 
       <ChipTooltip content={FRICTION_RISK_TOOLTIP}>
-        <span
-          className={`${CHIP_CLASS} ${frictionRiskClasses(frictionRisk)}`}
+        <Badge
+          variant="attribute"
+          kind="friction"
+          level={toAttrLevel(frictionRisk)}
           data-testid="friction-risk-badge"
           aria-label={`Friction risk ${frictionRisk}`}
           tabIndex={0}
         >
           {frictionRisk} friction
-        </span>
+        </Badge>
       </ChipTooltip>
 
       <ChipTooltip content={CONFIDENCE_TOOLTIP}>
-        <span
-          className={`${CHIP_CLASS} ${confidenceClasses(recommendation.confidence)}`}
+        <Badge
+          variant="attribute"
+          kind="confidence"
+          level={toAttrLevel(recommendation.confidence)}
           data-testid="confidence-badge"
           aria-label={`Recommendation confidence ${recommendation.confidence}`}
           tabIndex={0}
         >
           {recommendation.confidence} confidence
-        </span>
+        </Badge>
       </ChipTooltip>
 
       {relative && (

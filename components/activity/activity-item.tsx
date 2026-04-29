@@ -161,21 +161,25 @@ function TicketLink({
 }
 
 /**
- * Stage badge for stage changes
+ * Stage badge for stage changes — uses canonical stage colors.
+ * CLOSED is non-canonical and falls back to neutral secondary.
  */
 function StageBadge({ stage }: { stage: string }) {
-  const colors: Record<string, string> = {
-    INBOX: 'bg-zinc-600/50 text-zinc-300',
-    SPECIFY: 'bg-blue-600/50 text-blue-300',
-    PLAN: 'bg-violet-600/50 text-violet-300',
-    BUILD: 'bg-green-600/50 text-green-300',
-    VERIFY: 'bg-yellow-600/50 text-yellow-300',
-    SHIP: 'bg-cyan-600/50 text-cyan-300',
-    CLOSED: 'bg-zinc-600/50 text-zinc-300',
+  const canonical: Record<string, 'inbox' | 'specify' | 'plan' | 'build' | 'verify' | 'ship'> = {
+    INBOX: 'inbox',
+    SPECIFY: 'specify',
+    PLAN: 'plan',
+    BUILD: 'build',
+    VERIFY: 'verify',
+    SHIP: 'ship',
   };
+  const canonicalStage = canonical[stage];
 
+  if (!canonicalStage) {
+    return <Badge variant="secondary">{stage}</Badge>;
+  }
   return (
-    <Badge variant="outline" className={`text-xs ${colors[stage] || ''}`}>
+    <Badge variant="stage" stage={canonicalStage}>
       {stage}
     </Badge>
   );

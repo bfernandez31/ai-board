@@ -16,7 +16,7 @@ interface SubscriptionStatusProps {
 
 function getStatusVariant(
   status: string
-): 'default' | 'secondary' | 'destructive' | 'outline' {
+): 'default' | 'secondary' | 'destructive' {
   switch (status) {
     case 'active':
       return 'default';
@@ -25,9 +25,8 @@ function getStatusVariant(
     case 'past_due':
       return 'destructive';
     case 'canceled':
-      return 'outline';
     default:
-      return 'outline';
+      return 'secondary';
   }
 }
 

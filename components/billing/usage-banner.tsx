@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 interface BannerStyles {
   cardClassName: string;
-  badgeClassName: string;
+  badgeVariant: 'default' | 'secondary';
 }
 
 function getBannerStyles(plan: UsageData['plan']): BannerStyles {
@@ -18,20 +18,20 @@ function getBannerStyles(plan: UsageData['plan']): BannerStyles {
       return {
         cardClassName:
           'border-indigo-500/20 bg-gradient-to-r from-indigo-500/15 via-violet-500/10 to-background',
-        badgeClassName: 'border-violet-500/30 bg-violet-500/15 text-violet-950 dark:text-violet-100',
+        badgeVariant: 'default',
       };
     case 'PRO':
       return {
         cardClassName:
           'border-sky-500/20 bg-gradient-to-r from-sky-500/15 via-cyan-500/10 to-background',
-        badgeClassName: 'border-sky-500/30 bg-sky-500/15 text-sky-950 dark:text-sky-100',
+        badgeVariant: 'default',
       };
     case 'FREE':
     default:
       return {
         cardClassName:
           'border-border bg-gradient-to-r from-muted/90 via-muted/60 to-background',
-        badgeClassName: 'border-border bg-background/80 text-muted-foreground',
+        badgeVariant: 'secondary',
       };
   }
 }
@@ -76,7 +76,7 @@ export function UsageBanner(): JSX.Element {
 
   const gracePeriodEndsAt = usage.gracePeriodEndsAt;
   const isPastDue = usage.status === 'past_due' && gracePeriodEndsAt !== null;
-  const { cardClassName, badgeClassName } = getBannerStyles(usage.plan);
+  const { cardClassName, badgeVariant } = getBannerStyles(usage.plan);
   const ctaLabel = usage.plan === 'FREE' ? 'Upgrade' : 'Manage plan';
 
   return (
@@ -101,11 +101,8 @@ export function UsageBanner(): JSX.Element {
         <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
           <div className="flex flex-wrap items-center gap-3">
             <Badge
+              variant={badgeVariant}
               data-testid="usage-banner-badge"
-              className={cn(
-                'rounded-full px-3 py-1 text-[11px] font-bold tracking-[0.24em]',
-                badgeClassName
-              )}
             >
               {usage.plan}
             </Badge>

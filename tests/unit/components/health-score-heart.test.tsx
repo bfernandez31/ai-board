@@ -21,36 +21,43 @@ function makeHealthScore(overrides: Partial<NonNullable<HealthScore>> = {}): Hea
 
 describe('HealthScoreHeart', () => {
   describe('color thresholds', () => {
-    it('renders green heart with score "95" for globalScore=95 (>=85)', () => {
+    it('renders green (best) heart for globalScore=95 (>=90, Excellent)', () => {
       renderWithProviders(
         <HealthScoreHeart healthScore={makeHealthScore({ globalScore: 95 })} />
       );
       expect(screen.getByText('95')).toBeInTheDocument();
       const heart = screen.getByTestId('health-heart');
-      // Rendered heart has a stroked outline path (not inside <defs><clipPath>)
+      const colored = heart.querySelector('span.text-ctp-green');
+      expect(colored).not.toBeNull();
       const outlinePath = heart.querySelector('svg > path');
       expect(outlinePath).toHaveAttribute('stroke');
     });
 
-    it('renders violet heart with score "72" for globalScore=72 (60-84)', () => {
+    it('renders blue (high) heart for globalScore=72 (70-89, Good)', () => {
       renderWithProviders(
         <HealthScoreHeart healthScore={makeHealthScore({ globalScore: 72 })} />
       );
       expect(screen.getByText('72')).toBeInTheDocument();
+      const heart = screen.getByTestId('health-heart');
+      expect(heart.querySelector('span.text-ctp-blue')).not.toBeNull();
     });
 
-    it('renders orange heart with score "55" for globalScore=55 (40-59)', () => {
+    it('renders yellow (med) heart for globalScore=55 (50-69, Fair)', () => {
       renderWithProviders(
         <HealthScoreHeart healthScore={makeHealthScore({ globalScore: 55 })} />
       );
       expect(screen.getByText('55')).toBeInTheDocument();
+      const heart = screen.getByTestId('health-heart');
+      expect(heart.querySelector('span.text-ctp-yellow')).not.toBeNull();
     });
 
-    it('renders red heart with score "30" for globalScore=30 (<40)', () => {
+    it('renders red (low) heart for globalScore=30 (<50, Poor)', () => {
       renderWithProviders(
         <HealthScoreHeart healthScore={makeHealthScore({ globalScore: 30 })} />
       );
       expect(screen.getByText('30')).toBeInTheDocument();
+      const heart = screen.getByTestId('health-heart');
+      expect(heart.querySelector('span.text-ctp-red')).not.toBeNull();
     });
 
     it('renders red heart with score "0" for globalScore=0 (not no-data)', () => {

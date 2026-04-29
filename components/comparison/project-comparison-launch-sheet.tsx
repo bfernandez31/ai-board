@@ -108,7 +108,7 @@ export function ProjectComparisonLaunchSheet({
                         <div className="font-medium text-foreground">{candidate.ticketKey}</div>
                         <div className="text-sm text-muted-foreground">{candidate.title}</div>
                       </div>
-                      <Badge variant="outline">Quality {getQualityLabel(candidate.qualityScore)}</Badge>
+                      <Badge variant="secondary">Quality {getQualityLabel(candidate.qualityScore)}</Badge>
                     </div>
                   </button>
                 );

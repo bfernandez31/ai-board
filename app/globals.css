@@ -160,6 +160,218 @@
   .aurora-btn-outline:hover {
     box-shadow: 0 0 16px hsl(var(--ctp-mauve) / 0.22);
   }
+
+  /* =============================================================================
+     AI-Board Badge Styles — Aurora & Semantic Variants
+     ============================================================================= */
+
+  /* ---------- BASE — partagé par toutes les variantes ---------- */
+  .ab-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 5px;
+    padding: 3px 9px;
+    height: 22px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 550;
+    line-height: 1;
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+    user-select: none;
+    border: 1px solid transparent;
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.06);
+    transition: all 140ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  /* ---------- DEFAULT — Aurora tinted (signature brand) ---------- */
+  .ab-badge-default {
+    background:
+      linear-gradient(135deg,
+        hsl(var(--ctp-mauve) / 0.22),
+        hsl(var(--primary)   / 0.28),
+        hsl(var(--ctp-blue)  / 0.22));
+    color: #fff;
+    border-color: hsl(var(--primary) / 0.45);
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.1);
+  }
+
+  /* ---------- SECONDARY — Mauve doux, on-brand (pas de gris) ---------- */
+  .ab-badge-secondary {
+    background: hsl(var(--ctp-mauve) / 0.1);
+    color: hsl(var(--ctp-lavender));
+    border-color: hsl(var(--ctp-mauve) / 0.3);
+  }
+
+  /* ---------- DESTRUCTIVE ---------- */
+  .ab-badge-destructive {
+    background: hsl(var(--destructive) / 0.18);
+    color: hsl(var(--destructive));
+    border-color: hsl(var(--destructive) / 0.5);
+  }
+
+  /* ---------- OUTLINE — Bordure aurora gradient (mono-cap, sans fond) */
+  .ab-badge-outline {
+    background: transparent;
+    color: hsl(var(--ctp-lavender));
+    border: 1px solid transparent;
+    background:
+      linear-gradient(transparent, transparent) padding-box,
+      linear-gradient(135deg,
+        hsl(var(--ctp-mauve)  / 0.7),
+        hsl(var(--primary)    / 0.7),
+        hsl(var(--ctp-blue)   / 0.7)) border-box;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    box-shadow: none;
+  }
+
+  /* ---------- STAGE — Couleurs canoniques INBOX → SHIP ---------- */
+  .ab-badge-stage {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    box-shadow: none;
+  }
+  .ab-stage-inbox    { background: hsl(var(--ctp-overlay-0)   / 0.18); color: hsl(var(--ctp-overlay-0));   border-color: hsl(var(--ctp-overlay-0)   / 0.45); }
+  .ab-stage-specify  { background: hsl(var(--ctp-lavender)    / 0.14); color: hsl(var(--ctp-lavender));    border-color: hsl(var(--ctp-lavender)    / 0.45); }
+  .ab-stage-plan     { background: hsl(var(--ctp-blue)        / 0.14); color: hsl(var(--ctp-blue));        border-color: hsl(var(--ctp-blue)        / 0.45); }
+  .ab-stage-build    { background: hsl(var(--ctp-peach-light) / 0.14); color: hsl(var(--ctp-peach-light)); border-color: hsl(var(--ctp-peach-light) / 0.45); }
+  .ab-stage-verify   { background: hsl(var(--ctp-flamingo)    / 0.14); color: hsl(var(--ctp-flamingo));    border-color: hsl(var(--ctp-flamingo)    / 0.45); }
+  .ab-stage-ship     { background: hsl(var(--ctp-green)       / 0.14); color: hsl(var(--ctp-green));       border-color: hsl(var(--ctp-green)       / 0.45); }
+
+  /* ---------- STATUS — Avec dot animé pour "running" ---------- */
+  .ab-badge-status {
+    background: hsl(var(--ctp-mauve) / 0.08);
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--ctp-mauve) / 0.25);
+    font-weight: 500;
+  }
+  .ab-badge-status .ab-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .ab-status-running .ab-dot {
+    background: hsl(var(--primary));
+    box-shadow: 0 0 6px hsl(var(--primary) / 0.8);
+    animation: ab-pulse 1.6s ease-in-out infinite;
+  }
+  .ab-status-ok .ab-dot   { background: hsl(var(--ctp-green));       box-shadow: 0 0 6px hsl(var(--ctp-green) / 0.6); }
+  .ab-status-idle .ab-dot { background: hsl(var(--muted-foreground)); }
+  @keyframes ab-pulse {
+    0%, 100% { opacity: 1;   transform: scale(1); }
+    50%      { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* ---------- PROMO — Aurora plein animé (Most Popular) ---------- */
+  .ab-badge-promo {
+    background: linear-gradient(135deg,
+      hsl(var(--ctp-mauve)) 0%,
+      hsl(var(--primary))   55%,
+      hsl(var(--ctp-blue))  100%);
+    background-size: 200% 200%;
+    color: #fff;
+    border-color: transparent;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    padding: 4px 12px;
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.22),
+      0 2px 10px hsl(var(--primary) / 0.4);
+    animation: ab-gradient-shift 4s ease-in-out infinite;
+  }
+  @keyframes ab-gradient-shift {
+    0%, 100% { background-position: 0% 0%; }
+    50%      { background-position: 100% 100%; }
+  }
+
+  /* ---------- TICKET ID — Mono compact, mauve teinté ---------- */
+  .ab-badge-ticket {
+    background: hsl(var(--ctp-mauve) / 0.08);
+    color: hsl(var(--ctp-lavender));
+    border-color: hsl(var(--ctp-mauve) / 0.3);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- COUNT — Pastille numérique (workflow column count) ---------- */
+  .ab-badge-count {
+    background: hsl(var(--ctp-mauve) / 0.15);
+    color: hsl(var(--ctp-lavender));
+    border-color: transparent;
+    min-width: 22px;
+    justify-content: center;
+    padding: 3px 7px;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    box-shadow: none;
+  }
+
+  /* =============================================================================
+     ATTRIBUTE — Échelle sémantique low / med / high
+     ============================================================================= */
+  .ab-badge-attr {
+    background: hsl(var(--ctp-crust));
+    color: hsl(var(--attr-on));
+    border-color: hsl(var(--attr-h) / 0.4);
+    font-size: 11px;
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+    padding: 3px 9px 3px 16px;
+    position: relative;
+    box-shadow: none;
+  }
+  .ab-badge-attr::before {
+    content: '';
+    position: absolute;
+    left: 7px; top: 50%; transform: translateY(-50%);
+    width: 5px; height: 5px; border-radius: 50%;
+    background: hsl(var(--attr-h));
+    box-shadow: 0 0 4px hsl(var(--attr-h) / 0.6);
+  }
+
+  /* SCOPE (FULL / QUICK) — small caps stamp, pas de dot, mono */
+  .ab-badge-attr.ab-attr-scope {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+  }
+  .ab-badge-attr.ab-attr-scope::before { display: none; }
+
+  /* Ramps sémantiques */
+  .ab-level-low  { --attr-h: var(--ctp-green);  --attr-on: 115 54% 76%; }
+  .ab-level-med  { --attr-h: var(--ctp-yellow); --attr-on:  41 88% 83%; }
+  .ab-level-high { --attr-h: var(--ctp-red);    --attr-on: 343 81% 75%; }
+
+  /* Confidence inverse la sémantique : high = bon = vert */
+  .ab-level-conf-low  { --attr-h: var(--ctp-red);    --attr-on: 343 81% 75%; }
+  .ab-level-conf-med  { --attr-h: var(--ctp-yellow); --attr-on:  41 88% 83%; }
+  .ab-level-conf-high { --attr-h: var(--ctp-green);  --attr-on: 115 54% 76%; }
+
+  /* Quality — 4 paliers pour scores 0-100 (Poor/Fair/Good/Excellent).
+     Distingue "passing avec marge" (best ≥90 vert) de "passing tout juste"
+     (high 70-89 bleu). Échelle de référence pour quality score & health score. */
+  .ab-level-quality-low  { --attr-h: var(--ctp-red);    --attr-on: 343 81% 75%; }
+  .ab-level-quality-med  { --attr-h: var(--ctp-yellow); --attr-on:  41 88% 83%; }
+  .ab-level-quality-high { --attr-h: var(--ctp-blue);   --attr-on: 217 92% 76%; }
+  .ab-level-quality-best { --attr-h: var(--ctp-green);  --attr-on: 115 54% 76%; }
+
+  /* Scope binaire — neutral tonal pair */
+  .ab-level-scope-full  { --attr-h: var(--ctp-mauve); --attr-on: 267 84% 81%; }
+  .ab-level-scope-quick { --attr-h: var(--ctp-blue);  --attr-on: 217 92% 76%; }
 }
 
 @layer utilities {

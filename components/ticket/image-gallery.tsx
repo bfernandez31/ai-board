@@ -216,7 +216,7 @@ export function ImageGallery({
         )}
         <ImageIcon className="h-4 w-4 text-text/60" aria-hidden="true" />
         <span className="font-medium text-sm text-text">Images</span>
-        <Badge variant="secondary" className="ml-auto" aria-hidden="true">
+        <Badge variant="count" className="ml-auto" aria-hidden="true">
           {actualImageCount}
         </Badge>
       </button>

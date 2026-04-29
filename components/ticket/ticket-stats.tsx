@@ -134,11 +134,10 @@ function ToolsUsageSection({ toolsUsage }: { toolsUsage: TicketStatsType['toolsU
           <Badge
             key={tool}
             variant="secondary"
-            className="text-foreground border-ctp-mauve/20 text-xs px-2 py-1 aurora-bg-tint"
             data-testid={`tool-badge-${tool}`}
           >
             {tool}
-            <span className="ml-1.5 text-muted-foreground">({count})</span>
+            <span className="ml-1.5 opacity-70">({count})</span>
           </Badge>
         ))}
       </div>

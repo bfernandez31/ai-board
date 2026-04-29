@@ -89,6 +89,29 @@ export function getScoreThreshold(score: number): ScoreThreshold {
 }
 
 /**
+ * Returns the Badge attribute level for a given score, aligned with the
+ * 4-tier quality rampe (`<Badge variant="attribute" kind="quality" />`).
+ * Single source of truth for both ticket quality and project health.
+ *
+ * Thresholds match getScoreThreshold:
+ *   90-100 (Excellent) → 'best'  (green)
+ *   70-89  (Good)      → 'high'  (blue)
+ *   50-69  (Fair)      → 'med'   (yellow)
+ *   0-49   (Poor)      → 'low'   (red)
+ *
+ * Returns null for null score (no data).
+ */
+export function getScoreLevel(
+  score: number | null
+): 'best' | 'high' | 'med' | 'low' | null {
+  if (score === null) return null;
+  if (score >= 90) return 'best';
+  if (score >= 70) return 'high';
+  if (score >= 50) return 'med';
+  return 'low';
+}
+
+/**
  * Returns Tailwind CSS classes for the score's threshold color.
  * Uses semantic ctp-* tokens defined in globals.css / tailwind.config.ts.
  */

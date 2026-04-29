@@ -2,6 +2,7 @@
 
 import { useId, useState } from 'react';
 import { getScoreColorConfig } from '@/lib/health/score-calculator';
+import { getScoreColor } from '@/lib/quality-score';
 import type { ProjectWithCount } from '@/app/lib/types/project';
 import {
   Popover,
@@ -31,12 +32,14 @@ const TOP = 10;
 const BOTTOM = 33.5;
 const USABLE = BOTTOM - TOP;
 
+/**
+ * Heart color follows the centralized quality rampe (90/70/50 thresholds,
+ * ctp-* tokens). Same as ticket quality score for visual consistency across
+ * the app. See lib/quality-score.ts for the source of truth.
+ */
 function getHeartColorClass(score: number | null): string {
   if (score === null) return 'text-muted-foreground';
-  if (score >= 85) return 'text-emerald-400';
-  if (score >= 60) return 'text-violet-400';
-  if (score >= 40) return 'text-orange-400';
-  return 'text-red-400';
+  return getScoreColor(score).text;
 }
 
 export function HealthScoreHeart({ healthScore }: HealthScoreHeartProps) {

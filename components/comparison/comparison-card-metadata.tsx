@@ -16,26 +16,26 @@ interface ComparisonCardMetadataProps {
 }
 
 function WorkflowTypeBadge({ workflowType }: { workflowType: WorkflowType }): JSX.Element {
-  const baseClassName = 'shrink-0 px-1.5 py-0.5 text-xs font-semibold';
-
   switch (workflowType) {
     case 'QUICK':
       return (
         <Badge
-          variant="outline"
+          variant="attribute"
+          kind="scope"
+          scope="quick"
           data-testid="comparison-workflow-badge"
-          className={`${baseClassName} bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200`}
+          className="shrink-0"
         >
-          ⚡ Quick
+          Quick
         </Badge>
       );
 
     case 'CLEAN':
       return (
         <Badge
-          variant="outline"
+          variant="secondary"
           data-testid="comparison-workflow-badge"
-          className={`flex items-center gap-1 ${baseClassName} bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200`}
+          className="shrink-0 inline-flex items-center gap-1"
         >
           <Sparkles className="h-3 w-3" />
           Clean
@@ -45,9 +45,11 @@ function WorkflowTypeBadge({ workflowType }: { workflowType: WorkflowType }): JS
     default:
       return (
         <Badge
-          variant="outline"
+          variant="attribute"
+          kind="scope"
+          scope="full"
           data-testid="comparison-workflow-badge"
-          className={baseClassName}
+          className="shrink-0"
         >
           FULL
         </Badge>

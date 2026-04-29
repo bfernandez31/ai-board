@@ -128,39 +128,23 @@ interface TicketDetailModalProps {
   fullJobs?: TicketJobWithTelemetry[];
 }
 
+type CanonicalStage = 'inbox' | 'specify' | 'plan' | 'build' | 'verify' | 'ship';
+
 /**
- * Stage badge configuration mapping stages to Tailwind CSS classes
+ * Stage badge configuration. Stage variant uses canonical Catppuccin colors;
+ * CLOSED is non-canonical and falls back to the neutral secondary variant.
  */
-const stageBadgeConfig: Record<string, { label: string; className: string }> = {
-  INBOX: {
-    label: 'Inbox',
-    className: 'bg-ctp-overlay0 text-zinc-50 border-ctp-overlay0',
-  },
-  SPECIFY: {
-    label: 'Specify',
-    className: 'bg-ctp-lavender text-zinc-900 border-ctp-lavender',
-  },
-  PLAN: {
-    label: 'Plan',
-    className: 'bg-ctp-blue text-zinc-900 border-ctp-blue',
-  },
-  BUILD: {
-    label: 'Build',
-    className: 'bg-ctp-peach-light text-zinc-900 border-ctp-peach-light',
-  },
-  VERIFY: {
-    label: 'Verify',
-    className: 'bg-ctp-flamingo text-zinc-900 border-ctp-flamingo',
-  },
-  SHIP: {
-    label: 'Ship',
-    className: 'bg-ctp-green text-zinc-900 border-ctp-green',
-  },
-  // AIB-148: CLOSED stage styling
-  CLOSED: {
-    label: 'Closed',
-    className: 'bg-accent text-zinc-50 border-accent',
-  },
+const stageBadgeConfig: Record<
+  string,
+  { label: string; stage?: CanonicalStage }
+> = {
+  INBOX: { label: 'Inbox', stage: 'inbox' },
+  SPECIFY: { label: 'Specify', stage: 'specify' },
+  PLAN: { label: 'Plan', stage: 'plan' },
+  BUILD: { label: 'Build', stage: 'build' },
+  VERIFY: { label: 'Verify', stage: 'verify' },
+  SHIP: { label: 'Ship', stage: 'ship' },
+  CLOSED: { label: 'Closed' },
 };
 
 /**
@@ -807,10 +791,7 @@ export function TicketDetailModal({
   }
 
   // Get stage badge configuration
-  const stageBadge = stageBadgeConfig[ticket.stage] || {
-    label: ticket.stage,
-    className: 'bg-zinc-600 text-zinc-50 border-zinc-500',
-  };
+  const stageBadge = stageBadgeConfig[ticket.stage] || { label: ticket.stage };
 
   // Check if description and policy can be edited based on current stage
   const isInboxStage = canEditDescriptionAndPolicy(ticket.stage as Stage);
@@ -867,19 +848,24 @@ export function TicketDetailModal({
           <div className="flex items-center gap-2 mb-2">
             {/* Left: ticket key + stage pip + metadata badges */}
             <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
-              <span className="text-sm font-mono font-bold text-foreground/90 tracking-tight" data-testid="ticket-key">
+              <Badge variant="ticket" data-testid="ticket-key">
                 {localTicket?.ticketKey || ticket.ticketKey}
-              </span>
-              <Badge
-                className={`${stageBadge.className} text-xs px-2 py-0.5 font-medium pointer-events-none`}
-                data-testid="stage-badge"
-              >
-                {stageBadge.label}
               </Badge>
-              {isClosedTicket && (
-                <Badge variant="outline" className="text-xs px-2 py-0.5 text-muted-foreground border-muted-foreground/30">
-                  Read-only
+              {stageBadge.stage ? (
+                <Badge
+                  variant="stage"
+                  stage={stageBadge.stage}
+                  data-testid="stage-badge"
+                >
+                  {stageBadge.label}
                 </Badge>
+              ) : (
+                <Badge variant="secondary" data-testid="stage-badge">
+                  {stageBadge.label}
+                </Badge>
+              )}
+              {isClosedTicket && (
+                <Badge variant="outline">Read-only</Badge>
               )}
               <span className="text-muted-foreground/30 select-none hidden sm:inline">·</span>
               {localTicket?.project && (
@@ -896,13 +882,12 @@ export function TicketDetailModal({
               {effectiveAgent && (
                 <Badge
                   variant={isAgentOverride ? 'default' : 'secondary'}
-                  className="gap-1 text-xs py-0.5 px-2 font-normal"
                   data-testid="agent-badge"
                   title={`Agent${isAgentOverride ? ' (override)' : ''}`}
                 >
                   <AgentIcon agent={effectiveAgent} size={14} />
                   <span>{getAgentLabel(effectiveAgent)}</span>
-                  {!isAgentOverride && <span className="text-muted-foreground">(default)</span>}
+                  {!isAgentOverride && <span className="opacity-70">(default)</span>}
                 </Badge>
               )}
               {localTicket?.branch &&
@@ -1090,7 +1075,7 @@ export function TicketDetailModal({
             <TabsTrigger value="comments" className="text-sm relative">
               Conversation
               {comments?.comments && comments.comments.length > 0 && (
-                <Badge className="ml-2 bg-blue text-white text-xs px-1.5 py-0 h-5 min-w-[1.25rem]">
+                <Badge variant="count" className="ml-2">
                   {comments.comments.length}
                 </Badge>
               )}
@@ -1098,7 +1083,7 @@ export function TicketDetailModal({
             <TabsTrigger value="files" className="text-sm relative">
               Files
               {localTicket?.attachments && isTicketAttachmentArray(localTicket.attachments) && localTicket.attachments.length > 0 && (
-                <Badge className="ml-2 bg-blue text-white text-xs px-1.5 py-0 h-5 min-w-[1.25rem]">
+                <Badge variant="count" className="ml-2">
                   {localTicket.attachments.length}
                 </Badge>
               )}
@@ -1107,7 +1092,7 @@ export function TicketDetailModal({
               <TabsTrigger value="stats" className="text-sm relative" data-testid="stats-tab-trigger">
                 <BarChart3 className="w-4 h-4 mr-1.5" />
                 Stats
-                <Badge className="ml-2 bg-blue text-white text-xs px-1.5 py-0 h-5 min-w-[1.25rem]">
+                <Badge variant="count" className="ml-2">
                   {fullJobs.length}
                 </Badge>
               </TabsTrigger>
@@ -1328,7 +1313,7 @@ export function TicketDetailModal({
                 data-testid="details-footer"
               >
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-mono">{localTicket?.ticketKey || ticket.ticketKey}</span>
+                  <Badge variant="ticket">{localTicket?.ticketKey || ticket.ticketKey}</Badge>
                   <span>·</span>
                   <span>📅 Created {formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}</span>
                   <span>·</span>
