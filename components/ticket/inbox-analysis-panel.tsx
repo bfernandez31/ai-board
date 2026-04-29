@@ -47,6 +47,8 @@ const CONFIDENCE_TOOLTIP =
 const STALE_TOOLTIP =
   'The ticket description has changed since this analysis ran — re-analyze for an up-to-date signal.';
 
+const CHIP_CLASS = 'rounded-full border px-2 py-0.5 text-[11px] font-semibold';
+
 function recommendationClasses(choice: Recommendation): string {
   return choice === 'QUICK'
     ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
@@ -184,11 +186,10 @@ export function InboxAnalysisPanel({
   const showCostLabel = !!data;
   const stale = !!latest?.stale && latest.status !== 'running' && triggerable;
 
-  if (!latest && !triggerable) {
-    return null;
-  }
-
-  if (!latest && triggerable) {
+  if (!latest) {
+    if (!triggerable) {
+      return null;
+    }
     return (
       <div
         className="mb-6 flex items-center justify-end"
@@ -205,8 +206,6 @@ export function InboxAnalysisPanel({
       </div>
     );
   }
-
-  if (!latest) return null;
 
   const isExpandable =
     latest.status === 'success' || latest.status === 'cold_start';
@@ -263,7 +262,7 @@ export function InboxAnalysisPanel({
         {isColdStartOutput(latest) && (
           <CollapsibleRow
             expanded={expanded}
-            onToggle={() => setExpanded((e) => !e)}
+            onToggle={() => setExpanded((prev) => !prev)}
             isExpandable={isExpandable}
             collapsed={
               <div
@@ -307,7 +306,7 @@ export function InboxAnalysisPanel({
         {isSuccessOutput(latest) && (
           <CollapsibleRow
             expanded={expanded}
-            onToggle={() => setExpanded((e) => !e)}
+            onToggle={() => setExpanded((prev) => !prev)}
             isExpandable={isExpandable}
             collapsed={
               <SuccessRow
@@ -412,7 +411,7 @@ function SuccessRow({
 
       <ChipTooltip content={RECOMMENDATION_TOOLTIP}>
         <span
-          className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${recommendationClasses(recommendation.choice)}`}
+          className={`${CHIP_CLASS} ${recommendationClasses(recommendation.choice)}`}
           data-testid="recommendation-chip"
           aria-label={`Recommendation ${recommendation.choice}`}
           tabIndex={0}
@@ -423,7 +422,7 @@ function SuccessRow({
 
       <ChipTooltip content={FRICTION_RISK_TOOLTIP}>
         <span
-          className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${frictionRiskClasses(frictionRisk)}`}
+          className={`${CHIP_CLASS} ${frictionRiskClasses(frictionRisk)}`}
           data-testid="friction-risk-badge"
           aria-label={`Friction risk ${frictionRisk}`}
           tabIndex={0}
@@ -434,7 +433,7 @@ function SuccessRow({
 
       <ChipTooltip content={CONFIDENCE_TOOLTIP}>
         <span
-          className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${confidenceClasses(recommendation.confidence)}`}
+          className={`${CHIP_CLASS} ${confidenceClasses(recommendation.confidence)}`}
           data-testid="confidence-badge"
           aria-label={`Recommendation confidence ${recommendation.confidence}`}
           tabIndex={0}
