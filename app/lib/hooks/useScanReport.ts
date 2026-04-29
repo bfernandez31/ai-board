@@ -22,12 +22,9 @@ export function useScanReport(
     queryFn: async (): Promise<ScanReportResult> => {
       if (!moduleType) return { scan: null, report: null };
 
-      let url: string;
-      if (scanId !== null) {
-        url = `/api/projects/${projectId}/health/scans?scanId=${scanId}&includeReport=true`;
-      } else {
-        url = `/api/projects/${projectId}/health/scans?type=${moduleType}&limit=1&includeReport=true`;
-      }
+      const url = scanId !== null
+        ? `/api/projects/${projectId}/health/scans?scanId=${scanId}&includeReport=true`
+        : `/api/projects/${projectId}/health/scans?type=${moduleType}&limit=1&includeReport=true`;
 
       const response = await fetch(url, { cache: 'no-store' });
 

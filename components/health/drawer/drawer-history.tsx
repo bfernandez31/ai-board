@@ -13,6 +13,7 @@ import {
 import { getScoreColor } from '@/lib/quality-score';
 import { queryKeys } from '@/app/lib/query-keys';
 import { formatDuration } from '@/lib/health/format';
+import { cn } from '@/lib/utils';
 import type { HealthModuleType, ScanHistoryItem, ScanHistoryResponse } from '@/lib/health/types';
 
 interface DrawerHistoryProps {
@@ -129,12 +130,9 @@ function HistoryEntry({ scan, isSelected, onSelectScan }: HistoryEntryProps) {
   const date = scan.completedAt ?? scan.createdAt;
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') {
-      onSelectScan(scan.id);
-    } else if (e.key === ' ') {
-      e.preventDefault();
-      onSelectScan(scan.id);
-    }
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    if (e.key === ' ') e.preventDefault();
+    onSelectScan(scan.id);
   }
 
   return (
@@ -144,7 +142,11 @@ function HistoryEntry({ scan, isSelected, onSelectScan }: HistoryEntryProps) {
       aria-pressed={isSelected}
       onClick={() => onSelectScan(scan.id)}
       onKeyDown={handleKeyDown}
-      className={`aurora-glass rounded-md px-3 py-2 flex items-center justify-between cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none${isSelected ? ' ring-2 ring-primary/50 bg-primary/5' : ''}`}
+      className={cn(
+        'aurora-glass rounded-md px-3 py-2 flex items-center justify-between cursor-pointer',
+        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+        isSelected && 'ring-2 ring-primary/50 bg-primary/5'
+      )}
     >
       <div className="space-y-0.5">
         <p className="text-xs text-foreground">
