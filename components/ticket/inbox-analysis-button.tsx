@@ -41,8 +41,8 @@ export function InboxAnalysisButton({
   const disabled = !triggerable || exhausted || !!isPending || !!busy;
   const costLabel = `${formatUsd(estimatedCostUsd.lower)}–${formatUsd(estimatedCostUsd.upper)}`;
   const accessibleLabel = showCost
-    ? `Analyze ticket — estimated cost ${costLabel}`
-    : 'Analyze ticket';
+    ? `Run analysis — estimated cost ${costLabel}`
+    : 'Run analysis';
 
   const button = (
     <Button
@@ -51,27 +51,34 @@ export function InboxAnalysisButton({
       disabled={disabled}
       data-testid="inbox-analysis-trigger"
       aria-label={accessibleLabel}
-      className="gap-2"
+      className="h-7 gap-1.5 px-2.5 text-xs"
       size="sm"
+      variant="outline"
     >
-      <Sparkles className="h-4 w-4" aria-hidden="true" />
-      <span>Analyze</span>
-      {showCost && (
-        <span className="text-xs text-primary-foreground/70" aria-hidden="true">
-          ({costLabel})
-        </span>
-      )}
+      <Sparkles className="h-3 w-3" aria-hidden="true" />
+      <span>Run analysis</span>
     </Button>
   );
 
   if (exhausted && rateLimit.nextResetAt) {
     return (
-      <TooltipProvider>
+      <TooltipProvider delayDuration={150}>
         <Tooltip>
           <TooltipTrigger asChild>{button}</TooltipTrigger>
           <TooltipContent>
             Hourly budget exhausted. Capacity returns at {formatResetTime(rateLimit.nextResetAt)}.
           </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  if (showCost) {
+    return (
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild>{button}</TooltipTrigger>
+          <TooltipContent>Estimated cost {costLabel}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );

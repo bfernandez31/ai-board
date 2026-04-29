@@ -908,7 +908,7 @@ describe('TicketDetailModal', () => {
       expect(screen.getByTestId('inbox-analysis-panel')).toBeInTheDocument();
     });
 
-    it('renders the panel for non-INBOX tickets too (read-only persisted view)', () => {
+    it('renders nothing for non-INBOX tickets that have never been analysed', () => {
       const ticket = createMockTicket({ stage: 'BUILD' });
       renderWithProviders(
         <TicketDetailModal
@@ -921,7 +921,8 @@ describe('TicketDetailModal', () => {
           fullJobs={[]}
         />
       );
-      expect(screen.getByTestId('inbox-analysis-panel')).toBeInTheDocument();
+      expect(screen.queryByTestId('inbox-analysis-panel')).not.toBeInTheDocument();
+      expect(screen.queryByText(/no analysis available/i)).not.toBeInTheDocument();
     });
   });
 });
