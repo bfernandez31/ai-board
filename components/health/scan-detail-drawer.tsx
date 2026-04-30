@@ -49,27 +49,50 @@ export function ScanDetailDrawer({
     setSelectedScanId(null);
   }
 
-  const { data: latestData, isLoading } = useScanReport(projectId, moduleType);
-  const { data: selectedData } = useScanById(projectId, moduleType, selectedScanId);
+  // Treat selectedScanId as null during the same render the module changes —
+  // otherwise useScanById fires a request keyed by the new moduleType + the
+  // stale scanId, producing a transient empty state before the reset commits.
+  const effectiveSelectedScanId = prevModuleType === moduleType ? selectedScanId : null;
+
+  const {
+    data: latestData,
+    isLoading: isLatestLoading,
+    isError: isLatestError,
+  } = useScanReport(projectId, moduleType);
+  const {
+    data: selectedData,
+    isLoading: isSelectedLoading,
+    isError: isSelectedError,
+  } = useScanById(projectId, moduleType, effectiveSelectedScanId);
 
   const isOpen = moduleType !== null;
   const moduleMeta = moduleType ? MODULE_METADATA[moduleType] : null;
 
+  const isLoading =
+    effectiveSelectedScanId === null ? isLatestLoading : isSelectedLoading;
+  const isError =
+    effectiveSelectedScanId === null ? isLatestError : isSelectedError;
+
   const displayedScan =
-    selectedScanId === null ? latestData?.scan ?? null : selectedData?.scan ?? null;
+    effectiveSelectedScanId === null ? latestData?.scan ?? null : selectedData?.scan ?? null;
   const displayedReport =
-    selectedScanId === null ? latestData?.report ?? null : selectedData?.report ?? null;
+    effectiveSelectedScanId === null ? latestData?.report ?? null : selectedData?.report ?? null;
   const latestScanId = latestData?.scan?.id ?? null;
 
   const hasCompletedScan = !isLoading && displayedScan?.status === 'COMPLETED';
   const hasReport = hasCompletedScan && displayedReport !== null;
   const isSkipped = !isLoading && displayedScan?.status === 'SKIPPED';
+  const isDisplayedScanFailed = !isLoading && displayedScan?.status === 'FAILED';
 
   const showStates =
     !isLoading &&
     !hasCompletedScan &&
     !isSkipped &&
-    (isScanning || moduleStatus?.scanStatus === 'FAILED' || !displayedScan);
+    (isScanning ||
+      isDisplayedScanFailed ||
+      moduleStatus?.scanStatus === 'FAILED' ||
+      isError ||
+      !displayedScan);
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -105,6 +128,7 @@ export function ScanDetailDrawer({
                 isScanning={isScanning}
                 errorMessage={displayedScan?.errorMessage}
                 onTriggerScan={onTriggerScan}
+                isDisplayedScanFailed={isDisplayedScanFailed}
               />
             )}
 

@@ -226,7 +226,7 @@ Returns a single `HealthScan` by id with its `report` JSON. Powers historic-row 
     "headCommit": "def5678",
     "durationMs": 5421,
     "tokensUsed": 12345,
-    "costUsd": "0.0234",
+    "costUsd": 0.0234,
     "errorMessage": null,
     "startedAt": "2026-04-29T10:00:00.000Z",
     "completedAt": "2026-04-29T10:00:05.421Z",

@@ -11,6 +11,7 @@ interface DrawerStatesProps {
   isScanning: boolean;
   errorMessage?: string | null | undefined;
   onTriggerScan?: (() => void) | undefined;
+  isDisplayedScanFailed?: boolean | undefined;
 }
 
 type DrawerState = 'never_scanned' | 'scanning' | 'failed' | 'passive_no_data';
@@ -19,9 +20,10 @@ function getDrawerState(
   moduleType: HealthModuleType,
   moduleStatus: HealthModuleStatus,
   isScanning: boolean,
+  isDisplayedScanFailed: boolean,
 ): DrawerState {
   if (isScanning) return 'scanning';
-  if (moduleStatus.scanStatus === 'FAILED') return 'failed';
+  if (isDisplayedScanFailed || moduleStatus.scanStatus === 'FAILED') return 'failed';
   const meta = MODULE_METADATA[moduleType];
   if (meta.passive && moduleStatus.score === null && moduleStatus.label !== 'OK') {
     return 'passive_no_data';
@@ -35,8 +37,9 @@ export function DrawerStates({
   isScanning,
   errorMessage,
   onTriggerScan,
+  isDisplayedScanFailed = false,
 }: DrawerStatesProps) {
-  const state = getDrawerState(moduleType, moduleStatus, isScanning);
+  const state = getDrawerState(moduleType, moduleStatus, isScanning, isDisplayedScanFailed);
   const meta = MODULE_METADATA[moduleType];
 
   switch (state) {

@@ -65,6 +65,11 @@ export function DrawerHistory({
     return null;
   }
 
+  // If the latest-scan request failed (latestScanId === null) but we still have
+  // history rows, fall back to the most recent row so something is highlighted
+  // and the user has a clear "current" anchor.
+  const fallbackLatestId = latestScanId ?? allScans[0]?.id ?? null;
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -77,7 +82,7 @@ export function DrawerHistory({
           size="sm"
           className="text-xs h-6 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
           onClick={() => onSelect(null)}
-          disabled={selectedScanId === null}
+          disabled={selectedScanId === null || selectedScanId === fallbackLatestId}
           aria-label="Return to latest scan"
         >
           Latest
@@ -91,7 +96,7 @@ export function DrawerHistory({
             scan={scan}
             isSelected={
               scan.id === selectedScanId ||
-              (selectedScanId === null && scan.id === latestScanId)
+              (selectedScanId === null && scan.id === fallbackLatestId)
             }
             onSelect={onSelect}
           />

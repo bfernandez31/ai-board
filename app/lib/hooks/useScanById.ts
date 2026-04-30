@@ -20,7 +20,7 @@ export function useScanById(
   scanId: number | null
 ) {
   return useQuery({
-    queryKey: queryKeys.health.scan(projectId, scanId),
+    queryKey: queryKeys.health.scan(projectId, moduleType, scanId),
     queryFn: async (): Promise<ScanByIdResult> => {
       if (scanId === null || moduleType === null) {
         return { scan: null, report: null };

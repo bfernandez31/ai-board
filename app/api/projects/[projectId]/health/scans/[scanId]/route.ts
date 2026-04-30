@@ -20,10 +20,11 @@ export async function GET(
 
     await verifyProjectAccess(projectId, request);
 
-    const scan = await prisma.healthScan.findFirst({
-      where: { id: scanId, projectId },
+    const scan = await prisma.healthScan.findUnique({
+      where: { id: scanId },
       select: {
         id: true,
+        projectId: true,
         scanType: true,
         status: true,
         score: true,
@@ -42,11 +43,12 @@ export async function GET(
       },
     });
 
-    if (!scan) {
+    if (!scan || scan.projectId !== projectId) {
       return NextResponse.json({ error: 'Scan not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ scan });
+    const { projectId: _projectId, ...scanResponse } = scan;
+    return NextResponse.json({ scan: scanResponse });
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {

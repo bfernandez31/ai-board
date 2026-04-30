@@ -1233,7 +1233,7 @@ const { data, isLoading } = useScanReport(projectId, 'SECURITY');
 // data: { scan: ScanHistoryItemWithReport | null, report: ScanReport | null }
 ```
 
-`useScanById(projectId, moduleType, scanId)` fetches a single scan by id from `GET /api/projects/:projectId/health/scans/:scanId` and parses the report through the same `parseScanReport` pipeline. Used by the Scan Detail Drawer to swap the report area when the user selects a historic row in the History list. Disabled (no fetch) when `scanId` is `null`. Cached under `queryKeys.health.scan(projectId, scanId)` with `staleTime: 30_000` and `gcTime: 300_000`.
+`useScanById(projectId, moduleType, scanId)` fetches a single scan by id from `GET /api/projects/:projectId/health/scans/:scanId` and parses the report through the same `parseScanReport` pipeline. Used by the Scan Detail Drawer to swap the report area when the user selects a historic row in the History list. Disabled (no fetch) when `scanId` is `null`. Cached under `queryKeys.health.scan(projectId, moduleType, scanId)` with `staleTime: 30_000` and `gcTime: 300_000`.
 
 ```typescript
 const { data } = useScanById(projectId, 'SECURITY', selectedScanId);
