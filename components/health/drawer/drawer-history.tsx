@@ -72,10 +72,14 @@ export function DrawerHistory({
   const latestScanId = allScans[0]?.id ?? null;
   const effectiveSelectedId = selectedScanId ?? latestScanId;
 
-  // Clicking the latest row toggles back to the default (no explicit selection).
+  // Always set the explicit scan ID on first click so the list highlight and
+  // the report pane stay in sync. Comparing against the cached `latestScanId`
+  // would deselect on a row that only appears latest, then `useScanReport(null)`
+  // could fetch a different server-truth latest — drifting the two panes.
+  // Re-clicking an already-selected row deselects (returns to default).
   const handleSelect = (scanId: number) => {
     if (!onSelectScan) return;
-    onSelectScan(scanId === latestScanId ? null : scanId);
+    onSelectScan(scanId === selectedScanId ? null : scanId);
   };
 
   return (
@@ -152,7 +156,7 @@ function HistoryEntry({ scan, isSelected, onSelect }: HistoryEntryProps) {
                     variant="attribute-tc"
                     kind="friction"
                     level={issuesToLevel(scan.issuesFound)}
-                    aria-label={`${scan.issuesFound} issues found`}
+                    aria-label={`${scan.issuesFound} ${scan.issuesFound === 1 ? 'issue' : 'issues'} found`}
                   >
                     <AlertTriangle className="h-3 w-3" aria-hidden="true" />
                     {scan.issuesFound}

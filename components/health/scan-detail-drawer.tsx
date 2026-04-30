@@ -103,7 +103,7 @@ export function ScanDetailDrawer({
               />
             )}
 
-            {isSkipped && (
+            {isSkipped && !isViewingHistorical && (
               <div className="rounded-lg border border-border bg-muted/50 p-4 text-center space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Skipped</p>
                 <p className="text-xs text-muted-foreground">
@@ -115,6 +115,13 @@ export function ScanDetailDrawer({
                     Re-run scan
                   </Button>
                 )}
+              </div>
+            )}
+
+            {isSkipped && isViewingHistorical && (
+              <div className="rounded-lg border border-border bg-muted/50 p-4 text-center space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Skipped</p>
+                <p className="text-2xl font-bold text-muted-foreground">N/A</p>
               </div>
             )}
 
