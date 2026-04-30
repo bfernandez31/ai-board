@@ -109,7 +109,7 @@ Single Next.js project (Option 1 per `plan.md` §"Project Structure"). All paths
 
 ### Tests for User Story 3
 
-- [ ] T027 [P] [US3] Create `tests/integration/calibration/multi-analysis.test.ts` — three sub-tests: (a) two `success` analyses → calibration references the later one; (b) latest analysis is `failed` while a prior `success` exists → calibration references the prior `success`; (c) older `success` row is unmodified after pairing (`updatedAt` and `output` byte-equal pre/post). Asserts `pair.ts` Phase 3's `orderBy: { createdAt: 'desc' }` clause works (FR-003 / SC-012)
+- [X] ✅ DONE T027 [P] [US3] Create `tests/integration/calibration/multi-analysis.test.ts` — three sub-tests: (a) two `success` analyses → calibration references the later one; (b) latest analysis is `failed` while a prior `success` exists → calibration references the prior `success`; (c) older `success` row is unmodified after pairing (`updatedAt` and `output` byte-equal pre/post). Asserts `pair.ts` Phase 3's `orderBy: { createdAt: 'desc' }` clause works (FR-003 / SC-012)
 
 **Checkpoint**: Multi-analysis tickets pair correctly; older analyses untouched.
 
@@ -123,9 +123,9 @@ Single Next.js project (Option 1 per `plan.md` §"Project Structure"). All paths
 
 ### Tests for User Story 4
 
-- [ ] T028 [P] [US4] Create `tests/integration/calibration/cold-start.test.ts` — seed ticket whose latest `TicketAnalysis.status='cold_start'`; run pairing; assert no calibration row written; assert the ticket still counts in adoption (verified by querying `getCalibrationDashboard().adoption.analyzed` once US5/T031 lands — until then, assert directly via Prisma that `analysisId` for ticket exists with status `cold_start`)
-- [ ] T029 [P] [US4] Create `tests/integration/calibration/partial-outcome.test.ts` — seed ticket + `success` analysis + outcome with `partial=true`, `partialReason='diff_truncated'`, `qualityScore=null`, `totalCostUsd=12.5`, `frictionFree=false`; run pairing; assert calibration row exists with `partial=true`, `partialReason='diff_truncated'`, `qualityVerdict='n_a'`, `costVerdict='hit'|'miss'` per the predicted summed range, `frictionCell ∈ {TN, FN}` per `frictionPredictedClean`/`frictionActualFree=false` (FR-011 / SC-011)
-- [ ] T030 [P] [US4] Create `tests/integration/calibration/no-success-analysis.test.ts` — seed ticket with only `failed` and `running` analyses + outcome row; run pairing; assert no calibration row written (FR-004); assert adoption still counts the ticket (verified once T031 lands; until then assert via Prisma)
+- [X] ✅ DONE T028 [P] [US4] Create `tests/integration/calibration/cold-start.test.ts` — seed ticket whose latest `TicketAnalysis.status='cold_start'`; run pairing; assert no calibration row written; assert the ticket still counts in adoption (verified by querying `getCalibrationDashboard().adoption.analyzed` once US5/T031 lands — until then, assert directly via Prisma that `analysisId` for ticket exists with status `cold_start`)
+- [X] ✅ DONE T029 [P] [US4] Create `tests/integration/calibration/partial-outcome.test.ts` — seed ticket + `success` analysis + outcome with `partial=true`, `partialReason='diff_truncated'`, `qualityScore=null`, `totalCostUsd=12.5`, `frictionFree=false`; run pairing; assert calibration row exists with `partial=true`, `partialReason='diff_truncated'`, `qualityVerdict='n_a'`, `costVerdict='hit'|'miss'` per the predicted summed range, `frictionCell ∈ {TN, FN}` per `frictionPredictedClean`/`frictionActualFree=false` (FR-011 / SC-011)
+- [X] ✅ DONE T030 [P] [US4] Create `tests/integration/calibration/no-success-analysis.test.ts` — seed ticket with only `failed` and `running` analyses + outcome row; run pairing; assert no calibration row written (FR-004); assert adoption still counts the ticket (verified once T031 lands; until then assert via Prisma)
 
 **Checkpoint**: Degraded-input handling matches spec policy.
 
@@ -139,13 +139,13 @@ Single Next.js project (Option 1 per `plan.md` §"Project Structure"). All paths
 
 ### Tests for User Story 5
 
-- [ ] T031 [P] [US5] Create `tests/integration/calibration/adoption-counter.test.ts` — seed mixed cohort across the feature-availability boundary; assert numerator includes `failed`/`cold_start` analyses, denominator excludes pre-feature tickets, ratio is null when `sinceFeatureAvailable=0` (FR-016 / SC-008)
+- [X] ✅ DONE T031 [P] [US5] Create `tests/integration/calibration/adoption-counter.test.ts` — seed mixed cohort across the feature-availability boundary; assert numerator includes `failed`/`cold_start` analyses, denominator excludes pre-feature tickets, ratio is null when `sinceFeatureAvailable=0` (FR-016 / SC-008)
 
 ### Implementation for User Story 5
 
-- [ ] T032 [US5] Extend `lib/calibration/queries.ts` with `computeAdoption(projectId): Promise<{analyzed: number; sinceFeatureAvailable: number; ratio: number | null}>` — runs in parallel: (a) `prisma.ticketAnalysis.aggregate({_min: {createdAt}, where: {projectId}})` to derive feature-availability moment; (b) `findMany` distinct `ticketId`s with ≥1 analysis row of any status (numerator); (c) count distinct tickets with `createdAt >= featureAvailableAt` (denominator). Wire into `getCalibrationDashboard` (research.md D6)
-- [ ] T033 [US5] Create `components/calibration/adoption-counter.tsx` — single stat Card showing "X of Y tickets analysed since feature available" + ratio percentage; null-safe when `sinceFeatureAvailable=0` ("No tickets since feature became available")
-- [ ] T034 [US5] Modify `components/calibration/calibration-dashboard.tsx` to render `<AdoptionCounter adoption={data.adoption} />` alongside the four drift panels; AdoptionCounter is independent of `warmingUp` (still rendered when drift dataset is empty)
+- [X] ✅ DONE T032 [US5] Extend `lib/calibration/queries.ts` with `computeAdoption(projectId): Promise<{analyzed: number; sinceFeatureAvailable: number; ratio: number | null}>` — runs in parallel: (a) `prisma.ticketAnalysis.aggregate({_min: {createdAt}, where: {projectId}})` to derive feature-availability moment; (b) `findMany` distinct `ticketId`s with ≥1 analysis row of any status (numerator); (c) count distinct tickets with `createdAt >= featureAvailableAt` (denominator). Wire into `getCalibrationDashboard` (research.md D6)
+- [X] ✅ DONE T033 [US5] Create `components/calibration/adoption-counter.tsx` — single stat Card showing "X of Y tickets analysed since feature available" + ratio percentage; null-safe when `sinceFeatureAvailable=0` ("No tickets since feature became available")
+- [X] ✅ DONE T034 [US5] Modify `components/calibration/calibration-dashboard.tsx` to render `<AdoptionCounter adoption={data.adoption} />` alongside the four drift panels; AdoptionCounter is independent of `warmingUp` (still rendered when drift dataset is empty)
 
 **Checkpoint**: Adoption counter visible on the dashboard; numerator/denominator semantics verified.
 
@@ -159,7 +159,7 @@ Single Next.js project (Option 1 per `plan.md` §"Project Structure"). All paths
 
 ### Tests for User Story 6
 
-- [ ] T035 [P] [US6] Create `tests/integration/calibration/api-calibration.test.ts` — three test cases via `vi.mock('@/lib/db/auth-helpers')` controlling `verifyProjectOwnership` outcome: (1) owner → 200 + payload shape matching `CalibrationDashboardData` interface; (2) member (helper throws `'Project not found'`) → 404 with `{error: 'Not found'}`; (3) non-member (same throw) → response byte-identical to (2); also: (4) unauthenticated (`requireAuth` throws `'Unauthorized'`) → 401 `{error: 'Unauthorized'}`; (5) invalid `projectId` path parameter → 400 (FR-013, SC-007, `contracts/calibration-api.md` §"Authorization")
+- [X] ✅ DONE T035 [P] [US6] Create `tests/integration/calibration/api-calibration.test.ts` — three test cases via `vi.mock('@/lib/db/auth-helpers')` controlling `verifyProjectOwnership` outcome: (1) owner → 200 + payload shape matching `CalibrationDashboardData` interface; (2) member (helper throws `'Project not found'`) → 404 with `{error: 'Not found'}`; (3) non-member (same throw) → response byte-identical to (2); also: (4) unauthenticated (`requireAuth` throws `'Unauthorized'`) → 401 `{error: 'Unauthorized'}`; (5) invalid `projectId` path parameter → 400 (FR-013, SC-007, `contracts/calibration-api.md` §"Authorization")
 
 **Checkpoint**: Owner-only gate verified; no data leak.
 
