@@ -100,28 +100,28 @@ enum CaptureStatus {
 }
 
 model Project {
-  id                  Int                 @id @default(autoincrement())
-  name                String              @db.VarChar(100)
-  description         String              @db.VarChar(1000)
-  githubOwner         String              @db.VarChar(100)
-  githubRepo          String              @db.VarChar(100)
+  id                  Int                   @id @default(autoincrement())
+  name                String                @db.VarChar(100)
+  description         String                @db.VarChar(1000)
+  githubOwner         String                @db.VarChar(100)
+  githubRepo          String                @db.VarChar(100)
   userId              String
-  deploymentUrl       String?             @db.VarChar(500)
-  key                 String              @unique @db.VarChar(6)
-  createdAt           DateTime            @default(now())
+  deploymentUrl       String?               @db.VarChar(500)
+  key                 String                @unique @db.VarChar(6)
+  createdAt           DateTime              @default(now())
   updatedAt           DateTime
-  clarificationPolicy ClarificationPolicy @default(AUTO)
-  defaultAgent        Agent               @default(CLAUDE)
+  clarificationPolicy ClarificationPolicy   @default(AUTO)
+  defaultAgent        Agent                 @default(CLAUDE)
   config              Json?
   configSyncedAt      DateTime?
-  defaultBranch       String              @default("main") @db.VarChar(100)
-  specifyModel        String?             @db.VarChar(50)
-  planModel           String?             @db.VarChar(50)
-  implementModel      String?             @db.VarChar(50)
-  quickImplModel      String?             @db.VarChar(50)
-  verifyModel         String?             @db.VarChar(50)
-  hasSpecs            Boolean             @default(false)
-  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultBranch       String                @default("main") @db.VarChar(100)
+  specifyModel        String?               @db.VarChar(50)
+  planModel           String?               @db.VarChar(50)
+  implementModel      String?               @db.VarChar(50)
+  quickImplModel      String?               @db.VarChar(50)
+  verifyModel         String?               @db.VarChar(50)
+  hasSpecs            Boolean               @default(false)
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
   members             ProjectMember[]
   comparisonRecords   ComparisonRecord[]
@@ -130,6 +130,7 @@ model Project {
   setupJobs           ProjectSetupJob[]
   outcomes            TicketOutcome[]
   analyses            TicketAnalysis[]
+  calibrations        AnalysisCalibration[]
   backfillProgress    BackfillProgress?
 
   @@unique([githubOwner, githubRepo])
@@ -191,6 +192,7 @@ model Ticket {
   notifications          Notification[]
   outcome                TicketOutcome?
   analyses               TicketAnalysis[]
+  calibration            AnalysisCalibration?
   project                Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   sourceComparisons      ComparisonRecord[]        @relation("ComparisonSourceTicket")
   winnerComparisons      ComparisonRecord[]        @relation("ComparisonWinnerTicket")
@@ -731,8 +733,9 @@ model TicketOutcome {
   partialReason String? @db.VarChar(40)
 
   // Relations
-  ticket  Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ticket      Ticket               @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  project     Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  calibration AnalysisCalibration?
 
   @@index([projectId, shippedAt(sort: Desc)])
   @@index([projectId, frictionFree])
@@ -808,12 +811,63 @@ model TicketAnalysis {
 
   anchorIdsAttempted Int[] @default([])
 
-  ticket  Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticket      Ticket               @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  project     Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calibration AnalysisCalibration?
 
   @@index([ticketId, createdAt(sort: Desc)])
   @@index([userId, status, endedAt])
   @@index([projectId, createdAt(sort: Desc)])
   @@index([status, startedAt])
+}
+
+model AnalysisCalibration {
+  id Int @id @default(autoincrement())
+
+  ticketId   Int @unique
+  projectId  Int
+  analysisId Int @unique
+  outcomeId  Int @unique
+
+  ruleSetVersion Int
+  capturedAt     DateTime @default(now())
+  shippedAt      DateTime
+
+  frictionPredictedRating String  @db.VarChar(8)
+  frictionPredictedClean  Boolean
+  frictionActualFree      Boolean
+  frictionCell            String  @db.VarChar(2)
+
+  qualityPredictedLower Int
+  qualityPredictedUpper Int
+  qualityActual         Int?
+  qualityVerdict        String @db.VarChar(4)
+
+  costPredictedBaselineLowerUsd Float
+  costPredictedBaselineUpperUsd Float
+  costPredictedMarginalLowerUsd Float
+  costPredictedMarginalUpperUsd Float
+  costPredictedSummedLowerUsd   Float
+  costPredictedSummedUpperUsd   Float
+  costActualUsd                 Float?
+  costVerdict                   String @db.VarChar(4)
+
+  recommendationPredicted       String       @db.VarChar(5)
+  recommendationConfidence      String       @db.VarChar(6)
+  workflowActual                WorkflowType
+  recommendationMatched         Boolean
+  recommendationFrictionAligned Boolean
+
+  partial       Boolean @default(false)
+  partialReason String? @db.VarChar(40)
+
+  ticket   Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  project  Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analysis TicketAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  outcome  TicketOutcome  @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, shippedAt(sort: Desc)])
+  @@index([projectId, partial])
+  @@index([projectId, frictionCell])
 }
