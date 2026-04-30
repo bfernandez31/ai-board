@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
+import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
 import { ScanDetailDrawer } from '@/components/health/scan-detail-drawer';
 import type { HealthModuleStatus } from '@/lib/health/types';
 
@@ -8,6 +8,44 @@ import type { HealthModuleStatus } from '@/lib/health/types';
 const mockUseScanReport = vi.fn();
 vi.mock('@/app/lib/hooks/useScanReport', () => ({
   useScanReport: (...args: unknown[]) => mockUseScanReport(...args),
+}));
+
+// Mock useScanById hook (historic scan source)
+const mockUseScanById = vi.fn();
+vi.mock('@/app/lib/hooks/useScanById', () => ({
+  useScanById: (...args: unknown[]) => mockUseScanById(...args),
+}));
+
+// Mock DrawerHistory so we can drive selectedScanId from the test (avoids
+// network fetch noise; this test focuses on ScanDetailDrawer orchestration).
+vi.mock('@/components/health/drawer/drawer-history', () => ({
+  DrawerHistory: ({
+    selectedScanId,
+    onSelect,
+  }: {
+    selectedScanId: number | null;
+    onSelect: (id: number | null) => void;
+  }) => (
+    <div data-testid="mock-drawer-history">
+      <button
+        type="button"
+        data-testid="mock-select-historic"
+        onClick={() => onSelect(42)}
+      >
+        select historic
+      </button>
+      <button
+        type="button"
+        data-testid="mock-select-latest"
+        onClick={() => onSelect(null)}
+        disabled={selectedScanId === null}
+        aria-label="Return to latest scan"
+      >
+        Latest
+      </button>
+      <span data-testid="mock-selected-scan-id">{String(selectedScanId)}</span>
+    </div>
+  ),
 }));
 
 const completedStatus: HealthModuleStatus = {
@@ -66,6 +104,10 @@ const securityReport = {
 describe('ScanDetailDrawer', () => {
   beforeEach(() => {
     mockUseScanReport.mockReturnValue({
+      data: null,
+      isLoading: false,
+    });
+    mockUseScanById.mockReturnValue({
       data: null,
       isLoading: false,
     });
@@ -208,5 +250,139 @@ describe('ScanDetailDrawer', () => {
     expect(screen.getByText(/SQL injection vulnerability/)).toBeInTheDocument();
     expect(screen.getByText('Generated Tickets')).toBeInTheDocument();
     expect(screen.getByText('AIB-123')).toBeInTheDocument();
+  });
+
+  it('case 12: shows historic report (not latest) when a historic scan is selected', async () => {
+    const historicScan = { ...completedScan, id: 42 };
+    const historicReport = {
+      type: 'SECURITY' as const,
+      issues: [
+        {
+          id: 'sec-historic',
+          severity: 'high' as const,
+          description: 'Historic XSS vulnerability',
+        },
+      ],
+      generatedTickets: [],
+    };
+
+    mockUseScanReport.mockReturnValue({
+      data: { scan: completedScan, report: securityReport },
+      isLoading: false,
+    });
+    mockUseScanById.mockImplementation(
+      (_projectId: number, _moduleType: unknown, scanId: number | null) => {
+        if (scanId === 42) {
+          return {
+            data: { scan: historicScan, report: historicReport },
+            isLoading: false,
+          };
+        }
+        return { data: null, isLoading: false };
+      }
+    );
+
+    renderWithProviders(
+      <ScanDetailDrawer
+        projectId={1}
+        moduleType="SECURITY"
+        moduleStatus={completedStatus}
+        isScanning={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    // Initially shows latest report
+    expect(screen.getByText(/SQL injection vulnerability/)).toBeInTheDocument();
+
+    // Select the historic scan via the mocked DrawerHistory
+    await userEvent.click(screen.getByTestId('mock-select-historic'));
+
+    expect(screen.getByText(/Historic XSS vulnerability/)).toBeInTheDocument();
+    expect(screen.queryByText(/SQL injection vulnerability/)).not.toBeInTheDocument();
+  });
+
+  it('case 13: shows "No detailed report available for this scan" when historic scan has null report', async () => {
+    mockUseScanReport.mockReturnValue({
+      data: { scan: completedScan, report: securityReport },
+      isLoading: false,
+    });
+    mockUseScanById.mockImplementation(
+      (_projectId: number, _moduleType: unknown, scanId: number | null) => {
+        if (scanId === 42) {
+          return {
+            data: { scan: { ...completedScan, id: 42 }, report: null },
+            isLoading: false,
+          };
+        }
+        return { data: null, isLoading: false };
+      }
+    );
+
+    renderWithProviders(
+      <ScanDetailDrawer
+        projectId={1}
+        moduleType="SECURITY"
+        moduleStatus={completedStatus}
+        isScanning={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    await userEvent.click(screen.getByTestId('mock-select-historic'));
+
+    expect(
+      screen.getByText('No detailed report available for this scan')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Report data unavailable/)
+    ).not.toBeInTheDocument();
+  });
+
+  it('case 14: changing moduleType resets selectedScanId to null', async () => {
+    mockUseScanReport.mockReturnValue({
+      data: { scan: completedScan, report: securityReport },
+      isLoading: false,
+    });
+    mockUseScanById.mockImplementation(
+      (_projectId: number, _moduleType: unknown, scanId: number | null) => {
+        if (scanId === 42) {
+          return {
+            data: { scan: { ...completedScan, id: 42 }, report: securityReport },
+            isLoading: false,
+          };
+        }
+        return { data: null, isLoading: false };
+      }
+    );
+
+    const { rerender } = renderWithProviders(
+      <ScanDetailDrawer
+        projectId={1}
+        moduleType="SECURITY"
+        moduleStatus={completedStatus}
+        isScanning={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    // Select a historic scan
+    await userEvent.click(screen.getByTestId('mock-select-historic'));
+    let latestBtn = screen.getByRole('button', { name: /return to latest scan/i });
+    expect(latestBtn).not.toBeDisabled();
+
+    // Change moduleType — selectedScanId should reset to null
+    rerender(
+      <ScanDetailDrawer
+        projectId={1}
+        moduleType="COMPLIANCE"
+        moduleStatus={completedStatus}
+        isScanning={false}
+        onClose={vi.fn()}
+      />
+    );
+
+    latestBtn = screen.getByRole('button', { name: /return to latest scan/i });
+    expect(latestBtn).toBeDisabled();
   });
 });

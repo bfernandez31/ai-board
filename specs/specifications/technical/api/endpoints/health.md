@@ -203,6 +203,52 @@ Results ordered by `createdAt DESC`. `nextCursor` is the ID of the last scan ret
 
 ---
 
+### GET /api/projects/[projectId]/health/scans/[scanId]
+
+Returns a single `HealthScan` by id with its `report` JSON. Powers historic-row selection in the scan-detail drawer.
+
+**Authentication**: Session cookie OR Bearer PAT
+**Authorization**: `verifyProjectAccess(projectId)` — owner or member. After the access check, the handler verifies that the looked-up scan's `projectId` matches the URL `projectId`; on mismatch, the response is `404` (not `403`) so the existence of a scan in another project is not leaked.
+
+**Path params**: `projectId` (positive integer), `scanId` (positive integer)
+
+**Response** (200 OK):
+```json
+{
+  "scan": {
+    "id": 1234,
+    "scanType": "COMPLIANCE",
+    "status": "COMPLETED",
+    "score": 87,
+    "issuesFound": 2,
+    "issuesFixed": 1,
+    "baseCommit": "abc1234",
+    "headCommit": "def5678",
+    "durationMs": 5421,
+    "tokensUsed": 12345,
+    "costUsd": 0.0234,
+    "errorMessage": null,
+    "startedAt": "2026-04-29T10:00:00.000Z",
+    "completedAt": "2026-04-29T10:00:05.421Z",
+    "createdAt": "2026-04-29T10:00:00.000Z",
+    "report": "{\"type\":\"COMPLIANCE\",\"issues\":[…],\"generatedTickets\":[…]}"
+  }
+}
+```
+
+The `scan` object shape matches a single item from `GET …/scans?type=…&includeReport=true`. The `report` field is the raw JSON-stringified column; the client decodes it via `parseScanReport(moduleType, raw)`. `report` is `null` for legacy or SKIPPED scans that have no structured report — the drawer surfaces the "No detailed report available for this scan" empty state when this happens.
+
+**Caching**: Server does not set explicit `Cache-Control`; clients call with `cache: 'no-store'` and rely on TanStack Query (`staleTime: 30_000`, `gcTime: 5 min`) keyed by `health.scan(projectId, scanId)`.
+
+**Errors**:
+- `400`: Invalid `projectId` or `scanId`
+- `401`: Unauthorized
+- `403`: Forbidden (caller is neither owner nor member)
+- `404`: Scan not found, or scan exists but belongs to a different project (cross-project guard)
+- `500`: Unexpected error (logged server-side as `[Health Scan By Id] Error:`)
+
+---
+
 ### PATCH /api/projects/[projectId]/health/scans/[scanId]/status
 
 Workflow callback endpoint to update scan status and results. Uses the same Bearer token authentication pattern as `PATCH /api/jobs/:id/status`.
