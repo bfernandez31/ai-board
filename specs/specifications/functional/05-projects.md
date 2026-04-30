@@ -579,6 +579,60 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - Navigates to `/projects/{projectId}/board`
 - Outline variant styling for secondary action appearance
 
+### Analysis Calibration Drift Dashboard
+
+Project owners can review how the inbox-analysis predictions have held up against actual delivery outcomes. The dashboard pairs every analyzed-then-shipped ticket's stored predictions with the captured outcome and surfaces the deltas as a confusion matrix, two distributions, a recommendation panel, and an adoption counter.
+
+**Page Access**:
+- Owner-only page at `/projects/{projectId}/calibration`
+- Project members and non-members receive the same generic "not found" response — the dashboard's existence is not leaked
+- No new role or permission tier; the existing owner-only gate is reused
+
+**Window**:
+- Headline metrics reflect the most recent 30 calibration rows in the project, ordered by paired-outcome `shippedAt` descending
+- When the project has more than 30 paired tickets, the page shows "30 of N shipped+analyzed tickets" so the owner knows the underlying dataset is larger
+- When the project has fewer than 30 paired tickets, the page renders with the available rows and a "still warming up" indicator naming the current count, instead of an empty-state error
+
+**Friction Confusion Matrix**:
+- 2×2 labelled HTML table on the binary "predicted clean" / "actual frictionFree" classification
+- Predicted "low" friction risk maps to "predicted clean"; predicted "medium" or "high" maps to "predicted friction"
+- Cells display explicit counts and percentages for true positive (TP), true negative (TN), false positive (FP), and false negative (FN) — the positive class is "predicted clean" with "actual frictionFree"
+- Precision and recall on the "low risk" class are surfaced alongside the matrix; both render as `null` when the relevant denominator is zero
+
+**Quality and Cost Distributions**:
+- Each rendered as a labelled chart paired with a sortable tabular fallback so screen-reader and keyboard-only users have an equivalent view
+- Three explicit buckets per distribution: `hit`, `miss`, and `n/a` so QUICK tickets (no quality score) and tickets without recorded cost cannot inflate or deflate the headline rate
+- Quality hit: actual quality score falls inside the predicted `[lower, upper]` range, inclusive of both bounds
+- Cost hit: actual aggregated cost falls inside the summed predicted range (`baselineLower + marginalLower` … `baselineUpper + marginalUpper`)
+
+**Recommendation Panel**:
+- Two independent rates over the window, presented as separate stat cards:
+  - **Matched rate**: the predicted recommendation (`QUICK` or `FULL`) equalled the actual `workflowType` the user used
+  - **Friction-aligned rate**: `QUICK` was predicted and the ticket was friction-free, OR `FULL` was predicted and friction emerged
+- Both axes are reported separately because a recommendation can be "matched" (the user followed it) yet still wrong in hindsight, or vice versa
+
+**Adoption Counter**:
+- Numerator: distinct tickets in the project with at least one analysis attempt of any status (including `failed` and `cold_start`) — reflects user attempts, not just successful runs
+- Denominator: tickets that entered INBOX in the project on or after the moment the analysis feature became available on the project (so older inboxes do not artificially depress adoption)
+- Ratio is rendered alongside the absolute counts; the counter is computed independently of the 30-row drift window
+
+**Honest Handling of Degraded Inputs**:
+- Tickets whose latest analysis is `cold_start` produce no calibration row (no numeric ranges to compare) but still count in the adoption denominator
+- Tickets whose paired outcome is `partial = true` still produce a calibration row: cells that depend on missing telemetry are recorded as `n/a` with a `partialReason` snapshot, while cells that can be computed (cost, friction-free) populate normally
+- Headline rates exclude `n/a` cells from their denominators; the `n/a` count is surfaced as a separate bucket so owners can see how many comparisons were skipped
+- Tickets with multiple analyses pair only the most recent `success` row; older analyses remain on the analysis history but do not contribute to drift metrics
+- Tickets without any `success` analysis produce no calibration row but still count in the adoption denominator
+
+**Refresh Cadence**:
+- The dashboard polls every 15 seconds, matching the analytics dashboard convention
+- The read path is read-only: it never triggers a recomputation, LLM call, or write
+- The dashboard is informative only — no auto-correction, alerting, or modification of analysis prompts is performed based on observed drift
+
+**Accessibility**:
+- The confusion matrix is a labelled HTML table; both axes carry explicit text labels ("Predicted: low risk", "Actual: friction-free")
+- Hit/miss distributions render as a labelled chart and a sortable tabular fallback; no information is conveyed by colour alone
+- Counts plus percentages are shown on every cell so small denominators cannot mislead
+
 ## Project Import
 
 ### Overview

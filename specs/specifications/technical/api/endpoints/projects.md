@@ -786,6 +786,98 @@ Return the current `BackfillProgress` for a project. Operators poll this endpoin
 
 **Errors**: `401`, `403` (no access), `404` (project not found)
 
+## Project Calibration Endpoint
+
+### GET /api/projects/:projectId/calibration
+
+Return the project owner's calibration drift dashboard payload — friction confusion matrix, quality and cost verdict distributions, recommendation panel, and adoption counter — aggregated from the most recent 30 calibration rows in the project. Read-only — no `POST`, `PUT`, `PATCH`, or `DELETE` is exposed.
+
+**Authentication**: Session cookie OR Bearer PAT (via `requireAuth(request)` in `lib/db/auth-helpers.ts`)
+**Authorization**: Project owner only (`verifyProjectOwnership`). Authenticated callers who are not the owner — including project members — receive a generic `404 Not Found` response so the dashboard's existence is not leaked.
+
+**Path Parameters**:
+- `projectId` (number, required, > 0): Project ID
+
+**Query Parameters**: none in v1
+
+**Response** (200 OK):
+```json
+{
+  "windowSize": 30,
+  "totalRows": 47,
+  "warmingUp": false,
+  "confusionMatrix": {
+    "truePositive": 14,
+    "trueNegative": 8,
+    "falsePositive": 5,
+    "falseNegative": 3,
+    "precisionLowRisk": 0.7368421052631579,
+    "recallLowRisk": 0.8235294117647058,
+    "total": 30
+  },
+  "qualityDistribution": {
+    "hit": 12,
+    "miss": 6,
+    "na": 12,
+    "total": 30,
+    "hitRate": 0.6666666666666666
+  },
+  "costDistribution": {
+    "hit": 22,
+    "miss": 7,
+    "na": 1,
+    "total": 30,
+    "hitRate": 0.7586206896551724
+  },
+  "recommendation": {
+    "matchedRate": 0.7666666666666667,
+    "frictionAlignedRate": 0.6,
+    "counts": { "matched": 23, "frictionAligned": 18 }
+  },
+  "adoption": {
+    "analyzed": 89,
+    "sinceFeatureAvailable": 142,
+    "ratio": 0.6267605633802817
+  },
+  "generatedAt": "2026-05-12T14:32:11.000Z"
+}
+```
+
+**Fields**:
+- `windowSize`: Number of calibration rows aggregated into this response (≤ 30)
+- `totalRows`: Total calibration rows in the project (drives the "30 of N" caption)
+- `warmingUp`: `true` iff `totalRows < 30`; the client renders the "still warming up" indicator whenever this is `true`
+- `confusionMatrix`: Counts on the binary "predicted clean (low friction) / actual frictionFree" classification across the windowed rows. Partial calibration rows always contribute (friction is one of the always-available signals). `precisionLowRisk = TP / (TP + FP)` and `recallLowRisk = TP / (TP + FN)`; both are `null` when the relevant denominator is zero
+- `qualityDistribution` / `costDistribution`: Hit/miss/n_a counts plus `hitRate = hit / (hit + miss)` (excludes `na` from the denominator); `hitRate` is `null` when `(hit + miss) = 0`. The renamed `na` field corresponds to the persisted `'n_a'` verdict
+- `recommendation.matchedRate`: `count(recommendationMatched = true) / windowSize`; `null` when `windowSize = 0`
+- `recommendation.frictionAlignedRate`: `count(recommendationFrictionAligned = true) / windowSize`; `null` when `windowSize = 0`
+- `adoption.analyzed`: Distinct tickets in the project with at least one `TicketAnalysis` row of any status (numerator)
+- `adoption.sinceFeatureAvailable`: Distinct tickets in the project created on or after `MIN(TicketAnalysis.createdAt)` for the project — proxy for "moment the analysis feature became available on the project"; the denominator excludes tickets created before that moment so older inboxes do not artificially depress adoption
+- `adoption.ratio`: `analyzed / sinceFeatureAvailable`; `null` when `sinceFeatureAvailable = 0`. Computed independently of the 30-row drift window
+- `generatedAt`: Server-side generation timestamp (ISO 8601, UTC)
+
+**Empty-state response** (project has zero calibration rows): all counts are `0`, every rate field is `null`, and `warmingUp` is `true`.
+
+**Errors**:
+
+| Status | Body | Triggered by |
+|---|---|---|
+| `400` | `{ "error": "Invalid project ID" }` | `Number.isNaN(projectId) \|\| projectId <= 0` |
+| `401` | `{ "error": "Unauthorized" }` | No session and no Bearer token |
+| `404` | `{ "error": "Not found" }` | `verifyProjectOwnership` threw `Project not found` (project does not exist OR caller is not the owner — collapsed to a single response) |
+| `500` | `{ "error": "Internal server error" }` | Unhandled — caught at the bottom of the route's try/catch, logged with `[calibration-api]` prefix |
+
+The `404` collapse — authenticated-but-not-owner returning the same body and status as project-not-found — prevents existence leakage. Unauthenticated callers continue to receive `401` from the standard auth helper.
+
+**Behavior**:
+- Read-only and reactive — the route never triggers a recomputation, LLM call, or database write
+- The handler parses `projectId`, calls `verifyProjectOwnership(projectId, request)`, then `getCalibrationDashboard(projectId)` from `lib/calibration/queries.ts`, and serialises via `lib/calibration/serialize.ts`
+- Underlying query budget: three projection-only Prisma queries against indexed columns (`AnalysisCalibration(projectId, shippedAt DESC)`, `AnalysisCalibration(projectId, partial)`, `AnalysisCalibration(projectId, frictionCell)`), expected to return in tens of milliseconds
+
+**Polling cadence**:
+- Clients (the dashboard component via TanStack Query) poll every 15 seconds with `staleTime: 10000`, matching the analytics dashboard convention
+- No `Cache-Control: max-age` overrides; freshness comes from polling rather than HTTP caching
+
 ## Project Member Endpoints
 
 ### GET /api/projects/:projectId/members
