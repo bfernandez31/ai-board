@@ -18,11 +18,8 @@ import {
 import { persistCalibration } from './persist';
 import {
   CALIBRATION_RULE_SET_VERSION,
-  type FrictionRating,
   type PairedCalibration,
   type PartialReason,
-  type RecommendationChoice,
-  type RecommendationConfidence,
 } from './types';
 
 export interface PairCalibrationInput {
@@ -101,7 +98,7 @@ export async function pairCalibrationOnOutcome(
   logPhase(ticketId, 4, t4 - t3);
 
   // Phase 5: Friction pairing
-  const frictionPredictedRating = predicted.frictionRisk as FrictionRating;
+  const frictionPredictedRating = predicted.frictionRisk;
   const frictionPredictedClean = binariseFriction(frictionPredictedRating);
   const frictionActualFree = outcome.frictionFree;
   const frictionCell = classifyFrictionCell(frictionPredictedClean, frictionActualFree);
@@ -123,7 +120,7 @@ export async function pairCalibrationOnOutcome(
   const costVerdict = quantifyCostVerdict(outcome.totalCostUsd, summed.lower, summed.upper);
 
   // Phase 8: Recommendation pairing
-  const recommendationPredicted = predicted.recommendation.choice as RecommendationChoice;
+  const recommendationPredicted = predicted.recommendation.choice;
   const axes = computeRecommendationAxes(
     recommendationPredicted,
     outcome.workflowType,
@@ -159,7 +156,7 @@ export async function pairCalibrationOnOutcome(
     costVerdict,
 
     recommendationPredicted,
-    recommendationConfidence: predicted.recommendation.confidence as RecommendationConfidence,
+    recommendationConfidence: predicted.recommendation.confidence,
     workflowActual: outcome.workflowType,
     recommendationMatched: axes.matched,
     recommendationFrictionAligned: axes.frictionAligned,

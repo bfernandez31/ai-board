@@ -7,8 +7,14 @@
  * re-attempt). Mirrors `lib/outcomes/persist.ts`.
  */
 import { z } from 'zod';
-import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
+import {
+  binariseFriction,
+  classifyFrictionCell,
+  computeRecommendationAxes,
+  quantifyCostVerdict,
+  quantifyQualityVerdict,
+} from './derive';
 import {
   CALIBRATION_RULE_SET_VERSION,
   FrictionCellValues,
@@ -65,8 +71,7 @@ const pairedCalibrationSchema = z
   })
   .superRefine((data, ctx) => {
     // 1. Friction binarisation matches predicted rating
-    const expectedClean = data.frictionPredictedRating === 'low';
-    if (data.frictionPredictedClean !== expectedClean) {
+    if (data.frictionPredictedClean !== binariseFriction(data.frictionPredictedRating)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'frictionPredictedClean must equal (frictionPredictedRating === "low")',
@@ -75,14 +80,7 @@ const pairedCalibrationSchema = z
     }
 
     // 2. Confusion cell matches predicted/actual booleans
-    const expectedCell =
-      data.frictionPredictedClean && data.frictionActualFree
-        ? 'TP'
-        : !data.frictionPredictedClean && !data.frictionActualFree
-          ? 'TN'
-          : data.frictionPredictedClean && !data.frictionActualFree
-            ? 'FP'
-            : 'FN';
+    const expectedCell = classifyFrictionCell(data.frictionPredictedClean, data.frictionActualFree);
     if (data.frictionCell !== expectedCell) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -101,17 +99,11 @@ const pairedCalibrationSchema = z
     }
 
     // 4. Quality verdict matches actual + bounds
-    let expectedQualityVerdict: 'hit' | 'miss' | 'n_a';
-    if (data.qualityActual === null) {
-      expectedQualityVerdict = 'n_a';
-    } else if (
-      data.qualityActual >= data.qualityPredictedLower &&
-      data.qualityActual <= data.qualityPredictedUpper
-    ) {
-      expectedQualityVerdict = 'hit';
-    } else {
-      expectedQualityVerdict = 'miss';
-    }
+    const expectedQualityVerdict = quantifyQualityVerdict(
+      data.qualityActual,
+      data.qualityPredictedLower,
+      data.qualityPredictedUpper
+    );
     if (data.qualityVerdict !== expectedQualityVerdict) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -161,17 +153,11 @@ const pairedCalibrationSchema = z
     }
 
     // 7. Cost verdict matches actual + summed range
-    let expectedCostVerdict: 'hit' | 'miss' | 'n_a';
-    if (data.costActualUsd === null) {
-      expectedCostVerdict = 'n_a';
-    } else if (
-      data.costActualUsd >= data.costPredictedSummedLowerUsd &&
-      data.costActualUsd <= data.costPredictedSummedUpperUsd
-    ) {
-      expectedCostVerdict = 'hit';
-    } else {
-      expectedCostVerdict = 'miss';
-    }
+    const expectedCostVerdict = quantifyCostVerdict(
+      data.costActualUsd,
+      data.costPredictedSummedLowerUsd,
+      data.costPredictedSummedUpperUsd
+    );
     if (data.costVerdict !== expectedCostVerdict) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -180,22 +166,20 @@ const pairedCalibrationSchema = z
       });
     }
 
-    // 8. Recommendation matched
-    const expectedMatched =
-      (data.recommendationPredicted as string) === (data.workflowActual as string);
-    if (data.recommendationMatched !== expectedMatched) {
+    // 8. Recommendation axes (matched + friction-aligned)
+    const expectedAxes = computeRecommendationAxes(
+      data.recommendationPredicted,
+      data.workflowActual,
+      data.frictionActualFree
+    );
+    if (data.recommendationMatched !== expectedAxes.matched) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'recommendationMatched must equal (predicted === workflowActual)',
         path: ['recommendationMatched'],
       });
     }
-
-    // 9. Recommendation friction-aligned
-    const expectedFrictionAligned =
-      (data.recommendationPredicted === 'QUICK' && data.frictionActualFree) ||
-      (data.recommendationPredicted === 'FULL' && !data.frictionActualFree);
-    if (data.recommendationFrictionAligned !== expectedFrictionAligned) {
+    if (data.recommendationFrictionAligned !== expectedAxes.frictionAligned) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
@@ -204,7 +188,7 @@ const pairedCalibrationSchema = z
       });
     }
 
-    // 10. Partial mirror
+    // 9. Partial mirror
     if (data.partial && data.partialReason === null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -240,40 +224,8 @@ export async function persistCalibration(
 ): Promise<PersistCalibrationResult> {
   const parsed = pairedCalibrationSchema.parse(input);
 
-  const data: Prisma.AnalysisCalibrationUncheckedCreateInput = {
-    ticketId: parsed.ticketId,
-    projectId: parsed.projectId,
-    analysisId: parsed.analysisId,
-    outcomeId: parsed.outcomeId,
-    ruleSetVersion: parsed.ruleSetVersion,
-    shippedAt: parsed.shippedAt,
-    frictionPredictedRating: parsed.frictionPredictedRating,
-    frictionPredictedClean: parsed.frictionPredictedClean,
-    frictionActualFree: parsed.frictionActualFree,
-    frictionCell: parsed.frictionCell,
-    qualityPredictedLower: parsed.qualityPredictedLower,
-    qualityPredictedUpper: parsed.qualityPredictedUpper,
-    qualityActual: parsed.qualityActual,
-    qualityVerdict: parsed.qualityVerdict,
-    costPredictedBaselineLowerUsd: parsed.costPredictedBaselineLowerUsd,
-    costPredictedBaselineUpperUsd: parsed.costPredictedBaselineUpperUsd,
-    costPredictedMarginalLowerUsd: parsed.costPredictedMarginalLowerUsd,
-    costPredictedMarginalUpperUsd: parsed.costPredictedMarginalUpperUsd,
-    costPredictedSummedLowerUsd: parsed.costPredictedSummedLowerUsd,
-    costPredictedSummedUpperUsd: parsed.costPredictedSummedUpperUsd,
-    costActualUsd: parsed.costActualUsd,
-    costVerdict: parsed.costVerdict,
-    recommendationPredicted: parsed.recommendationPredicted,
-    recommendationConfidence: parsed.recommendationConfidence,
-    workflowActual: parsed.workflowActual,
-    recommendationMatched: parsed.recommendationMatched,
-    recommendationFrictionAligned: parsed.recommendationFrictionAligned,
-    partial: parsed.partial,
-    partialReason: parsed.partialReason,
-  };
-
   try {
-    await prisma.analysisCalibration.create({ data });
+    await prisma.analysisCalibration.create({ data: parsed });
     return { created: true };
   } catch (err) {
     if (isP2002(err)) {
