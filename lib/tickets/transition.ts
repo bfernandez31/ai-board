@@ -15,6 +15,7 @@ import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
 import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
 import { captureOutcomeOnShip } from '@/lib/outcomes/capture';
+import { pairCalibrationOnOutcome } from '@/lib/calibration/pair';
 
 type TicketWithJobsAndProject = Ticket & {
   project: Project;
@@ -353,14 +354,30 @@ export async function executeTicketTransition(
     });
 
     if (targetStage === Stage.SHIP) {
-      void captureOutcomeOnShip({
-        ticketId: updatedTicket.id,
-        projectId: updatedTicket.projectId,
-        workflowType: updatedTicket.workflowType,
-        shippedAt: updatedTicket.updatedAt,
-      }).catch((err) => {
-        console.error('[outcome-capture] unhandled', { ticketId: updatedTicket.id, err });
-      });
+      void (async () => {
+        try {
+          const captureResult = await captureOutcomeOnShip({
+            ticketId: updatedTicket.id,
+            projectId: updatedTicket.projectId,
+            workflowType: updatedTicket.workflowType,
+            shippedAt: updatedTicket.updatedAt,
+          });
+          if (
+            captureResult.status === 'created' ||
+            captureResult.status === 'duplicate'
+          ) {
+            await pairCalibrationOnOutcome({
+              ticketId: updatedTicket.id,
+              projectId: updatedTicket.projectId,
+            });
+          }
+        } catch (err) {
+          console.error('[ship-post-commit] unhandled', {
+            ticketId: updatedTicket.id,
+            err,
+          });
+        }
+      })();
     }
 
     return {
