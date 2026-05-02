@@ -130,7 +130,6 @@ model Project {
   setupJobs           ProjectSetupJob[]
   outcomes            TicketOutcome[]
   analyses            TicketAnalysis[]
-  backfillProgress    BackfillProgress?
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -738,30 +737,6 @@ model TicketOutcome {
   @@index([projectId, frictionFree])
   @@index([projectId, partial])
   @@index([shippedAt])
-}
-
-model BackfillProgress {
-  id                    Int            @id @default(autoincrement())
-  projectId             Int            @unique
-  status                BackfillStatus @default(IN_PROGRESS)
-  lastProcessedTicketId Int?
-  ticketsProcessed      Int            @default(0)
-  ticketsWithPartial    Int            @default(0)
-  startedAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-  completedAt           DateTime?
-  version               Int            @default(1)
-  lastError             String?        @db.VarChar(2000)
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@index([status])
-}
-
-enum BackfillStatus {
-  IN_PROGRESS
-  COMPLETED
-  FAILED
 }
 
 enum TicketAnalysisStatus {

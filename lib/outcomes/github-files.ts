@@ -19,7 +19,7 @@
  * - Per-call retries with backoff `[1s, 4s, 16s]` for transient errors.
  * - Distinguishes 404 on the repo (`repository_unreachable`) from "no merged PR found"
  *   (`merge_not_found`).
- * - Backfill rate-limit handling: if `x-ratelimit-remaining` < 100, sleep until reset.
+ * - Rate-limit handling: if `x-ratelimit-remaining` < 100, sleep until reset.
  */
 
 import { Octokit } from '@octokit/rest';
