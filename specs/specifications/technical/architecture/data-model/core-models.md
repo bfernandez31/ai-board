@@ -94,7 +94,6 @@ model Project {
   healthScore          HealthScore?
   setupJobs            ProjectSetupJob[]
   outcomes             TicketOutcome[]
-  backfillProgress     BackfillProgress?
   analyses             TicketAnalysis[]
 
   @@unique([githubOwner, githubRepo])
@@ -1056,7 +1055,7 @@ model TicketOutcome {
 - Belongs to Project (required, cascade delete) — denormalized for query convenience
 
 **Constraints**:
-- Unique `ticketId` enforces 1:1 with Ticket and protects against duplicate writes from concurrent live-capture and backfill paths (P2002 catch in `lib/outcomes/persist.ts` collapses races to a no-op)
+- Unique `ticketId` enforces 1:1 with Ticket and protects against duplicate writes from concurrent live-capture invocations (P2002 catch in `lib/outcomes/persist.ts` collapses races to a no-op)
 - `(projectId, shippedAt DESC)` index serves the project list/analytics query
 - `(projectId, frictionFree)` and `(projectId, partial)` indexes serve aggregate filters
 - `(shippedAt)` index serves cross-project time-window queries
@@ -1186,56 +1185,4 @@ model TicketAnalysis {
 - The `anchorIdsAttempted` array is the ground truth for validating the workflow PATCH — outcomes can change between trigger and completion, so re-querying at PATCH time is rejected as a design choice
 - Older rows retain their original stack snapshot for audit; later project stack changes do not retroactively rewrite past analyses
 - No automatic re-runs occur — every analysis run requires an explicit user action
-
-### BackfillProgress
-
-Per-project resume cursor for the historical outcome backfill workflow.
-
-```prisma
-model BackfillProgress {
-  id                    Int            @id @default(autoincrement())
-  projectId             Int            @unique
-  status                BackfillStatus @default(IN_PROGRESS)
-  lastProcessedTicketId Int?
-  ticketsProcessed      Int            @default(0)
-  ticketsWithPartial    Int            @default(0)
-  startedAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-  completedAt           DateTime?
-  version               Int            @default(1)
-  lastError             String?        @db.VarChar(2000)
-
-  project               Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@index([status])
-}
-```
-
-**Purpose**: Track progress and enable safe resume of the per-project historical outcome backfill across runner timeouts, network blips, and concurrent workflow dispatches.
-
-**Fields**:
-- `projectId`: Parent project (unique — one progress row per project across all runs)
-- `status`: Current backfill state (`IN_PROGRESS`, `COMPLETED`, or `FAILED`)
-- `lastProcessedTicketId`: Cursor — the most recently processed `Ticket.id`; the next chunk resumes by selecting tickets with `id < lastProcessedTicketId` (newest-first order)
-- `ticketsProcessed`: Running count of tickets whose outcome was written by this or a prior run
-- `ticketsWithPartial`: Running count of `partial = true` rows produced (operator-visible signal of repository reachability)
-- `startedAt`: When the first run for this project began
-- `completedAt`: Set when `status = COMPLETED`
-- `version`: Optimistic-lock counter — every cursor advance uses `updateMany({ where: { projectId, version }, data: { ..., version: { increment: 1 } } })`; collisions cause the losing worker to exit cleanly
-- `lastError`: Operator-visible error message; cleared on successful resume
-
-**Relationships**:
-- Belongs to Project (required, cascade delete)
-
-**Constraints**:
-- Unique `projectId`
-- Index on `status` to scope retention or operator queries
-
-**Business Rules**:
-- Created by `POST /api/projects/:projectId/backfill-outcomes` and updated by the backfill runner (`scripts/backfill-outcomes.ts`)
-- Enumeration is restricted to tickets in stage `SHIP` (matches the live capture path); tickets in stage `CLOSED` are never selected, fetched, or processed
-- Re-dispatching against a `COMPLETED` row is a no-op (enumeration finds zero remaining tickets and returns to `COMPLETED`)
-- Re-dispatching against a `FAILED` row resumes from `lastProcessedTicketId`
-- Two concurrent dispatches collide on `version`; the losing worker exits cleanly and the unique constraint on `TicketOutcome.ticketId` prevents duplicate rows even if both happen to pick the same ticket simultaneously
-- Idempotent against existing rows: tickets that already have a `TicketOutcome` are skipped during enumeration
 

@@ -1,9 +1,8 @@
 /**
  * Outcome capture orchestrator. Phases follow workflows/capture-on-ship.md exactly.
  *
- * Triggered both from `lib/tickets/transition.ts` (live, fire-and-forget) and from the
- * backfill script. Single derivation pipeline; the only difference between the two
- * trigger paths is the caller.
+ * Triggered from `lib/tickets/transition.ts` (live, fire-and-forget) on every SHIP
+ * transition.
  */
 
 import type { Job, Project, Ticket } from '@prisma/client';
