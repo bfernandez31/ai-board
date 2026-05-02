@@ -130,27 +130,6 @@ export interface QualityScoreAnalytics {
   totalScoredJobs: number;
 }
 
-/**
- * Per-job record used by the peak-context distribution chart (AIB-725).
- * Server returns one row per filtered completed job; the chart applies
- * client-side command/workflow/quality bucket filters and computes the
- * percent-of-context-window bucketing in the browser.
- */
-export interface PeakContextJob {
-  jobId: number;
-  peakContextTokens: number | null;
-  model: string | null;
-  command: string;
-  workflowType: WorkflowTypeKey;
-  qualityScore: number | null;
-}
-
-export interface PeakContextDistribution {
-  jobs: PeakContextJob[];
-  /** True when at least one job has a non-null peakContextTokens. */
-  hasData: boolean;
-}
-
 export interface AnalyticsData {
   overview: OverviewMetrics;
   costOverTime: CostDataPoint[];
@@ -161,8 +140,6 @@ export interface AnalyticsData {
   workflowDistribution: WorkflowBreakdown[];
   velocity: WeeklyVelocity[];
   qualityScore?: QualityScoreAnalytics | null;
-  /** Per-project peak per-turn context distribution (AIB-725). */
-  peakContextDistribution: PeakContextDistribution;
   filters: AnalyticsFilters;
   availableAgents: AgentOption[];
   /** ISO timestamp of when data was generated */
