@@ -25,12 +25,9 @@ export async function persistPairing(input: PersistPairingInput): Promise<void> 
     unpairedReason,
   } = input;
 
-  const data: Prisma.AnalysisOutcomePairingUncheckedCreateInput = {
-    ticketId,
-    projectId,
+  const shared = {
     analysisId,
-    outcomeId: outcomeId ?? null,
-    shippedAt,
+    outcomeId,
     pendingOutcome,
     unpairedReason,
     predictedFriction: deltas.predictedFriction,
@@ -39,18 +36,18 @@ export async function persistPairing(input: PersistPairingInput): Promise<void> 
     frictionMatch: deltas.frictionMatch,
     frictionEmerged: deltas.frictionEmerged,
     frictionIncomparable: deltas.frictionIncomparable,
-    predictedCostLowerUsd: deltas.predictedCostLowerUsd ?? null,
-    predictedCostUpperUsd: deltas.predictedCostUpperUsd ?? null,
-    predictedBaselineUpperUsd: deltas.predictedBaselineUpperUsd ?? null,
-    actualCostUsd: deltas.actualCostUsd ?? null,
-    costInRange: deltas.costInRange ?? null,
-    costMissDirection: deltas.costMissDirection ?? null,
+    predictedCostLowerUsd: deltas.predictedCostLowerUsd,
+    predictedCostUpperUsd: deltas.predictedCostUpperUsd,
+    predictedBaselineUpperUsd: deltas.predictedBaselineUpperUsd,
+    actualCostUsd: deltas.actualCostUsd,
+    costInRange: deltas.costInRange,
+    costMissDirection: deltas.costMissDirection,
     costIncomparable: deltas.costIncomparable,
-    predictedQualityLower: deltas.predictedQualityLower ?? null,
-    predictedQualityUpper: deltas.predictedQualityUpper ?? null,
-    actualQualityScore: deltas.actualQualityScore ?? null,
-    qualityInRange: deltas.qualityInRange ?? null,
-    qualityMissDirection: deltas.qualityMissDirection ?? null,
+    predictedQualityLower: deltas.predictedQualityLower,
+    predictedQualityUpper: deltas.predictedQualityUpper,
+    actualQualityScore: deltas.actualQualityScore,
+    qualityInRange: deltas.qualityInRange,
+    qualityMissDirection: deltas.qualityMissDirection,
     qualityIncomparable: deltas.qualityIncomparable,
     predictedRecommendation: deltas.predictedRecommendation,
     actualWorkflowType: deltas.actualWorkflowType,
@@ -58,41 +55,18 @@ export async function persistPairing(input: PersistPairingInput): Promise<void> 
     recommendationIncomparable: deltas.recommendationIncomparable,
   };
 
-  const updateData: Prisma.AnalysisOutcomePairingUncheckedUpdateInput = {
-    analysisId,
-    outcomeId: outcomeId ?? null,
-    pendingOutcome,
-    unpairedReason,
-    predictedFriction: deltas.predictedFriction,
-    actualFrictionFree: deltas.actualFrictionFree,
-    frictionPredictedLow: deltas.frictionPredictedLow,
-    frictionMatch: deltas.frictionMatch,
-    frictionEmerged: deltas.frictionEmerged,
-    frictionIncomparable: deltas.frictionIncomparable,
-    predictedCostLowerUsd: deltas.predictedCostLowerUsd ?? null,
-    predictedCostUpperUsd: deltas.predictedCostUpperUsd ?? null,
-    predictedBaselineUpperUsd: deltas.predictedBaselineUpperUsd ?? null,
-    actualCostUsd: deltas.actualCostUsd ?? null,
-    costInRange: deltas.costInRange ?? null,
-    costMissDirection: deltas.costMissDirection ?? null,
-    costIncomparable: deltas.costIncomparable,
-    predictedQualityLower: deltas.predictedQualityLower ?? null,
-    predictedQualityUpper: deltas.predictedQualityUpper ?? null,
-    actualQualityScore: deltas.actualQualityScore ?? null,
-    qualityInRange: deltas.qualityInRange ?? null,
-    qualityMissDirection: deltas.qualityMissDirection ?? null,
-    qualityIncomparable: deltas.qualityIncomparable,
-    predictedRecommendation: deltas.predictedRecommendation,
-    actualWorkflowType: deltas.actualWorkflowType,
-    recommendationMatch: deltas.recommendationMatch,
-    recommendationIncomparable: deltas.recommendationIncomparable,
+  const data: Prisma.AnalysisOutcomePairingUncheckedCreateInput = {
+    ticketId,
+    projectId,
+    shippedAt,
+    ...shared,
   };
 
   await prisma.$transaction(async (tx) => {
     await tx.analysisOutcomePairing.upsert({
       where: { ticketId },
       create: data,
-      update: updateData,
+      update: shared,
     });
 
     // Set countedInDrift=false on all other analyses for this ticket

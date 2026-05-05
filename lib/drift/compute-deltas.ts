@@ -8,6 +8,12 @@ interface OutcomeInput {
   workflowType: string;
 }
 
+function missDirection(actual: number, lower: number, upper: number): 'under' | 'over' | null {
+  if (actual < lower) return 'under';
+  if (actual > upper) return 'over';
+  return null;
+}
+
 export function computePairingDeltas(
   prediction: AnalysisOutput,
   outcome: OutcomeInput
@@ -23,28 +29,16 @@ export function computePairingDeltas(
   const costUpper = prediction.costRange.marginalFrictionUpperUsd;
   const actualCost = outcome.totalCostUsd;
   const costIncomparable = actualCost === null;
-  const costInRange = costIncomparable ? null : actualCost >= costLower && actualCost <= costUpper;
-  const costMissDirection = costIncomparable
-    ? null
-    : actualCost! < costLower
-      ? 'under'
-      : actualCost! > costUpper
-        ? 'over'
-        : null;
+  const costInRange = actualCost === null ? null : actualCost >= costLower && actualCost <= costUpper;
+  const costMissDirection = actualCost === null ? null : missDirection(actualCost, costLower, costUpper);
 
   // Quality
   const qLower = prediction.qualityGateRange.lower;
   const qUpper = prediction.qualityGateRange.upper;
   const actualQ = outcome.qualityScore;
   const qualityIncomparable = actualQ === null;
-  const qualityInRange = qualityIncomparable ? null : actualQ >= qLower && actualQ <= qUpper;
-  const qualityMissDirection = qualityIncomparable
-    ? null
-    : actualQ! < qLower
-      ? 'under'
-      : actualQ! > qUpper
-        ? 'over'
-        : null;
+  const qualityInRange = actualQ === null ? null : actualQ >= qLower && actualQ <= qUpper;
+  const qualityMissDirection = actualQ === null ? null : missDirection(actualQ, qLower, qUpper);
 
   // Workflow recommendation
   const predictedRec = prediction.recommendation.choice;

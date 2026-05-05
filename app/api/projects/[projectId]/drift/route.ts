@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { getDriftData } from '@/lib/drift/queries';
+import type { DriftFilters } from '@/lib/drift/types';
 
 const querySchema = z.object({
   cursor: z.string().optional(),
@@ -35,9 +36,8 @@ export async function GET(
       );
     }
 
-    const filters: import('@/lib/drift/types').DriftFilters = {};
+    const filters: DriftFilters = { pageSize: parseResult.data.pageSize };
     if (parseResult.data.cursor) filters.cursor = parseResult.data.cursor;
-    if (parseResult.data.pageSize) filters.pageSize = parseResult.data.pageSize;
     const data = await getDriftData(projectId, filters);
     return NextResponse.json(data);
   } catch (error) {

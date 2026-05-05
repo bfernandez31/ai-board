@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/client';
 import { AnalysisOutputSchema } from '@/lib/analysis/output-schema';
 import { computePairingDeltas } from './compute-deltas';
 import { persistPairing } from './persist';
+import type { PairingDeltas } from './types';
 
 export interface PairResult {
   paired: boolean;
@@ -44,7 +45,7 @@ export async function pairAnalysisWithOutcome(ticketId: number): Promise<PairRes
       analysisId: analysis.id,
       outcomeId: null,
       shippedAt: ticket.updatedAt,
-      deltas: buildIncomparableDeltas(analysis.output),
+      deltas: buildIncomparableDeltas(extractFriction(analysis.output) ?? 'low'),
       pendingOutcome: true,
       unpairedReason: null,
     });
@@ -63,7 +64,7 @@ export async function pairAnalysisWithOutcome(ticketId: number): Promise<PairRes
       analysisId: analysis.id,
       outcomeId: outcome.id,
       shippedAt: outcome.shippedAt,
-      deltas: buildAllIncomparableDeltas(),
+      deltas: buildIncomparableDeltas('low'),
       pendingOutcome: false,
       unpairedReason: 'output_unparseable',
     });
@@ -96,37 +97,9 @@ export async function pairAnalysisWithOutcome(ticketId: number): Promise<PairRes
   return { paired: true };
 }
 
-function buildIncomparableDeltas(output: unknown): import('./types').PairingDeltas {
+function buildIncomparableDeltas(predictedFriction: string): PairingDeltas {
   return {
-    predictedFriction: extractFriction(output) ?? 'low',
-    actualFrictionFree: false,
-    frictionPredictedLow: false,
-    frictionMatch: false,
-    frictionEmerged: false,
-    frictionIncomparable: true,
-    predictedCostLowerUsd: null,
-    predictedCostUpperUsd: null,
-    predictedBaselineUpperUsd: null,
-    actualCostUsd: null,
-    costInRange: null,
-    costMissDirection: null,
-    costIncomparable: true,
-    predictedQualityLower: null,
-    predictedQualityUpper: null,
-    actualQualityScore: null,
-    qualityInRange: null,
-    qualityMissDirection: null,
-    qualityIncomparable: true,
-    predictedRecommendation: 'FULL',
-    actualWorkflowType: 'FULL',
-    recommendationMatch: false,
-    recommendationIncomparable: true,
-  };
-}
-
-function buildAllIncomparableDeltas(): import('./types').PairingDeltas {
-  return {
-    predictedFriction: 'low',
+    predictedFriction,
     actualFrictionFree: false,
     frictionPredictedLow: false,
     frictionMatch: false,
