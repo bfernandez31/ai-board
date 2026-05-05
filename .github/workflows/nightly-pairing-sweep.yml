@@ -1,0 +1,26 @@
+name: Nightly Pairing Sweep
+
+on:
+  schedule:
+    - cron: '45 1 * * *'  # 01:45 UTC, offset from log-prune (01:15) and health (00:30)
+  workflow_dispatch: {}
+
+jobs:
+  sweep-pairings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger pairing sweep
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          response=$(curl -sS -w "\n%{http_code}" \
+            -X POST "$APP_URL/api/maintenance/sweep-unpaired-pairings" \
+            -H "Authorization: Bearer $WORKFLOW_API_TOKEN")
+          body=$(echo "$response" | head -n -1)
+          code=$(echo "$response" | tail -n 1)
+          echo "HTTP $code"
+          echo "$body"
+          [ "$code" = "200" ]

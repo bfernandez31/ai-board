@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, TrendingUp } from 'lucide-react';
 import { getProject } from '@/lib/db/projects';
+import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { getAnalyticsData } from '@/lib/analytics/queries';
 import { DEFAULT_ANALYTICS_FILTERS } from '@/lib/analytics/aggregations';
 import { AnalyticsDashboard } from '@/components/analytics/analytics-dashboard';
@@ -79,6 +80,8 @@ export default async function AnalyticsPage({
 
   const initialData = await getAnalyticsData(projectId, filters);
 
+  const isOwner = await verifyProjectOwnership(projectId).then(() => true).catch(() => false);
+
   return (
     <main className="container mx-auto py-10 max-w-7xl">
       <div className="space-y-6">
@@ -87,12 +90,22 @@ export default async function AnalyticsPage({
             <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
             <p className="text-muted-foreground mt-2">AI workflow metrics for {project.name}</p>
           </div>
-          <Link href={`/projects/${projectId}/board`}>
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Board
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            {isOwner && (
+              <Link href={`/projects/${projectId}/analytics/drift`}>
+                <Button variant="outline" size="sm">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Drift Dashboard
+                </Button>
+              </Link>
+            )}
+            <Link href={`/projects/${projectId}/board`}>
+              <Button variant="outline" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Board
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <AnalyticsDashboard projectId={projectId} initialData={initialData} />

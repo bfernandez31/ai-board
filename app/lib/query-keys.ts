@@ -90,6 +90,13 @@ export const queryKeys = {
   credentials: {
     all: ['credentials'] as const,
   },
+
+  drift: {
+    data: (projectId: number, filters?: { cursor?: string; pageSize?: number }) =>
+      filters
+        ? (['drift', projectId, filters] as const)
+        : (['drift', projectId] as const),
+  },
 } as const;
 
 export type QueryKeys = typeof queryKeys;

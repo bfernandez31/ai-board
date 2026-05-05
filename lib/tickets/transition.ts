@@ -15,6 +15,7 @@ import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
 import { AGENT_PROVIDER_MAP } from '@/lib/ai-credentials/types';
 import { captureOutcomeOnShip } from '@/lib/outcomes/capture';
+import { pairAnalysisWithOutcome } from '@/lib/drift/pair';
 
 type TicketWithJobsAndProject = Ticket & {
   project: Project;
@@ -358,9 +359,11 @@ export async function executeTicketTransition(
         projectId: updatedTicket.projectId,
         workflowType: updatedTicket.workflowType,
         shippedAt: updatedTicket.updatedAt,
-      }).catch((err) => {
-        console.error('[outcome-capture] unhandled', { ticketId: updatedTicket.id, err });
-      });
+      })
+        .then(() => pairAnalysisWithOutcome(updatedTicket.id))
+        .catch((err) => {
+          console.error('[drift-pairing] unhandled', { ticketId: updatedTicket.id, err });
+        });
     }
 
     return {
