@@ -18,7 +18,6 @@ User
 │   ├── outcomes (one-to-many) → TicketOutcome
 │   ├── analyses (one-to-many) → TicketAnalysis
 │   ├── calibrations (one-to-many) → AnalysisCalibration
-│   ├── backfillProgress (one-to-one, optional) → BackfillProgress
 │   ├── comparisonRecords (one-to-many) → ComparisonRecord
 │   │   ├── participants (one-to-many) → ComparisonParticipant
 │   │   │   ├── metricSnapshot (one-to-one) → TicketMetricSnapshot
@@ -81,10 +80,6 @@ User
 - `TicketOutcome(projectId, frictionFree)` - Fraction-frictionFree aggregate per project
 - `TicketOutcome(projectId, partial)` - Filter partial rows out of analytics
 - `TicketOutcome(shippedAt)` - Cross-project time-window queries
-
-**Backfill Queries**:
-- `BackfillProgress(projectId)` - Unique 1:1 with Project; resume cursor lookup
-- `BackfillProgress(status)` - Operator queries for in-progress / failed runs
 
 **Analysis Queries**:
 - `TicketAnalysis(ticketId, createdAt DESC)` - Latest analysis lookup for the panel render path

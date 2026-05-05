@@ -23,7 +23,6 @@ import { WorkflowDistributionChart } from './workflow-distribution-chart';
 import { VelocityChart } from './velocity-chart';
 import { QualityScoreTrendChart } from './quality-score-trend-chart';
 import { DimensionComparisonChart } from './dimension-comparison-chart';
-import { PeakContextDistributionChart } from './peak-context-distribution-chart';
 import { useSubscription } from '@/hooks/use-subscription';
 import { UpgradePrompt } from '@/components/billing/upgrade-prompt';
 import {
@@ -208,10 +207,6 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
                   analytics.filters.agent
                 )} in this selection.`}
               />
-            </div>
-
-            <div>
-              <PeakContextDistributionChart data={analytics.peakContextDistribution} />
             </div>
 
             <div className="md:col-span-2">

@@ -495,11 +495,6 @@ When a ticket transitions into the SHIP stage (from VERIFY for FULL workflows or
 - Both FULL and QUICK workflow tickets are captured; QUICK rows have `qualityScore = null` and `frictionFree = false` by definition
 - Outcomes are never updated after creation — rule-set version is pinned per row so future analyses can interpret historical rows under their original rules
 
-**Operator-triggered backfill**:
-- A separate per-project backfill workflow (`.github/workflows/backfill-outcomes.yml`) populates outcomes for tickets that shipped before this feature was deployed or before their merge diff was reachable
-- Backfill enumerates tickets in stage `SHIP` only — the same population the live capture path covers; tickets in stage `CLOSED` are never enumerated, so abandoned tickets do not produce outcome rows
-- Backfill is owner-triggered, idempotent, resumable, rate-limit-aware, and safe to run alongside live SHIP-driven capture (the unique constraint collapses races to a no-op)
-
 ## Analysis Calibration on SHIP
 
 After outcome capture completes for a shipped ticket, the system pairs the latest successful inbox analysis (if any) with the captured outcome and persists the predicted-vs-actual deltas as a single immutable calibration row. The pairing runs as the next link in the post-commit chain — it is invoked only when capture returns `created` or `duplicate`, and never blocks, delays, or alters the SHIP transition or the outcome capture itself.

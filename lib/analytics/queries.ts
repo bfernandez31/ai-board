@@ -19,8 +19,6 @@ import type {
   DimensionComparison,
   NamedAgent,
   OverviewMetrics,
-  PeakContextDistribution,
-  PeakContextJob,
   QualityScoreAnalytics,
   QualityScoreDataPoint,
   StageCost,
@@ -30,7 +28,6 @@ import type {
   ToolUsage,
   WeeklyVelocity,
   WorkflowBreakdown,
-  WorkflowTypeKey,
 } from './types';
 import { parseQualityScoreDetails } from '@/lib/quality-score';
 import {
@@ -608,40 +605,6 @@ async function getQualityScoreAnalytics(
   };
 }
 
-async function getPeakContextDistribution(
-  projectId: number,
-  filters: AnalyticsFilters,
-  now: Date
-): Promise<PeakContextDistribution> {
-  const rows = await prisma.job.findMany({
-    where: buildJobWhere(projectId, filters, now, [JobStatus.COMPLETED]),
-    select: {
-      id: true,
-      peakContextTokens: true,
-      model: true,
-      command: true,
-      qualityScore: true,
-      ticket: {
-        select: { workflowType: true },
-      },
-    },
-  });
-
-  const jobs: PeakContextJob[] = rows.map((row) => ({
-    jobId: row.id,
-    peakContextTokens: row.peakContextTokens,
-    model: row.model,
-    command: row.command,
-    workflowType: row.ticket.workflowType as WorkflowTypeKey,
-    qualityScore: row.qualityScore,
-  }));
-
-  return {
-    jobs,
-    hasData: jobs.some((job) => job.peakContextTokens != null),
-  };
-}
-
 function normalizeFilters(
   filters: Partial<AnalyticsFilters> = {},
   availableAgents?: AgentOption[]
@@ -692,7 +655,6 @@ export async function getAnalyticsData(
     workflowDistribution,
     velocity,
     qualityScore,
-    peakContextDistribution,
   ] = await Promise.all([
     getOverviewMetrics(projectId, normalizedFilters, now),
     getCostOverTime(projectId, normalizedFilters, now),
@@ -702,7 +664,6 @@ export async function getAnalyticsData(
     getWorkflowDistribution(projectId, normalizedFilters, now),
     getVelocityData(projectId, normalizedFilters, now),
     getQualityScoreAnalytics(projectId, normalizedFilters, now),
-    getPeakContextDistribution(projectId, normalizedFilters, now),
   ]);
 
   const cacheEfficiency = getCacheEfficiency(tokenUsage);
@@ -717,7 +678,6 @@ export async function getAnalyticsData(
     workflowDistribution,
     velocity,
     qualityScore,
-    peakContextDistribution,
     filters: normalizedFilters,
     availableAgents,
     generatedAt: now.toISOString(),
