@@ -95,6 +95,7 @@ model Project {
   setupJobs            ProjectSetupJob[]
   outcomes             TicketOutcome[]
   analyses             TicketAnalysis[]
+  analysisOutcomePairings AnalysisOutcomePairing[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -203,6 +204,7 @@ model Ticket {
   decisionVerdicts       DecisionPointEvaluation[] @relation("DecisionVerdictTicket")
   outcome                TicketOutcome?
   analyses               TicketAnalysis[]
+  analysisOutcomePairing AnalysisOutcomePairing?
 
   @@unique([projectId, ticketNumber])
   @@index([projectId])
@@ -1018,6 +1020,7 @@ model TicketOutcome {
 
   ticket                   Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project                  Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pairing                  AnalysisOutcomePairing?
 
   @@index([projectId, shippedAt(sort: Desc)])
   @@index([projectId, frictionFree])
@@ -1108,9 +1111,12 @@ model TicketAnalysis {
 
   output              Json?
 
+  countedInDrift      Boolean               @default(false)
+
   ticket              Ticket                @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project             Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pairing             AnalysisOutcomePairing?
 
   @@index([ticketId, createdAt(sort: Desc)])
   @@index([userId, status, endedAt])
@@ -1119,7 +1125,7 @@ model TicketAnalysis {
 }
 ```
 
-**Purpose**: Append-only audit trail of inbox ticket analyses, capturing the input snapshot, stack snapshot, anchor candidate set, panel output, and measured telemetry for each run. Powers the inbox analysis panel (including its stale indicator on the collapsed success row) and the per-user hourly rate limit.
+**Purpose**: Append-only audit trail of inbox ticket analyses, capturing the input snapshot, stack snapshot, anchor candidate set, panel output, and measured telemetry for each run. Powers the inbox analysis panel (including its stale indicator on the collapsed success row), the per-user hourly rate limit, and the drift dashboard's predicted-vs-actual pairing.
 
 **Fields**:
 - `ticketId`: Parent ticket (cascade delete)
@@ -1139,6 +1145,7 @@ model TicketAnalysis {
 - `errorReason`: Enum-like string in `{scoping_pass_failed, grounded_pass_failed, dispatch_failed, timeout, invalid_model_output, credential_missing, other}`; NULL unless `status = failed`
 - `errorMessage`: Free-form trace excerpt (max 2000 chars); NULL unless `status = failed`
 - `output`: JSON payload conforming to `AnalysisOutputSchema` when `status = success`, to `ColdStartOutputSchema` (`{ scopeWarnings: ScopeWarning[] }`) when `status = cold_start`, and NULL when `status = running` or `status = failed`. The discriminator is implicit in `status` — the API serialiser inspects status before parsing the column
+- `countedInDrift`: True for the single analysis chosen as the basis of the ticket's `AnalysisOutcomePairing` row. All other analyses on the same ticket are `false`. Default `false` until pairing runs at SHIP; the pairing transaction sets exactly one row to `true` per ticket and demotes any prior `true` rows to `false`. Re-analyses created after pairing inherit the default `false` and never flip without an explicit re-pairing operation
 
 **Output payload shape** (`AnalysisOutputSchema`):
 - `frictionRisk`: `'low' | 'medium' | 'high'`
@@ -1185,4 +1192,111 @@ model TicketAnalysis {
 - The `anchorIdsAttempted` array is the ground truth for validating the workflow PATCH — outcomes can change between trigger and completion, so re-querying at PATCH time is rejected as a design choice
 - Older rows retain their original stack snapshot for audit; later project stack changes do not retroactively rewrite past analyses
 - No automatic re-runs occur — every analysis run requires an explicit user action
+
+### AnalysisOutcomePairing
+
+One row per shipped ticket whose latest analysis has been paired with its captured outcome. Backs the owner-only drift dashboard at `/projects/:projectId/analytics/drift`.
+
+```prisma
+model AnalysisOutcomePairing {
+  id Int @id @default(autoincrement())
+
+  ticketId       Int      @unique
+  projectId      Int
+  analysisId     Int
+  outcomeId      Int      @unique
+  pairedAt       DateTime @default(now())
+  shippedAt      DateTime
+  ruleSetVersion Int      @default(1)
+
+  predictedFriction      String   @db.VarChar(10)
+  actualFrictionFree     Boolean
+  frictionPredictedLow   Boolean
+  frictionMatch          Boolean
+  frictionEmerged        Boolean
+  frictionIncomparable   Boolean  @default(false)
+
+  predictedCostLowerUsd      Float?
+  predictedCostUpperUsd      Float?
+  predictedBaselineUpperUsd  Float?
+  actualCostUsd              Float?
+  costInRange                Boolean?
+  costMissDirection          String?  @db.VarChar(8)
+  costIncomparable           Boolean  @default(false)
+
+  predictedQualityLower      Int?
+  predictedQualityUpper      Int?
+  actualQualityScore         Int?
+  qualityInRange             Boolean?
+  qualityMissDirection       String?  @db.VarChar(8)
+  qualityIncomparable        Boolean  @default(false)
+
+  predictedRecommendation    String   @db.VarChar(8)
+  actualWorkflowType         String   @db.VarChar(8)
+  recommendationMatch        Boolean
+  recommendationIncomparable Boolean  @default(false)
+
+  unpairedReason String? @db.VarChar(40)
+  pendingOutcome Boolean @default(false)
+
+  ticket   Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  project  Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analysis TicketAnalysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  outcome  TicketOutcome?  @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, shippedAt(sort: Desc)])
+  @@index([projectId, unpairedReason])
+  @@index([pendingOutcome, shippedAt])
+}
+```
+
+**Purpose**: Persist the predicted-vs-actual deltas between the most recent `TicketAnalysis` for a ticket and its `TicketOutcome` at SHIP time, across four dimensions (friction, cost, quality, workflow recommendation). The drift dashboard aggregates these rows into the friction confusion matrix and the cost/quality range-hit panels.
+
+**Dimension fields**:
+- **Friction (binarized on the "low risk" class)**: `predictedFriction` is the raw enum (`'low'|'medium'|'high'`); `frictionPredictedLow` is `predictedFriction === 'low'`; `actualFrictionFree` mirrors `TicketOutcome.frictionFree`; `frictionMatch` is the XNOR of `frictionPredictedLow` and `actualFrictionFree`; `frictionEmerged` is `!actualFrictionFree`, surfaced separately so an owner can spot a "recommendation correct but friction still emerged" pattern
+- **Cost**: `predictedCostLowerUsd` / `predictedCostUpperUsd` is the envelope `[baselineLowerUsd, marginalFrictionUpperUsd]` from `AnalysisOutputSchema.costRange`; `predictedBaselineUpperUsd` is retained for audit; `actualCostUsd` mirrors `TicketOutcome.totalCostUsd`; `costInRange` is `lower ≤ actual ≤ upper`; `costMissDirection` is `'under' | 'over' | null`
+- **Quality**: same shape as cost, against `AnalysisOutputSchema.qualityGateRange` and `TicketOutcome.qualityScore`
+- **Recommendation**: `predictedRecommendation` is `AnalysisOutput.recommendation.choice`; `actualWorkflowType` is `TicketOutcome.workflowType` (`QUICK | FULL | CLEAN`); `recommendationMatch` is exact equality (legacy `CLEAN` outcomes always count as a mismatch unless prediction matches)
+
+**Lifecycle fields**:
+- `pendingOutcome`: `true` while the row is waiting for the outcome capture inside the 24-hour retry window; flipped to `false` once paired or expired
+- `unpairedReason`: `null` for paired rows; otherwise `'outcome_missing_24h'` (window expired), `'analysis_missing'` (defensive — pairing should not have run), or `'output_unparseable'` (analysis output failed `AnalysisOutputSchema.safeParse`). Rows with `unpairedReason !== null` are excluded from drift dashboard panels
+
+**Validation rules**:
+- `<dim>Incomparable=true` ⇒ that dimension's nullable fields are `null` and its match/in-range boolean is `false`/`null`
+- `predictedFriction ∈ {'low','medium','high'}`
+- `costMissDirection`: `'under'` if `actualCostUsd < predictedCostLowerUsd`, `'over'` if `> predictedCostUpperUsd`, else `null`; same convention for `qualityMissDirection`
+- `pendingOutcome=true` ⇒ `unpairedReason IS NULL` (still inside the retry window)
+
+**State transitions**:
+```
+[no row]  ── ship + analysis + outcome present ──▶  [paired:  pendingOutcome=false, unpairedReason=null]
+[no row]  ── ship + analysis + outcome missing ──▶  [pending: pendingOutcome=true,  unpairedReason=null]
+[pending] ── outcome arrives, retry succeeds   ──▶  [paired:  pendingOutcome=false, unpairedReason=null]
+[pending] ── 24h elapses without outcome       ──▶  [expired: pendingOutcome=false, unpairedReason='outcome_missing_24h']
+[no row]  ── ship without analysis             ──▶  [no row created]
+[paired]  ── duplicate ship event              ──▶  [no-op via upsert idempotency on ticketId]
+```
+
+**Relationships**:
+- Belongs to Ticket (required, unique — at most one pairing per ticket)
+- Belongs to Project (required, denormalized for project-scoped queries)
+- Belongs to TicketAnalysis (required, the analysis chosen as the basis)
+- Belongs to TicketOutcome (optional — null while `pendingOutcome=true` before the outcome row materialises)
+
+**Constraints**:
+- `ticketId` UNIQUE enforces 1:1 with Ticket and gives the upsert key for FR-006 idempotency
+- `outcomeId` UNIQUE prevents two pairings from referencing the same outcome
+- `(projectId, shippedAt DESC)` index serves the dashboard's `recentPairings` listing
+- `(projectId, unpairedReason)` index serves dashboard counters that filter paired vs unpaired
+- `(pendingOutcome, shippedAt)` index serves the nightly sweep's pending-row scan
+
+**Business Rules**:
+- Written by `lib/drift/pair.ts` (chained after `captureOutcomeOnShip` inside the SHIP transition's fire-and-forget envelope) and by `lib/drift/sweep.ts` (nightly retry); both paths use the same upsert keyed on `ticketId`
+- Pairing chooses the most recent `TicketAnalysis` row by `(createdAt DESC, id DESC)` and sets its `countedInDrift = true` while demoting all other analyses for the same ticket to `false` inside a single Prisma transaction
+- Pairing is idempotent on `ticketId`: duplicate SHIP events update the existing row rather than create a second one
+- Pairing never blocks or surfaces errors on the SHIP transition; failures are logged with `[drift-pairing]` and retried by the sweep
+- The 24-hour retry window starts at `shippedAt`; rows past the window are flipped to `unpairedReason='outcome_missing_24h'` and excluded from drift
+- Tickets that ship without any stored analysis do not produce a row and do not log an error
+- A row never references analysis or outcome content — only ids, deltas, and counters — so PII never lands in pairing storage
 

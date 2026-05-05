@@ -574,6 +574,49 @@ Per-turn context telemetry (`peakContextTokens`, `avgContextTokens`, `turnCount`
 - Navigates to `/projects/{projectId}/board`
 - Outline variant styling for secondary action appearance
 
+### Analysis Drift Dashboard
+
+Project owners can audit how accurately the inbox analysis predictions have aligned with actual shipped outcomes via a dedicated drift dashboard at `/projects/{projectId}/analytics/drift`.
+
+**Access Control**:
+- Owner-only — project members, non-members, and former owners are denied as if the resource did not exist
+- Members and non-members receive a 404 from both the page and its data endpoint
+- Anonymous visitors are redirected to sign-in
+- Access is re-checked at request time, so a transferred project becomes inaccessible to its previous owner immediately
+
+**How Pairing Works**:
+- When a ticket reaches the SHIP stage, the system pairs the ticket's most recent stored inbox analysis with its captured outcome and persists a single paired record per ticket
+- The most recent analysis is selected by `createdAt` (most recent first; ties broken by highest analysis ID); older analyses are kept for audit and explicitly marked as not counted toward drift
+- If the outcome record is not yet available at SHIP, pairing is retried for up to 24 hours; tickets whose outcome never arrives within that window are flagged unpaired and excluded from drift
+- Tickets that ship without any stored analysis do not produce a paired record and do not trigger an error
+- Pairing is idempotent on the ticket — duplicate SHIP events update the existing record rather than create a second one
+
+**Dashboard Panels**:
+
+The dashboard renders four labelled panels, all using tabular layouts; no signal is encoded in colour alone.
+
+- **Friction Confusion Matrix**: A 2×2 matrix on the "low risk" class binarisation (predicted `low` vs predicted `medium|high`, actual frictionFree vs not) with explicit counts of true positives, false positives, true negatives, and false negatives, plus precision and recall figures. Records where the analysis output could not be parsed appear as an "incomparable" count alongside the matrix
+- **Cost-Range Hit/Miss**: Counts of paired records whose actual cost fell inside the predicted cost envelope (`baselineLowerUsd`–`marginalFrictionUpperUsd`), below it ("under"), or above it ("over"), plus an "incomparable" count for paired records where the cost was unavailable
+- **Quality-Gate Hit/Miss**: Same shape as the cost panel, applied to the actual quality score versus the predicted quality range
+- **Usage Counter**: "X analysed tickets shipped" alongside "Y tickets left INBOX" and the resulting ratio, all rendered as text and numbers; analysed-shipped excludes tickets still inside the 24-hour pairing retry window so the ratio reflects only settled history
+
+**Sample Size Handling**:
+- The dashboard surfaces at least the 30 most recent paired records per project; pagination loads older records on demand
+- When fewer than 30 paired records exist, the actual sample size is labelled explicitly so owners do not over-interpret early data
+- When zero paired records exist, the dashboard shows an empty state explaining the absence; the usage counter still renders with `0 analysed shipped` and the project's actual `tickets left INBOX` count
+- Records where a single dimension is incomparable (e.g., older analysis without a quality range) are excluded from that panel's denominator only and counted as incomparable in audit storage; the other dimensions still count
+
+**Read-Only**:
+- The dashboard only displays data; it never modifies the analysis prompt, alerts on threshold breaches, or auto-corrects any record
+- It does not change the existing inbox analysis flow or the outcome capture flow
+
+**Data Refresh**:
+- Polling-based refresh every 15 seconds, matching the analytics dashboard cadence
+- Fresh paired records appear as soon as the next refresh completes after the SHIP transition
+
+**Cross-Project Isolation**:
+- An owner only ever sees their own project's data; the dashboard endpoint refuses cross-project requests with a 404
+
 ## Project Import
 
 ### Overview

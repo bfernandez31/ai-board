@@ -13,9 +13,11 @@ User
 │   │   ├── notifications (one-to-many) → Notification
 │   │   ├── comparisonParticipants (one-to-many) → ComparisonParticipant
 │   │   ├── outcome (one-to-one, optional) → TicketOutcome
-│   │   └── analyses (one-to-many) → TicketAnalysis
+│   │   ├── analyses (one-to-many) → TicketAnalysis
+│   │   └── analysisOutcomePairing (one-to-one, optional) → AnalysisOutcomePairing
 │   ├── outcomes (one-to-many) → TicketOutcome
 │   ├── analyses (one-to-many) → TicketAnalysis
+│   ├── analysisOutcomePairings (one-to-many) → AnalysisOutcomePairing
 │   ├── comparisonRecords (one-to-many) → ComparisonRecord
 │   │   ├── participants (one-to-many) → ComparisonParticipant
 │   │   │   ├── metricSnapshot (one-to-one) → TicketMetricSnapshot
@@ -85,6 +87,13 @@ User
 - `TicketAnalysis(projectId, createdAt DESC)` - Project-scoped analytics over historical analyses
 - `TicketAnalysis(status, startedAt)` - Observability for orphaned `running` rows (workflow timeouts)
 
+**Analysis–Outcome Pairing Queries**:
+- `AnalysisOutcomePairing(ticketId)` - Unique 1:1 with Ticket; idempotency guard for the SHIP-time upsert
+- `AnalysisOutcomePairing(outcomeId)` - Unique reference to the captured outcome
+- `AnalysisOutcomePairing(projectId, shippedAt DESC)` - Drift dashboard's `recentPairings` listing newest-first
+- `AnalysisOutcomePairing(projectId, unpairedReason)` - Filter paired vs unpaired-with-reason rows for dashboard counters
+- `AnalysisOutcomePairing(pendingOutcome, shippedAt)` - Nightly sweep scan of rows still inside the 24-hour retry window
+
 **Comparison Queries**:
 - `ComparisonRecord(projectId, generatedAt DESC)` - Project comparisons listing
 - `ComparisonRecord(sourceTicketId, generatedAt DESC)` - Source ticket lookups
@@ -110,4 +119,7 @@ Used for multi-column queries with optimal performance:
 - `TicketOutcome(projectId, partial)`: Filter partial rows out of analytics queries
 - `TicketAnalysis(ticketId, createdAt DESC)`: Latest-row lookup serving the panel render path
 - `TicketAnalysis(userId, status, endedAt)`: Per-user rolling-hour rate-limit count
+- `AnalysisOutcomePairing(projectId, shippedAt DESC)`: Newest-first dashboard listing
+- `AnalysisOutcomePairing(projectId, unpairedReason)`: Paired-only filter for dashboard aggregates
+- `AnalysisOutcomePairing(pendingOutcome, shippedAt)`: Pending-row scan for the nightly sweep
 

@@ -2,6 +2,77 @@
 
 ## Analytics Endpoints
 
+### GET /api/projects/:projectId/drift
+
+Owner-only drift dashboard snapshot pairing the most recent inbox analysis on each shipped ticket with the ticket's captured outcome.
+
+**Authentication**: Required (NextAuth session cookie or Bearer PAT)
+**Authorization**: Project owner only — members, non-members, and former owners receive 404 (no information leak per spec FR-007)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters**:
+- `cursor` (string, optional): Opaque cursor for paginating `recentPairings`
+- `pageSize` (int, optional, 1–50, default 30): Validated via Zod
+
+**Behavior**:
+- Aggregates `AnalysisOutcomePairing` rows where `unpairedReason IS NULL` (paired only) into the friction confusion matrix and the cost/quality range-hit panels
+- Counts paired, unpaired-with-reason, and pending-outcome rows separately so the dashboard can surface sample size and in-flight totals
+- `usage.analysedShipped` includes paired AND unpaired-with-reason rows but excludes `pendingOutcome=true` rows still inside the 24-hour retry window
+- `usage.leftInbox` is `COUNT(Ticket WHERE projectId = ? AND stage != 'INBOX')`
+- `recentPairings` returns the most recent paired rows sorted by `shippedAt` desc, capped at `pageSize`
+
+**Response** (200 OK):
+```json
+{
+  "projectId": 42,
+  "generatedAt": "2026-05-05T12:00:00.000Z",
+  "sampleSize": 27,
+  "unpairedCount": 1,
+  "pendingCount": 2,
+  "friction": {
+    "incomparable": 0,
+    "matrix": { "tp": 10, "fp": 3, "tn": 12, "fn": 2 },
+    "precision": 0.769,
+    "recall": 0.833
+  },
+  "cost":   { "incomparable": 1, "inRange": 18, "under": 4, "over": 4 },
+  "quality":{ "incomparable": 0, "inRange": 21, "under": 5, "over": 1 },
+  "usage":  { "analysedShipped": 28, "leftInbox": 60, "ratio": 0.467 },
+  "recentPairings": [
+    {
+      "ticketId": 501,
+      "ticketKey": "AIB-501",
+      "shippedAt": "2026-05-04T16:32:11.000Z",
+      "frictionMatch": true,
+      "costInRange": true,
+      "qualityInRange": true,
+      "recommendationMatch": false
+    }
+  ],
+  "nextCursor": "eyJzaGlwcGVkQXQiOiIyMDI2LTA1LTA0VDE2OjMyOjExLjAwMFoiLCJpZCI6NTAxfQ=="
+}
+```
+
+**Field invariants** (verified by integration tests):
+- `friction.matrix.tp + fp + tn + fn + friction.incomparable === sampleSize`
+- `cost.inRange + cost.under + cost.over + cost.incomparable === sampleSize`
+- `quality.inRange + quality.under + quality.over + quality.incomparable === sampleSize`
+- `friction.precision === null` when `tp + fp === 0`; otherwise `tp / (tp + fp)` rounded to 3 decimals
+- `friction.recall === null` when `tp + fn === 0`; otherwise `tp / (tp + fn)` rounded to 3 decimals
+- `usage.ratio === 0` when `usage.leftInbox === 0`; otherwise `analysedShipped / leftInbox` rounded to 3 decimals
+
+**Errors**:
+- `400`: Zod validation failure on `cursor` / `pageSize` → `{ "error": "Invalid query params", "code": "BAD_REQUEST" }`
+- `401`: Not authenticated
+- `404`: Caller is not the project owner (or project does not exist) → `{ "error": "Project not found" }`
+- `500`: Unhandled DB error
+
+**Performance**: Target p95 < 1.5s (well under SC-002's 2s p95). Single Prisma `groupBy` for per-dimension counters, single `prisma.ticket.count` for the inbox-leaver denominator, single `findMany` for `recentPairings`.
+
+**Polling**: Client refreshes every 15 seconds via TanStack Query, matching the analytics dashboard cadence.
+
 ### GET /api/projects/:projectId/analytics
 
 Fetch aggregated analytics data for project visualization.

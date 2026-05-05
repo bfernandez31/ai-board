@@ -128,3 +128,13 @@ A scheduled workflow `.github/workflows/nightly-log-prune.yml` triggers `POST /a
 - Returns `{ prunedCount, skippedCount, durationMs }` for GitHub Actions log visibility
 
 Pruning is idempotent — a re-run over the same window finds no matches. Because both the Blob object and the Postgres row are hard-deleted, pruned jobs show the timeline entry (status, telemetry) with a "logs no longer retained" preview but no viewer.
+
+### Analysis–Outcome Pairing Sweep (scheduled)
+
+A scheduled workflow `.github/workflows/nightly-pairing-sweep.yml` triggers `POST /api/maintenance/sweep-unpaired-pairings` once per day at 01:45 UTC (offset from log-prune at 01:15 UTC). The endpoint:
+- Retries pairings whose outcome arrived after the SHIP transition by re-running the SHIP-time pairing logic on rows where `pendingOutcome = true AND unpairedReason IS NULL`
+- Expires pairings whose outcome never arrived within 24 hours of SHIP by setting `unpairedReason = 'outcome_missing_24h'` and `pendingOutcome = false`
+- Catches up tickets that shipped without producing a pairing row at all, bounded to tickets updated within the last 7 days so a first deploy does not chew through unbounded history
+- Returns `{ examinedPending, pairedNow, expired, windowHours: 24 }` for GitHub Actions log visibility
+
+The sweep is idempotent — a re-run over the same window upserts identical rows, and expired rows stay expired. Per-ticket failures log with `[drift-sweep]` and the sweep continues with the next candidate. SHIP transitions never block on or surface pairing failures; the sweep is the safety net for late or missed outcomes.

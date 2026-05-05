@@ -615,6 +615,41 @@ Retention prune of `JobLog` rows and their Blob artifacts. Invoked daily by `.gi
 - `401`: Invalid or missing workflow token
 - `500`: Internal error
 
+### POST /api/maintenance/sweep-unpaired-pairings
+
+Nightly sweep that retries pending `AnalysisOutcomePairing` rows whose outcome arrived after SHIP and expires rows whose outcome never arrived within 24 hours. Invoked by `.github/workflows/nightly-pairing-sweep.yml` at 01:45 UTC.
+
+**Authentication**: Bearer token (`WORKFLOW_API_TOKEN`)
+**Authorization**: Workflow token validation only (no session auth)
+
+**Request**: No body, no query params.
+
+**Behavior**:
+- Phase 1: Selects up to 1000 rows where `pendingOutcome = true AND unpairedReason IS NULL`, ordered by `shippedAt` ascending
+- Phase 2: Selects up to 500 tickets in stage `SHIP` with at least one `success` analysis but no pairing row, bounded to tickets updated within the last 7 days (catch-up window for pre-feature SHIPs)
+- Phase 3: For each candidate, expires the row to `unpairedReason='outcome_missing_24h'` if `now - shippedAt > 24h`; otherwise calls `pairAnalysisWithOutcome(ticketId)` which upserts the row using the same logic as the SHIP-time path
+- Per-ticket failures are logged with `[drift-sweep]` and the sweep continues with the next candidate
+- Idempotent: re-running the sweep in the same night is a no-op (upsert; expired rows stay expired)
+
+**Response** (200 OK):
+```json
+{
+  "examinedPending": 12,
+  "pairedNow": 8,
+  "expired": 1,
+  "windowHours": 24
+}
+```
+
+- `examinedPending`: Rows visited from Phase 1
+- `pairedNow`: Rows that became paired during this sweep (outcome arrived; pairing succeeded)
+- `expired`: Rows transitioned to `unpairedReason='outcome_missing_24h'`
+- `windowHours`: Server-side constant (24)
+
+**Errors**:
+- `401`: Missing or invalid Bearer token → `{ "error": "Unauthorized" }`
+- `500`: DB error during sweep → `{ "error": "Sweep failed", "details": "..." }`
+
 ### Extended: GET /api/projects/:projectId/tickets/:ticketId/jobs
 
 The ticket jobs listing includes a `log` object on each row so the timeline can render the preview without an N+1 fetch:
