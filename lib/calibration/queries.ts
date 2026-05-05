@@ -23,11 +23,13 @@ export async function computeAdoption(projectId: number): Promise<AdoptionData> 
     return { analyzed: 0, sinceFeatureAvailable: 0, ratio: null };
   }
 
-  const [analyzedRows, sinceFeatureAvailable] = await Promise.all([
-    prisma.ticketAnalysis.findMany({
-      where: { projectId },
-      distinct: ['ticketId'],
-      select: { ticketId: true },
+  const [analyzed, sinceFeatureAvailable] = await Promise.all([
+    prisma.ticket.count({
+      where: {
+        projectId,
+        createdAt: { gte: featureAvailableAt },
+        analyses: { some: {} },
+      },
     }),
     prisma.ticket.count({
       where: {
@@ -37,7 +39,6 @@ export async function computeAdoption(projectId: number): Promise<AdoptionData> 
     }),
   ]);
 
-  const analyzed = analyzedRows.length;
   const ratio =
     sinceFeatureAvailable === 0 ? null : analyzed / sinceFeatureAvailable;
 

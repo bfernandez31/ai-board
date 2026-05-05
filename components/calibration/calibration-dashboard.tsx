@@ -35,28 +35,30 @@ export function CalibrationDashboard({
 
       {dashboard.warmingUp ? (
         <CalibrationEmptyState totalRows={dashboard.totalRows} />
-      ) : null}
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <ConfusionMatrixTable matrix={dashboard.confusionMatrix} />
+            <RecommendationPanel
+              data={dashboard.recommendation}
+              windowSize={dashboard.windowSize}
+            />
+          </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ConfusionMatrixTable matrix={dashboard.confusionMatrix} />
-        <RecommendationPanel
-          data={dashboard.recommendation}
-          windowSize={dashboard.windowSize}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <VerdictDistributionChart
-          title="Quality verdict distribution"
-          distribution={dashboard.qualityDistribution}
-          naTooltip='N/A applies when the actual quality score is null (e.g. QUICK or verify-without-score tickets).'
-        />
-        <VerdictDistributionChart
-          title="Cost verdict distribution"
-          distribution={dashboard.costDistribution}
-          naTooltip='N/A applies when every job had a null costUsd telemetry value.'
-        />
-      </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <VerdictDistributionChart
+              title="Quality verdict distribution"
+              distribution={dashboard.qualityDistribution}
+              naTooltip='N/A applies when the actual quality score is null (e.g. QUICK or verify-without-score tickets).'
+            />
+            <VerdictDistributionChart
+              title="Cost verdict distribution"
+              distribution={dashboard.costDistribution}
+              naTooltip='N/A applies when every job had a null costUsd telemetry value.'
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

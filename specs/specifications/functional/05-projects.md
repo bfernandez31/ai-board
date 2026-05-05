@@ -612,7 +612,7 @@ Project owners can review how the inbox-analysis predictions have held up agains
 - Both axes are reported separately because a recommendation can be "matched" (the user followed it) yet still wrong in hindsight, or vice versa
 
 **Adoption Counter**:
-- Numerator: distinct tickets in the project with at least one analysis attempt of any status (including `failed` and `cold_start`) — reflects user attempts, not just successful runs
+- Numerator: distinct tickets in the project that entered INBOX on or after the moment the analysis feature became available AND have at least one analysis attempt of any status (including `failed` and `cold_start`) — reflects user attempts, not just successful runs. Constraining the numerator to the same date population as the denominator keeps the ratio bounded at ≤ 1.0 (retroactive analyses on tickets created before the feature was available do not inflate the numerator).
 - Denominator: tickets that entered INBOX in the project on or after the moment the analysis feature became available on the project (so older inboxes do not artificially depress adoption)
 - Ratio is rendered alongside the absolute counts; the counter is computed independently of the 30-row drift window
 

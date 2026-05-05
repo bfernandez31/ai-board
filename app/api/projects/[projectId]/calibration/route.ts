@@ -14,19 +14,21 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
     }
 
-    await verifyProjectOwnership(projectId, request);
+    try {
+      await verifyProjectOwnership(projectId, request);
+    } catch (authError) {
+      if (
+        authError instanceof Error &&
+        authError.message === 'Project not found'
+      ) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const data = await getCalibrationDashboard(projectId);
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === 'Unauthorized') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-      if (error.message === 'Project not found') {
-        return NextResponse.json({ error: 'Not found' }, { status: 404 });
-      }
-    }
     console.error('[calibration-api]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

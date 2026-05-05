@@ -38,12 +38,12 @@ export function ConfusionMatrixTable({ matrix }: ConfusionMatrixTableProps) {
           >
             <thead>
               <tr>
-                <th
-                  scope="col"
+                <td
+                  aria-hidden="true"
                   className="border border-border bg-muted/50 p-2 text-left text-xs font-medium text-muted-foreground"
                 >
-                  Predicted: low risk
-                </th>
+                  Predicted ↓ / Actual →
+                </td>
                 <th
                   scope="col"
                   className="border border-border bg-muted/50 p-2 text-left text-xs font-medium text-muted-foreground"

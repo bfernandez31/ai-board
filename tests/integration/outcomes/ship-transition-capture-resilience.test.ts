@@ -88,6 +88,15 @@ describe('SHIP transition is resilient to capture failure (T019, FR-019)', () =>
   });
 
   it('SHIP returns 200 even when pairCalibrationOnOutcome rejects (T010, US2)', async () => {
+    // Stub capture so the fire-and-forget chain deterministically reaches
+    // pairCalibrationOnOutcome — without this, the real capture path may
+    // short-circuit or take longer than any fixed sleep.
+    vi.spyOn(captureModule, 'captureOutcomeOnShip').mockResolvedValueOnce({
+      status: 'created',
+      partial: false,
+      partialReason: null,
+      durationMs: 0,
+    });
     const calibrationSpy = vi
       .spyOn(calibrationModule, 'pairCalibrationOnOutcome')
       .mockRejectedValueOnce(new Error('calibration boom'));
@@ -128,9 +137,11 @@ describe('SHIP transition is resilient to capture failure (T019, FR-019)', () =>
       expect(result.body.stage).toBe('SHIP');
     }
 
-    // Wait briefly for the fire-and-forget chain to settle (capture + pair).
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(calibrationSpy).toHaveBeenCalled();
+    // Poll for the fire-and-forget chain to settle (capture + pair).
+    await vi.waitFor(() => expect(calibrationSpy).toHaveBeenCalled(), {
+      timeout: 2000,
+      interval: 25,
+    });
 
     const persisted = await prisma.ticket.findUnique({ where: { id: ticket.id } });
     expect(persisted?.stage).toBe(Stage.SHIP);

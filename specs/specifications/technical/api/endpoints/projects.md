@@ -851,7 +851,7 @@ Return the project owner's calibration drift dashboard payload — friction conf
 - `qualityDistribution` / `costDistribution`: Hit/miss/n_a counts plus `hitRate = hit / (hit + miss)` (excludes `na` from the denominator); `hitRate` is `null` when `(hit + miss) = 0`. The renamed `na` field corresponds to the persisted `'n_a'` verdict
 - `recommendation.matchedRate`: `count(recommendationMatched = true) / windowSize`; `null` when `windowSize = 0`
 - `recommendation.frictionAlignedRate`: `count(recommendationFrictionAligned = true) / windowSize`; `null` when `windowSize = 0`
-- `adoption.analyzed`: Distinct tickets in the project with at least one `TicketAnalysis` row of any status (numerator)
+- `adoption.analyzed`: Distinct tickets in the project created on or after `MIN(TicketAnalysis.createdAt)` AND with at least one `TicketAnalysis` row of any status (numerator). Constrained to the same date population as `sinceFeatureAvailable` so the ratio is bounded at ≤ 1.0 (retroactive analyses on older tickets do not inflate the numerator).
 - `adoption.sinceFeatureAvailable`: Distinct tickets in the project created on or after `MIN(TicketAnalysis.createdAt)` for the project — proxy for "moment the analysis feature became available on the project"; the denominator excludes tickets created before that moment so older inboxes do not artificially depress adoption
 - `adoption.ratio`: `analyzed / sinceFeatureAvailable`; `null` when `sinceFeatureAvailable = 0`. Computed independently of the 30-row drift window
 - `generatedAt`: Server-side generation timestamp (ISO 8601, UTC)
