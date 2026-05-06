@@ -12,6 +12,7 @@ import { JobStatus, Stage, WorkflowType } from '@prisma/client';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import * as captureModule from '@/lib/outcomes/capture';
+import * as calibrationModule from '@/lib/calibration/pair';
 import { executeTicketTransition } from '@/lib/tickets/transition';
 
 beforeAll(() => {
@@ -84,5 +85,109 @@ describe('SHIP transition is resilient to capture failure (T019, FR-019)', () =>
 
     const persisted = await prisma.ticket.findUnique({ where: { id: ticket.id } });
     expect(persisted?.stage).toBe(Stage.SHIP);
+  });
+
+  it('SHIP returns 200 even when pairCalibrationOnOutcome rejects (T010, US2)', async () => {
+    // Stub capture so the fire-and-forget chain deterministically reaches
+    // pairCalibrationOnOutcome — without this, the real capture path may
+    // short-circuit or take longer than any fixed sleep.
+    vi.spyOn(captureModule, 'captureOutcomeOnShip').mockResolvedValueOnce({
+      status: 'created',
+      partial: false,
+      partialReason: null,
+      durationMs: 0,
+    });
+    const calibrationSpy = vi
+      .spyOn(calibrationModule, 'pairCalibrationOnOutcome')
+      .mockRejectedValueOnce(new Error('calibration boom'));
+
+    const ticket = await ctx.createTicket({
+      title: '[e2e] cal resilience reject',
+      description: 'x',
+    });
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        stage: Stage.VERIFY,
+        workflowType: WorkflowType.FULL,
+      },
+    });
+    await prisma.job.create({
+      data: {
+        ticketId: ticket.id,
+        projectId: ctx.projectId,
+        command: 'verify',
+        status: JobStatus.COMPLETED,
+        qualityScore: 85,
+        startedAt: new Date(),
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    const result = await executeTicketTransition(
+      ctx.projectId,
+      String(ticket.id),
+      Stage.SHIP
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.status).toBe(200);
+    if (result.ok) {
+      expect(result.body.stage).toBe('SHIP');
+    }
+
+    // Poll for the fire-and-forget chain to settle (capture + pair).
+    await vi.waitFor(() => expect(calibrationSpy).toHaveBeenCalled(), {
+      timeout: 2000,
+      interval: 25,
+    });
+
+    const persisted = await prisma.ticket.findUnique({ where: { id: ticket.id } });
+    expect(persisted?.stage).toBe(Stage.SHIP);
+  });
+
+  it('SHIP returns 200 with no calibration row when ticket has no success analysis (T010, US2)', async () => {
+    const ticket = await ctx.createTicket({
+      title: '[e2e] cal no-success',
+      description: 'x',
+    });
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        stage: Stage.VERIFY,
+        workflowType: WorkflowType.FULL,
+        branch: 'no-success-branch',
+      },
+    });
+    await prisma.job.create({
+      data: {
+        ticketId: ticket.id,
+        projectId: ctx.projectId,
+        command: 'verify',
+        status: JobStatus.COMPLETED,
+        qualityScore: 80,
+        startedAt: new Date(),
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    const result = await executeTicketTransition(
+      ctx.projectId,
+      String(ticket.id),
+      Stage.SHIP
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.status).toBe(200);
+
+    // Wait briefly for the fire-and-forget chain to settle.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    const calibration = await prisma.analysisCalibration.findUnique({
+      where: { ticketId: ticket.id },
+    });
+    expect(calibration).toBeNull();
   });
 });

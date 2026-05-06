@@ -495,3 +495,28 @@ When a ticket transitions into the SHIP stage (from VERIFY for FULL workflows or
 - Both FULL and QUICK workflow tickets are captured; QUICK rows have `qualityScore = null` and `frictionFree = false` by definition
 - Outcomes are never updated after creation — rule-set version is pinned per row so future analyses can interpret historical rows under their original rules
 
+## Analysis Calibration on SHIP
+
+After outcome capture completes for a shipped ticket, the system pairs the latest successful inbox analysis (if any) with the captured outcome and persists the predicted-vs-actual deltas as a single immutable calibration row. The pairing runs as the next link in the post-commit chain — it is invoked only when capture returns `created` or `duplicate`, and never blocks, delays, or alters the SHIP transition or the outcome capture itself.
+
+**What is paired per shipped ticket**:
+- Friction: the predicted three-class rating (`low | medium | high`), the binarised "predicted clean" flag (`true` iff `low`), the actual `frictionFree` boolean, and the explicit confusion-matrix cell (`TP | TN | FP | FN`) on the "predicted clean / actual frictionFree" positive class
+- Quality: the predicted lower and upper bounds, the actual quality score (nullable for QUICK tickets), and a hit verdict in `{ hit, miss, n_a }` (inclusive bounds; `n_a` when the actual is null)
+- Cost: the predicted summed range (`baselineLower + marginalLower` … `baselineUpper + marginalUpper`), the decomposed predicted components, the actual `totalCostUsd`, and a hit verdict (`n_a` when the actual is null)
+- Recommendation: the predicted recommendation (`QUICK | FULL`) and confidence, the actual `workflowType`, plus two boolean axes — `recommendationMatched` (predicted equals actual) and `recommendationFrictionAligned` (`QUICK + frictionFree` OR `FULL + NOT frictionFree`)
+- Versioning: the rule-set version that produced the pairing rules and a `shippedAt` denormalised from the outcome for ordering
+- Partial mirror: the outcome's `partial` flag and `partialReason` snapshot (when set)
+
+**Selection rules**:
+- Pairing selects the most recent `TicketAnalysis` row with status `success` for the ticket; analyses with status `cold_start`, `failed`, or `running` are skipped (cold-start lacks numeric ranges; failed has no output; running is incomplete)
+- Older `success` analyses on the same ticket remain on the analysis history but do not produce calibration rows of their own and do not contribute to drift metrics
+- When a ticket has no `success` analysis at pairing time, no calibration row is created — the ticket still counts in the adoption denominator if it has any analysis row of any status
+
+**Behavior guarantees**:
+- Exactly one calibration row per ticket (database unique constraint on `ticketId`); the row is append-only and immutable after creation
+- Pairing is fire-and-forget after outcome capture commits — failures are logged but never cascade to SHIP or capture; tickets whose pairing fails are silently excluded from drift metrics
+- When the paired outcome is `partial = true`, the calibration row is still created: cost and friction cells populate from available telemetry, while cells that depend on missing data are recorded as `n_a` with the `partialReason` snapshot
+- Re-pairing on outcome change is never performed — outcomes are immutable and calibration inherits that immutability; an existing calibration row is treated as a duplicate by subsequent pair attempts and is never modified
+- No bounded-retry loop is implemented; transient failures result in no row, and SHIP and outcome capture continue unaffected
+- The pairing has no GitHub workflow, no event emitter, and no LLM call — it runs in-process as a chained DB join
+

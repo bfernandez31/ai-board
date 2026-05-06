@@ -13,9 +13,11 @@ User
 │   │   ├── notifications (one-to-many) → Notification
 │   │   ├── comparisonParticipants (one-to-many) → ComparisonParticipant
 │   │   ├── outcome (one-to-one, optional) → TicketOutcome
-│   │   └── analyses (one-to-many) → TicketAnalysis
+│   │   ├── analyses (one-to-many) → TicketAnalysis
+│   │   └── calibration (one-to-one, optional) → AnalysisCalibration
 │   ├── outcomes (one-to-many) → TicketOutcome
 │   ├── analyses (one-to-many) → TicketAnalysis
+│   ├── calibrations (one-to-many) → AnalysisCalibration
 │   ├── comparisonRecords (one-to-many) → ComparisonRecord
 │   │   ├── participants (one-to-many) → ComparisonParticipant
 │   │   │   ├── metricSnapshot (one-to-one) → TicketMetricSnapshot
@@ -85,6 +87,14 @@ User
 - `TicketAnalysis(projectId, createdAt DESC)` - Project-scoped analytics over historical analyses
 - `TicketAnalysis(status, startedAt)` - Observability for orphaned `running` rows (workflow timeouts)
 
+**Calibration Queries**:
+- `AnalysisCalibration(ticketId)` - Unique 1:1 with Ticket; pairing idempotency guard
+- `AnalysisCalibration(analysisId)` - Unique; defensive guarantee that no analysis row is paired twice
+- `AnalysisCalibration(outcomeId)` - Unique; defensive guarantee that no outcome row is paired twice
+- `AnalysisCalibration(projectId, shippedAt DESC)` - Dashboard 30-row window, newest-first
+- `AnalysisCalibration(projectId, partial)` - Dashboard headline-rate filters that exclude partials
+- `AnalysisCalibration(projectId, frictionCell)` - Dashboard confusion-matrix counts via `groupBy`
+
 **Comparison Queries**:
 - `ComparisonRecord(projectId, generatedAt DESC)` - Project comparisons listing
 - `ComparisonRecord(sourceTicketId, generatedAt DESC)` - Source ticket lookups
@@ -110,4 +120,7 @@ Used for multi-column queries with optimal performance:
 - `TicketOutcome(projectId, partial)`: Filter partial rows out of analytics queries
 - `TicketAnalysis(ticketId, createdAt DESC)`: Latest-row lookup serving the panel render path
 - `TicketAnalysis(userId, status, endedAt)`: Per-user rolling-hour rate-limit count
+- `AnalysisCalibration(projectId, shippedAt DESC)`: Newest-first calibration row window for the drift dashboard
+- `AnalysisCalibration(projectId, partial)`: Filter partial calibration rows out of headline rate denominators
+- `AnalysisCalibration(projectId, frictionCell)`: Confusion-matrix `groupBy` aggregation per project
 

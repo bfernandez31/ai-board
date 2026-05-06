@@ -1186,3 +1186,124 @@ model TicketAnalysis {
 - Older rows retain their original stack snapshot for audit; later project stack changes do not retroactively rewrite past analyses
 - No automatic re-runs occur — every analysis run requires an explicit user action
 
+### AnalysisCalibration
+
+Immutable per-ticket snapshot pairing the latest successful `TicketAnalysis` row with the captured `TicketOutcome` row at outcome-capture time. Drives the project-owner-only calibration drift dashboard.
+
+```prisma
+model AnalysisCalibration {
+  id Int @id @default(autoincrement())
+
+  ticketId   Int      @unique
+  projectId  Int
+  analysisId Int      @unique
+  outcomeId  Int      @unique
+
+  ruleSetVersion Int
+  capturedAt     DateTime @default(now())
+  shippedAt      DateTime
+
+  frictionPredictedRating String  @db.VarChar(8)
+  frictionPredictedClean  Boolean
+  frictionActualFree      Boolean
+  frictionCell            String  @db.VarChar(2)
+
+  qualityPredictedLower Int
+  qualityPredictedUpper Int
+  qualityActual         Int?
+  qualityVerdict        String  @db.VarChar(4)
+
+  costPredictedBaselineLowerUsd Float
+  costPredictedBaselineUpperUsd Float
+  costPredictedMarginalLowerUsd Float
+  costPredictedMarginalUpperUsd Float
+  costPredictedSummedLowerUsd   Float
+  costPredictedSummedUpperUsd   Float
+  costActualUsd                 Float?
+  costVerdict                   String  @db.VarChar(4)
+
+  recommendationPredicted       String  @db.VarChar(5)
+  recommendationConfidence      String  @db.VarChar(6)
+  workflowActual                WorkflowType
+  recommendationMatched         Boolean
+  recommendationFrictionAligned Boolean
+
+  partial       Boolean @default(false)
+  partialReason String? @db.VarChar(40)
+
+  ticket   Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  project  Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analysis TicketAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  outcome  TicketOutcome  @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, shippedAt(sort: Desc)])
+  @@index([projectId, partial])
+  @@index([projectId, frictionCell])
+}
+```
+
+**Purpose**: Append-only calibration record per shipped+analyzed ticket — the canonical source for "how the predicted analysis (friction, quality range, cost range, recommendation) compared to the actual outcome" without re-deriving from the source `TicketAnalysis` and `TicketOutcome` rows on every read.
+
+**Fields**:
+- `ticketId`: Parent ticket (unique — at most one calibration row per ticket)
+- `projectId`: Denormalized for the project-scoped dashboard query
+- `analysisId`: Foreign key to the paired `TicketAnalysis` row whose `status = 'success'`
+- `outcomeId`: Foreign key to the paired `TicketOutcome` row
+- `ruleSetVersion`: Pinned `CALIBRATION_RULE_SET_VERSION` at write time so future rule-set changes can be detected on read
+- `capturedAt`: Moment this row was written
+- `shippedAt`: Denormalized from `TicketOutcome.shippedAt` for the dashboard's newest-first ordering
+- Friction pairing:
+  - `frictionPredictedRating`: Predicted three-class rating (`'low' | 'medium' | 'high'`) from the analysis output
+  - `frictionPredictedClean`: Binarised flag (`true` iff `frictionPredictedRating === 'low'`)
+  - `frictionActualFree`: Mirrored from `TicketOutcome.frictionFree`
+  - `frictionCell`: Mutually exclusive confusion-matrix cell (`'TP' | 'TN' | 'FP' | 'FN'`) on the "predicted clean / actual frictionFree" positive class — derived at write time, validated by `superRefine`
+- Quality pairing:
+  - `qualityPredictedLower`, `qualityPredictedUpper`: Predicted bounds (0..100, inclusive; `lower <= upper`)
+  - `qualityActual`: Nullable when QUICK / no verify-with-score
+  - `qualityVerdict`: `'hit' | 'miss' | 'n_a'` — `n_a` when actual is null, `hit` when the actual is inside `[lower, upper]` inclusive, else `miss`
+- Cost pairing:
+  - `costPredictedBaselineLowerUsd`, `costPredictedBaselineUpperUsd`, `costPredictedMarginalLowerUsd`, `costPredictedMarginalUpperUsd`: Decomposed predicted components from the analysis output's `costRange`, preserved for future drill-down
+  - `costPredictedSummedLowerUsd`, `costPredictedSummedUpperUsd`: Summed range matching the user-facing "expected cost" line; consistency with the decomposed components is validated on write
+  - `costActualUsd`: Nullable when every contributing job had a null `costUsd`
+  - `costVerdict`: `'hit' | 'miss' | 'n_a'` — same semantics as the quality verdict over the summed range
+- Recommendation pairing:
+  - `recommendationPredicted`: `'QUICK' | 'FULL'` (the analysis output's `recommendation.choice`)
+  - `recommendationConfidence`: `'low' | 'medium' | 'high'` (the analysis output's `recommendation.confidence`)
+  - `workflowActual`: Mirrored from `TicketOutcome.workflowType` (`FULL`, `QUICK`, or `CLEAN` for legacy rows)
+  - `recommendationMatched`: `true` iff `recommendationPredicted === workflowActual`
+  - `recommendationFrictionAligned`: `true` iff `(recommendationPredicted === 'QUICK' && frictionActualFree) || (recommendationPredicted === 'FULL' && !frictionActualFree)`
+- Partial mirror:
+  - `partial`: Snapshotted from `TicketOutcome.partial` at write time
+  - `partialReason`: One of `no_jobs`, `no_branch_reference`, `merge_not_found`, `repository_unreachable`, `fetch_failed_after_retry`, `diff_truncated`; null when `partial = false`. Mirrors `TicketOutcome.partialReason` (single source of truth lives in `lib/outcomes/persist.ts`)
+
+**Relationships**:
+- Belongs to Ticket (required, cascade delete) — 1:1
+- Belongs to Project (required, cascade delete) — denormalized
+- Belongs to TicketAnalysis (required, cascade delete) — 1:1 with the paired success row
+- Belongs to TicketOutcome (required, cascade delete) — 1:1 with the paired outcome row
+
+**Constraints**:
+- Unique `ticketId` enforces 1:1 with Ticket and protects against duplicate writes from re-tries; `lib/calibration/persist.ts` catches Prisma `P2002` and treats it as a no-op duplicate (mirrors the established `lib/outcomes/persist.ts` pattern)
+- Unique `analysisId` and unique `outcomeId` are defensive — they guarantee no analysis row or outcome row can be paired twice, even via a future re-pair bug
+- `(projectId, shippedAt DESC)` index serves the dashboard's 30-row window
+- `(projectId, partial)` index serves the headline-rate denominators that exclude partials
+- `(projectId, frictionCell)` index serves the confusion-matrix `groupBy` query
+
+**Validation invariants** (enforced by `lib/calibration/persist.ts` Zod `superRefine` before any DB write):
+- `frictionPredictedClean === (frictionPredictedRating === 'low')`
+- `frictionCell` is the cell consistent with `frictionPredictedClean` and `frictionActualFree`
+- `qualityPredictedLower <= qualityPredictedUpper`; `qualityVerdict` is consistent with `qualityActual` and the bounds
+- Each cost component's lower ≤ upper; `costPredictedSummedLowerUsd === baselineLower + marginalLower` (and the same for upper); `costVerdict` is consistent with `costActualUsd` and the summed range
+- `recommendationMatched === (recommendationPredicted === workflowActual)`
+- `recommendationFrictionAligned` matches the spec rule above
+- `partial === true ⇔ partialReason !== null`
+
+**Business Rules**:
+- Written by `lib/calibration/pair.ts` chained after `captureOutcomeOnShip` in `lib/tickets/transition.ts` — fire-and-forget, never blocks or alters SHIP or outcome capture
+- Pairing selects the most recent `TicketAnalysis` row with `status = 'success'` for the ticket; analyses with status `cold_start`, `failed`, or `running` are skipped
+- When a ticket has no `success` analysis at pairing time, no calibration row is written; the ticket still counts in adoption (via the `TicketAnalysis` count) but is excluded from drift metrics
+- Append-only: rows are never updated after creation. The model has no `updatedAt` column on purpose — any update path would be a code smell. Re-pairing on outcome change is never performed (outcomes are immutable; calibration inherits that immutability)
+- When the paired outcome is `partial = true`, the row is still created: cells whose computation requires fields the outcome was unable to capture are recorded as `'n_a'` with the `partialReason` snapshot; cells that can be computed from available telemetry populate normally
+- Pairing failures (Zod superRefine, Prisma errors, missing analysis output) are logged with the `[calibration]` prefix and never propagate to SHIP or capture
+- No backfill for historical shipped+analyzed tickets — the dashboard's "30 of N" caption naturally reflects the post-launch dataset
+
