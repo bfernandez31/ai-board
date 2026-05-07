@@ -102,6 +102,23 @@ describe('PUT /api/jobs/:id/logs/artifact', () => {
     }
   );
 
+  it.skipIf(!blobConfigured)(
+    'returns 201 with raw artifactKey when ?type=raw',
+    async () => {
+      const payload = gzipSync(Buffer.from('{"uuid":"abc"}\n'));
+      const res = await putArtifact(
+        `/api/jobs/${jobId}/logs/artifact?type=raw`,
+        payload,
+        'application/gzip',
+        true
+      );
+      expect(res.status).toBe(201);
+      const data = (await res.json()) as { artifactKey: string; artifactSize: number };
+      expect(data.artifactKey).toBe(`logs/${ctx.projectId}/${ticketId}/${jobId}-raw.jsonl.gz`);
+      expect(data.artifactSize).toBe(payload.byteLength);
+    }
+  );
+
   it.skipIf(blobConfigured)(
     'returns 502 BLOB_UPLOAD_FAILED when Blob is not configured',
     async () => {

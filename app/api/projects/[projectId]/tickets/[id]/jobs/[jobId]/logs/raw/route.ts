@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { verifyTicketAccess } from '@/lib/db/auth-helpers';
 import { streamJobLogArtifact } from '@/app/lib/blob/client';
-import { buildJobLogArtifactKey, buildJobLogRawUrl } from '@/app/lib/logs/artifact-key';
+import { buildJobLogArtifactKey, buildJobLogRawArtifactKey, buildJobLogRawUrl } from '@/app/lib/logs/artifact-key';
 
 export async function GET(
   request: NextRequest,
@@ -40,20 +40,31 @@ export async function GET(
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 
+  const url = new URL(request.url);
+  const isNative = url.searchParams.get('type') === 'native';
+
   const log = await prisma.jobLog.findUnique({
     where: { jobId },
-    select: { captureStatus: true, artifactKey: true },
+    select: { captureStatus: true, artifactKey: true, rawArtifactKey: true },
   });
-  if (!log || log.captureStatus !== 'CAPTURED' || !log.artifactKey) {
+  if (!log || log.captureStatus !== 'CAPTURED') {
     return NextResponse.json({ error: 'Artifact not available' }, { status: 404 });
   }
 
-  const artifactKey = buildJobLogArtifactKey(projectId, ticketId, jobId);
-  if (log.artifactKey !== artifactKey) {
+  const storedKey = isNative ? log.rawArtifactKey : log.artifactKey;
+  if (!storedKey) {
+    return NextResponse.json({ error: 'Artifact not available' }, { status: 404 });
+  }
+
+  const artifactKey = isNative
+    ? buildJobLogRawArtifactKey(projectId, ticketId, jobId)
+    : buildJobLogArtifactKey(projectId, ticketId, jobId);
+  if (storedKey !== artifactKey) {
     console.error('[GET /logs/raw] Stored artifact key mismatch', {
       jobId,
       expectedArtifactKey: artifactKey,
-      actualArtifactKey: log.artifactKey,
+      actualArtifactKey: storedKey,
+      type: isNative ? 'native' : 'normalized',
       rawUrl: buildJobLogRawUrl(projectId, ticketId, jobId),
     });
     return NextResponse.json(
@@ -76,9 +87,9 @@ export async function GET(
     return NextResponse.json({ error: 'Artifact not found' }, { status: 404 });
   }
 
-  const url = new URL(request.url);
   const isDownload = url.searchParams.get('format') === 'jsonl';
   const ticketKey = ticket.ticketKey ?? `ticket-${ticketId}`;
+  const filenameSuffix = isNative ? '-native' : '';
 
   // NOTE: We do NOT set Content-Encoding: gzip here. The body is an opaque
   // gzipped file (an archive), not a gzip-encoded response. Setting
@@ -91,7 +102,7 @@ export async function GET(
     'Content-Length': String(result.size),
   };
   if (isDownload) {
-    headers['Content-Disposition'] = `attachment; filename="${ticketKey}-job-${jobId}.jsonl.gz"`;
+    headers['Content-Disposition'] = `attachment; filename="${ticketKey}-job-${jobId}${filenameSuffix}.jsonl.gz"`;
   }
 
   return new Response(result.stream, { status: 200, headers });

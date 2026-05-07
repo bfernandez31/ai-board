@@ -37,7 +37,7 @@ function redactOptional(value) {
   return value ? redactString(value) : value;
 }
 
-function deepRedact(value) {
+export function deepRedact(value) {
   if (value == null) return value;
   if (typeof value === 'string') return redactString(value);
   if (typeof value === 'number' || typeof value === 'boolean') return value;

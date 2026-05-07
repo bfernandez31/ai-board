@@ -85,6 +85,8 @@ model JobLog {
   errorCount    Int           @default(0)
   artifactKey   String?       @db.VarChar(300)
   artifactSize  Int?
+  rawArtifactKey  String?     @db.VarChar(300)
+  rawArtifactSize Int?
   capturedAt    DateTime      @default(now())
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt

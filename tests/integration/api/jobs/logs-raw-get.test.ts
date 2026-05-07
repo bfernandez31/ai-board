@@ -93,6 +93,25 @@ describe('GET /api/projects/:projectId/tickets/:id/jobs/:jobId/logs/raw', () => 
     }
   );
 
+  it('returns 404 for ?type=native when no rawArtifactKey exists', async () => {
+    await prisma.jobLog.create({
+      data: {
+        jobId,
+        captureStatus: 'CAPTURED',
+        preview: 'preview',
+        schemaVersion: 1,
+        eventCount: 1,
+        errorCount: 0,
+        artifactKey: `logs/${ctx.projectId}/${ticketId}/${jobId}.jsonl.gz`,
+        artifactSize: 100,
+      },
+    });
+    const res = await ctx.api.fetch(
+      `/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs/${jobId}/logs/raw?type=native`
+    );
+    expect(res.status).toBe(404);
+  });
+
   it('returns 401 when no session cookie or test user override is provided', async () => {
     await prisma.jobLog.create({
       data: {

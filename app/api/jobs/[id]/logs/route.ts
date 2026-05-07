@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
-import { buildJobLogRawUrl } from '@/app/lib/logs/artifact-key';
+import { buildJobLogRawUrl, buildJobLogNativeRawUrl } from '@/app/lib/logs/artifact-key';
 import { JobLogSubmissionSchema, PREVIEW_MAX_CHARS } from '@/app/lib/logs/schema';
 import { redactString } from '@/app/lib/logs/redactor';
 
@@ -61,6 +61,8 @@ export async function POST(
     errorCount: submission.errorCount,
     artifactKey: submission.artifactKey ?? null,
     artifactSize: submission.artifactSize ?? null,
+    rawArtifactKey: submission.rawArtifactKey ?? null,
+    rawArtifactSize: submission.rawArtifactSize ?? null,
     capturedAt: new Date(),
   };
 
@@ -76,6 +78,11 @@ export async function POST(
         ? buildJobLogRawUrl(job.projectId, job.ticketId, jobId)
         : null;
 
+    const nativeRawUrl =
+      row.captureStatus === 'CAPTURED' && row.rawArtifactKey
+        ? buildJobLogNativeRawUrl(job.projectId, job.ticketId, jobId)
+        : null;
+
     return NextResponse.json(
       {
         captureStatus: row.captureStatus,
@@ -86,6 +93,7 @@ export async function POST(
         artifactSize: row.artifactSize,
         capturedAt: row.capturedAt.toISOString(),
         rawUrl,
+        nativeRawUrl,
       },
       { status: 200, headers: { 'Cache-Control': 'no-store' } }
     );

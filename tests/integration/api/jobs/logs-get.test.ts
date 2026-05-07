@@ -95,6 +95,33 @@ describe('GET /api/projects/:projectId/tickets/:id/jobs/:jobId/logs', () => {
     expect(res.data.rawUrl).toBeNull();
   });
 
+  it('nativeRawUrl is populated when rawArtifactKey exists', async () => {
+    await prisma.jobLog.update({
+      where: { jobId },
+      data: {
+        rawArtifactKey: `logs/${ctx.projectId}/${ticketId}/${jobId}-raw.jsonl.gz`,
+        rawArtifactSize: 9876,
+      },
+    });
+    const res = await ctx.api.get<{
+      captureStatus: string;
+      nativeRawUrl: string | null;
+    }>(`/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs/${jobId}/logs`);
+    expect(res.status).toBe(200);
+    expect(res.data.nativeRawUrl).toBe(
+      `/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs/${jobId}/logs/raw?type=native`
+    );
+  });
+
+  it('nativeRawUrl is null when rawArtifactKey is absent', async () => {
+    const res = await ctx.api.get<{
+      captureStatus: string;
+      nativeRawUrl: string | null;
+    }>(`/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs/${jobId}/logs`);
+    expect(res.status).toBe(200);
+    expect(res.data.nativeRawUrl).toBeNull();
+  });
+
   it('returns 404 when no log row exists', async () => {
     await prisma.jobLog.delete({ where: { jobId } });
     const res = await ctx.api.get(

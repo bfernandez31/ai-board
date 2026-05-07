@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { redactString, redactEvents } from '@/app/lib/logs/redactor';
+import { redactString, redactEvents, deepRedact } from '@/app/lib/logs/redactor';
 import type { NormalizedEvent } from '@/app/lib/logs/schema';
 
 describe('redactString', () => {
@@ -104,6 +104,50 @@ describe('redactString', () => {
 
   it('returns the original string when no patterns match', () => {
     expect(redactString('hello world')).toBe('hello world');
+  });
+});
+
+describe('deepRedact', () => {
+  it('recursively redacts all string values in a native Claude Code event', () => {
+    const nativeEvent = {
+      type: 'assistant',
+      uuid: '550e8400-e29b-41d4-a716-446655440000',
+      parentUuid: '550e8400-e29b-41d4-a716-446655440001',
+      sessionId: 'sess-123',
+      isSidechain: false,
+      message: {
+        role: 'assistant',
+        content: [
+          { type: 'text', text: 'Using token ghp_1234567890abcdefghij' },
+          { type: 'tool_use', input: { command: 'echo sk-ant-api03-AAAAAAAAAAAAAAAAAAAA' } },
+        ],
+      },
+      usage: { input_tokens: 100, output_tokens: 50 },
+      cwd: '/home/runner',
+    };
+    const result = deepRedact(nativeEvent) as typeof nativeEvent;
+    expect(result.uuid).toBe('550e8400-e29b-41d4-a716-446655440000');
+    expect(result.usage.input_tokens).toBe(100);
+    expect(result.isSidechain).toBe(false);
+    const textContent = result.message.content[0] as { text: string };
+    expect(textContent.text).toContain('[REDACTED:github_token]');
+    const toolContent = result.message.content[1] as { input: { command: string } };
+    expect(toolContent.input.command).toContain('[REDACTED:anthropic_key]');
+  });
+
+  it('preserves null and non-string scalars', () => {
+    expect(deepRedact(null)).toBeNull();
+    expect(deepRedact(42)).toBe(42);
+    expect(deepRedact(true)).toBe(true);
+    expect(deepRedact('no secrets')).toBe('no secrets');
+  });
+
+  it('handles arrays recursively', () => {
+    const input = ['safe', 'token=ghp_1234567890abcdefghij', 123];
+    const result = deepRedact(input) as unknown[];
+    expect(result[0]).toBe('safe');
+    expect(result[1]).toContain('[REDACTED:github_token]');
+    expect(result[2]).toBe(123);
   });
 });
 

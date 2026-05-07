@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildJobLogArtifactKey } from '@/app/lib/logs/artifact-key';
+import { buildJobLogArtifactKey, buildJobLogRawArtifactKey } from '@/app/lib/logs/artifact-key';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { POST } from '@/app/api/jobs/[id]/logs/route';
@@ -169,6 +169,61 @@ describe('POST /api/jobs/:id/logs', () => {
     expect(row.preview).toContain('[REDACTED:github_token]');
     expect(row.preview).not.toContain(secret);
     expect(row.preview.length).toBeLessThanOrEqual(280);
+  });
+
+  it('stores rawArtifactKey and rawArtifactSize when provided', async () => {
+    const rawKey = buildJobLogRawArtifactKey(ctx.projectId, ticketId, jobId);
+    const res = await postLog(jobId, {
+      captureStatus: 'CAPTURED',
+      preview: 'with raw artifact',
+      schemaVersion: 1,
+      eventCount: 5,
+      errorCount: 0,
+      artifactKey: buildArtifactKey(jobId),
+      artifactSize: 1234,
+      rawArtifactKey: rawKey,
+      rawArtifactSize: 5678,
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json() as { nativeRawUrl: string | null };
+    expect(data.nativeRawUrl).toContain('?type=native');
+
+    const row = await prisma.jobLog.findUniqueOrThrow({ where: { jobId } });
+    expect(row.rawArtifactKey).toBe(rawKey);
+    expect(row.rawArtifactSize).toBe(5678);
+  });
+
+  it('accepts submission without raw artifact fields (backwards compatible)', async () => {
+    const res = await postLog(jobId, {
+      captureStatus: 'CAPTURED',
+      preview: 'no raw artifact',
+      schemaVersion: 1,
+      eventCount: 3,
+      errorCount: 0,
+      artifactKey: buildArtifactKey(jobId),
+      artifactSize: 500,
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json() as { nativeRawUrl: string | null };
+    expect(data.nativeRawUrl).toBeNull();
+
+    const row = await prisma.jobLog.findUniqueOrThrow({ where: { jobId } });
+    expect(row.rawArtifactKey).toBeNull();
+    expect(row.rawArtifactSize).toBeNull();
+  });
+
+  it('rejects rawArtifactKey without rawArtifactSize', async () => {
+    const res = await postLog(jobId, {
+      captureStatus: 'CAPTURED',
+      preview: 'mismatch',
+      schemaVersion: 1,
+      eventCount: 1,
+      errorCount: 0,
+      artifactKey: buildArtifactKey(jobId),
+      artifactSize: 100,
+      rawArtifactKey: 'logs/1/2/3-raw.jsonl.gz',
+    });
+    expect(res.status).toBe(400);
   });
 
   it('returns 404 for unknown job', async () => {

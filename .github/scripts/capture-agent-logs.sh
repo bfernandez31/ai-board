@@ -36,8 +36,12 @@ AGENT_UPPER="$(echo "${AGENT_TYPE}" | tr '[:lower:]' '[:upper:]')"
 STARTED_AT="${CAPTURE_STARTED_AT:-$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)}"
 ENDED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)"
 
+RAW_NATIVE_REDACTED="${TMPDIR}/agent-raw-native-redacted-${JOB_ID}.jsonl"
+RAW_NATIVE_ARTIFACT="${TMPDIR}/agent-raw-native-redacted-${JOB_ID}.jsonl.gz"
+
 cleanup() {
   rm -f "${NORMALIZED}" "${REDACTED}" "${ARTIFACT}" 2>/dev/null || true
+  rm -f "${RAW_NATIVE_REDACTED}" "${RAW_NATIVE_ARTIFACT}" 2>/dev/null || true
   rm -f "${RAW_LOG}" 2>/dev/null || true
   [[ -n "${CLAUDE_AGGREGATED:-}" ]] && rm -f "${CLAUDE_AGGREGATED}" 2>/dev/null || true
 }
@@ -233,12 +237,87 @@ try {
   fi
 fi
 
+# ---------- Phase 5b: Raw native artifact (Claude only) ----------
+
+RAW_ARTIFACT_KEY=""
+RAW_ARTIFACT_SIZE=0
+
+if [[ "${AGENT_UPPER}" == "CLAUDE" && -n "${CLAUDE_AGGREGATED:-}" && -s "${CLAUDE_AGGREGATED}" ]]; then
+  redact_raw_native() {
+    node --input-type=module -e "
+import { readFileSync, writeFileSync } from 'node:fs';
+import { deepRedact } from '${LIB_DIR}/redactor.mjs';
+const raw = readFileSync('${CLAUDE_AGGREGATED}', 'utf-8');
+const lines = raw.split(/\r?\n/).filter(l => l.length > 0);
+const redacted = lines.map(l => {
+  try { return JSON.stringify(deepRedact(JSON.parse(l))); }
+  catch { return null; }
+}).filter(Boolean);
+writeFileSync('${RAW_NATIVE_REDACTED}', redacted.join('\n') + '\n');
+"
+  }
+
+  if redact_raw_native 2>/tmp/raw-native-redact-error.log; then
+    gzip -c "${RAW_NATIVE_REDACTED}" > "${RAW_NATIVE_ARTIFACT}"
+    RAW_ARTIFACT_SIZE=$(stat -c%s "${RAW_NATIVE_ARTIFACT}" 2>/dev/null || stat -f%z "${RAW_NATIVE_ARTIFACT}" 2>/dev/null || wc -c < "${RAW_NATIVE_ARTIFACT}")
+
+    put_raw_artifact() {
+      local attempt=0
+      local delay=1
+      while [[ ${attempt} -lt 3 ]]; do
+        local code
+        code=$(curl -sS -o /tmp/raw-upload-response.json -w "%{http_code}" \
+          -X PUT "${APP_URL}/api/jobs/${JOB_ID}/logs/artifact?type=raw" \
+          -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+          -H "Content-Type: application/gzip" \
+          --data-binary @"${RAW_NATIVE_ARTIFACT}" || echo "000")
+        if [[ "${code}" == "201" ]]; then
+          return 0
+        fi
+        if [[ "${code}" =~ ^4 ]]; then
+          echo "capture-agent-logs: raw artifact FAILED status=${code} reason=non_retriable_upload" >&2
+          return 1
+        fi
+        attempt=$((attempt + 1))
+        sleep "${delay}"
+        delay=$((delay * 2))
+      done
+      echo "capture-agent-logs: raw artifact FAILED status=retry_exhausted reason=upload_timeout" >&2
+      return 1
+    }
+
+    if put_raw_artifact; then
+      RAW_ARTIFACT_KEY=$(node --input-type=module -e "
+import { readFileSync } from 'node:fs';
+try {
+  const data = JSON.parse(readFileSync('/tmp/raw-upload-response.json', 'utf-8'));
+  if (typeof data.artifactKey === 'string') process.stdout.write(data.artifactKey);
+} catch {}
+" 2>/dev/null)
+      if [[ -z "${RAW_ARTIFACT_KEY}" ]]; then
+        echo "capture-agent-logs: raw artifact key missing from response (non-blocking)" >&2
+        RAW_ARTIFACT_KEY=""
+        RAW_ARTIFACT_SIZE=0
+      fi
+    else
+      echo "capture-agent-logs: raw artifact upload failed (non-blocking)" >&2
+    fi
+  else
+    echo "capture-agent-logs: raw native redaction failed, skipping raw artifact" >&2
+    cat /tmp/raw-native-redact-error.log >&2 2>/dev/null || true
+  fi
+fi
+
 # ---------- Phase 6: Submit summary ----------
 
 build_summary_body() {
+  local raw_fields=""
+  if [[ -n "${RAW_ARTIFACT_KEY}" && "${RAW_ARTIFACT_SIZE}" -gt 0 ]]; then
+    raw_fields=",\"rawArtifactKey\":\"${RAW_ARTIFACT_KEY}\",\"rawArtifactSize\":${RAW_ARTIFACT_SIZE}"
+  fi
   if [[ "${CAPTURE_STATUS}" == "CAPTURED" ]]; then
     cat <<JSON
-{"captureStatus":"CAPTURED","preview":$(printf '%s' "${PREVIEW}" | node -e "process.stdout.write(JSON.stringify(require('fs').readFileSync(0,'utf-8')))"),"schemaVersion":1,"eventCount":${EVENT_COUNT},"errorCount":${ERROR_COUNT},"artifactKey":"${ARTIFACT_KEY}","artifactSize":${ARTIFACT_SIZE}}
+{"captureStatus":"CAPTURED","preview":$(printf '%s' "${PREVIEW}" | node -e "process.stdout.write(JSON.stringify(require('fs').readFileSync(0,'utf-8')))"),"schemaVersion":1,"eventCount":${EVENT_COUNT},"errorCount":${ERROR_COUNT},"artifactKey":"${ARTIFACT_KEY}","artifactSize":${ARTIFACT_SIZE}${raw_fields}}
 JSON
   else
     cat <<JSON
@@ -274,11 +353,18 @@ post_summary() {
 }
 
 delete_orphan_artifact() {
-  [[ -z "${ARTIFACT_KEY}" ]] && return 0
-  curl -sS -o /dev/null -w "%{http_code}" \
-    -X DELETE "${APP_URL}/api/jobs/${JOB_ID}/logs/artifact" \
-    -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-    >/dev/null 2>&1 || true
+  if [[ -n "${ARTIFACT_KEY}" ]]; then
+    curl -sS -o /dev/null -w "%{http_code}" \
+      -X DELETE "${APP_URL}/api/jobs/${JOB_ID}/logs/artifact" \
+      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+      >/dev/null 2>&1 || true
+  fi
+  if [[ -n "${RAW_ARTIFACT_KEY}" ]]; then
+    curl -sS -o /dev/null -w "%{http_code}" \
+      -X DELETE "${APP_URL}/api/jobs/${JOB_ID}/logs/artifact?type=raw" \
+      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+      >/dev/null 2>&1 || true
+  fi
 }
 
 SUMMARY_BODY="$(build_summary_body)"

@@ -31,7 +31,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           createdAt: { lt: cutoff },
           captureStatus: { not: 'PRUNED' },
         },
-        select: { id: true, artifactKey: true, jobId: true },
+        select: { id: true, artifactKey: true, rawArtifactKey: true, jobId: true },
         take: BATCH_SIZE,
       });
       if (batch.length === 0) break;
@@ -39,18 +39,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       const confirmedIds: number[] = [];
       for (const row of batch) {
-        if (row.artifactKey) {
+        const keysToDelete = [row.artifactKey, row.rawArtifactKey].filter(Boolean) as string[];
+        if (keysToDelete.length > 0) {
           if (!blobConfigured) {
-            // We can't delete the Blob artifact without a token — skip this
-            // row so storage doesn't silently leak. The row will be retried
-            // on the next cycle once Blob is configured.
             skippedCount += 1;
             continue;
           }
-          try {
-            await deleteJobLogArtifact(row.artifactKey);
-          } catch (error) {
-            console.error('[prune-logs] Blob delete failed', row.artifactKey, error);
+          let failed = false;
+          for (const key of keysToDelete) {
+            try {
+              await deleteJobLogArtifact(key);
+            } catch (error) {
+              console.error('[prune-logs] Blob delete failed', key, error);
+              failed = true;
+              break;
+            }
+          }
+          if (failed) {
             skippedCount += 1;
             continue;
           }
@@ -70,6 +75,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             captureStatus: 'PRUNED',
             artifactKey: null,
             artifactSize: null,
+            rawArtifactKey: null,
+            rawArtifactSize: null,
           },
         });
         prunedCount += result.count;

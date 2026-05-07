@@ -84,6 +84,8 @@ describe('POST /api/maintenance/prune-logs', () => {
         expect(row.captureStatus).toBe('PRUNED');
         expect(row.artifactKey).toBeNull();
         expect(row.artifactSize).toBeNull();
+        expect(row.rawArtifactKey).toBeNull();
+        expect(row.rawArtifactSize).toBeNull();
       }
 
       const second = await workflowApi().post<{ prunedCount: number }>(
