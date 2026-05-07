@@ -13,11 +13,12 @@ import type { AdoptionData, CalibrationDashboardData } from './types';
 const WINDOW_SIZE = 30;
 
 export async function computeAdoption(projectId: number): Promise<AdoptionData> {
-  const featureAvailable = await prisma.ticketAnalysis.aggregate({
-    _min: { createdAt: true },
-    where: { projectId },
+  const firstAnalyzedTicket = await prisma.ticket.findFirst({
+    where: { projectId, analyses: { some: {} } },
+    orderBy: { createdAt: 'asc' },
+    select: { createdAt: true },
   });
-  const featureAvailableAt = featureAvailable._min.createdAt;
+  const featureAvailableAt = firstAnalyzedTicket?.createdAt ?? null;
 
   if (!featureAvailableAt) {
     return { analyzed: 0, sinceFeatureAvailable: 0, ratio: null };

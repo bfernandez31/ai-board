@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { Agent, PrismaClient } from '@prisma/client';
 
 /**
  * Database cleanup utility for E2E tests
@@ -452,6 +452,12 @@ export async function ensureProjectExists(projectId: number): Promise<void> {
       githubOwner: github.owner,
       githubRepo: github.repo,
       configSyncedAt: new Date(), // Mark as configured so board page doesn't redirect to setup
+      defaultAgent: Agent.CLAUDE,
+      specifyModel: null,
+      planModel: null,
+      implementModel: null,
+      quickImplModel: null,
+      verifyModel: null,
     },
     create: {
       id: projectId,

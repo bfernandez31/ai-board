@@ -21,11 +21,6 @@ export const DEFAULT_ANALYSIS_OUTPUT: AnalysisOutput = {
   anchors: [],
 };
 
-let nonceCounter = 0;
-function uniqueNonce(): string {
-  nonceCounter += 1;
-  return `${Date.now().toString(36)}-${process.pid}-${nonceCounter}`;
-}
 
 export interface SeedTicketOpts {
   projectId: number;
@@ -46,7 +41,7 @@ export async function seedTicket(opts: SeedTicketOpts) {
       stage: Stage.SHIP,
       workflowType: opts.workflowType ?? WorkflowType.FULL,
       ticketNumber,
-      ticketKey: `E2E-CAL-${uniqueNonce()}`,
+      ticketKey: `E2E-${ticketNumber}`,
       branch: opts.branch === undefined ? `cal-${ticketNumber}` : opts.branch,
       updatedAt: new Date(),
     },
@@ -116,7 +111,7 @@ export async function seedOutcome(opts: SeedOutcomeOpts) {
       workflowType: opts.workflowType ?? WorkflowType.FULL,
       shippedAt: opts.shippedAt ?? new Date(),
       ruleSetVersion: 1,
-      qualityScore: opts.qualityScore ?? 80,
+      qualityScore: opts.qualityScore !== undefined ? opts.qualityScore : 80,
       totalCostUsd: opts.totalCostUsd ?? 2.5,
       frictionFree: opts.frictionFree ?? true,
       pipelineJobCount: 1,
