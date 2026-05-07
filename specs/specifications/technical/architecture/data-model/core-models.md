@@ -464,18 +464,20 @@ Captured agent execution transcript summary for a terminated job.
 
 ```prisma
 model JobLog {
-  id             Int           @id @default(autoincrement())
-  jobId          Int           @unique
-  captureStatus  CaptureStatus
-  preview        String        @db.VarChar(320)
-  schemaVersion  Int           @default(1)
-  eventCount     Int           @default(0)
-  errorCount     Int           @default(0)
-  artifactKey    String?       @db.VarChar(300)
-  artifactSize   Int?
-  capturedAt     DateTime      @default(now())
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id                 Int           @id @default(autoincrement())
+  jobId              Int           @unique
+  captureStatus      CaptureStatus
+  preview            String        @db.VarChar(320)
+  schemaVersion      Int           @default(1)
+  eventCount         Int           @default(0)
+  errorCount         Int           @default(0)
+  artifactKey        String?       @db.VarChar(300)
+  artifactSize       Int?
+  nativeArtifactKey  String?       @db.VarChar(300)
+  nativeArtifactSize Int?
+  capturedAt         DateTime      @default(now())
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
@@ -494,8 +496,10 @@ model JobLog {
 - `schemaVersion`: Version of the normalized event stream format carried by the artifact (currently `1`)
 - `eventCount`: Number of normalized events in the artifact
 - `errorCount`: Number of `error` events in the artifact (≤ `eventCount`)
-- `artifactKey`: Vercel Blob pathname (`logs/<projectId>/<ticketId>/<jobId>.jsonl.gz`); null when `captureStatus !== CAPTURED`
-- `artifactSize`: Size of the gzipped artifact in bytes; null when no artifact exists
+- `artifactKey`: Vercel Blob pathname for the normalized v1 artifact (`logs/<projectId>/<ticketId>/<jobId>.jsonl.gz`); null when `captureStatus !== CAPTURED`
+- `artifactSize`: Size of the gzipped normalized artifact in bytes; null when no artifact exists
+- `nativeArtifactKey`: Vercel Blob pathname for the raw, redacted Claude Code session JSONL (`logs/<projectId>/<ticketId>/<jobId>.native.jsonl.gz`); set only for Claude jobs whose native session capture succeeded, null otherwise (other agents, capture skipped, or upload failed)
+- `nativeArtifactSize`: Size of the gzipped native artifact in bytes; null when no native artifact exists
 - `capturedAt`: When capture completed on the runner
 - `createdAt` / `updatedAt`: Row timestamps
 
@@ -512,6 +516,7 @@ model JobLog {
 - `preview` is re-run through the server-side redactor before persistence as defense-in-depth — the runner also redacts before upload
 - `preview` is capped at 280 chars with trailing `…` truncation; the 320-char DB column absorbs unicode overhead
 - `captureStatus = CAPTURED` requires both `artifactKey` and `artifactSize`; `UNAVAILABLE` forbids them
+- `nativeArtifactKey` and `nativeArtifactSize` are written together or both null; they are populated only when `captureStatus = CAPTURED`, the agent is `CLAUDE`, and the native session JSONL was successfully redacted and uploaded — a native upload failure never downgrades `captureStatus` or affects the normalized artifact
 - Log capture is independent of `PATCH /api/jobs/:id/status` — a capture failure must never prevent the job's terminal status from being reported
 - Telemetry fields on `Job` (`inputTokens`, `costUsd`, `toolsUsed`, `qualityScore`, …) are written by a separate pipeline and remain unaffected by log capture outcome
 - Hard-deleted by retention pruning after 30 days (`LOG_RETENTION_DAYS`, configurable); no soft-delete column

@@ -422,6 +422,8 @@ sequenceDiagram
 
 Job logs capture the agent's normalized execution transcript for a terminated job. Writes are performed by the GitHub Actions runner (workflow token auth); reads are session-authenticated and gated by `verifyTicketAccess`. The full transcript lives in Vercel Blob; only the inline preview and metadata live in Postgres (`JobLog` model).
 
+For `CLAUDE` jobs, the runner additionally persists the raw, redacted Claude Code session JSONL as a second Blob object (`*.native.jsonl.gz`) so downstream tooling — notably Claude Code's `/insights` command — can replay the full native event graph (`uuid`, `parentUuid`, `sessionId`, `isSidechain`, `usage`, `cwd`, `gitBranch`, `version`, `summary` events). Other agents (`CODEX`, `MISTRAL`, `GEMINI`) produce only the normalized artifact.
+
 ### POST /api/jobs/:id/logs
 
 Upsert the log summary for a terminated job.
@@ -441,7 +443,9 @@ Upsert the log summary for a terminated job.
   "eventCount": 127,
   "errorCount": 3,
   "artifactKey": "logs/7/41/4321.jsonl.gz",
-  "artifactSize": 48210
+  "artifactSize": 48210,
+  "nativeArtifactKey": "logs/7/41/4321.native.jsonl.gz",
+  "nativeArtifactSize": 91240
 }
 ```
 
@@ -453,6 +457,8 @@ Upsert the log summary for a terminated job.
 - `errorCount`: Required, integer ≥ 0 and ≤ `eventCount`
 - `artifactKey`: Required iff `captureStatus === CAPTURED`; forbidden otherwise
 - `artifactSize`: Required iff `captureStatus === CAPTURED`; forbidden otherwise
+- `nativeArtifactKey`: Optional string (max 300 chars); only meaningful for `CLAUDE` jobs whose native session upload succeeded — silently ignored when omitted
+- `nativeArtifactSize`: Optional positive integer; required iff `nativeArtifactKey` is present
 
 **Response** (200 OK — idempotent upsert):
 ```json
@@ -463,10 +469,14 @@ Upsert the log summary for a terminated job.
   "eventCount": 127,
   "errorCount": 3,
   "artifactSize": 48210,
+  "nativeArtifactSize": 91240,
   "capturedAt": "2026-04-22T21:44:10.000Z",
-  "rawUrl": "/api/projects/7/tickets/41/jobs/4321/logs/raw"
+  "rawUrl": "/api/projects/7/tickets/41/jobs/4321/logs/raw",
+  "nativeUrl": "/api/projects/7/tickets/41/jobs/4321/logs/native"
 }
 ```
+
+`nativeArtifactSize` and `nativeUrl` are `null` when no native artifact exists (non-Claude job, native capture skipped, or native upload failed).
 
 **Errors**:
 - `400`: Validation failed (Zod)
@@ -507,6 +517,41 @@ Stream the gzipped JSONL transcript to Vercel Blob via the authenticated proxy.
 
 **Errors**:
 - `401`: Invalid or missing workflow token
+- `413`: Artifact exceeds 25 MB gzipped
+- `415`: Content-Type is not `application/gzip`
+- `502`: Upstream Blob write failure (`code: BLOB_UPLOAD_FAILED`)
+
+### PUT /api/jobs/:id/logs/native-artifact
+
+Stream the gzipped raw Claude Code session JSONL to Vercel Blob. Used only for `CLAUDE` jobs; the runner concatenates every `~/.claude/projects/<cwd>/<sessionId>.jsonl` file produced during the run, applies `deepRedact` to every line, gzips the result, and PUTs it here. Failure to upload is non-blocking — the job still completes with the normalized artifact and `JobLog` row.
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation
+
+**Path Parameters**:
+- `id` (number, required): Job ID
+
+**Request**:
+- `Content-Type: application/gzip` (any other value → 415)
+- Body: raw gzipped JSONL stream of native Claude Code session events, max 25 MB (413 on overflow)
+
+**Server behavior**:
+- Derives `nativeArtifactKey = logs/<projectId>/<ticketId>/<jobId>.native.jsonl.gz` deterministically — the runner does not pick the key
+- Uploads through `app/lib/blob/client.ts` — the runner never holds the Blob token
+- Does not write to `JobLog` directly; the canonical key is returned to the runner, which forwards it on the subsequent `POST /api/jobs/:id/logs` call
+
+**Response** (201 Created):
+```json
+{
+  "nativeArtifactKey": "logs/7/41/4321.native.jsonl.gz",
+  "nativeArtifactSize": 91240
+}
+```
+
+**Errors**:
+- `400`: Invalid job ID or empty body
+- `401`: Invalid or missing workflow token
+- `404`: Job not found
 - `413`: Artifact exceeds 25 MB gzipped
 - `415`: Content-Type is not `application/gzip`
 - `502`: Upstream Blob write failure (`code: BLOB_UPLOAD_FAILED`)
@@ -553,12 +598,14 @@ Fetch the log summary for rendering the inline preview and deciding whether the 
   "eventCount": 127,
   "errorCount": 3,
   "artifactSize": 48210,
+  "nativeArtifactSize": 91240,
   "capturedAt": "2026-04-22T21:44:10.000Z",
-  "rawUrl": "/api/projects/7/tickets/41/jobs/4321/logs/raw"
+  "rawUrl": "/api/projects/7/tickets/41/jobs/4321/logs/raw",
+  "nativeUrl": "/api/projects/7/tickets/41/jobs/4321/logs/native"
 }
 ```
 
-`rawUrl` is `null` when `captureStatus !== CAPTURED`; clients render a disabled "View full logs" affordance in that case.
+`rawUrl` is `null` when `captureStatus !== CAPTURED`; clients render a disabled "View full logs" affordance in that case. `nativeUrl` and `nativeArtifactSize` are `null` whenever the row has no `nativeArtifactKey` — the standard case for non-Claude jobs and for Claude jobs whose native upload failed.
 
 **Errors**:
 - `401`: Not authenticated
@@ -589,6 +636,32 @@ Stream the raw normalized transcript artifact. Session-authenticated; Blob pathn
 - `404`: No captured artifact (status is `UNAVAILABLE` or `PRUNED`)
 - `502`: Blob backend unreachable — client keeps the inline preview visible and surfaces a readable error
 
+### GET /api/projects/:projectId/tickets/:ticketId/jobs/:jobId/logs/native
+
+Stream the raw Claude Code session JSONL artifact (`logs/<projectId>/<ticketId>/<jobId>.native.jsonl.gz`). Provided so external tooling (e.g. Claude Code's `/insights` analyzer) can replay an agent run on the full native event graph that the normalized format intentionally drops.
+
+**Authentication**: Required (session)
+**Authorization**: `verifyTicketAccess`
+
+**Query Parameters**:
+- `format=jsonl` (optional): When set, server adds `Content-Disposition: attachment; filename="<ticketKey>-job-<jobId>-native.jsonl.gz"` for the download affordance
+
+**Response** (200 OK):
+- `Content-Type: application/gzip`
+- `Content-Length: <size>`
+- `Cache-Control: private, max-age=60`
+- Body: the gzipped native JSONL stream read from Vercel Blob
+
+The endpoint cross-checks the stored `nativeArtifactKey` against the deterministic key derived from `(projectId, ticketId, jobId)`. A mismatch is logged and returns `500` with `code: ARTIFACT_KEY_MISMATCH` rather than serving an unexpected object.
+
+**Errors**:
+- `400`: Invalid path parameters
+- `401`: Not authenticated
+- `403`: Not owner/member
+- `404`: Native artifact unavailable (non-Claude job, capture skipped, native upload failed, status is `UNAVAILABLE` or `PRUNED`)
+- `500`: Stored key disagrees with the deterministic key (`code: ARTIFACT_KEY_MISMATCH`)
+- `502`: Blob backend unreachable (`code: BLOB_UNREACHABLE`)
+
 ### POST /api/maintenance/prune-logs
 
 Retention prune of `JobLog` rows and their Blob artifacts. Invoked daily by `.github/workflows/nightly-log-prune.yml`.
@@ -599,7 +672,9 @@ Retention prune of `JobLog` rows and their Blob artifacts. Invoked daily by `.gi
 **Behavior**:
 - Scans `JobLog` where `createdAt < now() - LOG_RETENTION_DAYS` (default 30) and `captureStatus != 'PRUNED'`
 - Batched at 500 rows per iteration, capped at 50 000 rows per cycle to stay inside serverless time budgets
-- Per row: delete Blob object first (404 treated as success), then delete Postgres row; transient Blob failures skip the row and increment `skippedCount`
+- Per row: delete every Blob object the row references (`nativeArtifactKey` first, then `artifactKey`; 404 treated as success), then mark the Postgres row `captureStatus = PRUNED` and clear `artifactKey` / `artifactSize` / `nativeArtifactKey` / `nativeArtifactSize`. The placeholder row is retained so the UI can still render a "logs no longer retained" entry on old jobs.
+- If Blob is not configured but a row has any blob key, the row is skipped (counted in `skippedCount`) so storage does not silently leak; the row is retried on the next cycle
+- A transient Blob delete failure on either key skips the entire row (no partial cleanup)
 - Idempotent — a re-run over the same window finds no matches once the prior cycle completed
 
 **Response** (200 OK):
@@ -647,22 +722,27 @@ The ticket jobs listing includes a `log` object on each row so the timeline can 
 
 ```mermaid
 sequenceDiagram
-    participant RN as Runner (run-agent.sh)
     participant CAP as capture-agent-logs.sh
     participant ART as PUT /logs/artifact
+    participant NAT as PUT /logs/native-artifact
     participant BLOB as Vercel Blob
     participant LOG as POST /logs
     participant DB as Database (JobLog)
 
-    RN->>CAP: Trigger on agent exit (if: always())
     CAP->>CAP: Normalize → redact → derive preview → gzip
     CAP->>ART: PUT application/gzip (Bearer WORKFLOW_API_TOKEN)
     ART->>BLOB: Upload to logs/<pid>/<tid>/<jid>.jsonl.gz
     BLOB-->>ART: OK
     ART-->>CAP: { artifactKey, artifactSize }
-    CAP->>LOG: POST summary (preview, counts, artifactKey)
+    opt agent == CLAUDE and session JSONL captured
+        CAP->>CAP: deepRedact native session JSONL → gzip
+        CAP->>NAT: PUT application/gzip (Bearer WORKFLOW_API_TOKEN)
+        NAT->>BLOB: Upload to logs/<pid>/<tid>/<jid>.native.jsonl.gz
+        BLOB-->>NAT: OK
+        NAT-->>CAP: { nativeArtifactKey, nativeArtifactSize }
+    end
+    CAP->>LOG: POST summary (preview, counts, artifactKey, nativeArtifactKey?)
     LOG->>DB: UPSERT JobLog by jobId
-    DB-->>LOG: Row
     LOG-->>CAP: 200 JobLogReadable
 ```
 

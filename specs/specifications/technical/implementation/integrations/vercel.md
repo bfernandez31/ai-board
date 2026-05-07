@@ -106,16 +106,18 @@ NEXTAUTH_SECRET=<preview-secret>
 
 **Package**: `@vercel/blob` ^2.3.x. Used to persist gzipped JSONL agent execution transcripts that survive beyond the GitHub Actions retention window.
 
-**Pathname layout**: `logs/<projectId>/<ticketId>/<jobId>.jsonl.gz` — one object per terminated job.
+**Pathname layout**:
+- `logs/<projectId>/<ticketId>/<jobId>.jsonl.gz` — normalized v1 transcript, written for every terminated job
+- `logs/<projectId>/<ticketId>/<jobId>.native.jsonl.gz` — raw, redacted Claude Code session JSONL, written only for `CLAUDE` jobs whose native session capture succeeded; absent for other agents and for Claude jobs whose native upload failed
 
-**Size budget**: 25 MB gzipped per object. Oversize transcripts are truncated on the runner with a `lifecycle:upstream_error:transcript_truncated` marker.
+**Size budget**: 25 MB gzipped per object (applies independently to each artifact). Oversize normalized transcripts are truncated on the runner with a `lifecycle:upstream_error:transcript_truncated` marker.
 
 **Credential scope**:
 - `BLOB_READ_WRITE_TOKEN` is configured only in the Vercel environment
-- The GitHub Actions runner never holds the Blob token — all uploads are streamed through `PUT /api/jobs/:id/logs/artifact` (workflow token auth) which the server forwards to Blob via `app/lib/blob/client.ts`
-- Reads are streamed through `GET /api/projects/:projectId/tickets/:id/jobs/:jobId/logs/raw` (session auth + `verifyTicketAccess`); Blob URLs are never rendered client-side
+- The GitHub Actions runner never holds the Blob token — normalized uploads go through `PUT /api/jobs/:id/logs/artifact` and native Claude session uploads through `PUT /api/jobs/:id/logs/native-artifact` (both workflow token auth), which the server forwards to Blob via `app/lib/blob/client.ts`
+- Reads are streamed through `GET /api/projects/:projectId/tickets/:id/jobs/:jobId/logs/raw` (normalized) and `GET /api/projects/:projectId/tickets/:id/jobs/:jobId/logs/native` (native), both session auth + `verifyTicketAccess`; Blob URLs are never rendered client-side
 
-**Retention**: `LOG_RETENTION_DAYS` (default `30`) drives `POST /api/maintenance/prune-logs`, invoked nightly by `.github/workflows/nightly-log-prune.yml` at `15 1 * * *` UTC. Pruning deletes the Blob object first (`404` treated as success), then the `JobLog` Postgres row.
+**Retention**: `LOG_RETENTION_DAYS` (default `30`) drives `POST /api/maintenance/prune-logs`, invoked nightly by `.github/workflows/nightly-log-prune.yml` at `15 1 * * *` UTC. Pruning deletes every Blob object the row references (both normalized and native, `404` treated as success), then marks the `JobLog` row `PRUNED` and clears all artifact key/size fields.
 
 ### Performance Monitoring
 

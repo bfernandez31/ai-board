@@ -66,6 +66,16 @@ Every terminated job row on the ticket's Stats tab shows a one-line preview belo
 
 The preview is capped at 280 characters with trailing `…` truncation so the timeline cannot visually balloon. It renders without user interaction — reading the preview alone lets a member form a hypothesis about each job's outcome.
 
+### Native Claude session capture
+
+For Claude Code jobs, the runner persists a second artifact alongside the normalized one: the raw, aggregated session JSONL produced by Claude Code in `~/.claude/projects/<cwd>/<sessionId>.jsonl`. The native artifact preserves fields the normalized format intentionally drops — `uuid`, `parentUuid`, `sessionId`, `isSidechain`, `usage`, `cwd`, `gitBranch`, `version`, summary events — so downstream tooling (notably Claude Code's `/insights` analyzer) can replay the full event graph.
+
+The native artifact:
+- Is captured only when `agent = CLAUDE` and at least one session file exists; other agents (Codex, Mistral, Gemini) are unaffected
+- Goes through the same secret-redaction pass as the normalized artifact before leaving the runner — every field on every line passes through `deepRedact`
+- Is gzipped and uploaded as a separate Blob object (see `vercel.md` for the pathname layout)
+- Is non-blocking: a redaction or upload failure is logged on the runner but never fails the job, downgrades `captureStatus`, or affects the normalized artifact and inline preview
+
 ### Full log viewer
 
 A "View full logs" affordance on each timeline row opens a side sheet that renders the normalized event stream with type-specific styling — not a raw JSON dump. Each entry carries a timestamp, a type icon, and a monospace payload body. Event types:
@@ -123,8 +133,9 @@ Every agent-invoking workflow — `speckit.yml`, `quick-impl.yml`, `verify.yml`,
 
 A scheduled workflow `.github/workflows/nightly-log-prune.yml` triggers `POST /api/maintenance/prune-logs` once per day at 01:15 UTC. The endpoint:
 - Scans `JobLog` rows older than `LOG_RETENTION_DAYS` (default 30) where `captureStatus != 'PRUNED'`
-- Deletes the Blob artifact first, treating `404` as success, then hard-deletes the Postgres row
+- For each row, deletes every Blob object it references — both the normalized artifact and (if present) the native Claude session artifact — treating `404` as success
+- Marks the Postgres row `captureStatus = PRUNED` and clears all four artifact fields (`artifactKey`, `artifactSize`, `nativeArtifactKey`, `nativeArtifactSize`); the row itself is retained so the UI can keep rendering a "logs no longer retained" entry on old jobs
 - Processes up to 500 rows per iteration and caps the cycle at 50 000 rows
 - Returns `{ prunedCount, skippedCount, durationMs }` for GitHub Actions log visibility
 
-Pruning is idempotent — a re-run over the same window finds no matches. Because both the Blob object and the Postgres row are hard-deleted, pruned jobs show the timeline entry (status, telemetry) with a "logs no longer retained" preview but no viewer.
+Pruning is idempotent — a re-run over the same window finds no matches. Pruned jobs show the timeline entry (status, telemetry) with a "logs no longer retained" preview but no viewer.
