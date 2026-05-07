@@ -184,54 +184,62 @@ fi
 
 # ---------- Phase 5: Compress + upload artifact ----------
 
+# Shared upload helpers used by both Phase 5 (normalized) and Phase 5b (raw).
+# Reads the canonical artifactKey from the server response rather than
+# reconstructing it client-side, since TICKET_ID may be a ticket key (e.g.
+# "AIB-123") in workflow inputs.
+artifact_size() {
+  stat -c%s "$1" 2>/dev/null || stat -f%z "$1" 2>/dev/null || wc -c < "$1"
+}
+
+upload_artifact() {
+  # $1: artifact file  $2: response file  $3: query suffix (e.g. "" or "?type=raw")  $4: label prefix
+  local artifact_path="$1" response_path="$2" query="$3" label="$4"
+  local attempt=0
+  local delay=1
+  while [[ ${attempt} -lt 3 ]]; do
+    local code
+    code=$(curl -sS -o "${response_path}" -w "%{http_code}" \
+      -X PUT "${APP_URL}/api/jobs/${JOB_ID}/logs/artifact${query}" \
+      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+      -H "Content-Type: application/gzip" \
+      --data-binary @"${artifact_path}" || echo "000")
+    if [[ "${code}" == "201" ]]; then
+      return 0
+    fi
+    if [[ "${code}" =~ ^4 ]]; then
+      echo "capture-agent-logs: ${label}FAILED status=${code} reason=non_retriable_upload" >&2
+      return 1
+    fi
+    attempt=$((attempt + 1))
+    sleep "${delay}"
+    delay=$((delay * 2))
+  done
+  echo "capture-agent-logs: ${label}FAILED status=retry_exhausted reason=upload_timeout" >&2
+  return 1
+}
+
+read_artifact_key() {
+  node --input-type=module -e "
+import { readFileSync } from 'node:fs';
+try {
+  const data = JSON.parse(readFileSync('$1', 'utf-8'));
+  if (typeof data.artifactKey === 'string') process.stdout.write(data.artifactKey);
+} catch {}
+" 2>/dev/null
+}
+
 ARTIFACT_KEY=""
 ARTIFACT_SIZE=0
 
 if [[ "${CAPTURE_STATUS}" == "CAPTURED" ]]; then
   gzip -c "${REDACTED}" > "${ARTIFACT}"
-  ARTIFACT_SIZE=$(stat -c%s "${ARTIFACT}" 2>/dev/null || stat -f%z "${ARTIFACT}" 2>/dev/null || wc -c < "${ARTIFACT}")
+  ARTIFACT_SIZE=$(artifact_size "${ARTIFACT}")
 
-  put_artifact() {
-    local attempt=0
-    local delay=1
-    while [[ ${attempt} -lt 3 ]]; do
-      local code
-      code=$(curl -sS -o /tmp/upload-response.json -w "%{http_code}" \
-        -X PUT "${APP_URL}/api/jobs/${JOB_ID}/logs/artifact" \
-        -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-        -H "Content-Type: application/gzip" \
-        --data-binary @"${ARTIFACT}" || echo "000")
-      if [[ "${code}" == "201" ]]; then
-        return 0
-      fi
-      if [[ "${code}" =~ ^4 ]]; then
-        echo "capture-agent-logs: FAILED status=${code} reason=non_retriable_upload" >&2
-        return 1
-      fi
-      attempt=$((attempt + 1))
-      sleep "${delay}"
-      delay=$((delay * 2))
-    done
-    echo "capture-agent-logs: FAILED status=retry_exhausted reason=upload_timeout" >&2
-    return 1
-  }
-
-  if put_artifact; then
-    # The server returns the canonical artifactKey derived from the job's DB
-    # projectId/ticketId. Use that rather than reconstructing it client-side,
-    # since TICKET_ID may be a ticket key (e.g. "AIB-123") in workflow inputs.
-    ARTIFACT_KEY=$(node --input-type=module -e "
-import { readFileSync } from 'node:fs';
-try {
-  const data = JSON.parse(readFileSync('/tmp/upload-response.json', 'utf-8'));
-  if (typeof data.artifactKey === 'string') process.stdout.write(data.artifactKey);
-} catch {}
-" 2>/dev/null)
-    if [[ -z "${ARTIFACT_KEY}" ]]; then
-      CAPTURE_STATUS="UNAVAILABLE"
-      PREVIEW="Logs unavailable — capture failed."
-    fi
-  else
+  if upload_artifact "${ARTIFACT}" /tmp/upload-response.json "" ""; then
+    ARTIFACT_KEY=$(read_artifact_key /tmp/upload-response.json)
+  fi
+  if [[ -z "${ARTIFACT_KEY}" ]]; then
     CAPTURE_STATUS="UNAVAILABLE"
     PREVIEW="Logs unavailable — capture failed."
   fi
@@ -259,44 +267,12 @@ writeFileSync('${RAW_NATIVE_REDACTED}', redacted.join('\n') + '\n');
 
   if redact_raw_native 2>/tmp/raw-native-redact-error.log; then
     gzip -c "${RAW_NATIVE_REDACTED}" > "${RAW_NATIVE_ARTIFACT}"
-    RAW_ARTIFACT_SIZE=$(stat -c%s "${RAW_NATIVE_ARTIFACT}" 2>/dev/null || stat -f%z "${RAW_NATIVE_ARTIFACT}" 2>/dev/null || wc -c < "${RAW_NATIVE_ARTIFACT}")
+    RAW_ARTIFACT_SIZE=$(artifact_size "${RAW_NATIVE_ARTIFACT}")
 
-    put_raw_artifact() {
-      local attempt=0
-      local delay=1
-      while [[ ${attempt} -lt 3 ]]; do
-        local code
-        code=$(curl -sS -o /tmp/raw-upload-response.json -w "%{http_code}" \
-          -X PUT "${APP_URL}/api/jobs/${JOB_ID}/logs/artifact?type=raw" \
-          -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-          -H "Content-Type: application/gzip" \
-          --data-binary @"${RAW_NATIVE_ARTIFACT}" || echo "000")
-        if [[ "${code}" == "201" ]]; then
-          return 0
-        fi
-        if [[ "${code}" =~ ^4 ]]; then
-          echo "capture-agent-logs: raw artifact FAILED status=${code} reason=non_retriable_upload" >&2
-          return 1
-        fi
-        attempt=$((attempt + 1))
-        sleep "${delay}"
-        delay=$((delay * 2))
-      done
-      echo "capture-agent-logs: raw artifact FAILED status=retry_exhausted reason=upload_timeout" >&2
-      return 1
-    }
-
-    if put_raw_artifact; then
-      RAW_ARTIFACT_KEY=$(node --input-type=module -e "
-import { readFileSync } from 'node:fs';
-try {
-  const data = JSON.parse(readFileSync('/tmp/raw-upload-response.json', 'utf-8'));
-  if (typeof data.artifactKey === 'string') process.stdout.write(data.artifactKey);
-} catch {}
-" 2>/dev/null)
+    if upload_artifact "${RAW_NATIVE_ARTIFACT}" /tmp/raw-upload-response.json "?type=raw" "raw artifact "; then
+      RAW_ARTIFACT_KEY=$(read_artifact_key /tmp/raw-upload-response.json)
       if [[ -z "${RAW_ARTIFACT_KEY}" ]]; then
         echo "capture-agent-logs: raw artifact key missing from response (non-blocking)" >&2
-        RAW_ARTIFACT_KEY=""
         RAW_ARTIFACT_SIZE=0
       fi
     else

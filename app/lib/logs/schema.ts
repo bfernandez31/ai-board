@@ -100,15 +100,7 @@ export const JobLogSubmissionSchema = baseSubmission.refine(
     path: ['artifactKey'],
   }
 ).refine(
-  (data) => {
-    if (data.rawArtifactKey !== undefined) {
-      return typeof data.rawArtifactSize === 'number';
-    }
-    if (data.rawArtifactSize !== undefined) {
-      return typeof data.rawArtifactKey === 'string';
-    }
-    return true;
-  },
+  (data) => (data.rawArtifactKey === undefined) === (data.rawArtifactSize === undefined),
   {
     message: 'rawArtifactKey and rawArtifactSize must both be present or both absent',
     path: ['rawArtifactKey'],
