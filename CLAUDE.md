@@ -23,7 +23,7 @@
 - **Auth**: NextAuth.js (session-based)
 - **Push Notifications**: web-push ^3.6.x (VAPID), Web Push API, Service Worker (/public/sw.js)
 - **Billing**: stripe (server-side only), Stripe Checkout + Customer Portal, webhook handler at `/api/webhooks/stripe`
-- **Agent log capture**: `@vercel/blob` ^2.3.x — gzipped JSONL transcripts of agent runs stored at `logs/<projectId>/<ticketId>/<jobId>.jsonl.gz`. Runner never holds Blob credentials; uploads stream through `PUT /api/jobs/:id/logs/artifact`, reads stream through `GET /api/projects/:projectId/tickets/:id/jobs/:jobId/logs/raw`. Env vars: `BLOB_READ_WRITE_TOKEN` (Vercel only), `LOG_RETENTION_DAYS` (default 30). 30-day retention pruned by `nightly-log-prune.yml`.
+- **Agent log capture**: `@vercel/blob` ^2.3.x — gzipped JSONL transcripts of agent runs stored at `logs/<projectId>/<ticketId>/<jobId>.jsonl.gz` (normalized event stream). Claude jobs additionally persist the raw native Claude Code session at `logs/<projectId>/<ticketId>/<jobId>.native.jsonl.gz` for downstream tools that need the full uuid/parentUuid/sidechain graph (e.g. `/insights`). Runner never holds Blob credentials; uploads stream through `PUT /api/jobs/:id/logs/artifact` and `PUT /api/jobs/:id/logs/artifact-raw`; reads stream through `GET /api/projects/:projectId/tickets/:id/jobs/:jobId/logs/raw` and `.../logs/raw-native`. Env vars: `BLOB_READ_WRITE_TOKEN` (Vercel only), `LOG_RETENTION_DAYS` (default 30). 30-day retention pruned by `nightly-log-prune.yml` for both artifacts.
 
 **Forbidden**: No UI libs besides shadcn/ui + Radix. No ORMs besides Prisma. No state libs (Redux, Zustand, etc.) — use React hooks + TanStack Query.
 

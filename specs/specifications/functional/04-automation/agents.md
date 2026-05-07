@@ -114,16 +114,23 @@ Every agent-invoking workflow — `speckit.yml`, `quick-impl.yml`, `verify.yml`,
 3. Apply secret redaction to every string payload
 4. Derive the preview capped at 280 chars
 5. Gzip and `PUT` the artifact through the authenticated proxy (bounded retry: 3 attempts with 1/2/4s exponential backoff)
-6. `POST` the summary with the same retry strategy — on upload failure, set `captureStatus = UNAVAILABLE` and omit `artifactKey` / `artifactSize`
-7. Clean up the raw log from the runner to avoid leaving secrets on disk
+5b. **Claude only** — when an aggregated `~/.claude/projects/<cwd>/*.jsonl` session exists, deep-redact every JSON value with the same redactor used in Phase 3, gzip, and `PUT /logs/artifact-raw` with the same bounded retry. The native artifact is stored under the parallel `<jobId>.native.jsonl.gz` key. Failure here is logged to the runner but never cascades — the normalized artifact and summary still land
+6. `POST` the summary with the same retry strategy — on normalized-upload failure, set `captureStatus = UNAVAILABLE` and omit `artifactKey` / `artifactSize`. When the native capture succeeded, `rawArtifactKey` / `rawArtifactSize` are included in the body
+7. Clean up the raw log and aggregated native session file from the runner to avoid leaving secrets on disk
 
 `verify.yml` invokes `run-agent.sh` twice (fix-tests + code-review) but appends to a single raw log, so the capture step runs once after the last agent invocation.
+
+### Native Claude Code session artifact (Claude only)
+
+For jobs whose effective agent is `CLAUDE`, capture also persists the raw, pre-normalization Claude Code session JSONL — uuid/parentUuid threading, sidechain markers, token usage, summary events, and version metadata — alongside the normalized artifact. Both artifacts share the same redaction rules, the same 30-day retention, the same project/ticket/job grouping in Blob, and the same authenticated proxy for reads.
+
+The native artifact is non-blocking: a failure to redact, gzip, or upload it is logged to the runner but never cascades. The job still completes, the normalized artifact is still produced, and the timeline preview is unaffected. Non-Claude jobs (Codex, Mistral, Gemini) skip native capture entirely.
 
 ### Log Retention Pruning (scheduled)
 
 A scheduled workflow `.github/workflows/nightly-log-prune.yml` triggers `POST /api/maintenance/prune-logs` once per day at 01:15 UTC. The endpoint:
 - Scans `JobLog` rows older than `LOG_RETENTION_DAYS` (default 30) where `captureStatus != 'PRUNED'`
-- Deletes the Blob artifact first, treating `404` as success, then hard-deletes the Postgres row
+- Deletes every present Blob artifact (normalized and native) first, treating `404` as success; both deletes must succeed before the row is marked `PRUNED` so storage never leaks one half of the pair
 - Processes up to 500 rows per iteration and caps the cycle at 50 000 rows
 - Returns `{ prunedCount, skippedCount, durationMs }` for GitHub Actions log visibility
 
