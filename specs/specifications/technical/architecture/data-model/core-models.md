@@ -473,6 +473,8 @@ model JobLog {
   errorCount     Int           @default(0)
   artifactKey    String?       @db.VarChar(300)
   artifactSize   Int?
+  rawArtifactKey  String?      @db.VarChar(300)
+  rawArtifactSize Int?
   capturedAt     DateTime      @default(now())
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -496,6 +498,8 @@ model JobLog {
 - `errorCount`: Number of `error` events in the artifact (≤ `eventCount`)
 - `artifactKey`: Vercel Blob pathname (`logs/<projectId>/<ticketId>/<jobId>.jsonl.gz`); null when `captureStatus !== CAPTURED`
 - `artifactSize`: Size of the gzipped artifact in bytes; null when no artifact exists
+- `rawArtifactKey`: Vercel Blob pathname for the native Claude Code session JSONL (`logs/<projectId>/<ticketId>/<jobId>-raw.jsonl.gz`); only populated for Claude jobs whose runner successfully aggregated and uploaded the native session files; null otherwise
+- `rawArtifactSize`: Size of the gzipped native artifact in bytes; null when no native artifact exists
 - `capturedAt`: When capture completed on the runner
 - `createdAt` / `updatedAt`: Row timestamps
 
@@ -512,10 +516,11 @@ model JobLog {
 - `preview` is re-run through the server-side redactor before persistence as defense-in-depth — the runner also redacts before upload
 - `preview` is capped at 280 chars with trailing `…` truncation; the 320-char DB column absorbs unicode overhead
 - `captureStatus = CAPTURED` requires both `artifactKey` and `artifactSize`; `UNAVAILABLE` forbids them
+- `rawArtifactKey` and `rawArtifactSize` must be present together or absent together — they are independent of the normalized artifact and only populated when the runner ran a Claude agent and successfully captured the native session
 - Log capture is independent of `PATCH /api/jobs/:id/status` — a capture failure must never prevent the job's terminal status from being reported
 - Telemetry fields on `Job` (`inputTokens`, `costUsd`, `toolsUsed`, `qualityScore`, …) are written by a separate pipeline and remain unaffected by log capture outcome
-- Hard-deleted by retention pruning after 30 days (`LOG_RETENTION_DAYS`, configurable); no soft-delete column
-- Prune order per record: delete Blob artifact first (404 treated as success), then delete Postgres row
+- Retention pruning runs at 30 days (`LOG_RETENTION_DAYS`, configurable). Both Blob objects (normalized + native raw) are deleted, then the row is marked `captureStatus = PRUNED` with all four artifact key/size columns cleared so the timeline can render a "logs no longer retained" placeholder
+- Prune order per record: delete every populated Blob key first (404 treated as success), then update the Postgres row; transient Blob failures skip the row for retry on the next cycle
 - Access for read endpoints follows the parent ticket's ownership and membership rules via `verifyTicketAccess`
 - Blob artifact pathname is never rendered client-side — reads are proxied through the authenticated API
 

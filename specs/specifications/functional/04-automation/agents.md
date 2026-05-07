@@ -80,6 +80,8 @@ A "View full logs" affordance on each timeline row opens a side sheet that rende
 
 From the viewer, users can copy any single entry to the clipboard and trigger "Download raw" to fetch the gzipped JSONL artifact through the authenticated `/logs/raw?format=jsonl` endpoint. For `UNAVAILABLE` / `PRUNED` logs the trigger is disabled with explanatory copy; for a `502` from the Blob backend the sheet shows a clear error state while the inline preview from Postgres remains visible.
 
+For Claude jobs the runner additionally captures the **native Claude Code session JSONL** alongside the normalized stream. This second artifact preserves fields the normalized format drops — `uuid`/`parentUuid` threading, `sessionId`, `isSidechain` (Task subagent markers), per-message `usage`, `cwd`, `gitBranch`, `version`, summary events — so downstream tooling (notably Claude Code's `/insights` analyzer) can replay the run faithfully. It is fetched via the same authenticated raw endpoint with `?type=native&format=jsonl`. The native artifact is only present when `agent = CLAUDE` and the runner found native session files; non-Claude jobs and Claude runs whose native capture failed expose only the normalized artifact.
+
 ### Access control
 
 Log access follows the parent ticket's authorization rules — project owners and project members can read; non-members cannot. Access is enforced server-side via `verifyTicketAccess`; the Blob artifact pathname is never rendered client-side and raw streams are proxied through the ai-board API on every read.
@@ -92,7 +94,7 @@ Before any transcript leaves the GitHub Actions runner, recognizable secrets are
 - Private SSH keys
 - High-entropy `KEY=VALUE` environment pairs
 
-The placeholder is preserved through the preview and through every event payload — `message` text, `tool_invocation.input`, `tool_result.output`, `error.message`, and `error.stack` are all passed through the redactor; the server re-runs the preview through the same redactor on submit as defense-in-depth.
+The placeholder is preserved through the preview and through every event payload — `message` text, `tool_invocation.input`, `tool_result.output`, `error.message`, and `error.stack` are all passed through the redactor; the server re-runs the preview through the same redactor on submit as defense-in-depth. The native Claude Code session JSONL is run through a deep-redact pass that walks every string field (regardless of position in the native event graph) before upload, so secrets cannot leak through native fields the normalized format never inspects.
 
 ### Capture failure behavior
 
@@ -109,13 +111,14 @@ Every agent-invoking workflow — `speckit.yml`, `quick-impl.yml`, `verify.yml`,
 **Input**: tee'd raw agent stdout at `$RUNNER_TEMP/agent-raw-<jobId>.log`, plus agent-specific session dirs (`~/.claude/projects/...`, `~/.codex/sessions/*`, `~/.vibe/sessions/*`).
 
 **Phases**:
-1. Collect the tee'd raw log; synthesize a two-event `lifecycle:started` + `lifecycle:cancelled` pair when the log is empty (covers the cancelled-before-any-output edge case)
+1. Collect the tee'd raw log; synthesize a two-event `lifecycle:started` + `lifecycle:cancelled` pair when the log is empty (covers the cancelled-before-any-output edge case). For Claude jobs, additionally aggregate every `~/.claude/projects/<encoded-cwd>/*.jsonl` session file (sorted, separated by trailing newlines) into a single native session stream — this becomes the input to both the normalizer (so tool_use/thinking/tool_result events are captured) and the raw-artifact pipeline.
 2. Normalize via the agent-specific script (`normalize-claude.mjs`, `normalize-codex.mjs`, `normalize-mistral.mjs`, `normalize-gemini.mjs`) into a v1 event stream
 3. Apply secret redaction to every string payload
 4. Derive the preview capped at 280 chars
-5. Gzip and `PUT` the artifact through the authenticated proxy (bounded retry: 3 attempts with 1/2/4s exponential backoff)
-6. `POST` the summary with the same retry strategy — on upload failure, set `captureStatus = UNAVAILABLE` and omit `artifactKey` / `artifactSize`
-7. Clean up the raw log from the runner to avoid leaving secrets on disk
+5. Gzip and `PUT` the normalized artifact through the authenticated proxy (bounded retry: 3 attempts with 1/2/4s exponential backoff)
+6. **Claude only, when native sessions were aggregated**: deep-redact the native session JSONL line-by-line, gzip it, and `PUT` it with `?type=raw` using the same bounded retry. Failures here are non-blocking — they log `raw artifact upload failed (non-blocking)` and the normalized artifact still ships. Non-Claude agents skip this phase entirely.
+7. `POST` the summary with the same retry strategy — include `rawArtifactKey` / `rawArtifactSize` when phase 6 succeeded; on normalized upload failure, set `captureStatus = UNAVAILABLE` and omit all four artifact fields
+8. Clean up the raw log and aggregated native session file from the runner to avoid leaving secrets on disk
 
 `verify.yml` invokes `run-agent.sh` twice (fix-tests + code-review) but appends to a single raw log, so the capture step runs once after the last agent invocation.
 
@@ -123,8 +126,9 @@ Every agent-invoking workflow — `speckit.yml`, `quick-impl.yml`, `verify.yml`,
 
 A scheduled workflow `.github/workflows/nightly-log-prune.yml` triggers `POST /api/maintenance/prune-logs` once per day at 01:15 UTC. The endpoint:
 - Scans `JobLog` rows older than `LOG_RETENTION_DAYS` (default 30) where `captureStatus != 'PRUNED'`
-- Deletes the Blob artifact first, treating `404` as success, then hard-deletes the Postgres row
+- Deletes every populated Blob object for the row (normalized and, for Claude jobs, the native raw artifact), treating `404` as success; if any delete throws, the row is left untouched and counted in `skippedCount` so the next cycle retries it
+- Updates the row to `captureStatus = PRUNED` with all four artifact key/size columns cleared so the timeline can render a "logs no longer retained" placeholder
 - Processes up to 500 rows per iteration and caps the cycle at 50 000 rows
 - Returns `{ prunedCount, skippedCount, durationMs }` for GitHub Actions log visibility
 
-Pruning is idempotent — a re-run over the same window finds no matches. Because both the Blob object and the Postgres row are hard-deleted, pruned jobs show the timeline entry (status, telemetry) with a "logs no longer retained" preview but no viewer.
+Pruning is idempotent — a re-run over the same window finds no matches because the row's `captureStatus` is now `PRUNED`. Pruned jobs show the timeline entry (status, telemetry) with a "logs no longer retained" preview but no viewer.

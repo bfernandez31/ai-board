@@ -441,7 +441,9 @@ Upsert the log summary for a terminated job.
   "eventCount": 127,
   "errorCount": 3,
   "artifactKey": "logs/7/41/4321.jsonl.gz",
-  "artifactSize": 48210
+  "artifactSize": 48210,
+  "rawArtifactKey": "logs/7/41/4321-raw.jsonl.gz",
+  "rawArtifactSize": 18934
 }
 ```
 
@@ -453,6 +455,7 @@ Upsert the log summary for a terminated job.
 - `errorCount`: Required, integer ≥ 0 and ≤ `eventCount`
 - `artifactKey`: Required iff `captureStatus === CAPTURED`; forbidden otherwise
 - `artifactSize`: Required iff `captureStatus === CAPTURED`; forbidden otherwise
+- `rawArtifactKey`, `rawArtifactSize`: Optional; both must be present together or both absent (only populated for Claude jobs whose runner successfully aggregated and uploaded the native session JSONL)
 
 **Response** (200 OK — idempotent upsert):
 ```json
@@ -464,9 +467,12 @@ Upsert the log summary for a terminated job.
   "errorCount": 3,
   "artifactSize": 48210,
   "capturedAt": "2026-04-22T21:44:10.000Z",
-  "rawUrl": "/api/projects/7/tickets/41/jobs/4321/logs/raw"
+  "rawUrl": "/api/projects/7/tickets/41/jobs/4321/logs/raw",
+  "nativeRawUrl": "/api/projects/7/tickets/41/jobs/4321/logs/raw?type=native"
 }
 ```
+
+`nativeRawUrl` is `null` when `captureStatus !== CAPTURED` or no native raw artifact was captured (non-Claude agents, or Claude runs where the native session aggregation/upload failed non-fatally).
 
 **Errors**:
 - `400`: Validation failed (Zod)
@@ -489,12 +495,17 @@ Stream the gzipped JSONL transcript to Vercel Blob via the authenticated proxy.
 **Path Parameters**:
 - `id` (number, required): Job ID
 
+**Query Parameters**:
+- `type=raw` (optional): When set, the body is treated as the native Claude Code session JSONL and stored under the `-raw` artifact key. Used only by Claude jobs in addition to the normalized upload.
+
 **Request**:
 - `Content-Type: application/gzip` (any other value → 415)
 - Body: raw gzipped JSONL stream, max 25 MB (413 on overflow)
 
 **Server behavior**:
-- Derives `artifactKey = logs/<projectId>/<ticketId>/<jobId>.jsonl.gz` deterministically
+- Derives the artifact key deterministically:
+  - default: `logs/<projectId>/<ticketId>/<jobId>.jsonl.gz`
+  - `?type=raw`: `logs/<projectId>/<ticketId>/<jobId>-raw.jsonl.gz`
 - Uploads through `app/lib/blob/client.ts` — the runner never holds the Blob token
 
 **Response** (201 Created):
@@ -520,6 +531,9 @@ Delete an orphaned Blob artifact for a job (called by the capture script when th
 
 **Path Parameters**:
 - `id` (number, required): Job ID
+
+**Query Parameters**:
+- `type=raw` (optional): Targets the native raw artifact (`<jobId>-raw.jsonl.gz`) instead of the normalized one.
 
 **Response** (200 OK):
 ```json
@@ -554,11 +568,12 @@ Fetch the log summary for rendering the inline preview and deciding whether the 
   "errorCount": 3,
   "artifactSize": 48210,
   "capturedAt": "2026-04-22T21:44:10.000Z",
-  "rawUrl": "/api/projects/7/tickets/41/jobs/4321/logs/raw"
+  "rawUrl": "/api/projects/7/tickets/41/jobs/4321/logs/raw",
+  "nativeRawUrl": "/api/projects/7/tickets/41/jobs/4321/logs/raw?type=native"
 }
 ```
 
-`rawUrl` is `null` when `captureStatus !== CAPTURED`; clients render a disabled "View full logs" affordance in that case.
+`rawUrl` is `null` when `captureStatus !== CAPTURED`; clients render a disabled "View full logs" affordance in that case. `nativeRawUrl` is `null` when no native raw artifact was captured (non-Claude jobs, Claude jobs whose runner failed to aggregate native sessions, or pruned/unavailable rows); clients can use its presence to gate "Download native session" affordances.
 
 **Errors**:
 - `401`: Not authenticated
@@ -570,23 +585,25 @@ Fetch the log summary for rendering the inline preview and deciding whether the 
 
 ### GET /api/projects/:projectId/tickets/:ticketId/jobs/:jobId/logs/raw
 
-Stream the raw normalized transcript artifact. Session-authenticated; Blob pathnames never leak to the client.
+Stream a stored transcript artifact. Session-authenticated; Blob pathnames never leak to the client.
 
 **Authentication**: Required (session)
 **Authorization**: `verifyTicketAccess`
 
 **Query Parameters**:
-- `format=jsonl` (optional): When set, server adds `Content-Disposition: attachment; filename="<ticketKey>-<jobId>.jsonl.gz"` for the "Download raw" button
+- `type=native` (optional): Streams the native Claude Code session JSONL artifact (`<jobId>-raw.jsonl.gz`) instead of the normalized one. Returns 404 when the row has no `rawArtifactKey` (non-Claude jobs, capture failures, pruned rows).
+- `format=jsonl` (optional): When set, server adds `Content-Disposition: attachment; filename="<ticketKey>-<jobId>[-native].jsonl.gz"` for the "Download raw" / "Download native session" buttons. The `-native` filename suffix is appended only when `type=native`.
 
 **Response** (200 OK):
 - `Content-Type: application/gzip`
-- `Content-Encoding: gzip` (preserved so browsers decompress transparently for in-app rendering)
-- Body: the gzipped JSONL stream read from Vercel Blob
+- Body: the gzipped JSONL stream read from Vercel Blob (the runner-side gzip is forwarded as opaque bytes; clients decompress in-app via `DecompressionStream`)
+- The server validates that the row's `artifactKey` / `rawArtifactKey` matches the deterministically-derived key for `(projectId, ticketId, jobId)`; mismatches return `500` with `code: ARTIFACT_KEY_MISMATCH`
 
 **Errors**:
 - `401`: Not authenticated
 - `403`: Not owner/member
-- `404`: No captured artifact (status is `UNAVAILABLE` or `PRUNED`)
+- `404`: No captured artifact (status is `UNAVAILABLE` or `PRUNED`, or `type=native` requested but no native raw artifact exists)
+- `500`: Stored artifact key mismatch (`code: ARTIFACT_KEY_MISMATCH`)
 - `502`: Blob backend unreachable — client keeps the inline preview visible and surfaces a readable error
 
 ### POST /api/maintenance/prune-logs
@@ -599,7 +616,8 @@ Retention prune of `JobLog` rows and their Blob artifacts. Invoked daily by `.gi
 **Behavior**:
 - Scans `JobLog` where `createdAt < now() - LOG_RETENTION_DAYS` (default 30) and `captureStatus != 'PRUNED'`
 - Batched at 500 rows per iteration, capped at 50 000 rows per cycle to stay inside serverless time budgets
-- Per row: delete Blob object first (404 treated as success), then delete Postgres row; transient Blob failures skip the row and increment `skippedCount`
+- Per row: delete every populated Blob key (`artifactKey` and `rawArtifactKey`), 404 treated as success; if any delete throws, the row is skipped (`skippedCount++`) and retried on the next cycle
+- After successful Blob deletion, the row is updated to `captureStatus = PRUNED` with `artifactKey`, `artifactSize`, `rawArtifactKey`, and `rawArtifactSize` cleared (the row is kept so the UI can show a "logs no longer retained" placeholder)
 - Idempotent — a re-run over the same window finds no matches once the prior cycle completed
 
 **Response** (200 OK):
@@ -656,13 +674,20 @@ sequenceDiagram
 
     RN->>CAP: Trigger on agent exit (if: always())
     CAP->>CAP: Normalize → redact → derive preview → gzip
-    CAP->>ART: PUT application/gzip (Bearer WORKFLOW_API_TOKEN)
+    CAP->>ART: PUT application/gzip (normalized)
     ART->>BLOB: Upload to logs/<pid>/<tid>/<jid>.jsonl.gz
     BLOB-->>ART: OK
     ART-->>CAP: { artifactKey, artifactSize }
-    CAP->>LOG: POST summary (preview, counts, artifactKey)
+    alt Agent is Claude AND native sessions found
+        CAP->>CAP: Aggregate ~/.claude/projects/.../*.jsonl → deepRedact → gzip
+        CAP->>ART: PUT application/gzip ?type=raw (native)
+        ART->>BLOB: Upload to logs/<pid>/<tid>/<jid>-raw.jsonl.gz
+        BLOB-->>ART: OK
+        ART-->>CAP: { artifactKey, artifactSize } (raw)
+    end
+    CAP->>LOG: POST summary (preview, counts, artifactKey, rawArtifactKey?)
     LOG->>DB: UPSERT JobLog by jobId
     DB-->>LOG: Row
-    LOG-->>CAP: 200 JobLogReadable
+    LOG-->>CAP: 200 { rawUrl, nativeRawUrl }
 ```
 
