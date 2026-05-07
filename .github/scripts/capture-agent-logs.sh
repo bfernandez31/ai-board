@@ -31,6 +31,8 @@ RAW_LOG="${TMPDIR}/agent-raw-${JOB_ID}.log"
 NORMALIZED="${TMPDIR}/agent-normalized-${JOB_ID}.jsonl"
 REDACTED="${TMPDIR}/agent-redacted-${JOB_ID}.jsonl"
 ARTIFACT="${TMPDIR}/agent-redacted-${JOB_ID}.jsonl.gz"
+NATIVE_REDACTED="${TMPDIR}/agent-native-redacted-${JOB_ID}.jsonl"
+NATIVE_ARTIFACT="${TMPDIR}/agent-native-redacted-${JOB_ID}.jsonl.gz"
 
 AGENT_UPPER="$(echo "${AGENT_TYPE}" | tr '[:lower:]' '[:upper:]')"
 STARTED_AT="${CAPTURE_STARTED_AT:-$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)}"
@@ -38,6 +40,7 @@ ENDED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ 2>/dev/null || date -u +%Y-%m-%dT%H:
 
 cleanup() {
   rm -f "${NORMALIZED}" "${REDACTED}" "${ARTIFACT}" 2>/dev/null || true
+  rm -f "${NATIVE_REDACTED}" "${NATIVE_ARTIFACT}" 2>/dev/null || true
   rm -f "${RAW_LOG}" 2>/dev/null || true
   [[ -n "${CLAUDE_AGGREGATED:-}" ]] && rm -f "${CLAUDE_AGGREGATED}" 2>/dev/null || true
 }
@@ -233,13 +236,116 @@ try {
   fi
 fi
 
+# ---------- Phase 5b: Native Claude Code session capture (AIB-776) ----------
+#
+# Persists the raw, pre-normalization aggregated Claude Code session JSONL
+# alongside the normalized artifact so downstream tooling (Claude Code's
+# /insights analyzer, replay, etc.) can read the full native event graph
+# (uuid/parentUuid threading, sidechain markers, token usage, summaries).
+#
+# Non-blocking by design: any failure here is logged but never fails the
+# script — the normalized artifact and summary are still produced.
+RAW_ARTIFACT_KEY=""
+RAW_ARTIFACT_SIZE=0
+
+if [[ "${AGENT_UPPER}" == "CLAUDE" && -n "${CLAUDE_AGGREGATED}" && -s "${CLAUDE_AGGREGATED}" ]]; then
+  # Reuse the same redactor used for the normalized payload so secrets that
+  # appeared in raw tool input/output never leak to Blob.
+  if node --input-type=module -e "
+import { readFileSync, writeFileSync } from 'node:fs';
+import { redactString } from '${LIB_DIR}/redactor.mjs';
+const raw = readFileSync('${CLAUDE_AGGREGATED}', 'utf-8');
+const lines = raw.split(/\r?\n/);
+const out = lines.map((line) => {
+  if (!line) return line;
+  try {
+    const parsed = JSON.parse(line);
+    return JSON.stringify(deepRedact(parsed));
+  } catch {
+    // Not valid JSON — fall back to whole-line string redaction.
+    return redactString(line);
+  }
+});
+function deepRedact(value) {
+  if (value == null) return value;
+  if (typeof value === 'string') return redactString(value);
+  if (typeof value === 'number' || typeof value === 'boolean') return value;
+  if (Array.isArray(value)) return value.map(deepRedact);
+  if (typeof value === 'object') {
+    const r = {};
+    for (const [k, v] of Object.entries(value)) r[k] = deepRedact(v);
+    return r;
+  }
+  return value;
+}
+writeFileSync('${NATIVE_REDACTED}', out.join('\n'));
+" 2>/tmp/native-redact-error.log; then
+    if [[ -s "${NATIVE_REDACTED}" ]]; then
+      gzip -c "${NATIVE_REDACTED}" > "${NATIVE_ARTIFACT}"
+      RAW_ARTIFACT_SIZE=$(stat -c%s "${NATIVE_ARTIFACT}" 2>/dev/null || stat -f%z "${NATIVE_ARTIFACT}" 2>/dev/null || wc -c < "${NATIVE_ARTIFACT}")
+
+      put_native_artifact() {
+        local attempt=0
+        local delay=1
+        while [[ ${attempt} -lt 3 ]]; do
+          local code
+          code=$(curl -sS -o /tmp/native-upload-response.json -w "%{http_code}" \
+            -X PUT "${APP_URL}/api/jobs/${JOB_ID}/logs/artifact-raw" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -H "Content-Type: application/gzip" \
+            --data-binary @"${NATIVE_ARTIFACT}" || echo "000")
+          if [[ "${code}" == "201" ]]; then
+            return 0
+          fi
+          if [[ "${code}" =~ ^4 ]]; then
+            echo "capture-agent-logs: native upload non-retriable status=${code}" >&2
+            return 1
+          fi
+          attempt=$((attempt + 1))
+          sleep "${delay}"
+          delay=$((delay * 2))
+        done
+        echo "capture-agent-logs: native upload retry exhausted" >&2
+        return 1
+      }
+
+      if put_native_artifact; then
+        RAW_ARTIFACT_KEY=$(node --input-type=module -e "
+import { readFileSync } from 'node:fs';
+try {
+  const data = JSON.parse(readFileSync('/tmp/native-upload-response.json', 'utf-8'));
+  if (typeof data.rawArtifactKey === 'string') process.stdout.write(data.rawArtifactKey);
+} catch {}
+" 2>/dev/null)
+        if [[ -z "${RAW_ARTIFACT_KEY}" ]]; then
+          echo "capture-agent-logs: native upload succeeded but response missing rawArtifactKey" >&2
+          RAW_ARTIFACT_SIZE=0
+        fi
+      else
+        echo "capture-agent-logs: native artifact upload failed; normalized capture is unaffected" >&2
+        RAW_ARTIFACT_KEY=""
+        RAW_ARTIFACT_SIZE=0
+      fi
+    fi
+  else
+    echo "capture-agent-logs: native redaction failed; skipping native artifact" >&2
+    cat /tmp/native-redact-error.log >&2 2>/dev/null || true
+  fi
+fi
+
 # ---------- Phase 6: Submit summary ----------
 
 build_summary_body() {
   if [[ "${CAPTURE_STATUS}" == "CAPTURED" ]]; then
-    cat <<JSON
+    if [[ -n "${RAW_ARTIFACT_KEY}" ]]; then
+      cat <<JSON
+{"captureStatus":"CAPTURED","preview":$(printf '%s' "${PREVIEW}" | node -e "process.stdout.write(JSON.stringify(require('fs').readFileSync(0,'utf-8')))"),"schemaVersion":1,"eventCount":${EVENT_COUNT},"errorCount":${ERROR_COUNT},"artifactKey":"${ARTIFACT_KEY}","artifactSize":${ARTIFACT_SIZE},"rawArtifactKey":"${RAW_ARTIFACT_KEY}","rawArtifactSize":${RAW_ARTIFACT_SIZE}}
+JSON
+    else
+      cat <<JSON
 {"captureStatus":"CAPTURED","preview":$(printf '%s' "${PREVIEW}" | node -e "process.stdout.write(JSON.stringify(require('fs').readFileSync(0,'utf-8')))"),"schemaVersion":1,"eventCount":${EVENT_COUNT},"errorCount":${ERROR_COUNT},"artifactKey":"${ARTIFACT_KEY}","artifactSize":${ARTIFACT_SIZE}}
 JSON
+    fi
   else
     cat <<JSON
 {"captureStatus":"UNAVAILABLE","preview":"Logs unavailable — capture failed.","schemaVersion":1,"eventCount":0,"errorCount":0}

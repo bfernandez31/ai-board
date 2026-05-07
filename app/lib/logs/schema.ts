@@ -80,6 +80,11 @@ const baseSubmission = z.object({
   errorCount: z.number().int().nonnegative(),
   artifactKey: z.string().max(300).optional(),
   artifactSize: z.number().int().positive().optional(),
+  // AIB-776: Optional native Claude Code session artifact captured alongside
+  // the normalized one. Only set for CLAUDE jobs and only when the raw upload
+  // succeeded — failure to capture must not block the normalized submission.
+  rawArtifactKey: z.string().max(300).optional(),
+  rawArtifactSize: z.number().int().positive().optional(),
 });
 
 export const JobLogSubmissionSchema = baseSubmission.refine(
@@ -96,6 +101,16 @@ export const JobLogSubmissionSchema = baseSubmission.refine(
     message:
       'artifactKey and artifactSize are required when captureStatus is CAPTURED, and forbidden otherwise',
     path: ['artifactKey'],
+  }
+).refine(
+  (data) => {
+    const hasKey = typeof data.rawArtifactKey === 'string';
+    const hasSize = typeof data.rawArtifactSize === 'number';
+    return hasKey === hasSize;
+  },
+  {
+    message: 'rawArtifactKey and rawArtifactSize must both be present or both absent',
+    path: ['rawArtifactKey'],
   }
 );
 

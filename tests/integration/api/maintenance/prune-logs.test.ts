@@ -147,4 +147,46 @@ describe('POST /api/maintenance/prune-logs', () => {
     expect(row).not.toBeNull();
     expect(row?.captureStatus).toBe('PRUNED');
   });
+
+  it.skipIf(!blobConfigured)(
+    'clears rawArtifactKey/rawArtifactSize when pruning a row that captured a native artifact (AIB-776)',
+    async () => {
+      const job = await prisma.job.create({
+        data: {
+          ticketId,
+          projectId: ctx.projectId,
+          command: 'specify',
+          status: 'COMPLETED',
+          startedAt: new Date(),
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+      await prisma.jobLog.create({
+        data: {
+          jobId: job.id,
+          captureStatus: 'CAPTURED',
+          preview: 'aged-with-native',
+          schemaVersion: 1,
+          eventCount: 1,
+          errorCount: 0,
+          artifactKey: `logs/${ctx.projectId}/${ticketId}/${job.id}.jsonl.gz`,
+          artifactSize: 100,
+          rawArtifactKey: `logs/${ctx.projectId}/${ticketId}/${job.id}.native.jsonl.gz`,
+          rawArtifactSize: 250,
+          createdAt: cutoffDate,
+        },
+      });
+
+      const res = await workflowApi().post<{ prunedCount: number }>('/api/maintenance/prune-logs');
+      expect(res.status).toBe(200);
+
+      const row = await prisma.jobLog.findUniqueOrThrow({ where: { jobId: job.id } });
+      expect(row.captureStatus).toBe('PRUNED');
+      expect(row.artifactKey).toBeNull();
+      expect(row.artifactSize).toBeNull();
+      expect(row.rawArtifactKey).toBeNull();
+      expect(row.rawArtifactSize).toBeNull();
+    }
+  );
 });

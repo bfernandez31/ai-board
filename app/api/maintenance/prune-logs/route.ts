@@ -31,7 +31,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           createdAt: { lt: cutoff },
           captureStatus: { not: 'PRUNED' },
         },
-        select: { id: true, artifactKey: true, jobId: true },
+        select: {
+          id: true,
+          artifactKey: true,
+          rawArtifactKey: true,
+          jobId: true,
+        },
         take: BATCH_SIZE,
       });
       if (batch.length === 0) break;
@@ -39,21 +44,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       const confirmedIds: number[] = [];
       for (const row of batch) {
-        if (row.artifactKey) {
-          if (!blobConfigured) {
-            // We can't delete the Blob artifact without a token — skip this
-            // row so storage doesn't silently leak. The row will be retried
-            // on the next cycle once Blob is configured.
-            skippedCount += 1;
-            continue;
-          }
+        // Both artifacts must succeed (or be absent) before the row is marked
+        // PRUNED, so storage never leaks one half of the pair.
+        const keysToDelete = [row.artifactKey, row.rawArtifactKey].filter(
+          (k): k is string => typeof k === 'string' && k.length > 0
+        );
+        if (keysToDelete.length > 0 && !blobConfigured) {
+          // We can't delete the Blob artifact without a token — skip this
+          // row so storage doesn't silently leak. The row will be retried
+          // on the next cycle once Blob is configured.
+          skippedCount += 1;
+          continue;
+        }
+        let deleteFailed = false;
+        for (const key of keysToDelete) {
           try {
-            await deleteJobLogArtifact(row.artifactKey);
+            await deleteJobLogArtifact(key);
           } catch (error) {
-            console.error('[prune-logs] Blob delete failed', row.artifactKey, error);
-            skippedCount += 1;
-            continue;
+            console.error('[prune-logs] Blob delete failed', key, error);
+            deleteFailed = true;
+            break;
           }
+        }
+        if (deleteFailed) {
+          skippedCount += 1;
+          continue;
         }
         confirmedIds.push(row.id);
       }
@@ -70,6 +85,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             captureStatus: 'PRUNED',
             artifactKey: null,
             artifactSize: null,
+            rawArtifactKey: null,
+            rawArtifactSize: null,
           },
         });
         prunedCount += result.count;

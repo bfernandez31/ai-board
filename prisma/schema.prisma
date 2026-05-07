@@ -75,19 +75,21 @@ model Job {
 }
 
 model JobLog {
-  id            Int           @id @default(autoincrement())
-  jobId         Int           @unique
-  job           Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  captureStatus CaptureStatus
-  preview       String        @db.VarChar(320)
-  schemaVersion Int           @default(1)
-  eventCount    Int           @default(0)
-  errorCount    Int           @default(0)
-  artifactKey   String?       @db.VarChar(300)
-  artifactSize  Int?
-  capturedAt    DateTime      @default(now())
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id              Int           @id @default(autoincrement())
+  jobId           Int           @unique
+  job             Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  captureStatus   CaptureStatus
+  preview         String        @db.VarChar(320)
+  schemaVersion   Int           @default(1)
+  eventCount      Int           @default(0)
+  errorCount      Int           @default(0)
+  artifactKey     String?       @db.VarChar(300)
+  artifactSize    Int?
+  rawArtifactKey  String?       @db.VarChar(300)
+  rawArtifactSize Int?
+  capturedAt      DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@index([captureStatus, createdAt])
   @@index([createdAt])
