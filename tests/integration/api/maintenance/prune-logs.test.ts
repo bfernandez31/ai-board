@@ -113,6 +113,52 @@ describe('POST /api/maintenance/prune-logs', () => {
     }
   );
 
+  it.skipIf(!blobConfigured)(
+    'also clears nativeArtifactKey when pruning rows that have both artifacts',
+    async () => {
+      const job = await prisma.job.create({
+        data: {
+          ticketId,
+          projectId: ctx.projectId,
+          command: 'implement',
+          status: 'COMPLETED',
+          startedAt: new Date(),
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+      await prisma.jobLog.create({
+        data: {
+          jobId: job.id,
+          captureStatus: 'CAPTURED',
+          preview: 'aged-native',
+          schemaVersion: 1,
+          eventCount: 2,
+          errorCount: 0,
+          artifactKey: `logs/${ctx.projectId}/${ticketId}/${job.id}.jsonl.gz`,
+          artifactSize: 100,
+          nativeArtifactKey: `logs/${ctx.projectId}/${ticketId}/${job.id}.native.jsonl.gz`,
+          nativeArtifactSize: 80,
+          createdAt: cutoffDate,
+        },
+      });
+
+      const res = await workflowApi().post<{ prunedCount: number }>(
+        '/api/maintenance/prune-logs'
+      );
+      expect(res.status).toBe(200);
+      expect(res.data.prunedCount).toBeGreaterThanOrEqual(1);
+
+      const row = await prisma.jobLog.findUnique({ where: { jobId: job.id } });
+      expect(row).not.toBeNull();
+      expect(row?.captureStatus).toBe('PRUNED');
+      expect(row?.artifactKey).toBeNull();
+      expect(row?.artifactSize).toBeNull();
+      expect(row?.nativeArtifactKey).toBeNull();
+      expect(row?.nativeArtifactSize).toBeNull();
+    }
+  );
+
   it('marks aged row without artifactKey as PRUNED regardless of Blob config', async () => {
     // Rows without artifactKey (e.g. UNAVAILABLE captures) have no Blob object
     // to clean up, so pruning works even when BLOB_READ_WRITE_TOKEN is unset.

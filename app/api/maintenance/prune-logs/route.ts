@@ -31,7 +31,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           createdAt: { lt: cutoff },
           captureStatus: { not: 'PRUNED' },
         },
-        select: { id: true, artifactKey: true, jobId: true },
+        select: { id: true, artifactKey: true, nativeArtifactKey: true, jobId: true },
         take: BATCH_SIZE,
       });
       if (batch.length === 0) break;
@@ -39,23 +39,37 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       const confirmedIds: number[] = [];
       for (const row of batch) {
-        if (row.artifactKey) {
-          if (!blobConfigured) {
-            // We can't delete the Blob artifact without a token — skip this
-            // row so storage doesn't silently leak. The row will be retried
-            // on the next cycle once Blob is configured.
+        const hasBlob = !!(row.artifactKey || row.nativeArtifactKey);
+        if (hasBlob && !blobConfigured) {
+          // We can't delete Blob artifacts without a token — skip this row so
+          // storage doesn't silently leak. Retried on the next cycle once
+          // Blob is configured.
+          skippedCount += 1;
+          continue;
+        }
+
+        let skipRow = false;
+        if (row.nativeArtifactKey) {
+          try {
+            await deleteJobLogArtifact(row.nativeArtifactKey);
+          } catch (error) {
+            console.error('[prune-logs] Native blob delete failed', row.nativeArtifactKey, error);
             skippedCount += 1;
-            continue;
+            skipRow = true;
           }
+        }
+        if (!skipRow && row.artifactKey) {
           try {
             await deleteJobLogArtifact(row.artifactKey);
           } catch (error) {
             console.error('[prune-logs] Blob delete failed', row.artifactKey, error);
             skippedCount += 1;
-            continue;
+            skipRow = true;
           }
         }
-        confirmedIds.push(row.id);
+        if (!skipRow) {
+          confirmedIds.push(row.id);
+        }
       }
 
       if (confirmedIds.length > 0) {
@@ -70,6 +84,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             captureStatus: 'PRUNED',
             artifactKey: null,
             artifactSize: null,
+            nativeArtifactKey: null,
+            nativeArtifactSize: null,
           },
         });
         prunedCount += result.count;

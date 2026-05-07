@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { verifyTicketAccess } from '@/lib/db/auth-helpers';
-import { buildJobLogRawUrl } from '@/app/lib/logs/artifact-key';
+import { buildJobLogNativeUrl, buildJobLogRawUrl } from '@/app/lib/logs/artifact-key';
 
 export async function GET(
   request: NextRequest,
@@ -47,6 +47,10 @@ export async function GET(
 
   const rawUrl =
     log.captureStatus === 'CAPTURED' ? buildJobLogRawUrl(projectId, ticketId, jobId) : null;
+  const nativeUrl =
+    log.captureStatus === 'CAPTURED' && log.nativeArtifactKey
+      ? buildJobLogNativeUrl(projectId, ticketId, jobId)
+      : null;
 
   return NextResponse.json(
     {
@@ -56,8 +60,10 @@ export async function GET(
       eventCount: log.eventCount,
       errorCount: log.errorCount,
       artifactSize: log.artifactSize,
+      nativeArtifactSize: log.nativeArtifactSize,
       capturedAt: log.capturedAt.toISOString(),
       rawUrl,
+      nativeUrl,
     },
     { status: 200, headers: { 'Cache-Control': 'no-store' } }
   );

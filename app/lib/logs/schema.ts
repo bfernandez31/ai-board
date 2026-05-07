@@ -80,6 +80,8 @@ const baseSubmission = z.object({
   errorCount: z.number().int().nonnegative(),
   artifactKey: z.string().max(300).optional(),
   artifactSize: z.number().int().positive().optional(),
+  nativeArtifactKey: z.string().max(300).optional(),
+  nativeArtifactSize: z.number().int().positive().optional(),
 });
 
 export const JobLogSubmissionSchema = baseSubmission.refine(

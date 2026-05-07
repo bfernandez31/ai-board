@@ -36,10 +36,15 @@ AGENT_UPPER="$(echo "${AGENT_TYPE}" | tr '[:lower:]' '[:upper:]')"
 STARTED_AT="${CAPTURE_STARTED_AT:-$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)}"
 ENDED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)"
 
+NATIVE_REDACTED=""
+NATIVE_ARTIFACT_FILE=""
+
 cleanup() {
   rm -f "${NORMALIZED}" "${REDACTED}" "${ARTIFACT}" 2>/dev/null || true
   rm -f "${RAW_LOG}" 2>/dev/null || true
   [[ -n "${CLAUDE_AGGREGATED:-}" ]] && rm -f "${CLAUDE_AGGREGATED}" 2>/dev/null || true
+  [[ -n "${NATIVE_REDACTED:-}" ]] && rm -f "${NATIVE_REDACTED}" 2>/dev/null || true
+  [[ -n "${NATIVE_ARTIFACT_FILE:-}" ]] && rm -f "${NATIVE_ARTIFACT_FILE}" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -233,12 +238,73 @@ try {
   fi
 fi
 
+# ---------- Phase 5b: Upload native CLAUDE sessions (CLAUDE-only, non-blocking) ----------
+# Persists the raw, aggregated session JSONL so that downstream tooling (e.g.
+# /insights) can replay the full native event graph. Failures here never
+# cascade — the job still completes and the normalized artifact is unaffected.
+
+NATIVE_ARTIFACT_KEY=""
+NATIVE_ARTIFACT_SIZE=0
+
+if [[ "${AGENT_UPPER}" == "CLAUDE" && "${CAPTURE_STATUS}" == "CAPTURED" && -s "${CLAUDE_AGGREGATED:-}" ]]; then
+  NATIVE_REDACTED="${TMPDIR}/agent-claude-native-redacted-${JOB_ID}.jsonl"
+  NATIVE_ARTIFACT_FILE="${TMPDIR}/agent-claude-native-${JOB_ID}.jsonl.gz"
+
+  if node --input-type=module -e "
+import { readFileSync, writeFileSync } from 'node:fs';
+import { deepRedact } from '${LIB_DIR}/redactor.mjs';
+const raw = readFileSync('${CLAUDE_AGGREGATED}', 'utf-8');
+const lines = raw.split(/\r?\n/).filter(l => l.length > 0);
+const redacted = lines.map(line => {
+  try { return JSON.stringify(deepRedact(JSON.parse(line))); } catch { return null; }
+}).filter(Boolean);
+writeFileSync('${NATIVE_REDACTED}', redacted.join('\n') + '\n');
+" 2>/tmp/native-redact-error.log; then
+    gzip -c "${NATIVE_REDACTED}" > "${NATIVE_ARTIFACT_FILE}"
+    NATIVE_ARTIFACT_SIZE=$(stat -c%s "${NATIVE_ARTIFACT_FILE}" 2>/dev/null || stat -f%z "${NATIVE_ARTIFACT_FILE}" 2>/dev/null || wc -c < "${NATIVE_ARTIFACT_FILE}")
+
+    NATIVE_UPLOAD_CODE=$(curl -sS -o /tmp/native-upload-response.json -w "%{http_code}" \
+      -X PUT "${APP_URL}/api/jobs/${JOB_ID}/logs/native-artifact" \
+      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+      -H "Content-Type: application/gzip" \
+      --data-binary @"${NATIVE_ARTIFACT_FILE}" || echo "000")
+
+    if [[ "${NATIVE_UPLOAD_CODE}" == "201" ]]; then
+      NATIVE_ARTIFACT_KEY=$(node --input-type=module -e "
+import { readFileSync } from 'node:fs';
+try {
+  const data = JSON.parse(readFileSync('/tmp/native-upload-response.json', 'utf-8'));
+  if (typeof data.nativeArtifactKey === 'string') process.stdout.write(data.nativeArtifactKey);
+} catch {}
+" 2>/dev/null || true)
+      NATIVE_ARTIFACT_SIZE=$(node --input-type=module -e "
+import { readFileSync } from 'node:fs';
+try {
+  const data = JSON.parse(readFileSync('/tmp/native-upload-response.json', 'utf-8'));
+  if (typeof data.nativeArtifactSize === 'number') process.stdout.write(String(data.nativeArtifactSize));
+} catch {}
+" 2>/dev/null || echo "${NATIVE_ARTIFACT_SIZE}")
+      echo "capture-agent-logs: native artifact uploaded (key=${NATIVE_ARTIFACT_KEY})"
+    else
+      echo "capture-agent-logs: native artifact upload failed (HTTP ${NATIVE_UPLOAD_CODE}), continuing" >&2
+      NATIVE_ARTIFACT_KEY=""
+    fi
+  else
+    echo "capture-agent-logs: native artifact redaction failed, skipping" >&2
+    cat /tmp/native-redact-error.log >&2 2>/dev/null || true
+  fi
+fi
+
 # ---------- Phase 6: Submit summary ----------
 
 build_summary_body() {
   if [[ "${CAPTURE_STATUS}" == "CAPTURED" ]]; then
+    local native_fields=""
+    if [[ -n "${NATIVE_ARTIFACT_KEY}" ]]; then
+      native_fields=",\"nativeArtifactKey\":\"${NATIVE_ARTIFACT_KEY}\",\"nativeArtifactSize\":${NATIVE_ARTIFACT_SIZE}"
+    fi
     cat <<JSON
-{"captureStatus":"CAPTURED","preview":$(printf '%s' "${PREVIEW}" | node -e "process.stdout.write(JSON.stringify(require('fs').readFileSync(0,'utf-8')))"),"schemaVersion":1,"eventCount":${EVENT_COUNT},"errorCount":${ERROR_COUNT},"artifactKey":"${ARTIFACT_KEY}","artifactSize":${ARTIFACT_SIZE}}
+{"captureStatus":"CAPTURED","preview":$(printf '%s' "${PREVIEW}" | node -e "process.stdout.write(JSON.stringify(require('fs').readFileSync(0,'utf-8')))"),"schemaVersion":1,"eventCount":${EVENT_COUNT},"errorCount":${ERROR_COUNT},"artifactKey":"${ARTIFACT_KEY}","artifactSize":${ARTIFACT_SIZE}${native_fields}}
 JSON
   else
     cat <<JSON

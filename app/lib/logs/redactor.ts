@@ -57,7 +57,7 @@ function redactOptional(value: string | undefined): string | undefined {
   return value ? redactString(value) : value;
 }
 
-function deepRedact(value: unknown): unknown {
+export function deepRedact(value: unknown): unknown {
   if (value == null) return value;
   if (typeof value === 'string') return redactString(value);
   if (typeof value === 'number' || typeof value === 'boolean') return value;
