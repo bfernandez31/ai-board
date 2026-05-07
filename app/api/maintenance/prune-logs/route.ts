@@ -39,8 +39,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       const confirmedIds: number[] = [];
       for (const row of batch) {
-        const hasBlob = !!(row.artifactKey || row.nativeArtifactKey);
-        if (hasBlob && !blobConfigured) {
+        const blobKeys = [row.nativeArtifactKey, row.artifactKey].filter(
+          (key): key is string => key != null
+        );
+        if (blobKeys.length > 0 && !blobConfigured) {
           // We can't delete Blob artifacts without a token — skip this row so
           // storage doesn't silently leak. Retried on the next cycle once
           // Blob is configured.
@@ -48,26 +50,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           continue;
         }
 
-        let skipRow = false;
-        if (row.nativeArtifactKey) {
+        let allDeleted = true;
+        for (const key of blobKeys) {
           try {
-            await deleteJobLogArtifact(row.nativeArtifactKey);
+            await deleteJobLogArtifact(key);
           } catch (error) {
-            console.error('[prune-logs] Native blob delete failed', row.nativeArtifactKey, error);
+            console.error('[prune-logs] Blob delete failed', key, error);
             skippedCount += 1;
-            skipRow = true;
+            allDeleted = false;
+            break;
           }
         }
-        if (!skipRow && row.artifactKey) {
-          try {
-            await deleteJobLogArtifact(row.artifactKey);
-          } catch (error) {
-            console.error('[prune-logs] Blob delete failed', row.artifactKey, error);
-            skippedCount += 1;
-            skipRow = true;
-          }
-        }
-        if (!skipRow) {
+        if (allDeleted) {
           confirmedIds.push(row.id);
         }
       }
