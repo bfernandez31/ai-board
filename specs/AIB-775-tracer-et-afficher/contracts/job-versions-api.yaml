@@ -1,0 +1,194 @@
+openapi: 3.1.0
+info:
+  title: Job Versions API
+  version: 1.0.0
+  description: |
+    AIB-775 — Endpoint used by GitHub Actions workflows to record the AI-Board
+    plugin version and the agent CLI version active at the moment a Job starts.
+
+    The endpoint is workflow-token authenticated, idempotent, and applies
+    first-write-wins semantics: once a column is set on a Job, subsequent
+    calls cannot overwrite it. Capture failures on the runner side never
+    reach this endpoint at all (the runner script either sends what it has
+    or sends nothing); when this endpoint receives a partial payload, it
+    writes only the provided fields.
+
+paths:
+  /api/jobs/{id}/versions:
+    post:
+      summary: Persist plugin and/or agent CLI version on a Job
+      operationId: postJobVersions
+      tags: [Jobs, Versions, Workflow]
+      security:
+        - WorkflowToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Numeric Job ID
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobVersionsPayload'
+            examples:
+              both:
+                summary: Both versions captured
+                value:
+                  pluginVersion: "1.0.1"
+                  agentCliVersion: "claude-code 0.5.12"
+              partialPlugin:
+                summary: Only plugin version captured (CLI probe failed)
+                value:
+                  pluginVersion: "1.0.1"
+              partialCli:
+                summary: Only CLI version captured (plugin.json missing, SHA fallback also failed)
+                value:
+                  agentCliVersion: "vibe 0.4.0"
+              shaFallback:
+                summary: Plugin version came from the SHA fallback path
+                value:
+                  pluginVersion: "sha:7bf6d3a4"
+                  agentCliVersion: "gemini 0.3.1"
+      responses:
+        '200':
+          description: |
+            Versions accepted. The response always reflects the **post-write**
+            state of the Job's two version columns, including any prior values
+            kept by the first-write-wins guard.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobVersionsResponse'
+              examples:
+                accepted:
+                  value:
+                    id: 12345
+                    pluginVersion: "1.0.1"
+                    agentCliVersion: "claude-code 0.5.12"
+                idempotentNoOp:
+                  summary: Both columns were already set; nothing changed
+                  value:
+                    id: 12345
+                    pluginVersion: "1.0.1"
+                    agentCliVersion: "claude-code 0.5.12"
+        '400':
+          description: |
+            Validation failure. Either the path id is not an integer, the
+            JSON body is malformed, the body fails Zod validation
+            (`pluginVersion`/`agentCliVersion` length 1..100), or both
+            optional fields are absent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: |
+            Missing or invalid `Authorization: Bearer <WORKFLOW_API_TOKEN>`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Unauthorized"
+        '404':
+          description: Job with the given id does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Job not found"
+        '500':
+          description: Unexpected server error. Internal details are not exposed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Internal server error"
+
+components:
+  securitySchemes:
+    WorkflowToken:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: |
+        Same `WORKFLOW_API_TOKEN` used by `PATCH /api/jobs/{id}/status` —
+        validated via `validateWorkflowAuth` (`app/lib/auth/workflow-auth.ts`).
+
+  schemas:
+    JobVersionsPayload:
+      type: object
+      additionalProperties: false
+      description: |
+        Either `pluginVersion`, `agentCliVersion`, or both. Sending neither
+        is rejected with HTTP 400. Empty strings are rejected (use omission
+        to signal "not captured").
+      properties:
+        pluginVersion:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: |
+            AI-Board plugin release identifier. Either a semver (read from
+            `.claude-plugin/plugin.json`) or a fallback SHA prefixed with
+            `"sha:"`. Stored as-is — no parsing.
+          examples: ["1.0.1", "sha:7bf6d3a4"]
+        agentCliVersion:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: |
+            First non-empty line of `<cli> --version`, trimmed. Stored
+            verbatim — the CLI's exact reported string.
+          examples:
+            - "claude-code 0.5.12"
+            - "codex 0.20.0"
+            - "@google/gemini-cli 0.3.1"
+            - "vibe 0.4.0"
+
+    JobVersionsResponse:
+      type: object
+      additionalProperties: false
+      required: [id, pluginVersion, agentCliVersion]
+      properties:
+        id:
+          type: integer
+          description: Job ID
+        pluginVersion:
+          type: [string, "null"]
+          maxLength: 100
+        agentCliVersion:
+          type: [string, "null"]
+          maxLength: 100
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Human-readable error message.
+        code:
+          type: string
+          description: Optional stable error code for programmatic handling.
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              message:
+                type: string
+              path:
+                type: array
+                items:
+                  oneOf:
+                    - type: string
+                    - type: integer
