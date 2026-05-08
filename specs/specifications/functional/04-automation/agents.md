@@ -102,6 +102,16 @@ Log capture runs in parallel with — and never blocks — the terminal status r
 - Existing telemetry (tokens, cost, duration, tools used, quality score) continues to flow through its own OTLP / batch pipeline
 - The UI surfaces the unavailable state explicitly rather than silently hiding the absence
 
+### Raw native session capture (Claude only)
+
+Claude jobs additionally persist a second artifact: the aggregated native Claude Code session JSONL — the same redaction pipeline applied to the normalized stream is run over every nested string field, then the result is gzipped and uploaded under a sibling Blob key. This preserves the fields the normalized format drops (`uuid`, `parentUuid`, `sessionId`, `isSidechain`, `usage`, `cwd`, `gitBranch`, `version`, summary events) so downstream tooling — notably an Admin Insights view — can replay a Claude run with full fidelity.
+
+Behavior:
+- Gated on `agent === CLAUDE` and `captureStatus === CAPTURED`; non-Claude jobs and Claude jobs whose normalized capture failed never produce a raw artifact and never log a raw-capture line
+- A Claude job that produced no session data emits an informational log distinguishing this from an upload failure; no raw artifact is uploaded
+- Raw-capture failures (read, redact, gzip, upload) are non-blocking — the job's terminal status and normalized artifact are unaffected; a structured runner log entry records the failure stage so operators can grep for regressions
+- Available through `GET /api/projects/:projectId/tickets/:ticketId/jobs/:jobId/logs/raw-native` with the same access-control rules as the normalized raw endpoint; non-Claude jobs and Claude jobs without a raw artifact return 404 with no leakage about the artifact's existence
+
 ### Agent Log Capture (per workflow run)
 
 Every agent-invoking workflow — `speckit.yml`, `quick-impl.yml`, `verify.yml`, `ai-board-assist.yml`, `iterate.yml` — includes a capture step (`if: always()`) after the agent invocation and before the terminal status PATCH.
@@ -113,9 +123,10 @@ Every agent-invoking workflow — `speckit.yml`, `quick-impl.yml`, `verify.yml`,
 2. Normalize via the agent-specific script (`normalize-claude.mjs`, `normalize-codex.mjs`, `normalize-mistral.mjs`, `normalize-gemini.mjs`) into a v1 event stream
 3. Apply secret redaction to every string payload
 4. Derive the preview capped at 280 chars
-5. Gzip and `PUT` the artifact through the authenticated proxy (bounded retry: 3 attempts with 1/2/4s exponential backoff)
-6. `POST` the summary with the same retry strategy — on upload failure, set `captureStatus = UNAVAILABLE` and omit `artifactKey` / `artifactSize`
-7. Clean up the raw log from the runner to avoid leaving secrets on disk
+5. Gzip and `PUT` the normalized artifact through the authenticated proxy (bounded retry: 3 attempts with 1/2/4s exponential backoff)
+5b. **Claude only** — when normalized capture succeeded and aggregated native session files are present: redact the native JSONL line-by-line via the same redactor, gzip it, and `PUT /api/jobs/:id/logs/raw-artifact` with the same retry strategy. Failures here are non-blocking and never alter the normalized artifact or the job's terminal status.
+6. `POST` the summary with the same retry strategy — on normalized-upload failure, set `captureStatus = UNAVAILABLE` and omit `artifactKey` / `artifactSize`; include `rawArtifactKey` / `rawArtifactSize` only when Phase 5b succeeded
+7. Clean up the raw log from the runner to avoid leaving secrets on disk; if the summary `POST` fails permanently, both the normalized and raw Blob objects are explicitly deleted to prevent orphans
 
 `verify.yml` invokes `run-agent.sh` twice (fix-tests + code-review) but appends to a single raw log, so the capture step runs once after the last agent invocation.
 
@@ -123,8 +134,8 @@ Every agent-invoking workflow — `speckit.yml`, `quick-impl.yml`, `verify.yml`,
 
 A scheduled workflow `.github/workflows/nightly-log-prune.yml` triggers `POST /api/maintenance/prune-logs` once per day at 01:15 UTC. The endpoint:
 - Scans `JobLog` rows older than `LOG_RETENTION_DAYS` (default 30) where `captureStatus != 'PRUNED'`
-- Deletes the Blob artifact first, treating `404` as success, then hard-deletes the Postgres row
+- Deletes the normalized Blob artifact first, then the raw Blob artifact when present (each `404` treated as success), then marks the row `PRUNED` and clears all four artifact columns
 - Processes up to 500 rows per iteration and caps the cycle at 50 000 rows
 - Returns `{ prunedCount, skippedCount, durationMs }` for GitHub Actions log visibility
 
-Pruning is idempotent — a re-run over the same window finds no matches. Because both the Blob object and the Postgres row are hard-deleted, pruned jobs show the timeline entry (status, telemetry) with a "logs no longer retained" preview but no viewer.
+Pruning is idempotent — a re-run over the same window finds no matches. Pruned jobs show the timeline entry (status, telemetry) with a "logs no longer retained" preview but no viewer. The normalized and raw artifacts age out together so the system never retains a raw artifact pointing at a job whose normalized record is already gone.
