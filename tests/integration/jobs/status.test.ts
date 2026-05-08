@@ -419,6 +419,72 @@ describe('Jobs Status', () => {
     });
   });
 
+  describe('pluginVersion and agentCliVersion persistence', () => {
+    it('persists pluginVersion and agentCliVersion on RUNNING transition', async () => {
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        {
+          status: 'RUNNING',
+          workflowRunId: 12345678901,
+          pluginVersion: '1.0.1',
+          agentCliVersion: '1.0.92 (Claude Code)',
+        }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.status).toBe('RUNNING');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.pluginVersion).toBe('1.0.1');
+      expect(job?.agentCliVersion).toBe('1.0.92 (Claude Code)');
+    });
+
+    it('rejects oversize version strings', async () => {
+      const response = await workflowApi.patch<{ error: string }>(
+        `/api/jobs/${jobId}/status`,
+        {
+          status: 'RUNNING',
+          agentCliVersion: 'a'.repeat(41),
+        }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data).toHaveProperty('error');
+    });
+
+    it('first-write-wins on retried RUNNING PATCH', async () => {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'RUNNING', startedAt: new Date(), pluginVersion: 'A', agentCliVersion: 'B' },
+      });
+
+      const response = await workflowApi.patch(
+        `/api/jobs/${jobId}/status`,
+        { status: 'RUNNING', pluginVersion: 'C', agentCliVersion: 'D' }
+      );
+
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.pluginVersion).toBe('A');
+      expect(job?.agentCliVersion).toBe('B');
+    });
+
+    it('non-RUNNING transitions ignore version fields', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, {
+        status: 'COMPLETED',
+        pluginVersion: 'X',
+        agentCliVersion: 'Y',
+      });
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.pluginVersion).toBeNull();
+      expect(job?.agentCliVersion).toBeNull();
+    });
+  });
+
   describe('Multiple jobs per ticket', () => {
     it('should handle multiple jobs for same ticket', async () => {
       // Complete the first job using workflow API

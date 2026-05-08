@@ -168,6 +168,42 @@ describe('Ticket Jobs API', () => {
       expect(response.data[0]!.id).toBeLessThan(response.data[1]!.id);
     });
 
+    it('surfaces null pluginVersion and null agentCliVersion for jobs without capture data', async () => {
+      // Pending job has no version capture — both fields must be present but null
+      const response = await ctx.api.get<TicketJobWithTelemetry[]>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs`
+      );
+
+      expect(response.status).toBe(200);
+      const job = response.data.find((j) => j.id === jobId);
+      expect(job).toBeDefined();
+      expect(Object.prototype.hasOwnProperty.call(job, 'pluginVersion')).toBe(true);
+      expect(Object.prototype.hasOwnProperty.call(job, 'agentCliVersion')).toBe(true);
+      expect(job!.pluginVersion).toBeNull();
+      expect(job!.agentCliVersion).toBeNull();
+    });
+
+    it('surfaces populated pluginVersion and agentCliVersion when set on the job', async () => {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: {
+          status: 'COMPLETED',
+          pluginVersion: '1.0.1',
+          agentCliVersion: '1.0.92 (Claude Code)',
+        },
+      });
+
+      const response = await ctx.api.get<TicketJobWithTelemetry[]>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs`
+      );
+
+      expect(response.status).toBe(200);
+      const job = response.data.find((j) => j.id === jobId);
+      expect(job).toBeDefined();
+      expect(job!.pluginVersion).toBe('1.0.1');
+      expect(job!.agentCliVersion).toBe('1.0.92 (Claude Code)');
+    });
+
     it('surfaces Gemini-native telemetry fields through the ticket jobs API', async () => {
       await prisma.job.update({
         where: { id: jobId },

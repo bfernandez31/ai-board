@@ -412,6 +412,20 @@ jobs:
             "${cmd[@]}"
           fi
 
+      - name: Update Job Versions
+        if: ${{ always() && inputs.job_id && (env.PLUGIN_VERSION != '' || env.AGENT_CLI_VERSION != '') }}
+        run: |
+          JSON_BODY=$(jq -nc \
+            --arg pv "${PLUGIN_VERSION:-}" \
+            --arg cv "${AGENT_CLI_VERSION:-}" \
+            '{"status": "RUNNING"}
+             + (if $pv != "" then {"pluginVersion": $pv} else {} end)
+             + (if $cv != "" then {"agentCliVersion": $cv} else {} end)')
+          curl -s -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d "$JSON_BODY" || true
+
       - name: Capture Branch Name
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         working-directory: target

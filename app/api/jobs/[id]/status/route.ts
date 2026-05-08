@@ -120,6 +120,8 @@ export async function PATCH(
         completedAt: true,
         startedAt: true,
         workflowRunId: true,
+        pluginVersion: true,
+        agentCliVersion: true,
       },
     });
 
@@ -192,6 +194,8 @@ export async function PATCH(
       qualityScore?: number;
       qualityScoreDetails?: string;
       workflowRunId?: bigint;
+      pluginVersion?: string;
+      agentCliVersion?: string;
     } = {
       status: requestedStatus,
     };
@@ -203,6 +207,14 @@ export async function PATCH(
     // Populate workflowRunId on RUNNING status (first-write-wins)
     if (requestedStatus === 'RUNNING' && validationResult.data.workflowRunId && !job.workflowRunId) {
       updateData.workflowRunId = BigInt(validationResult.data.workflowRunId);
+    }
+
+    // Persist plugin/agent CLI version on RUNNING transition (first-write-wins)
+    if (requestedStatus === 'RUNNING' && validationResult.data.pluginVersion && !job.pluginVersion) {
+      updateData.pluginVersion = validationResult.data.pluginVersion;
+    }
+    if (requestedStatus === 'RUNNING' && validationResult.data.agentCliVersion && !job.agentCliVersion) {
+      updateData.agentCliVersion = validationResult.data.agentCliVersion;
     }
 
     if (isTerminalState) {
@@ -268,6 +280,8 @@ export async function PATCH(
       transition: `${currentStatus} → ${requestedStatus}`,
       completedAt: updatedJob.completedAt?.toISOString(),
       elapsedMs: elapsedTime,
+      ...(updateData.pluginVersion ? { pluginVersion: updateData.pluginVersion } : {}),
+      ...(updateData.agentCliVersion ? { agentCliVersion: updateData.agentCliVersion } : {}),
     });
 
     if (isTerminalState) {

@@ -22,6 +22,8 @@ export const jobStatusUpdateSchema = z.object({
   qualityScore: z.number().int().min(0).max(100).optional(),
   qualityScoreDetails: z.string().optional(),
   workflowRunId: z.number().int().positive().optional(),
+  pluginVersion: z.string().min(1).max(40).optional(),
+  agentCliVersion: z.string().min(1).max(40).optional(),
 });
 
 /**

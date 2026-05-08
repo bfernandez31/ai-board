@@ -57,6 +57,37 @@ log_error() {
   echo "❌ [run-agent] ERROR: $*" >&2
 }
 
+# --- Version capture helpers (AIB-778) ---
+# All helpers: never exit non-zero, never log via log_error, always return stdout (empty on failure).
+
+read_plugin_version() {
+  local manifest=".claude-plugin/plugin.json"
+  if [[ ! -f "$manifest" ]]; then
+    log_info "plugin manifest not found — skipping pluginVersion capture"
+    echo ""
+    return 0
+  fi
+  local v
+  v=$(jq -r '.version // empty' "$manifest" 2>/dev/null | tr -d '\n' | cut -c1-40 || echo "")
+  echo "$v"
+}
+
+capture_claude_version() {
+  claude --version 2>/dev/null | head -1 | tr -d '\n' | cut -c1-40 || echo ""
+}
+
+capture_codex_version() {
+  codex --version 2>/dev/null | head -1 | tr -d '\n' | cut -c1-40 || echo ""
+}
+
+capture_mistral_version() {
+  vibe --version 2>/dev/null | head -1 | tr -d '\n' | cut -c1-40 || echo ""
+}
+
+capture_gemini_version() {
+  gemini --version 2>/dev/null | head -1 | tr -d '\n' | cut -c1-40 || echo ""
+}
+
 json_array_from_args() {
   if [[ ${#RAW_ARGS[@]} -eq 0 ]]; then
     echo "[]"
@@ -757,10 +788,13 @@ fi
 _capture_agent_end_kind="completed"
 
 dispatch_agent() {
+  PLUGIN_VERSION="$(read_plugin_version)"
+
   case "$AGENT_TYPE" in
     CLAUDE)
       validate_auth
       install_claude
+      AGENT_CLI_VERSION="$(capture_claude_version)"
       invoke_claude
       ;;
     CODEX)
@@ -768,6 +802,7 @@ dispatch_agent() {
       install_codex
       auth_codex
       setup_codex_telemetry
+      AGENT_CLI_VERSION="$(capture_codex_version)"
       invoke_codex
       persist_codex_token
       ;;
@@ -775,6 +810,7 @@ dispatch_agent() {
       validate_auth
       install_mistral
       setup_mistral_telemetry
+      AGENT_CLI_VERSION="$(capture_mistral_version)"
       invoke_mistral
       collect_mistral_telemetry
       ;;
@@ -783,6 +819,7 @@ dispatch_agent() {
       install_gemini
       auth_gemini
       setup_gemini_telemetry
+      AGENT_CLI_VERSION="$(capture_gemini_version)"
       local gemini_exit=0
       invoke_gemini || gemini_exit=$?
       return $gemini_exit
@@ -794,32 +831,42 @@ dispatch_agent() {
   esac
 }
 
-if [[ -n "${AGENT_RAW_LOG}" ]]; then
-  # Append agent stdout to the raw log (stderr unchanged — passes through).
-  dispatch_agent | tee -a "${AGENT_RAW_LOG}"
-  dispatch_exit="${PIPESTATUS[0]}"
-else
-  set +e
-  dispatch_agent
-  dispatch_exit=$?
-  set -e
-fi
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  # Script is being executed (not sourced for testing).
+  if [[ -n "${AGENT_RAW_LOG}" ]]; then
+    # Append agent stdout to the raw log (stderr unchanged — passes through).
+    dispatch_agent | tee -a "${AGENT_RAW_LOG}"
+    dispatch_exit="${PIPESTATUS[0]}"
+  else
+    set +e
+    dispatch_agent
+    dispatch_exit=$?
+    set -e
+  fi
 
-if [[ "${dispatch_exit}" -ne 0 ]]; then
-  # SIGINT (130) and SIGTERM (143) indicate external cancellation of the agent
-  # process. Classify as cancelled so the log capture produces a CANCELLED
-  # preview instead of an upstream_error one.
-  case "${dispatch_exit}" in
-    130|143) _capture_agent_end_kind="cancelled" ;;
-    *) _capture_agent_end_kind="upstream_error" ;;
-  esac
-fi
+  if [[ "${dispatch_exit}" -ne 0 ]]; then
+    # SIGINT (130) and SIGTERM (143) indicate external cancellation of the agent
+    # process. Classify as cancelled so the log capture produces a CANCELLED
+    # preview instead of an upstream_error one.
+    case "${dispatch_exit}" in
+      130|143) _capture_agent_end_kind="cancelled" ;;
+      *) _capture_agent_end_kind="upstream_error" ;;
+    esac
+  fi
 
-export CAPTURE_END_KIND="${_capture_agent_end_kind}"
-# Persist across step boundaries so the capture step (a fresh shell) can read
-# it from the workflow environment — `export` alone does not cross steps.
-if [[ -n "${GITHUB_ENV:-}" ]]; then
-  echo "CAPTURE_END_KIND=${_capture_agent_end_kind}" >> "${GITHUB_ENV}"
-fi
+  export CAPTURE_END_KIND="${_capture_agent_end_kind}"
+  # Persist across step boundaries so the capture step (a fresh shell) can read
+  # it from the workflow environment — `export` alone does not cross steps.
+  if [[ -n "${GITHUB_ENV:-}" ]]; then
+    echo "CAPTURE_END_KIND=${_capture_agent_end_kind}" >> "${GITHUB_ENV}"
+    # Export captured runtime versions (best-effort; empty values are skipped)
+    if [[ -n "${PLUGIN_VERSION:-}" ]]; then
+      echo "PLUGIN_VERSION=${PLUGIN_VERSION}" >> "${GITHUB_ENV}"
+    fi
+    if [[ -n "${AGENT_CLI_VERSION:-}" ]]; then
+      echo "AGENT_CLI_VERSION=${AGENT_CLI_VERSION}" >> "${GITHUB_ENV}"
+    fi
+  fi
 
-exit "${dispatch_exit}"
+  exit "${dispatch_exit}"
+fi

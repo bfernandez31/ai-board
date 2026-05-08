@@ -36,10 +36,57 @@ function makeJob(overrides: Partial<TicketJobWithTelemetry> = {}): TicketJobWith
     peakContextTokens: null,
     avgContextTokens: null,
     turnCount: null,
+    pluginVersion: null,
+    agentCliVersion: null,
     log: null,
     ...overrides,
   };
 }
+
+describe('JobsTimeline — plugin/CLI version badges (AIB-778)', () => {
+  it('renders pluginVersion and agentCliVersion badges when both present', () => {
+    const job = makeJob({
+      id: 42,
+      pluginVersion: '1.0.1',
+      agentCliVersion: '1.0.92 (Claude Code)',
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+
+    const pluginBadge = screen.getByTestId('job-plugin-version-42');
+    const cliBadge = screen.getByTestId('job-cli-version-42');
+    expect(pluginBadge).toHaveTextContent('1.0.1');
+    expect(cliBadge).toHaveTextContent('1.0.92 (Claude Code)');
+  });
+
+  it('renders placeholder when both versions are null', () => {
+    const job = makeJob({
+      id: 43,
+      pluginVersion: null,
+      agentCliVersion: null,
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+
+    const pluginBadge = screen.getByTestId('job-plugin-version-43');
+    const cliBadge = screen.getByTestId('job-cli-version-43');
+    expect(pluginBadge.textContent).not.toBe('');
+    expect(cliBadge.textContent).not.toBe('');
+  });
+
+  it('renders mixed populated/null versions', () => {
+    const job = makeJob({
+      id: 44,
+      pluginVersion: '1.0.1',
+      agentCliVersion: null,
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+
+    const pluginBadge = screen.getByTestId('job-plugin-version-44');
+    const cliBadge = screen.getByTestId('job-cli-version-44');
+    expect(pluginBadge).toHaveTextContent('1.0.1');
+    expect(cliBadge.textContent).not.toBe('');
+    expect(cliBadge).not.toHaveTextContent('1.0.1');
+  });
+});
 
 describe('JobsTimeline — expanded breakdown rows (US3)', () => {
   it('shows Avg Context and Turn Count rows for a Claude job with both fields set', async () => {

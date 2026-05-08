@@ -137,6 +137,22 @@ function JobRow({
               {job.model}
             </span>
           )}
+
+          {/* Plugin Version Badge */}
+          <span
+            className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded hidden sm:inline"
+            data-testid={`job-plugin-version-${job.id}`}
+          >
+            {job.pluginVersion ?? '-'}
+          </span>
+
+          {/* Agent CLI Version Badge */}
+          <span
+            className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded hidden sm:inline"
+            data-testid={`job-cli-version-${job.id}`}
+          >
+            {job.agentCliVersion ?? '-'}
+          </span>
         </div>
 
         <div className="flex items-center gap-4 flex-shrink-0">
