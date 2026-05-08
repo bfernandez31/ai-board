@@ -37,17 +37,17 @@ export async function GET(
 
   const job = await prisma.job.findUnique({
     where: { id: jobId },
-    select: { id: true, ticketId: true, projectId: true },
+    select: {
+      id: true,
+      ticketId: true,
+      projectId: true,
+      ticket: { select: { agent: true } },
+    },
   });
   if (!job || job.ticketId !== ticketId || job.projectId !== projectId) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
-
-  const ticketAgent = await prisma.ticket.findUnique({
-    where: { id: ticketId },
-    select: { agent: true },
-  });
-  if (!ticketAgent || ticketAgent.agent !== 'CLAUDE') {
+  if (job.ticket?.agent !== 'CLAUDE') {
     return NextResponse.json({ error: 'Artifact not available' }, { status: 404 });
   }
 
