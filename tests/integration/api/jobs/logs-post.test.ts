@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildJobLogArtifactKey } from '@/app/lib/logs/artifact-key';
+import { buildJobLogArtifactKey, buildJobLogRawArtifactKey } from '@/app/lib/logs/artifact-key';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { POST } from '@/app/api/jobs/[id]/logs/route';
@@ -180,5 +180,76 @@ describe('POST /api/jobs/:id/logs', () => {
       errorCount: 0,
     });
     expect(res.status).toBe(404);
+  });
+
+  function buildRawArtifactKey(targetJobId: number): string {
+    return buildJobLogRawArtifactKey(ctx.projectId, ticketId, targetJobId);
+  }
+
+  it('persists rawArtifactKey + rawArtifactSize when both are submitted', async () => {
+    const body = {
+      captureStatus: 'CAPTURED' as const,
+      preview: 'with raw',
+      schemaVersion: 1,
+      eventCount: 1,
+      errorCount: 0,
+      artifactKey: buildArtifactKey(jobId),
+      artifactSize: 100,
+      rawArtifactKey: buildRawArtifactKey(jobId),
+      rawArtifactSize: 222,
+    };
+    const res = await postLog(jobId, body);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.rawArtifactSize).toBe(222);
+    expect(data.rawNativeUrl).toContain(`/jobs/${jobId}/logs/raw-native`);
+
+    const row = await prisma.jobLog.findUniqueOrThrow({ where: { jobId } });
+    expect(row.rawArtifactKey).toBe(body.rawArtifactKey);
+    expect(row.rawArtifactSize).toBe(222);
+  });
+
+  it('omits rawNativeUrl when raw fields are absent (back-compat)', async () => {
+    const res = await postLog(jobId, {
+      captureStatus: 'CAPTURED',
+      preview: 'no raw',
+      schemaVersion: 1,
+      eventCount: 1,
+      errorCount: 0,
+      artifactKey: buildArtifactKey(jobId),
+      artifactSize: 100,
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.rawNativeUrl).toBeNull();
+    expect(data.rawArtifactSize).toBeNull();
+  });
+
+  it('rejects rawArtifactKey without rawArtifactSize', async () => {
+    const res = await postLog(jobId, {
+      captureStatus: 'CAPTURED',
+      preview: 'mismatch',
+      schemaVersion: 1,
+      eventCount: 1,
+      errorCount: 0,
+      artifactKey: buildArtifactKey(jobId),
+      artifactSize: 100,
+      rawArtifactKey: buildRawArtifactKey(jobId),
+    });
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('rejects raw fields when captureStatus is not CAPTURED', async () => {
+    const res = await postLog(jobId, {
+      captureStatus: 'UNAVAILABLE',
+      preview: 'Logs unavailable — capture failed.',
+      schemaVersion: 1,
+      eventCount: 0,
+      errorCount: 0,
+      rawArtifactKey: buildRawArtifactKey(jobId),
+      rawArtifactSize: 222,
+    });
+    expect(res.status).toBe(400);
   });
 });

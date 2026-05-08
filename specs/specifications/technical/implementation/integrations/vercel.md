@@ -106,16 +106,18 @@ NEXTAUTH_SECRET=<preview-secret>
 
 **Package**: `@vercel/blob` ^2.3.x. Used to persist gzipped JSONL agent execution transcripts that survive beyond the GitHub Actions retention window.
 
-**Pathname layout**: `logs/<projectId>/<ticketId>/<jobId>.jsonl.gz` — one object per terminated job.
+**Pathname layout**:
+- `logs/<projectId>/<ticketId>/<jobId>.jsonl.gz` — normalized v1 event stream, written for every terminated job
+- `raw-logs/<projectId>/<ticketId>/<jobId>.jsonl.gz` — redacted, gzipped native Claude Code session JSONL, written only for Claude jobs that produced session data and whose raw upload succeeded
 
-**Size budget**: 25 MB gzipped per object. Oversize transcripts are truncated on the runner with a `lifecycle:upstream_error:transcript_truncated` marker.
+**Size budget**: 25 MB gzipped per object (each artifact independently). Oversize normalized transcripts are truncated on the runner with a `lifecycle:upstream_error:transcript_truncated` marker; oversize raw artifacts cause Phase 5b to fail non-blockingly and the row's `rawArtifactKey` stays null.
 
 **Credential scope**:
 - `BLOB_READ_WRITE_TOKEN` is configured only in the Vercel environment
-- The GitHub Actions runner never holds the Blob token — all uploads are streamed through `PUT /api/jobs/:id/logs/artifact` (workflow token auth) which the server forwards to Blob via `app/lib/blob/client.ts`
-- Reads are streamed through `GET /api/projects/:projectId/tickets/:id/jobs/:jobId/logs/raw` (session auth + `verifyTicketAccess`); Blob URLs are never rendered client-side
+- The GitHub Actions runner never holds the Blob token — all uploads are streamed through `PUT /api/jobs/:id/logs/artifact` (normalized) or `PUT /api/jobs/:id/logs/raw-artifact` (Claude raw native), both workflow-token-authenticated and forwarded to Blob via `app/lib/blob/client.ts`
+- Reads are streamed through `GET /api/projects/:projectId/tickets/:id/jobs/:jobId/logs/raw` (normalized) and `GET /api/projects/:projectId/tickets/:id/jobs/:jobId/logs/raw-native` (raw native), both session-authenticated via `verifyTicketAccess` with the AIB-724 canonical-key re-derivation; Blob URLs are never rendered client-side
 
-**Retention**: `LOG_RETENTION_DAYS` (default `30`) drives `POST /api/maintenance/prune-logs`, invoked nightly by `.github/workflows/nightly-log-prune.yml` at `15 1 * * *` UTC. Pruning deletes the Blob object first (`404` treated as success), then the `JobLog` Postgres row.
+**Retention**: `LOG_RETENTION_DAYS` (default `30`) drives `POST /api/maintenance/prune-logs`, invoked nightly by `.github/workflows/nightly-log-prune.yml` at `15 1 * * *` UTC. Per row, pruning deletes the normalized Blob object first, then the raw Blob object when present (each `404` treated as success), then marks the `JobLog` row `PRUNED` and nulls all four artifact columns so the two artifacts age out together.
 
 ### Performance Monitoring
 

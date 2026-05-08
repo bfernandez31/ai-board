@@ -31,6 +31,8 @@ RAW_LOG="${TMPDIR}/agent-raw-${JOB_ID}.log"
 NORMALIZED="${TMPDIR}/agent-normalized-${JOB_ID}.jsonl"
 REDACTED="${TMPDIR}/agent-redacted-${JOB_ID}.jsonl"
 ARTIFACT="${TMPDIR}/agent-redacted-${JOB_ID}.jsonl.gz"
+RAW_REDACTED="${TMPDIR}/agent-redacted-raw-${JOB_ID}.jsonl"
+RAW_ARTIFACT="${TMPDIR}/agent-redacted-raw-${JOB_ID}.jsonl.gz"
 
 AGENT_UPPER="$(echo "${AGENT_TYPE}" | tr '[:lower:]' '[:upper:]')"
 STARTED_AT="${CAPTURE_STARTED_AT:-$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)}"
@@ -38,6 +40,7 @@ ENDED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ 2>/dev/null || date -u +%Y-%m-%dT%H:
 
 cleanup() {
   rm -f "${NORMALIZED}" "${REDACTED}" "${ARTIFACT}" 2>/dev/null || true
+  rm -f "${RAW_REDACTED}" "${RAW_ARTIFACT}" 2>/dev/null || true
   rm -f "${RAW_LOG}" 2>/dev/null || true
   [[ -n "${CLAUDE_AGGREGATED:-}" ]] && rm -f "${CLAUDE_AGGREGATED}" 2>/dev/null || true
 }
@@ -233,13 +236,117 @@ try {
   fi
 fi
 
+# ---------- Phase 5b: Raw native session capture (Claude only) ----------
+
+RAW_ARTIFACT_KEY=""
+RAW_ARTIFACT_SIZE=0
+
+if [[ "${AGENT_UPPER}" != "CLAUDE" ]]; then
+  : # non-Claude: silently skip. No log line. No raw artifact. (FR-008)
+elif [[ "${CAPTURE_STATUS}" != "CAPTURED" ]]; then
+  : # normalized failed: do not run raw. Same exit point as non-Claude.
+elif [[ -z "${CLAUDE_AGGREGATED:-}" || ! -s "${CLAUDE_AGGREGATED}" ]]; then
+  echo "capture-agent-logs: raw_capture skipped reason=no_session_data jobId=${JOB_ID}"
+else
+  redact_native() {
+    node --input-type=module -e "
+import { readFileSync, writeFileSync } from 'node:fs';
+import { redactNativeJsonl } from '${LIB_DIR}/redactor.mjs';
+const raw = readFileSync('${CLAUDE_AGGREGATED}', 'utf-8');
+const lines = raw.split(/\r?\n/);
+const out = lines
+  .map(l => l.length === 0 ? l : redactNativeJsonl(l))
+  .join('\n');
+writeFileSync('${RAW_REDACTED}', out);
+"
+  }
+
+  if ! redact_native 2>/tmp/raw-redact-error.log; then
+    echo "capture-agent-logs: raw_capture FAILED reason=redaction_failed jobId=${JOB_ID}" >&2
+    RAW_ARTIFACT_KEY=""
+    RAW_ARTIFACT_SIZE=0
+  else
+    gzip -c "${RAW_REDACTED}" > "${RAW_ARTIFACT}"
+    RAW_ARTIFACT_SIZE=$(stat -c%s "${RAW_ARTIFACT}" 2>/dev/null || stat -f%z "${RAW_ARTIFACT}" 2>/dev/null || wc -c < "${RAW_ARTIFACT}")
+
+    # Namespace by JOB_ID so concurrent capture runs on the same runner can't
+    # clobber each other's responses (which would commit one job's
+    # rawArtifactKey to another job's summary and orphan the original blob).
+    RAW_UPLOAD_RESPONSE="${TMPDIR}/raw-upload-response-${JOB_ID}.json"
+
+    put_raw_artifact() {
+      local attempt=0
+      local delay=1
+      while [[ ${attempt} -lt 3 ]]; do
+        local code
+        code=$(curl -sS -o "${RAW_UPLOAD_RESPONSE}" -w "%{http_code}" \
+          -X PUT "${APP_URL}/api/jobs/${JOB_ID}/logs/raw-artifact" \
+          -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+          -H "Content-Type: application/gzip" \
+          --data-binary @"${RAW_ARTIFACT}" || echo "000")
+        if [[ "${code}" == "201" ]]; then
+          return 0
+        fi
+        if [[ "${code}" =~ ^4 ]]; then
+          echo "capture-agent-logs: raw_capture FAILED status=${code} reason=non_retriable_raw_upload jobId=${JOB_ID}" >&2
+          return 1
+        fi
+        attempt=$((attempt + 1))
+        sleep "${delay}"
+        delay=$((delay * 2))
+      done
+      echo "capture-agent-logs: raw_capture FAILED status=retry_exhausted reason=raw_upload_timeout jobId=${JOB_ID}" >&2
+      return 1
+    }
+
+    # If the PUT returned 201 but we can't extract rawArtifactKey, the Blob
+    # object exists but no JobLog row will reference it. Proactively DELETE
+    # the orphan via the workflow endpoint (server re-derives the canonical
+    # key) so storage doesn't leak.
+    delete_orphan_raw_artifact() {
+      curl -sS -o /dev/null -w "%{http_code}" \
+        -X DELETE "${APP_URL}/api/jobs/${JOB_ID}/logs/raw-artifact" \
+        -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+        >/dev/null 2>&1 || true
+    }
+
+    if put_raw_artifact; then
+      RAW_ARTIFACT_KEY=$(node --input-type=module -e "
+import { readFileSync } from 'node:fs';
+try {
+  const data = JSON.parse(readFileSync('${RAW_UPLOAD_RESPONSE}', 'utf-8'));
+  if (typeof data.rawArtifactKey === 'string') process.stdout.write(data.rawArtifactKey);
+} catch {}
+" 2>/dev/null)
+      if [[ -n "${RAW_ARTIFACT_KEY}" ]]; then
+        echo "capture-agent-logs: raw_capture ok jobId=${JOB_ID} size=${RAW_ARTIFACT_SIZE}"
+      else
+        echo "capture-agent-logs: raw_capture FAILED reason=missing_raw_artifact_key jobId=${JOB_ID}" >&2
+        delete_orphan_raw_artifact
+        RAW_ARTIFACT_KEY=""
+        RAW_ARTIFACT_SIZE=0
+      fi
+    else
+      RAW_ARTIFACT_KEY=""
+      RAW_ARTIFACT_SIZE=0
+    fi
+    rm -f "${RAW_UPLOAD_RESPONSE}" 2>/dev/null || true
+  fi
+fi
+
 # ---------- Phase 6: Submit summary ----------
 
 build_summary_body() {
   if [[ "${CAPTURE_STATUS}" == "CAPTURED" ]]; then
-    cat <<JSON
+    if [[ -n "${RAW_ARTIFACT_KEY}" ]]; then
+      cat <<JSON
+{"captureStatus":"CAPTURED","preview":$(printf '%s' "${PREVIEW}" | node -e "process.stdout.write(JSON.stringify(require('fs').readFileSync(0,'utf-8')))"),"schemaVersion":1,"eventCount":${EVENT_COUNT},"errorCount":${ERROR_COUNT},"artifactKey":"${ARTIFACT_KEY}","artifactSize":${ARTIFACT_SIZE},"rawArtifactKey":"${RAW_ARTIFACT_KEY}","rawArtifactSize":${RAW_ARTIFACT_SIZE}}
+JSON
+    else
+      cat <<JSON
 {"captureStatus":"CAPTURED","preview":$(printf '%s' "${PREVIEW}" | node -e "process.stdout.write(JSON.stringify(require('fs').readFileSync(0,'utf-8')))"),"schemaVersion":1,"eventCount":${EVENT_COUNT},"errorCount":${ERROR_COUNT},"artifactKey":"${ARTIFACT_KEY}","artifactSize":${ARTIFACT_SIZE}}
 JSON
+    fi
   else
     cat <<JSON
 {"captureStatus":"UNAVAILABLE","preview":"Logs unavailable — capture failed.","schemaVersion":1,"eventCount":0,"errorCount":0}
@@ -274,11 +381,18 @@ post_summary() {
 }
 
 delete_orphan_artifact() {
-  [[ -z "${ARTIFACT_KEY}" ]] && return 0
-  curl -sS -o /dev/null -w "%{http_code}" \
-    -X DELETE "${APP_URL}/api/jobs/${JOB_ID}/logs/artifact" \
-    -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-    >/dev/null 2>&1 || true
+  if [[ -n "${ARTIFACT_KEY}" ]]; then
+    curl -sS -o /dev/null -w "%{http_code}" \
+      -X DELETE "${APP_URL}/api/jobs/${JOB_ID}/logs/artifact" \
+      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+      >/dev/null 2>&1 || true
+  fi
+  if [[ -n "${RAW_ARTIFACT_KEY}" ]]; then
+    curl -sS -o /dev/null -w "%{http_code}" \
+      -X DELETE "${APP_URL}/api/jobs/${JOB_ID}/logs/raw-artifact" \
+      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+      >/dev/null 2>&1 || true
+  fi
 }
 
 SUMMARY_BODY="$(build_summary_body)"

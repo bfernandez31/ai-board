@@ -24,6 +24,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   let skippedCount = 0;
   let processed = 0;
 
+  // We can't delete Blob artifacts without a token — skip rows that have any
+  // artifact so storage doesn't silently leak. They'll be retried on the next
+  // cycle once Blob is configured.
+  async function tryDeleteArtifact(key: string, label: string): Promise<boolean> {
+    if (!blobConfigured) return false;
+    try {
+      await deleteJobLogArtifact(key);
+      return true;
+    } catch (error) {
+      console.error(`[prune-logs] Blob delete failed (${label})`, key, error);
+      return false;
+    }
+  }
+
   try {
     while (processed < CYCLE_LIMIT) {
       const batch = await prisma.jobLog.findMany({
@@ -31,7 +45,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           createdAt: { lt: cutoff },
           captureStatus: { not: 'PRUNED' },
         },
-        select: { id: true, artifactKey: true, jobId: true },
+        select: {
+          id: true,
+          artifactKey: true,
+          rawArtifactKey: true,
+          jobId: true,
+        },
         take: BATCH_SIZE,
       });
       if (batch.length === 0) break;
@@ -39,23 +58,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       const confirmedIds: number[] = [];
       for (const row of batch) {
-        if (row.artifactKey) {
-          if (!blobConfigured) {
-            // We can't delete the Blob artifact without a token — skip this
-            // row so storage doesn't silently leak. The row will be retried
-            // on the next cycle once Blob is configured.
-            skippedCount += 1;
-            continue;
-          }
-          try {
-            await deleteJobLogArtifact(row.artifactKey);
-          } catch (error) {
-            console.error('[prune-logs] Blob delete failed', row.artifactKey, error);
-            skippedCount += 1;
-            continue;
-          }
+        let confirmed = true;
+        if (row.artifactKey && !(await tryDeleteArtifact(row.artifactKey, 'normalized'))) {
+          confirmed = false;
         }
-        confirmedIds.push(row.id);
+        if (confirmed && row.rawArtifactKey && !(await tryDeleteArtifact(row.rawArtifactKey, 'raw'))) {
+          confirmed = false;
+        }
+        if (confirmed) {
+          confirmedIds.push(row.id);
+        } else {
+          skippedCount += 1;
+        }
       }
 
       if (confirmedIds.length > 0) {
@@ -70,6 +84,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             captureStatus: 'PRUNED',
             artifactKey: null,
             artifactSize: null,
+            rawArtifactKey: null,
+            rawArtifactSize: null,
           },
         });
         prunedCount += result.count;

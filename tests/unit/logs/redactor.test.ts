@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { redactString, redactEvents } from '@/app/lib/logs/redactor';
+import { redactString, redactEvents, redactNativeJsonl } from '@/app/lib/logs/redactor';
 import type { NormalizedEvent } from '@/app/lib/logs/schema';
 
 describe('redactString', () => {
@@ -186,5 +186,158 @@ describe('redactEvents deep visitor', () => {
     const [out] = redactEvents(events);
     if (out?.type !== 'tool_invocation') throw new Error('wrong type');
     expect(out.payload.input).toEqual({ offset: 100, limit: 50, recursive: true, paths: null });
+  });
+});
+
+describe('redactNativeJsonl', () => {
+  it('returns empty/whitespace input unchanged', () => {
+    expect(redactNativeJsonl('')).toBe('');
+    expect(redactNativeJsonl('   ')).toBe('   ');
+  });
+
+  it('redacts top-level string token field on a parsed object', () => {
+    const line = JSON.stringify({
+      type: 'user',
+      uuid: 'u-1',
+      content: 'token=ghp_1234567890abcdefghij',
+    });
+    const out = redactNativeJsonl(line);
+    const parsed = JSON.parse(out);
+    expect(parsed.content).toContain('[REDACTED:github_token]');
+    expect(parsed.content).not.toContain('ghp_1234567890abcdefghij');
+    expect(parsed.uuid).toBe('u-1');
+  });
+
+  it('redacts deeply nested tool_input string with API key', () => {
+    const line = JSON.stringify({
+      type: 'assistant',
+      message: {
+        content: [
+          {
+            type: 'tool_use',
+            id: 'tool-1',
+            name: 'Bash',
+            tool_input: {
+              env: { ANTHROPIC_API_KEY: 'sk-ant-api03-AAAAAAAAAAAAAAAAAAAA' },
+              cmd: 'curl',
+            },
+          },
+        ],
+      },
+    });
+    const out = redactNativeJsonl(line);
+    const parsed = JSON.parse(out);
+    expect(parsed.message.content[0].tool_input.env.ANTHROPIC_API_KEY).toBe(
+      '[REDACTED:anthropic_key]',
+    );
+    expect(parsed.message.content[0].tool_input.cmd).toBe('curl');
+  });
+
+  it('redacts KEY=VALUE env-secret strings inside summary events', () => {
+    const line = JSON.stringify({
+      type: 'summary',
+      summary: 'Final env: MY_API_TOKEN=abcdefghijklmnopqrstuvwxyz1234567890',
+      leafUuid: 'leaf-1',
+    });
+    const out = redactNativeJsonl(line);
+    const parsed = JSON.parse(out);
+    expect(parsed.summary).toContain('MY_API_TOKEN=[REDACTED:env_secret:MY_API_TOKEN]');
+    expect(parsed.summary).not.toContain('abcdefghijklmnopqrstuvwxyz1234567890');
+  });
+
+  it('redacts unknown native event types via type-agnostic deepRedact', () => {
+    const line = JSON.stringify({
+      type: 'totally_unknown_native_event',
+      depth: { deeper: { token: 'ghp_1234567890abcdefghij' } },
+    });
+    const out = redactNativeJsonl(line);
+    const parsed = JSON.parse(out);
+    expect(parsed.depth.deeper.token).toBe('[REDACTED:github_token]');
+  });
+
+  it('falls back to redactString on malformed JSON without throwing', () => {
+    const malformed = 'not-json: ghp_1234567890abcdefghij';
+    const out = redactNativeJsonl(malformed);
+    expect(out).toContain('[REDACTED:github_token]');
+    expect(out).not.toContain('ghp_1234567890abcdefghij');
+  });
+
+  it('preserves non-string scalar JSON values unchanged', () => {
+    expect(redactNativeJsonl('123')).toBe('123');
+    expect(redactNativeJsonl('true')).toBe('true');
+    expect(redactNativeJsonl('null')).toBe('null');
+  });
+
+  it('redacts a top-level JSON string scalar', () => {
+    const line = JSON.stringify('Authorization: Bearer abc.def-ghi_jklmno');
+    const out = redactNativeJsonl(line);
+    expect(JSON.parse(out)).toContain('[REDACTED:bearer]');
+  });
+
+  it('redacts private RSA/OpenSSH PEM blocks anywhere in the tree', () => {
+    const pem =
+      '-----BEGIN OPENSSH PRIVATE KEY-----\nMIIBVQIBADANBgkq\n-----END OPENSSH PRIVATE KEY-----';
+    const line = JSON.stringify({
+      type: 'tool_result',
+      content: { result: { stderr: pem } },
+    });
+    const out = redactNativeJsonl(line);
+    const parsed = JSON.parse(out);
+    expect(parsed.content.result.stderr).toBe('[REDACTED:private_key]');
+  });
+
+  it('redacts OAuth Authorization Bearer tokens nested in message content', () => {
+    const line = JSON.stringify({
+      type: 'user',
+      message: { content: 'curl -H "Authorization: Bearer abc.def-ghi_jklmno"' },
+    });
+    const out = redactNativeJsonl(line);
+    const parsed = JSON.parse(out);
+    expect(parsed.message.content).toContain('[REDACTED:bearer]');
+  });
+
+  it('redacts arrays of strings recursively', () => {
+    const line = JSON.stringify([
+      'normal',
+      'sk-ant-api03-AAAAAAAAAAAAAAAAAAAA',
+      { nested: 'AIzaSyA-AAAAAAAAAAAAAAAAAAA' },
+    ]);
+    const out = redactNativeJsonl(line);
+    const parsed = JSON.parse(out);
+    expect(parsed[0]).toBe('normal');
+    expect(parsed[1]).toContain('[REDACTED:anthropic_key]');
+    expect(parsed[2].nested).toContain('[REDACTED:google_key]');
+  });
+
+  // FR-002 acceptance: native Claude Code fields must survive redaction so
+  // downstream consumers can still rely on them. Spec §63 mandates this.
+  it('preserves native Claude Code session fields through redaction', () => {
+    const line = JSON.stringify({
+      type: 'assistant',
+      uuid: 'aaaa-bbbb-cccc-dddd',
+      parentUuid: 'eeee-ffff-0000-1111',
+      sessionId: 'session-12345',
+      isSidechain: false,
+      cwd: '/workspace/repo',
+      gitBranch: 'main',
+      version: '1.0.42',
+      usage: { input_tokens: 100, output_tokens: 50, cache_read_input_tokens: 10 },
+      message: { content: 'token=ghp_1234567890abcdefghij' },
+    });
+    const out = redactNativeJsonl(line);
+    const parsed = JSON.parse(out);
+    expect(parsed.uuid).toBe('aaaa-bbbb-cccc-dddd');
+    expect(parsed.parentUuid).toBe('eeee-ffff-0000-1111');
+    expect(parsed.sessionId).toBe('session-12345');
+    expect(parsed.isSidechain).toBe(false);
+    expect(parsed.cwd).toBe('/workspace/repo');
+    expect(parsed.gitBranch).toBe('main');
+    expect(parsed.version).toBe('1.0.42');
+    expect(parsed.usage).toEqual({
+      input_tokens: 100,
+      output_tokens: 50,
+      cache_read_input_tokens: 10,
+    });
+    expect(parsed.message.content).toContain('[REDACTED:github_token]');
   });
 });

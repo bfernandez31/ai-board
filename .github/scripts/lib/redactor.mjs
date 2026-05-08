@@ -52,6 +52,15 @@ function deepRedact(value) {
   return value;
 }
 
+export function redactNativeJsonl(line) {
+  if (!line || line.trim().length === 0) return line;
+  try {
+    return JSON.stringify(deepRedact(JSON.parse(line)));
+  } catch {
+    return redactString(line);
+  }
+}
+
 export function redactEvents(events) {
   return events.map((event) => {
     switch (event.type) {

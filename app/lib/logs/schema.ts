@@ -80,6 +80,8 @@ const baseSubmission = z.object({
   errorCount: z.number().int().nonnegative(),
   artifactKey: z.string().max(300).optional(),
   artifactSize: z.number().int().positive().optional(),
+  rawArtifactKey: z.string().max(300).optional(),
+  rawArtifactSize: z.number().int().positive().optional(),
 });
 
 export const JobLogSubmissionSchema = baseSubmission.refine(
@@ -96,6 +98,19 @@ export const JobLogSubmissionSchema = baseSubmission.refine(
     message:
       'artifactKey and artifactSize are required when captureStatus is CAPTURED, and forbidden otherwise',
     path: ['artifactKey'],
+  }
+).refine(
+  (data) => {
+    const hasKey = data.rawArtifactKey !== undefined;
+    const hasSize = data.rawArtifactSize !== undefined;
+    if (hasKey !== hasSize) return false;
+    if (hasKey && data.captureStatus !== 'CAPTURED') return false;
+    return true;
+  },
+  {
+    message:
+      'rawArtifactKey and rawArtifactSize must be set together, and only when captureStatus is CAPTURED',
+    path: ['rawArtifactKey'],
   }
 );
 
