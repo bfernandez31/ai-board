@@ -62,6 +62,7 @@ export async function POST(
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
+    // First-write-wins: only persist values that aren't already set.
     const updateData: { pluginVersion?: string; agentCliVersion?: string } = {};
     if (validation.data.pluginVersion && !job.pluginVersion) {
       updateData.pluginVersion = validation.data.pluginVersion;
@@ -74,18 +75,15 @@ export async function POST(
       await prisma.job.update({ where: { id: jobId }, data: updateData });
     }
 
-    const updated = await prisma.job.findUniqueOrThrow({
-      where: { id: jobId },
-      select: { id: true, pluginVersion: true, agentCliVersion: true },
-    });
+    const result = {
+      id: job.id,
+      pluginVersion: job.pluginVersion ?? updateData.pluginVersion ?? null,
+      agentCliVersion: job.agentCliVersion ?? updateData.agentCliVersion ?? null,
+    };
 
-    console.log('[Job Versions] Success:', {
-      jobId,
-      pluginVersion: updated.pluginVersion,
-      agentCliVersion: updated.agentCliVersion,
-    });
+    console.log('[Job Versions] Success:', result);
 
-    return NextResponse.json(updated, { status: 200 });
+    return NextResponse.json(result, { status: 200 });
   } catch (error: unknown) {
     console.error('[Job Versions] Unexpected error:', {
       jobId,

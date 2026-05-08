@@ -245,7 +245,7 @@ function JobRow({
                   )}
                   <div
                     data-testid={`job-plugin-version-${job.id}`}
-                    {...(job.pluginVersion == null ? { title: 'Non disponible' } : {})}
+                    title={job.pluginVersion == null ? 'Non disponible' : undefined}
                   >
                     <span className="text-ctp-overlay0">Plugin Version:</span>
                     <span className="ml-2 text-foreground font-medium">
@@ -254,7 +254,7 @@ function JobRow({
                   </div>
                   <div
                     data-testid={`job-cli-version-${job.id}`}
-                    {...(job.agentCliVersion == null ? { title: 'Non disponible' } : {})}
+                    title={job.agentCliVersion == null ? 'Non disponible' : undefined}
                   >
                     <span className="text-ctp-overlay0">CLI Version:</span>
                     <span className="ml-2 text-foreground font-medium">
