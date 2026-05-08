@@ -204,17 +204,18 @@ export async function PATCH(
       updateData.startedAt = new Date();
     }
 
-    // Populate workflowRunId on RUNNING status (first-write-wins)
-    if (requestedStatus === 'RUNNING' && validationResult.data.workflowRunId && !job.workflowRunId) {
-      updateData.workflowRunId = BigInt(validationResult.data.workflowRunId);
-    }
-
-    // Persist plugin/agent CLI version on RUNNING transition (first-write-wins)
-    if (requestedStatus === 'RUNNING' && validationResult.data.pluginVersion && !job.pluginVersion) {
-      updateData.pluginVersion = validationResult.data.pluginVersion;
-    }
-    if (requestedStatus === 'RUNNING' && validationResult.data.agentCliVersion && !job.agentCliVersion) {
-      updateData.agentCliVersion = validationResult.data.agentCliVersion;
+    // First-write-wins fields populated on RUNNING transition
+    if (requestedStatus === 'RUNNING') {
+      const { workflowRunId, pluginVersion, agentCliVersion } = validationResult.data;
+      if (workflowRunId && !job.workflowRunId) {
+        updateData.workflowRunId = BigInt(workflowRunId);
+      }
+      if (pluginVersion && !job.pluginVersion) {
+        updateData.pluginVersion = pluginVersion;
+      }
+      if (agentCliVersion && !job.agentCliVersion) {
+        updateData.agentCliVersion = agentCliVersion;
+      }
     }
 
     if (isTerminalState) {

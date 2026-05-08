@@ -67,25 +67,11 @@ read_plugin_version() {
     echo ""
     return 0
   fi
-  local v
-  v=$(jq -r '.version // empty' "$manifest" 2>/dev/null | tr -d '\n' | cut -c1-40 || echo "")
-  echo "$v"
+  jq -r '.version // empty' "$manifest" 2>/dev/null | tr -d '\n' | cut -c1-40 || echo ""
 }
 
-capture_claude_version() {
-  claude --version 2>/dev/null | head -1 | tr -d '\n' | cut -c1-40 || echo ""
-}
-
-capture_codex_version() {
-  codex --version 2>/dev/null | head -1 | tr -d '\n' | cut -c1-40 || echo ""
-}
-
-capture_mistral_version() {
-  vibe --version 2>/dev/null | head -1 | tr -d '\n' | cut -c1-40 || echo ""
-}
-
-capture_gemini_version() {
-  gemini --version 2>/dev/null | head -1 | tr -d '\n' | cut -c1-40 || echo ""
+capture_cli_version() {
+  "$1" --version 2>/dev/null | head -1 | tr -d '\n' | cut -c1-40 || echo ""
 }
 
 json_array_from_args() {
@@ -794,7 +780,7 @@ dispatch_agent() {
     CLAUDE)
       validate_auth
       install_claude
-      AGENT_CLI_VERSION="$(capture_claude_version)"
+      AGENT_CLI_VERSION="$(capture_cli_version claude)"
       invoke_claude
       ;;
     CODEX)
@@ -802,7 +788,7 @@ dispatch_agent() {
       install_codex
       auth_codex
       setup_codex_telemetry
-      AGENT_CLI_VERSION="$(capture_codex_version)"
+      AGENT_CLI_VERSION="$(capture_cli_version codex)"
       invoke_codex
       persist_codex_token
       ;;
@@ -810,7 +796,7 @@ dispatch_agent() {
       validate_auth
       install_mistral
       setup_mistral_telemetry
-      AGENT_CLI_VERSION="$(capture_mistral_version)"
+      AGENT_CLI_VERSION="$(capture_cli_version vibe)"
       invoke_mistral
       collect_mistral_telemetry
       ;;
@@ -819,7 +805,7 @@ dispatch_agent() {
       install_gemini
       auth_gemini
       setup_gemini_telemetry
-      AGENT_CLI_VERSION="$(capture_gemini_version)"
+      AGENT_CLI_VERSION="$(capture_cli_version gemini)"
       local gemini_exit=0
       invoke_gemini || gemini_exit=$?
       return $gemini_exit

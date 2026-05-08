@@ -80,23 +80,22 @@ describe('run-agent.sh — read_plugin_version', () => {
   });
 });
 
-describe('run-agent.sh — capture_*_version helpers', () => {
+describe('run-agent.sh — capture_cli_version helper', () => {
   beforeEach(() => {
     if (existsSync(TMP_DIR)) rmSync(TMP_DIR, { recursive: true, force: true });
     mkdirSync(TMP_DIR, { recursive: true });
   });
 
-  it('capture_claude_version returns trimmed first line of --version output', () => {
-    // Inject a fake "claude" binary onto PATH that outputs a known version string
+  it('returns trimmed first line of --version output for the given binary', () => {
     mkdirSync(join(TMP_DIR, 'bin'), { recursive: true });
     writeFileSync(join(TMP_DIR, 'bin/claude'), '#!/bin/bash\necho "1.0.92 (Claude Code)"', { mode: 0o755 });
-    const result = runAgentHelperFn(TMP_DIR, 'capture_claude_version', { PATH: `${join(TMP_DIR, 'bin')}:${process.env.PATH ?? '/usr/bin'}` });
+    const result = runAgentHelperFn(TMP_DIR, 'capture_cli_version claude', { PATH: `${join(TMP_DIR, 'bin')}:${process.env.PATH ?? '/usr/bin'}` });
     expect(result.exitCode).toBe(0);
     expect(result.stdout.trim()).toBe('1.0.92 (Claude Code)');
   });
 
-  it('capture_claude_version returns empty string when binary is missing on PATH', () => {
-    const result = runAgentHelperFn(TMP_DIR, 'capture_claude_version', { PATH: '/nonexistent' });
+  it('returns empty string when the binary is missing on PATH', () => {
+    const result = runAgentHelperFn(TMP_DIR, 'capture_cli_version claude', { PATH: '/nonexistent' });
     expect(result.exitCode).toBe(0);
     expect(result.stdout.trim()).toBe('');
   });
@@ -116,8 +115,8 @@ describe('run-agent.sh — capture failure does not propagate non-zero (US3)', (
     expect(result.stdout).not.toMatch(/❌/);
   });
 
-  it('capture_claude_version exits 0 when binary is missing', () => {
-    const result = runAgentHelperFn(TMP_DIR, 'capture_claude_version; echo "exit:$?"', { PATH: '/nonexistent' });
+  it('capture_cli_version exits 0 when binary is missing', () => {
+    const result = runAgentHelperFn(TMP_DIR, 'capture_cli_version claude; echo "exit:$?"', { PATH: '/nonexistent' });
     expect(result.stdout).toContain('exit:0');
   });
 });
