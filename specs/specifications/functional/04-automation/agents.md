@@ -130,6 +130,19 @@ Every agent-invoking workflow — `speckit.yml`, `quick-impl.yml`, `verify.yml`,
 
 `verify.yml` invokes `run-agent.sh` twice (fix-tests + code-review) but appends to a single raw log, so the capture step runs once after the last agent invocation.
 
+### Plugin & CLI Version Capture (per workflow run)
+
+Every agent-invoking workflow — `speckit.yml`, `quick-impl.yml`, `verify.yml`, `ai-board-assist.yml`, `iterate.yml` — runs a version-capture step immediately after the sparse checkout of `.claude-plugin/` and before the agent's productive work begins. The step records the AI-Board plugin release identifier and the agent CLI's self-reported version on the active `Job`, so the ticket detail panel can correlate the run with the stack that produced it.
+
+**Input**: `JOB_ID`, `APP_URL`, `WORKFLOW_API_TOKEN`, `AGENT_TYPE` (CLAUDE | CODEX | GEMINI | MISTRAL).
+
+**Phases**:
+1. Resolve the plugin version: read `.version` from `.claude-plugin/plugin.json` if present; otherwise fall back to `sha:<short>` (the short Git SHA of the plugin source tree). Both forms are clipped to 100 characters.
+2. Resolve the agent CLI version: install the CLI on demand (60 s timeout per installer), then run `<cli> --version` with a 5 s timeout. The first non-empty line is trimmed and clipped to 100 characters. Stored verbatim — no parsing.
+3. POST the captured fields (omitting any that probed empty) to `/api/jobs/:id/versions` with bounded retry (3 attempts, 1/2/4 s backoff). HTTP 400/401/404 short-circuit the retry loop. If both probes failed and the payload is empty, no request is sent.
+
+The script always exits 0 — capture failure can never block the job. Each failed probe writes a structured warning line to stderr identifying the job, agent, and stage that failed, so operators can audit capture reliability without alerting. The endpoint enforces first-write-wins (a job's two version columns are immutable once set), so the script is safely retryable.
+
 ### Log Retention Pruning (scheduled)
 
 A scheduled workflow `.github/workflows/nightly-log-prune.yml` triggers `POST /api/maintenance/prune-logs` once per day at 01:15 UTC. The endpoint:

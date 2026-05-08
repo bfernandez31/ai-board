@@ -418,6 +418,55 @@ sequenceDiagram
     EP-->>OT: 200 { status: "accepted", metrics }
 ```
 
+## Job Version Endpoints
+
+### POST /api/jobs/:id/versions
+
+Persist the AI-Board plugin version and/or the agent CLI version on a Job. Workflow-only endpoint, idempotent, first-write-wins.
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN) via `validateWorkflowAuth`
+**Authorization**: Workflow token validation (no project membership check)
+
+**Path Parameters**:
+- `id` (number, required): Job ID
+
+**Request Body**:
+```json
+{
+  "pluginVersion": "1.0.1",
+  "agentCliVersion": "claude-code 0.5.12"
+}
+```
+
+**Validation**:
+- `pluginVersion`: Optional string, trimmed, length `1..100` (matches `Job.pluginVersion @db.VarChar(100)`)
+- `agentCliVersion`: Optional string, trimmed, length `1..100` (matches `Job.agentCliVersion @db.VarChar(100)`)
+- At least one of the two fields must be present; an empty body is rejected with 400
+- Empty strings are rejected — omit the field instead to signal "not captured"
+
+**Response** (200 OK):
+```json
+{
+  "id": 12345,
+  "pluginVersion": "1.0.1",
+  "agentCliVersion": "claude-code 0.5.12"
+}
+```
+
+The response always reflects the post-write state, including any prior values kept by the first-write-wins guard. Both fields are typed `string | null`.
+
+**Errors**:
+- `400`: Invalid job ID format, malformed JSON body, Zod validation failure, or both optional fields absent
+- `401`: Missing or invalid workflow token
+- `404`: Job not found
+- `500`: Unexpected server error
+
+**First-Write-Wins**:
+The endpoint reads the current `pluginVersion` and `agentCliVersion` columns and only writes a field when the column is currently `null`. Subsequent calls with the same `jobId` are no-ops on already-set columns, making the runner's POST safely retryable. Once written, neither column changes for the lifetime of the job.
+
+**Capture Source**:
+The endpoint is called by `.github/scripts/capture-versions.sh` from every agent-invoking workflow, immediately after the sparse checkout of `.claude-plugin/` and before the agent's first productive turn. The script always exits 0; capture failure leaves the corresponding column null and never blocks the job. Partial payloads (only one of the two fields) are valid and produce a partial write.
+
 ## Job Log Endpoints
 
 Job logs capture the agent's normalized execution transcript for a terminated job. Writes are performed by the GitHub Actions runner (workflow token auth); reads are session-authenticated and gated by `verifyTicketAccess`. The full transcript lives in Vercel Blob; only the inline preview and metadata live in Postgres (`JobLog` model).
@@ -723,6 +772,8 @@ The ticket jobs listing includes a `log` object on each row so the timeline can 
       "peakContextTokens": 142000,
       "avgContextTokens": 86500,
       "turnCount": 17,
+      "pluginVersion": "1.0.1",
+      "agentCliVersion": "claude-code 0.5.12",
       "log": {
         "captureStatus": "CAPTURED",
         "preview": "Build failed: Prisma migration 20260422 not applied to target DB"
@@ -738,6 +789,12 @@ The ticket jobs listing includes a `log` object on each row so the timeline can 
 - All three are `null` for jobs run with agents that expose no per-turn telemetry (Mistral today), for jobs whose OTLP stream produced zero successfully-parsed per-turn events, and for jobs that predate per-turn ingestion (no backfill).
 - Gemini jobs may populate `peakContextTokens` while leaving `avgContextTokens` and `turnCount` `null` — Gemini emits cumulative snapshots rather than per-turn deltas, so an average and a turn count are not derivable.
 - All three values are integer token counts. `avgContextTokens` is rounded.
+
+**Version fields** (`pluginVersion`, `agentCliVersion`):
+- Both are `string | null`. They are written exactly once per job by `POST /api/jobs/:id/versions` and surfaced here as additive read-only fields.
+- `pluginVersion` is either a semver (e.g. `"1.0.1"`) or a `"sha:<short>"` fallback. `agentCliVersion` is the agent CLI's reported version string, stored verbatim — no parsing, no validation beyond length.
+- Either or both may be `null` for jobs that pre-date the feature, jobs whose runner-side capture probe failed, or jobs where one branch succeeded and the other did not. The two columns resolve independently.
+- The route adds no new visibility gating: access follows `verifyTicketAccess`, the same rule that governs every other field on this payload.
 
 ```mermaid
 sequenceDiagram

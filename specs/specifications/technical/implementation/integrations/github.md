@@ -779,6 +779,38 @@ cat specs/$BRANCH/.telemetry-context.json
 - Ignored: `.gitignore` entry prevents commit
 - Temporary: Regenerated on every comparison request
 
+### Plugin/CLI Version Capture Script
+
+**Script**: `.github/scripts/capture-versions.sh`
+
+**Purpose**: Record the AI-Board plugin release identifier and the agent CLI's self-reported version on the active `Job` so the ticket detail panel can correlate observed behavior with the stack that produced it.
+
+**Execution Context**:
+- Invoked from `speckit.yml`, `quick-impl.yml`, `verify.yml`, `ai-board-assist.yml`, and `iterate.yml` as the "Capture Plugin/CLI Versions" step
+- Runs immediately after the sparse checkout that brings down `.claude-plugin/`, before the agent's productive work begins
+- The step is gated on `if: ${{ inputs.job_id }}` — capture is skipped on dry runs that have no Job to write against
+- Always exits 0; capture failure can never fail the job (guard contract for FR-004 of AIB-775)
+
+**Required Environment**:
+- `JOB_ID` — numeric Job ID; the only path parameter for the POST
+- `APP_URL` — base URL for `POST /api/jobs/:id/versions`
+- `WORKFLOW_API_TOKEN` — Bearer token authenticating the POST
+- `AGENT_TYPE` — one of `CLAUDE`, `CODEX`, `GEMINI`, `MISTRAL`; selects which CLI to probe
+
+**Process**:
+1. **Plugin probe**: read `.version` from the first matching `.claude-plugin/plugin.json` (under `ai-board/` or the working tree root). When the file is missing or `jq` returns empty, fall back to `sha:<short>` using `git -C <dir> rev-parse --short HEAD`. The result is clipped to 100 characters.
+2. **CLI probe**: install the agent CLI on demand if absent (`npm install -g @anthropic-ai/claude-code` for CLAUDE, `bun add -g @openai/codex` for CODEX, `npm install -g @google/gemini-cli` for GEMINI, `curl … mistral.ai/vibe/install.sh | bash` for MISTRAL — each bounded at 60 s), then run `<cli> --version` with a 5 s timeout. The first non-empty line is trimmed and clipped to 100 characters. Stored verbatim — no parsing.
+3. **POST**: assemble the JSON body with only the fields that probed non-empty. If both probes failed, the script logs a warning and exits without sending. Otherwise it POSTs to `/api/jobs/:JOB_ID/versions` with bounded retry (3 attempts, 1/2/4 s exponential backoff). HTTP 200 is success; 400/401/404 short-circuit the loop (no retry); other transient errors fall through to the next delay.
+
+**Error Handling**:
+- Missing required env var → log to stderr and exit 0
+- Unknown `AGENT_TYPE` → CLI probe is skipped with a structured warning; the plugin probe still runs
+- CLI install or `--version` failure → CLI value stays empty; the POST proceeds with whatever was captured (possibly plugin only)
+- Empty payload (both probes failed) → no POST; warning line written to stderr identifying the job
+- Retry exhaustion → final HTTP code logged; exit 0
+
+**Idempotency**: The endpoint enforces first-write-wins on each column independently, so re-running the script on the same `JOB_ID` cannot overwrite an already-captured value. This makes the bounded retry loop safe and aligns with the immutability contract on `Job.pluginVersion` / `Job.agentCliVersion`.
+
 ### Multi-Repository Workflow Architecture
 
 **Centralized Workflow Management**:

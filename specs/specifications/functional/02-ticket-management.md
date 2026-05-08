@@ -329,6 +329,8 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
   - Cache creation tokens
   - Average per-turn context size — shown only when the job recorded per-turn telemetry; row is hidden entirely (not "—" or "0") otherwise
   - Turn count — shown only when the job recorded per-turn telemetry; row is hidden entirely otherwise
+  - Plugin Version — the AI-Board plugin release identifier (semver from `.claude-plugin/plugin.json`, or `sha:<short>` fallback) captured at job start. Renders the captured string when present, or `-` with a `Non disponible` tooltip when null (jobs that pre-date version capture or where the plugin probe failed)
+  - CLI Version — the agent CLI's reported version string (first line of `<cli> --version`, stored verbatim) captured at job start. Renders the captured string when present, or `-` with a `Non disponible` tooltip when null. The two version rows resolve independently — one may render a value while the other shows the placeholder
 
 **Tools Usage**:
 - Aggregated count of all tools used across jobs

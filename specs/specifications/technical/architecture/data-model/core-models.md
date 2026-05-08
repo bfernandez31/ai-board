@@ -343,6 +343,10 @@ model Job {
   qualityScore        Int?      // Final weighted quality score (0-100)
   qualityScoreDetails String?   @db.Text  // JSON with dimension sub-scores and weights
 
+  // Plugin and agent CLI versions captured at job start (immutable once written)
+  pluginVersion   String? @db.VarChar(100)
+  agentCliVersion String? @db.VarChar(100)
+
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   log         JobLog?
@@ -384,6 +388,8 @@ model Job {
 - `workflowRunId`: GitHub Actions workflow run ID as BigInt (nullable, populated by the workflow's first RUNNING status callback; enables job cancellation via GitHub API)
 - `qualityScore`: Final weighted code quality score 0-100 (nullable, FULL workflow verify jobs only)
 - `qualityScoreDetails`: JSON string containing all five dimension sub-scores, weights, and computed final score (nullable, populated alongside `qualityScore`)
+- `pluginVersion`: AI-Board plugin release identifier active at job start, max 100 chars (nullable). Either a semver read from `.claude-plugin/plugin.json` (e.g. `"1.0.1"`) or, when the file is absent or unparseable, a short Git SHA prefixed with `"sha:"` (e.g. `"sha:7bf6d3a4"`). Stored verbatim — no parsing.
+- `agentCliVersion`: First non-empty line of `<cli> --version` for the agent assigned to the job, trimmed, max 100 chars (nullable). Examples: `"claude-code 0.5.12"`, `"codex 0.20.0"`, `"vibe 0.4.0"`. Stored verbatim — no parsing or format validation.
 
 **Relationships**:
 - Belongs to Ticket (required, cascade delete)
@@ -457,6 +463,12 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - When multiple verify jobs exist (rollback-reset cycles), the UI scans completed verify jobs and displays the score from the latest job by `startedAt`
 - The Stats tab always renders the summary score first; dimension rows are shown only when `qualityScoreDetails` contains one or more parsed dimensions and the user expands the disclosure
 - If `qualityScore` exists but `qualityScoreDetails` is absent or cannot be parsed, the UI still shows the overall score and threshold label without the expandable breakdown
+
+**Version Capture**:
+- `pluginVersion` and `agentCliVersion` are written exactly once per job by `POST /api/jobs/:id/versions` (workflow-token auth). The endpoint applies first-write-wins on each column independently, mirroring the `workflowRunId` pattern: a column already populated cannot be overwritten by a subsequent call
+- Each Zod-validated value is `1..100` characters, aligned with the column's `VarChar(100)` constraint; empty strings are rejected. The two columns are independent — partial captures (one column written, the other left null) are valid and persisted as such
+- The runner captures both values before the agent's first productive turn; capture failure leaves the column null and never blocks the job. No backfill is run on jobs that pre-date this feature
+- Neither column is indexed and neither participates in `WHERE` / `ORDER BY` clauses — they are read-only payload fields surfaced through the ticket-jobs GET into the timeline's expanded breakdown rows
 
 ### JobLog
 
