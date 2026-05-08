@@ -148,6 +148,8 @@ Update job status (workflow-only endpoint).
 {
   "status": "RUNNING",
   "workflowRunId": 12345678901,
+  "pluginVersion": "1.0.1",
+  "agentCliVersion": "1.0.92 (Claude Code)",
   "qualityScore": 83,
   "qualityScoreDetails": "{\"dimensions\":{\"bugDetection\":{\"score\":90,\"weight\":0.30},\"compliance\":{\"score\":80,\"weight\":0.40},\"codeComments\":{\"score\":70,\"weight\":0.20},\"historicalContext\":{\"score\":85,\"weight\":0.10},\"specSync\":{\"score\":95,\"weight\":0.00}},\"finalScore\":83}"
 }
@@ -156,6 +158,8 @@ Update job status (workflow-only endpoint).
 **Validation**:
 - `status`: Required, enum (RUNNING|COMPLETED|FAILED|CANCELLED)
 - `workflowRunId`: Optional BigInt, positive integer; only accepted when `status = "RUNNING"`; written once (first-write-wins — ignored if `workflowRunId` already populated)
+- `pluginVersion`: Optional string, length 1-40; only persisted when `status = "RUNNING"` and the existing column is null; silently ignored on non-RUNNING transitions and on retries (first-write-wins). Workflows omit the field entirely when capture failed — never sent as empty string
+- `agentCliVersion`: Same shape and semantics as `pluginVersion`; carries the first trimmed line of the agent CLI's `--version` output
 - `qualityScore`: Optional, integer 0-100 inclusive; only accepted when `status = "COMPLETED"` for verify jobs; ignored otherwise
 - `qualityScoreDetails`: Optional, JSON string with dimension sub-scores; stored alongside `qualityScore`
 - State machine transitions enforced
@@ -186,6 +190,8 @@ Invalid transitions return 400 error
 ```
 
 **Workflow self-abort on cancel**: When a workflow sends a RUNNING status update for a job that has already been marked CANCELLED (e.g., user cancelled a PENDING job before it started), the endpoint returns 409. Workflows must check the response status and abort if they receive 409.
+
+**Runtime-version capture flow**: Workflows that dispatch an agent (`speckit.yml`, `verify.yml`, `quick-impl.yml`, `iterate.yml`, `ai-board-assist.yml`) issue two RUNNING PATCH calls per job. The first runs before `run-agent.sh` and carries only `status` and `workflowRunId` — preserving the early 409 cancellation gate. The second runs after `run-agent.sh` (gated `if: always() && (env.PLUGIN_VERSION != '' || env.AGENT_CLI_VERSION != '')`) and carries the captured `pluginVersion` / `agentCliVersion` alongside `status: 'RUNNING'`. The handler's status idempotency check returns 200 immediately on the second call; only the still-null version columns are written. The second PATCH is best-effort (`|| true`), so a network failure on the version update never blocks the workflow.
 
 **Auto-transition hook** (terminal statuses only): After the job row is persisted and the push notification is dispatched, the endpoint invokes a fire-and-log side effect that drives ticket auto-mode:
 - Loads `job.command` and the parent ticket's `stage`, `workflowType`, `autoMode`, `projectId`
@@ -723,6 +729,8 @@ The ticket jobs listing includes a `log` object on each row so the timeline can 
       "peakContextTokens": 142000,
       "avgContextTokens": 86500,
       "turnCount": 17,
+      "pluginVersion": "1.0.1",
+      "agentCliVersion": "1.0.92 (Claude Code)",
       "log": {
         "captureStatus": "CAPTURED",
         "preview": "Build failed: Prisma migration 20260422 not applied to target DB"
@@ -732,7 +740,7 @@ The ticket jobs listing includes a `log` object on each row so the timeline can 
 }
 ```
 
-`log` is `null` when no log record exists yet (e.g., a still-RUNNING job or capture in flight).
+`log` is `null` when no log record exists yet (e.g., a still-RUNNING job or capture in flight). `pluginVersion` and `agentCliVersion` are always emitted as either a string or `null` — the keys are never omitted.
 
 **Per-turn context fields** (`peakContextTokens`, `avgContextTokens`, `turnCount`):
 - All three are `null` for jobs run with agents that expose no per-turn telemetry (Mistral today), for jobs whose OTLP stream produced zero successfully-parsed per-turn events, and for jobs that predate per-turn ingestion (no backfill).

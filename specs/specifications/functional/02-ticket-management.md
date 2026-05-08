@@ -321,6 +321,8 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
   - Duration (formatted time)
   - Cost (formatted USD)
   - Model used (e.g., "claude-sonnet-4-5")
+  - Plugin version badge — compact badge showing the AI-Board plugin version that ran the job (e.g., "1.0.1"). Always rendered in the same metric zone as the model badge; shows a hyphen-minus placeholder ("-") when the value is missing (older job, capture failure, or capture not yet completed) so the layout stays stable
+  - Agent CLI version badge — compact badge showing the agent CLI version that executed the job (first line of the binary's `--version` output, e.g., "1.0.92 (Claude Code)"). Same placeholder behavior as the plugin version badge
   - Peak context pill — compact badge showing the maximum per-turn context size observed during the run (formatted as an abbreviated token count). Hover reveals the absolute token count and the percentage of the model's context window. The pill uses neutral styling below 60% of the model's context window, warning styling between 60% and 80%, and danger styling at or above 80%. The pill is hidden entirely (no placeholder, no zero) for jobs run with agents that expose no per-turn telemetry (Mistral), for jobs whose model has no registered context window, and for jobs that predate per-turn ingestion
 - Jobs are expandable to reveal detailed token breakdown:
   - Input tokens

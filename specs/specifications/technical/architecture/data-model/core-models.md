@@ -343,6 +343,10 @@ model Job {
   qualityScore        Int?      // Final weighted quality score (0-100)
   qualityScoreDetails String?   @db.Text  // JSON with dimension sub-scores and weights
 
+  // Runtime version capture (populated on the first RUNNING callback)
+  pluginVersion       String?   @db.VarChar(40)  // AI-Board plugin manifest version at job start
+  agentCliVersion     String?   @db.VarChar(40)  // Agent CLI first-line --version output at job start
+
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   log         JobLog?
@@ -384,6 +388,8 @@ model Job {
 - `workflowRunId`: GitHub Actions workflow run ID as BigInt (nullable, populated by the workflow's first RUNNING status callback; enables job cancellation via GitHub API)
 - `qualityScore`: Final weighted code quality score 0-100 (nullable, FULL workflow verify jobs only)
 - `qualityScoreDetails`: JSON string containing all five dimension sub-scores, weights, and computed final score (nullable, populated alongside `qualityScore`)
+- `pluginVersion`: AI-Board plugin manifest version captured at job start (max 40 chars, nullable). Read from `.claude-plugin/plugin.json` `.version` by the runner; null when the manifest is missing, the field is empty, or the job predates this capture
+- `agentCliVersion`: Resolved agent CLI version captured at job start (max 40 chars, nullable). First trimmed line of the agent binary's `--version` output (`claude`, `codex`, `vibe`, or `gemini`); null when the binary is missing, exits non-zero, prints nothing, or the job predates this capture
 
 **Relationships**:
 - Belongs to Ticket (required, cascade delete)
@@ -415,6 +421,7 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
   - Deleted when a rollback transition occurs (job record removed as part of rollback)
 - AI-BOARD jobs (command like 'comment-%') don't block transitions or count toward rollback validation
 - `workflowRunId` is set once (first-write-wins) when the workflow sends its first RUNNING callback; subsequent RUNNING callbacks with a run ID are ignored if already populated
+- `pluginVersion` and `agentCliVersion` follow the same first-write-wins semantics as `workflowRunId`: persisted only on RUNNING callbacks, only when the existing column is null, and only when the body field is present. They are silently ignored on non-RUNNING transitions and on retried RUNNING callbacks. Capture failures leave the column null — no sentinel string is ever stored, and no backfill runs against pre-feature jobs
 - When a PENDING job is cancelled before `workflowRunId` is set, any subsequent RUNNING callback for that job receives a 409 response, signalling the workflow to self-abort
 - Users can cancel RUNNING or PENDING jobs via `POST /api/jobs/:id/cancel` (session auth); cancellation calls the GitHub Actions API for RUNNING jobs or marks CANCELLED directly for PENDING jobs
 

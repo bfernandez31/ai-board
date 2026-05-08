@@ -251,6 +251,16 @@ The `run-agent.sh` script abstracts CLI differences:
 | **Model** | `ANTHROPIC_MODEL` env var | `CODEX_MODEL` env var (default: `gpt-5.4`) | CLI default / configured by vibe | CLI default / configured by Gemini runtime |
 | **Reasoning** | N/A (built-in) | `CODEX_REASONING` env var (default: `high`) | N/A | N/A |
 | **Auth** | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` | `MISTRAL_API_KEY` | `GEMINI_API_KEY` or `GEMINI_OAUTH_JSON` |
+| **Version capture binary** | `claude --version` | `codex --version` | `vibe --version` | `gemini --version` |
+
+### Runtime Version Capture
+
+`dispatch_agent` in `run-agent.sh` captures two runtime identifiers per job, before invoking the agent's main task, so the persisted values reflect the runtime that actually executed:
+
+- **Plugin version**: `read_plugin_version` reads `.version` from `.claude-plugin/plugin.json` (truncated to 40 chars). Missing manifest or missing field → empty stdout.
+- **Agent CLI version**: `capture_cli_version <binary>` runs `<binary> --version 2>/dev/null | head -1 | tr -d '\n' | cut -c1-40`. Missing binary, non-zero exit, or empty output → empty stdout.
+
+Both captures are best-effort: helpers never exit non-zero, log via `log_info` (not `log_error`), and never block the agent task. Captured values are exported to the parent workflow through `$GITHUB_ENV` (`PLUGIN_VERSION`, `AGENT_CLI_VERSION`) and a follow-up "Update Job Versions" step PATCHes them onto the job via the existing `/api/jobs/:id/status` endpoint with `|| true` so a network failure cannot fail the workflow. See `api/endpoints/jobs.md` ("Runtime-version capture flow") for the API-side persistence semantics.
 
 ### Command Compatibility
 
