@@ -43,13 +43,23 @@ export async function PUT(
       id: true,
       projectId: true,
       ticketId: true,
-      ticket: { select: { agent: true } },
+      ticket: {
+        select: {
+          agent: true,
+          project: { select: { defaultAgent: true } },
+        },
+      },
     },
   });
   if (!job) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
-  if (job.ticket?.agent !== 'CLAUDE') {
+  // Ticket.agent is nullable; workflow dispatch resolves to project.defaultAgent
+  // when unset. Mirror that fallback so jobs that ran under Claude via project
+  // default are accepted instead of returning 409 AGENT_NOT_CLAUDE.
+  const effectiveAgent =
+    job.ticket?.agent ?? job.ticket?.project?.defaultAgent ?? 'CLAUDE';
+  if (effectiveAgent !== 'CLAUDE') {
     return NextResponse.json(
       { error: 'Raw artifact not allowed for non-Claude job', code: 'AGENT_NOT_CLAUDE' },
       { status: 409 }

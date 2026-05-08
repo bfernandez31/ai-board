@@ -308,4 +308,36 @@ describe('redactNativeJsonl', () => {
     expect(parsed[1]).toContain('[REDACTED:anthropic_key]');
     expect(parsed[2].nested).toContain('[REDACTED:google_key]');
   });
+
+  // FR-002 acceptance: native Claude Code fields must survive redaction so
+  // downstream consumers can still rely on them. Spec §63 mandates this.
+  it('preserves native Claude Code session fields through redaction', () => {
+    const line = JSON.stringify({
+      type: 'assistant',
+      uuid: 'aaaa-bbbb-cccc-dddd',
+      parentUuid: 'eeee-ffff-0000-1111',
+      sessionId: 'session-12345',
+      isSidechain: false,
+      cwd: '/workspace/repo',
+      gitBranch: 'main',
+      version: '1.0.42',
+      usage: { input_tokens: 100, output_tokens: 50, cache_read_input_tokens: 10 },
+      message: { content: 'token=ghp_1234567890abcdefghij' },
+    });
+    const out = redactNativeJsonl(line);
+    const parsed = JSON.parse(out);
+    expect(parsed.uuid).toBe('aaaa-bbbb-cccc-dddd');
+    expect(parsed.parentUuid).toBe('eeee-ffff-0000-1111');
+    expect(parsed.sessionId).toBe('session-12345');
+    expect(parsed.isSidechain).toBe(false);
+    expect(parsed.cwd).toBe('/workspace/repo');
+    expect(parsed.gitBranch).toBe('main');
+    expect(parsed.version).toBe('1.0.42');
+    expect(parsed.usage).toEqual({
+      input_tokens: 100,
+      output_tokens: 50,
+      cache_read_input_tokens: 10,
+    });
+    expect(parsed.message.content).toContain('[REDACTED:github_token]');
+  });
 });

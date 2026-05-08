@@ -41,16 +41,17 @@ export async function GET(
       id: true,
       ticketId: true,
       projectId: true,
-      ticket: { select: { agent: true } },
     },
   });
   if (!job || job.ticketId !== ticketId || job.projectId !== projectId) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
-  if (job.ticket?.agent !== 'CLAUDE') {
-    return NextResponse.json({ error: 'Artifact not available' }, { status: 404 });
-  }
 
+  // Gate on immutable jobLog.rawArtifactKey rather than the mutable
+  // ticket.agent so historical Claude raw artifacts remain readable even if
+  // the ticket's agent is later switched. Non-Claude jobs never have a
+  // rawArtifactKey persisted (the upload route blocks them), so this naturally
+  // returns 404 for non-Claude.
   const log = await prisma.jobLog.findUnique({
     where: { jobId },
     select: { captureStatus: true, rawArtifactKey: true },

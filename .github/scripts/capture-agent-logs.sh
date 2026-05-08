@@ -269,12 +269,17 @@ writeFileSync('${RAW_REDACTED}', out);
     gzip -c "${RAW_REDACTED}" > "${RAW_ARTIFACT}"
     RAW_ARTIFACT_SIZE=$(stat -c%s "${RAW_ARTIFACT}" 2>/dev/null || stat -f%z "${RAW_ARTIFACT}" 2>/dev/null || wc -c < "${RAW_ARTIFACT}")
 
+    # Namespace by JOB_ID so concurrent capture runs on the same runner can't
+    # clobber each other's responses (which would commit one job's
+    # rawArtifactKey to another job's summary and orphan the original blob).
+    RAW_UPLOAD_RESPONSE="${TMPDIR}/raw-upload-response-${JOB_ID}.json"
+
     put_raw_artifact() {
       local attempt=0
       local delay=1
       while [[ ${attempt} -lt 3 ]]; do
         local code
-        code=$(curl -sS -o /tmp/raw-upload-response.json -w "%{http_code}" \
+        code=$(curl -sS -o "${RAW_UPLOAD_RESPONSE}" -w "%{http_code}" \
           -X PUT "${APP_URL}/api/jobs/${JOB_ID}/logs/raw-artifact" \
           -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
           -H "Content-Type: application/gzip" \
@@ -294,17 +299,30 @@ writeFileSync('${RAW_REDACTED}', out);
       return 1
     }
 
+    # If the PUT returned 201 but we can't extract rawArtifactKey, the Blob
+    # object exists but no JobLog row will reference it. Proactively DELETE
+    # the orphan via the workflow endpoint (server re-derives the canonical
+    # key) so storage doesn't leak.
+    delete_orphan_raw_artifact() {
+      curl -sS -o /dev/null -w "%{http_code}" \
+        -X DELETE "${APP_URL}/api/jobs/${JOB_ID}/logs/raw-artifact" \
+        -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+        >/dev/null 2>&1 || true
+    }
+
     if put_raw_artifact; then
       RAW_ARTIFACT_KEY=$(node --input-type=module -e "
 import { readFileSync } from 'node:fs';
 try {
-  const data = JSON.parse(readFileSync('/tmp/raw-upload-response.json', 'utf-8'));
+  const data = JSON.parse(readFileSync('${RAW_UPLOAD_RESPONSE}', 'utf-8'));
   if (typeof data.rawArtifactKey === 'string') process.stdout.write(data.rawArtifactKey);
 } catch {}
 " 2>/dev/null)
       if [[ -n "${RAW_ARTIFACT_KEY}" ]]; then
         echo "capture-agent-logs: raw_capture ok jobId=${JOB_ID} size=${RAW_ARTIFACT_SIZE}"
       else
+        echo "capture-agent-logs: raw_capture FAILED reason=missing_raw_artifact_key jobId=${JOB_ID}" >&2
+        delete_orphan_raw_artifact
         RAW_ARTIFACT_KEY=""
         RAW_ARTIFACT_SIZE=0
       fi
@@ -312,6 +330,7 @@ try {
       RAW_ARTIFACT_KEY=""
       RAW_ARTIFACT_SIZE=0
     fi
+    rm -f "${RAW_UPLOAD_RESPONSE}" 2>/dev/null || true
   fi
 fi
 

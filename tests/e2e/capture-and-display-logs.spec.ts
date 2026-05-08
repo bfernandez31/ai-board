@@ -96,4 +96,107 @@ test.describe('AIB-715 capture and display logs', () => {
     const sheet = page.locator('[data-testid="log-viewer-sheet"]');
     await expect(sheet).toBeVisible();
   });
+
+  test('raw-native endpoint serves Claude raw artifacts and 404s on Codex jobs', async ({
+    page,
+    projectId,
+  }) => {
+    const projectKey = getProjectKey(projectId);
+
+    const claudeTicket = await prisma.ticket.create({
+      data: {
+        ticketNumber: ticketNumber++,
+        ticketKey: `${projectKey}-${ticketNumber}`,
+        projectId,
+        title: '[e2e] AIB-783 raw-native Claude',
+        description: 'Seeded Claude job with raw artifact for raw-native E2E.',
+        stage: 'VERIFY',
+        agent: 'CLAUDE',
+        updatedAt: new Date(),
+      },
+    });
+    const claudeJob = await prisma.job.create({
+      data: {
+        ticketId: claudeTicket.id,
+        projectId,
+        command: 'implement',
+        status: 'COMPLETED',
+        startedAt: new Date(),
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    await prisma.jobLog.create({
+      data: {
+        jobId: claudeJob.id,
+        captureStatus: 'CAPTURED',
+        preview: 'raw-native happy path',
+        schemaVersion: 1,
+        eventCount: 1,
+        errorCount: 0,
+        artifactKey: `logs/${projectId}/${claudeTicket.id}/${claudeJob.id}.jsonl.gz`,
+        artifactSize: 100,
+        rawArtifactKey: `raw-logs/${projectId}/${claudeTicket.id}/${claudeJob.id}.jsonl.gz`,
+        rawArtifactSize: 200,
+      },
+    });
+
+    const codexTicket = await prisma.ticket.create({
+      data: {
+        ticketNumber: ticketNumber++,
+        ticketKey: `${projectKey}-${ticketNumber}`,
+        projectId,
+        title: '[e2e] AIB-783 raw-native Codex',
+        description: 'Seeded Codex job (no raw artifact) for raw-native E2E.',
+        stage: 'VERIFY',
+        agent: 'CODEX',
+        updatedAt: new Date(),
+      },
+    });
+    const codexJob = await prisma.job.create({
+      data: {
+        ticketId: codexTicket.id,
+        projectId,
+        command: 'implement',
+        status: 'COMPLETED',
+        startedAt: new Date(),
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    await prisma.jobLog.create({
+      data: {
+        jobId: codexJob.id,
+        captureStatus: 'CAPTURED',
+        preview: 'codex job no raw',
+        schemaVersion: 1,
+        eventCount: 1,
+        errorCount: 0,
+        artifactKey: `logs/${projectId}/${codexTicket.id}/${codexJob.id}.jsonl.gz`,
+        artifactSize: 100,
+      },
+    });
+
+    // Authenticate the request fixture by visiting any page first (sets cookies / test-user header).
+    await page.goto(`/projects/${projectId}/board`);
+
+    // Codex job has no rawArtifactKey, so the route must return 404.
+    const codexRes = await page.request.get(
+      `/api/projects/${projectId}/tickets/${codexTicket.id}/jobs/${codexJob.id}/logs/raw-native`,
+    );
+    expect(codexRes.status()).toBe(404);
+
+    // Claude job's raw artifact exists in DB; route returns 200 (gzip) when
+    // Blob is configured, 502 BLOB_UNREACHABLE otherwise. Either response
+    // demonstrates the route wiring (auth, key derivation, agent gate)
+    // resolved correctly past the 404 cases — same philosophy as the viewer
+    // wiring assertion above.
+    const claudeRes = await page.request.get(
+      `/api/projects/${projectId}/tickets/${claudeTicket.id}/jobs/${claudeJob.id}/logs/raw-native`,
+    );
+    expect([200, 502]).toContain(claudeRes.status());
+    if (claudeRes.status() === 200) {
+      expect(claudeRes.headers()['content-type']).toBe('application/gzip');
+    }
+  });
 });
