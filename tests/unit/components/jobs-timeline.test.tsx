@@ -36,6 +36,8 @@ function makeJob(overrides: Partial<TicketJobWithTelemetry> = {}): TicketJobWith
     peakContextTokens: null,
     avgContextTokens: null,
     turnCount: null,
+    pluginVersion: null,
+    agentCliVersion: null,
     log: null,
     ...overrides,
   };
@@ -86,5 +88,77 @@ describe('JobsTimeline — expanded breakdown rows (US3)', () => {
     const details = screen.getByTestId(`job-details-${job.id}`);
     expect(details.textContent).not.toMatch(/Avg Context/i);
     expect(details.textContent).not.toMatch(/Turn Count/i);
+  });
+});
+
+describe('JobsTimeline — plugin & CLI version rows (AIB-775)', () => {
+  it('renders both versions with no "Non disponible" tooltip when both fields are set (US-1)', async () => {
+    const job = makeJob({
+      pluginVersion: '1.0.1',
+      agentCliVersion: 'claude-code 0.5.12',
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+    await userEvent.click(screen.getByTestId(`job-row-${job.id}`));
+
+    const details = screen.getByTestId(`job-details-${job.id}`);
+    expect(details).toHaveTextContent(/Plugin Version/i);
+    expect(details).toHaveTextContent('1.0.1');
+    expect(details).toHaveTextContent(/CLI Version/i);
+    expect(details).toHaveTextContent('claude-code 0.5.12');
+
+    const pluginRow = screen.getByTestId(`job-plugin-version-${job.id}`);
+    expect(pluginRow).not.toHaveAttribute('title');
+    const cliRow = screen.getByTestId(`job-cli-version-${job.id}`);
+    expect(cliRow).not.toHaveAttribute('title');
+  });
+
+  it('renders "-" with title="Non disponible" when both versions are null (US-2 #1 / #2)', async () => {
+    const job = makeJob({
+      pluginVersion: null,
+      agentCliVersion: null,
+      // Force the row to be expandable since version-only rows must trigger expansion
+      inputTokens: 100,
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+    await userEvent.click(screen.getByTestId(`job-row-${job.id}`));
+
+    const details = screen.getByTestId(`job-details-${job.id}`);
+    expect(details).toHaveTextContent(/Plugin Version/i);
+    expect(details).toHaveTextContent(/CLI Version/i);
+
+    const pluginRow = screen.getByTestId(`job-plugin-version-${job.id}`);
+    expect(pluginRow).toHaveAttribute('title', 'Non disponible');
+    expect(pluginRow.textContent).toMatch(/-/);
+    const cliRow = screen.getByTestId(`job-cli-version-${job.id}`);
+    expect(cliRow).toHaveAttribute('title', 'Non disponible');
+    expect(cliRow.textContent).toMatch(/-/);
+  });
+
+  it('renders partial-null state: plugin set, CLI null with tooltip (US-2 #3)', async () => {
+    const job = makeJob({
+      pluginVersion: '1.0.1',
+      agentCliVersion: null,
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+    await userEvent.click(screen.getByTestId(`job-row-${job.id}`));
+
+    const pluginRow = screen.getByTestId(`job-plugin-version-${job.id}`);
+    expect(pluginRow).not.toHaveAttribute('title');
+    expect(pluginRow).toHaveTextContent('1.0.1');
+
+    const cliRow = screen.getByTestId(`job-cli-version-${job.id}`);
+    expect(cliRow).toHaveAttribute('title', 'Non disponible');
+    expect(cliRow.textContent).toMatch(/-/);
+  });
+
+  it('expands a job that has only versions set (no telemetry, no preview)', async () => {
+    const job = makeJob({
+      pluginVersion: '1.0.1',
+      agentCliVersion: 'claude-code 0.5.12',
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+    await userEvent.click(screen.getByTestId(`job-row-${job.id}`));
+
+    expect(screen.getByTestId(`job-details-${job.id}`)).toBeInTheDocument();
   });
 });

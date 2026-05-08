@@ -19,9 +19,9 @@
 
 **Purpose**: Persist the two new optional version columns on `Job` so the rest of the stack can read/write them.
 
-- [ ] T001 Add `pluginVersion String? @db.VarChar(100)` and `agentCliVersion String? @db.VarChar(100)` to the `Job` model in `prisma/schema.prisma` (existing model lines 29-75)
-- [ ] T002 Generate the migration via `bunx prisma migrate dev --name add_job_versions` (creates `prisma/migrations/<timestamp>_add_job_versions/migration.sql`)
-- [ ] T003 Run `bunx prisma generate` to refresh `@prisma/client` types so `Job.pluginVersion` / `Job.agentCliVersion` are available across the codebase
+- [X] T001 ✅ DONE Add `pluginVersion String? @db.VarChar(100)` and `agentCliVersion String? @db.VarChar(100)` to the `Job` model in `prisma/schema.prisma` (existing model lines 29-75)
+- [X] T002 ✅ DONE Generate the migration via `bunx prisma migrate dev --name add_job_versions` (creates `prisma/migrations/<timestamp>_add_job_versions/migration.sql`)
+- [X] T003 ✅ DONE Run `bunx prisma generate` to refresh `@prisma/client` types so `Job.pluginVersion` / `Job.agentCliVersion` are available across the codebase
 
 ---
 
@@ -31,8 +31,8 @@
 
 **⚠️ CRITICAL**: No user story work begins until Phase 2 is complete.
 
-- [ ] T004 [P] Extend the `TicketJobWithTelemetry` interface in `lib/types/job-types.ts` (existing lines 55-76) by appending `pluginVersion: string | null;` and `agentCliVersion: string | null;` so the wider GET payload flows through `TicketStats` → `JobsTimeline` → `JobRow` without further type edits
-- [ ] T005 [P] Create the Zod validator at `app/lib/job-versions-validator.ts` exporting `jobVersionsUpdateSchema` — each field `z.string().trim().min(1).max(100).optional()`, plus a `.refine` guaranteeing at least one of `pluginVersion`/`agentCliVersion` is provided (constitution §IV: `max(100)` mirrors `@db.VarChar(100)`)
+- [X] T004 ✅ DONE [P] Extend the `TicketJobWithTelemetry` interface in `lib/types/job-types.ts` (existing lines 55-76) by appending `pluginVersion: string | null;` and `agentCliVersion: string | null;` so the wider GET payload flows through `TicketStats` → `JobsTimeline` → `JobRow` without further type edits
+- [X] T005 ✅ DONE [P] Create the Zod validator at `app/lib/job-versions-validator.ts` exporting `jobVersionsUpdateSchema` — each field `z.string().trim().min(1).max(100).optional()`, plus a `.refine` guaranteeing at least one of `pluginVersion`/`agentCliVersion` is provided (constitution §IV: `max(100)` mirrors `@db.VarChar(100)`)
 
 **Checkpoint**: Foundation ready — user story work can now begin.
 
@@ -49,17 +49,17 @@
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation.**
 **RULE (constitution): "Search existing tests FIRST — extend, don't duplicate." File paths below come from research.md §2.6.**
 
-- [ ] T006 [P] [US1] Create endpoint integration tests in `tests/integration/api/jobs/versions-post.test.ts` (new file — no existing file owns this domain; mirrors AIB-715's `logs-post.test.ts` naming) covering: 401 on missing/invalid `Authorization` bearer; 400 on Zod violation (empty string, >100 chars, neither field provided); 404 on unknown job ID; 200 success returns `{ id, pluginVersion, agentCliVersion }`; first-write-wins (a second POST with different values returns the originally stored values)
-- [ ] T007 [US1] Extend the existing `describe('GET /api/projects/:projectId/tickets/:id/jobs')` in `tests/integration/jobs/ticket-jobs.test.ts` with a new `it('exposes pluginVersion and agentCliVersion through the GET payload', …)` that seeds versions through the new POST endpoint and asserts both fields are returned by the GET round-trip
-- [ ] T008 [US1] Extend `tests/unit/components/jobs-timeline.test.tsx` — first grow the local `makeJob()` factory (lines 18-42) with `pluginVersion: null, agentCliVersion: null` defaults so existing tests still pass — then add an `it(…)` case asserting both version values render with no `title` attribute when both fields are set
+- [X] T006 ✅ DONE [P] [US1] Create endpoint integration tests in `tests/integration/api/jobs/versions-post.test.ts` (new file — no existing file owns this domain; mirrors AIB-715's `logs-post.test.ts` naming) covering: 401 on missing/invalid `Authorization` bearer; 400 on Zod violation (empty string, >100 chars, neither field provided); 404 on unknown job ID; 200 success returns `{ id, pluginVersion, agentCliVersion }`; first-write-wins (a second POST with different values returns the originally stored values)
+- [X] T007 ✅ DONE [US1] Extend the existing `describe('GET /api/projects/:projectId/tickets/:id/jobs')` in `tests/integration/jobs/ticket-jobs.test.ts` with a new `it('exposes pluginVersion and agentCliVersion through the GET payload', …)` that seeds versions through the new POST endpoint and asserts both fields are returned by the GET round-trip
+- [X] T008 ✅ DONE [US1] Extend `tests/unit/components/jobs-timeline.test.tsx` — first grow the local `makeJob()` factory (lines 18-42) with `pluginVersion: null, agentCliVersion: null` defaults so existing tests still pass — then add an `it(…)` case asserting both version values render with no `title` attribute when both fields are set
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Create the POST handler at `app/api/jobs/[id]/versions/route.ts` mirroring the recipe from `app/api/jobs/[id]/status/route.ts:46-326`: call `validateWorkflowAuth`, parse the path param with `parseInt`, Zod-parse the body via `jobVersionsUpdateSchema` (T005), `prisma.job.findUnique({ select: { id, pluginVersion, agentCliVersion } })` for 404 check, build first-write-wins `updateData` per `data-model.md` §"Immutability", `prisma.job.update`, return `{ id, pluginVersion, agentCliVersion }`; structured `{ error, details? }` envelopes; `console.error('[Job Versions] …')` log prefix
-- [ ] T010 [US1] Extend the GET handler at `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts` to include `pluginVersion` and `agentCliVersion` in the Prisma `select` so they appear on every element of the returned `TicketJobWithTelemetry[]`
-- [ ] T011 [US1] Extend `components/ticket/jobs-timeline.tsx` `JobRow` (existing lines 81-308) — inside the breakdown grid (`<div className="grid grid-cols-2 gap-4 text-sm">`, lines 201-244) add two new rows: `Plugin Version` and `CLI Version`, each rendering `job.pluginVersion ?? '-'` / `job.agentCliVersion ?? '-'` with `title="Non disponible"` only when the value is null, using `text-ctp-overlay0` for labels and `text-foreground font-medium` for values (matches surrounding rows); ALSO widen the `hasTelemetry` predicate at line 100 to include `job.pluginVersion != null || job.agentCliVersion != null` so jobs with versions but no telemetry still expand
-- [ ] T012 [P] [US1] Create the runner script `.github/scripts/capture-versions.sh` per `specs/AIB-775-tracer-et-afficher/workflows/version-capture-script.md` — `set -o pipefail` only (NO `set -e`), REQUIRED_VARS guard (`JOB_ID`, `APP_URL`, `WORKFLOW_API_TOKEN`, `AGENT_TYPE`), plugin-version probe (`jq -r '.version' .claude-plugin/plugin.json` then `git rev-parse --short HEAD` fallback prefixed `sha:`), per-agent CLI install (60 s timeout) + `<cli> --version` probe (5 s timeout) for `CLAUDE|CODEX|GEMINI|MISTRAL`, build conditional payload omitting empty fields, POST to `${APP_URL}/api/jobs/${JOB_ID}/versions` with `Authorization: Bearer ${WORKFLOW_API_TOKEN}` and 3-attempt 1/2/4 s backoff, always `exit 0`; mark executable (`chmod +x`)
-- [ ] T013 [US1] Insert a new `- name: Capture Plugin/CLI Versions` step in `.github/workflows/verify.yml` after "Update Job Status - Running" (lines 205-218) and after "Checkout ai-board (sparse - plugin only)" (lines 263-271), gated only on `if: ${{ inputs.job_id }}` (NOT `SKIP_EXECUTION`), env `JOB_ID/APP_URL/WORKFLOW_API_TOKEN/AGENT_TYPE`, `run: bash ai-board/.github/scripts/capture-versions.sh`
+- [X] T009 ✅ DONE [US1] Create the POST handler at `app/api/jobs/[id]/versions/route.ts` mirroring the recipe from `app/api/jobs/[id]/status/route.ts:46-326`: call `validateWorkflowAuth`, parse the path param with `parseInt`, Zod-parse the body via `jobVersionsUpdateSchema` (T005), `prisma.job.findUnique({ select: { id, pluginVersion, agentCliVersion } })` for 404 check, build first-write-wins `updateData` per `data-model.md` §"Immutability", `prisma.job.update`, return `{ id, pluginVersion, agentCliVersion }`; structured `{ error, details? }` envelopes; `console.error('[Job Versions] …')` log prefix
+- [X] T010 ✅ DONE [US1] Extend the GET handler at `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts` to include `pluginVersion` and `agentCliVersion` in the Prisma `select` so they appear on every element of the returned `TicketJobWithTelemetry[]`
+- [X] T011 ✅ DONE [US1] Extend `components/ticket/jobs-timeline.tsx` `JobRow` (existing lines 81-308) — inside the breakdown grid (`<div className="grid grid-cols-2 gap-4 text-sm">`, lines 201-244) add two new rows: `Plugin Version` and `CLI Version`, each rendering `job.pluginVersion ?? '-'` / `job.agentCliVersion ?? '-'` with `title="Non disponible"` only when the value is null, using `text-ctp-overlay0` for labels and `text-foreground font-medium` for values (matches surrounding rows); ALSO widen the `hasTelemetry` predicate at line 100 to include `job.pluginVersion != null || job.agentCliVersion != null` so jobs with versions but no telemetry still expand
+- [X] T012 ✅ DONE [P] [US1] Create the runner script `.github/scripts/capture-versions.sh` per `specs/AIB-775-tracer-et-afficher/workflows/version-capture-script.md` — `set -o pipefail` only (NO `set -e`), REQUIRED_VARS guard (`JOB_ID`, `APP_URL`, `WORKFLOW_API_TOKEN`, `AGENT_TYPE`), plugin-version probe (`jq -r '.version' .claude-plugin/plugin.json` then `git rev-parse --short HEAD` fallback prefixed `sha:`), per-agent CLI install (60 s timeout) + `<cli> --version` probe (5 s timeout) for `CLAUDE|CODEX|GEMINI|MISTRAL`, build conditional payload omitting empty fields, POST to `${APP_URL}/api/jobs/${JOB_ID}/versions` with `Authorization: Bearer ${WORKFLOW_API_TOKEN}` and 3-attempt 1/2/4 s backoff, always `exit 0`; mark executable (`chmod +x`)
+- [X] T013 ✅ DONE [US1] Insert a new `- name: Capture Plugin/CLI Versions` step in `.github/workflows/verify.yml` after "Update Job Status - Running" (lines 205-218) and after "Checkout ai-board (sparse - plugin only)" (lines 263-271), gated only on `if: ${{ inputs.job_id }}` (NOT `SKIP_EXECUTION`), env `JOB_ID/APP_URL/WORKFLOW_API_TOKEN/AGENT_TYPE`, `run: bash ai-board/.github/scripts/capture-versions.sh`
 
 **Checkpoint**: User Story 1 is fully functional — a fresh `verify` run captures and displays both versions in the job detail panel.
 
@@ -75,8 +75,8 @@
 
 **NOTE: The implementation in T011 already handles null rendering. These tests pin the contract.**
 
-- [ ] T014 [US2] Extend `tests/unit/components/jobs-timeline.test.tsx` with an `it(…)` case asserting that when `pluginVersion` and `agentCliVersion` are both `null` the rows render `'-'` and the wrapping element carries `title="Non disponible"` (covers US-2 #1 and US-2 #2 — pre-feature job and capture failure render identically)
-- [ ] T015 [US2] Extend `tests/unit/components/jobs-timeline.test.tsx` with an `it(…)` case asserting partial-null rendering: when only `pluginVersion` is set, the plugin row shows the captured value with no `title` attribute and the CLI row shows `'-'` with `title="Non disponible"` (covers US-2 #3)
+- [X] T014 ✅ DONE [US2] Extend `tests/unit/components/jobs-timeline.test.tsx` with an `it(…)` case asserting that when `pluginVersion` and `agentCliVersion` are both `null` the rows render `'-'` and the wrapping element carries `title="Non disponible"` (covers US-2 #1 and US-2 #2 — pre-feature job and capture failure render identically)
+- [X] T015 ✅ DONE [US2] Extend `tests/unit/components/jobs-timeline.test.tsx` with an `it(…)` case asserting partial-null rendering: when only `pluginVersion` is set, the plugin row shows the captured value with no `title` attribute and the CLI row shows `'-'` with `title="Non disponible"` (covers US-2 #3)
 
 ### Implementation for User Story 2
 
@@ -94,15 +94,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T016 [US3] Extend `tests/integration/api/jobs/versions-post.test.ts` with an `it(…)` case that creates one job per supported agent (CLAUDE, CODEX, MISTRAL, GEMINI) and asserts the POST endpoint accepts the same payload shape on each, regardless of the underlying `agent` field (covers US-3 #1 — all four agents)
-- [ ] T017 [US3] Extend `tests/integration/api/jobs/versions-post.test.ts` with an `it(…)` case asserting versions are visible immediately after the POST while the job is still in a non-terminal state (RUNNING) — i.e. the GET payload exposes them without waiting for the job to complete (covers US-3 #2 — visible at start, not only at end)
+- [X] T016 ✅ DONE [US3] Extend `tests/integration/api/jobs/versions-post.test.ts` with an `it(…)` case that creates one job per supported agent (CLAUDE, CODEX, MISTRAL, GEMINI) and asserts the POST endpoint accepts the same payload shape on each, regardless of the underlying `agent` field (covers US-3 #1 — all four agents)
+- [X] T017 ✅ DONE [US3] Extend `tests/integration/api/jobs/versions-post.test.ts` with an `it(…)` case asserting versions are visible immediately after the POST while the job is still in a non-terminal state (RUNNING) — i.e. the GET payload exposes them without waiting for the job to complete (covers US-3 #2 — visible at start, not only at end)
 
 ### Implementation for User Story 3
 
-- [ ] T018 [P] [US3] Insert the "Capture Plugin/CLI Versions" step in `.github/workflows/speckit.yml` at the same anchors and with the same shape as T013
-- [ ] T019 [P] [US3] Insert the "Capture Plugin/CLI Versions" step in `.github/workflows/quick-impl.yml` at the same anchors and with the same shape as T013
-- [ ] T020 [P] [US3] Insert the "Capture Plugin/CLI Versions" step in `.github/workflows/iterate.yml` at the same anchors and with the same shape as T013
-- [ ] T021 [P] [US3] Insert the "Capture Plugin/CLI Versions" step in `.github/workflows/ai-board-assist.yml` at the same anchors and with the same shape as T013
+- [X] T018 ✅ DONE [P] [US3] Insert the "Capture Plugin/CLI Versions" step in `.github/workflows/speckit.yml` at the same anchors and with the same shape as T013
+- [X] T019 ✅ DONE [P] [US3] Insert the "Capture Plugin/CLI Versions" step in `.github/workflows/quick-impl.yml` at the same anchors and with the same shape as T013
+- [X] T020 ✅ DONE [P] [US3] Insert the "Capture Plugin/CLI Versions" step in `.github/workflows/iterate.yml` at the same anchors and with the same shape as T013
+- [X] T021 ✅ DONE [P] [US3] Insert the "Capture Plugin/CLI Versions" step in `.github/workflows/ai-board-assist.yml` at the same anchors and with the same shape as T013
 
 **Checkpoint**: All four agents covered across the five agent-running workflows. The data-collection invariant for future comparative analyses is satisfied.
 
@@ -112,8 +112,8 @@
 
 **Purpose**: Repository-wide quality gates required by the constitution and CLAUDE.md before commit.
 
-- [ ] T022 Run `bun run type-check` and fix any TypeScript errors surfaced by the new `Job.pluginVersion`/`agentCliVersion` columns flowing through `lib/types/job-types.ts` and the route handlers
-- [ ] T023 Run `bun run lint` and fix any ESLint errors in the new/extended files (`app/api/jobs/[id]/versions/route.ts`, `app/lib/job-versions-validator.ts`, `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`, `lib/types/job-types.ts`, `components/ticket/jobs-timeline.tsx`, the three test files)
+- [X] T022 ✅ DONE Run `bun run type-check` and fix any TypeScript errors surfaced by the new `Job.pluginVersion`/`agentCliVersion` columns flowing through `lib/types/job-types.ts` and the route handlers
+- [X] T023 ✅ DONE Run `bun run lint` and fix any ESLint errors in the new/extended files (`app/api/jobs/[id]/versions/route.ts`, `app/lib/job-versions-validator.ts`, `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`, `lib/types/job-types.ts`, `components/ticket/jobs-timeline.tsx`, the three test files)
 
 ---
 

@@ -150,6 +150,8 @@ function toBoardSnapshotJobs(
       peakContextTokens: job.peakContextTokens,
       avgContextTokens: job.avgContextTokens,
       turnCount: job.turnCount,
+      pluginVersion: job.pluginVersion ?? null,
+      agentCliVersion: job.agentCliVersion ?? null,
     } satisfies Job;
   });
 }

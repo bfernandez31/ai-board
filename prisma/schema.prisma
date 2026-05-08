@@ -64,6 +64,10 @@ model Job {
   // JSON string containing dimension sub-scores, weights, and threshold label
   qualityScoreDetails String?
 
+  // AI-Board plugin and agent CLI version captured at job start (AIB-775)
+  pluginVersion   String? @db.VarChar(100)
+  agentCliVersion String? @db.VarChar(100)
+
   log JobLog?
 
   @@index([projectId])

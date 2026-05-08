@@ -256,6 +256,15 @@ jobs:
             .github/scripts
           sparse-checkout-cone-mode: true
 
+      - name: Capture Plugin/CLI Versions
+        if: ${{ inputs.job_id }}
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          APP_URL: ${{ vars.APP_URL }}
+          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+          AGENT_TYPE: ${{ inputs.agent }}
+        run: bash ai-board/.github/scripts/capture-versions.sh
+
       - name: Fetch Owner GitHub Token
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         id: fetch-github-token

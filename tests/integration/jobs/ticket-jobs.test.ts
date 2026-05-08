@@ -168,6 +168,28 @@ describe('Ticket Jobs API', () => {
       expect(response.data[0]!.id).toBeLessThan(response.data[1]!.id);
     });
 
+    it('exposes pluginVersion and agentCliVersion through the GET payload', async () => {
+      // Seed versions through the workflow-token POST endpoint
+      const postRes = await workflowApi.post(
+        `/api/jobs/${jobId}/versions`,
+        {
+          pluginVersion: '1.0.1',
+          agentCliVersion: 'claude-code 0.5.12',
+        }
+      );
+      expect(postRes.status).toBe(200);
+
+      const response = await ctx.api.get<TicketJobWithTelemetry[]>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/jobs`
+      );
+
+      expect(response.status).toBe(200);
+      const job = response.data.find((j) => j.id === jobId);
+      expect(job).toBeDefined();
+      expect(job!.pluginVersion).toBe('1.0.1');
+      expect(job!.agentCliVersion).toBe('claude-code 0.5.12');
+    });
+
     it('surfaces Gemini-native telemetry fields through the ticket jobs API', async () => {
       await prisma.job.update({
         where: { id: jobId },

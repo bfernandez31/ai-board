@@ -102,7 +102,9 @@ function JobRow({
     job.outputTokens != null ||
     job.cacheReadTokens != null ||
     job.cacheCreationTokens != null ||
-    job.turnCount != null;
+    job.turnCount != null ||
+    job.pluginVersion != null ||
+    job.agentCliVersion != null;
 
   const log = job.log;
   const isTerminal = TERMINAL_STATUSES.has(job.status);
@@ -241,6 +243,24 @@ function JobRow({
                       </span>
                     </div>
                   )}
+                  <div
+                    data-testid={`job-plugin-version-${job.id}`}
+                    {...(job.pluginVersion == null ? { title: 'Non disponible' } : {})}
+                  >
+                    <span className="text-ctp-overlay0">Plugin Version:</span>
+                    <span className="ml-2 text-foreground font-medium">
+                      {job.pluginVersion ?? '-'}
+                    </span>
+                  </div>
+                  <div
+                    data-testid={`job-cli-version-${job.id}`}
+                    {...(job.agentCliVersion == null ? { title: 'Non disponible' } : {})}
+                  >
+                    <span className="text-ctp-overlay0">CLI Version:</span>
+                    <span className="ml-2 text-foreground font-medium">
+                      {job.agentCliVersion ?? '-'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="text-xs text-ctp-overlay0 border-t border-border pt-3">
