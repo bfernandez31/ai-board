@@ -5,6 +5,7 @@
  * but remain optional so jobs predating the feature stay valid.
  */
 
+import { strict as assert } from 'node:assert';
 import { describe, expect, it } from 'vitest';
 import { jobStatusUpdateSchema } from '@/app/lib/job-update-validator';
 
@@ -17,19 +18,17 @@ describe('jobStatusUpdateSchema', () => {
       agentCliVersion: 'claude 1.2.3',
     });
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.pluginVersion).toBe('1.0.1');
-      expect(result.data.agentCliVersion).toBe('claude 1.2.3');
-    }
+    assert(result.success);
+    expect(result.data.pluginVersion).toBe('1.0.1');
+    expect(result.data.agentCliVersion).toBe('claude 1.2.3');
   });
 
   it('treats both version fields as optional', () => {
     const result = jobStatusUpdateSchema.safeParse({ status: 'RUNNING' });
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.pluginVersion).toBeUndefined();
-      expect(result.data.agentCliVersion).toBeUndefined();
-    }
+    assert(result.success);
+    expect(result.data.pluginVersion).toBeUndefined();
+    expect(result.data.agentCliVersion).toBeUndefined();
   });
 
   it('rejects empty version strings (capture failure should be encoded as omission, not empty)', () => {
@@ -63,9 +62,8 @@ describe('jobStatusUpdateSchema', () => {
       agentCliVersion: '\tcodex 0.4.0\n',
     });
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.pluginVersion).toBe('1.0.1');
-      expect(result.data.agentCliVersion).toBe('codex 0.4.0');
-    }
+    assert(result.success);
+    expect(result.data.pluginVersion).toBe('1.0.1');
+    expect(result.data.agentCliVersion).toBe('codex 0.4.0');
   });
 });

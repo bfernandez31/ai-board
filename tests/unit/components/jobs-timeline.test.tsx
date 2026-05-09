@@ -134,4 +134,21 @@ describe('JobsTimeline — plugin and agent CLI versions (AIB-779)', () => {
     expect(screen.getByTestId(`job-plugin-version-${job.id}`)).toHaveTextContent('1.0.1');
     expect(screen.getByTestId(`job-agent-cli-version-${job.id}`)).toHaveTextContent('codex 0.4.0');
   });
+
+  it('expands and shows placeholder rows even when both versions and telemetry are absent', async () => {
+    const job = makeJob({
+      inputTokens: null,
+      outputTokens: null,
+      cacheReadTokens: null,
+      cacheCreationTokens: null,
+      turnCount: null,
+      pluginVersion: null,
+      agentCliVersion: null,
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+    await userEvent.click(screen.getByTestId(`job-row-${job.id}`));
+
+    expect(screen.getByTestId(`job-plugin-version-${job.id}`)).toHaveTextContent('—');
+    expect(screen.getByTestId(`job-agent-cli-version-${job.id}`)).toHaveTextContent('—');
+  });
 });

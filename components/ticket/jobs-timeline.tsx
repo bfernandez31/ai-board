@@ -104,11 +104,10 @@ function JobRow({
     job.cacheCreationTokens != null ||
     job.turnCount != null;
 
-  // AIB-779: runtime version metadata is execution context, surfaced in the
-  // details grid alongside tokens/duration/cost so it expands the panel even
-  // when no telemetry was captured.
-  const hasRuntimeVersions = job.pluginVersion != null || job.agentCliVersion != null;
-  const showDetails = hasTelemetry || hasRuntimeVersions;
+  // AIB-779: runtime version rows always render (with `—` placeholder when
+  // capture failed or pre-feature jobs), so the details panel must always be
+  // expandable to surface the placeholder per acceptance criterion 6.
+  const showDetails = true;
 
   const log = job.log;
   const isTerminal = TERMINAL_STATUSES.has(job.status);

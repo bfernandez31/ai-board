@@ -167,10 +167,24 @@ export async function PATCH(
     if (currentStatus === requestedStatus) {
       // AIB-779: still backfill runtime versions when the runner reports them
       // after the initial RUNNING transition (CLIs are installed mid-run, so
-      // versions are only known after the first PATCH).
-      const versionPatch = buildVersionPatch(requestedStatus, validationResult.data, job);
-      if (Object.keys(versionPatch).length > 0) {
-        await prisma.job.update({ where: { id: jobId }, data: versionPatch });
+      // versions are only known after the first PATCH). Per-field updateMany
+      // guarded by `: null` enforces first-write-wins atomically — concurrent
+      // PATCHes with different values cannot clobber each other based on a
+      // stale read.
+      if (requestedStatus === 'RUNNING') {
+        const { pluginVersion, agentCliVersion } = validationResult.data;
+        if (pluginVersion) {
+          await prisma.job.updateMany({
+            where: { id: jobId, pluginVersion: null },
+            data: { pluginVersion },
+          });
+        }
+        if (agentCliVersion) {
+          await prisma.job.updateMany({
+            where: { id: jobId, agentCliVersion: null },
+            data: { agentCliVersion },
+          });
+        }
       }
 
       const elapsedTime = Date.now() - startTime;

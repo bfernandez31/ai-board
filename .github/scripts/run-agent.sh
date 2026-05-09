@@ -344,7 +344,13 @@ resolve_plugin_version() {
   )
   for path in "${candidates[@]}"; do
     if [[ -f "$path" ]]; then
-      jq -r '.version // empty' "$path" 2>/dev/null && return 0
+      local version
+      version="$(jq -r '.version // empty' "$path" 2>/dev/null)" || continue
+      if [[ -n "$version" ]]; then
+        # Cap to the Zod validator limit (pluginVersion ≤ 50 chars).
+        printf '%s' "${version:0:50}"
+        return 0
+      fi
     fi
   done
   return 1
@@ -363,7 +369,10 @@ resolve_agent_cli_version() {
   # Strip common prefixes like "claude " or "codex v" — keep the rest verbatim.
   raw="${raw#"$cli" }"
   raw="${raw#v}"
-  printf '%s' "$raw"
+  # Cap to the Zod validator limit (agentCliVersion ≤ 100 chars) so CLIs that
+  # emit build metadata in their first line don't trigger a 400 that silently
+  # drops the whole capture. Mirrors job-update-validator.ts.
+  printf '%s' "${raw:0:100}"
 }
 
 report_runtime_versions() {
@@ -395,11 +404,18 @@ report_runtime_versions() {
   }
 
   log_info "Reporting runtime versions: plugin='${plugin_version}' cli='${cli_version}'"
-  curl -X PATCH "${APP_URL}/api/jobs/${JOB_ID}/status" \
+  local http_code
+  http_code="$(curl -X PATCH "${APP_URL}/api/jobs/${JOB_ID}/status" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
     -d "$payload" \
-    -s -o /dev/null --max-time 10 || log_info "Runtime version PATCH failed (non-fatal)"
+    -s -o /dev/null -w '%{http_code}' --max-time 10)" || {
+    log_info "Runtime version PATCH failed: curl error (non-fatal)"
+    return 0
+  }
+  if [[ "$http_code" != 2* ]]; then
+    log_info "Runtime version PATCH failed: HTTP ${http_code} (non-fatal)"
+  fi
   return 0
 }
 
