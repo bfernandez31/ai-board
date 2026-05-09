@@ -72,5 +72,7 @@ export interface TicketJobWithTelemetry {
   peakContextTokens: number | null;
   avgContextTokens: number | null;
   turnCount: number | null;
+  pluginVersion: string | null;
+  agentCliVersion: string | null;
   log: TicketJobLogSummary | null;
 }

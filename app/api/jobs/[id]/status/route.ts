@@ -120,6 +120,8 @@ export async function PATCH(
         completedAt: true,
         startedAt: true,
         workflowRunId: true,
+        pluginVersion: true,
+        agentCliVersion: true,
       },
     });
 
@@ -145,6 +147,20 @@ export async function PATCH(
 
     // Check if this is an idempotent request (same status)
     if (currentStatus === requestedStatus) {
+      // AIB-779: still backfill runtime versions when the runner reports them
+      // after the initial RUNNING transition (CLIs are installed mid-run, so
+      // versions are only known after the first PATCH).
+      const versionPatch: { pluginVersion?: string; agentCliVersion?: string } = {};
+      if (requestedStatus === 'RUNNING' && validationResult.data.pluginVersion && !job.pluginVersion) {
+        versionPatch.pluginVersion = validationResult.data.pluginVersion;
+      }
+      if (requestedStatus === 'RUNNING' && validationResult.data.agentCliVersion && !job.agentCliVersion) {
+        versionPatch.agentCliVersion = validationResult.data.agentCliVersion;
+      }
+      if (Object.keys(versionPatch).length > 0) {
+        await prisma.job.update({ where: { id: jobId }, data: versionPatch });
+      }
+
       const elapsedTime = Date.now() - startTime;
       console.log('[Job Status Update] Idempotent request (no-op):', {
         jobId,
@@ -192,6 +208,8 @@ export async function PATCH(
       qualityScore?: number;
       qualityScoreDetails?: string;
       workflowRunId?: bigint;
+      pluginVersion?: string;
+      agentCliVersion?: string;
     } = {
       status: requestedStatus,
     };
@@ -203,6 +221,15 @@ export async function PATCH(
     // Populate workflowRunId on RUNNING status (first-write-wins)
     if (requestedStatus === 'RUNNING' && validationResult.data.workflowRunId && !job.workflowRunId) {
       updateData.workflowRunId = BigInt(validationResult.data.workflowRunId);
+    }
+
+    // AIB-779: capture runtime versions on RUNNING (first-write-wins).
+    // Runner posts these once at startup; later transitions don't overwrite.
+    if (requestedStatus === 'RUNNING' && validationResult.data.pluginVersion && !job.pluginVersion) {
+      updateData.pluginVersion = validationResult.data.pluginVersion;
+    }
+    if (requestedStatus === 'RUNNING' && validationResult.data.agentCliVersion && !job.agentCliVersion) {
+      updateData.agentCliVersion = validationResult.data.agentCliVersion;
     }
 
     if (isTerminalState) {

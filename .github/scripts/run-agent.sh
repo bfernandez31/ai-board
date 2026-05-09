@@ -328,6 +328,81 @@ resolve_command_file() {
   return 1
 }
 
+# --- Runtime version capture (AIB-779) ---
+#
+# Captures the AI-Board plugin version and the agent CLI version, then reports
+# them to the job-status PATCH endpoint. Best-effort: any failure is logged and
+# swallowed so the agent run continues unannotated.
+
+resolve_plugin_version() {
+  local script_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local candidates=(
+    ".claude-plugin/plugin.json"
+    "../ai-board/.claude-plugin/plugin.json"
+    "${script_dir}/../../.claude-plugin/plugin.json"
+  )
+  for path in "${candidates[@]}"; do
+    if [[ -f "$path" ]]; then
+      jq -r '.version // empty' "$path" 2>/dev/null && return 0
+    fi
+  done
+  return 1
+}
+
+resolve_agent_cli_version() {
+  local cli="$1"
+  if ! command -v "$cli" &>/dev/null; then
+    return 1
+  fi
+  # `<cli> --version` output varies (e.g. "claude 1.2.3", "codex v0.4.0", multi-line).
+  # Take the first non-empty line and strip leading binary name + leading 'v'.
+  local raw
+  raw="$("$cli" --version 2>/dev/null | head -n 1 | tr -d '\r')" || return 1
+  [[ -z "$raw" ]] && return 1
+  # Strip common prefixes like "claude " or "codex v" — keep the rest verbatim.
+  raw="${raw#"$cli" }"
+  raw="${raw#v}"
+  printf '%s' "$raw"
+}
+
+report_runtime_versions() {
+  local cli="$1"
+  if [[ -z "${JOB_ID:-}" || -z "${APP_URL:-}" || -z "${WORKFLOW_API_TOKEN:-}" ]]; then
+    log_info "Runtime version capture skipped — JOB_ID/APP_URL/WORKFLOW_API_TOKEN unset"
+    return 0
+  fi
+
+  local plugin_version=""
+  local cli_version=""
+  plugin_version="$(resolve_plugin_version 2>/dev/null || true)"
+  cli_version="$(resolve_agent_cli_version "$cli" 2>/dev/null || true)"
+
+  if [[ -z "$plugin_version" && -z "$cli_version" ]]; then
+    log_info "Runtime version capture: nothing to report"
+    return 0
+  fi
+
+  local payload
+  payload="$(jq -n \
+    --arg pv "$plugin_version" \
+    --arg cv "$cli_version" \
+    '{status: "RUNNING"}
+      + (if $pv != "" then {pluginVersion: $pv} else {} end)
+      + (if $cv != "" then {agentCliVersion: $cv} else {} end)')" || {
+    log_info "Runtime version capture: failed to build payload"
+    return 0
+  }
+
+  log_info "Reporting runtime versions: plugin='${plugin_version}' cli='${cli_version}'"
+  curl -X PATCH "${APP_URL}/api/jobs/${JOB_ID}/status" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+    -d "$payload" \
+    -s -o /dev/null --max-time 10 || log_info "Runtime version PATCH failed (non-fatal)"
+  return 0
+}
+
 # --- Validation ---
 
 validate_auth() {
@@ -761,6 +836,7 @@ dispatch_agent() {
     CLAUDE)
       validate_auth
       install_claude
+      report_runtime_versions claude
       invoke_claude
       ;;
     CODEX)
@@ -768,6 +844,7 @@ dispatch_agent() {
       install_codex
       auth_codex
       setup_codex_telemetry
+      report_runtime_versions codex
       invoke_codex
       persist_codex_token
       ;;
@@ -775,6 +852,7 @@ dispatch_agent() {
       validate_auth
       install_mistral
       setup_mistral_telemetry
+      report_runtime_versions vibe
       invoke_mistral
       collect_mistral_telemetry
       ;;
@@ -783,6 +861,7 @@ dispatch_agent() {
       install_gemini
       auth_gemini
       setup_gemini_telemetry
+      report_runtime_versions gemini
       local gemini_exit=0
       invoke_gemini || gemini_exit=$?
       return $gemini_exit

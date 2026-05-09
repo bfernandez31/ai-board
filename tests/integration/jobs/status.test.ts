@@ -337,6 +337,81 @@ describe('Jobs Status', () => {
     });
   });
 
+  describe('Runtime versions on RUNNING status (AIB-779)', () => {
+    it('persists pluginVersion and agentCliVersion on the initial RUNNING transition', async () => {
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        {
+          status: 'RUNNING',
+          pluginVersion: '1.0.1',
+          agentCliVersion: 'claude 1.2.3',
+        }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.status).toBe('RUNNING');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.pluginVersion).toBe('1.0.1');
+      expect(job?.agentCliVersion).toBe('claude 1.2.3');
+    });
+
+    it('backfills versions on a follow-up idempotent RUNNING patch when initially absent', async () => {
+      // First PATCH: RUNNING without versions (CLI not yet installed at this point).
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+      let job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.pluginVersion).toBeNull();
+      expect(job?.agentCliVersion).toBeNull();
+
+      // Second PATCH (idempotent same-status): runner reports versions post-install.
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        {
+          status: 'RUNNING',
+          pluginVersion: '1.0.1',
+          agentCliVersion: 'codex 0.4.0',
+        }
+      );
+      expect(response.status).toBe(200);
+
+      job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.pluginVersion).toBe('1.0.1');
+      expect(job?.agentCliVersion).toBe('codex 0.4.0');
+    });
+
+    it('does not overwrite already-captured versions on subsequent RUNNING patches', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, {
+        status: 'RUNNING',
+        pluginVersion: '1.0.1',
+        agentCliVersion: 'claude 1.2.3',
+      });
+
+      // A retry / second-source attempt with different values must not clobber.
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, {
+        status: 'RUNNING',
+        pluginVersion: '9.9.9',
+        agentCliVersion: 'rogue 0.0.0',
+      });
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.pluginVersion).toBe('1.0.1');
+      expect(job?.agentCliVersion).toBe('claude 1.2.3');
+    });
+
+    it('allows job to RUN without version data (capture failure stays unannotated)', async () => {
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'RUNNING' }
+      );
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.status).toBe('RUNNING');
+      expect(job?.pluginVersion).toBeNull();
+      expect(job?.agentCliVersion).toBeNull();
+    });
+  });
+
   describe('Job status lifecycle', () => {
     it('should track full job lifecycle: PENDING → RUNNING → COMPLETED', async () => {
       // Verify initial PENDING state (startedAt is set at job creation)

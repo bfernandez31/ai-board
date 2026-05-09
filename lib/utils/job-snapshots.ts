@@ -44,6 +44,8 @@ export function createSnapshotJob(polledJob: JobStatusDto, projectId: number): J
     peakContextTokens: null,
     avgContextTokens: null,
     turnCount: null,
+    pluginVersion: null,
+    agentCliVersion: null,
   };
 }
 

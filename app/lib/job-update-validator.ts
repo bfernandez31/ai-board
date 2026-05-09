@@ -22,6 +22,10 @@ export const jobStatusUpdateSchema = z.object({
   qualityScore: z.number().int().min(0).max(100).optional(),
   qualityScoreDetails: z.string().optional(),
   workflowRunId: z.number().int().positive().optional(),
+  // AIB-779: runtime versions captured by the runner at job start.
+  // Both fields are optional — failure to capture leaves the job unannotated.
+  pluginVersion: z.string().trim().min(1).max(50).optional(),
+  agentCliVersion: z.string().trim().min(1).max(100).optional(),
 });
 
 /**
