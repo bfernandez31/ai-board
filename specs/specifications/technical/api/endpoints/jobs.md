@@ -148,6 +148,8 @@ Update job status (workflow-only endpoint).
 {
   "status": "RUNNING",
   "workflowRunId": 12345678901,
+  "pluginVersion": "0.4.2",
+  "agentCliVersion": "1.2.3",
   "qualityScore": 83,
   "qualityScoreDetails": "{\"dimensions\":{\"bugDetection\":{\"score\":90,\"weight\":0.30},\"compliance\":{\"score\":80,\"weight\":0.40},\"codeComments\":{\"score\":70,\"weight\":0.20},\"historicalContext\":{\"score\":85,\"weight\":0.10},\"specSync\":{\"score\":95,\"weight\":0.00}},\"finalScore\":83}"
 }
@@ -156,6 +158,8 @@ Update job status (workflow-only endpoint).
 **Validation**:
 - `status`: Required, enum (RUNNING|COMPLETED|FAILED|CANCELLED)
 - `workflowRunId`: Optional BigInt, positive integer; only accepted when `status = "RUNNING"`; written once (first-write-wins — ignored if `workflowRunId` already populated)
+- `pluginVersion`: Optional string, trimmed, length 1–50; only accepted when `status = "RUNNING"`; written once (first-write-wins — ignored if already populated). Accepted both on the initial RUNNING transition and on idempotent same-status PATCH calls so the runner can backfill after CLI installation.
+- `agentCliVersion`: Optional string, trimmed, length 1–100; same rules as `pluginVersion`.
 - `qualityScore`: Optional, integer 0-100 inclusive; only accepted when `status = "COMPLETED"` for verify jobs; ignored otherwise
 - `qualityScoreDetails`: Optional, JSON string with dimension sub-scores; stored alongside `qualityScore`
 - State machine transitions enforced
@@ -711,7 +715,7 @@ Retention prune of `JobLog` rows and their Blob artifacts. Invoked daily by `.gi
 
 ### Extended: GET /api/projects/:projectId/tickets/:ticketId/jobs
 
-The ticket jobs listing includes a `log` object on each row so the timeline can render the preview without an N+1 fetch:
+The ticket jobs listing includes a `log` object on each row so the timeline can render the preview without an N+1 fetch, and surfaces the runtime versions captured at job start:
 
 ```json
 {
@@ -723,6 +727,8 @@ The ticket jobs listing includes a `log` object on each row so the timeline can 
       "peakContextTokens": 142000,
       "avgContextTokens": 86500,
       "turnCount": 17,
+      "pluginVersion": "0.4.2",
+      "agentCliVersion": "1.2.3",
       "log": {
         "captureStatus": "CAPTURED",
         "preview": "Build failed: Prisma migration 20260422 not applied to target DB"
@@ -732,7 +738,7 @@ The ticket jobs listing includes a `log` object on each row so the timeline can 
 }
 ```
 
-`log` is `null` when no log record exists yet (e.g., a still-RUNNING job or capture in flight).
+`log` is `null` when no log record exists yet (e.g., a still-RUNNING job or capture in flight). `pluginVersion` and `agentCliVersion` are `null` for jobs predating runtime version capture and for runs where the runner could not resolve either value.
 
 **Per-turn context fields** (`peakContextTokens`, `avgContextTokens`, `turnCount`):
 - All three are `null` for jobs run with agents that expose no per-turn telemetry (Mistral today), for jobs whose OTLP stream produced zero successfully-parsed per-turn events, and for jobs that predate per-turn ingestion (no backfill).

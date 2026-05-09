@@ -48,6 +48,22 @@ The effective agent is determined by a priority chain:
 - Some workflows remain explicitly agent-restricted even when ticket/project resolution returns a different default. For example, ai-board-assist code review remains Claude-only, and setup / retro-spec / health-scan may reject unsupported agents before dispatch.
 - Agent selection is read-only during dispatch — it flows from the database into workflow inputs without changing ticket state
 
+## Runtime Version Capture
+
+For every job that invokes an AI agent (Claude, Codex, Mistral, Gemini), the runner records two pieces of execution metadata so a job's behavior can be traced back to the exact toolchain that produced it:
+
+- **Plugin version** — the version field from the active `.claude-plugin/plugin.json` (the AI-Board plugin package: commands, skills, prompts)
+- **Agent CLI version** — the version reported by the underlying CLI (`claude`, `codex`, `vibe`, `gemini`)
+
+**Capture timing**: Both values are resolved after the CLI is installed and reported once via the job-status PATCH endpoint. The values are written first-write-wins on the first RUNNING-status PATCH that carries them; later PATCH calls never overwrite an already-populated value.
+
+**Best-effort behavior**: Capture never blocks or fails the job. If either value cannot be resolved (missing plugin manifest, CLI not on PATH, `--version` returns nothing), the field stays `null` and the job continues normally.
+
+**Coverage**:
+- Jobs run before this feature shipped remain unannotated — there is no backfill
+- All four supported agents (Claude, Codex, Mistral, Gemini) are covered
+- The values are surfaced in the ticket detail Stats tab alongside the other per-job execution metrics; absent values render as a discreet placeholder (`—`) rather than an empty field
+
 ## Agent Execution Log Capture & Display
 
 Every workflow that runs an AI agent (Claude, Codex, Mistral, Gemini) captures the agent's execution transcript so project members can diagnose failures from the ai-board UI without GitHub Actions access. Capture is agent-agnostic and uniform across self-managed and external projects.
