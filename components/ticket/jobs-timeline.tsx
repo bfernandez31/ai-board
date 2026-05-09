@@ -108,7 +108,7 @@ function JobRow({
   // details grid alongside tokens/duration/cost so it expands the panel even
   // when no telemetry was captured.
   const hasRuntimeVersions = job.pluginVersion != null || job.agentCliVersion != null;
-  const showRuntimeVersions = hasTelemetry || hasRuntimeVersions;
+  const showDetails = hasTelemetry || hasRuntimeVersions;
 
   const log = job.log;
   const isTerminal = TERMINAL_STATUSES.has(job.status);
@@ -116,7 +116,7 @@ function JobRow({
   const showPreview = isTerminal && log != null;
   const previewToneClass = previewTone(job.status, log);
   const viewerDisabledReason = disabledLogsReason(log);
-  const canExpand = hasTelemetry || hasRuntimeVersions || showPreview;
+  const canExpand = showDetails || showPreview;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -204,7 +204,7 @@ function JobRow({
             className="bg-card border border-border rounded-lg p-4 ml-8 space-y-3"
             data-testid={`job-details-${job.id}`}
           >
-            {showRuntimeVersions && (
+            {showDetails && (
               <>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   {hasTelemetry && (
@@ -277,7 +277,7 @@ function JobRow({
 
             {showPreview && (
               <div
-                className={`flex items-start justify-between gap-3 ${showRuntimeVersions ? 'border-t border-border pt-3' : ''}`}
+                className={`flex items-start justify-between gap-3 ${showDetails ? 'border-t border-border pt-3' : ''}`}
                 data-testid={`job-log-preview-${job.id}`}
               >
                 <p className={`text-xs line-clamp-3 flex-1 ${previewToneClass}`}>

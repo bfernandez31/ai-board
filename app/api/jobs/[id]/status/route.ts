@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jobStatusUpdateSchema } from '@/app/lib/job-update-validator';
+import { jobStatusUpdateSchema, type JobStatusUpdate } from '@/app/lib/job-update-validator';
 import {
   canTransition,
   InvalidTransitionError,
@@ -9,6 +9,24 @@ import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { sendJobCompletionNotification } from '@/app/lib/push/send-notification';
 import { handleJobCompletionAutoTransition } from '@/app/lib/tickets/auto-mode';
+
+// AIB-779: runtime versions are first-write-wins on RUNNING. The runner posts
+// them once the CLI is installed, which can be on the initial RUNNING PATCH or
+// on a follow-up idempotent same-status PATCH — so this helper is reused by
+// both paths.
+type VersionPatch = { pluginVersion?: string; agentCliVersion?: string };
+
+function buildVersionPatch(
+  requestedStatus: JobStatus,
+  data: JobStatusUpdate,
+  job: { pluginVersion: string | null; agentCliVersion: string | null }
+): VersionPatch {
+  if (requestedStatus !== 'RUNNING') return {};
+  const patch: VersionPatch = {};
+  if (data.pluginVersion && !job.pluginVersion) patch.pluginVersion = data.pluginVersion;
+  if (data.agentCliVersion && !job.agentCliVersion) patch.agentCliVersion = data.agentCliVersion;
+  return patch;
+}
 
 /**
  * PATCH /api/jobs/[id]/status
@@ -150,13 +168,7 @@ export async function PATCH(
       // AIB-779: still backfill runtime versions when the runner reports them
       // after the initial RUNNING transition (CLIs are installed mid-run, so
       // versions are only known after the first PATCH).
-      const versionPatch: { pluginVersion?: string; agentCliVersion?: string } = {};
-      if (requestedStatus === 'RUNNING' && validationResult.data.pluginVersion && !job.pluginVersion) {
-        versionPatch.pluginVersion = validationResult.data.pluginVersion;
-      }
-      if (requestedStatus === 'RUNNING' && validationResult.data.agentCliVersion && !job.agentCliVersion) {
-        versionPatch.agentCliVersion = validationResult.data.agentCliVersion;
-      }
+      const versionPatch = buildVersionPatch(requestedStatus, validationResult.data, job);
       if (Object.keys(versionPatch).length > 0) {
         await prisma.job.update({ where: { id: jobId }, data: versionPatch });
       }
@@ -225,12 +237,7 @@ export async function PATCH(
 
     // AIB-779: capture runtime versions on RUNNING (first-write-wins).
     // Runner posts these once at startup; later transitions don't overwrite.
-    if (requestedStatus === 'RUNNING' && validationResult.data.pluginVersion && !job.pluginVersion) {
-      updateData.pluginVersion = validationResult.data.pluginVersion;
-    }
-    if (requestedStatus === 'RUNNING' && validationResult.data.agentCliVersion && !job.agentCliVersion) {
-      updateData.agentCliVersion = validationResult.data.agentCliVersion;
-    }
+    Object.assign(updateData, buildVersionPatch(requestedStatus, validationResult.data, job));
 
     if (isTerminalState) {
       updateData.completedAt = new Date();
