@@ -52,33 +52,40 @@ export async function POST(
       );
     }
 
-    const job = await prisma.job.findUnique({
+    const exists = await prisma.job.findUnique({
       where: { id: jobId },
-      select: { id: true, pluginVersion: true, agentCliVersion: true },
+      select: { id: true },
     });
 
-    if (!job) {
+    if (!exists) {
       console.error('[Job Versions] Job not found:', { jobId });
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
-    // First-write-wins: only persist values that aren't already set.
-    const updateData: { pluginVersion?: string; agentCliVersion?: string } = {};
-    if (validation.data.pluginVersion && !job.pluginVersion) {
-      updateData.pluginVersion = validation.data.pluginVersion;
+    // First-write-wins via conditional updateMany so concurrent POSTs cannot
+    // overwrite an already-set column. Each field is guarded independently.
+    if (validation.data.pluginVersion) {
+      await prisma.job.updateMany({
+        where: { id: jobId, pluginVersion: null },
+        data: { pluginVersion: validation.data.pluginVersion },
+      });
     }
-    if (validation.data.agentCliVersion && !job.agentCliVersion) {
-      updateData.agentCliVersion = validation.data.agentCliVersion;
+    if (validation.data.agentCliVersion) {
+      await prisma.job.updateMany({
+        where: { id: jobId, agentCliVersion: null },
+        data: { agentCliVersion: validation.data.agentCliVersion },
+      });
     }
 
-    if (Object.keys(updateData).length > 0) {
-      await prisma.job.update({ where: { id: jobId }, data: updateData });
-    }
+    const stored = await prisma.job.findUniqueOrThrow({
+      where: { id: jobId },
+      select: { id: true, pluginVersion: true, agentCliVersion: true },
+    });
 
     const result = {
-      id: job.id,
-      pluginVersion: job.pluginVersion ?? updateData.pluginVersion ?? null,
-      agentCliVersion: job.agentCliVersion ?? updateData.agentCliVersion ?? null,
+      id: stored.id,
+      pluginVersion: stored.pluginVersion,
+      agentCliVersion: stored.agentCliVersion,
     };
 
     console.log('[Job Versions] Success:', result);

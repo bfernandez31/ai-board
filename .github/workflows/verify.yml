@@ -271,7 +271,7 @@ jobs:
           sparse-checkout-cone-mode: true
 
       - name: Capture Plugin/CLI Versions
-        if: ${{ inputs.job_id }}
+        if: ${{ inputs.job_id && env.SKIP_EXECUTION != 'true' }}
         env:
           JOB_ID: ${{ inputs.job_id }}
           APP_URL: ${{ vars.APP_URL }}

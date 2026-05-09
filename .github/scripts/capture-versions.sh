@@ -88,7 +88,8 @@ fi
 
 DELAYS=(1 2 4)
 HTTP_CODE=""
-for delay in "${DELAYS[@]}"; do
+LAST_INDEX=$((${#DELAYS[@]} - 1))
+for i in "${!DELAYS[@]}"; do
   HTTP_CODE="$(curl -s -o /dev/null -w '%{http_code}' \
     -X POST "${APP_URL}/api/jobs/${JOB_ID}/versions" \
     -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
@@ -105,7 +106,9 @@ for delay in "${DELAYS[@]}"; do
       exit 0
       ;;
   esac
-  sleep "$delay"
+  if [[ "$i" -lt "$LAST_INDEX" ]]; then
+    sleep "${DELAYS[$i]}"
+  fi
 done
 
 echo "capture-versions: api ${HTTP_CODE:-error} after retries (job_id=${JOB_ID})" >&2

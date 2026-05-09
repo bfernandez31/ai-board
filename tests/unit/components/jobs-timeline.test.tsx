@@ -112,12 +112,14 @@ describe('JobsTimeline — plugin & CLI version rows (AIB-775)', () => {
     expect(cliRow).not.toHaveAttribute('title');
   });
 
-  it('renders "-" with title="Non disponible" when both versions are null (US-2 #1 / #2)', async () => {
+  it('renders em-dash with title="Non disponible" when both versions are null (US-2 #1 / #2)', async () => {
     const job = makeJob({
       pluginVersion: null,
       agentCliVersion: null,
-      // Force the row to be expandable since version-only rows must trigger expansion
-      inputTokens: 100,
+      inputTokens: null,
+      outputTokens: null,
+      cacheReadTokens: null,
+      cacheCreationTokens: null,
     });
     renderWithProviders(<JobsTimeline jobs={[job]} />);
     await userEvent.click(screen.getByTestId(`job-row-${job.id}`));
@@ -128,10 +130,10 @@ describe('JobsTimeline — plugin & CLI version rows (AIB-775)', () => {
 
     const pluginRow = screen.getByTestId(`job-plugin-version-${job.id}`);
     expect(pluginRow).toHaveAttribute('title', 'Non disponible');
-    expect(pluginRow.textContent).toMatch(/-/);
+    expect(pluginRow.textContent).toMatch(/—/);
     const cliRow = screen.getByTestId(`job-cli-version-${job.id}`);
     expect(cliRow).toHaveAttribute('title', 'Non disponible');
-    expect(cliRow.textContent).toMatch(/-/);
+    expect(cliRow.textContent).toMatch(/—/);
   });
 
   it('renders partial-null state: plugin set, CLI null with tooltip (US-2 #3)', async () => {
@@ -148,7 +150,7 @@ describe('JobsTimeline — plugin & CLI version rows (AIB-775)', () => {
 
     const cliRow = screen.getByTestId(`job-cli-version-${job.id}`);
     expect(cliRow).toHaveAttribute('title', 'Non disponible');
-    expect(cliRow.textContent).toMatch(/-/);
+    expect(cliRow.textContent).toMatch(/—/);
   });
 
   it('expands a job that has only versions set (no telemetry, no preview)', async () => {

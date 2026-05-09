@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/app/lib/query-keys';
+import { isActiveStatus } from '@/app/lib/schemas/job-polling';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 
 /**
@@ -10,6 +11,8 @@ import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
  * Features:
  * - Returns complete job telemetry (tokens, cost, duration, model)
  * - 5-second stale time (balances freshness with performance)
+ * - Polls every 5s while any job is PENDING/RUNNING so mid-run telemetry
+ *   (plugin/CLI versions, tokens) becomes visible without waiting for terminal
  * - Can be conditionally enabled (e.g., only when modal is open)
  * - Invalidated by useJobPolling on terminal job transitions
  *
@@ -48,5 +51,9 @@ export function useTicketJobs(
     staleTime: 5000,
     // Keep in cache for 10 minutes after unmount
     gcTime: 10 * 60 * 1000,
+    refetchInterval: (query) => {
+      const jobs = query.state.data ?? [];
+      return jobs.some((job) => isActiveStatus(job.status)) ? 5000 : false;
+    },
   });
 }
