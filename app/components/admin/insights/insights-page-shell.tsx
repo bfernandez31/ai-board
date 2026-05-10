@@ -8,6 +8,7 @@ import {
   PastReportsList,
   type InsightsReportSummary,
 } from './past-reports-list';
+import { TriggerRunButton } from './trigger-run-button';
 import {
   useAdminInsightsList,
   type AdminInsightsListResponse,
@@ -47,6 +48,9 @@ export function InsightsPageShell({
   if (reports.length === 0) {
     return (
       <div className="flex flex-col gap-6 p-6">
+        <div className="flex justify-end">
+          <TriggerRunButton runningReportId={data.runningReportId} />
+        </div>
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">
@@ -60,6 +64,9 @@ export function InsightsPageShell({
 
   return (
     <div className="flex flex-col gap-6 p-6" data-testid="insights-page-shell">
+      <div className="flex justify-end">
+        <TriggerRunButton runningReportId={data.runningReportId} />
+      </div>
       {selectedReport && selectedReport.status === 'COMPLETED' ? (
         <>
           <MetadataHeader
