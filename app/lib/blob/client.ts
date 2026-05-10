@@ -50,6 +50,46 @@ export async function streamJobLogArtifact(
   return { stream: result.stream, size: result.blob.size };
 }
 
+export async function uploadInsightsReportArtifact(
+  key: string,
+  html: string
+): Promise<PutBlobResult> {
+  const token = requireToken();
+  if (!html) {
+    throw new Error('Report HTML must not be empty');
+  }
+  return put(key, html, {
+    access: 'private',
+    token,
+    contentType: 'text/html; charset=utf-8',
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+}
+
+export async function fetchInsightsReportArtifact(
+  key: string
+): Promise<string | null> {
+  const token = requireToken();
+  let result;
+  try {
+    result = await get(key, { access: 'private', token });
+  } catch (error) {
+    const status = (error as { status?: number } | null)?.status;
+    if (status === 404) return null;
+    throw error;
+  }
+  if (!result || result.statusCode !== 200 || !result.stream) return null;
+  const reader = result.stream.getReader();
+  const chunks: Uint8Array[] = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString('utf-8');
+}
+
 export async function deleteJobLogArtifact(key: string): Promise<{ deleted: boolean }> {
   const token = requireToken();
   try {

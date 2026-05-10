@@ -1,0 +1,156 @@
+name: Admin Insights Analysis
+
+on:
+  workflow_dispatch:
+    inputs:
+      report_id:
+        description: 'InsightsReport record ID'
+        required: true
+        type: string
+
+jobs:
+  run-insights:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      APP_URL: ${{ vars.APP_URL }}
+      WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+      ANTHROPIC_MODEL: 'claude-opus-4-7'
+      INPUT_REPORT_ID: ${{ inputs.report_id }}
+
+    steps:
+      - name: Debug Inputs
+        run: |
+          echo "Admin insights inputs:"
+          echo "  report_id: $INPUT_REPORT_ID"
+
+      - name: Checkout ai-board
+        uses: actions/checkout@v4
+        with:
+          path: ai-board
+          sparse-checkout: |
+            .claude-plugin
+          sparse-checkout-cone-mode: true
+
+      - name: Update Report Status - RUNNING
+        run: |
+          curl -X PATCH "${APP_URL}/api/admin/insights/${INPUT_REPORT_ID}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            --data "$(jq -n --arg runId "${{ github.run_id }}" \
+              '{status: "RUNNING", workflowRunId: $runId}')" \
+            -f -s -S || echo "Failed to mark report RUNNING"
+
+      - name: Fetch Report Scope
+        id: scope
+        run: |
+          SCOPE=$(curl -s -f \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            "${APP_URL}/api/admin/insights/${INPUT_REPORT_ID}/scope")
+          echo "$SCOPE" > /tmp/scope.json
+          SESSION_COUNT=$(jq -r '.sessions | length' /tmp/scope.json)
+          echo "session_count=$SESSION_COUNT" >> "$GITHUB_OUTPUT"
+          echo "Found $SESSION_COUNT sessions for analysis"
+
+      - name: Download Session Artifacts
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: |
+          mkdir -p /tmp/sessions
+          jq -c '.sessions[]' /tmp/scope.json | while read -r session; do
+            JOB_ID=$(printf '%s' "$session" | jq -r '.jobId')
+            PROJECT_ID=$(printf '%s' "$session" | jq -r '.projectId')
+            TICKET_ID=$(printf '%s' "$session" | jq -r '.ticketId')
+            URL="${APP_URL}/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}/jobs/${JOB_ID}/logs/raw-native"
+            curl -sSf \
+              -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+              -o "/tmp/sessions/${JOB_ID}.jsonl.gz" \
+              "${URL}" || echo "Failed to download session $JOB_ID"
+          done
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.20.0'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run /insights analyzer
+        id: insights
+        env:
+          REPORT_OUTPUT: /tmp/insights-report.html
+        run: |
+          set -euo pipefail
+          # Aggregate raw session transcripts (gunzipped JSONL) into a single
+          # context buffer the analyzer can read.
+          AGGREGATED=/tmp/aggregated.jsonl
+          : > "$AGGREGATED"
+          for f in /tmp/sessions/*.jsonl.gz; do
+            [ -f "$f" ] || continue
+            gunzip -c "$f" >> "$AGGREGATED" || true
+          done
+
+          BYTES=$(wc -c < "$AGGREGATED" || echo 0)
+          echo "Aggregated transcript bytes: $BYTES"
+
+          PROMPT_FILE=/tmp/insights-prompt.md
+          cat > "$PROMPT_FILE" <<'PROMPT'
+          You are running the Claude Code /insights analyzer over a corpus of
+          AI-Board agent sessions. The transcripts (JSONL) are at $AGGREGATED.
+          Produce a single self-contained HTML document at $REPORT_OUTPUT that
+          contains the narratives, charts, friction categories, suggested
+          CLAUDE.md additions, big wins, and horizon section that the
+          /insights command normally produces. Do not output anything else.
+          PROMPT
+
+          claude --print --output-format text "$(cat "$PROMPT_FILE")" \
+            > "$REPORT_OUTPUT" || {
+              echo "Claude /insights run failed";
+              exit 1;
+            }
+
+          SIZE=$(wc -c < "$REPORT_OUTPUT")
+          echo "report_size=$SIZE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Report to Blob
+        env:
+          REPORT_ID: ${{ inputs.report_id }}
+        run: |
+          set -euo pipefail
+          ARTIFACT_KEY="insights/${REPORT_ID}.html"
+          # Vercel Blob "put" via REST API. The token gives owner write access.
+          curl -sSf -X PUT \
+            "https://blob.vercel-storage.com/${ARTIFACT_KEY}" \
+            -H "Authorization: Bearer ${BLOB_READ_WRITE_TOKEN}" \
+            -H "x-content-type: text/html; charset=utf-8" \
+            -H "x-access: private" \
+            -H "x-add-random-suffix: 0" \
+            -H "x-allow-overwrite: 1" \
+            --data-binary @/tmp/insights-report.html
+          echo "ARTIFACT_KEY=$ARTIFACT_KEY" >> "$GITHUB_ENV"
+
+      - name: Mark Report COMPLETED
+        env:
+          ARTIFACT_SIZE: ${{ steps.insights.outputs.report_size }}
+        run: |
+          curl -X PATCH "${APP_URL}/api/admin/insights/${INPUT_REPORT_ID}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            --data "$(jq -n \
+              --arg key "$ARTIFACT_KEY" \
+              --argjson size "$ARTIFACT_SIZE" \
+              '{status: "COMPLETED", artifactKey: $key, artifactSize: $size}')" \
+            -f -s -S
+
+      - name: Mark Report FAILED
+        if: failure()
+        run: |
+          curl -X PATCH "${APP_URL}/api/admin/insights/${INPUT_REPORT_ID}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            --data "$(jq -n '{status: "FAILED", errorMessage: "Workflow step failed — see GitHub Actions logs"}')" \
+            -f -s -S || true

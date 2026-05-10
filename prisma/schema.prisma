@@ -81,21 +81,21 @@ model Job {
 }
 
 model JobLog {
-  id            Int           @id @default(autoincrement())
-  jobId         Int           @unique
-  job           Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  captureStatus CaptureStatus
-  preview       String        @db.VarChar(320)
-  schemaVersion Int           @default(1)
-  eventCount    Int           @default(0)
-  errorCount    Int           @default(0)
-  artifactKey   String?       @db.VarChar(300)
-  artifactSize  Int?
-  rawArtifactKey  String?     @db.VarChar(300)
+  id              Int           @id @default(autoincrement())
+  jobId           Int           @unique
+  job             Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  captureStatus   CaptureStatus
+  preview         String        @db.VarChar(320)
+  schemaVersion   Int           @default(1)
+  eventCount      Int           @default(0)
+  errorCount      Int           @default(0)
+  artifactKey     String?       @db.VarChar(300)
+  artifactSize    Int?
+  rawArtifactKey  String?       @db.VarChar(300)
   rawArtifactSize Int?
-  capturedAt    DateTime      @default(now())
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  capturedAt      DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@index([captureStatus, createdAt])
   @@index([createdAt])
@@ -803,6 +803,42 @@ model TicketAnalysis {
   @@index([userId, status, endedAt])
   @@index([projectId, createdAt(sort: Desc)])
   @@index([status, startedAt])
+}
+
+enum InsightsReportStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model InsightsReport {
+  id Int @id @default(autoincrement())
+
+  status        InsightsReportStatus @default(RUNNING)
+  triggeredById String
+  workflowRunId BigInt?
+
+  // Analyzed scope
+  periodStart  DateTime?
+  periodEnd    DateTime?
+  sessionCount Int       @default(0)
+  ticketCount  Int       @default(0)
+
+  // Blob artifact (HTML) — keyed `insights/<id>.html`
+  artifactKey  String? @db.VarChar(300)
+  artifactSize Int?
+
+  // Error tracking
+  errorMessage String? @db.VarChar(2000)
+
+  // Timestamps
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, startedAt])
+  @@index([completedAt(sort: Desc)])
 }
 
 model AnalysisCalibration {
