@@ -104,13 +104,18 @@ function JobRow({
     job.cacheCreationTokens != null ||
     job.turnCount != null;
 
+  // AIB-779: runtime version rows always render (with `—` placeholder when
+  // capture failed or pre-feature jobs), so the details panel must always be
+  // expandable to surface the placeholder per acceptance criterion 6.
+  const showDetails = true;
+
   const log = job.log;
   const isTerminal = TERMINAL_STATUSES.has(job.status);
   const canViewLogs = log?.captureStatus === 'CAPTURED' && projectId != null && ticketId != null;
   const showPreview = isTerminal && log != null;
   const previewToneClass = previewTone(job.status, log);
   const viewerDisabledReason = disabledLogsReason(log);
-  const canExpand = hasTelemetry || showPreview;
+  const canExpand = showDetails || showPreview;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -198,49 +203,66 @@ function JobRow({
             className="bg-card border border-border rounded-lg p-4 ml-8 space-y-3"
             data-testid={`job-details-${job.id}`}
           >
-            {hasTelemetry && (
+            {showDetails && (
               <>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-ctp-overlay0">Input Tokens:</span>
-                    <span className="ml-2 text-foreground font-medium">
-                      {job.inputTokens != null ? formatAbbreviatedNumber(job.inputTokens) : '-'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-ctp-overlay0">Output Tokens:</span>
-                    <span className="ml-2 text-foreground font-medium">
-                      {job.outputTokens != null ? formatAbbreviatedNumber(job.outputTokens) : '-'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-ctp-overlay0">Cache Read:</span>
-                    <span className="ml-2 text-foreground font-medium">
-                      {job.cacheReadTokens != null ? formatAbbreviatedNumber(job.cacheReadTokens) : '-'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-ctp-overlay0">Cache Creation:</span>
-                    <span className="ml-2 text-foreground font-medium">
-                      {job.cacheCreationTokens != null ? formatAbbreviatedNumber(job.cacheCreationTokens) : '-'}
-                    </span>
-                  </div>
-                  {job.avgContextTokens != null && (
-                    <div>
-                      <span className="text-ctp-overlay0">Avg Context:</span>
-                      <span className="ml-2 text-foreground font-medium">
-                        {formatAbbreviatedNumber(job.avgContextTokens)}
-                      </span>
-                    </div>
+                  {hasTelemetry && (
+                    <>
+                      <div>
+                        <span className="text-ctp-overlay0">Input Tokens:</span>
+                        <span className="ml-2 text-foreground font-medium">
+                          {job.inputTokens != null ? formatAbbreviatedNumber(job.inputTokens) : '-'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-ctp-overlay0">Output Tokens:</span>
+                        <span className="ml-2 text-foreground font-medium">
+                          {job.outputTokens != null ? formatAbbreviatedNumber(job.outputTokens) : '-'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-ctp-overlay0">Cache Read:</span>
+                        <span className="ml-2 text-foreground font-medium">
+                          {job.cacheReadTokens != null ? formatAbbreviatedNumber(job.cacheReadTokens) : '-'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-ctp-overlay0">Cache Creation:</span>
+                        <span className="ml-2 text-foreground font-medium">
+                          {job.cacheCreationTokens != null ? formatAbbreviatedNumber(job.cacheCreationTokens) : '-'}
+                        </span>
+                      </div>
+                      {job.avgContextTokens != null && (
+                        <div>
+                          <span className="text-ctp-overlay0">Avg Context:</span>
+                          <span className="ml-2 text-foreground font-medium">
+                            {formatAbbreviatedNumber(job.avgContextTokens)}
+                          </span>
+                        </div>
+                      )}
+                      {job.turnCount != null && (
+                        <div>
+                          <span className="text-ctp-overlay0">Turn Count:</span>
+                          <span className="ml-2 text-foreground font-medium">
+                            {job.turnCount.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
-                  {job.turnCount != null && (
-                    <div>
-                      <span className="text-ctp-overlay0">Turn Count:</span>
-                      <span className="ml-2 text-foreground font-medium">
-                        {job.turnCount.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
+                  {/* AIB-779: plugin and agent CLI versions captured by the runner */}
+                  <div data-testid={`job-plugin-version-${job.id}`}>
+                    <span className="text-ctp-overlay0">Plugin:</span>
+                    <span className="ml-2 text-foreground font-medium font-mono text-xs">
+                      {job.pluginVersion ?? '—'}
+                    </span>
+                  </div>
+                  <div data-testid={`job-agent-cli-version-${job.id}`}>
+                    <span className="text-ctp-overlay0">Agent CLI:</span>
+                    <span className="ml-2 text-foreground font-medium font-mono text-xs">
+                      {job.agentCliVersion ?? '—'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="text-xs text-ctp-overlay0 border-t border-border pt-3">
@@ -254,7 +276,7 @@ function JobRow({
 
             {showPreview && (
               <div
-                className={`flex items-start justify-between gap-3 ${hasTelemetry ? 'border-t border-border pt-3' : ''}`}
+                className={`flex items-start justify-between gap-3 ${showDetails ? 'border-t border-border pt-3' : ''}`}
                 data-testid={`job-log-preview-${job.id}`}
               >
                 <p className={`text-xs line-clamp-3 flex-1 ${previewToneClass}`}>

@@ -329,6 +329,9 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
   - Cache creation tokens
   - Average per-turn context size — shown only when the job recorded per-turn telemetry; row is hidden entirely (not "—" or "0") otherwise
   - Turn count — shown only when the job recorded per-turn telemetry; row is hidden entirely otherwise
+  - Plugin version — the AI-Board plugin version active when the job ran, rendered in compact monospace styling. A discreet `—` placeholder is shown when the value is absent (jobs predating capture or runs where capture failed). The row is always present whenever the details panel is expanded
+  - Agent CLI version — the underlying agent CLI version (claude, codex, vibe, gemini) active when the job ran, with the same styling and placeholder rules as the plugin version
+- The presence of either runtime version is enough to make the details panel expandable, even when no token telemetry was captured
 
 **Tools Usage**:
 - Aggregated count of all tools used across jobs

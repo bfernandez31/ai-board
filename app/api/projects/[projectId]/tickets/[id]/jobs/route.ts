@@ -148,6 +148,8 @@ export async function GET(
         peakContextTokens: true,
         avgContextTokens: true,
         turnCount: true,
+        pluginVersion: true,
+        agentCliVersion: true,
         log: {
           select: {
             captureStatus: true,

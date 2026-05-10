@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jobStatusUpdateSchema } from '@/app/lib/job-update-validator';
+import { jobStatusUpdateSchema, type JobStatusUpdate } from '@/app/lib/job-update-validator';
 import {
   canTransition,
   InvalidTransitionError,
@@ -9,6 +9,24 @@ import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { sendJobCompletionNotification } from '@/app/lib/push/send-notification';
 import { handleJobCompletionAutoTransition } from '@/app/lib/tickets/auto-mode';
+
+// AIB-779: runtime versions are first-write-wins on RUNNING. The runner posts
+// them once the CLI is installed, which can be on the initial RUNNING PATCH or
+// on a follow-up idempotent same-status PATCH — so this helper is reused by
+// both paths.
+type VersionPatch = { pluginVersion?: string; agentCliVersion?: string };
+
+function buildVersionPatch(
+  requestedStatus: JobStatus,
+  data: JobStatusUpdate,
+  job: { pluginVersion: string | null; agentCliVersion: string | null }
+): VersionPatch {
+  if (requestedStatus !== 'RUNNING') return {};
+  const patch: VersionPatch = {};
+  if (data.pluginVersion && !job.pluginVersion) patch.pluginVersion = data.pluginVersion;
+  if (data.agentCliVersion && !job.agentCliVersion) patch.agentCliVersion = data.agentCliVersion;
+  return patch;
+}
 
 /**
  * PATCH /api/jobs/[id]/status
@@ -120,6 +138,8 @@ export async function PATCH(
         completedAt: true,
         startedAt: true,
         workflowRunId: true,
+        pluginVersion: true,
+        agentCliVersion: true,
       },
     });
 
@@ -145,6 +165,28 @@ export async function PATCH(
 
     // Check if this is an idempotent request (same status)
     if (currentStatus === requestedStatus) {
+      // AIB-779: still backfill runtime versions when the runner reports them
+      // after the initial RUNNING transition (CLIs are installed mid-run, so
+      // versions are only known after the first PATCH). Per-field updateMany
+      // guarded by `: null` enforces first-write-wins atomically — concurrent
+      // PATCHes with different values cannot clobber each other based on a
+      // stale read.
+      if (requestedStatus === 'RUNNING') {
+        const { pluginVersion, agentCliVersion } = validationResult.data;
+        if (pluginVersion) {
+          await prisma.job.updateMany({
+            where: { id: jobId, pluginVersion: null },
+            data: { pluginVersion },
+          });
+        }
+        if (agentCliVersion) {
+          await prisma.job.updateMany({
+            where: { id: jobId, agentCliVersion: null },
+            data: { agentCliVersion },
+          });
+        }
+      }
+
       const elapsedTime = Date.now() - startTime;
       console.log('[Job Status Update] Idempotent request (no-op):', {
         jobId,
@@ -192,6 +234,8 @@ export async function PATCH(
       qualityScore?: number;
       qualityScoreDetails?: string;
       workflowRunId?: bigint;
+      pluginVersion?: string;
+      agentCliVersion?: string;
     } = {
       status: requestedStatus,
     };
@@ -204,6 +248,10 @@ export async function PATCH(
     if (requestedStatus === 'RUNNING' && validationResult.data.workflowRunId && !job.workflowRunId) {
       updateData.workflowRunId = BigInt(validationResult.data.workflowRunId);
     }
+
+    // AIB-779: capture runtime versions on RUNNING (first-write-wins).
+    // Runner posts these once at startup; later transitions don't overwrite.
+    Object.assign(updateData, buildVersionPatch(requestedStatus, validationResult.data, job));
 
     if (isTerminalState) {
       updateData.completedAt = new Date();

@@ -90,6 +90,12 @@ function createMockJob(
     toolsUsed: ['Read', 'Edit'],
     qualityScore: null,
     qualityScoreDetails: null,
+    peakContextTokens: null,
+    avgContextTokens: null,
+    turnCount: null,
+    pluginVersion: null,
+    agentCliVersion: null,
+    log: null,
     ...overrides,
   };
 }

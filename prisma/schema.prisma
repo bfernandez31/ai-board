@@ -64,6 +64,12 @@ model Job {
   // JSON string containing dimension sub-scores, weights, and threshold label
   qualityScoreDetails String?
 
+  // Runtime versions captured by the runner at job start (AIB-779).
+  // Both nullable: jobs predating this feature, or runs where capture failed,
+  // remain unannotated.
+  pluginVersion   String? @db.VarChar(50) // ai-board plugin version (.claude-plugin/plugin.json)
+  agentCliVersion String? @db.VarChar(100) // Underlying agent CLI version (claude/codex/vibe/gemini --version)
+
   log JobLog?
 
   @@index([projectId])

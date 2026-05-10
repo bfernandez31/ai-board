@@ -41,6 +41,12 @@ function createJob(overrides: Partial<TicketJobWithTelemetry> = {}): TicketJobWi
     toolsUsed: [],
     qualityScore: 82,
     qualityScoreDetails: MOCK_DETAILS,
+    peakContextTokens: null,
+    avgContextTokens: null,
+    turnCount: null,
+    pluginVersion: null,
+    agentCliVersion: null,
+    log: null,
     ...overrides,
   };
 }

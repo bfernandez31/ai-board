@@ -36,6 +36,8 @@ function makeJob(overrides: Partial<TicketJobWithTelemetry> = {}): TicketJobWith
     peakContextTokens: null,
     avgContextTokens: null,
     turnCount: null,
+    pluginVersion: null,
+    agentCliVersion: null,
     log: null,
     ...overrides,
   };
@@ -86,5 +88,67 @@ describe('JobsTimeline — expanded breakdown rows (US3)', () => {
     const details = screen.getByTestId(`job-details-${job.id}`);
     expect(details.textContent).not.toMatch(/Avg Context/i);
     expect(details.textContent).not.toMatch(/Turn Count/i);
+  });
+});
+
+describe('JobsTimeline — plugin and agent CLI versions (AIB-779)', () => {
+  it('renders both versions when captured', async () => {
+    const job = makeJob({
+      pluginVersion: '1.0.1',
+      agentCliVersion: '1.2.3',
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+    await userEvent.click(screen.getByTestId(`job-row-${job.id}`));
+
+    expect(screen.getByTestId(`job-plugin-version-${job.id}`)).toHaveTextContent('1.0.1');
+    expect(screen.getByTestId(`job-agent-cli-version-${job.id}`)).toHaveTextContent('1.2.3');
+  });
+
+  it('shows a discreet placeholder when versions are missing but telemetry is present', async () => {
+    const job = makeJob({
+      pluginVersion: null,
+      agentCliVersion: null,
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+    await userEvent.click(screen.getByTestId(`job-row-${job.id}`));
+
+    expect(screen.getByTestId(`job-plugin-version-${job.id}`)).toHaveTextContent('—');
+    expect(screen.getByTestId(`job-agent-cli-version-${job.id}`)).toHaveTextContent('—');
+  });
+
+  it('expands and shows version rows even when no telemetry was captured', async () => {
+    const job = makeJob({
+      inputTokens: null,
+      outputTokens: null,
+      cacheReadTokens: null,
+      cacheCreationTokens: null,
+      durationMs: null,
+      costUsd: null,
+      model: null,
+      pluginVersion: '1.0.1',
+      agentCliVersion: 'codex 0.4.0',
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+    await userEvent.click(screen.getByTestId(`job-row-${job.id}`));
+
+    expect(screen.getByTestId(`job-plugin-version-${job.id}`)).toHaveTextContent('1.0.1');
+    expect(screen.getByTestId(`job-agent-cli-version-${job.id}`)).toHaveTextContent('codex 0.4.0');
+  });
+
+  it('expands and shows placeholder rows even when both versions and telemetry are absent', async () => {
+    const job = makeJob({
+      inputTokens: null,
+      outputTokens: null,
+      cacheReadTokens: null,
+      cacheCreationTokens: null,
+      turnCount: null,
+      pluginVersion: null,
+      agentCliVersion: null,
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+    await userEvent.click(screen.getByTestId(`job-row-${job.id}`));
+
+    expect(screen.getByTestId(`job-plugin-version-${job.id}`)).toHaveTextContent('—');
+    expect(screen.getByTestId(`job-agent-cli-version-${job.id}`)).toHaveTextContent('—');
   });
 });

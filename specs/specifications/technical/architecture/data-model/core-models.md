@@ -343,6 +343,10 @@ model Job {
   qualityScore        Int?      // Final weighted quality score (0-100)
   qualityScoreDetails String?   @db.Text  // JSON with dimension sub-scores and weights
 
+  // Runtime versions captured by the runner at job start
+  pluginVersion       String?   @db.VarChar(50)   // ai-board plugin version (.claude-plugin/plugin.json)
+  agentCliVersion     String?   @db.VarChar(100)  // Agent CLI version (claude/codex/vibe/gemini --version)
+
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   log         JobLog?
@@ -384,6 +388,8 @@ model Job {
 - `workflowRunId`: GitHub Actions workflow run ID as BigInt (nullable, populated by the workflow's first RUNNING status callback; enables job cancellation via GitHub API)
 - `qualityScore`: Final weighted code quality score 0-100 (nullable, FULL workflow verify jobs only)
 - `qualityScoreDetails`: JSON string containing all five dimension sub-scores, weights, and computed final score (nullable, populated alongside `qualityScore`)
+- `pluginVersion`: ai-board plugin version active at job start (max 50 chars, nullable). Sourced from `.claude-plugin/plugin.json`. Null for jobs predating runtime version capture or runs where the runner could not resolve the file.
+- `agentCliVersion`: Underlying agent CLI version active at job start (max 100 chars, nullable). Captured by parsing the first line of `<cli> --version` (claude/codex/vibe/gemini); leading binary name and `v` prefix are stripped. Null for jobs predating runtime version capture or runs where the CLI did not report a version.
 
 **Relationships**:
 - Belongs to Ticket (required, cascade delete)
@@ -415,6 +421,7 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
   - Deleted when a rollback transition occurs (job record removed as part of rollback)
 - AI-BOARD jobs (command like 'comment-%') don't block transitions or count toward rollback validation
 - `workflowRunId` is set once (first-write-wins) when the workflow sends its first RUNNING callback; subsequent RUNNING callbacks with a run ID are ignored if already populated
+- `pluginVersion` and `agentCliVersion` are first-write-wins on RUNNING. The runner reports them once after CLI installation, which can land on the initial RUNNING PATCH or on a follow-up idempotent same-status PATCH; later transitions never overwrite a populated value
 - When a PENDING job is cancelled before `workflowRunId` is set, any subsequent RUNNING callback for that job receives a 409 response, signalling the workflow to self-abort
 - Users can cancel RUNNING or PENDING jobs via `POST /api/jobs/:id/cancel` (session auth); cancellation calls the GitHub Actions API for RUNNING jobs or marks CANCELLED directly for PENDING jobs
 
