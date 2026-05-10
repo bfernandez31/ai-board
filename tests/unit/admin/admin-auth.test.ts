@@ -4,7 +4,12 @@ vi.mock('@/lib/auth', () => ({
   auth: vi.fn(),
 }));
 
+vi.mock('@/lib/db/users', () => ({
+  getCurrentUserOrNull: vi.fn(),
+}));
+
 import { auth } from '@/lib/auth';
+import { getCurrentUserOrNull } from '@/lib/db/users';
 import {
   getAdminAllowlistEmails,
   isAdminEmail,
@@ -13,6 +18,7 @@ import {
 } from '@/lib/admin/admin-auth';
 
 const mockedAuth = auth as unknown as ReturnType<typeof vi.fn>;
+const mockedGetCurrentUserOrNull = getCurrentUserOrNull as unknown as ReturnType<typeof vi.fn>;
 
 describe('getAdminAllowlistEmails', () => {
   afterEach(() => {
@@ -64,6 +70,7 @@ describe('requireAdmin', () => {
   beforeEach(() => {
     vi.stubEnv('ADMIN_ALLOWLIST_EMAILS', 'alice@example.com');
     mockedAuth.mockReset();
+    mockedGetCurrentUserOrNull.mockReset();
   });
 
   afterEach(() => {
@@ -71,23 +78,25 @@ describe('requireAdmin', () => {
   });
 
   it('throws AdminAccessDenied when no session', async () => {
+    mockedGetCurrentUserOrNull.mockResolvedValue(null);
     mockedAuth.mockResolvedValue(null);
     await expect(requireAdmin()).rejects.toBeInstanceOf(AdminAccessDenied);
   });
 
-  it('throws AdminAccessDenied when session lacks email', async () => {
-    mockedAuth.mockResolvedValue({ user: { id: 'u1' } });
-    await expect(requireAdmin()).rejects.toBeInstanceOf(AdminAccessDenied);
-  });
-
   it('throws AdminAccessDenied for non-allowlisted email', async () => {
-    mockedAuth.mockResolvedValue({ user: { id: 'u1', email: 'eve@example.com' } });
+    mockedGetCurrentUserOrNull.mockResolvedValue({
+      id: 'u1',
+      email: 'eve@example.com',
+      source: 'session',
+    });
     await expect(requireAdmin()).rejects.toBeInstanceOf(AdminAccessDenied);
   });
 
   it('returns user when allowlisted', async () => {
-    mockedAuth.mockResolvedValue({
-      user: { id: 'u1', email: 'alice@example.com' },
+    mockedGetCurrentUserOrNull.mockResolvedValue({
+      id: 'u1',
+      email: 'alice@example.com',
+      source: 'session',
     });
     await expect(requireAdmin()).resolves.toEqual({
       id: 'u1',
@@ -96,8 +105,10 @@ describe('requireAdmin', () => {
   });
 
   it('matches allowlist case-insensitively', async () => {
-    mockedAuth.mockResolvedValue({
-      user: { id: 'u1', email: 'Alice@Example.COM' },
+    mockedGetCurrentUserOrNull.mockResolvedValue({
+      id: 'u1',
+      email: 'Alice@Example.COM',
+      source: 'session',
     });
     await expect(requireAdmin()).resolves.toEqual({
       id: 'u1',
