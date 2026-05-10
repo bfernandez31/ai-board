@@ -215,26 +215,27 @@ model Ticket {
 }
 
 model User {
-  id                    String                @id
-  name                  String?
-  email                 String                @unique
-  emailVerified         DateTime?
-  image                 String?
-  stripeCustomerId      String?               @unique @db.VarChar(255)
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime
-  accounts              Account[]
-  comments              Comment[]
-  projects              Project[]
-  sessions              Session[]
-  memberships           ProjectMember[]
-  notificationsReceived Notification[]        @relation("NotificationRecipient")
-  notificationsCreated  Notification[]        @relation("NotificationActor")
-  pushSubscriptions     PushSubscription[]
-  personalAccessTokens  PersonalAccessToken[]
-  credentials           UserCredential[]
-  subscription          Subscription?
-  ticketAnalyses        TicketAnalysis[]
+  id                            String                @id
+  name                          String?
+  email                         String                @unique
+  emailVerified                 DateTime?
+  image                         String?
+  stripeCustomerId              String?               @unique @db.VarChar(255)
+  createdAt                     DateTime              @default(now())
+  updatedAt                     DateTime
+  accounts                      Account[]
+  comments                      Comment[]
+  projects                      Project[]
+  sessions                      Session[]
+  memberships                   ProjectMember[]
+  notificationsReceived         Notification[]        @relation("NotificationRecipient")
+  notificationsCreated          Notification[]        @relation("NotificationActor")
+  pushSubscriptions             PushSubscription[]
+  personalAccessTokens          PersonalAccessToken[]
+  credentials                   UserCredential[]
+  subscription                  Subscription?
+  ticketAnalyses                TicketAnalysis[]
+  adminInsightsReportsTriggered AdminInsightsReport[] @relation("AdminInsightsReportTriggeredBy")
 
   @@index([email])
 }
@@ -853,4 +854,41 @@ model AnalysisCalibration {
   @@index([projectId, shippedAt(sort: Desc)])
   @@index([projectId, partial])
   @@index([projectId, frictionCell])
+}
+
+enum AdminInsightsReportStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model AdminInsightsReport {
+  id     Int                       @id @default(autoincrement())
+  status AdminInsightsReportStatus @default(RUNNING)
+
+  periodStart DateTime
+  periodEnd   DateTime
+
+  sessionsCount Int?
+  ticketsCount  Int?
+
+  htmlBlobKey  String? @db.VarChar(300)
+  htmlBlobSize Int?
+
+  errorReason String? @db.VarChar(2000)
+
+  triggeredById String?
+  triggeredBy   User?   @relation("AdminInsightsReportTriggeredBy", fields: [triggeredById], references: [id], onDelete: SetNull)
+
+  workflowRunId BigInt?
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([status, periodEnd])
+  @@index([createdAt])
 }

@@ -61,3 +61,28 @@ export async function deleteJobLogArtifact(key: string): Promise<{ deleted: bool
     throw error;
   }
 }
+
+export async function uploadInsightsReportHtml(
+  key: string,
+  body: Buffer | Uint8Array,
+  size: number
+): Promise<PutBlobResult> {
+  const token = requireToken();
+  if (size <= 0) {
+    throw new Error('Artifact size must be positive');
+  }
+  const buf = Buffer.isBuffer(body) ? body : Buffer.from(body);
+  return put(key, buf, {
+    access: 'private',
+    token,
+    contentType: 'text/html; charset=utf-8',
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+}
+
+export async function streamInsightsReportHtml(
+  key: string
+): Promise<{ stream: ReadableStream<Uint8Array>; size: number } | null> {
+  return streamJobLogArtifact(key);
+}

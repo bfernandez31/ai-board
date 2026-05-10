@@ -95,6 +95,14 @@ export const queryKeys = {
   credentials: {
     all: ['credentials'] as const,
   },
+
+  admin: {
+    insights: {
+      list: ['admin', 'insights', 'list'] as const,
+      report: (id: number) => ['admin', 'insights', 'report', id] as const,
+      runStatus: ['admin', 'insights', 'run', 'status'] as const,
+    },
+  },
 } as const;
 
 export type QueryKeys = typeof queryKeys;
