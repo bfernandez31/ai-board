@@ -1080,6 +1080,66 @@ model TicketOutcome {
 - `partial = true` rows still populate job-level signals fully; only change-shape and domain fields are empty/null
 - Rule-set version is captured per row so older rows remain interpretable under their original rules; outcomes are never recomputed when rules later change
 
+### InsightsReport
+
+Application-level Claude Code `/insights` analysis run. Each row tracks one execution of the admin Insights tool (background workflow + persisted HTML artifact).
+
+```prisma
+model InsightsReport {
+  id            Int                  @id @default(autoincrement())
+
+  status        InsightsReportStatus @default(RUNNING)
+  triggeredById String
+  workflowRunId BigInt?
+
+  periodStart  DateTime?
+  periodEnd    DateTime?
+  sessionCount Int       @default(0)
+  ticketCount  Int       @default(0)
+
+  artifactKey  String? @db.VarChar(300)
+  artifactSize Int?
+
+  errorMessage String? @db.VarChar(2000)
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, startedAt])
+  @@index([completedAt(sort: Desc)])
+}
+```
+
+**Purpose**: One row per Claude Code Insights run, surfacing the analyzed scope (period, sessions, tickets) and the location of the produced HTML artifact.
+
+**Fields**:
+- `status`: Lifecycle state — `RUNNING` until the workflow callback updates it to `COMPLETED` or `FAILED`
+- `triggeredById`: Admin user ID that invoked the run (no FK constraint; users are not deleted in practice)
+- `workflowRunId`: GitHub Actions workflow run ID as BigInt (nullable, populated by the workflow's first RUNNING callback)
+- `periodStart`: Lower bound of the analyzed window — set to the previous successful run's `periodEnd`, or to the earliest shipped-ticket timestamp on the first ever run; null when no data was available
+- `periodEnd`: Upper bound — set to the run's `now()` at trigger time
+- `sessionCount`: Number of CLAUDE jobs whose raw native session artifact was included
+- `ticketCount`: Number of `TicketOutcome` rows shipped within the analyzed window
+- `artifactKey`: Vercel Blob key for the produced HTML report (`insights/<id>.html`); populated only on COMPLETED
+- `artifactSize`: Byte size of the produced HTML artifact (nullable)
+- `errorMessage`: Recorded failure reason (nullable, populated on FAILED)
+- `startedAt`: Run creation timestamp
+- `completedAt`: Terminal-state timestamp (set when status moves to COMPLETED or FAILED)
+
+**Constraints**:
+- `(status, startedAt)` index serves the "is anything running?" query and chronological listings filtered by status
+- `completedAt DESC` index serves "latest successful report" lookups
+
+**Business Rules**:
+- A run is only created when `previewInsightsScope()` reports `hasNewTickets = true` — otherwise the trigger is rejected before any row is inserted
+- Only one report can be `RUNNING` at a time; concurrent triggers are rejected with `ANALYSIS_IN_PROGRESS`
+- Only sessions from `Job` rows whose ticket has `agent = CLAUDE` and whose `JobLog.captureStatus = CAPTURED` with a non-null `rawArtifactKey` are included in the analyzed scope
+- The artifact is stored as private HTML in Vercel Blob (`text/html; charset=utf-8`) with deterministic key `insights/<reportId>.html`; reads happen server-side and never expose the blob URL to the client
+- Reports are immutable after the workflow completes — there is no UI or API to edit them
+- No automatic cleanup or retention policy; reports are kept indefinitely
+
 ### TicketAnalysis
 
 Append-only row created on every on-demand inbox analysis run. The latest row drives the analysis panel; older rows are retained indefinitely for audit and future calibration.

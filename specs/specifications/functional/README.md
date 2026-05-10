@@ -137,6 +137,21 @@ Describes the Health Dashboard page, which provides a global health score (0–1
 
 ---
 
+### [09-admin-area.md](09-admin-area.md)
+**Admin Area & Claude Code Insights**
+
+Describes the application-level Admin area (`/admin`), gated by an email allowlist, and the Claude Code Insights tool that runs the `/insights` analyzer across captured Claude sessions.
+
+**Key Topics**:
+- Email-based admin allowlist (no DB role system)
+- Stealth 404 for non-admins to avoid leaking the area's existence
+- Insights page: latest report rendered inline, past-reports list, manual trigger
+- Pre-flight check: refuses runs when no new shipped tickets exist
+- Report viewer states (running, completed, failed) and 5s status polling
+- Sandboxed iframe rendering of `/insights` HTML output
+
+---
+
 ## What's NOT in These Documents
 
 These functional specifications intentionally **exclude**:

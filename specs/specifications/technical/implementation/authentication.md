@@ -299,6 +299,31 @@ Shared authorization helpers enforce the standard access rules:
 
 These helpers accept an optional `NextRequest` so routes that support PATs can resolve identity from either session or token.
 
+## Admin Allowlist
+
+**File**: `lib/auth/admin.ts`
+
+The application-level `/admin` area uses a config-driven email allowlist rather than a DB-backed role. Admin status is orthogonal to project ownership.
+
+**Helpers**:
+
+| Helper | Purpose |
+|--------|---------|
+| `getAdminAllowlist()` | Reads `ADMIN_USER_EMAILS`, splits on `,`, normalizes (lower-case + trim), and deduplicates |
+| `isAdminEmail(email)` | Pure check against the allowlist |
+| `getCurrentAdminOrNull(request?)` | Resolves the current user via `getCurrentUserOrNull()` and returns it only if their email is admin |
+| `requireAdmin(request?)` | Throws `AdminAccessDeniedError` for non-admins; used by routes that wrap and translate the error to 404 |
+
+**Stealth-404 pattern**: Both unauthenticated requests and signed-in non-admin requests receive `404 Not Found`. This applies to every `/admin/*` page (via `app/admin/layout.tsx` calling `notFound()`) and every `/api/admin/*` route. The response is identical to a missing page so the area's existence cannot be inferred.
+
+**Environment variable**:
+
+```env
+ADMIN_USER_EMAILS=alice@example.com,bob@example.com
+```
+
+When unset or empty, no user is admin and the entire `/admin` tree behaves as a 404 for everyone.
+
 ## Test Authentication
 
 **Primary files**:

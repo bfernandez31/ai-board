@@ -14,6 +14,7 @@ Complete REST API documentation with authentication, request/response formats, a
 - [Health](./health.md) — Health dashboard endpoints
 - [Billing](./billing.md) — Billing, subscription, and usage endpoints
 - [Account, Settings & Credentials](./account.md) — Settings, Account, Token, Credential endpoints
+- [Admin](./admin.md) — Application-level admin area endpoints (Claude Code Insights)
 
 ## Authentication
 

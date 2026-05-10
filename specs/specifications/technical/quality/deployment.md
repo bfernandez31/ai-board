@@ -15,6 +15,7 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 | `ai-board-assist.yml` | workflow_dispatch | AI-BOARD comment assistance | 60 min |
 | `deploy-preview.yml` | workflow_dispatch | Manual Vercel preview deployment | 15 min |
 | `auto-ship.yml` | deployment_status | Auto-transition VERIFY → SHIP | 5 min |
+| `admin-insights.yml` | workflow_dispatch | Run Claude Code `/insights` over captured CLAUDE sessions | 30 min |
 | `test.yml` | push, pull_request | CI testing (future) | 30 min |
 
 ### AI-Board Workflow
@@ -465,6 +466,30 @@ echo "  ⏭️  Skipped: ${SKIPPED_COUNT} ticket(s)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 ```
 
+### Admin Insights Workflow
+
+**File**: `.github/workflows/admin-insights.yml`
+
+**Inputs**:
+- `report_id` (string, required): `InsightsReport.id` to update
+
+**Authentication**:
+- `WORKFLOW_API_TOKEN` for status / scope / artifact callbacks
+- `CLAUDE_CODE_OAUTH_TOKEN` for the Claude CLI (used directly from secrets — this workflow is application-scoped, not project-scoped, so the AI Credential Guard does not apply)
+- `BLOB_READ_WRITE_TOKEN` to upload the produced HTML to Vercel Blob
+
+**Execution Flow**:
+
+1. **Mark RUNNING**: `PATCH /api/admin/insights/{report_id}/status` with `status=RUNNING` and the GitHub run ID.
+2. **Fetch scope**: `GET /api/admin/insights/{report_id}/scope` returns the list of CLAUDE jobs whose raw native session artifact is captured within the report's period.
+3. **Download sessions**: For each session, `GET /api/projects/:p/tickets/:t/jobs/:j/logs/raw-native` streams the gzipped JSONL transcript into `/tmp/sessions/`.
+4. **Run analyzer**: The Claude CLI (`@anthropic-ai/claude-code`, model `claude-opus-4-7`) is invoked with a prompt that instructs it to run the `/insights` analyzer over the aggregated transcript and emit a single self-contained HTML document.
+5. **Upload artifact**: The HTML is uploaded to Vercel Blob at `insights/{report_id}.html` with `content-type: text/html; charset=utf-8` and `x-access: private`.
+6. **Mark COMPLETED**: `PATCH /api/admin/insights/{report_id}/status` with `status=COMPLETED`, `artifactKey`, and `artifactSize`.
+7. **Failure path** (`if: failure()`): `PATCH …/status` with `status=FAILED` and an error message pointing operators to the GitHub Actions logs.
+
+**Sparse checkout**: Only the `.claude-plugin/` directory is fetched — the workflow does not need application source.
+
 ## Environment Configuration
 
 ### GitHub Secrets
@@ -511,6 +536,9 @@ CLOUDINARY_API_SECRET=<api-secret>
 
 # Workflow (must match GitHub secret)
 WORKFLOW_API_TOKEN=<same-as-github-secret>
+
+# Admin allowlist for /admin area (comma-separated emails; empty = no admins)
+ADMIN_USER_EMAILS=<email1>,<email2>
 ```
 
 **Preview** (optional, different database):

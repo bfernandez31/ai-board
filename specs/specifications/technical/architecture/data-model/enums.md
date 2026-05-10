@@ -59,6 +59,26 @@ enum CredentialReadiness {
 | `READY` | Provider confirmed the credential is valid | `ACTION_REQUIRED` (if re-test fails) |
 | `ACTION_REQUIRED` | Provider rejected or could not verify | `PENDING_VERIFICATION` (on replace) |
 
+### InsightsReportStatus
+
+Lifecycle states for an admin Claude Code `/insights` run.
+
+```prisma
+enum InsightsReportStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+```
+
+| Value | Description | Terminal? | Transitions To |
+|-------|-------------|-----------|----------------|
+| `RUNNING` | Report row created; admin-insights workflow dispatched | No | `COMPLETED`, `FAILED` |
+| `COMPLETED` | Workflow uploaded the HTML artifact and reported success | Yes | — |
+| `FAILED` | Workflow step failed or dispatch raised an error | Yes | — |
+
+`CANCELLED` is omitted — Insights runs have no cancellation UX. A stalled run is left in `RUNNING` until the workflow's `if: failure()` step records `FAILED`.
+
 ### CaptureStatus
 
 State of the log artifact captured for a terminated job.
