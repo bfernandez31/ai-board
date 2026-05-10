@@ -119,4 +119,42 @@ describe('GET /api/admin/insights/reports', () => {
     expect(response.status).toBe(200);
     expect(response.data.reports.length).toBeLessThanOrEqual(200);
   });
+
+  it('US4 — orders by createdAt desc with mixed statuses and runningReportId resolves', async () => {
+    const olderCompleted = await seedCompletedInsightsReport({
+      triggeredById: adminId,
+      sessionsCount: 1,
+      ticketsCount: 1,
+    });
+    // Insert a small delay so that createdAt differs measurably.
+    await new Promise((r) => setTimeout(r, 20));
+    const failed = await seedFailedInsightsReport({
+      triggeredById: adminId,
+      errorReason: 'old failure',
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    const newerCompleted = await seedCompletedInsightsReport({
+      triggeredById: adminId,
+      sessionsCount: 2,
+      ticketsCount: 2,
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    const running = await seedRunningInsightsReport({ triggeredById: adminId });
+
+    const response = await adminClient().get<{
+      reports: Array<{ id: number; status: string; errorReason: string | null }>;
+      runningReportId: number | null;
+    }>('/api/admin/insights/reports');
+    expect(response.status).toBe(200);
+    expect(response.data.runningReportId).toBe(running.id);
+    expect(response.data.reports.map((r) => r.id)).toEqual([
+      running.id,
+      newerCompleted.id,
+      failed.id,
+      olderCompleted.id,
+    ]);
+    const failedRow = response.data.reports.find((r) => r.id === failed.id)!;
+    expect(failedRow.status).toBe('FAILED');
+    expect(failedRow.errorReason).toBe('old failure');
+  });
 });

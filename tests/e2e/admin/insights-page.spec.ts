@@ -78,4 +78,67 @@ test.describe('Admin Insights page', () => {
       `/api/admin/insights/reports/${report.id}/html`
     );
   });
+
+  test('US4 — admin can select an older COMPLETED report from the list', async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    await page.goto('/auth/signin');
+    await page.getByLabel(/email/i).fill(ADMIN_EMAIL);
+    await page.getByLabel(/shared secret/i).fill('shared-preview-secret');
+    await page.getByRole('button', { name: /continue with preview login/i }).click();
+    await page.waitForURL('**/projects');
+
+    // Two completed reports: older + newer
+    const olderReport = await seedCompletedInsightsReport({
+      sessionsCount: 1,
+      ticketsCount: 1,
+      periodStart: new Date('2026-01-01T00:00:00.000Z'),
+      periodEnd: new Date('2026-01-31T00:00:00.000Z'),
+    });
+    const newerReport = await seedCompletedInsightsReport({
+      sessionsCount: 9,
+      ticketsCount: 4,
+      periodStart: new Date('2026-02-01T00:00:00.000Z'),
+      periodEnd: new Date('2026-02-28T00:00:00.000Z'),
+    });
+    // Upload HTML for both reports.
+    for (const r of [olderReport, newerReport]) {
+      const uploadRes = await request.put(
+        `${baseURL ?? 'http://localhost:3000'}/api/admin/insights/reports/${r.id}/html`,
+        {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            Authorization: `Bearer ${process.env.WORKFLOW_API_TOKEN ?? 'test-workflow-token-for-e2e-tests-only'}`,
+          },
+          data: HTML_BODY,
+        }
+      );
+      expect(uploadRes.ok()).toBeTruthy();
+      const { htmlBlobKey, htmlBlobSize } = await uploadRes.json();
+      await prisma.adminInsightsReport.update({
+        where: { id: r.id },
+        data: { htmlBlobKey, htmlBlobSize },
+      });
+    }
+
+    await page.goto('/admin/insights');
+
+    const iframe = page.getByTestId('insights-report-iframe');
+    await expect(iframe).toHaveAttribute(
+      'src',
+      `/api/admin/insights/reports/${newerReport.id}/html`
+    );
+
+    await page.getByTestId(`insights-report-row-${olderReport.id}`).click();
+
+    await expect(page.getByTestId('insights-metadata-header')).toContainText(
+      'Analyzed 1 Claude Code sessions across 1 tickets shipped between 2026-01-01 and 2026-01-31'
+    );
+    await expect(iframe).toHaveAttribute(
+      'src',
+      `/api/admin/insights/reports/${olderReport.id}/html`
+    );
+  });
 });
