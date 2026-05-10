@@ -51,10 +51,10 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
     }
   }
   if (!res.ok) {
-    const errorMessage =
-      (json && typeof json === 'object' && 'error' in json
-        ? String((json as { error: unknown }).error)
-        : null) ?? `Request failed (${res.status})`;
+    let errorMessage = `Request failed (${res.status})`;
+    if (json && typeof json === 'object' && 'error' in json) {
+      errorMessage = String((json as { error: unknown }).error);
+    }
     const error = new Error(errorMessage) as Error & {
       status?: number;
       code?: string;
@@ -235,20 +235,25 @@ export function InsightsPageClient(): JSX.Element {
   );
 }
 
+function statusBadgeClass(status: ReportSummary['status']): string {
+  switch (status) {
+    case 'COMPLETED':
+      return 'bg-emerald-500/15 text-emerald-500';
+    case 'FAILED':
+      return 'bg-destructive/15 text-destructive';
+    case 'RUNNING':
+      return 'bg-amber-500/15 text-amber-500';
+  }
+}
+
 function StatusBadge({
   status,
 }: {
   status: ReportSummary['status'];
 }): JSX.Element {
-  const className =
-    status === 'COMPLETED'
-      ? 'bg-emerald-500/15 text-emerald-500'
-      : status === 'FAILED'
-        ? 'bg-destructive/15 text-destructive'
-        : 'bg-amber-500/15 text-amber-500';
   return (
     <span
-      className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${className}`}
+      className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusBadgeClass(status)}`}
     >
       {status}
     </span>
@@ -266,6 +271,43 @@ interface ReportData {
   startedAt: string;
   completedAt: string | null;
   html: string | null;
+}
+
+function reportTitle(data: ReportData): string {
+  switch (data.status) {
+    case 'COMPLETED':
+      return `Analyzed ${data.sessionCount} Claude Code sessions across ${data.ticketCount} tickets`;
+    case 'RUNNING':
+      return 'Analysis in progress';
+    case 'FAILED':
+      return 'Analysis failed';
+  }
+}
+
+function ReportBody({ data }: { data: ReportData }): JSX.Element {
+  if (data.status === 'COMPLETED' && data.html) {
+    return (
+      <iframe
+        title={`Claude Code Insights report #${data.id}`}
+        srcDoc={data.html}
+        sandbox=""
+        className="h-[80vh] w-full rounded-lg border border-border bg-background"
+      />
+    );
+  }
+  if (data.status === 'RUNNING') {
+    return (
+      <div className="rounded-lg border border-border bg-card/40 p-6 text-sm text-muted-foreground">
+        Generating report… this can take a few minutes. The page will refresh
+        automatically when the analysis finishes.
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-lg border border-border bg-card/40 p-6 text-sm text-muted-foreground">
+      Report artifact unavailable.
+    </div>
+  );
 }
 
 function ReportViewer({
@@ -306,13 +348,7 @@ function ReportViewer({
   return (
     <div className="flex flex-col gap-4">
       <header className="rounded-lg border border-border bg-card/40 p-4 text-sm">
-        <h2 className="text-base font-semibold">
-          {data.status === 'COMPLETED'
-            ? `Analyzed ${data.sessionCount} Claude Code sessions across ${data.ticketCount} tickets`
-            : data.status === 'RUNNING'
-              ? 'Analysis in progress'
-              : 'Analysis failed'}
-        </h2>
+        <h2 className="text-base font-semibold">{reportTitle(data)}</h2>
         <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-muted-foreground">
           <div>
             <dt className="inline font-medium">Generated:</dt>{' '}
@@ -341,23 +377,7 @@ function ReportViewer({
           </p>
         )}
       </header>
-      {data.status === 'COMPLETED' && data.html ? (
-        <iframe
-          title={`Claude Code Insights report #${data.id}`}
-          srcDoc={data.html}
-          sandbox=""
-          className="h-[80vh] w-full rounded-lg border border-border bg-background"
-        />
-      ) : data.status === 'RUNNING' ? (
-        <div className="rounded-lg border border-border bg-card/40 p-6 text-sm text-muted-foreground">
-          Generating report… this can take a few minutes. The page will refresh
-          automatically when the analysis finishes.
-        </div>
-      ) : (
-        <div className="rounded-lg border border-border bg-card/40 p-6 text-sm text-muted-foreground">
-          Report artifact unavailable.
-        </div>
-      )}
+      <ReportBody data={data} />
     </div>
   );
 }

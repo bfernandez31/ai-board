@@ -87,17 +87,17 @@ export async function buildInsightsScope(now: Date = new Date()): Promise<Insigh
       })
     : [];
 
-  const jobs = jobRows
-    .filter(
-      (j): j is typeof j & { log: { rawArtifactKey: string } } =>
-        !!j.log?.rawArtifactKey
-    )
-    .map((j) => ({
-      jobId: j.id,
-      projectId: j.projectId,
-      ticketId: j.ticketId,
-      rawArtifactKey: j.log.rawArtifactKey,
-    }));
+  const jobs: InsightsScope['jobs'] = [];
+  for (const row of jobRows) {
+    const rawArtifactKey = row.log?.rawArtifactKey;
+    if (!rawArtifactKey) continue;
+    jobs.push({
+      jobId: row.id,
+      projectId: row.projectId,
+      ticketId: row.ticketId,
+      rawArtifactKey,
+    });
+  }
 
   return {
     ...preview,
