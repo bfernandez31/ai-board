@@ -109,6 +109,7 @@ This gives you access to all `/ai-board.*` commands locally.
 | Health Dashboard | [Health Dashboard](./functional/08-health-dashboard.md) | [Health Endpoints](./technical/api/endpoints/health.md), [Health Models](./technical/architecture/data-model/health-models.md) |
 | Inbox Ticket Analysis | [Inbox Analysis Panel](./functional/02-ticket-management.md#inbox-analysis-panel) | [Analysis Endpoints](./technical/api/endpoints/tickets.md#ticket-analysis-endpoints), [TicketAnalysis Model](./technical/architecture/data-model/core-models.md#ticketanalysis) |
 | Analysis Calibration | [Calibration Drift Dashboard](./functional/05-projects.md#analysis-calibration-drift-dashboard), [Pairing on SHIP](./functional/04-automation/stage-transitions.md#analysis-calibration-on-ship) | [Calibration Endpoint](./technical/api/endpoints/projects.md#project-calibration-endpoint), [AnalysisCalibration Model](./technical/architecture/data-model/core-models.md#analysiscalibration) |
+| Admin Insights | [Admin Insights](./functional/09-admin-insights.md) | [Admin Insights Endpoints](./technical/api/endpoints/admin-insights.md), [AdminInsightsReport Model](./technical/architecture/data-model/core-models.md#admininsightsreport) |
 
 ### By Task
 

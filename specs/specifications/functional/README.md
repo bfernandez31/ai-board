@@ -137,6 +137,24 @@ Describes the Health Dashboard page, which provides a global health score (0–1
 
 ---
 
+### [09-admin-insights.md](09-admin-insights.md)
+**Admin Insights**
+
+Describes the application-wide admin area at `/admin` and the single page at `/admin/insights` that hosts archived Claude Code `/insights` reports for operators in the configuration-driven allowlist.
+
+**Key Topics**:
+- Configuration-driven admin allowlist (no DB role)
+- 404-byte-equivalent responses for non-allowlisted callers
+- Manual trigger for new analysis runs
+- Pre-flight check (shipped Claude tickets since last successful run)
+- Single-flight concurrency gate with lazy orphan reconciliation
+- Half-open analysis period semantics across runs
+- Sandboxed inline rendering of the genuine `/insights` HTML
+- Reverse-chronological past-reports browsing
+- Read-only artifacts (no edit/delete/notify)
+
+---
+
 ## What's NOT in These Documents
 
 These functional specifications intentionally **exclude**:

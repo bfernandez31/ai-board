@@ -347,3 +347,27 @@ enum TicketAnalysisStatus {
 
 Terminal rows are immutable. The single allowed transition is enforced by the PATCH handler with `WHERE id = ? AND status = 'running'`; PATCH on a row already terminal is idempotent (200, no DB write).
 
+### AdminInsightsReportStatus
+
+Lifecycle states for an `AdminInsightsReport` row.
+
+```prisma
+enum AdminInsightsReportStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+```
+
+| Value | Description | Terminal? | Transitions To |
+|-------|-------------|-----------|----------------|
+| RUNNING | Row created by the trigger endpoint; workflow dispatched | No | COMPLETED, FAILED |
+| COMPLETED | Workflow uploaded HTML and finalized with `sessionsCount`, `ticketsCount`, `htmlBlobKey`, `htmlBlobSize` | Yes | — |
+| FAILED | Workflow reported failure, or lazy reconciliation flipped a stuck RUNNING row past the timeout cutoff | Yes | — |
+
+**Allowed transitions** (enforced by `lib/admin/insights/state-machine.ts`):
+- `RUNNING → COMPLETED`
+- `RUNNING → FAILED`
+- `RUNNING → RUNNING` accepted as idempotent no-op (200, no DB write)
+- `COMPLETED → *` and `FAILED → *` rejected with 400 (`Invalid transition`)
+

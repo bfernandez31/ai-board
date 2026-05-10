@@ -27,6 +27,7 @@ model User {
   personalAccessTokens  PersonalAccessToken[]
   subscription          Subscription?
   ticketAnalyses        TicketAnalysis[]
+  adminInsightsReportsTriggered AdminInsightsReport[] @relation("AdminInsightsReportTriggeredBy")
 
   @@index([email])
 }
@@ -1318,4 +1319,87 @@ model AnalysisCalibration {
 - When the paired outcome is `partial = true`, the row is still created: cells whose computation requires fields the outcome was unable to capture are recorded as `'n_a'` with the `partialReason` snapshot; cells that can be computed from available telemetry populate normally
 - Pairing failures (Zod superRefine, Prisma errors, missing analysis output) are logged with the `[calibration]` prefix and never propagate to SHIP or capture
 - No backfill for historical shipped+analyzed tickets — the dashboard's "30 of N" caption naturally reflects the post-launch dataset
+
+### AdminInsightsReport
+
+Application-wide admin insights report — one row per Claude Code `/insights` analysis attempt.
+
+```prisma
+model AdminInsightsReport {
+  id              Int                       @id @default(autoincrement())
+  status          AdminInsightsReportStatus @default(RUNNING)
+  periodStart     DateTime
+  periodEnd       DateTime
+  sessionsCount   Int?
+  ticketsCount    Int?
+  htmlBlobKey     String?                   @db.VarChar(300)
+  htmlBlobSize    Int?
+  errorReason     String?                   @db.VarChar(2000)
+  triggeredById   String?
+  triggeredBy     User?                     @relation("AdminInsightsReportTriggeredBy", fields: [triggeredById], references: [id], onDelete: SetNull)
+  workflowRunId   BigInt?
+  startedAt       DateTime                  @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  @@index([status])
+  @@index([status, periodEnd])
+  @@index([createdAt])
+}
+```
+
+**Purpose**: Persisted record of each admin insights analysis run. The HTML body is NOT stored as a column — it lives in Vercel Blob at `insights/reports/<id>.html`. The row carries metadata plus a pointer.
+
+**Fields**:
+- `id`: Auto-incrementing primary key; embedded in the blob key
+- `status`: Lifecycle state (enum: RUNNING, COMPLETED, FAILED); default RUNNING (rows are created at trigger time, before workflow dispatch)
+- `periodStart` / `periodEnd`: Half-open window `[periodStart, periodEnd)` covered by the analysis
+- `sessionsCount` / `ticketsCount`: Counts of what the workflow actually fed into `/insights` (NOT the pre-flight prediction). NULL on RUNNING/FAILED, may be 0 on COMPLETED when raw artifacts aged out
+- `htmlBlobKey`: Pointer to the HTML artifact (`insights/reports/<id>.html`). Max 300 chars. Set only on COMPLETED. NULL on RUNNING/FAILED
+- `htmlBlobSize`: Byte size of the uploaded artifact (capped at 25 MB / `ARTIFACT_MAX_BYTES`)
+- `errorReason`: Non-secret, operator-actionable failure description (max 2000 chars). Set only on FAILED
+- `triggeredById`: Identity of the operator who triggered the run (nullable; FK to User with `onDelete: SetNull` to preserve audit trail across user deletion)
+- `workflowRunId`: GitHub Actions run id, set on the first RUNNING callback for operator forensics
+- `startedAt`: Row creation timestamp; surfaced in the "Already running since…" refusal message
+- `completedAt`: Set on the COMPLETED/FAILED transition
+- `createdAt` / `updatedAt`: Standard timestamps
+
+**Relationships**:
+- Belongs to User (optional) via `triggeredById` with `onDelete: SetNull`
+
+**Constraints**:
+- `@@index([status])` — hottest query; "is anything RUNNING?" fires on every admin page load and every trigger attempt
+- `@@index([status, periodEnd])` — supports the previous-successful-run high-water-mark lookup
+- `@@index([createdAt])` — supports reverse-chronological listing
+
+**State Machine** (enforced by `lib/admin/insights/state-machine.ts`):
+- `RUNNING → COMPLETED` (workflow uploads HTML, then PATCHes COMPLETED with counts and key)
+- `RUNNING → FAILED` (workflow step fails, lazy reconciliation timeout, or workflow error reason)
+- `RUNNING → RUNNING` accepted as idempotent no-op
+- `COMPLETED → *` and `FAILED → *` rejected — terminal states
+
+**Atomicity**: all `RUNNING → terminal` writes use `updateMany({ where: { id, status: 'RUNNING' }, data })`. On `count === 0`, re-read and return current state with 200 — duplicate workflow callbacks cannot double-finalize.
+
+**Lazy Reconciliation**:
+```ts
+const cutoff = new Date(Date.now() - INSIGHTS_RUN_TIMEOUT_MS);
+await prisma.adminInsightsReport.updateMany({
+  where: { status: 'RUNNING', startedAt: { lt: cutoff } },
+  data: {
+    status: 'FAILED',
+    errorReason: 'Run timed out — workflow did not report terminal status',
+    completedAt: new Date(),
+  },
+});
+```
+`INSIGHTS_RUN_TIMEOUT_MS` defaults to 3,600,000 ms (60 min). Runs on every admin list-endpoint read and every trigger attempt (idempotent).
+
+**Business Rules**:
+- Rows are created only by `POST /api/admin/insights/runs` (the trigger endpoint), never by the workflow
+- The trigger endpoint runs the pre-flight + concurrency gates, creates the RUNNING row in a transaction, then dispatches the workflow — on dispatch failure the row is deleted (rollback-on-error)
+- COMPLETED metadata is immutable after creation; FAILED metadata is immutable after creation
+- No edit, annotation, rename, or delete endpoints exist — reports are read-only artifacts
+- Application-wide vantage point: no `projectId` or `ticketId` foreign key; reports are not partitioned per-project, per-ticket, or per-user
+- The admin allowlist is environment-driven (`ADMIN_ALLOWLIST_EMAILS`); no `User.isAdmin` column is added
 

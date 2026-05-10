@@ -15,6 +15,7 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 | `ai-board-assist.yml` | workflow_dispatch | AI-BOARD comment assistance | 60 min |
 | `deploy-preview.yml` | workflow_dispatch | Manual Vercel preview deployment | 15 min |
 | `auto-ship.yml` | deployment_status | Auto-transition VERIFY → SHIP | 5 min |
+| `insights-analyze.yml` | workflow_dispatch | Admin Insights — Claude Code `/insights` analysis | 45 min |
 | `test.yml` | push, pull_request | CI testing (future) | 30 min |
 
 ### AI-Board Workflow
@@ -369,6 +370,65 @@ steps:
         -d '{"status":"FAILED","logs":"Deployment failed. Check workflow logs for details."}'
 ```
 
+### Insights-Analyze Workflow
+
+**File**: `.github/workflows/insights-analyze.yml`
+
+**Trigger**: `workflow_dispatch` only (no `schedule`, no `push`, no `pull_request`). Dispatched exclusively by `POST /api/admin/insights/runs` via `octokit.actions.createWorkflowDispatch({ workflow_id: 'insights-analyze.yml', inputs: { report_id, period_start, period_end } })`.
+
+**Inputs**:
+- `report_id`: `AdminInsightsReport.id` of the row already created in the database before dispatch
+- `period_start`: ISO-8601 timestamp; inclusive lower bound of the analysis window
+- `period_end`: ISO-8601 timestamp; exclusive upper bound of the analysis window
+
+No `ticket_id`, no `project_id`, no `branch`, no `githubRepository` — the analysis is application-wide and operates on raw artifacts already in blob storage. There is no target repo to clone.
+
+**Required secrets / variables**:
+| Name | Source | Used by |
+|------|--------|---------|
+| `WORKFLOW_API_TOKEN` | repo secret | Bearer token on every PATCH/PUT callback |
+| `CLAUDE_CODE_OAUTH_TOKEN` | repo secret | Authenticate the Claude Code CLI |
+| `APP_URL` | repo variable | Base URL for callbacks |
+
+The workflow never holds blob credentials directly; raw artifacts are streamed through authenticated app endpoints.
+
+**Pipeline** (`timeout-minutes: 45`, deliberately less than the 60-min `INSIGHTS_RUN_TIMEOUT_MS` so the workflow's own timeout fires before lazy reconciliation):
+
+```yaml
+name: Admin Insights Analyze
+on:
+  workflow_dispatch:
+    inputs:
+      report_id: { required: true, type: string }
+      period_start: { required: true, type: string }
+      period_end: { required: true, type: string }
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      # 1. PATCH …/status RUNNING (acknowledges start, sets workflowRunId)
+      # 2. Setup Node + Bun + Claude Code CLI (no target-repo checkout)
+      # 3. Enumerate raw Claude artifacts via GET /api/internal/admin-insights/raw-artifacts
+      # 4. Download each raw JSONL via GET /api/jobs/:id/logs/raw-native
+      # 5. claude /insights --input-dir /tmp/sessions --output-html /tmp/report.html --period-start --period-end
+      # 6. PUT …/html with the HTML body
+      # 7. PATCH …/status COMPLETED { sessionsCount, ticketsCount, htmlBlobKey, htmlBlobSize } on success
+      # 8. PATCH …/status FAILED { errorReason } on any prior step failure (if: failure())
+```
+
+**Failure semantics**:
+- Any step before step 8 failing leaves the row RUNNING until step 8 fires (it always fires on `if: failure()`); step 8 transitions to FAILED with a non-secret reason
+- Step 6 (HTML upload) failing fires step 8; the row's `htmlBlobKey` remains NULL
+- If the runner crashes such that step 8 never fires, lazy reconciliation transitions the row to FAILED at the next admin page load
+- A duplicated dispatch (e.g., GitHub retry) operates on the existing row id; idempotent PATCH/PUT semantics mean duplicates at most overwrite the artifact during RUNNING, and the atomic terminal write blocks double-finalization
+
+**Deliberate omissions**:
+- No target-repo clone, no `bun install`, no service containers (no DB / Redis / MySQL / Mongo)
+- No automatic trigger (no `schedule`, no `push`, no `pull_request`)
+- No notifications
+
 ### Auto-Ship Workflow
 
 **File**: `.github/workflows/auto-ship.yml`
@@ -475,6 +535,7 @@ Required secrets in repository settings:
 |--------|---------|---------|
 | `ANTHROPIC_API_KEY` | Claude Code API key | `sk-ant-api03-...` |
 | `WORKFLOW_API_TOKEN` | Workflow authentication | Random 32-char string |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code CLI authentication for `insights-analyze.yml` | OAuth bearer token |
 | `VERCEL_TOKEN` | Vercel API authentication | `vercel_api_token_...` |
 | `VERCEL_ORG_ID` | Vercel organization ID | `team_abc123...` |
 | `VERCEL_PROJECT_ID` | Vercel project ID | `prj_xyz789...` |
@@ -511,7 +572,15 @@ CLOUDINARY_API_SECRET=<api-secret>
 
 # Workflow (must match GitHub secret)
 WORKFLOW_API_TOKEN=<same-as-github-secret>
+
+# Admin Insights (optional)
+ADMIN_ALLOWLIST_EMAILS=alice@example.com,bob@example.com
+INSIGHTS_RUN_TIMEOUT_MS=3600000
 ```
+
+**Admin Insights configuration**:
+- `ADMIN_ALLOWLIST_EMAILS`: comma-separated allowlist of email addresses permitted to access `/admin/*` routes; matched case-insensitively against `session.user.email`. Empty or unset means the admin area is inaccessible to everyone. Changes take effect on the next request (no restart required).
+- `INSIGHTS_RUN_TIMEOUT_MS`: orphan reconciliation cutoff (default 3,600,000 ms = 60 min). A RUNNING report older than this is auto-transitioned to FAILED on the next admin page load or trigger attempt. Must exceed the `insights-analyze.yml` workflow `timeout-minutes` (45 min) so the workflow's own timeout fires before reconciliation.
 
 **Preview** (optional, different database):
 

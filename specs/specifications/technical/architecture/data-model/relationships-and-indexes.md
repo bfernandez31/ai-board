@@ -33,6 +33,7 @@ User
 ├── credentials (one-to-many) → UserCredential
 │   └── unique on (userId, provider)
 ├── ticketAnalyses (one-to-many) → TicketAnalysis (as trigger)
+├── adminInsightsReportsTriggered (one-to-many) → AdminInsightsReport (as trigger, optional FK with onDelete: SetNull)
 └── accounts/sessions (one-to-many) → NextAuth tables
 ```
 
@@ -94,6 +95,11 @@ User
 - `AnalysisCalibration(projectId, shippedAt DESC)` - Dashboard 30-row window, newest-first
 - `AnalysisCalibration(projectId, partial)` - Dashboard headline-rate filters that exclude partials
 - `AnalysisCalibration(projectId, frictionCell)` - Dashboard confusion-matrix counts via `groupBy`
+
+**Admin Insights Queries**:
+- `AdminInsightsReport(status)` - Concurrency gate ("is anything RUNNING?") fired on every admin page load and trigger attempt
+- `AdminInsightsReport(status, periodEnd)` - Previous-successful-run high-water mark lookup (COMPLETED rows ordered by periodEnd desc)
+- `AdminInsightsReport(createdAt)` - Reverse-chronological past-reports listing
 
 **Comparison Queries**:
 - `ComparisonRecord(projectId, generatedAt DESC)` - Project comparisons listing
