@@ -98,48 +98,31 @@ export async function PATCH(
     );
   }
 
-  // Atomic conditional update — terminal transitions race-safe.
+  // Atomic conditional update — guarded by `status: 'RUNNING'` so a lost race
+  // is a no-op. The post-fetch below returns the authoritative state either way.
+  // requestedStatus is COMPLETED or FAILED here: same-status was handled above,
+  // and non-RUNNING→RUNNING is rejected by canTransition.
   if (requestedStatus === 'COMPLETED') {
-    const data = {
-      status: 'COMPLETED' as const,
-      completedAt: new Date(),
-      sessionsCount: payload.sessionsCount,
-      ticketsCount: payload.ticketsCount,
-      htmlBlobKey: payload.htmlBlobKey,
-      htmlBlobSize: payload.htmlBlobSize,
-    };
-    const result = await prisma.adminInsightsReport.updateMany({
+    await prisma.adminInsightsReport.updateMany({
       where: { id, status: 'RUNNING' },
-      data,
+      data: {
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        sessionsCount: payload.sessionsCount,
+        ticketsCount: payload.ticketsCount,
+        htmlBlobKey: payload.htmlBlobKey,
+        htmlBlobSize: payload.htmlBlobSize,
+      },
     });
-    if (result.count === 0) {
-      const after = await prisma.adminInsightsReport.findUnique({
-        where: { id },
-        select: { id: true, status: true, completedAt: true },
-      });
-      return NextResponse.json(toCurrentState(after!), { status: 200 });
-    }
   } else if (requestedStatus === 'FAILED') {
-    const data = {
-      status: 'FAILED' as const,
-      completedAt: new Date(),
-      errorReason: payload.errorReason,
-    };
-    const result = await prisma.adminInsightsReport.updateMany({
+    await prisma.adminInsightsReport.updateMany({
       where: { id, status: 'RUNNING' },
-      data,
+      data: {
+        status: 'FAILED',
+        completedAt: new Date(),
+        errorReason: payload.errorReason,
+      },
     });
-    if (result.count === 0) {
-      const after = await prisma.adminInsightsReport.findUnique({
-        where: { id },
-        select: { id: true, status: true, completedAt: true },
-      });
-      return NextResponse.json(toCurrentState(after!), { status: 200 });
-    }
-  } else {
-    // RUNNING — only reachable here if currentStatus is also RUNNING (handled
-    // by the idempotent branch above). For completeness, no-op + 200.
-    return NextResponse.json(toCurrentState(existing), { status: 200 });
   }
 
   const after = await prisma.adminInsightsReport.findUnique({

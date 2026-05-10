@@ -9,6 +9,15 @@ export interface TriggerRunButtonProps {
   runningReportId: number | null;
 }
 
+function buttonLabel(
+  runningReportId: number | null,
+  isPending: boolean
+): string {
+  if (runningReportId !== null) return 'Running…';
+  if (isPending) return 'Starting…';
+  return 'Run new analysis';
+}
+
 export function TriggerRunButton({
   runningReportId,
 }: TriggerRunButtonProps): JSX.Element {
@@ -34,11 +43,7 @@ export function TriggerRunButton({
       disabled={disabled}
       data-testid="insights-trigger-run-button"
     >
-      {runningReportId !== null
-        ? 'Running…'
-        : mutation.isPending
-        ? 'Starting…'
-        : 'Run new analysis'}
+      {buttonLabel(runningReportId, mutation.isPending)}
     </Button>
   );
 }

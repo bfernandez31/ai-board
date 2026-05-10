@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/client';
 import {
   AdminAccessDenied,
   requireAdmin,
+  type AdminUser,
 } from '@/lib/admin/admin-auth';
 import { reconcileOrphanedInsightsReports } from '@/lib/admin/insights/reconcile';
 import { derivePeriod } from '@/lib/admin/insights/period';
@@ -17,8 +18,9 @@ function notFound(): NextResponse {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  let session: AdminUser;
   try {
-    await requireAdmin(request);
+    session = await requireAdmin(request);
   } catch (error) {
     if (error instanceof AdminAccessDenied) return notFound();
     throw error;
@@ -84,14 +86,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
       { status: 409 }
     );
-  }
-
-  let session;
-  try {
-    session = await requireAdmin(request);
-  } catch (error) {
-    if (error instanceof AdminAccessDenied) return notFound();
-    throw error;
   }
 
   const report = await prisma.adminInsightsReport.create({

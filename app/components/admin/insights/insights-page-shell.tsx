@@ -25,6 +25,53 @@ function pickDefaultSelected(
   return latestCompleted?.id ?? null;
 }
 
+function renderSelectedReport(
+  selectedReport: InsightsReportSummary | null
+): JSX.Element | null {
+  if (!selectedReport) return null;
+
+  switch (selectedReport.status) {
+    case 'COMPLETED':
+      return (
+        <>
+          <MetadataHeader
+            sessionsCount={selectedReport.sessionsCount ?? 0}
+            ticketsCount={selectedReport.ticketsCount ?? 0}
+            periodStart={selectedReport.periodStart}
+            periodEnd={selectedReport.periodEnd}
+          />
+          <ReportIframe reportId={selectedReport.id} />
+        </>
+      );
+    case 'FAILED':
+      return (
+        <Card>
+          <CardContent className="pt-6">
+            <p
+              className="text-sm text-destructive"
+              data-testid="insights-failed-placeholder"
+            >
+              Failed: {selectedReport.errorReason ?? 'unknown error'}
+            </p>
+          </CardContent>
+        </Card>
+      );
+    case 'RUNNING':
+      return (
+        <Card>
+          <CardContent className="pt-6">
+            <p
+              className="text-sm text-muted-foreground"
+              data-testid="insights-running-placeholder"
+            >
+              Running…
+            </p>
+          </CardContent>
+        </Card>
+      );
+  }
+}
+
 export function InsightsPageShell({
   initialData,
 }: InsightsPageShellProps): JSX.Element {
@@ -67,39 +114,7 @@ export function InsightsPageShell({
       <div className="flex justify-end">
         <TriggerRunButton runningReportId={data.runningReportId} />
       </div>
-      {selectedReport && selectedReport.status === 'COMPLETED' ? (
-        <>
-          <MetadataHeader
-            sessionsCount={selectedReport.sessionsCount ?? 0}
-            ticketsCount={selectedReport.ticketsCount ?? 0}
-            periodStart={selectedReport.periodStart}
-            periodEnd={selectedReport.periodEnd}
-          />
-          <ReportIframe reportId={selectedReport.id} />
-        </>
-      ) : selectedReport && selectedReport.status === 'FAILED' ? (
-        <Card>
-          <CardContent className="pt-6">
-            <p
-              className="text-sm text-destructive"
-              data-testid="insights-failed-placeholder"
-            >
-              Failed: {selectedReport.errorReason ?? 'unknown error'}
-            </p>
-          </CardContent>
-        </Card>
-      ) : selectedReport && selectedReport.status === 'RUNNING' ? (
-        <Card>
-          <CardContent className="pt-6">
-            <p
-              className="text-sm text-muted-foreground"
-              data-testid="insights-running-placeholder"
-            >
-              Running…
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
+      {renderSelectedReport(selectedReport)}
       <PastReportsList
         reports={reports}
         selectedReportId={effectiveSelectedId}
