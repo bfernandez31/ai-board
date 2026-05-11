@@ -650,7 +650,11 @@ export function Board({
           return;
         }
 
-        const serverData = await response.json();
+        const rawServerData: unknown = await response.json();
+        const serverData: Record<string, unknown> =
+          typeof rawServerData === 'object' && rawServerData !== null
+            ? (rawServerData as Record<string, unknown>)
+            : {};
         const merge = config.mergeServerData ?? mergeTransitionFields;
         const finalTickets = updatedTickets.map((t) =>
           t.id === ticket.id ? merge(serverData, t) : t
@@ -658,13 +662,7 @@ export function Board({
         queryClient.setQueryData(queryKeys.projects.tickets(projectId), finalTickets);
 
         const transitionCommand = getCommandForTransition(ticket.stage, targetStage);
-        const jobId =
-          typeof serverData === 'object' &&
-          serverData !== null &&
-          'jobId' in serverData &&
-          typeof serverData.jobId === 'number'
-            ? serverData.jobId
-            : null;
+        const jobId = typeof serverData.jobId === 'number' ? serverData.jobId : null;
 
         if (transitionCommand && jobId) {
           seedPendingJobIntoStatusCache(queryClient, projectId, {
