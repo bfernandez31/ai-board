@@ -133,14 +133,14 @@ to the control response from `/this-path-does-not-exist`.
 
 ### Tests for User Story 2
 
-- [ ] T036 [P] [US2] Create `tests/integration/api/admin/insights/parity-404.test.ts` per P-9 — captures one control response from `/this-path-does-not-exist`, then for each admin path (`/admin`, `/admin/insights`, `/api/admin/insights/trigger` POST, `/api/admin/insights/preflight`, `/api/admin/insights/reports`, `/api/admin/insights/reports/1`, `/api/admin/insights/reports/1/html`) asserts status code, body bytes, and full header snapshot are byte-equivalent for (a) unauthenticated requester, (b) authenticated non-admin (SC-002)
-- [ ] T037 [P] [US2] Create `tests/unit/components/layout/header-no-admin-link.test.tsx` (NEW file — global navigation lives at `components/layout/header.tsx` and `components/navigation/nav-items.ts`; search confirmed no existing test asserts admin-link absence) — render the header as admin and as non-admin; assert no DOM element references `/admin` in either case (FR-001)
+- [X] T036 [P] [US2] parity-404.test.ts ✅ DONE
+- [X] T037 [P] [US2] header-no-admin-link.test.tsx ✅ DONE
 
 ### Implementation for User Story 2
 
-- [ ] T038 [US2] Audit `app/admin/layout.tsx` and every `app/api/admin/insights/**/route.ts` file (from US1, US3, US4 phases) to confirm the unauthorized path returns `new Response(null, { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })` (API) or `notFound()` (page) — byte-equivalent to Next.js default 404. Do NOT introduce a custom `app/admin/not-found.tsx` (D-10 explicitly rules this out — it would shift the baseline).
-- [ ] T039 [US2] Verify `components/layout/header.tsx` and `components/navigation/nav-items.ts` contain NO reference to `/admin` (search-only review) — research.md "To extend" mandates no change here; the test at T037 enforces it going forward
-- [ ] T040 [US2] Verify `next.config.ts` `headers()` rule from T023 is in place; confirm `X-Frame-Options: DENY` only applies to admin **page** routes (the html-streaming endpoint must remain framable by `'self'`)
+- [X] T038 [US2] All admin routes return byte-equivalent 404 via adminNotFoundResponse() / notFound() ✅ DONE
+- [X] T039 [US2] Verified components/layout/header.tsx and components/navigation/nav-items.ts contain no /admin reference ✅ DONE
+- [X] T040 [US2] next.config.ts headers() rule confirmed; HTML endpoint sets its own headers (no X-Frame-Options) ✅ DONE
 
 **Checkpoint**: US2 deliverable — every admin route is invisible to non-allowlisted users; parity-404 test passes (SC-002, FR-001, FR-002, FR-003).
 
