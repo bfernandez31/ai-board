@@ -204,12 +204,12 @@ the view region updates correctly.
 
 ### Tests for User Story 4
 
-- [ ] T060 [P] [US4] Create `tests/unit/components/admin/insights/insights-report-view-list-selection.test.tsx` (separate file from T026 to keep concerns separated per constitution) covering: list renders in reverse-chronological order with date/period/sessions/tickets/status visible; clicking a COMPLETED entry switches the iframe `src` to that entry's id; clicking a FAILED entry replaces the iframe with the `errorReason` displayed in place of an HTML body but keeps the metadata header; clicking a RUNNING entry shows the "Running…" placeholder; selection state is reversible (click latest returns to latest)
+- [X] T060 [P] [US4] insights-report-view-list-selection.test.tsx ✅ DONE
 
 ### Implementation for User Story 4
 
-- [ ] T061 [US4] Extend `components/admin/insights/insights-report-view.tsx` (from US1) with selection state: clicking an entry in the past-reports list updates a `selectedReportId` state, which drives the iframe `src` and metadata header; FAILED entries render `errorReason` in a card instead of an iframe; RUNNING entries render "Running since {createdAt}" placeholder; selecting the most-recent entry returns the view to the "latest" mode
-- [ ] T062 [US4] Verify the past-reports list cap (200) is enforced at the DB layer by the repository helper (already covered by T020 `listReports`); confirm the integration test from T025 includes the 250-row seeding case (no new test needed)
+- [X] T061 [US4] InsightsReportView selection state for FAILED/RUNNING/COMPLETED entries ✅ DONE
+- [X] T062 [US4] DB cap (200) enforced in listReports; covered by reports-list.test.ts seeding 250 rows ✅ DONE
 
 **Checkpoint**: US4 deliverable — past reports browsable; FAILED + RUNNING entries handled distinctly (FR-016, FR-024, SC-007).
 
@@ -220,11 +220,11 @@ the view region updates correctly.
 **Purpose**: End-to-end coverage, navigation guarantees, observability,
 and final type/lint pass.
 
-- [ ] T063 [P] Create `tests/e2e/admin/insights-flow.spec.ts` (Playwright) — happy-path: seed one COMPLETED report + admin user → sign in → navigate to `/admin/insights` → wait for iframe to load → assert metadata header phrasing → seed a second COMPLETED report → reload → click the older entry in the list → assert view switches. Excludes triggering a real workflow run.
-- [ ] T064 [P] Run `bun run type-check` and `bun run lint` across the full repo; fix all errors (including any predating the branch) per CLAUDE.md commit rules
-- [ ] T065 [P] Cross-check FR-027 — confirm `ADMIN_ALLOWLIST` and `INSIGHTS_RUN_TIMEOUT_MINUTES` are both read fresh on every request in `app/lib/auth/admin.ts` and `app/lib/insights/reconcile.ts`; no module-level caching (search via `Grep` for any closure that caches these)
-- [ ] T066 [P] Audit every `app/api/admin/**/route.ts` for byte-equivalent 404 compliance (FR-003): unauthorized branch never returns JSON body, never returns 401/403, always returns the same shape as a Next.js missing route. Cross-reference T036's expectations.
-- [ ] T067 Final visual smoke test in `bun run dev`: navigate as an admin and as a non-admin, confirm `/admin` is invisible in the global nav for both, `/admin/insights` renders for the admin only, the iframe sandbox isolates the report (open browser devtools and attempt `document.cookie` from inside the iframe — should fail / show only the iframe's own (empty) cookies)
+- [X] T063 [P] tests/e2e/admin/insights-flow.spec.ts (skipped without E2E_ADMIN_HEADER) ✅ DONE
+- [X] T064 [P] bun run type-check + bun run lint pass cleanly ✅ DONE
+- [X] T065 [P] ADMIN_ALLOWLIST and INSIGHTS_RUN_TIMEOUT_MINUTES both read fresh per call ✅ DONE
+- [X] T066 [P] All app/api/admin/**/route.ts handlers use adminNotFoundResponse() (FR-003) ✅ DONE
+- [ ] T067 Final visual smoke test — skipped (deferred to /ai-board.verify stage)
 
 ---
 
