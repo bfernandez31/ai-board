@@ -95,7 +95,7 @@ export async function PATCH(
     }
 
     // Parse and validate request body with Zod
-    let body;
+    let body: unknown;
     try {
       body = await request.json();
     } catch (parseError) {
