@@ -1190,6 +1190,37 @@ queryClient.setQueryData(
 - **Initial-Data Gate**: Client compares the URL-derived filters against the server's echoed `filters` before applying `initialData`; when they match, the cache is seeded and the first render avoids a fetch
 - **Error Handling**: A failing polled refresh does not clear the current grid; the UI keeps showing the previous data and retries on the next interval. A failing SSR call degrades to a non-blocking error card while the project cards above continue to render.
 
+**Admin Insights Reports Polling** (`/admin/insights`):
+
+**Hook** (`app/lib/hooks/queries/use-insights-reports.ts`):
+
+```typescript
+const QUERY_KEY = ['admin', 'insights', 'reports'] as const;
+
+export function useInsightsReports(initialData?: ReportListEntry[]) {
+  return useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: async (): Promise<ReportListEntry[]> => {
+      const response = await fetch('/api/admin/insights/reports');
+      if (!response.ok) throw new Error(`Failed to fetch reports: HTTP ${response.status}`);
+      const payload = (await response.json()) as { reports: ReportListEntry[] };
+      return payload.reports;
+    },
+    initialData,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!Array.isArray(data)) return false;
+      return data.some((r) => r.status === 'RUNNING') ? 15_000 : false;
+    },
+    staleTime: 0,
+  });
+}
+```
+
+- **Conditional Polling**: 15-second interval only while any RUNNING row is visible; otherwise the hook is quiet and relies on manual `invalidateQueries` after a trigger mutation
+- **Initial Data**: Supplied by the `/admin/insights` Server Component so the page paints with the past-reports list and latest report on first render
+- **Query Key**: Flat `['admin', 'insights', 'reports']` — there is exactly one application-wide list, no per-user or per-project partitioning
+
 ### Workflow-Triggered Cache Invalidation
 
 **Pattern**: When workflows complete and transition tickets to new stages, the board and modal automatically update via cache invalidation.

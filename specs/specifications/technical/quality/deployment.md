@@ -15,6 +15,7 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 | `ai-board-assist.yml` | workflow_dispatch | AI-BOARD comment assistance | 60 min |
 | `deploy-preview.yml` | workflow_dispatch | Manual Vercel preview deployment | 15 min |
 | `auto-ship.yml` | deployment_status | Auto-transition VERIFY → SHIP | 5 min |
+| `insights-analyze.yml` | workflow_dispatch | Claude Code `/insights` analysis for the admin Insights page | 50 min |
 | `test.yml` | push, pull_request | CI testing (future) | 30 min |
 
 ### AI-Board Workflow
@@ -465,6 +466,49 @@ echo "  ⏭️  Skipped: ${SKIPPED_COUNT} ticket(s)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 ```
 
+### Insights Analyze Workflow
+
+**File**: `.github/workflows/insights-analyze.yml`
+
+**Trigger**: `workflow_dispatch` only — fired by `POST /api/admin/insights/trigger`. Never scheduled.
+
+**Inputs**:
+
+| Input | Required | Description |
+|-------|----------|-------------|
+| `report_id` | yes | The `InsightsReport.id` to finalize |
+| `job_id` | yes | The companion `Job.id` (for status PATCH and log capture) |
+| `period_start` | yes | ISO 8601 timestamp (inclusive lower bound) |
+| `period_end` | yes | ISO 8601 timestamp (exclusive upper bound) |
+| `app_url` | yes | Base URL of the deployment that triggered the run |
+
+No `githubRepository` input — the workflow does not operate on an external project repo. The corpus comes entirely from blob storage.
+
+**Required secrets**:
+- `WORKFLOW_API_TOKEN` — Bearer token for the status PATCH, finalize PUT, and job-enumeration GET callbacks
+- `ANTHROPIC_API_KEY` — Authenticates `bunx @anthropic-ai/claude-code /insights`
+
+**Step outline**:
+1. PATCH `/api/jobs/:job_id/status` to RUNNING
+2. GET `/api/admin/insights/jobs?periodStart&periodEnd` — enumerate Claude jobs in the window via the shared predicate
+3. GET `/api/admin/insights/jobs/:jobId/raw-native` for each enumerated job — download the gzipped native session JSONL
+4. Run `bunx @anthropic-ai/claude-code /insights --sessions ./sessions --output ./report.html` — the genuine slash command, never a free-text prompt
+5. Validate the HTML contains the analyzer's characteristic markers (`Suggested CLAUDE.md additions`, `Big wins`, `Horizon`); fail with `Insights output validation failed` otherwise
+6. PUT `/api/admin/insights/reports/:report_id/finalize` with the raw HTML body — the server re-runs validation as defense in depth and rejects with 422 on failure
+7. PATCH `/api/admin/insights/reports/:report_id/status` with `COMPLETED` plus counts and artifact pointer (or `FAILED` with a non-secret reason if any prior step failed)
+8. PATCH `/api/jobs/:job_id/status` with the matching terminal status (direct atomic update — insights jobs intentionally bypass push notifications)
+
+**Timeout**: 50 minutes — 10 minutes below the default `INSIGHTS_RUN_TIMEOUT_MINUTES=60` so the workflow's own failure path runs before lazy reconciliation auto-FAILs the row. Operators can raise the timeout via configuration if needed; the workflow timeout should track below it.
+
+**Failure isolation**:
+- Step failures during analysis produce a generic `errorReason` (the analyzer's stderr is captured into job logs but never echoed into `errorReason` because logs may contain secrets)
+- Structural-marker validation failure → `Insights output validation failed`
+- Finalize 422 → `Insights output validation failed`
+- Finalize non-422 error → `Artifact upload rejected by storage`
+- A workflow that never reports terminal status is reconciled to FAILED by the lazy timeout sweep on the next list or trigger call
+
+**Not in this workflow**: No PR creation, no `gh pr create`, no external-repo clone, no cron schedule. Reports are not committed to git.
+
 ## Environment Configuration
 
 ### GitHub Secrets
@@ -511,6 +555,10 @@ CLOUDINARY_API_SECRET=<api-secret>
 
 # Workflow (must match GitHub secret)
 WORKFLOW_API_TOKEN=<same-as-github-secret>
+
+# Admin Insights
+ADMIN_ALLOWLIST=alice@example.com,bob@example.com
+INSIGHTS_RUN_TIMEOUT_MINUTES=60
 ```
 
 **Preview** (optional, different database):

@@ -137,6 +137,23 @@ Describes the Health Dashboard page, which provides a global health score (0–1
 
 ---
 
+### [09-admin-insights.md](09-admin-insights.md)
+**Admin Insights**
+
+Describes the `/admin/insights` page — the only page in the platform's admin shell — which hosts a manually triggered, archived series of Claude Code `/insights` reports synthesized from raw native session JSONL across every project.
+
+**Key Topics**:
+- Allowlist-based admin access with byte-equivalent 404 parity for non-admins
+- Hidden navigation (no link or hint of `/admin` for any user)
+- Inline sandboxed iframe rendering with canonical metadata header phrasing
+- Pre-flight (shipped Claude tickets since last run) and single-flight concurrency gates
+- Period semantics (first-run full coverage; subsequent half-open windows)
+- Past-reports list (reverse-chronological, capped at 200)
+- Orphan-row reconciliation and atomic state transitions
+- Read-only reports — no edit, delete, or notification surfaces
+
+---
+
 ## What's NOT in These Documents
 
 These functional specifications intentionally **exclude**:

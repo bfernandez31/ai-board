@@ -92,6 +92,8 @@ type Attachments = TicketAttachment[];  // Max 5 items
 | Ticket.quickImplModel | 50 | VARCHAR(50) |
 | Ticket.verifyModel | 50 | VARCHAR(50) |
 | Comment.content | 2000 | TEXT |
+| InsightsReport.artifactKey | 300 | VARCHAR(300) |
+| InsightsReport.errorReason | 500 | VARCHAR(500) |
 
 ### Character Validation
 
