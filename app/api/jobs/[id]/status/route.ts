@@ -296,6 +296,7 @@ export async function PATCH(
         startedAt: true,
         completedAt: true,
         durationMs: true,
+        command: true,
       },
     });
 
@@ -319,20 +320,26 @@ export async function PATCH(
     });
 
     if (isTerminalState) {
-      // Send push notification for job completion (non-blocking)
-      sendJobCompletionNotification(
-        jobId,
-        requestedStatus as 'COMPLETED' | 'FAILED' | 'CANCELLED'
-      ).catch((err) => {
-        console.error('[Job Status Update] Push notification error:', err);
-      });
+      // AIB-791 FR-022: insights-analyze jobs are explicitly pull-only — no
+      // push notifications, no auto-mode side effects. Short-circuit both
+      // hooks even if a future code path PATCHes through this generic
+      // endpoint instead of the dedicated /api/admin/insights/.../status one.
+      const isInsightsJob = updatedJob.command === 'insights-analyze';
+      if (!isInsightsJob) {
+        sendJobCompletionNotification(
+          jobId,
+          requestedStatus as 'COMPLETED' | 'FAILED' | 'CANCELLED'
+        ).catch((err) => {
+          console.error('[Job Status Update] Push notification error:', err);
+        });
 
-      handleJobCompletionAutoTransition({
-        jobId,
-        terminalStatus: requestedStatus as 'COMPLETED' | 'FAILED' | 'CANCELLED',
-      }).catch((err) => {
-        console.error('[Job Status Update] Auto-mode hook error:', err);
-      });
+        handleJobCompletionAutoTransition({
+          jobId,
+          terminalStatus: requestedStatus as 'COMPLETED' | 'FAILED' | 'CANCELLED',
+        }).catch((err) => {
+          console.error('[Job Status Update] Auto-mode hook error:', err);
+        });
+      }
     }
 
     // Return minimal response (id, status, completedAt)

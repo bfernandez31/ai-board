@@ -8,6 +8,7 @@ import {
 } from '@/app/lib/hooks/queries/use-insights-reports';
 import type { ReportListEntry } from '@/app/lib/insights/repository';
 import { ReportErrorPlaceholder } from '@/components/admin/insights/report-error-placeholder';
+import { RunAnalysisButton } from '@/components/admin/insights/run-analysis-button';
 
 interface PreflightSummary {
   shippedSincePreviousRun: number;
@@ -61,19 +62,42 @@ export function InsightsReportView({
   const display = selected ?? latest;
   const showIframe = display?.status === 'COMPLETED';
 
+  const latestIsRunning = reports.some((r) => r.status === 'RUNNING');
+  const canTrigger =
+    !latestIsRunning && preflight.shippedSincePreviousRun > 0;
+
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">Claude Code Insights</h1>
-        <p className="text-sm text-muted-foreground">
-          Shipped Claude tickets since previous run:{' '}
-          <strong className="text-foreground">
-            {preflight.shippedSincePreviousRun}
-          </strong>
-          {preflight.previousRunEnd
-            ? ` (last analyzed up to ${formatDate(preflight.previousRunEnd)})`
-            : ' (no prior run on record)'}
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-semibold">Claude Code Insights</h1>
+          <p className="text-sm text-muted-foreground">
+            Shipped Claude tickets since previous run:{' '}
+            <strong className="text-foreground">
+              {preflight.shippedSincePreviousRun}
+            </strong>
+            {preflight.previousRunEnd
+              ? ` (last analyzed up to ${formatDate(preflight.previousRunEnd)})`
+              : ' (no prior run on record)'}
+          </p>
+        </div>
+        <RunAnalysisButton
+          preflight={{
+            canTrigger,
+            refusal: canTrigger
+              ? null
+              : latestIsRunning
+                ? {
+                    refusalCode: 'ALREADY_RUNNING',
+                    message: 'A run is already in progress.',
+                  }
+                : {
+                    refusalCode: 'NO_NEW_SHIPPED',
+                    message: 'No new shipped Claude tickets since the last run.',
+                  },
+          }}
+          latestIsRunning={latestIsRunning}
+        />
       </header>
 
       {display ? (

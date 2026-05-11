@@ -1,0 +1,165 @@
+name: Insights Analyze
+# AIB-791: run Claude Code /insights over the native session JSONL corpus
+# for a given window and finalize the report row + HTML artifact.
+
+on:
+  workflow_dispatch:
+    inputs:
+      report_id:
+        description: 'InsightsReport.id to finalize'
+        required: true
+        type: string
+      job_id:
+        description: 'Companion Job.id for status PATCH and log capture'
+        required: true
+        type: string
+      period_start:
+        description: 'ISO 8601 lower bound (inclusive)'
+        required: true
+        type: string
+      period_end:
+        description: 'ISO 8601 upper bound (exclusive)'
+        required: true
+        type: string
+      app_url:
+        description: 'Base URL of the deployment that triggered the run'
+        required: true
+        type: string
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    # Buffer below INSIGHTS_RUN_TIMEOUT_MINUTES (default 60) so the workflow
+    # surfaces its own failure before reconciliation auto-FAILs the row.
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PATCH job status -> RUNNING
+        run: |
+          curl -fsS -X PATCH "${{ inputs.app_url }}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"RUNNING"}'
+
+      - name: Enumerate Claude sessions in window
+        id: enumerate
+        run: |
+          set -euo pipefail
+          curl -fsS \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            "${{ inputs.app_url }}/api/admin/insights/jobs?periodStart=${{ inputs.period_start }}&periodEnd=${{ inputs.period_end }}" \
+            > jobs.json
+          echo "session_count=$(jq '.jobs | length' jobs.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Download raw native session JSONL artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p ./sessions
+          jq -c '.jobs[]' jobs.json | while read -r row; do
+            jobId=$(echo "$row" | jq -r .jobId)
+            curl -fsS \
+              -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+              "${{ inputs.app_url }}/api/admin/insights/jobs/${jobId}/raw-native" \
+              -o "./sessions/${jobId}.jsonl.gz"
+            gunzip "./sessions/${jobId}.jsonl.gz"
+          done
+
+      - name: Setup runtime
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.1
+
+      - name: Run Claude Code /insights
+        id: insights
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          # FR-011: invoke the real /insights slash command — never a free-text
+          # prompt. The CLI is pinned to the @anthropic-ai/claude-code package.
+          bunx @anthropic-ai/claude-code /insights \
+            --sessions ./sessions \
+            --output ./report.html
+
+      - name: Validate output (structural markers)
+        run: |
+          set -euo pipefail
+          for marker in "Suggested CLAUDE.md additions" "Big wins" "Horizon"; do
+            grep -F -q "$marker" report.html || {
+              echo "INSIGHTS_FAILURE_REASON=Insights output validation failed" >> "$GITHUB_ENV"
+              echo "Missing marker: $marker"
+              exit 1
+            }
+          done
+
+      - name: Upload artifact via /finalize
+        id: finalize
+        run: |
+          set -euo pipefail
+          response=$(curl -sS -w "\n%{http_code}" \
+            -X PUT "${{ inputs.app_url }}/api/admin/insights/reports/${{ inputs.report_id }}/finalize" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: text/html; charset=utf-8" \
+            --data-binary @report.html)
+          code=$(echo "$response" | tail -n 1)
+          body=$(echo "$response" | sed '$d')
+          if [ "$code" = "422" ]; then
+            echo "INSIGHTS_FAILURE_REASON=Insights output validation failed" >> "$GITHUB_ENV"
+            echo "Finalize rejected output: $body"
+            exit 1
+          fi
+          if [ "$code" != "200" ]; then
+            echo "INSIGHTS_FAILURE_REASON=Artifact upload rejected by storage" >> "$GITHUB_ENV"
+            echo "Finalize failed (status $code): $body"
+            exit 1
+          fi
+          echo "artifact_size=$(echo "$body" | jq -r .artifactSize)" >> "$GITHUB_OUTPUT"
+
+      - name: Compute counts
+        id: counts
+        run: |
+          set -euo pipefail
+          session_count=${{ steps.enumerate.outputs.session_count }}
+          ticket_count=$(jq '[.jobs[].ticketId] | unique | length' jobs.json)
+          echo "session_count=$session_count" >> "$GITHUB_OUTPUT"
+          echo "ticket_count=$ticket_count" >> "$GITHUB_OUTPUT"
+
+      - name: PATCH report status -> COMPLETED
+        run: |
+          set -euo pipefail
+          payload=$(jq -n \
+            --arg status 'COMPLETED' \
+            --argjson sc ${{ steps.counts.outputs.session_count }} \
+            --argjson tc ${{ steps.counts.outputs.ticket_count }} \
+            --arg ak "insights/reports/${{ inputs.report_id }}.html" \
+            --argjson asz ${{ steps.finalize.outputs.artifact_size }} \
+            '{status:$status, sessionsCount:$sc, ticketsCount:$tc, artifactKey:$ak, artifactSize:$asz}')
+          curl -fsS -X PATCH \
+            "${{ inputs.app_url }}/api/admin/insights/reports/${{ inputs.report_id }}/status" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "$payload"
+
+      - name: PATCH job status -> COMPLETED
+        if: success()
+        run: |
+          curl -fsS -X PATCH "${{ inputs.app_url }}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"COMPLETED"}'
+
+      - name: Report failure
+        if: failure()
+        run: |
+          reason="${INSIGHTS_FAILURE_REASON:-Workflow step failed; see workflow logs}"
+          curl -fsS -X PATCH \
+            "${{ inputs.app_url }}/api/admin/insights/reports/${{ inputs.report_id }}/status" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg status 'FAILED' --arg er "$reason" '{status:$status, errorReason:$er}')"
+          curl -fsS -X PATCH \
+            "${{ inputs.app_url }}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"FAILED"}'
