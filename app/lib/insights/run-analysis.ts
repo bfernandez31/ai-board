@@ -58,15 +58,7 @@ export async function executeInsightsAnalysis(runId: number): Promise<void> {
     }
 
     if (artifactKeys.length === 0) {
-      await prisma.insightsRun.update({
-        where: { id: runId },
-        data: {
-          status: 'FAILED',
-          completedAt: new Date(),
-          errorMessage: 'No Claude session artifacts found for shipped tickets',
-        },
-      });
-      return;
+      throw new Error('No Claude session artifacts found for shipped tickets');
     }
 
     tempDir = await mkdtemp(join(tmpdir(), 'insights-'));
@@ -78,11 +70,10 @@ export async function executeInsightsAnalysis(runId: number): Promise<void> {
 
       const chunks: Uint8Array[] = [];
       const reader = result.stream.getReader();
-      let done = false;
-      while (!done) {
-        const read = await reader.read();
-        if (read.value) chunks.push(read.value);
-        done = read.done;
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) chunks.push(value);
       }
 
       const compressed = Buffer.concat(chunks);
@@ -93,21 +84,12 @@ export async function executeInsightsAnalysis(runId: number): Promise<void> {
         content = compressed;
       }
 
-      const fileName = `session-${downloadedCount}.jsonl`;
-      await writeFile(join(tempDir, fileName), content);
+      await writeFile(join(tempDir, `session-${downloadedCount}.jsonl`), content);
       downloadedCount++;
     }
 
     if (downloadedCount === 0) {
-      await prisma.insightsRun.update({
-        where: { id: runId },
-        data: {
-          status: 'FAILED',
-          completedAt: new Date(),
-          errorMessage: 'All session artifacts were unavailable or pruned',
-        },
-      });
-      return;
+      throw new Error('All session artifacts were unavailable or pruned');
     }
 
     const { stdout } = await execFileAsync('claude', ['-p', `Analyze the Claude Code session JSONL files in ${tempDir} and produce a comprehensive HTML insights report. Use the /insights analysis format covering: usage patterns, friction points, wins, and CLAUDE.md suggestions. Output ONLY the raw HTML.`], {
@@ -117,15 +99,7 @@ export async function executeInsightsAnalysis(runId: number): Promise<void> {
 
     const html = Buffer.from(stdout, 'utf-8');
     if (html.length === 0) {
-      await prisma.insightsRun.update({
-        where: { id: runId },
-        data: {
-          status: 'FAILED',
-          completedAt: new Date(),
-          errorMessage: 'Claude Code /insights produced empty output',
-        },
-      });
-      return;
+      throw new Error('Claude Code /insights produced empty output');
     }
 
     const reportKey = buildInsightsReportKey(runId);

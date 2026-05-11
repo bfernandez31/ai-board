@@ -67,17 +67,7 @@ export async function uploadInsightsReport(
 export async function streamInsightsReport(
   key: string
 ): Promise<{ stream: ReadableStream<Uint8Array>; size: number } | null> {
-  const token = requireToken();
-  let result;
-  try {
-    result = await get(key, { access: 'private', token });
-  } catch (error) {
-    const status = (error as { status?: number } | null)?.status;
-    if (status === 404) return null;
-    throw error;
-  }
-  if (!result || result.statusCode !== 200 || !result.stream) return null;
-  return { stream: result.stream, size: result.blob.size };
+  return streamJobLogArtifact(key);
 }
 
 export async function deleteJobLogArtifact(key: string): Promise<{ deleted: boolean }> {

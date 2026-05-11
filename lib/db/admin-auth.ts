@@ -19,21 +19,12 @@ export async function verifyAdminAccess(request?: NextRequest): Promise<AdminUse
     throw new Error('Not found');
   }
 
-  const adminEmails = process.env.ADMIN_EMAILS;
-  if (!adminEmails || adminEmails.trim() === '') {
-    throw new Error('Not found');
-  }
-
-  const allowlist = adminEmails
+  const allowlist = (process.env.ADMIN_EMAILS ?? '')
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
 
-  if (allowlist.length === 0) {
-    throw new Error('Not found');
-  }
-
-  if (!allowlist.includes(user.email.toLowerCase())) {
+  if (allowlist.length === 0 || !allowlist.includes(user.email.toLowerCase())) {
     throw new Error('Not found');
   }
 

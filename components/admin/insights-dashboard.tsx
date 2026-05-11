@@ -50,18 +50,15 @@ export function InsightsDashboard({
   const queryClient = useQueryClient();
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
 
-  const { data: latestData } = useQuery({
+  const { data: latestData } = useQuery<LatestResponse>({
     queryKey: queryKeys.admin.insights.latest,
-    queryFn: async (): Promise<LatestResponse> => {
+    queryFn: async () => {
       const res = await fetch('/api/admin/insights/latest');
       if (!res.ok) throw new Error('Failed to fetch latest');
       return res.json();
     },
     ...(initialLatest ? { initialData: initialLatest } : {}),
-    refetchInterval: (query) => {
-      const data = query.state.data as LatestResponse | undefined;
-      return data?.activeRun ? 5000 : 30000;
-    },
+    refetchInterval: (query) => (query.state.data?.activeRun ? 5000 : 30000),
   });
 
   const { data: runsData } = useQuery<RunsListResponse>({
@@ -89,9 +86,8 @@ export function InsightsDashboard({
     },
   });
 
-  const typedLatest = latestData as LatestResponse | undefined;
-  const activeRun = typedLatest?.activeRun;
-  const latestRun = typedLatest?.run;
+  const activeRun = latestData?.activeRun;
+  const latestRun = latestData?.run;
   const isRunning = !!activeRun;
   const completedRuns = runsData?.runs ?? [];
 

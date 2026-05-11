@@ -74,14 +74,13 @@ export async function PATCH(
       );
     }
 
-    const updateData: Record<string, unknown> = {
-      status: parsed.data.status,
-    };
+    const now = new Date();
+    const updateData: Record<string, unknown> = { status: parsed.data.status };
 
     if (parsed.data.status === 'RUNNING') {
-      updateData.startedAt = new Date();
+      updateData.startedAt = now;
     } else if (parsed.data.status === 'COMPLETED') {
-      updateData.completedAt = new Date();
+      updateData.completedAt = now;
       updateData.periodStart = parsed.data.periodStart;
       updateData.periodEnd = parsed.data.periodEnd;
       updateData.sessionCount = parsed.data.sessionCount;
@@ -89,7 +88,7 @@ export async function PATCH(
       updateData.reportKey = parsed.data.reportKey;
       updateData.reportSize = parsed.data.reportSize;
     } else if (parsed.data.status === 'FAILED') {
-      updateData.completedAt = new Date();
+      updateData.completedAt = now;
       updateData.errorMessage = parsed.data.errorMessage;
     }
 

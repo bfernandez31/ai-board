@@ -35,8 +35,6 @@ export default async function InsightsPage() {
         timeoutAt: run.timeoutAt.toISOString(),
         createdAt: run.createdAt.toISOString(),
         updatedAt: run.updatedAt.toISOString(),
-        errorMessage: run.errorMessage ?? null,
-        reportKey: run.reportKey ?? null,
       }
     : null;
 
