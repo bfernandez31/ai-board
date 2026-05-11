@@ -115,24 +115,12 @@ export function useJobSnapshots({
     const jobMap = new Map(initial.map(j => [j.id, j]));
     polled.forEach(pj => {
       const existing = jobMap.get(pj.id);
-      if (existing) {
-        jobMap.set(pj.id, { ...existing, status: pj.status, updatedAt: new Date(pj.updatedAt) });
-      } else {
-        jobMap.set(pj.id, {
-          id: pj.id,
-          ticketId: pj.ticketId,
-          projectId,
-          status: pj.status,
-          command: pj.command,
-          startedAt: new Date(pj.updatedAt),
-          completedAt: null,
-          branch: null,
-          commitSha: null,
-          logs: null,
-          createdAt: new Date(pj.updatedAt),
-          updatedAt: new Date(pj.updatedAt),
-        } as Job);
-      }
+      jobMap.set(
+        pj.id,
+        existing
+          ? mergePolledIntoExistingJob(existing, pj)
+          : createSnapshotJob(pj, projectId),
+      );
     });
     return Array.from(jobMap.values());
   }, [initialJobs, polledJobs, projectId]);

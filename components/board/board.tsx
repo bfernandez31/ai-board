@@ -79,7 +79,7 @@ export function Board({
 
   // Ticket with active preview URL (for single-preview warning)
   const activePreviewTicket = useMemo(() => {
-    const ticketWithPreview = allTickets.find(t => t.previewUrl !== null && t.previewUrl !== undefined);
+    const ticketWithPreview = allTickets.find(t => t.previewUrl != null);
     return ticketWithPreview ? { ticketKey: ticketWithPreview.ticketKey } : null;
   }, [allTickets]);
 
