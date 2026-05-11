@@ -65,15 +65,21 @@ export async function POST(request: NextRequest): Promise<Response> {
   const shippedSince = await countShippedClaudeTicketsSince(prevEnd);
 
   if (shippedSince === 0) {
+    // First-ever run with zero shipped Claude tickets: NO_CLAUDE_JOBS. Once
+    // any Claude ticket has shipped, `shippedSince` (counted against a null
+    // floor) will be ≥ 1 and we land in the NO_NEW_SHIPPED branch below
+    // with a real `prevEnd` to reference. Never synthesize `new Date()` as
+    // a "last run" — the operator would see a fabricated timestamp that
+    // does not correspond to any real run.
     if (prevEnd === null) {
-      const earliest = await getEarliestClaudeJobTimestamp();
-      if (!earliest) {
-        return refusal('NO_CLAUDE_JOBS', 'No shipped Claude tickets to analyze yet');
-      }
+      return refusal(
+        'NO_CLAUDE_JOBS',
+        'No shipped Claude tickets to analyze yet'
+      );
     }
     return refusal(
       'NO_NEW_SHIPPED',
-      `No new shipped tickets since last run on ${(prevEnd ?? new Date()).toISOString()}`
+      `No new shipped tickets since last run on ${prevEnd.toISOString()}`
     );
   }
 

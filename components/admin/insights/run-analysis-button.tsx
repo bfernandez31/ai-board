@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { insightsReportsQueryKey } from '@/app/lib/hooks/queries/use-insights-reports';
+import { insightsPreflightQueryKey } from '@/app/lib/hooks/queries/use-insights-preflight';
 import type { ReportListEntry } from '@/app/lib/insights/repository';
 
 interface PreflightShape {
@@ -95,6 +96,7 @@ export function RunAnalysisButton({
     onSuccess: () => {
       setMessage(null);
       void queryClient.invalidateQueries({ queryKey: insightsReportsQueryKey });
+      void queryClient.invalidateQueries({ queryKey: insightsPreflightQueryKey });
     },
     onError: (error, _vars, context) => {
       if (context?.previousReports !== undefined) {
@@ -103,6 +105,7 @@ export function RunAnalysisButton({
           context.previousReports
         );
       }
+      void queryClient.invalidateQueries({ queryKey: insightsPreflightQueryKey });
       setMessage(error instanceof Error ? error.message : 'Unknown error');
     },
   });

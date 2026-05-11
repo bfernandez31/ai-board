@@ -43,7 +43,16 @@ describe('InsightsReportView list selection (US4, AIB-791)', () => {
       <InsightsReportView
         reports={reports}
         latest={reports[2]}
-        preflight={{ shippedSincePreviousRun: 0, previousRunEnd: null }}
+        preflight={{
+          canTrigger: false,
+          shippedSincePreviousRun: 0,
+          previousRunEnd: null,
+          runningSince: null,
+          refusal: {
+            refusalCode: 'NO_CLAUDE_JOBS',
+            message: 'No shipped Claude tickets to analyze yet',
+          },
+        }}
       />
     );
 
@@ -57,7 +66,16 @@ describe('InsightsReportView list selection (US4, AIB-791)', () => {
       <InsightsReportView
         reports={reports}
         latest={reports[2]}
-        preflight={{ shippedSincePreviousRun: 0, previousRunEnd: null }}
+        preflight={{
+          canTrigger: false,
+          shippedSincePreviousRun: 0,
+          previousRunEnd: null,
+          runningSince: null,
+          refusal: {
+            refusalCode: 'NO_CLAUDE_JOBS',
+            message: 'No shipped Claude tickets to analyze yet',
+          },
+        }}
       />
     );
     const user = userEvent.setup();
@@ -73,7 +91,16 @@ describe('InsightsReportView list selection (US4, AIB-791)', () => {
       <InsightsReportView
         reports={reports}
         latest={reports[2]}
-        preflight={{ shippedSincePreviousRun: 0, previousRunEnd: null }}
+        preflight={{
+          canTrigger: false,
+          shippedSincePreviousRun: 0,
+          previousRunEnd: null,
+          runningSince: null,
+          refusal: {
+            refusalCode: 'NO_CLAUDE_JOBS',
+            message: 'No shipped Claude tickets to analyze yet',
+          },
+        }}
       />
     );
     const user = userEvent.setup();
@@ -87,7 +114,16 @@ describe('InsightsReportView list selection (US4, AIB-791)', () => {
       <InsightsReportView
         reports={reports}
         latest={reports[2]}
-        preflight={{ shippedSincePreviousRun: 0, previousRunEnd: null }}
+        preflight={{
+          canTrigger: false,
+          shippedSincePreviousRun: 0,
+          previousRunEnd: null,
+          runningSince: null,
+          refusal: {
+            refusalCode: 'NO_CLAUDE_JOBS',
+            message: 'No shipped Claude tickets to analyze yet',
+          },
+        }}
       />
     );
     const user = userEvent.setup();

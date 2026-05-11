@@ -140,13 +140,27 @@ export async function countShippedClaudeTicketsSince(
  * List of Claude Jobs whose Ticket shipped in [start, end). Used by the
  * insights workflow's enumeration step (T052) so the analyzer sees exactly
  * the same set of sessions the pre-flight counted.
+ *
+ * De-duplicated by `ticketId` so the workflow's session_count cannot
+ * exceed the pre-flight's distinct-ticket count (FR-025). When a ticket has
+ * multiple COMPLETED Claude jobs (e.g. an `implement` plus a later
+ * `iterate`), we keep the earliest job by `startedAt` — the foundational
+ * session that produced the shipped outcome.
  */
 export async function listShippedClaudeJobsForWindow(
   start: Date,
   end: Date
 ): Promise<JobRef[]> {
   const rows = await queryShippedJobs(start, end);
-  return rows.filter(isClaudeRow).map((row) => ({
+  const claudeRows = rows.filter(isClaudeRow);
+  const earliestByTicket = new Map<number, RawJobRow>();
+  for (const row of claudeRows) {
+    const prior = earliestByTicket.get(row.ticketId);
+    if (!prior || row.jobStartedAt < prior.jobStartedAt) {
+      earliestByTicket.set(row.ticketId, row);
+    }
+  }
+  return Array.from(earliestByTicket.values()).map((row) => ({
     jobId: row.jobId,
     projectId: row.projectId,
     ticketId: row.ticketId,

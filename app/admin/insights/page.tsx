@@ -1,10 +1,6 @@
 import { reconcileOrphanedRunningReports } from '@/app/lib/insights/reconcile';
-import {
-  getLastCompletedRunEnd,
-  listReports,
-  toListEntry,
-} from '@/app/lib/insights/repository';
-import { countShippedClaudeTicketsSince } from '@/app/lib/insights/predicate';
+import { listReports, toListEntry } from '@/app/lib/insights/repository';
+import { computePreflightSnapshot } from '@/app/lib/insights/preflight';
 import { InsightsReportView } from '@/components/admin/insights/insights-report-view';
 
 export const dynamic = 'force-dynamic';
@@ -27,17 +23,13 @@ export default async function InsightsPage() {
   const defaultDisplay = latestCompleted ?? reports[0] ?? null;
   const latestEntry = defaultDisplay ? toListEntry(defaultDisplay) : null;
 
-  const prevEnd = await getLastCompletedRunEnd();
-  const shippedSincePreviousRun = await countShippedClaudeTicketsSince(prevEnd);
+  const preflight = await computePreflightSnapshot();
 
   return (
     <InsightsReportView
       reports={reportEntries}
       latest={latestEntry}
-      preflight={{
-        shippedSincePreviousRun,
-        previousRunEnd: prevEnd?.toISOString() ?? null,
-      }}
+      preflight={preflight}
     />
   );
 }

@@ -27,7 +27,16 @@ describe('InsightsReportView (US1, AIB-791)', () => {
       <InsightsReportView
         reports={[latest]}
         latest={latest}
-        preflight={{ shippedSincePreviousRun: 0, previousRunEnd: latest.periodEnd }}
+        preflight={{
+          canTrigger: false,
+          shippedSincePreviousRun: 0,
+          previousRunEnd: latest.periodEnd,
+          runningSince: null,
+          refusal: {
+            refusalCode: 'NO_NEW_SHIPPED',
+            message: `No new shipped tickets since last run on ${latest.periodEnd}`,
+          },
+        }}
       />
     );
 
@@ -42,7 +51,16 @@ describe('InsightsReportView (US1, AIB-791)', () => {
       <InsightsReportView
         reports={[latest]}
         latest={latest}
-        preflight={{ shippedSincePreviousRun: 0, previousRunEnd: latest.periodEnd }}
+        preflight={{
+          canTrigger: false,
+          shippedSincePreviousRun: 0,
+          previousRunEnd: latest.periodEnd,
+          runningSince: null,
+          refusal: {
+            refusalCode: 'NO_NEW_SHIPPED',
+            message: `No new shipped tickets since last run on ${latest.periodEnd}`,
+          },
+        }}
       />
     );
     expect(
@@ -57,7 +75,16 @@ describe('InsightsReportView (US1, AIB-791)', () => {
       <InsightsReportView
         reports={[]}
         latest={null}
-        preflight={{ shippedSincePreviousRun: 0, previousRunEnd: null }}
+        preflight={{
+          canTrigger: false,
+          shippedSincePreviousRun: 0,
+          previousRunEnd: null,
+          runningSince: null,
+          refusal: {
+            refusalCode: 'NO_CLAUDE_JOBS',
+            message: 'No shipped Claude tickets to analyze yet',
+          },
+        }}
       />
     );
     expect(screen.getByText(/No Insights reports yet/i)).toBeInTheDocument();
@@ -72,7 +99,16 @@ describe('InsightsReportView (US1, AIB-791)', () => {
       <InsightsReportView
         reports={[failed]}
         latest={failed}
-        preflight={{ shippedSincePreviousRun: 0, previousRunEnd: null }}
+        preflight={{
+          canTrigger: false,
+          shippedSincePreviousRun: 0,
+          previousRunEnd: null,
+          runningSince: null,
+          refusal: {
+            refusalCode: 'NO_CLAUDE_JOBS',
+            message: 'No shipped Claude tickets to analyze yet',
+          },
+        }}
       />
     );
     expect(screen.getByText(/This run failed/i)).toBeInTheDocument();

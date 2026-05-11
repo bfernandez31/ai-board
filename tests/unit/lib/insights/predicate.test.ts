@@ -166,6 +166,36 @@ describe('insights predicate (AIB-791)', () => {
       expect(list.map((j) => j.rawArtifactKey)).toContain('raw-logs/10/1/101.jsonl.gz');
       expect(list.map((j) => j.rawArtifactKey)).toContain('raw-logs/10/2/102.jsonl.gz');
     });
+
+    it('de-duplicates multiple Claude jobs per ticket by earliest startedAt', async () => {
+      const outcomes = [
+        makeOutcome({
+          ticketId: 1,
+          projectId: 10,
+          ticketAgent: 'CLAUDE',
+          projectDefaultAgent: 'CODEX',
+          shippedAt: new Date('2026-05-09T00:00:00Z'),
+        }),
+      ];
+      mockedPrisma.ticketOutcome.findMany.mockResolvedValue(outcomes);
+      // Ticket 1 has three Claude jobs (implement, iterate, fix). The earliest
+      // by startedAt is jobId=201; that's the one the enumerator should keep
+      // so session_count matches pre-flight's distinct-ticket count.
+      mockedPrisma.job.findMany.mockResolvedValue([
+        makeJob(202, 1, 10, new Date('2026-05-03T00:00:00Z')),
+        makeJob(201, 1, 10, new Date('2026-05-01T00:00:00Z')),
+        makeJob(203, 1, 10, new Date('2026-05-05T00:00:00Z')),
+      ]);
+
+      const list = await listShippedClaudeJobsForWindow(
+        new Date('2026-05-01T00:00:00Z'),
+        new Date('2026-05-11T00:00:00Z')
+      );
+
+      expect(list).toHaveLength(1);
+      expect(list[0].jobId).toBe(201);
+      expect(list[0].ticketId).toBe(1);
+    });
   });
 
   describe('getEarliestClaudeJobTimestamp', () => {

@@ -6,19 +6,18 @@ import { Card, CardContent } from '@/components/ui/card';
 import {
   useInsightsReports,
 } from '@/app/lib/hooks/queries/use-insights-reports';
+import {
+  useInsightsPreflight,
+  type InsightsPreflight,
+} from '@/app/lib/hooks/queries/use-insights-preflight';
 import type { ReportListEntry } from '@/app/lib/insights/repository';
 import { ReportErrorPlaceholder } from '@/components/admin/insights/report-error-placeholder';
 import { RunAnalysisButton } from '@/components/admin/insights/run-analysis-button';
 
-interface PreflightSummary {
-  shippedSincePreviousRun: number;
-  previousRunEnd: string | null;
-}
-
 interface InsightsReportViewProps {
   reports: ReportListEntry[];
   latest: ReportListEntry | null;
-  preflight: PreflightSummary;
+  preflight: InsightsPreflight;
 }
 
 function formatDate(iso: string | null): string {
@@ -53,44 +52,6 @@ function statusBadgeVariant(
   return 'secondary';
 }
 
-interface Refusal {
-  refusalCode: 'ALREADY_RUNNING' | 'NO_NEW_SHIPPED' | 'NO_CLAUDE_JOBS';
-  message: string;
-}
-
-function computeRefusal(
-  canTrigger: boolean,
-  latestIsRunning: boolean,
-  preflight: PreflightSummary
-): Refusal | null {
-  if (canTrigger) return null;
-  if (latestIsRunning) {
-    return {
-      refusalCode: 'ALREADY_RUNNING',
-      message: 'A run is already in progress.',
-    };
-  }
-  // Mirrors `/api/admin/insights/preflight` and `/trigger`: when no prior
-  // run exists AND no shipped Claude tickets are eligible, the API returns
-  // NO_CLAUDE_JOBS rather than NO_NEW_SHIPPED. The UI must reflect the same
-  // distinction so the message lines up with what a POST would return.
-  if (
-    preflight.previousRunEnd === null &&
-    preflight.shippedSincePreviousRun === 0
-  ) {
-    return {
-      refusalCode: 'NO_CLAUDE_JOBS',
-      message: 'No shipped Claude tickets to analyze yet.',
-    };
-  }
-  return {
-    refusalCode: 'NO_NEW_SHIPPED',
-    message: preflight.previousRunEnd
-      ? `No new shipped tickets since last run on ${formatDate(preflight.previousRunEnd)}.`
-      : 'No new shipped Claude tickets since the last run.',
-  };
-}
-
 function renderReportBody(display: ReportListEntry): React.ReactNode {
   if (display.status === 'COMPLETED') {
     return (
@@ -122,9 +83,18 @@ function renderReportBody(display: ReportListEntry): React.ReactNode {
 export function InsightsReportView({
   reports: initialReports,
   latest,
-  preflight,
+  preflight: initialPreflight,
 }: InsightsReportViewProps) {
   const { data: reports = initialReports } = useInsightsReports(initialReports);
+  const latestIsRunning = reports.some((r) => r.status === 'RUNNING');
+  // Live preflight refreshes off the server's authoritative refusal logic
+  // so the trigger button re-enables automatically when a RUNNING report
+  // transitions and `shippedSincePreviousRun` rolls forward.
+  const { data: preflight = initialPreflight } = useInsightsPreflight(
+    initialPreflight,
+    latestIsRunning
+  );
+
   const [selectedId, setSelectedId] = useState<number | null>(
     latest?.id ?? null
   );
@@ -144,10 +114,26 @@ export function InsightsReportView({
   const defaultDisplay = latestCompleted ?? reports[0] ?? latest;
   const display = selected ?? defaultDisplay;
 
-  const latestIsRunning = reports.some((r) => r.status === 'RUNNING');
-  const canTrigger =
-    !latestIsRunning && preflight.shippedSincePreviousRun > 0;
-  const refusal = computeRefusal(canTrigger, latestIsRunning, preflight);
+  const canTrigger = preflight.canTrigger && !latestIsRunning;
+  // The API returns refusal messages with ISO timestamps; format them for
+  // display while preserving the structured refusalCode contract.
+  const refusal = useMemo(() => {
+    if (!preflight.refusal) return null;
+    const { refusalCode } = preflight.refusal;
+    if (refusalCode === 'ALREADY_RUNNING' && preflight.runningSince) {
+      return {
+        refusalCode,
+        message: `A run is already in progress (started ${formatDate(preflight.runningSince)}).`,
+      };
+    }
+    if (refusalCode === 'NO_NEW_SHIPPED' && preflight.previousRunEnd) {
+      return {
+        refusalCode,
+        message: `No new shipped tickets since last run on ${formatDate(preflight.previousRunEnd)}.`,
+      };
+    }
+    return preflight.refusal;
+  }, [preflight.refusal, preflight.previousRunEnd, preflight.runningSince]);
 
   return (
     <div className="flex flex-col gap-6">

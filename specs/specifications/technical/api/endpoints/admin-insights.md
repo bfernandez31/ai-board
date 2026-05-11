@@ -65,8 +65,8 @@ Start a new Insights analysis run. Subject to the pre-flight (shipped Claude tic
 1. `requireAdminOrNotFound(request)` → admin email.
 2. `reconcileOrphanedRunningReports(new Date())` — lazy reconciliation auto-FAILs any RUNNING row older than `INSIGHTS_RUN_TIMEOUT_MINUTES`.
 3. Pre-flight: compute `prevEnd = getLastCompletedRunEnd()` and `count = countShippedClaudeTicketsSince(prevEnd)`. If `count === 0`:
-   - When `prevEnd === null` AND no Claude jobs exist anywhere → refuse with `NO_CLAUDE_JOBS`.
-   - Otherwise → refuse with `NO_NEW_SHIPPED`.
+   - When `prevEnd === null` → refuse with `NO_CLAUDE_JOBS` (no Claude tickets have shipped yet).
+   - Otherwise → refuse with `NO_NEW_SHIPPED` with the prior run's `periodEnd` as the boundary; never synthesize `new Date()` as a fabricated "last run" timestamp.
 4. Concurrency gate: if a RUNNING row exists, refuse with `ALREADY_RUNNING`.
 5. Compute period bounds — `periodStart = prevEnd ?? getEarliestClaudeJobTimestamp()`; `periodEnd = now`.
 6. In a single transaction:
@@ -279,6 +279,8 @@ Validation rejects `periodStart >= periodEnd` with 400.
 **Server flow**: Calls `listShippedClaudeJobsForWindow(periodStart, periodEnd)` — the **same** predicate the trigger's pre-flight uses, so the pre-flight count and the workflow's analysis-input enumeration cannot drift.
 
 A job is treated as Claude when its **effective agent** is Claude — the ticket-level `agent` if set, otherwise the project-level `defaultAgent`. Non-Claude jobs are silently filtered out at enumeration time.
+
+The list is de-duplicated by `ticketId` (earliest job by `startedAt` wins) so the workflow's session count can never exceed the pre-flight's distinct-ticket count for the same window.
 
 **Response** (200 OK):
 ```json

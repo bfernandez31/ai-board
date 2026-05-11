@@ -102,6 +102,12 @@ export async function streamInsightsReportArtifact(
     if (status === 404) return null;
     throw error;
   }
+  // Treat 200 as the only success status. The @vercel/blob `GetBlobResult`
+  // union also documents 304 Not Modified (with a null stream) — this
+  // helper never sends conditional fetch headers so 304 is unreachable
+  // today; if a future caller adds `If-None-Match`/`If-Modified-Since`
+  // support, expand this guard before the null return masks a valid
+  // artifact as missing.
   if (!result || result.statusCode !== 200 || !result.stream) return null;
   return {
     stream: result.stream,

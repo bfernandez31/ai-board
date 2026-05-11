@@ -13,7 +13,7 @@ export function ReportErrorPlaceholder({
   detail?: string | null;
 }) {
   return (
-    <Card>
+    <Card className="aurora-bg-card-blue">
       <CardContent className="p-6 text-sm text-muted-foreground">
         <p className="font-medium text-foreground">{title}</p>
         {detail ? <p className="mt-2">{detail}</p> : null}

@@ -72,15 +72,26 @@ async function applyTerminalTransition(
       { status: 200 }
     );
   }
-  await prisma.job
-    .updateMany({
+  // Cascade to the linked Job row. The InsightsReport transition has
+  // already been committed; if the cascade fails we log and continue so the
+  // workflow callback still gets a deterministic response (and the orphan
+  // Job is picked up by reconciliation). Constitution §IV: surface the
+  // failure, do not silently swallow.
+  try {
+    await prisma.job.updateMany({
       where: {
         insightsReport: { id },
         status: { in: ['PENDING', 'RUNNING'] },
       },
       data: { status: data.status, completedAt: now },
-    })
-    .catch(() => undefined);
+    });
+  } catch (error) {
+    console.error(
+      '[applyTerminalTransition] cascade job update failed',
+      { reportId: id, status: data.status },
+      error
+    );
+  }
   return NextResponse.json(
     { id, status: data.status, completedAt: now.toISOString() },
     { status: 200 }
