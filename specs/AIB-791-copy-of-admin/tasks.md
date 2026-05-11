@@ -98,21 +98,21 @@ M tickets shipped between START_DATE and END_DATE".
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation.**
 **No existing test file covers `/admin/*` — all new files justified.**
 
-- [ ] T024 [P] [US1] Create `tests/integration/api/admin/insights/reports-html.test.ts` covering: A-ADMIN COMPLETED row streams HTML with `Content-Type: text/html; charset=utf-8`, `Content-Security-Policy: frame-ancestors 'self'`, `Cache-Control: private, max-age=300`, `X-Content-Type-Options: nosniff`, NO `X-Frame-Options` (frameable by host); non-COMPLETED row returns byte-equivalent 404 (per `contracts/admin-api.md`); blob 404 returns 200 with the FR-024 placeholder body
-- [ ] T025 [P] [US1] Create `tests/integration/api/admin/insights/reports-list.test.ts` covering: reverse-chronological ordering by `generatedAt`; DB-level cap at 200 (seed 250 rows, assert response contains exactly 200); reconciliation runs BEFORE the SELECT (manually backdate a RUNNING row, call list, assert that row appears as FAILED in the response); FAILED entries surface `errorReason`; RUNNING entries surface no `errorReason`; `artifactKey` is never included in the response
-- [ ] T026 [P] [US1] Create `tests/unit/components/admin/insights/insights-report-view.test.tsx` covering: when `latestReport.status === 'COMPLETED'` the iframe is rendered with `sandbox="allow-scripts"` and `src` set to `/api/admin/insights/reports/{id}/html`; the metadata header bears the exact phrasing "Analyzed N Claude Code sessions across M tickets shipped between START_DATE and END_DATE" with the values from the report; empty-state panel renders when reports list is empty; FR-024 placeholder content shown when html endpoint returns the placeholder shape (mock fetch)
+- [X] T024 [P] [US1] reports-html.test.ts ✅ DONE
+- [X] T025 [P] [US1] reports-list.test.ts ✅ DONE
+- [X] T026 [P] [US1] insights-report-view.test.tsx ✅ DONE
 
 ### Implementation for User Story 1
 
-- [ ] T027 [P] [US1] Create `app/admin/layout.tsx` (Server Component) — calls `await requireAdminOrNotFound(request)` at the top; on non-admin → `notFound()` (NOT a JSON body); renders minimal sidebar with one entry "Insights" linking to `/admin/insights`; reuses root providers (no re-wrapping per P-8); marks segment `dynamic = 'force-dynamic'`
-- [ ] T028 [P] [US1] Create `app/admin/page.tsx` (Server Component) — calls `await requireAdminOrNotFound(request)`; on success `redirect('/admin/insights')`; on non-admin `notFound()`; segment `dynamic = 'force-dynamic'`
-- [ ] T029 [US1] Create `app/admin/insights/page.tsx` (Server Component) — calls `await requireAdminOrNotFound(request)`; runs `await reconcileOrphanedRunningReports(new Date())` before any read; fetches latest COMPLETED report via repository helper, full list (via `listReports({ limit: 200 })`), and pre-flight count; passes data to client island `<InsightsReportView ... />`; renders empty state when no reports exist; segment `dynamic = 'force-dynamic'`
-- [ ] T030 [US1] Create `app/api/admin/insights/reports/route.ts` — GET handler: `requireAdminOrNotFound` → `reconcileOrphanedRunningReports(now)` → returns `{ reports: [...] }` from `listReports(200)` excluding `artifactKey`; non-admin → byte-equivalent 404
-- [ ] T031 [US1] Create `app/api/admin/insights/reports/[id]/route.ts` — GET handler: `requireAdminOrNotFound` → look up by id; absent → byte-equivalent 404; found → returns single-row metadata shape (excluding `artifactKey`)
-- [ ] T032 [US1] Create `app/api/admin/insights/reports/[id]/html/route.ts` — GET handler: `requireAdminOrNotFound`; look up report; absent or non-COMPLETED → byte-equivalent 404; `streamInsightsReportArtifact(report.artifactKey!)`; blob null → 200 with FR-024 placeholder body `<!DOCTYPE html><html lang="en"><body><p>Report content is no longer available.</p></body></html>`; sets headers `Content-Type: text/html; charset=utf-8`, `Content-Security-Policy: frame-ancestors 'self'`, `Cache-Control: private, max-age=300`, `X-Content-Type-Options: nosniff` (D-9, P-5)
-- [ ] T033 [P] [US1] Create `app/lib/hooks/queries/use-insights-reports.ts` — TanStack Query hook that polls `/api/admin/insights/reports` every 15s while a RUNNING row is visible, off otherwise; type-safe response shape; mirrors the existing hook conventions in `app/lib/hooks/queries/`
-- [ ] T034 [P] [US1] Create `components/admin/insights/report-error-placeholder.tsx` — Stable shadcn-based placeholder rendering "Report content is no longer available" (FR-024)
-- [ ] T035 [US1] Create `components/admin/insights/insights-report-view.tsx` (Client Component) — renders metadata header with exact canonical phrasing "Analyzed N Claude Code sessions across M tickets shipped between START_DATE and END_DATE" sourced from the row's `sessionsCount` / `ticketsCount` / `periodStart` / `periodEnd`; renders sandboxed iframe `<iframe sandbox="allow-scripts" src={`/api/admin/insights/reports/${latestId}/html`} />` (no `allow-same-origin`); shows past-reports list shell (placeholder hook for US4 selection logic); renders `<ReportErrorPlaceholder />` when latest is non-COMPLETED; uses `aurora-bg-card-blue` utility on the metadata header surface (per research.md / globals.css)
+- [X] T027 [P] [US1] app/admin/layout.tsx ✅ DONE
+- [X] T028 [P] [US1] app/admin/page.tsx (redirect) ✅ DONE
+- [X] T029 [US1] app/admin/insights/page.tsx ✅ DONE
+- [X] T030 [US1] app/api/admin/insights/reports/route.ts ✅ DONE
+- [X] T031 [US1] app/api/admin/insights/reports/[id]/route.ts ✅ DONE
+- [X] T032 [US1] app/api/admin/insights/reports/[id]/html/route.ts ✅ DONE
+- [X] T033 [P] [US1] use-insights-reports.ts ✅ DONE
+- [X] T034 [P] [US1] report-error-placeholder.tsx ✅ DONE
+- [X] T035 [US1] insights-report-view.tsx ✅ DONE
 
 **Checkpoint**: US1 deliverable — an allowlisted admin can read the latest report at `/admin/insights` (SC-001).
 
