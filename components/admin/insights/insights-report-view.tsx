@@ -44,6 +44,53 @@ function statusBadgeVariant(
   return 'secondary';
 }
 
+interface Refusal {
+  refusalCode: 'ALREADY_RUNNING' | 'NO_NEW_SHIPPED';
+  message: string;
+}
+
+function computeRefusal(canTrigger: boolean, latestIsRunning: boolean): Refusal | null {
+  if (canTrigger) return null;
+  if (latestIsRunning) {
+    return {
+      refusalCode: 'ALREADY_RUNNING',
+      message: 'A run is already in progress.',
+    };
+  }
+  return {
+    refusalCode: 'NO_NEW_SHIPPED',
+    message: 'No new shipped Claude tickets since the last run.',
+  };
+}
+
+function renderReportBody(display: ReportListEntry): React.ReactNode {
+  if (display.status === 'COMPLETED') {
+    return (
+      <iframe
+        title={`Insights report ${display.id}`}
+        sandbox="allow-scripts"
+        src={`/api/admin/insights/reports/${display.id}/html`}
+        className="h-[70vh] w-full rounded-lg border border-border bg-background"
+      />
+    );
+  }
+  if (display.status === 'FAILED') {
+    return (
+      <ReportErrorPlaceholder
+        title="This run failed"
+        detail={display.errorReason}
+      />
+    );
+  }
+  // RUNNING
+  return (
+    <ReportErrorPlaceholder
+      title="Run in progress"
+      detail={`Started ${formatDate(display.createdAt)}`}
+    />
+  );
+}
+
 export function InsightsReportView({
   reports: initialReports,
   latest,
@@ -60,11 +107,11 @@ export function InsightsReportView({
   }, [reports, selectedId]);
 
   const display = selected ?? latest;
-  const showIframe = display?.status === 'COMPLETED';
 
   const latestIsRunning = reports.some((r) => r.status === 'RUNNING');
   const canTrigger =
     !latestIsRunning && preflight.shippedSincePreviousRun > 0;
+  const refusal = computeRefusal(canTrigger, latestIsRunning);
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,20 +129,7 @@ export function InsightsReportView({
           </p>
         </div>
         <RunAnalysisButton
-          preflight={{
-            canTrigger,
-            refusal: canTrigger
-              ? null
-              : latestIsRunning
-                ? {
-                    refusalCode: 'ALREADY_RUNNING',
-                    message: 'A run is already in progress.',
-                  }
-                : {
-                    refusalCode: 'NO_NEW_SHIPPED',
-                    message: 'No new shipped Claude tickets since the last run.',
-                  },
-          }}
+          preflight={{ canTrigger, refusal }}
           latestIsRunning={latestIsRunning}
         />
       </header>
@@ -113,23 +147,8 @@ export function InsightsReportView({
         </Card>
       ) : null}
 
-      {showIframe && display ? (
-        <iframe
-          title={`Insights report ${display.id}`}
-          sandbox="allow-scripts"
-          src={`/api/admin/insights/reports/${display.id}/html`}
-          className="h-[70vh] w-full rounded-lg border border-border bg-background"
-        />
-      ) : display?.status === 'FAILED' ? (
-        <ReportErrorPlaceholder
-          title="This run failed"
-          detail={display.errorReason}
-        />
-      ) : display?.status === 'RUNNING' ? (
-        <ReportErrorPlaceholder
-          title="Run in progress"
-          detail={`Started ${formatDate(display.createdAt)}`}
-        />
+      {display ? (
+        renderReportBody(display)
       ) : (
         <ReportErrorPlaceholder
           title="No Insights reports yet"

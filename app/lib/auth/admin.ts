@@ -40,6 +40,17 @@ export function adminNotFoundResponse(): Response {
   });
 }
 
+async function resolveAdminEmail(request: NextRequest): Promise<string | null> {
+  let user: { email: string } | null = null;
+  try {
+    user = await getCurrentUserOrNull(request);
+  } catch {
+    user = null;
+  }
+  if (!user || !isUserAdmin(user.email)) return null;
+  return user.email.trim().toLowerCase();
+}
+
 /**
  * Resolve the current admin email or, if the caller is not an admin, return
  * a byte-equivalent 404 (FR-003, D-10). This is the canonical guard for
@@ -55,18 +66,9 @@ export function adminNotFoundResponse(): Response {
 export async function requireAdminOrNotFound(
   request: NextRequest
 ): Promise<{ ok: true; email: string } | { ok: false; response: Response }> {
-  let user: { email: string } | null = null;
-  try {
-    user = await getCurrentUserOrNull(request);
-  } catch {
-    user = null;
-  }
-
-  if (!user || !isUserAdmin(user.email)) {
-    return { ok: false, response: adminNotFoundResponse() };
-  }
-
-  return { ok: true, email: user.email.trim().toLowerCase() };
+  const email = await resolveAdminEmail(request);
+  if (!email) return { ok: false, response: adminNotFoundResponse() };
+  return { ok: true, email };
 }
 
 /**
@@ -76,16 +78,7 @@ export async function requireAdminOrNotFound(
 export async function requireAdminPageOrNotFound(
   request: NextRequest
 ): Promise<string> {
-  let user: { email: string } | null = null;
-  try {
-    user = await getCurrentUserOrNull(request);
-  } catch {
-    user = null;
-  }
-
-  if (!user || !isUserAdmin(user.email)) {
-    notFound();
-  }
-
-  return user.email.trim().toLowerCase();
+  const email = await resolveAdminEmail(request);
+  if (!email) notFound();
+  return email;
 }

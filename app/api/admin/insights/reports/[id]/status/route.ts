@@ -35,6 +35,58 @@ const StatusPatchSchema = z
     { message: 'FAILED transitions require errorReason' }
   );
 
+type TerminalTransitionData =
+  | {
+      status: 'COMPLETED';
+      sessionsCount: number;
+      ticketsCount: number;
+      artifactKey: string;
+      artifactSize: number;
+    }
+  | { status: 'FAILED'; errorReason: string };
+
+/**
+ * Atomic conditional transition of a RUNNING row to COMPLETED or FAILED,
+ * cascading to the linked Job and returning the canonical JSON shape. If
+ * the row is already terminal, returns its current state (idempotent no-op,
+ * SC-012). The Job is updated directly to suppress notification side effects
+ * (FR-022).
+ */
+async function applyTerminalTransition(
+  id: number,
+  data: TerminalTransitionData,
+  now: Date
+): Promise<Response> {
+  const result = await prisma.insightsReport.updateMany({
+    where: { id, status: 'RUNNING' },
+    data: { ...data, completedAt: now },
+  });
+  if (result.count === 0) {
+    const current = await prisma.insightsReport.findUnique({ where: { id } });
+    return NextResponse.json(
+      {
+        id: current!.id,
+        status: current!.status,
+        completedAt: current!.completedAt?.toISOString() ?? null,
+      },
+      { status: 200 }
+    );
+  }
+  await prisma.job
+    .updateMany({
+      where: {
+        insightsReport: { id },
+        status: { in: ['PENDING', 'RUNNING'] },
+      },
+      data: { status: data.status, completedAt: now },
+    })
+    .catch(() => undefined);
+  return NextResponse.json(
+    { id, status: data.status, completedAt: now.toISOString() },
+    { status: 200 }
+  );
+}
+
 /**
  * PATCH /api/admin/insights/reports/:id/status — workflow-driven terminal
  * status transition (AIB-791 US3, D-16, FR-022).
@@ -117,114 +169,34 @@ export async function PATCH(
     const validation = validateInsightsOutput(html);
 
     if (!validation.ok) {
-      const result = await prisma.insightsReport.updateMany({
-        where: { id, status: 'RUNNING' },
-        data: {
-          status: 'FAILED',
-          errorReason: 'Insights output validation failed',
-          completedAt: now,
-        },
-      });
-      if (result.count === 0) {
-        const current = await prisma.insightsReport.findUnique({ where: { id } });
-        return NextResponse.json(
-          {
-            id: current!.id,
-            status: current!.status,
-            completedAt: current!.completedAt?.toISOString() ?? null,
-          },
-          { status: 200 }
-        );
-      }
-      await prisma.job
-        .updateMany({
-          where: {
-            insightsReport: { id },
-            status: { in: ['PENDING', 'RUNNING'] },
-          },
-          data: { status: 'FAILED', completedAt: now },
-        })
-        .catch(() => undefined);
-      return NextResponse.json(
-        { id, status: 'FAILED', completedAt: now.toISOString() },
-        { status: 200 }
+      return applyTerminalTransition(
+        id,
+        { status: 'FAILED', errorReason: 'Insights output validation failed' },
+        now
       );
     }
 
     // Refinement on the schema guarantees these are present when status===COMPLETED.
-    const sessionsCount = parsed.data.sessionsCount!;
-    const ticketsCount = parsed.data.ticketsCount!;
-    const artifactKey = parsed.data.artifactKey!;
-    const artifactSize = parsed.data.artifactSize!;
-
-    const result = await prisma.insightsReport.updateMany({
-      where: { id, status: 'RUNNING' },
-      data: {
+    return applyTerminalTransition(
+      id,
+      {
         status: 'COMPLETED',
-        sessionsCount,
-        ticketsCount,
-        artifactKey,
-        artifactSize,
-        completedAt: now,
+        sessionsCount: parsed.data.sessionsCount!,
+        ticketsCount: parsed.data.ticketsCount!,
+        artifactKey: parsed.data.artifactKey!,
+        artifactSize: parsed.data.artifactSize!,
       },
-    });
-    if (result.count === 0) {
-      const current = await prisma.insightsReport.findUnique({ where: { id } });
-      return NextResponse.json(
-        {
-          id: current!.id,
-          status: current!.status,
-          completedAt: current!.completedAt?.toISOString() ?? null,
-        },
-        { status: 200 }
-      );
-    }
-    await prisma.job
-      .updateMany({
-        where: {
-          insightsReport: { id },
-          status: { in: ['PENDING', 'RUNNING'] },
-        },
-        data: { status: 'COMPLETED', completedAt: now },
-      })
-      .catch(() => undefined);
-    return NextResponse.json(
-      { id, status: 'COMPLETED', completedAt: now.toISOString() },
-      { status: 200 }
+      now
     );
   }
 
   // FAILED branch
-  const failedResult = await prisma.insightsReport.updateMany({
-    where: { id, status: 'RUNNING' },
-    data: {
+  return applyTerminalTransition(
+    id,
+    {
       status: 'FAILED',
       errorReason: parsed.data.errorReason!.slice(0, 500),
-      completedAt: now,
     },
-  });
-  if (failedResult.count === 0) {
-    const current = await prisma.insightsReport.findUnique({ where: { id } });
-    return NextResponse.json(
-      {
-        id: current!.id,
-        status: current!.status,
-        completedAt: current!.completedAt?.toISOString() ?? null,
-      },
-      { status: 200 }
-    );
-  }
-  await prisma.job
-    .updateMany({
-      where: {
-        insightsReport: { id },
-        status: { in: ['PENDING', 'RUNNING'] },
-      },
-      data: { status: 'FAILED', completedAt: now },
-    })
-    .catch(() => undefined);
-  return NextResponse.json(
-    { id, status: 'FAILED', completedAt: now.toISOString() },
-    { status: 200 }
+    now
   );
 }

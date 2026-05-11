@@ -1,8 +1,7 @@
 import { headers } from 'next/headers';
-import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { isUserAdmin } from '@/app/lib/auth/admin';
-import { getCurrentUserOrNull } from '@/lib/db/users';
+import type { NextRequest } from 'next/server';
+import { requireAdminPageOrNotFound } from '@/app/lib/auth/admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,27 +19,16 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const requestHeaders = await headers();
-  // Reconstitute a minimal NextRequest-like shape for getCurrentUserOrNull,
-  // which only reads `headers` and `nextUrl`. The session resolver doesn't
-  // require the latter — it falls back to next/headers when the request is
-  // absent — but we pass it explicitly so the x-test-user-id override path
-  // works the same as it does in API routes.
+  // Reconstitute a minimal NextRequest-like shape: the underlying session
+  // resolver only reads `headers`, but we pass `nextUrl`/`url` too so the
+  // x-test-user-id override path behaves the same as in API routes.
   const requestLike = {
     headers: requestHeaders,
     nextUrl: { pathname: '/admin' },
     url: '/admin',
-  } as unknown as Parameters<typeof getCurrentUserOrNull>[0];
+  } as unknown as NextRequest;
 
-  let user: { email: string } | null = null;
-  try {
-    user = await getCurrentUserOrNull(requestLike);
-  } catch {
-    user = null;
-  }
-
-  if (!user || !isUserAdmin(user.email)) {
-    notFound();
-  }
+  await requireAdminPageOrNotFound(requestLike);
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
