@@ -10,6 +10,7 @@ import {
   getEarliestClaudeJobTimestamp,
 } from '@/app/lib/insights/predicate';
 import {
+  InsightsAlreadyRunningError,
   createRunningReportAndJob,
   getLastCompletedRunEnd,
   getRunningReport,
@@ -76,6 +77,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
   }
 
+  // Fast-path read for the common case where a run is already visible. The
+  // authoritative gate is the partial-unique index enforced inside
+  // createRunningReportAndJob — this early refusal just avoids an
+  // unnecessary transaction round trip.
   const running = await getRunningReport();
   if (running) {
     return refusal(
@@ -89,25 +94,56 @@ export async function POST(request: NextRequest): Promise<Response> {
   const periodEnd = now;
 
   // The driving Job needs a projectId. Insights jobs aren't tied to a single
-  // project; we record the ai-board host project (the repo we dispatch
-  // against) so existing project-scoped log queries still resolve.
-  const hostProject = await prisma.project.findFirst({
-    orderBy: { id: 'asc' },
-    select: { id: true, githubOwner: true, githubRepo: true },
-  });
-  if (!hostProject) {
+  // project; we record the configured ai-board host project (the repo we
+  // dispatch against) so existing project-scoped log queries still resolve.
+  // Selection: GITHUB_OWNER/GITHUB_REPO env match first, then the smallest
+  // id as a last-resort fallback so dev/test environments keep working.
+  const aiboardOwnerEnv = process.env.GITHUB_OWNER ?? null;
+  const aiboardRepoEnv = process.env.GITHUB_REPO ?? null;
+  const hostProject =
+    aiboardOwnerEnv && aiboardRepoEnv
+      ? await prisma.project.findFirst({
+          where: { githubOwner: aiboardOwnerEnv, githubRepo: aiboardRepoEnv },
+          orderBy: { id: 'asc' },
+          select: { id: true, githubOwner: true, githubRepo: true, defaultBranch: true },
+        })
+      : null;
+  const fallbackProject =
+    hostProject ??
+    (await prisma.project.findFirst({
+      orderBy: { id: 'asc' },
+      select: { id: true, githubOwner: true, githubRepo: true, defaultBranch: true },
+    }));
+  if (!fallbackProject) {
     return NextResponse.json(
       { error: 'No project configured to host the insights job' },
       { status: 500 }
     );
   }
 
-  const { report, jobId } = await createRunningReportAndJob({
-    periodStart,
-    periodEnd,
-    now,
-    projectId: hostProject.id,
-  });
+  let report;
+  let jobId: number;
+  try {
+    const created = await createRunningReportAndJob({
+      periodStart,
+      periodEnd,
+      now,
+      projectId: fallbackProject.id,
+    });
+    report = created.report;
+    jobId = created.jobId;
+  } catch (error) {
+    if (error instanceof InsightsAlreadyRunningError) {
+      const current = await getRunningReport();
+      return refusal(
+        'ALREADY_RUNNING',
+        current
+          ? `Already running since ${current.createdAt.toISOString()}`
+          : 'Another insights run is already in progress'
+      );
+    }
+    throw error;
+  }
 
   const githubToken = process.env.GITHUB_TOKEN;
   if (!isWorkflowTestMode(githubToken)) {
@@ -128,11 +164,18 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     try {
       const octokit = new Octokit({ auth: githubToken });
+      // Prefer the explicit dispatch ref, then the host project's
+      // defaultBranch, then 'main'. Hard-coding 'main' breaks deployments
+      // whose default branch is renamed (e.g. master/trunk).
+      const dispatchRef =
+        process.env.INSIGHTS_WORKFLOW_REF ??
+        fallbackProject.defaultBranch ??
+        'main';
       await octokit.actions.createWorkflowDispatch({
         owner: aiboardOwner,
         repo: aiboardRepo,
         workflow_id: WORKFLOW_FILE,
-        ref: 'main',
+        ref: dispatchRef,
         inputs: {
           report_id: String(report.id),
           job_id: String(jobId),

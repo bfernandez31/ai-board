@@ -39,8 +39,13 @@ function makeOutcome(args: {
   };
 }
 
-function makeJob(jobId: number, ticketId: number | null, projectId: number) {
-  return { id: jobId, projectId, ticketId };
+function makeJob(
+  jobId: number,
+  ticketId: number | null,
+  projectId: number,
+  startedAt: Date = new Date('2026-05-10T00:00:00Z')
+) {
+  return { id: jobId, projectId, ticketId, startedAt };
 }
 
 describe('insights predicate (AIB-791)', () => {
@@ -164,7 +169,7 @@ describe('insights predicate (AIB-791)', () => {
   });
 
   describe('getEarliestClaudeJobTimestamp', () => {
-    it('returns the earliest Claude shippedAt', async () => {
+    it('returns the earliest Claude job startedAt (not shippedAt)', async () => {
       const outcomes = [
         makeOutcome({
           ticketId: 1,
@@ -178,13 +183,13 @@ describe('insights predicate (AIB-791)', () => {
           projectId: 10,
           ticketAgent: 'CLAUDE',
           projectDefaultAgent: 'CODEX',
-          shippedAt: new Date('2026-05-01T00:00:00Z'),
+          shippedAt: new Date('2026-05-08T00:00:00Z'),
         }),
       ];
       mockedPrisma.ticketOutcome.findMany.mockResolvedValue(outcomes);
       mockedPrisma.job.findMany.mockResolvedValue([
-        makeJob(101, 1, 10),
-        makeJob(102, 2, 10),
+        makeJob(101, 1, 10, new Date('2026-05-03T00:00:00Z')),
+        makeJob(102, 2, 10, new Date('2026-05-01T00:00:00Z')),
       ]);
       const earliest = await getEarliestClaudeJobTimestamp();
       expect(earliest?.toISOString()).toBe('2026-05-01T00:00:00.000Z');

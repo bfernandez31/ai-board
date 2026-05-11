@@ -32,7 +32,8 @@ function streamFromBytes(bytes: Uint8Array) {
 
 async function makeJobForAgent(
   ctx: TestContext,
-  ticketAgent: string | null
+  ticketAgent: string | null,
+  options: { shipped?: boolean } = {}
 ): Promise<number> {
   const prisma = getPrismaClient();
   const ticket = await ctx.createTicket({ title: '[e2e] rn-job' });
@@ -44,6 +45,17 @@ async function makeJobForAgent(
     where: { id: ctx.projectId },
     data: { defaultAgent: 'CLAUDE' },
   });
+  if (options.shipped !== false) {
+    await prisma.ticketOutcome.create({
+      data: {
+        ticketId: ticket.id,
+        projectId: ctx.projectId,
+        workflowType: 'FULL',
+        shippedAt: new Date(),
+        ruleSetVersion: 1,
+      },
+    });
+  }
   const job = await prisma.job.create({
     data: {
       ticketId: ticket.id,
@@ -98,6 +110,15 @@ describe('GET /api/admin/insights/jobs/:jobId/raw-native (US3)', () => {
 
   it('returns 404 for a Codex job (effective-agent predicate)', async () => {
     const jobId = await makeJobForAgent(ctx, 'CODEX');
+    const res = await GET(
+      new NextRequest(`http://localhost/api/admin/insights/jobs/${jobId}/raw-native`),
+      { params: Promise.resolve({ jobId: String(jobId) }) }
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 404 for a Claude job whose ticket has not shipped', async () => {
+    const jobId = await makeJobForAgent(ctx, 'CLAUDE', { shipped: false });
     const res = await GET(
       new NextRequest(`http://localhost/api/admin/insights/jobs/${jobId}/raw-native`),
       { params: Promise.resolve({ jobId: String(jobId) }) }

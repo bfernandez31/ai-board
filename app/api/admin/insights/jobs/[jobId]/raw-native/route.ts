@@ -49,6 +49,7 @@ export async function GET(
         select: {
           agent: true,
           project: { select: { defaultAgent: true } },
+          outcome: { select: { shippedAt: true } },
         },
       },
     },
@@ -62,6 +63,15 @@ export async function GET(
   const effective =
     job.ticket.agent ?? job.ticket.project.defaultAgent ?? 'CLAUDE';
   if (effective !== 'CLAUDE') {
+    return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+  }
+
+  // FR-010 / FR-025: the analyzer corpus is exclusively shipped Claude
+  // tickets. A workflow-token holder must not be able to read raw session
+  // artifacts for unshipped tickets through this endpoint just because the
+  // effective agent resolves to CLAUDE. Treat unshipped tickets as 404 so
+  // this route stays aligned with the enumeration predicate.
+  if (!job.ticket.outcome) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 

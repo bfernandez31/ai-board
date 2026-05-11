@@ -33,6 +33,7 @@ interface RawJobRow {
   ticketAgent: string | null;
   projectDefaultAgent: string | null;
   shippedAt: Date;
+  jobStartedAt: Date;
 }
 
 /**
@@ -83,6 +84,7 @@ async function queryShippedJobs(
       id: true,
       projectId: true,
       ticketId: true,
+      startedAt: true,
     },
   });
 
@@ -100,6 +102,7 @@ async function queryShippedJobs(
       ticketAgent: outcome.ticket.agent ?? null,
       projectDefaultAgent: outcome.ticket.project.defaultAgent ?? null,
       shippedAt: outcome.shippedAt,
+      jobStartedAt: job.startedAt,
     });
   }
 
@@ -113,14 +116,14 @@ function isClaudeRow(row: RawJobRow): boolean {
 }
 
 /**
- * Distinct count of Claude-agent tickets that shipped strictly AFTER
- * `since` (half-open: shippedAt > since when since is non-null; no lower
- * bound otherwise). Used by the trigger endpoint's pre-flight gate and the
- * `/preflight` UI endpoint.
+ * Distinct count of Claude-agent tickets shipped at or after `since`
+ * (half-open lower bound: `shippedAt >= since` when `since` is non-null;
+ * no lower bound otherwise). Used by the trigger endpoint's pre-flight
+ * gate and the `/preflight` UI endpoint.
  *
- * Note: the period semantic in `data-model.md` is "[prevEnd, now)". When
- * `since` is the previous run's `periodEnd`, this counts new ships since
- * that boundary (half-open: gte).
+ * The period semantic in `data-model.md` is "[prevEnd, now)" — passing the
+ * previous run's `periodEnd` as `since` counts new ships at or after that
+ * boundary.
  */
 export async function countShippedClaudeTicketsSince(
   since: Date | null
@@ -156,17 +159,21 @@ export async function listShippedClaudeJobsForWindow(
 }
 
 /**
- * Timestamp of the oldest Claude Job ever recorded. Used by the trigger
- * endpoint as the first-run `periodStart` floor.
+ * Earliest `Job.startedAt` across Claude jobs of shipped tickets — the
+ * timestamp of the oldest available Claude Code session (FR-009 / US3 AC1).
+ * Used by the trigger endpoint as the first-run `periodStart` floor.
+ *
+ * Returns the session/job timestamp (not `shippedAt`), so the first-run
+ * window covers every session whose raw artifact exists in storage.
  */
 export async function getEarliestClaudeJobTimestamp(): Promise<Date | null> {
   const rows = await queryShippedJobs(null, null);
   const claudeRows = rows.filter(isClaudeRow);
   const first = claudeRows[0];
   if (!first) return null;
-  let earliest = first.shippedAt;
+  let earliest = first.jobStartedAt;
   for (const row of claudeRows) {
-    if (row.shippedAt < earliest) earliest = row.shippedAt;
+    if (row.jobStartedAt < earliest) earliest = row.jobStartedAt;
   }
   return earliest;
 }

@@ -71,13 +71,27 @@ describe('reconcileOrphanedRunningReports (AIB-791)', () => {
     expect(second.failed).toBe(0);
   });
 
-  it('clamps invalid (zero/negative/NaN) timeouts to the default', async () => {
-    process.env.INSIGHTS_RUN_TIMEOUT_MINUTES = 'bogus';
-    mockedPrisma.insightsReport.updateMany.mockResolvedValue({ count: 0 });
+  it.each([
+    ['NaN', 'bogus'],
+    ['zero', '0'],
+    ['negative', '-5'],
+  ])(
+    'clamps invalid (%s) timeouts up to the 1-minute floor or default',
+    async (_label, raw) => {
+      process.env.INSIGHTS_RUN_TIMEOUT_MINUTES = raw;
+      mockedPrisma.insightsReport.updateMany.mockResolvedValue({ count: 0 });
 
-    const now = new Date('2026-05-11T12:00:00Z');
-    await reconcileOrphanedRunningReports(now);
-    const cutoff = mockedPrisma.insightsReport.updateMany.mock.calls[0][0].where.createdAt.lt as Date;
-    expect(cutoff.toISOString()).toBe('2026-05-11T11:00:00.000Z');
-  });
+      const now = new Date('2026-05-11T12:00:00Z');
+      await reconcileOrphanedRunningReports(now);
+
+      const cutoff = mockedPrisma.insightsReport.updateMany.mock.calls[0][0]
+        .where.createdAt.lt as Date;
+      // NaN/non-finite falls back to the 60-min default; finite-but-≤0 values
+      // are clamped up to the 1-minute floor by readTimeoutMinutes.
+      const expected = Number.isFinite(Number(raw))
+        ? '2026-05-11T11:59:00.000Z'
+        : '2026-05-11T11:00:00.000Z';
+      expect(cutoff.toISOString()).toBe(expected);
+    }
+  );
 });

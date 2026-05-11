@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
 import {
   adminNotFoundResponse,
   requireAdminOrNotFound,
@@ -15,6 +14,13 @@ export const dynamic = 'force-dynamic';
 // message inside the iframe.
 const MISSING_ARTIFACT_PLACEHOLDER =
   '<!DOCTYPE html><html lang="en"><body><p>Report content is no longer available.</p></body></html>';
+
+// The admin shell iframes this endpoint, so transient blob errors must
+// render as readable HTML rather than a raw JSON body bleeding through the
+// iframe (review #5). A `Retry-After` header signals the client may try
+// again once the upstream recovers.
+const BLOB_UNREACHABLE_PLACEHOLDER =
+  '<!DOCTYPE html><html lang="en"><body><p>Report content is temporarily unavailable. Please retry shortly.</p></body></html>';
 
 const REPORT_HEADERS: HeadersInit = {
   'Content-Type': 'text/html; charset=utf-8',
@@ -53,10 +59,10 @@ export async function GET(
     result = await streamInsightsReportArtifact(row.artifactKey);
   } catch (error) {
     console.error('[GET /admin/insights/.../html] Blob backend unavailable', error);
-    return NextResponse.json(
-      { error: 'Blob backend unavailable', code: 'BLOB_UNREACHABLE' },
-      { status: 502 }
-    );
+    return new Response(BLOB_UNREACHABLE_PLACEHOLDER, {
+      status: 502,
+      headers: { ...REPORT_HEADERS, 'Retry-After': '30' },
+    });
   }
 
   if (!result) {

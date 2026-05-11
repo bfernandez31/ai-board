@@ -19,8 +19,13 @@ export default async function InsightsPage() {
 
   const reports = await listReports(200);
   const reportEntries = reports.map(toListEntry);
+  // Prefer the latest COMPLETED report (sortable by generatedAt desc), but
+  // fall back to the first row (which may be RUNNING or FAILED) so the view
+  // surfaces in-flight or failed runs instead of the empty-state placeholder
+  // when no COMPLETED report exists yet.
   const latestCompleted = reports.find((r) => r.status === 'COMPLETED') ?? null;
-  const latestEntry = latestCompleted ? toListEntry(latestCompleted) : null;
+  const defaultDisplay = latestCompleted ?? reports[0] ?? null;
+  const latestEntry = defaultDisplay ? toListEntry(defaultDisplay) : null;
 
   const prevEnd = await getLastCompletedRunEnd();
   const shippedSincePreviousRun = await countShippedClaudeTicketsSince(prevEnd);

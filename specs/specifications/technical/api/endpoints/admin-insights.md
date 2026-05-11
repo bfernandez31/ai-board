@@ -183,9 +183,10 @@ X-Content-Type-Options: nosniff
 
 `X-Frame-Options` is intentionally NOT set on this endpoint — the admin shell needs to frame it. The `frame-ancestors 'self'` CSP prevents embedding from other origins.
 
-**Blob backend unreachable** (502):
-```json
-{ "error": "Blob backend unavailable", "code": "BLOB_UNREACHABLE" }
+**Blob backend unreachable** (502): the admin shell iframes this endpoint, so the body MUST stay renderable HTML rather than a raw JSON payload bleeding through the iframe. The response sets the same headers as a 200 plus `Retry-After: 30` and uses this placeholder body:
+
+```html
+<!DOCTYPE html><html lang="en"><body><p>Report content is temporarily unavailable. Please retry shortly.</p></body></html>
 ```
 
 **Non-admin response**: Byte-equivalent 404.

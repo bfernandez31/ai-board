@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { insightsReportsQueryKey } from '@/app/lib/hooks/queries/use-insights-reports';
+import type { ReportListEntry } from '@/app/lib/insights/repository';
 
 interface PreflightShape {
   canTrigger: boolean;
@@ -28,6 +29,29 @@ interface RefusalResponse {
   message: string;
 }
 
+interface OptimisticContext {
+  previousReports: ReportListEntry[] | undefined;
+}
+
+const OPTIMISTIC_ID = -1;
+
+function buildOptimisticEntry(now: Date): ReportListEntry {
+  const iso = now.toISOString();
+  return {
+    id: OPTIMISTIC_ID,
+    status: 'RUNNING',
+    generatedAt: iso,
+    periodStart: iso,
+    periodEnd: iso,
+    sessionsCount: null,
+    ticketsCount: null,
+    artifactSize: null,
+    errorReason: null,
+    completedAt: null,
+    createdAt: iso,
+  };
+}
+
 export function RunAnalysisButton({
   preflight,
   latestIsRunning,
@@ -35,8 +59,8 @@ export function RunAnalysisButton({
   const queryClient = useQueryClient();
   const [message, setMessage] = useState<string | null>(null);
 
-  const mutation = useMutation({
-    mutationFn: async (): Promise<TriggerResponse> => {
+  const mutation = useMutation<TriggerResponse, Error, void, OptimisticContext>({
+    mutationFn: async () => {
       const response = await fetch('/api/admin/insights/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -54,11 +78,31 @@ export function RunAnalysisButton({
       }
       throw new Error(`Unexpected status ${response.status}`);
     },
+    onMutate: async () => {
+      // Constitution: mutations require an optimistic update so the user
+      // sees their click reflected instantly. We prepend a tentative RUNNING
+      // row that the success/error handler then reconciles with the server.
+      await queryClient.cancelQueries({ queryKey: insightsReportsQueryKey });
+      const previousReports = queryClient.getQueryData<ReportListEntry[]>(
+        insightsReportsQueryKey
+      );
+      queryClient.setQueryData<ReportListEntry[]>(
+        insightsReportsQueryKey,
+        (current) => [buildOptimisticEntry(new Date()), ...(current ?? [])]
+      );
+      return { previousReports };
+    },
     onSuccess: () => {
       setMessage(null);
       void queryClient.invalidateQueries({ queryKey: insightsReportsQueryKey });
     },
-    onError: (error) => {
+    onError: (error, _vars, context) => {
+      if (context?.previousReports !== undefined) {
+        queryClient.setQueryData(
+          insightsReportsQueryKey,
+          context.previousReports
+        );
+      }
       setMessage(error instanceof Error ? error.message : 'Unknown error');
     },
   });

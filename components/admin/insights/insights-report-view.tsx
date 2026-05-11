@@ -29,11 +29,20 @@ function formatDate(iso: string | null): string {
 }
 
 function formatMetadataPhrasing(report: ReportListEntry): string {
-  const sessions = report.sessionsCount ?? 0;
-  const tickets = report.ticketsCount ?? 0;
-  return `Analyzed ${sessions} Claude Code sessions across ${tickets} tickets shipped between ${formatDate(
-    report.periodStart
-  )} and ${formatDate(report.periodEnd)}`;
+  const start = formatDate(report.periodStart);
+  const end = formatDate(report.periodEnd);
+  if (report.status !== 'COMPLETED' || report.sessionsCount === null) {
+    // Sessions/tickets counts are only meaningful for COMPLETED rows.
+    // Rendering "Analyzed 0 … 0 …" for an in-flight or failed row would
+    // misrepresent the run as having processed zero items.
+    if (report.status === 'RUNNING') {
+      return `Analyzing Claude Code sessions for tickets shipped between ${start} and ${end}…`;
+    }
+    return `Run window: ${start} to ${end} (counts unavailable)`;
+  }
+  return `Analyzed ${report.sessionsCount} Claude Code sessions across ${
+    report.ticketsCount ?? 0
+  } tickets shipped between ${start} and ${end}`;
 }
 
 function statusBadgeVariant(
@@ -45,11 +54,15 @@ function statusBadgeVariant(
 }
 
 interface Refusal {
-  refusalCode: 'ALREADY_RUNNING' | 'NO_NEW_SHIPPED';
+  refusalCode: 'ALREADY_RUNNING' | 'NO_NEW_SHIPPED' | 'NO_CLAUDE_JOBS';
   message: string;
 }
 
-function computeRefusal(canTrigger: boolean, latestIsRunning: boolean): Refusal | null {
+function computeRefusal(
+  canTrigger: boolean,
+  latestIsRunning: boolean,
+  preflight: PreflightSummary
+): Refusal | null {
   if (canTrigger) return null;
   if (latestIsRunning) {
     return {
@@ -57,9 +70,24 @@ function computeRefusal(canTrigger: boolean, latestIsRunning: boolean): Refusal 
       message: 'A run is already in progress.',
     };
   }
+  // Mirrors `/api/admin/insights/preflight` and `/trigger`: when no prior
+  // run exists AND no shipped Claude tickets are eligible, the API returns
+  // NO_CLAUDE_JOBS rather than NO_NEW_SHIPPED. The UI must reflect the same
+  // distinction so the message lines up with what a POST would return.
+  if (
+    preflight.previousRunEnd === null &&
+    preflight.shippedSincePreviousRun === 0
+  ) {
+    return {
+      refusalCode: 'NO_CLAUDE_JOBS',
+      message: 'No shipped Claude tickets to analyze yet.',
+    };
+  }
   return {
     refusalCode: 'NO_NEW_SHIPPED',
-    message: 'No new shipped Claude tickets since the last run.',
+    message: preflight.previousRunEnd
+      ? `No new shipped tickets since last run on ${formatDate(preflight.previousRunEnd)}.`
+      : 'No new shipped Claude tickets since the last run.',
   };
 }
 
@@ -106,12 +134,20 @@ export function InsightsReportView({
     return reports.find((r) => r.id === selectedId) ?? null;
   }, [reports, selectedId]);
 
-  const display = selected ?? latest;
+  // Derive the default display from the live reports list so RUNNING or
+  // FAILED entries surface immediately after polling (instead of the
+  // empty-state placeholder) when no COMPLETED row exists yet.
+  const latestCompleted = useMemo(
+    () => reports.find((r) => r.status === 'COMPLETED') ?? null,
+    [reports]
+  );
+  const defaultDisplay = latestCompleted ?? reports[0] ?? latest;
+  const display = selected ?? defaultDisplay;
 
   const latestIsRunning = reports.some((r) => r.status === 'RUNNING');
   const canTrigger =
     !latestIsRunning && preflight.shippedSincePreviousRun > 0;
-  const refusal = computeRefusal(canTrigger, latestIsRunning);
+  const refusal = computeRefusal(canTrigger, latestIsRunning, preflight);
 
   return (
     <div className="flex flex-col gap-6">

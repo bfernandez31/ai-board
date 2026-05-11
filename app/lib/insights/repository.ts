@@ -1,7 +1,7 @@
 import type { InsightsReport, InsightsRunStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { getEarliestClaudeJobTimestamp } from '@/app/lib/insights/predicate';
-import { buildInsightsReportKey } from '@/app/lib/insights/blob-keys';
 
 /**
  * Data-access helpers for `InsightsReport`. Status transitions ALWAYS go
@@ -18,6 +18,19 @@ const LIST_DEFAULT_LIMIT = 200;
 
 export { getEarliestClaudeJobTimestamp };
 
+/**
+ * Sentinel thrown by `createRunningReportAndJob` when the partial-unique
+ * index on `status='RUNNING'` rejects a concurrent insert. The trigger
+ * handler maps this to an `ALREADY_RUNNING` refusal so the gate is enforced
+ * atomically at the database layer rather than via a TOCTOU read.
+ */
+export class InsightsAlreadyRunningError extends Error {
+  constructor() {
+    super('Another insights run is already in progress');
+    this.name = 'InsightsAlreadyRunningError';
+  }
+}
+
 export async function getLastCompletedRunEnd(): Promise<Date | null> {
   const row = await prisma.insightsReport.findFirst({
     where: { status: 'COMPLETED' },
@@ -25,13 +38,6 @@ export async function getLastCompletedRunEnd(): Promise<Date | null> {
     select: { periodEnd: true },
   });
   return row?.periodEnd ?? null;
-}
-
-export async function getLatestCompletedReport(): Promise<InsightsReport | null> {
-  return prisma.insightsReport.findFirst({
-    where: { status: 'COMPLETED' },
-    orderBy: { generatedAt: 'desc' },
-  });
 }
 
 export async function listReports(
@@ -66,35 +72,45 @@ export async function createRunningReportAndJob(args: {
   now: Date;
   projectId: number;
 }): Promise<{ report: InsightsReport; jobId: number }> {
-  return prisma.$transaction(async (tx) => {
-    const report = await tx.insightsReport.create({
-      data: {
-        status: 'RUNNING',
-        generatedAt: args.now,
-        periodStart: args.periodStart,
-        periodEnd: args.periodEnd,
-        createdAt: args.now,
-      },
-    });
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const report = await tx.insightsReport.create({
+        data: {
+          status: 'RUNNING',
+          generatedAt: args.now,
+          periodStart: args.periodStart,
+          periodEnd: args.periodEnd,
+          createdAt: args.now,
+        },
+      });
 
-    const job = await tx.job.create({
-      data: {
-        command: 'insights-analyze',
-        status: 'PENDING',
-        ticketId: null,
-        projectId: args.projectId,
-        startedAt: args.now,
-        updatedAt: args.now,
-      },
-    });
+      const job = await tx.job.create({
+        data: {
+          command: 'insights-analyze',
+          status: 'PENDING',
+          ticketId: null,
+          projectId: args.projectId,
+          startedAt: args.now,
+          updatedAt: args.now,
+        },
+      });
 
-    const linked = await tx.insightsReport.update({
-      where: { id: report.id },
-      data: { jobId: job.id },
-    });
+      const linked = await tx.insightsReport.update({
+        where: { id: report.id },
+        data: { jobId: job.id },
+      });
 
-    return { report: linked, jobId: job.id };
-  });
+      return { report: linked, jobId: job.id };
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      throw new InsightsAlreadyRunningError();
+    }
+    throw error;
+  }
 }
 
 /**
@@ -111,39 +127,6 @@ export async function markFailed(
     data: {
       status: 'FAILED',
       errorReason: reason.slice(0, 500),
-      completedAt: now,
-    },
-  });
-  return result.count > 0;
-}
-
-export interface CompletedFields {
-  sessionsCount: number;
-  ticketsCount: number;
-  artifactSize: number;
-  artifactKey?: string;
-  now?: Date;
-}
-
-/**
- * Atomic conditional transition of a RUNNING row to COMPLETED with the
- * artifact fields populated. The artifactKey is derived from the row id by
- * default so callers cannot bind a row to the wrong key (VR-7).
- */
-export async function markCompleted(
-  id: number,
-  fields: CompletedFields
-): Promise<boolean> {
-  const now = fields.now ?? new Date();
-  const artifactKey = fields.artifactKey ?? buildInsightsReportKey(id);
-  const result = await prisma.insightsReport.updateMany({
-    where: { id, status: 'RUNNING' },
-    data: {
-      status: 'COMPLETED',
-      sessionsCount: fields.sessionsCount,
-      ticketsCount: fields.ticketsCount,
-      artifactKey,
-      artifactSize: fields.artifactSize,
       completedAt: now,
     },
   });

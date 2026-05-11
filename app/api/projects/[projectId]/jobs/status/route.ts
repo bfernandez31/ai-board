@@ -92,9 +92,15 @@ export async function GET(
     // Default behavior keeps the payload focused on active jobs.
     // Clients may also pass `jobIds` to keep tracking specific jobs until they reach
     // a terminal status, which avoids stale UI state without returning full history.
+    //
+    // Ticketless jobs (e.g. admin insights-analyze runs which set ticketId=null
+    // on the host project) are excluded so the response stays compatible with
+    // the project-scoped polling contract — clients filter by ticketId and the
+    // schema requires ticketId to be a positive integer.
     const jobs = await prisma.job.findMany({
       where: {
         projectId,
+        ticketId: { not: null },
         OR: [
           { status: { in: ['PENDING', 'RUNNING'] } },
           ...(trackedJobIds.length > 0
@@ -112,15 +118,24 @@ export async function GET(
       orderBy: { updatedAt: 'desc' },
     });
 
-    // 5. Transform to response format (ISO 8601 timestamps)
+    // 5. Transform to response format (ISO 8601 timestamps).
+    // The WHERE clause already filtered out null ticketIds, but the Prisma
+    // type still permits null, so the explicit check below keeps the schema
+    // validator happy without changing observable behavior.
     const response = {
-      jobs: jobs.map(job => ({
-        id: job.id,
-        status: job.status,
-        ticketId: job.ticketId,
-        command: job.command, // Required for dual job filtering
-        updatedAt: job.updatedAt.toISOString(),
-      })),
+      jobs: jobs.flatMap(job =>
+        job.ticketId === null
+          ? []
+          : [
+              {
+                id: job.id,
+                status: job.status,
+                ticketId: job.ticketId,
+                command: job.command,
+                updatedAt: job.updatedAt.toISOString(),
+              },
+            ]
+      ),
     };
 
     // 6. Validate response schema (ensure contract compliance)

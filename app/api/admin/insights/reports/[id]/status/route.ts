@@ -150,21 +150,42 @@ export async function PATCH(
     // Re-fetch the blob and validate server-side. If the upload was rejected
     // or the content fails markers, override to FAILED instead of trusting
     // the workflow's claim (D-8 defense in depth).
-    let html = '';
+    //
+    // A transient blob outage must not be silently rewritten to a validation
+    // failure — that would mark a genuinely successful run as FAILED and
+    // mislead the operator (constitution §IV: external call failures must
+    // be surfaced, never swallowed). We surface 503 so the workflow can
+    // retry and the RUNNING row stays untouched.
+    let html: string;
     try {
       const stream = await streamInsightsReportArtifact(expectedKey);
-      if (stream) {
-        const reader = stream.stream.getReader();
-        const chunks: Uint8Array[] = [];
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (value) chunks.push(value);
-        }
-        html = Buffer.concat(chunks).toString('utf-8');
+      if (!stream) {
+        return applyTerminalTransition(
+          id,
+          {
+            status: 'FAILED',
+            errorReason: 'Insights output validation failed',
+          },
+          now
+        );
       }
+      const reader = stream.stream.getReader();
+      const chunks: Uint8Array[] = [];
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) chunks.push(value);
+      }
+      html = Buffer.concat(chunks).toString('utf-8');
     } catch (error) {
       console.error('[PATCH insights status] blob fetch failed', error);
+      return NextResponse.json(
+        {
+          error: 'Blob backend unavailable; retry',
+          code: 'BLOB_UNREACHABLE',
+        },
+        { status: 503 }
+      );
     }
     const validation = validateInsightsOutput(html);
 

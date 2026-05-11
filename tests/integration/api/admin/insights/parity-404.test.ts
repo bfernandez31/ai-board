@@ -27,11 +27,19 @@ import { GET as listGet } from '@/app/api/admin/insights/reports/route';
 import { GET as singleGet } from '@/app/api/admin/insights/reports/[id]/route';
 import { GET as htmlGet } from '@/app/api/admin/insights/reports/[id]/html/route';
 
-function snapshot(res: Response): { status: number; contentType: string | null } {
-  return {
-    status: res.status,
-    contentType: res.headers.get('content-type'),
-  };
+function snapshot(res: Response): {
+  status: number;
+  headers: Record<string, string>;
+} {
+  // Full header equality is the actual contract — the comment above this
+  // suite claims "byte-equivalent (status, body bytes, headers)", so capture
+  // every header. Header names are lowercased (Fetch spec) before sorting so
+  // ordering differences don't fail the equality check.
+  const headers: Record<string, string> = {};
+  for (const [name, value] of res.headers.entries()) {
+    headers[name.toLowerCase()] = value;
+  }
+  return { status: res.status, headers };
 }
 
 describe('Admin-route 404 parity for non-admin callers (US2, SC-002)', () => {

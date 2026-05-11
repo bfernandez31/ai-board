@@ -56,6 +56,17 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ./sessions
+          # Refuse to proceed with an empty session set — running /insights
+          # against an empty directory would silently produce a vacuous
+          # COMPLETED report (sessionsCount=0). The pre-flight gate already
+          # rejects this case, so an empty enumeration here means a raw-log
+          # artifact was pruned between enumeration and download.
+          session_count=$(jq '.jobs | length' jobs.json)
+          if [ "$session_count" -eq 0 ]; then
+            echo "INSIGHTS_FAILURE_REASON=No Claude session artifacts available for the requested window" >> "$GITHUB_ENV"
+            echo "Aborting: no sessions in window"
+            exit 1
+          fi
           jq -c '.jobs[]' jobs.json | while read -r row; do
             jobId=$(echo "$row" | jq -r .jobId)
             curl -fsS \
