@@ -51,7 +51,7 @@ export async function PUT(
       },
     },
   });
-  if (!job) {
+  if (!job || job.ticketId === null) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
   // Ticket.agent is nullable; workflow dispatch resolves to project.defaultAgent
@@ -130,7 +130,7 @@ export async function DELETE(
     where: { id: jobId },
     select: { projectId: true, ticketId: true },
   });
-  if (!job) {
+  if (!job || job.ticketId === null) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 

@@ -95,7 +95,11 @@ async function attachQualityScores(
 
   const scoreByTicket = new Map<number, number>();
   for (const job of verifyJobs) {
-    if (job.qualityScore != null && !scoreByTicket.has(job.ticketId)) {
+    if (
+      job.qualityScore != null &&
+      job.ticketId !== null &&
+      !scoreByTicket.has(job.ticketId)
+    ) {
       scoreByTicket.set(job.ticketId, job.qualityScore);
     }
   }

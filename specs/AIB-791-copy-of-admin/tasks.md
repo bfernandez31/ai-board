@@ -51,30 +51,30 @@ depend on. None of US1–US4 can begin until this phase is complete.
 
 ### Admin Auth Helper
 
-- [ ] T009 [P] Create `app/lib/auth/admin.ts` with `getAdminAllowlist()` (reads `process.env.ADMIN_ALLOWLIST` fresh on every call, splits on comma, lowercases, trims, filters empty), `isUserAdmin(email: string | null | undefined): boolean`, and `requireAdminOrNotFound(request: Request | NextRequest): Promise<string>` (returns the admin email or calls `notFound()` / returns a 404 Response byte-equivalent to Next.js default 404)
-- [ ] T010 [P] Create `tests/unit/lib/auth/admin.test.ts` covering: empty allowlist denies all; email match is case-insensitive; trimming applied; `isUserAdmin(null)` / `isUserAdmin(undefined)` return false; `getAdminAllowlist` re-reads env on each call (SC-009 — set env then read, mutate env then read again, assert different results)
+- [X] T009 [P] Create `app/lib/auth/admin.ts` ✅ DONE
+- [X] T010 [P] Create `tests/unit/lib/auth/admin.test.ts` ✅ DONE
 
 ### Shared Insights Modules
 
-- [ ] T011 [P] Create `app/lib/insights/blob-keys.ts` exporting `buildInsightsReportKey(reportId: number): string` returning `insights/reports/${reportId}.html` (mirror of `app/lib/logs/artifact-key.ts`)
-- [ ] T012 [P] Create `app/lib/insights/state-machine.ts` with `canTransition(from: InsightsRunStatus, to: InsightsRunStatus): boolean` and `isTerminalStatus(status: InsightsRunStatus): boolean` mirroring `app/lib/job-state-machine.ts` shape
-- [ ] T013 [P] Create `tests/unit/lib/insights/state-machine.test.ts` covering: RUNNING → COMPLETED allowed; RUNNING → FAILED allowed; COMPLETED → anything forbidden (VR-2); FAILED → anything forbidden (VR-3); `isTerminalStatus` true for COMPLETED/FAILED, false for RUNNING
-- [ ] T014 [P] Create `app/lib/insights/output-validation.ts` exporting `validateInsightsOutput(html: string): { ok: true } | { ok: false; reason: string }`, checking presence of structural markers `"Suggested CLAUDE.md additions"`, `"Big wins"`, `"Horizon"`, and at least one friction-section header (D-8)
-- [ ] T015 [P] Create `tests/unit/lib/insights/output-validation.test.ts` covering: all markers present → ok; each marker missing in isolation → fail with informative reason; empty/non-HTML inputs → fail
-- [ ] T016 [P] Create `app/lib/insights/predicate.ts` with one private query joining `Job → Ticket → Project` applying the effective-agent rule (`ticket.agent ?? ticket.project.defaultAgent ?? 'CLAUDE'`); export `countShippedClaudeTicketsSince(since: Date | null): Promise<number>` and `listShippedClaudeJobsForWindow(start: Date, end: Date): Promise<JobRef[]>` (D-6, D-7, FR-010, FR-025)
-- [ ] T017 [P] Create `tests/unit/lib/insights/predicate.test.ts` covering the effective-agent grid: (ticket=CLAUDE, project=CODEX) → Claude; (ticket=null, project=CLAUDE) → Claude; (ticket=CODEX, project=CLAUDE) → not Claude; (ticket=null, project=null) → Claude (legacy fallback); count vs list agree on the same window
-- [ ] T018 [P] Create `app/lib/insights/reconcile.ts` exporting `reconcileOrphanedRunningReports(now: Date): Promise<{ failed: number }>` using atomic `prisma.insightsReport.updateMany({ where: { status: 'RUNNING', createdAt: { lt: cutoff } }, data: { status: 'FAILED', errorReason: 'Run timed out — workflow did not report terminal status', completedAt: now } })`; reads `INSIGHTS_RUN_TIMEOUT_MINUTES` fresh (default 60) per `app/api/maintenance/prune-logs/route.ts` parsing idiom (D-12, D-14, FR-015)
-- [ ] T019 [P] Create `tests/unit/lib/insights/reconcile.test.ts` covering: backdated RUNNING row is auto-FAILED; non-backdated RUNNING row is left alone; running reconciliation twice on the same set yields exactly one transition (idempotent); env var override is honored
-- [ ] T020 Create `app/lib/insights/repository.ts` with DB helpers (all status transitions go through atomic `updateMany` per P-1): `createRunningReportAndJob(periodStart, periodEnd, now)` (single transaction inserts both rows and links them), `getLastCompletedRunEnd(): Promise<Date | null>` (SELECT periodEnd FROM InsightsReport WHERE status='COMPLETED' ORDER BY periodEnd DESC LIMIT 1), `getEarliestClaudeJobTimestamp(): Promise<Date | null>`, `getLatestCompletedReport()`, `listReports(limit = 200)` (with `take: 200` at the DB layer — FR-017 / SC-007), `getReportById(id)`, `getRunningReport()`, `markCompleted(id, fields)`, `markFailed(id, reason)`
-- [ ] T021 Extend `tests/integration/outcomes/ship-transition-capture-resilience.test.ts` with a case asserting `countShippedClaudeTicketsSince(prevEnd)` returned by `app/lib/insights/predicate.ts` agrees with `listShippedClaudeJobsForWindow(start,end)` for a mixed-agent window (research.md "Existing tests to extend")
+- [X] T011 [P] Create `app/lib/insights/blob-keys.ts` ✅ DONE
+- [X] T012 [P] Create `app/lib/insights/state-machine.ts` ✅ DONE
+- [X] T013 [P] Create `tests/unit/lib/insights/state-machine.test.ts` ✅ DONE
+- [X] T014 [P] Create `app/lib/insights/output-validation.ts` ✅ DONE
+- [X] T015 [P] Create `tests/unit/lib/insights/output-validation.test.ts` ✅ DONE
+- [X] T016 [P] Create `app/lib/insights/predicate.ts` ✅ DONE
+- [X] T017 [P] Create `tests/unit/lib/insights/predicate.test.ts` ✅ DONE
+- [X] T018 [P] Create `app/lib/insights/reconcile.ts` ✅ DONE
+- [X] T019 [P] Create `tests/unit/lib/insights/reconcile.test.ts` ✅ DONE
+- [X] T020 Create `app/lib/insights/repository.ts` ✅ DONE
+- [X] T021 Extend `tests/integration/outcomes/ship-transition-capture-resilience.test.ts` ✅ DONE
 
 ### Blob Client Extensions
 
-- [ ] T022 Extend `app/lib/blob/client.ts` to add `uploadInsightsReportArtifact(key: string, html: Buffer): Promise<{ key: string; size: number }>` and `streamInsightsReportArtifact(key: string): Promise<{ stream: ReadableStream; contentType: string; size: number } | null>` following the existing `uploadJobLogArtifact` / `streamJobLogArtifact` shape (`access: 'private'`, `addRandomSuffix: false`, `allowOverwrite: true`, `requireToken()`, `contentType: 'text/html; charset=utf-8'`) per D-1, D-2
+- [X] T022 Extend `app/lib/blob/client.ts` with insights helpers ✅ DONE
 
 ### Top-level Admin Page Routing Headers
 
-- [ ] T023 Add `headers()` rule in `next.config.ts` scoped to `/admin/:path*` that returns `X-Frame-Options: DENY` and `Cache-Control: private, no-store` (the report-body endpoint will override its own headers); leave existing rules intact (research.md "To extend" / D-9)
+- [X] T023 Add `headers()` rule in `next.config.ts` for `/admin/:path*` ✅ DONE
 
 **Checkpoint**: Foundation ready — US1, US2, US3, US4 implementation can now begin.
 

@@ -244,12 +244,22 @@ async function getComparisonDetailByWhere(where: {
     }),
   ]);
 
-  const aggregatedTelemetry = aggregateJobTelemetry(completedJobs);
-  const inProgressTicketIds = new Set(inProgressJobs.map((job) => job.ticketId));
-  const latestVerifyJobByTicketId = new Map(
-    latestVerifyJobs.map((job) => [job.ticketId, job] as const)
+  // Filter to ticket-bound jobs since Job.ticketId is now nullable (AIB-791).
+  // The queries above scope to participant ticket IDs, so null cannot appear,
+  // but the resulting type still surfaces `number | null` — narrow it here.
+  const completedTicketJobs = completedJobs.flatMap((job) =>
+    job.ticketId === null ? [] : [{ ...job, ticketId: job.ticketId }]
   );
-  const verifyJobTicketIds = new Set(latestVerifyJobs.map((job) => job.ticketId));
+  const aggregatedTelemetry = aggregateJobTelemetry(completedTicketJobs);
+  const inProgressTicketIds = new Set(
+    inProgressJobs.flatMap((job) => (job.ticketId === null ? [] : [job.ticketId]))
+  );
+  const latestVerifyJobByTicketId = new Map(
+    latestVerifyJobs.flatMap((job) => (job.ticketId === null ? [] : [[job.ticketId, job] as const]))
+  );
+  const verifyJobTicketIds = new Set(
+    latestVerifyJobs.flatMap((job) => (job.ticketId === null ? [] : [job.ticketId]))
+  );
 
   const participants = record.participants.map((participant) =>
     normalizeParticipantDetail({
