@@ -14,6 +14,7 @@ Complete REST API documentation with authentication, request/response formats, a
 - [Health](./health.md) — Health dashboard endpoints
 - [Billing](./billing.md) — Billing, subscription, and usage endpoints
 - [Account, Settings & Credentials](./account.md) — Settings, Account, Token, Credential endpoints
+- [Admin](./admin.md) — Admin Insights analysis runs and report endpoints
 
 ## Authentication
 
@@ -38,6 +39,11 @@ All API endpoints require authentication via NextAuth.js session cookies except 
 - Owner check performed first for performance (no database join needed)
 - Member check performed via ProjectMember table join if not owner
 - Non-members receive 403 Forbidden (API) or 404 Not Found (pages)
+
+**Admin Authorization**:
+- Endpoints under `/api/admin/*` use `verifyAdminAccess(request)` which checks the caller's email against the `ADMIN_EMAILS` env-var allowlist
+- The allowlist is case-insensitive and whitespace-trimmed; empty or missing means no admin access (fail-closed)
+- Non-admins, unauthenticated callers, and disabled admin areas all receive `404 Not Found` (not `403`) so the admin area's existence is not leaked
 
 **Workflow Endpoints**: Require Bearer token authentication
 ```

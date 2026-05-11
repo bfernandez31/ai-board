@@ -33,6 +33,7 @@ User
 ├── credentials (one-to-many) → UserCredential
 │   └── unique on (userId, provider)
 ├── ticketAnalyses (one-to-many) → TicketAnalysis (as trigger)
+├── insightsRuns (one-to-many) → InsightsRun (as triggering admin)
 └── accounts/sessions (one-to-many) → NextAuth tables
 ```
 
@@ -103,6 +104,11 @@ User
 - `ComparisonParticipant(comparisonRecordId, rank)` - Ranked participants
 - `DecisionPointEvaluation(comparisonRecordId, displayOrder)` - Ordered decision points
 - `ComplianceAssessment(comparisonParticipantId, displayOrder)` - Ordered assessments
+
+**Admin Insights Queries**:
+- `InsightsRun(status, createdAt)` - Active-run lookup for duplicate trigger prevention
+- `InsightsRun(createdAt DESC)` - Chronological listing of past runs
+- `InsightsRun(status)` - Status-filtered list endpoint
 
 ### Composite Indexes
 

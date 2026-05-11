@@ -299,6 +299,28 @@ Shared authorization helpers enforce the standard access rules:
 
 These helpers accept an optional `NextRequest` so routes that support PATs can resolve identity from either session or token.
 
+## Admin Access Control
+
+**File**: `lib/db/admin-auth.ts`
+
+Access to the `/admin` area and `/api/admin/*` endpoints is controlled by `verifyAdminAccess(request?)`. The helper:
+
+1. Resolves the caller via `requireAuth(request)` (session or PAT)
+2. Loads the user's email from the database
+3. Parses `ADMIN_EMAILS` (comma-separated), trims whitespace, and lowercases each entry
+4. Throws `Error("Not found")` if the allowlist is empty, the env var is missing, or the user's email is not present
+5. Returns `{ userId, email }` on success
+
+Callers must translate the `"Not found"` error into a `404` response (mirroring a missing resource). The admin layout (`app/admin/layout.tsx`) calls `notFound()` from `next/navigation` when the helper throws, so non-admins receive the standard 404 page without any indication that an admin area exists. All `/api/admin/*` handlers map both `"Unauthorized"` and `"Not found"` errors to a generic `404 { "error": "Not found" }` body.
+
+**Fail-closed semantics**:
+- Missing `ADMIN_EMAILS` env var → no admin access
+- Empty `ADMIN_EMAILS` (e.g., `ADMIN_EMAILS=""`) → no admin access
+- Email comparison is case-insensitive; the allowlist is whitespace-trimmed per entry
+- Unauthenticated callers fall through to the same `404` response
+
+**Workflow token fallback**: The PATCH status route for insights runs (`/api/admin/insights/runs/[runId]/status`) first calls `verifyWorkflowToken(request)`; if a valid `WORKFLOW_API_TOKEN` Bearer is present the route bypasses admin auth, otherwise it falls back to `verifyAdminAccess(request)`. This lets the background worker (or a future workflow caller) post status updates without an admin session while still gating manual updates through the allowlist.
+
 ## Test Authentication
 
 **Primary files**:
@@ -337,6 +359,14 @@ DEV_LOGIN_SECRET=<shared-preview-secret>
 ```
 
 If preview-login variables are absent or the environment is not a Vercel preview deployment, credentials sign-in remains hidden and unusable.
+
+### Required for Admin Area
+
+```env
+ADMIN_EMAILS=alice@example.com,bob@example.com
+```
+
+Comma-separated list of admin user emails. Whitespace and case are normalized. An empty or missing value blocks all admin access.
 
 ### Required for Test Environments
 

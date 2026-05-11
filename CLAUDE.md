@@ -66,6 +66,7 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 - Usage: `GET /api/billing/usage` returns current counts vs limits; `useUsage` hook (15s polling) powers dashboard `UsageBanner` and ticket/project creation quota gates
 - StripeEvent: Idempotency log for webhook events (keyed on Stripe event ID)
 - UserCredential: One per provider per user; encrypted with AES-256-GCM; master key in `CREDENTIAL_ENCRYPTION_KEY` env var (must be provisioned in all environments); workflow dispatch blocked when owner has no credential
+- InsightsRun: Global admin-triggered Claude Code `/insights` analysis over captured session artifacts; lifecycle PENDING → RUNNING → COMPLETED/FAILED with 30-minute `timeoutAt`; HTML report stored as Blob artifact at `insights-reports/<runId>.html`
 
 ## API Patterns
 
@@ -103,6 +104,7 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 - Members can access projects alongside owners
 - Preview deployments can enable credentials login with `DEV_LOGIN_ENABLED=true` and `DEV_LOGIN_SECRET`
 - Automated tests commonly authenticate with the `x-test-user-id` request header against seeded users such as `test@e2e.local`
+- `/admin` area gated by `verifyAdminAccess()` (`lib/db/admin-auth.ts`) against the `ADMIN_EMAILS` env var allowlist (comma-separated, case-insensitive, fail-closed). Non-admins receive a generic 404 — never 403 — so the admin area's existence is not leaked
 
 ### Test Environment
 

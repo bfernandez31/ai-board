@@ -27,6 +27,7 @@ model User {
   personalAccessTokens  PersonalAccessToken[]
   subscription          Subscription?
   ticketAnalyses        TicketAnalysis[]
+  insightsRuns          InsightsRun[]
 
   @@index([email])
 }

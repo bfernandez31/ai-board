@@ -137,6 +137,21 @@ Describes the Health Dashboard page, which provides a global health score (0–1
 
 ---
 
+### [09-admin.md](09-admin.md)
+**Admin Area**
+
+Describes the allowlist-restricted `/admin` section and its Claude Code Insights dashboard, which runs Claude Code's `/insights` analyzer over captured agent sessions.
+
+**Key Topics**:
+- Email-allowlist access control with 404 responses for non-admins
+- Insights page layout: trigger button, past reports list, sandboxed report viewer
+- Triggering a new analysis (pre-flight checks, double-trigger prevention)
+- Analysis window resolution (first-ever vs. incremental since last run)
+- CLAUDE-only session filtering across shipped tickets
+- Run lifecycle (PENDING → RUNNING → COMPLETED/FAILED) and 30-minute timeout
+
+---
+
 ## What's NOT in These Documents
 
 These functional specifications intentionally **exclude**:

@@ -5,6 +5,7 @@
 - [Core Models](./core-models.md) — Project, Ticket, Job, User, Token, Subscription, Usage, Credential, and related entities
 - [Comparison Models](./comparison-models.md) — Ticket and project comparison entities
 - [Health Models](./health-models.md) — Health scan result entities
+- [Admin Models](./admin-models.md) — Admin Insights run and report artifacts
 - [Enums](./enums.md) — Domain and core enums (stage, status, workflow type, etc.)
 - [Relationships & Indexes](./relationships-and-indexes.md) — Cross-model relationships diagram and indexing strategy
 

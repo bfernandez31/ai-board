@@ -77,6 +77,28 @@ enum CaptureStatus {
 | `UNAVAILABLE` | Runner could not complete capture after bounded retry (3 attempts, 1/2/4s) | Yes |
 | `PRUNED` | Server-side only — set by retention pruner to mark an artifact-less row for deletion in the next cycle | Server-only |
 
+### InsightsRunStatus
+
+Lifecycle states for an admin-triggered Claude Code `/insights` analysis run.
+
+```prisma
+enum InsightsRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+```
+
+| Value | Description | Terminal? | Transitions To |
+|-------|-------------|-----------|----------------|
+| `PENDING` | Run created, background analysis not yet started | No | `RUNNING`, `FAILED` |
+| `RUNNING` | Analysis in progress (downloading session artifacts, invoking Claude Code `/insights`) | No | `COMPLETED`, `FAILED` |
+| `COMPLETED` | HTML report uploaded to blob and metadata persisted | Yes | — |
+| `FAILED` | Pre-flight, artifact download, CLI invocation, or upload failed; `errorMessage` populated | Yes | — |
+
+A `PENDING` or `RUNNING` row whose `timeoutAt` is in the past no longer blocks a new trigger.
+
 ### HealthScanType
 
 ```prisma
