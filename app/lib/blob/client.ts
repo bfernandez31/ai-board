@@ -50,6 +50,36 @@ export async function streamJobLogArtifact(
   return { stream: result.stream, size: result.blob.size };
 }
 
+export async function uploadInsightsReport(
+  key: string,
+  html: Buffer
+): Promise<PutBlobResult> {
+  const token = requireToken();
+  return put(key, html, {
+    access: 'private',
+    token,
+    contentType: 'text/html; charset=utf-8',
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+}
+
+export async function streamInsightsReport(
+  key: string
+): Promise<{ stream: ReadableStream<Uint8Array>; size: number } | null> {
+  const token = requireToken();
+  let result;
+  try {
+    result = await get(key, { access: 'private', token });
+  } catch (error) {
+    const status = (error as { status?: number } | null)?.status;
+    if (status === 404) return null;
+    throw error;
+  }
+  if (!result || result.statusCode !== 200 || !result.stream) return null;
+  return { stream: result.stream, size: result.blob.size };
+}
+
 export async function deleteJobLogArtifact(key: string): Promise<{ deleted: boolean }> {
   const token = requireToken();
   try {

@@ -9,7 +9,7 @@ Implemented complete `/admin` area with env-var allowlist access control (ADMIN_
 
 ## Key Decisions
 
-Used `useReducer` instead of multiple `useState` in ReportViewer to satisfy the `react-hooks/set-state-in-effect` lint rule. Admin auth returns 404 (not 403) to hide admin area existence. Analysis engine runs server-side as non-blocking async (not via GitHub Actions workflow) since it only needs blob artifacts, not repo access.
+Used prev-runId state pattern in ReportViewer to reset during render (avoids synchronous setState in effects). Admin auth returns 404 (not 403) to hide admin area existence. Analysis engine runs server-side as non-blocking async (not via GitHub Actions workflow) since it only needs blob artifacts, not repo access. TanStack Query with adaptive polling (5s active, 30s idle).
 
 ## Files Modified
 

@@ -235,6 +235,7 @@ model User {
   credentials           UserCredential[]
   subscription          Subscription?
   ticketAnalyses        TicketAnalysis[]
+  insightsRuns          InsightsRun[]
 
   @@index([email])
 }
@@ -853,4 +854,35 @@ model AnalysisCalibration {
   @@index([projectId, shippedAt(sort: Desc)])
   @@index([projectId, partial])
   @@index([projectId, frictionCell])
+}
+
+enum InsightsRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model InsightsRun {
+  id           Int               @id @default(autoincrement())
+  status       InsightsRunStatus @default(PENDING)
+  triggeredBy  String
+  periodStart  DateTime?
+  periodEnd    DateTime?
+  sessionCount Int?
+  ticketCount  Int?
+  reportKey    String?           @db.VarChar(300)
+  reportSize   Int?
+  errorMessage String?           @db.VarChar(2000)
+  timeoutAt    DateTime
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  user User @relation(fields: [triggeredBy], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([createdAt(sort: Desc)])
+  @@index([status])
 }

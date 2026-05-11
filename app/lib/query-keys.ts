@@ -88,6 +88,17 @@ export const queryKeys = {
     trends: (projectId: number) => ['health', projectId, 'trends'] as const,
   },
 
+  admin: {
+    insights: {
+      latest: ['admin', 'insights', 'latest'] as const,
+      runs: (filters?: { status?: string; cursor?: number }) =>
+        filters
+          ? (['admin', 'insights', 'runs', filters] as const)
+          : (['admin', 'insights', 'runs'] as const),
+      run: (id: number) => ['admin', 'insights', 'runs', id] as const,
+    },
+  },
+
   tokens: {
     all: ['tokens'] as const,
   },
