@@ -221,9 +221,9 @@ export function useJobPolling(projectId: number, pollingInterval = 2000) {
 - **Adaptive Polling**: 2-second interval when active jobs exist, 30-second interval when idle (detects new jobs without wasting requests)
 - **Cache Invalidation**: Invalidates tickets and ticketJobs caches when a job disappears (completed/failed/cancelled)
 
-**Board Integration** (`components/board/board.tsx` — `getTicketJobs` callback):
+**Board Integration** (`components/board/hooks/use-job-snapshots.ts` — `getTicketJobs` callback):
 
-The board's `getTicketJobs` merges polled active jobs with server-provided `initialJobs` for each ticket:
+The hook's `getTicketJobs` merges polled active jobs with server-provided `initialJobs` (held in the snapshot map) for each ticket:
 - **Idle tickets** (no active polled jobs): Uses `initialJobs` directly for workflow status, quality score, and deploy state
 - **Active tickets** (PENDING/RUNNING jobs being polled): Merges polled status updates with `initialJobs` data, and appends historical (terminal) jobs from `initialJobs` that are no longer in the polling response. This ensures completed workflow status and quality score remain visible even when new jobs are running alongside completed ones
 
@@ -1261,32 +1261,21 @@ const { data } = useQuery({
 
 **Problem**: When tickets transition to CLOSED stage, they must remain in the cache for search modal access but hidden from board columns.
 
-**Solution** (`components/board/board.tsx`):
+**Solution** (close mutation in `components/board/hooks/use-ticket-transitions.ts`, column data sourced from server-side `ticketsByStage`):
 
 ```typescript
 // When ticket transitions to CLOSED, update in cache instead of removing
+const updatedTickets = allTickets.map((t) =>
+  t.id === ticket.id ? { ...t, stage: Stage.CLOSED } : t
+);
 queryClient.setQueryData<Ticket[]>(
   queryKeys.projects.tickets(projectId),
-  (old) => {
-    if (!old) return [];
-    return old.map((t) =>
-      t.id === ticketId ? { ...t, stage: Stage.CLOSED } : t
-    );
-  }
+  updatedTickets
 );
 
-// Board columns filter out CLOSED tickets for display
-const ticketsByStage = useMemo(() => {
-  return {
-    INBOX: allTickets.filter((t) => t.stage === 'INBOX'),
-    SPECIFY: allTickets.filter((t) => t.stage === 'SPECIFY'),
-    PLAN: allTickets.filter((t) => t.stage === 'PLAN'),
-    BUILD: allTickets.filter((t) => t.stage === 'BUILD'),
-    VERIFY: allTickets.filter((t) => t.stage === 'VERIFY'),
-    SHIP: allTickets.filter((t) => t.stage === 'SHIP'),
-    // CLOSED tickets excluded from board display
-  };
-}, [allTickets]);
+// Board columns receive `ticketsByStage` already keyed by stage from the
+// server query (`getTicketsByStage` in `lib/db/tickets.ts`), which excludes
+// CLOSED from the displayed stage buckets.
 ```
 
 **Key Points**:
