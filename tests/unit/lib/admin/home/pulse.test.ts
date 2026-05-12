@@ -38,7 +38,6 @@ function defaultMocks(overrides: Partial<{
   jobsThisMonth: Array<{ projectId: number; createdAt: Date }>;
   jobsPrevMonth: Array<{ projectId: number }>;
   activePaying: Array<{ plan: 'PRO' | 'TEAM'; createdAt: Date }>;
-  activePayingPrevMonth: number;
   payingNewLast30Subs: Array<{ createdAt: Date }>;
   freeUsersCount: number;
   projects: Array<{ id: number; userId: string }>;
@@ -54,9 +53,7 @@ function defaultMocks(overrides: Partial<{
   mockedPrisma.subscription.findMany
     .mockResolvedValueOnce(overrides.activePaying ?? [])
     .mockResolvedValueOnce(overrides.payingNewLast30Subs ?? []);
-  mockedPrisma.subscription.count
-    .mockResolvedValueOnce(overrides.activePayingPrevMonth ?? 0)
-    .mockResolvedValueOnce(overrides.freeUsersCount ?? 0);
+  mockedPrisma.subscription.count.mockResolvedValueOnce(overrides.freeUsersCount ?? 0);
   mockedPrisma.project.findMany.mockResolvedValue(overrides.projects ?? []);
 }
 

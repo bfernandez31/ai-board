@@ -64,7 +64,6 @@ export async function computePulse(now: Date = new Date()): Promise<DashboardSna
     jobsThisMonth,
     jobsPrevMonth,
     activePaying,
-    activePayingPrevMonth,
     payingNewLast30Subs,
     freeUsersCount,
   ] = await Promise.all([
@@ -86,13 +85,6 @@ export async function computePulse(now: Date = new Date()): Promise<DashboardSna
     prisma.subscription.findMany({
       where: { plan: { in: ['PRO', 'TEAM'] }, status: { in: ['ACTIVE', 'TRIALING'] } },
       select: { plan: true, createdAt: true },
-    }),
-    prisma.subscription.count({
-      where: {
-        plan: { in: ['PRO', 'TEAM'] },
-        status: { in: ['ACTIVE', 'TRIALING'] },
-        createdAt: { lt: prevMonthStart },
-      },
     }),
     prisma.subscription.findMany({
       where: {
@@ -298,9 +290,6 @@ export async function computePulse(now: Date = new Date()): Promise<DashboardSna
     sparkline: payingSparkline,
     tooltip: 'Comptes avec abonnement PRO ou TEAM actif.',
   };
-
-  // Suppress unused warning
-  void activePayingPrevMonth;
 
   return {
     users: usersTile,

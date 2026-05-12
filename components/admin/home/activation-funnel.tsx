@@ -27,9 +27,7 @@ export function ActivationFunnel({ steps }: ActivationFunnelProps) {
                 {formatCountWithSpacedThousands(step.count)}
               </p>
               <p className="text-xs text-muted-foreground">
-                {step.conversionFromPrevious === null
-                  ? '—'
-                  : formatPercent(step.conversionFromPrevious)}
+                {formatPercent(step.conversionFromPrevious)}
                 {step.conversionFromPrevious !== null && (
                   <span className="ml-1">vs. étape précédente</span>
                 )}

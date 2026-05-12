@@ -14,10 +14,6 @@ function startOfDayUtc(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 }
 
-function startOfMonthUtc(d: Date): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
-}
-
 function endOfMonthUtc(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
 }
@@ -103,7 +99,6 @@ async function computeJobsPerDay(now: Date): Promise<JobsDailyPoint[]> {
 
 async function computeMrrPerMonth(now: Date): Promise<MonthlyPoint[]> {
   const monthKeys = buildMonthWindow(now);
-  const firstMonthStart = startOfMonthUtc(nMonthsAgoUtc(now, MONTHLY_WINDOW - 1));
 
   // For each month, count active PRO/TEAM subscriptions at end of month.
   // We approximate "active at end of month" with: createdAt <= endOfMonth AND
@@ -138,7 +133,6 @@ async function computeMrrPerMonth(now: Date): Promise<MonthlyPoint[]> {
     });
   }
 
-  void firstMonthStart;
   return result;
 }
 

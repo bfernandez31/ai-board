@@ -146,12 +146,11 @@ export async function detectAlerts(now: Date = new Date()): Promise<AlertCard[]>
   const result: AlertCard[] = [];
   if (jobSuccess) result.push(jobSuccess);
   if (stripe) result.push(stripe);
-  for (const cron of crons.sort((a, b) => {
+  crons.sort((a, b) => {
     const aName = a.payload.kind === 'cron' ? a.payload.workflowName : '';
     const bName = b.payload.kind === 'cron' ? b.payload.workflowName : '';
     return aName.localeCompare(bName);
-  })) {
-    result.push(cron);
-  }
+  });
+  result.push(...crons);
   return result;
 }

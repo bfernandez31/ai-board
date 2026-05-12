@@ -28,13 +28,11 @@ export function ActionableTable<TRow>({
   total,
   emptyMessage,
 }: ActionableTableProps<TRow>) {
-  const showCountBadge = typeof total === 'number' && total > rows.length;
-
   return (
     <Card className="aurora-bg-subtle">
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base text-foreground">{title}</CardTitle>
-        {showCountBadge && total !== undefined && (
+        {typeof total === 'number' && total > rows.length && (
           <Badge variant="secondary">{`${total} au total`}</Badge>
         )}
       </CardHeader>
