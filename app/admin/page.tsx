@@ -1,12 +1,9 @@
-import { redirect } from 'next/navigation';
+import { computeDashboardSnapshot } from '@/app/lib/admin/home/dashboard-snapshot';
+import { AdminHomeDashboard } from '@/components/admin/home/admin-home-dashboard';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * /admin → /admin/insights. The layout already enforces admin allowlist
- * with notFound() on failure (AIB-791 FR-003); reaching this redirect means
- * the caller is allowlisted.
- */
-export default function AdminRootPage(): never {
-  redirect('/admin/insights');
+export default async function AdminHomePage() {
+  const snapshot = await computeDashboardSnapshot();
+  return <AdminHomeDashboard initialData={snapshot} />;
 }

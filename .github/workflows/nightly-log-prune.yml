@@ -24,3 +24,26 @@ jobs:
           echo "HTTP $code"
           echo "$body"
           [ "$code" = "200" ]
+
+      - name: Record cron success marker
+        if: success()
+        continue-on-error: true
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+          WORKFLOW_NAME: nightly-log-prune
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          payload=$(jq -n \
+            --arg name "$WORKFLOW_NAME" \
+            --arg url  "$RUN_URL" \
+            '{ workflowName: $name, runUrl: $url }')
+          code=$(curl -sS -o /tmp/marker.json -w "%{http_code}" \
+            -X POST "$APP_URL/api/admin/cron-markers" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $WORKFLOW_API_TOKEN" \
+            -d "$payload")
+          echo "marker HTTP $code"
+          cat /tmp/marker.json || true
+          [ "$code" = "201" ] || echo "::warning::Cron marker write returned HTTP $code"
