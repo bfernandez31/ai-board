@@ -889,3 +889,14 @@ enum InsightsRunStatus {
   COMPLETED
   FAILED
 }
+
+model CronRunLog {
+  id           Int      @id @default(autoincrement())
+  workflowName String   @db.VarChar(100)
+  ranAt        DateTime @default(now())
+  durationMs   Int?
+  runUrl       String?  @db.VarChar(500)
+
+  @@index([workflowName, ranAt])
+  @@index([ranAt])
+}
