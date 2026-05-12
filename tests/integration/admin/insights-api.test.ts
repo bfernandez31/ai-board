@@ -2,8 +2,13 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { setupTestServer } from '../../../tests/utils/test-server'
 import { cleanupTestDatabase } from '../../../tests/utils/test-db'
 
+type TestRequest = {
+  get: (path: string) => Promise<{ status: number }>
+  post: (path: string, body?: unknown) => Promise<{ status: number }>
+}
+
 describe('Admin Insights API Integration Tests', () => {
-  let request: any
+  let request: TestRequest
 
   beforeAll(async () => {
     const server = await setupTestServer()
