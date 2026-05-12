@@ -37,6 +37,10 @@ const PUBLIC_PATTERNS = [
   /^\/api\/internal\/github-token$/,
   /^\/api\/internal\/analysis-context$/,
   /^\/api\/projects\/\d+\/tickets\/\d+\/analysis\/\d+\/status$/,
+  /^\/api\/admin\/insights\/jobs$/,
+  /^\/api\/admin\/insights\/jobs\/\d+\/raw-native$/,
+  /^\/api\/admin\/insights\/reports\/\d+\/finalize$/,
+  /^\/api\/admin\/insights\/reports\/\d+\/status$/,
 ]
 
 function hasAuthSessionCookie(request: NextRequest): boolean {
