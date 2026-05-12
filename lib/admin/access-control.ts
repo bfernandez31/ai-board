@@ -14,26 +14,21 @@ export function checkAdminAccess(user: AdminUserCandidate): boolean {
     return true
   }
 
-  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || []
-  if (user.email && adminEmails.includes(user.email)) {
-    return true
-  }
-
-  return false
+  const adminEmails = process.env.ADMIN_EMAILS?.split(',') ?? []
+  return !!user.email && adminEmails.includes(user.email)
 }
 
 export async function getCurrentUser() {
   const session = await auth()
-  return session?.user || null
+  return session?.user ?? null
 }
 
 export async function requireAdminAccess() {
   const user = await getCurrentUser()
-  const hasAccess = await checkAdminAccess(user)
-  
-  if (!hasAccess) {
+
+  if (!checkAdminAccess(user)) {
     throw new Error('Admin access required')
   }
-  
+
   return user
 }
