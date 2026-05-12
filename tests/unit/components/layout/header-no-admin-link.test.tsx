@@ -14,20 +14,20 @@ vi.mock('next-auth/react', () => ({
   signOut: vi.fn(),
 }));
 
-describe('Global header — no admin link (AIB-791 FR-001)', () => {
+describe('Global header — no admin link for non-admins (AIB-791 FR-001 / AIB-796 FR-002)', () => {
   it('does not render any link or button referencing /admin when unauthenticated', () => {
     sessionMock.mockReturnValue({ data: null, status: 'unauthenticated' });
-    const { container } = renderWithProviders(<Header />);
+    const { container } = renderWithProviders(<Header isAdmin={false} />);
     const html = container.innerHTML;
     expect(html).not.toMatch(/\/admin/);
   });
 
-  it('does not render any link or button referencing /admin when authenticated', () => {
+  it('does not render any link or button referencing /admin when authenticated non-admin', () => {
     sessionMock.mockReturnValue({
-      data: { user: { email: 'admin@e2e.local', name: 'A' } },
+      data: { user: { email: 'user@e2e.local', name: 'A' } },
       status: 'authenticated',
     });
-    const { container } = renderWithProviders(<Header />);
+    const { container } = renderWithProviders(<Header isAdmin={false} />);
     const html = container.innerHTML;
     expect(html).not.toMatch(/\/admin/);
   });

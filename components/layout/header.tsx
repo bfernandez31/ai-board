@@ -17,7 +17,11 @@ interface ProjectInfo {
   githubRepo: string;
 }
 
-export function Header() {
+interface HeaderProps {
+  isAdmin: boolean;
+}
+
+export function Header({ isAdmin }: HeaderProps) {
   const pathname = usePathname();
   const { status } = useSession();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -200,7 +204,7 @@ export function Header() {
               <NotificationBell />
               {/* User Menu - desktop only, mobile uses hamburger menu */}
               <div className="hidden md:flex">
-                <UserMenu />
+                <UserMenu isAdmin={isAdmin} />
               </div>
             </>
           )}
@@ -209,6 +213,7 @@ export function Header() {
           <MobileMenu
             projectId={projectInfo?.id}
             projectName={projectInfo?.name}
+            isAdmin={isAdmin}
           />
         </div>
       </div>

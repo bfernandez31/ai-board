@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, LogOut, CreditCard, Key, KeyRound, User } from 'lucide-react';
+import { Menu, LogOut, CreditCard, Key, KeyRound, Shield, User } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -18,9 +18,10 @@ import { NAVIGATION_ITEMS } from '@/components/navigation/nav-items';
 interface MobileMenuProps {
   projectId?: number | undefined;
   projectName?: string | undefined;
+  isAdmin?: boolean;
 }
 
-export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
+export function MobileMenu({ projectId, projectName, isAdmin = false }: MobileMenuProps = {}) {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
 
@@ -132,6 +133,17 @@ export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
                 <KeyRound className="mr-2 h-4 w-4" />
                 AI Credentials
               </Link>
+
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
+                  onClick={() => setOpen(false)}
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  Admin
+                </Link>
+              )}
 
               <div className="border-t border-border my-2" />
 

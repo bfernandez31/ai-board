@@ -12,9 +12,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { CreditCard, Key, KeyRound, LogOut, User } from "lucide-react"
+import { CreditCard, Key, KeyRound, LogOut, Shield, User } from "lucide-react"
 
-export function UserMenu() {
+interface UserMenuProps {
+  isAdmin?: boolean
+}
+
+export function UserMenu({ isAdmin = false }: UserMenuProps = {}) {
   const { data: session } = useSession()
 
   if (!session?.user) {
@@ -81,6 +85,15 @@ export function UserMenu() {
             AI Credentials
           </Link>
         </DropdownMenuItem>
+
+        {isAdmin && (
+          <DropdownMenuItem asChild className="cursor-pointer">
+            <Link href="/admin">
+              <Shield className="mr-2 h-4 w-4" />
+              Admin
+            </Link>
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuSeparator />
 

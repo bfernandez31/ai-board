@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { getAdminAllowlist, isUserAdmin } from '@/app/lib/auth/admin';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { NextRequest } from 'next/server';
+import { getAdminAllowlist, isUserAdmin, getViewerIsAdmin } from '@/app/lib/auth/admin';
+import * as usersDb from '@/lib/db/users';
 
 describe('admin auth helpers (AIB-791)', () => {
   const originalAllowlist = process.env.ADMIN_ALLOWLIST;
@@ -90,6 +92,60 @@ describe('admin auth helpers (AIB-791)', () => {
       process.env.ADMIN_ALLOWLIST = 'bob@example.com';
       expect(isUserAdmin('alice@example.com')).toBe(false);
       expect(isUserAdmin('bob@example.com')).toBe(true);
+    });
+  });
+
+  describe('getViewerIsAdmin (AIB-796)', () => {
+    const request = {} as unknown as NextRequest;
+    let spy: ReturnType<typeof vi.spyOn>;
+
+    afterEach(() => {
+      spy?.mockRestore();
+    });
+
+    it('returns true for an allowlisted email', async () => {
+      process.env.ADMIN_ALLOWLIST = 'alice@example.com';
+      spy = vi
+        .spyOn(usersDb, 'getCurrentUserOrNull')
+        .mockResolvedValue({ email: 'alice@example.com' } as never);
+
+      expect(await getViewerIsAdmin(request)).toBe(true);
+    });
+
+    it('returns false for a non-allowlisted email', async () => {
+      process.env.ADMIN_ALLOWLIST = 'alice@example.com';
+      spy = vi
+        .spyOn(usersDb, 'getCurrentUserOrNull')
+        .mockResolvedValue({ email: 'mallory@example.com' } as never);
+
+      expect(await getViewerIsAdmin(request)).toBe(false);
+    });
+
+    it('returns false for an anonymous (null) viewer', async () => {
+      process.env.ADMIN_ALLOWLIST = 'alice@example.com';
+      spy = vi
+        .spyOn(usersDb, 'getCurrentUserOrNull')
+        .mockResolvedValue(null);
+
+      expect(await getViewerIsAdmin(request)).toBe(false);
+    });
+
+    it('returns false when the session resolver throws', async () => {
+      process.env.ADMIN_ALLOWLIST = 'alice@example.com';
+      spy = vi
+        .spyOn(usersDb, 'getCurrentUserOrNull')
+        .mockRejectedValue(new Error('boom'));
+
+      expect(await getViewerIsAdmin(request)).toBe(false);
+    });
+
+    it('returns false when ADMIN_ALLOWLIST is empty', async () => {
+      delete process.env.ADMIN_ALLOWLIST;
+      spy = vi
+        .spyOn(usersDb, 'getCurrentUserOrNull')
+        .mockResolvedValue({ email: 'alice@example.com' } as never);
+
+      expect(await getViewerIsAdmin(request)).toBe(false);
     });
   });
 });
