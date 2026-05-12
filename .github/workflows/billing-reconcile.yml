@@ -1,29 +1,18 @@
-name: Nightly Log Prune
+name: Billing Reconcile
 
 on:
   schedule:
-    - cron: '15 1 * * *'  # 01:15 UTC — offset from nightly-health (00:30 UTC)
+    - cron: '0 2 * * *'
   workflow_dispatch: {}
 
 jobs:
-  prune-logs:
+  reconcile:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Trigger log retention prune
-        env:
-          APP_URL: ${{ vars.APP_URL }}
-          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+      - name: Billing reconciliation (TBD)
         run: |
-          set -euo pipefail
-          response=$(curl -sS -w "\n%{http_code}" \
-            -X POST "$APP_URL/api/maintenance/prune-logs" \
-            -H "Authorization: Bearer $WORKFLOW_API_TOKEN")
-          body=$(echo "$response" | head -n -1)
-          code=$(echo "$response" | tail -n 1)
-          echo "HTTP $code"
-          echo "$body"
-          [ "$code" = "200" ]
+          echo "TBD: billing reconciliation functional work"
 
       - name: Cron heartbeat
         env:
@@ -35,7 +24,7 @@ jobs:
             -X POST "$APP_URL/api/maintenance/cron-heartbeat" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $WORKFLOW_API_TOKEN" \
-            -d '{"cron":"NIGHTLY_LOG_PRUNE"}')
+            -d '{"cron":"BILLING_RECONCILE"}')
           body=$(echo "$response" | head -n -1)
           code=$(echo "$response" | tail -n 1)
           echo "HTTP $code"

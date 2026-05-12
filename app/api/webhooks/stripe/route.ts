@@ -7,6 +7,7 @@ import {
   upsertSubscription,
   createStripeEvent,
 } from '@/lib/db/subscriptions';
+import { recordWebhookOutcome } from '@/lib/admin/webhooks/record-outcome';
 
 // Helper to extract subscription ID from invoice's parent in Stripe v20
 function getSubscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
@@ -98,9 +99,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true }, { status: 200 });
     }
 
+    await recordWebhookOutcome(event.id, event.type, 'SUCCESS');
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error(`Webhook handler error for ${event.type}:`, error);
+    await recordWebhookOutcome(event.id, event.type, 'FAILURE', String(error).slice(0, 1000));
     return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 });
   }
 }

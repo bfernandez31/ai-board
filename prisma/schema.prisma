@@ -557,6 +557,37 @@ enum HealthScanType {
   REVIEW_QUALITY
 }
 
+enum WebhookOutcomeStatus {
+  SUCCESS
+  FAILURE
+}
+
+enum CriticalCron {
+  NIGHTLY_LOG_PRUNE
+  NIGHTLY_HEALTH_SCANS
+  BILLING_RECONCILE
+}
+
+model WebhookOutcome {
+  id           Int                  @id @default(autoincrement())
+  provider     String               @db.VarChar(50)
+  eventId      String               @db.VarChar(255)
+  eventType    String               @db.VarChar(100)
+  status       WebhookOutcomeStatus
+  errorMessage String?              @db.VarChar(1000)
+  receivedAt   DateTime             @default(now())
+
+  @@index([status, receivedAt])
+  @@index([provider, receivedAt])
+}
+
+model CronRun {
+  id            Int          @id @default(autoincrement())
+  cron          CriticalCron @unique
+  lastSuccessAt DateTime
+  updatedAt     DateTime     @updatedAt
+}
+
 enum HealthScanStatus {
   PENDING
   RUNNING
