@@ -309,8 +309,10 @@ The `/admin/*` area uses a configuration-driven allowlist rather than a database
 |--------|---------|
 | `getAdminAllowlist()` | Returns the normalized (trimmed, lowercased, non-empty) list of admin emails parsed from `ADMIN_ALLOWLIST` |
 | `isUserAdmin(email)` | Case-insensitive membership check; treats null/undefined as not-admin |
+| `resolveAdminEmail(request)` | Resolves the current user and returns the normalized admin email when allowlisted, otherwise `null`. Catches resolver exceptions so callers never throw |
+| `getViewerIsAdmin(request)` | Returns `Promise<boolean>` — `true` only when the request comes from an allowlisted admin. Wraps `resolveAdminEmail` and swallows any thrown error as `false` so the global header never fails to render for non-admin or anonymous traffic. Called once per render in `app/layout.tsx`, then threaded as a boolean prop into `<Header>` → `<UserMenu>` / `<MobileMenu>` to gate the "Admin" entry |
 | `requireAdminOrNotFound(request)` | API-route guard. Resolves the current user via `getCurrentUserOrNull(request)`; returns `{ ok: true, email }` for an allowlisted admin or `{ ok: false, response }` with a byte-equivalent 404 Response for everything else |
-| `requireAdminPageOrNotFound(request)` | Page-route variant. Calls Next.js `notFound()` for non-admins so the framework renders its default 404 page |
+| `requireAdminPageOrNotFound(request)` | Page-route variant. Calls Next.js `notFound()` for non-admins so the framework renders its default 404 page. Remains the canonical guard inside `app/admin/layout.tsx`; the new `getViewerIsAdmin` helper is for UI gating in the root layout only and does not replace this check |
 | `adminNotFoundResponse()` | Constructs the canonical 404 Response (empty body, `Content-Type: text/html; charset=utf-8`, no other headers) used by API routes |
 
 ### Byte-Equivalent 404 Parity

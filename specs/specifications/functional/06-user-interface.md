@@ -513,11 +513,14 @@ The user menu provides authenticated account navigation via an avatar button in 
 - **Billing** → `/settings/billing` (CreditCard icon)
 - **API Tokens** → `/settings/tokens` (Key icon)
 - **AI Credentials** → `/settings/credentials` (KeyRound icon)
+- **Admin** → `/admin` (Shield icon) — rendered only when the server has confirmed the viewer is on the admin allowlist; positioned between "AI Credentials" and the "Sign out" separator
 - **Sign out** — triggers `signOut` with redirect to `/auth/signin`
+
+**Admin Entry Gating**: The Admin item's visibility is decided server-side per render. For non-admin viewers (including unauthenticated viewers), the dropdown markup contains no Admin entry, no `/admin` href, and no admin-related attribute — hidden-but-present markup is not used. Admin allowlist membership is re-evaluated on every request, so additions and removals take effect on the next render without sign-out.
 
 **Unauthenticated State**: Replaced by a "Sign In" button linking to `/auth/signin`.
 
-**Mobile Behavior** (<768px): Avatar button is hidden; Profile, Billing, API Tokens, and AI Credentials links are surfaced inside the mobile hamburger menu instead.
+**Mobile Behavior** (<768px): Avatar button is hidden; Profile, Billing, API Tokens, AI Credentials, and Admin (when applicable) links are surfaced inside the mobile hamburger menu instead.
 
 **Component**: `components/auth/user-menu.tsx`
 
@@ -533,7 +536,10 @@ The mobile hamburger menu (`components/layout/mobile-menu.tsx`) is a slide-in `S
 3. **Billing** → `/settings/billing` (CreditCard icon)
 4. **API Tokens** → `/settings/tokens` (Key icon)
 5. **AI Credentials** → `/settings/credentials` (KeyRound icon)
-6. **Sign Out** button (red text, LogOut icon)
+6. **Admin** → `/admin` (Shield icon) — rendered only when the server has confirmed the viewer is on the admin allowlist, mirroring the avatar dropdown; positioned between "AI Credentials" and the "Sign Out" separator
+7. **Sign Out** button (red text, LogOut icon)
+
+The Admin link follows the same server-side gating as the avatar dropdown entry: non-admin viewers receive no Admin link, no `/admin` href, and no related markup in the rendered sheet.
 
 **Project-specific section** (shown when `projectId` and `projectName` are provided):
 - Project name header with icon links: Board, Analytics, Activity
