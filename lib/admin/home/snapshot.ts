@@ -1,56 +1,63 @@
+import { computeAlerts } from './alerts';
+import { computePulseKpis } from './kpis';
+import {
+  computePlanDistribution,
+  computeActivationFunnel,
+  computeChurn,
+} from './business';
+import {
+  computeSignupsDaily,
+  computeJobsDaily,
+  computeMrrMonthly,
+} from './trends';
+import {
+  listNewPayingUsers,
+  listRecentCancellations,
+  listTopUsersThisMonth,
+  listTopProjectsThisMonth,
+} from './tables';
 import type { AdminHomeSnapshot } from './types';
+
+async function safe<T>(label: string, fn: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    console.error(`buildSnapshot: ${label} failed`, err);
+    return fallback;
+  }
+}
 
 export async function buildSnapshot(): Promise<AdminHomeSnapshot> {
   const [alerts, pulse, business, trends, tables] = await Promise.all([
-    (async () => {
-      try {
-        const { computeAlerts } = await import('./alerts');
-        return await computeAlerts();
-      } catch (err) {
-        console.error('buildSnapshot: computeAlerts failed', err);
-        return [];
-      }
-    })(),
-    (async () => {
-      try {
-        const { computePulseKpis } = await import('./kpis');
-        return await computePulseKpis();
-      } catch (err) {
-        console.error('buildSnapshot: computePulseKpis failed', err);
-        return emptyPulse();
-      }
-    })(),
-    (async () => {
-      try {
-        const { computePlanDistribution, computeActivationFunnel, computeChurn } = await import('./business');
+    safe('computeAlerts', computeAlerts, []),
+    safe('computePulseKpis', computePulseKpis, emptyPulse()),
+    safe(
+      'business aggregators',
+      async () => {
         const [planDistribution, activationFunnel, churn] = await Promise.all([
           computePlanDistribution(),
           computeActivationFunnel(),
           computeChurn(),
         ]);
         return { planDistribution, activationFunnel, churn };
-      } catch (err) {
-        console.error('buildSnapshot: business aggregators failed', err);
-        return emptyBusiness();
-      }
-    })(),
-    (async () => {
-      try {
-        const { computeSignupsDaily, computeJobsDaily, computeMrrMonthly } = await import('./trends');
+      },
+      emptyBusiness()
+    ),
+    safe(
+      'trends aggregators',
+      async () => {
         const [signupsDaily, jobsDaily, mrrMonthly] = await Promise.all([
           computeSignupsDaily(30),
           computeJobsDaily(30),
           computeMrrMonthly(12),
         ]);
         return { signupsDaily, jobsDaily, mrrMonthly };
-      } catch (err) {
-        console.error('buildSnapshot: trends aggregators failed', err);
-        return emptyTrends();
-      }
-    })(),
-    (async () => {
-      try {
-        const { listNewPayingUsers, listRecentCancellations, listTopUsersThisMonth, listTopProjectsThisMonth } = await import('./tables');
+      },
+      emptyTrends()
+    ),
+    safe(
+      'tables aggregators',
+      async () => {
         const [newPaying, cancellations, topUsers, topProjects] = await Promise.all([
           listNewPayingUsers(30, 50),
           listRecentCancellations(30, 50),
@@ -58,11 +65,9 @@ export async function buildSnapshot(): Promise<AdminHomeSnapshot> {
           listTopProjectsThisMonth(5),
         ]);
         return { newPaying, cancellations, topUsers, topProjects };
-      } catch (err) {
-        console.error('buildSnapshot: tables aggregators failed', err);
-        return emptyTables();
-      }
-    })(),
+      },
+      emptyTables()
+    ),
   ]);
 
   return {

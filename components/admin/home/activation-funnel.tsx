@@ -39,7 +39,7 @@ export function ActivationFunnelChart({ data }: ActivationFunnelProps) {
             </div>
             <div className="h-1.5 rounded-full bg-muted">
               <div
-                className="h-full rounded-full bg-chart-1"
+                className="h-full rounded-full"
                 style={{ width: `${width}%`, background: 'hsl(var(--chart-1))' }}
               />
             </div>

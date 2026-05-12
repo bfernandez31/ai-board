@@ -72,16 +72,19 @@ export async function computePulseKpis(): Promise<PulseSnapshot> {
   const mauValue = Number(mauCurrentRaw[0]?.count ?? 0);
   const prevMauValue = Number(mauPrevRaw[0]?.count ?? 0);
 
-  // MRR
+  // MRR + active paying counts (defensively filter to PRO/TEAM)
   let mrrUsd = 0;
   let proCount = 0;
   let teamCount = 0;
   let proUsd = 0;
   let teamUsd = 0;
   let newMrrThisMonth = 0;
+  let activePayingValue = 0;
+  let activePaying30dDelta = 0;
 
   for (const sub of activeSubs) {
     if (sub.plan !== 'PRO' && sub.plan !== 'TEAM') continue;
+    activePayingValue++;
     const price = PLANS[sub.plan].priceMonthly;
     mrrUsd += price;
     if (sub.plan === 'PRO') {
@@ -94,15 +97,10 @@ export async function computePulseKpis(): Promise<PulseSnapshot> {
     if (sub.createdAt >= startOfMonth) {
       newMrrThisMonth += price;
     }
+    if (sub.createdAt >= minus30d) {
+      activePaying30dDelta++;
+    }
   }
-
-  // Active paying (defensively filter to PRO/TEAM)
-  const activePayingValue = activeSubs.filter((s) => s.plan === 'PRO' || s.plan === 'TEAM').length;
-  const newPayingThisMonth = activeSubs.filter(
-    (s) => (s.plan === 'PRO' || s.plan === 'TEAM') && s.createdAt >= minus30d
-  ).length;
-  const activePaying30dAgo = activePayingValue - newPayingThisMonth;
-  const activePaying30dDelta = activePayingValue - activePaying30dAgo;
 
   // Sparklines
   const userSpark = padSpark(userSparkRaw, 30);

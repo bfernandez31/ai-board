@@ -8,8 +8,6 @@ interface ChurnPanelProps {
 }
 
 export function ChurnPanel({ data }: ChurnPanelProps) {
-  const netFormatted = `${data.netMrrDeltaUsd < 0 ? '-' : ''}${formatUsdCents(Math.abs(data.netMrrDeltaUsd))}`;
-
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="flex flex-col gap-0.5 rounded-md border bg-muted/30 p-3">
@@ -29,7 +27,7 @@ export function ChurnPanel({ data }: ChurnPanelProps) {
       <div className="flex flex-col gap-0.5 rounded-md border bg-muted/30 p-3">
         <span className="text-xs text-muted-foreground">Net MRR Delta</span>
         <span className={`text-xl font-semibold tabular-nums ${data.netMrrDeltaUsd >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-          {data.netMrrDeltaUsd >= 0 ? `+${formatUsdCents(data.netMrrDeltaUsd)}` : netFormatted}
+          {data.netMrrDeltaUsd >= 0 ? `+${formatUsdCents(data.netMrrDeltaUsd)}` : formatUsdCents(data.netMrrDeltaUsd)}
         </span>
       </div>
     </div>
