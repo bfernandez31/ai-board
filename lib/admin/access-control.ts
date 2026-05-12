@@ -1,14 +1,14 @@
-// Mock auth for testing - in real implementation, this would import from '@/auth'
-async function auth() {
-  return { user: null }
-}
-
-interface AdminUserShape {
+export interface AdminCandidate {
   role?: string | null
   email?: string | null
 }
 
-export function checkAdminAccess(user: AdminUserShape | null | undefined): boolean {
+// Mock auth for testing - in real implementation, this would import from '@/auth'
+async function auth(): Promise<{ user: AdminCandidate | null }> {
+  return { user: null }
+}
+
+export function checkAdminAccess(user: AdminCandidate | null | undefined): boolean {
   // In a real implementation, this would check the user's role
   // For now, we'll implement a basic check
   if (!user) {
