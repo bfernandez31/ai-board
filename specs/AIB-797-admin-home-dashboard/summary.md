@@ -17,4 +17,4 @@ New: `app/api/admin/home/route.ts`, `app/api/admin/cron-markers/route.ts`, `app/
 
 ## ⚠️ Manual Requirements
 
-Run `bunx prisma migrate deploy` on prod before workflow steps roll out (first nightly will 404 otherwise but `continue-on-error: true` swallows it). Integration tests (`parity-404`, `cron-markers/post`, `home/snapshot`) require a running `TEST_MODE=true bun run dev` + DB; not executed here.
+Run `bunx prisma migrate deploy` on prod before workflow steps roll out (first nightly will 404 otherwise but `continue-on-error: true` swallows it). Integration tests (3 files / 12 tests covering 404 parity, cron-markers POST, and snapshot composition under 5 fixtures) pass locally against `TEST_MODE=true bun run dev` + Postgres.
