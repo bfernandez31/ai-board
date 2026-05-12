@@ -513,11 +513,12 @@ The user menu provides authenticated account navigation via an avatar button in 
 - **Billing** → `/settings/billing` (CreditCard icon)
 - **API Tokens** → `/settings/tokens` (Key icon)
 - **AI Credentials** → `/settings/credentials` (KeyRound icon)
+- **Admin** → `/admin` (Shield icon) — rendered **only** for admin sessions (`session.user.isAdmin === true`), preceded by a separator. Non-admin sessions never receive the entry in the rendered markup.
 - **Sign out** — triggers `signOut` with redirect to `/auth/signin`
 
 **Unauthenticated State**: Replaced by a "Sign In" button linking to `/auth/signin`.
 
-**Mobile Behavior** (<768px): Avatar button is hidden; Profile, Billing, API Tokens, and AI Credentials links are surfaced inside the mobile hamburger menu instead.
+**Mobile Behavior** (<768px): Avatar button is hidden; Profile, Billing, API Tokens, AI Credentials, and (for admins) Admin links are surfaced inside the mobile hamburger menu instead.
 
 **Component**: `components/auth/user-menu.tsx`
 
@@ -533,7 +534,8 @@ The mobile hamburger menu (`components/layout/mobile-menu.tsx`) is a slide-in `S
 3. **Billing** → `/settings/billing` (CreditCard icon)
 4. **API Tokens** → `/settings/tokens` (Key icon)
 5. **AI Credentials** → `/settings/credentials` (KeyRound icon)
-6. **Sign Out** button (red text, LogOut icon)
+6. **Admin** → `/admin` (Shield icon) — rendered **only** for admin sessions (`session.user.isAdmin === true`), preceded by a divider. Non-admin sessions never receive the entry in the rendered markup.
+7. **Sign Out** button (red text, LogOut icon)
 
 **Project-specific section** (shown when `projectId` and `projectName` are provided):
 - Project name header with icon links: Board, Analytics, Activity

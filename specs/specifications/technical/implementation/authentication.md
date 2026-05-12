@@ -26,6 +26,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token, user }) {
       if (session.user) {
         session.user.id = (user?.id || token?.id || token?.userId) as string
+        session.user.isAdmin = isUserAdmin(session.user.email)
       }
       return session
     },
@@ -209,6 +210,26 @@ The proxy bypass does not itself authenticate the caller. Route handlers still n
 - **Test runtime (`NODE_ENV === "test"`)**: database sessions via Prisma adapter
 
 JWT and session callbacks copy the canonical database user ID onto `session.user.id` so authorization helpers can treat GitHub and credentials sign-ins the same way.
+
+### Session Type Augmentation
+
+`types/next-auth.d.ts` extends the default `Session.user` shape with the admin flag computed in the session callback:
+
+```typescript
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+      name?: string | null
+      email?: string | null
+      image?: string | null
+      isAdmin: boolean
+    }
+  }
+}
+```
+
+The session callback resolves `session.user.isAdmin` on every request via `isUserAdmin(session.user.email)`. Because the allowlist is re-parsed inside that helper, `ADMIN_ALLOWLIST` rotations take effect on the operator's next request without a re-login. Client components that need to conditionally render admin-only UI (the user-menu and mobile-menu "Admin" entry) read this flag directly from `useSession()`.
 
 ### Server-Side Session Access
 
