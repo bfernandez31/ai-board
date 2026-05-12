@@ -7,6 +7,12 @@ import { useAdminHomeSnapshot } from '@/app/lib/hooks/queries/use-admin-home-sna
 import type { DashboardSnapshot } from '@/app/lib/admin/home/types';
 import { AlertsStrip } from './alerts-strip';
 import { KpiTile } from './kpi-tile';
+import { PlanDistributionDonut } from './plan-distribution-donut';
+import { ActivationFunnel } from './activation-funnel';
+import { ChurnPanel } from './churn-panel';
+import { TrendSignupsChart } from './trend-signups-chart';
+import { TrendJobsChart } from './trend-jobs-chart';
+import { TrendMrrChart } from './trend-mrr-chart';
 
 interface AdminHomeDashboardProps {
   initialData: DashboardSnapshot;
@@ -52,6 +58,22 @@ export function AdminHomeDashboard({ initialData }: AdminHomeDashboardProps) {
           <KpiTile tile={snapshot.pulse.mau} />
           <KpiTile tile={snapshot.pulse.mrr} />
           <KpiTile tile={snapshot.pulse.paying} />
+        </div>
+      </section>
+
+      <section aria-label="Santé business">
+        <div className="grid gap-4 lg:grid-cols-3">
+          <PlanDistributionDonut data={snapshot.businessHealth.planDistribution} />
+          <ActivationFunnel steps={snapshot.businessHealth.activationFunnel} />
+          <ChurnPanel data={snapshot.businessHealth.churn} />
+        </div>
+      </section>
+
+      <section aria-label="Tendances">
+        <div className="grid gap-4 lg:grid-cols-3">
+          <TrendSignupsChart data={snapshot.trends.signupsPerDay} />
+          <TrendJobsChart data={snapshot.trends.jobsPerDay} />
+          <TrendMrrChart data={snapshot.trends.mrrPerMonth} />
         </div>
       </section>
     </div>

@@ -100,28 +100,22 @@ Web app — single Next.js App Router monolith. All paths are relative to repo r
 
 ### Tests for User Story 2
 
-- [ ] T034 [P] [US2] Create unit test for `business-health.ts` against in-memory fixture: (a) plan distribution counts match input (SC-006 — `free + pro + team === subscription.count()`), (b) funnel **chronological cohort rule** (user paid before creating a project must NOT appear in step 4 — spec auto-resolved decision §Activation funnel reviewer note), (c) funnel step counts monotone non-increasing, (d) `conversionFromPrevious === null` on step 1, (e) zero-cohort → counts all 0, conversion rates `null` (not NaN — spec edge case), (f) churn formula: `mrrLostCents === sum(plan.priceMonthly for each cancelled+downgraded subscription this UTC month)` in new file `tests/unit/lib/admin/home/business-health.test.ts`
-- [ ] T035 [P] [US2] Create unit test for `trends.ts` against in-memory fixture: (a) `signupsPerDay.length === 30`, (b) every day in 30-day window present with `value: 0` when no signups (FR-019), (c) sum of `signupsPerDay[*].value` equals funnel signup denominator (SC-005), (d) `jobsPerDay.length === 30` with `completed`/`failed` split (FAILED + CANCELLED → failed, FR-020), (e) `mrrPerMonth.length === 12` oldest-first, (f) date ordering ascending (oldest left, current right) in new file `tests/unit/lib/admin/home/trends.test.ts`
-- [ ] T036 [P] [US2] Extend `tests/integration/api/admin/home/snapshot.test.ts` (created in T019) with two additional fixtures: (d) large DB (≥50 users, ≥5 each FREE/PRO/TEAM, ≥30 days of signups) → asserts planDistribution donut invariant, trends array lengths, current-month MRR chart bar equals `pulse.mrr.value` (SC-004 spirit); (e) forced cron-stale fixture (`CronRunLog` row with `ranAt` 48h ago for `nightly-health`) → `alerts` contains a `cron` kind entry with `workflowName: 'nightly-health'`
-- [ ] T037 [P] [US2] Create unit test for `<ActivationFunnel>` component: 4 ordered step boxes rendered with count + conversion-rate label; renders "—" (not "NaN%") when cohort denominator is zero (spec edge case); uses `renderWithProviders` in new file `tests/unit/components/admin/home/activation-funnel.test.tsx`
+- [X] T034 ✅ DONE [P] [US2] Create unit test for `business-health.ts`
+- [X] T035 ✅ DONE [P] [US2] Create unit test for `trends.ts`
+- [ ] T036 [P] [US2] Extend `tests/integration/api/admin/home/snapshot.test.ts` with two additional fixtures
+- [X] T037 ✅ DONE [P] [US2] Create unit test for `<ActivationFunnel>` component
 
 ### Implementation for User Story 2
 
-- [ ] T038 [P] [US2] Replace `app/lib/admin/home/business-health.ts` stub with real implementation:
-  - `computePlanDistribution`: `prisma.subscription.groupBy({ by: ['plan'], _count: true })` mapped to `{ free, pro, team }`.
-  - `computeActivationFunnel` (FR-017): build cohort = `prisma.user.findMany({ where: { createdAt: { gte: thirtyDaysAgoUTC } } })`. For each cohort user, compute earliest qualifying timestamp at each step; ensure step `N` count only includes users who reached step `N-1` *chronologically before* their step `N` event (auto-resolved decision §Activation funnel). Return 4 `FunnelStep` rows with `conversionFromPrevious = step.count / prev.count` (null on step 1).
-  - `computeChurn` (FR-018): cancellations = `prisma.subscription.count({ where: { canceledAt: { gte: startOfMonthUTC } } })`; downgrades = subscriptions whose `plan === 'FREE'` and `updatedAt` in month and previously had a paid plan; mrrLostCents = sum of `PLANS[plan].priceMonthly` for the cancelled/downgraded set; netMrrDeltaCents = gained (new paid in month × price) − lost.
-- [ ] T039 [P] [US2] Replace `app/lib/admin/home/trends.ts` stub with real implementation:
-  - `computeSignupsPerDay`: `prisma.user.findMany({ where: { createdAt: { gte: thirtyDaysAgoUTC } } })` → bucket by UTC day → 30-element `DailyPoint[]` zero-filled.
-  - `computeJobsPerDay`: `prisma.job.findMany({ where: { createdAt: { gte: thirtyDaysAgoUTC } }, select: { createdAt: true, status: true } })` → bucket by UTC day → 30-element `JobsDailyPoint[]` with `completed` (status `COMPLETED`) and `failed` (status `FAILED` or `CANCELLED`, per FR-020).
-  - `computeMrrPerMonth`: for each of the 12 trailing UTC months, compute `(active PRO at end-of-month × PLANS.PRO.priceMonthly) + (active TEAM at end-of-month × PLANS.TEAM.priceMonthly)` (FR-021 documented limitation: current plan prices applied retroactively). Return 12-element `MonthlyPoint[]` oldest-first; `mrrPerMonth[11].mrrCents === pulse.mrr.value`.
-- [ ] T040 [P] [US2] Create `<PlanDistributionDonut>` — Recharts `PieChart` with three slices (FREE / PRO / TEAM), each `fill="hsl(var(--chart-N))"` (research P8), `Legend` showing plan name + absolute count, donut variant with inner radius. Falls back to `<EmptyState>` when `free + pro + team === 0`. New file `components/admin/home/plan-distribution-donut.tsx`
-- [ ] T041 [P] [US2] Create `<ActivationFunnel>` — 4 horizontal/vertical step boxes (Card with grid layout), each shows label + absolute count + conversion-rate-from-previous. Render `"—"` for `conversionFromPrevious === null` (step 1) AND when denominator is zero (spec edge case). New file `components/admin/home/activation-funnel.tsx`
-- [ ] T042 [P] [US2] Create `<ChurnPanel>` — Card with 4 metric rows: Cancellations (count), Downgrades (count), MRR perdu (formatted via `formatPriceCents`), Net MRR (signed, color-coded with theme tokens — gained > lost is green, lost > gained is red). New file `components/admin/home/churn-panel.tsx`
-- [ ] T043 [P] [US2] Create `<TrendSignupsChart>` — Recharts `BarChart` (or `LineChart`) over `DailyPoint[]`, x-axis = UTC date label, y-axis = count, single series `hsl(var(--chart-2))`. Renders `<EmptyState>` when all values are 0. New file `components/admin/home/trend-signups-chart.tsx`
-- [ ] T044 [P] [US2] Create `<TrendJobsChart>` — Recharts stacked `BarChart` with two series: `completed` (bottom, `hsl(var(--chart-3))`) and `failed` (top, `hsl(var(--chart-4))`), FR-020. Pattern reference `components/analytics/cost-by-stage-chart.tsx`. New file `components/admin/home/trend-jobs-chart.tsx`
-- [ ] T045 [P] [US2] Create `<TrendMrrChart>` — Recharts `BarChart` over `MonthlyPoint[]` (12 months oldest-left), y-axis formatted via `formatPriceCents`, single series `hsl(var(--chart-5))`. New file `components/admin/home/trend-mrr-chart.tsx`
-- [ ] T046 [US2] Modify `components/admin/home/admin-home-dashboard.tsx` (from T030) to add the US2 panels into the layout: Business Health row (`<PlanDistributionDonut>` + `<ActivationFunnel>` + `<ChurnPanel>` side-by-side in a grid) below KPI strip, and Trends row (`<TrendSignupsChart>` + `<TrendJobsChart>` + `<TrendMrrChart>`) below that, reading from `snapshot.businessHealth` and `snapshot.trends` respectively
+- [X] T038 ✅ DONE [P] [US2] Replace `app/lib/admin/home/business-health.ts` stub with real implementation
+- [X] T039 ✅ DONE [P] [US2] Replace `app/lib/admin/home/trends.ts` stub with real implementation
+- [X] T040 ✅ DONE [P] [US2] Create `<PlanDistributionDonut>` component
+- [X] T041 ✅ DONE [P] [US2] Create `<ActivationFunnel>` component
+- [X] T042 ✅ DONE [P] [US2] Create `<ChurnPanel>` component
+- [X] T043 ✅ DONE [P] [US2] Create `<TrendSignupsChart>` component
+- [X] T044 ✅ DONE [P] [US2] Create `<TrendJobsChart>` component
+- [X] T045 ✅ DONE [P] [US2] Create `<TrendMrrChart>` component
+- [X] T046 ✅ DONE [US2] Wire US2 panels into `admin-home-dashboard.tsx`
 
 **Checkpoint**: Plan distribution, activation funnel, churn panel, and three trend charts render with real DB-backed data. All invariants from SC-004/005/006 hold.
 
