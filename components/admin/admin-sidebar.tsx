@@ -2,31 +2,21 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft, BarChart3, Home } from 'lucide-react';
+import { ArrowLeft, BarChart3, Home, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type AdminNavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  /**
-   * Matching strategy:
-   *  - 'exact': active only on `pathname === href`
-   *  - 'prefix': active when `pathname === href` or `pathname.startsWith(href + '/')`
-   */
+  // 'prefix' is active on `href` and any `href/*` sub-path; 'exact' only on `href`.
   match: 'exact' | 'prefix';
 };
 
 const ADMIN_NAV_ITEMS: readonly AdminNavItem[] = [
   { href: '/admin', label: 'Accueil', icon: Home, match: 'exact' },
-  {
-    href: '/admin/insights',
-    label: 'Insights LLM',
-    icon: BarChart3,
-    match: 'prefix',
-  },
-] as const;
+  { href: '/admin/insights', label: 'Insights LLM', icon: BarChart3, match: 'prefix' },
+];
 
 function isItemActive(pathname: string | null, item: AdminNavItem): boolean {
   if (!pathname) return false;
@@ -34,13 +24,8 @@ function isItemActive(pathname: string | null, item: AdminNavItem): boolean {
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
-/**
- * Admin shell sidebar (AIB-799). Renders the "Espace admin" label, the
- * extensible nav list with active-state indication, a divider, and the
- * "Retour à l'app" link at the bottom. Pages-level allowlist enforcement
- * happens in `app/admin/layout.tsx`; this component is rendered only after
- * the guard has passed.
- */
+// Admin shell sidebar (AIB-799). Allowlist enforcement happens in
+// `app/admin/layout.tsx`; this component is rendered only after the guard.
 export function AdminSidebar() {
   const pathname = usePathname();
 
@@ -63,8 +48,6 @@ export function AdminSidebar() {
               const active = isItemActive(pathname, item);
               return (
                 <li key={item.href} className="relative">
-                  {/* Lateral active indicator — sits flush with the sidebar
-                      edge for the active item only. */}
                   {active && (
                     <span
                       aria-hidden

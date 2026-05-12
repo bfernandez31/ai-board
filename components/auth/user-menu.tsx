@@ -82,9 +82,8 @@ export function UserMenu() {
           </Link>
         </DropdownMenuItem>
 
-        {/* Admin entry — only rendered for allowlisted admins (AIB-799).
-            isAdmin is computed server-side in the next-auth session callback,
-            so non-admin sessions never include this DropdownMenuItem. */}
+        {/* `isAdmin` is computed server-side in the next-auth session callback,
+            so non-admin sessions never receive this menu item (AIB-799). */}
         {session.user.isAdmin && (
           <>
             <DropdownMenuSeparator />
