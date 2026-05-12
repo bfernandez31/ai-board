@@ -1,23 +1,21 @@
-// Mock auth for testing - in real implementation, this would import from '@/auth'
-async function auth() {
-  return { user: null }
-}
+import { auth } from '@/lib/auth'
 
-export function checkAdminAccess(user: any): boolean {
-  // In a real implementation, this would check the user's role
-  // For now, we'll implement a basic check
+type AdminUserCandidate = {
+  role?: string | null
+  email?: string | null
+} | null | undefined
+
+export function checkAdminAccess(user: AdminUserCandidate): boolean {
   if (!user) {
     return false
   }
 
-  // Check if user has admin role
   if (user.role === 'ADMIN') {
     return true
   }
 
-  // Check if user email is in the admin emails list
   const adminEmails = process.env.ADMIN_EMAILS?.split(',') || []
-  if (adminEmails.includes(user.email)) {
+  if (user.email && adminEmails.includes(user.email)) {
     return true
   }
 

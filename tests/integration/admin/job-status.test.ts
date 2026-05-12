@@ -2,8 +2,10 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { setupTestServer } from '../../../tests/utils/test-server'
 import { cleanupTestDatabase } from '../../../tests/utils/test-db'
 
+type TestRequest = Awaited<ReturnType<typeof setupTestServer>>['request']
+
 describe('Admin Job Status API Integration Tests', () => {
-  let request: any
+  let request: TestRequest
 
   beforeAll(async () => {
     const server = await setupTestServer()
