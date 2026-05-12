@@ -2,23 +2,31 @@
  * RTL Component Tests: UserMenu
  *
  * Tests for the user menu dropdown component.
- * Verifies settings links (Billing, API Tokens) are present.
+ * - Verifies settings links (Billing, API Tokens) are present.
+ * - Verifies the Admin entry is only rendered for admin sessions (AIB-799).
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// Mock next-auth session
+type MockUser = {
+  name: string;
+  email: string;
+  image: string | null;
+  isAdmin: boolean;
+};
+
+let currentUser: MockUser = {
+  name: 'Test User',
+  email: 'test@example.com',
+  image: null,
+  isAdmin: false,
+};
+
 vi.mock('next-auth/react', () => ({
   useSession: () => ({
     status: 'authenticated',
-    data: {
-      user: {
-        name: 'Test User',
-        email: 'test@example.com',
-        image: null,
-      },
-    },
+    data: { user: currentUser },
   }),
   signOut: vi.fn(),
 }));
@@ -33,6 +41,15 @@ vi.mock('next/link', () => ({
 import { UserMenu } from '@/components/auth/user-menu';
 
 describe('UserMenu', () => {
+  beforeEach(() => {
+    currentUser = {
+      name: 'Test User',
+      email: 'test@example.com',
+      image: null,
+      isAdmin: false,
+    };
+  });
+
   it('should render settings links in dropdown', async () => {
     const user = userEvent.setup();
     render(<UserMenu />);
@@ -59,5 +76,32 @@ describe('UserMenu', () => {
     await user.click(screen.getByTestId('user-menu'));
 
     expect(screen.getByText('Sign out')).toBeInTheDocument();
+  });
+
+  describe('Admin entry (AIB-799)', () => {
+    it('does not render the Admin entry for non-admin sessions', async () => {
+      currentUser = { ...currentUser, isAdmin: false };
+      const user = userEvent.setup();
+      render(<UserMenu />);
+
+      await user.click(screen.getByTestId('user-menu'));
+
+      expect(
+        screen.queryByRole('menuitem', { name: /admin/i })
+      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId('user-menu-admin-link')).not.toBeInTheDocument();
+    });
+
+    it('renders an Admin entry linking to /admin for admin sessions', async () => {
+      currentUser = { ...currentUser, isAdmin: true };
+      const user = userEvent.setup();
+      render(<UserMenu />);
+
+      await user.click(screen.getByTestId('user-menu'));
+
+      const adminItem = screen.getByRole('menuitem', { name: /admin/i });
+      expect(adminItem).toBeInTheDocument();
+      expect(adminItem).toHaveAttribute('href', '/admin');
+    });
   });
 });

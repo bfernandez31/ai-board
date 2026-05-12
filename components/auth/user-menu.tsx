@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { CreditCard, Key, KeyRound, LogOut, User } from "lucide-react"
+import { CreditCard, Key, KeyRound, LogOut, Shield, User } from "lucide-react"
 
 export function UserMenu() {
   const { data: session } = useSession()
@@ -81,6 +81,21 @@ export function UserMenu() {
             AI Credentials
           </Link>
         </DropdownMenuItem>
+
+        {/* Admin entry — only rendered for allowlisted admins (AIB-799).
+            isAdmin is computed server-side in the next-auth session callback,
+            so non-admin sessions never include this DropdownMenuItem. */}
+        {session.user.isAdmin && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/admin" data-testid="user-menu-admin-link">
+                <Shield className="mr-2 h-4 w-4" />
+                Admin
+              </Link>
+            </DropdownMenuItem>
+          </>
+        )}
 
         <DropdownMenuSeparator />
 

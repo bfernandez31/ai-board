@@ -2,23 +2,31 @@
  * RTL Component Tests: MobileMenu
  *
  * Tests for the mobile menu sheet component.
- * Verifies settings links (Billing, API Tokens) are present.
+ * - Verifies settings links (Billing, API Tokens) are present.
+ * - Verifies the Admin entry is only rendered for admin sessions (AIB-799).
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// Mock next-auth session
+type MockUser = {
+  name: string;
+  email: string;
+  image: string | null;
+  isAdmin: boolean;
+};
+
+let currentUser: MockUser = {
+  name: 'Test User',
+  email: 'test@example.com',
+  image: null,
+  isAdmin: false,
+};
+
 vi.mock('next-auth/react', () => ({
   useSession: () => ({
     status: 'authenticated',
-    data: {
-      user: {
-        name: 'Test User',
-        email: 'test@example.com',
-        image: null,
-      },
-    },
+    data: { user: currentUser },
   }),
   signOut: vi.fn(),
 }));
@@ -33,6 +41,15 @@ vi.mock('next/link', () => ({
 import { MobileMenu } from '@/components/layout/mobile-menu';
 
 describe('MobileMenu', () => {
+  beforeEach(() => {
+    currentUser = {
+      name: 'Test User',
+      email: 'test@example.com',
+      image: null,
+      isAdmin: false,
+    };
+  });
+
   it('should render settings links when menu is open', async () => {
     const user = userEvent.setup();
     render(<MobileMenu />);
@@ -59,5 +76,29 @@ describe('MobileMenu', () => {
     await user.click(screen.getByRole('button', { name: /toggle menu/i }));
 
     expect(screen.getByText('Sign Out')).toBeInTheDocument();
+  });
+
+  describe('Admin entry (AIB-799)', () => {
+    it('does not render the Admin link for non-admin sessions', async () => {
+      currentUser = { ...currentUser, isAdmin: false };
+      const user = userEvent.setup();
+      render(<MobileMenu />);
+
+      await user.click(screen.getByRole('button', { name: /toggle menu/i }));
+
+      expect(screen.queryByRole('link', { name: /admin/i })).not.toBeInTheDocument();
+    });
+
+    it('renders the Admin link pointing to /admin for admin sessions', async () => {
+      currentUser = { ...currentUser, isAdmin: true };
+      const user = userEvent.setup();
+      render(<MobileMenu />);
+
+      await user.click(screen.getByRole('button', { name: /toggle menu/i }));
+
+      const adminLink = screen.getByRole('link', { name: /admin/i });
+      expect(adminLink).toBeInTheDocument();
+      expect(adminLink).toHaveAttribute('href', '/admin');
+    });
   });
 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, LogOut, CreditCard, Key, KeyRound, User } from 'lucide-react';
+import { Menu, LogOut, CreditCard, Key, KeyRound, Shield, User } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -132,6 +132,21 @@ export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
                 <KeyRound className="mr-2 h-4 w-4" />
                 AI Credentials
               </Link>
+
+              {/* Admin entry — only rendered for allowlisted admins (AIB-799). */}
+              {session.user.isAdmin && (
+                <>
+                  <div className="border-t border-border my-2" />
+                  <Link
+                    href="/admin"
+                    className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
+                    onClick={() => setOpen(false)}
+                  >
+                    <Shield className="mr-2 h-4 w-4" />
+                    Admin
+                  </Link>
+                </>
+              )}
 
               <div className="border-t border-border my-2" />
 

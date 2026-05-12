@@ -4,6 +4,7 @@ import type { Adapter } from 'next-auth/adapters';
 import Credentials from 'next-auth/providers/credentials';
 import GitHub from 'next-auth/providers/github';
 import { authorizeDevLogin } from '@/app/lib/auth/dev-login';
+import { isUserAdmin } from '@/app/lib/auth/admin';
 import {
   createOrUpdateUser,
   validateGitHubProfile,
@@ -160,6 +161,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token, user }) {
       if (session.user) {
         session.user.id = (user?.id || token?.id || token?.userId) as string;
+        // isAdmin is computed server-side on every session resolution so
+        // ADMIN_ALLOWLIST rotations take effect without re-login (AIB-799).
+        session.user.isAdmin = isUserAdmin(session.user.email);
       }
       return session;
     },
