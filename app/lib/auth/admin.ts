@@ -40,7 +40,7 @@ export function adminNotFoundResponse(): Response {
   });
 }
 
-async function resolveAdminEmail(request: NextRequest): Promise<string | null> {
+export async function resolveAdminEmail(request: NextRequest): Promise<string | null> {
   let user: { email: string } | null = null;
   try {
     user = await getCurrentUserOrNull(request);
@@ -49,6 +49,21 @@ async function resolveAdminEmail(request: NextRequest): Promise<string | null> {
   }
   if (!user || !isUserAdmin(user.email)) return null;
   return user.email.trim().toLowerCase();
+}
+
+/**
+ * Resolve whether the current request comes from an allowlisted admin.
+ * Wraps `resolveAdminEmail`; treats any thrown error as not-admin so the
+ * global header never fails to render for non-admin or anonymous traffic
+ * (AIB-796, P-6).
+ */
+export async function getViewerIsAdmin(request: NextRequest): Promise<boolean> {
+  try {
+    const email = await resolveAdminEmail(request);
+    return email !== null;
+  } catch {
+    return false;
+  }
 }
 
 /**

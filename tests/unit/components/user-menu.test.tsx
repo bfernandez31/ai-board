@@ -60,4 +60,64 @@ describe('UserMenu', () => {
 
     expect(screen.getByText('Sign out')).toBeInTheDocument();
   });
+
+  describe('Admin entry (AIB-796)', () => {
+    it('renders Admin item when isAdmin=true with href=/admin between AI Credentials and Sign out', async () => {
+      const user = userEvent.setup();
+      render(<UserMenu isAdmin={true} />);
+
+      await user.click(screen.getByTestId('user-menu'));
+
+      const adminItem = screen.getByRole('menuitem', { name: /admin/i });
+      expect(adminItem).toBeInTheDocument();
+      expect(adminItem).toHaveAttribute('href', '/admin');
+
+      // Verify position: AI Credentials → Admin → Sign out
+      const menuItems = screen.getAllByRole('menuitem');
+      const labels = menuItems.map((el) => el.textContent?.trim() ?? '');
+      const aiCredsIdx = labels.findIndex((l) => /ai credentials/i.test(l));
+      const adminIdx = labels.findIndex((l) => /^admin$/i.test(l));
+      const signOutIdx = labels.findIndex((l) => /sign out/i.test(l));
+      expect(aiCredsIdx).toBeGreaterThanOrEqual(0);
+      expect(adminIdx).toBeGreaterThan(aiCredsIdx);
+      expect(signOutIdx).toBeGreaterThan(adminIdx);
+    });
+
+    it('does NOT render Admin item when isAdmin=false', async () => {
+      const user = userEvent.setup();
+      const { container } = render(<UserMenu isAdmin={false} />);
+
+      await user.click(screen.getByTestId('user-menu'));
+
+      expect(screen.queryByRole('menuitem', { name: /^admin$/i })).not.toBeInTheDocument();
+      expect(container.innerHTML).not.toMatch(/\/admin(?!\/)/);
+    });
+
+    it('does NOT render Admin item when isAdmin is undefined (default false)', async () => {
+      const user = userEvent.setup();
+      const { container } = render(<UserMenu />);
+
+      await user.click(screen.getByTestId('user-menu'));
+
+      expect(screen.queryByRole('menuitem', { name: /^admin$/i })).not.toBeInTheDocument();
+      expect(container.innerHTML).not.toMatch(/\/admin(?!\/)/);
+    });
+
+    it('preserves pre-existing item count and order when isAdmin=false', async () => {
+      const user = userEvent.setup();
+      render(<UserMenu />);
+
+      await user.click(screen.getByTestId('user-menu'));
+
+      const menuItems = screen.getAllByRole('menuitem');
+      const labels = menuItems.map((el) => el.textContent?.trim() ?? '');
+      expect(labels).toEqual([
+        expect.stringMatching(/profile/i),
+        expect.stringMatching(/billing/i),
+        expect.stringMatching(/api tokens/i),
+        expect.stringMatching(/ai credentials/i),
+        expect.stringMatching(/sign out/i),
+      ]);
+    });
+  });
 });

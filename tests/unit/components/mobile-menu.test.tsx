@@ -60,4 +60,48 @@ describe('MobileMenu', () => {
 
     expect(screen.getByText('Sign Out')).toBeInTheDocument();
   });
+
+  describe('Admin entry (AIB-796)', () => {
+    it('renders Admin link when isAdmin=true with href=/admin after AI Credentials and before Sign Out', async () => {
+      const user = userEvent.setup();
+      render(<MobileMenu isAdmin={true} />);
+
+      await user.click(screen.getByRole('button', { name: /toggle menu/i }));
+
+      const adminLink = screen.getByRole('link', { name: /^admin$/i });
+      expect(adminLink).toBeInTheDocument();
+      expect(adminLink).toHaveAttribute('href', '/admin');
+
+      // Verify position: AI Credentials → Admin → Sign Out
+      const aiCredsLink = screen.getByRole('link', { name: /ai credentials/i });
+      const signOutButton = screen.getByText('Sign Out');
+
+      // DOM order: aiCreds < admin < signOut
+      const aiPos = aiCredsLink.compareDocumentPosition(adminLink);
+      const adminPos = adminLink.compareDocumentPosition(signOutButton);
+      // Node.DOCUMENT_POSITION_FOLLOWING === 4
+      expect(aiPos & 4).toBeTruthy();
+      expect(adminPos & 4).toBeTruthy();
+    });
+
+    it('does NOT render Admin link when isAdmin=false', async () => {
+      const user = userEvent.setup();
+      const { container } = render(<MobileMenu isAdmin={false} />);
+
+      await user.click(screen.getByRole('button', { name: /toggle menu/i }));
+
+      expect(screen.queryByRole('link', { name: /^admin$/i })).not.toBeInTheDocument();
+      expect(container.innerHTML).not.toMatch(/\/admin(?!\/)/);
+    });
+
+    it('does NOT render Admin link when isAdmin is undefined (default false)', async () => {
+      const user = userEvent.setup();
+      const { container } = render(<MobileMenu />);
+
+      await user.click(screen.getByRole('button', { name: /toggle menu/i }));
+
+      expect(screen.queryByRole('link', { name: /^admin$/i })).not.toBeInTheDocument();
+      expect(container.innerHTML).not.toMatch(/\/admin(?!\/)/);
+    });
+  });
 });

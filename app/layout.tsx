@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { Righteous, DM_Sans, JetBrains_Mono } from 'next/font/google';
+import { headers } from 'next/headers';
+import type { NextRequest } from 'next/server';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -10,6 +12,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { PushOptInPrompt } from '@/app/components/push-notifications/push-opt-in-prompt';
 import { NotificationListener } from '@/app/components/push-notifications/notification-listener';
 import { Footer } from '@/components/layout/footer';
+import { getViewerIsAdmin } from '@/app/lib/auth/admin';
 
 const righteous = Righteous({
   weight: '400',
@@ -39,18 +42,26 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const requestHeaders = await headers();
+  const requestLike = {
+    headers: requestHeaders,
+    nextUrl: { pathname: '/' },
+    url: '/',
+  } as unknown as NextRequest;
+  const isAdmin = await getViewerIsAdmin(requestLike);
+
   return (
     <html lang="en" className={`dark ${righteous.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
       <body className="flex min-h-screen flex-col bg-background text-foreground antialiased font-sans">
         <QueryProvider>
           <SessionProvider>
             <TooltipProvider>
-              <Header />
+              <Header isAdmin={isAdmin} />
               <main className="flex-1">{children}</main>
               <Footer />
               <Toaster />

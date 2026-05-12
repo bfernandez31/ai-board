@@ -26,13 +26,22 @@ vi.mock('@/components/navigation/search-trigger', () => ({
   ),
 }));
 
-// Mock other components to simplify
+// Mock other components to simplify and capture isAdmin prop forwarding
+const userMenuSpy = vi.fn();
+const mobileMenuSpy = vi.fn();
+
 vi.mock('@/components/layout/mobile-menu', () => ({
-  MobileMenu: () => <div data-testid="mobile-menu">Mobile Menu</div>,
+  MobileMenu: (props: { isAdmin?: boolean }) => {
+    mobileMenuSpy(props);
+    return <div data-testid="mobile-menu">Mobile Menu</div>;
+  },
 }));
 
 vi.mock('@/components/auth/user-menu', () => ({
-  UserMenu: () => <div data-testid="user-menu">User Menu</div>,
+  UserMenu: (props: { isAdmin?: boolean }) => {
+    userMenuSpy(props);
+    return <div data-testid="user-menu">User Menu</div>;
+  },
 }));
 
 vi.mock('@/app/components/notifications/notification-bell', () => ({
@@ -53,6 +62,8 @@ describe('Header', () => {
     });
     // Reset to default board page path
     mockPathname = '/projects/1/board';
+    userMenuSpy.mockClear();
+    mobileMenuSpy.mockClear();
 
     // Mock fetch for project info
     global.fetch = vi.fn().mockResolvedValue({
@@ -65,10 +76,10 @@ describe('Header', () => {
     });
   });
 
-  const renderHeader = () => {
+  const renderHeader = (isAdmin: boolean = false) => {
     return render(
       <QueryClientProvider client={queryClient}>
-        <Header />
+        <Header isAdmin={isAdmin} />
       </QueryClientProvider>
     );
   };
@@ -133,6 +144,30 @@ describe('Header', () => {
       expect(screen.queryByLabelText('View project specifications on GitHub')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('View project analytics')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('View project activity')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('isAdmin prop forwarding (AIB-796)', () => {
+    it('forwards isAdmin=true to UserMenu and MobileMenu', async () => {
+      mockPathname = '/projects/1/board';
+      renderHeader(true);
+
+      await screen.findByTestId('user-menu');
+
+      expect(userMenuSpy).toHaveBeenCalled();
+      expect(userMenuSpy.mock.calls[0]?.[0]).toMatchObject({ isAdmin: true });
+      expect(mobileMenuSpy).toHaveBeenCalled();
+      expect(mobileMenuSpy.mock.calls[0]?.[0]).toMatchObject({ isAdmin: true });
+    });
+
+    it('forwards isAdmin=false to UserMenu and MobileMenu', async () => {
+      mockPathname = '/projects/1/board';
+      renderHeader(false);
+
+      await screen.findByTestId('user-menu');
+
+      expect(userMenuSpy.mock.calls[0]?.[0]).toMatchObject({ isAdmin: false });
+      expect(mobileMenuSpy.mock.calls[0]?.[0]).toMatchObject({ isAdmin: false });
     });
   });
 });
