@@ -324,7 +324,7 @@ Stream a single raw native Claude Code session JSONL artifact for a Claude job. 
 
 ## Page Routes
 
-`GET /admin` and `GET /admin/insights` are Server Components gated by `requireAdminPageOrNotFound` (the page-route variant that calls Next.js `notFound()` rather than returning a `Response`). `/admin` redirects to `/admin/insights`. Both responses carry `Cache-Control: private, no-store`; the admin shell layer sets `X-Frame-Options: DENY` on top-level admin paths to prevent click-jacking of the shell itself.
+`GET /admin/insights` is a Server Component gated by `requireAdminPageOrNotFound` (the page-route variant that calls Next.js `notFound()` rather than returning a `Response`). The response carries `Cache-Control: private, no-store`; the admin shell layer sets `X-Frame-Options: DENY` on top-level admin paths to prevent click-jacking of the shell itself. `GET /admin` renders the [Admin Home Dashboard](./admin-home.md#page-routes) and shares the same authorization model.
 
 Non-admin requests to any `/admin/...` path — including paths that don't resolve to a defined page route — produce a Not Found response indistinguishable from a request to `/this-path-does-not-exist`.
 

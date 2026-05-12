@@ -1221,6 +1221,37 @@ export function useInsightsReports(initialData?: ReportListEntry[]) {
 - **Initial Data**: Supplied by the `/admin/insights` Server Component so the page paints with the past-reports list and latest report on first render
 - **Query Key**: Flat `['admin', 'insights', 'reports']` — there is exactly one application-wide list, no per-user or per-project partitioning
 
+**Admin Home Dashboard Polling** (`/admin`):
+
+**Hook** (`app/lib/hooks/queries/use-admin-home-snapshot.ts`):
+
+```typescript
+const QUERY_KEY = ['admin', 'home', 'snapshot'] as const;
+
+export function useAdminHomeSnapshot(initialData: DashboardSnapshot) {
+  return useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: async (): Promise<DashboardSnapshot> => {
+      const response = await fetch('/api/admin/home');
+      if (!response.ok) throw new Error(`Failed to fetch dashboard: HTTP ${response.status}`);
+      return response.json();
+    },
+    initialData,
+    refetchInterval: 30_000,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+    // refetchIntervalInBackground defaults to false — polling pauses when the tab is hidden
+  });
+}
+```
+
+- **Unconditional Polling**: 30-second interval while the page is mounted. The TanStack default `refetchIntervalInBackground: false` pauses polling when the tab is hidden and resumes on visibility change.
+- **Stale-while-revalidate**: `placeholderData: keepPreviousData` keeps the previous snapshot visible during refetches — subsequent polls swap values in place with no skeleton flash. Skeletons only appear on first load.
+- **Initial Data**: Supplied by the `/admin` Server Component (which calls `computeDashboardSnapshot()` once on the server) so the page paints with full data on first render.
+- **Single Consolidated Request**: One poll cycle = one HTTP request to `/api/admin/home`. All five strata (alerts, KPIs, business health, trends, actionable tables) ride the same payload.
+- **Error Handling**: A failed poll renders a single page-level error banner with a retry button. The previous successful snapshot may remain visible underneath while the banner is displayed.
+- **Query Key**: Flat `['admin', 'home', 'snapshot']` — application-wide, no per-user partitioning.
+
 ### Workflow-Triggered Cache Invalidation
 
 **Pattern**: When workflows complete and transition tickets to new stages, the board and modal automatically update via cache invalidation.

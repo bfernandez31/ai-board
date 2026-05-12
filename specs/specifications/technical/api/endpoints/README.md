@@ -15,6 +15,7 @@ Complete REST API documentation with authentication, request/response formats, a
 - [Billing](./billing.md) — Billing, subscription, and usage endpoints
 - [Account, Settings & Credentials](./account.md) — Settings, Account, Token, Credential endpoints
 - [Admin Insights](./admin-insights.md) — `/admin/insights` page and Claude Code `/insights` workflow endpoints
+- [Admin Home](./admin-home.md) — `/admin` dashboard snapshot endpoint and scheduled-workflow cron-marker callback
 
 ## Authentication
 

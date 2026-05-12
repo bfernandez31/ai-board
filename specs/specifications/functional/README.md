@@ -140,7 +140,7 @@ Describes the Health Dashboard page, which provides a global health score (0–1
 ### [09-admin-insights.md](09-admin-insights.md)
 **Admin Insights**
 
-Describes the `/admin/insights` page — the only page in the platform's admin shell — which hosts a manually triggered, archived series of Claude Code `/insights` reports synthesized from raw native session JSONL across every project.
+Describes the `/admin/insights` page — one of two operational pages in the platform's admin shell — which hosts a manually triggered, archived series of Claude Code `/insights` reports synthesized from raw native session JSONL across every project.
 
 **Key Topics**:
 - Allowlist-based admin access with byte-equivalent 404 parity for non-admins
@@ -151,6 +151,22 @@ Describes the `/admin/insights` page — the only page in the platform's admin s
 - Past-reports list (reverse-chronological, capped at 200)
 - Orphan-row reconciliation and atomic state transitions
 - Read-only reports — no edit, delete, or notification surfaces
+
+---
+
+### [10-admin-home-dashboard.md](10-admin-home-dashboard.md)
+**Admin Home Dashboard**
+
+Describes the `/admin` landing page — a 5-stratum operator dashboard refreshed silently every 30 seconds. Renders inside the shared admin shell and shares the byte-equivalent 404 access model with the Insights page.
+
+**Key Topics**:
+- Alerts strip (job success rate, Stripe webhook activity, critical-cron freshness)
+- Four hero KPI tiles (Users, MAU, MRR estimé, Active payants) with two deltas and 30-day sparklines
+- Business-health panels (plan distribution donut, 30-day activation funnel, monthly churn)
+- Trend charts (30-day signups, 30-day jobs stacked success/fail, 12-month MRR)
+- Actionable 2×2 tables (new paying users, recent cancellations, top 5 active users, top 5 projects)
+- 30-second polling with stale-while-revalidate; pauses when tab is hidden
+- Deterministic tie-breaking so consecutive polls produce identical row orderings
 
 ---
 

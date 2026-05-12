@@ -123,4 +123,6 @@ Used for multi-column queries with optimal performance:
 - `AnalysisCalibration(projectId, shippedAt DESC)`: Newest-first calibration row window for the drift dashboard
 - `AnalysisCalibration(projectId, partial)`: Filter partial calibration rows out of headline rate denominators
 - `AnalysisCalibration(projectId, frictionCell)`: Confusion-matrix `groupBy` aggregation per project
+- `CronRunLog(workflowName, ranAt)`: Latest-marker-per-cron lookup feeding the admin home cron-staleness alert
+- `CronRunLog(ranAt)`: Lazy 7-day prune sweep performed inside the cron-marker POST handler
 

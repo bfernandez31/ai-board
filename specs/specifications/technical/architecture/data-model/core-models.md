@@ -928,6 +928,44 @@ model StripeEvent {
 - Webhook handler checks for existing record before processing; duplicate events are silently ignored
 - Records are never deleted (permanent audit log of processed events)
 
+### CronRunLog
+
+Append-only success marker for scheduled GitHub Actions workflows. The Admin Home Dashboard reads the latest row per `workflowName` to compute its critical-cron staleness alert.
+
+```prisma
+model CronRunLog {
+  id           Int      @id @default(autoincrement())
+  workflowName String   @db.VarChar(100)
+  ranAt        DateTime @default(now())
+  durationMs   Int?
+  runUrl       String?  @db.VarChar(500)
+
+  @@index([workflowName, ranAt])
+  @@index([ranAt])
+}
+```
+
+**Purpose**: Provide the freshness signal needed by the home dashboard's `cron` alert. The dashboard fires the alert when the latest marker for any workflow in `CRITICAL_CRONS = ['nightly-health', 'nightly-log-prune']` is older than 36 hours, or when no marker has ever been written.
+
+**Fields**:
+- `id`: Auto-incrementing primary key
+- `workflowName`: Free-form `varchar(100)` at the schema level; the application's accepted list is enforced in code (`CRITICAL_CRONS` in `app/lib/admin/home/alerts.ts`). Adding a new tracked cron is a code change plus a workflow edit — no schema migration.
+- `ranAt`: Server-recorded success timestamp (the workflow does not send one; `@default(now())` keeps the contract simple and avoids runner/DB clock skew)
+- `durationMs`: Optional observational metric; nullable
+- `runUrl`: Optional full GitHub Actions run URL; nullable. The alert renders a workflow-runs-list link even when no marker is present.
+
+**Relationships**: None — standalone, no foreign keys. Workflow names are typed in TypeScript, not in the database.
+
+**Constraints**:
+- `(workflowName, ranAt)` index serves the `findFirst({ where: { workflowName }, orderBy: { ranAt: 'desc' } })` lookup performed once per critical cron on every dashboard request.
+- `(ranAt)` index serves the lazy 7-day prune.
+
+**Business Rules**:
+- Append-only — rows are never updated. State is implicit in the latest row's `ranAt`.
+- Only successful workflow runs write a marker. The workflow step is gated by `if: success()` and runs with `continue-on-error: true`, so a marker-write outage cannot fail the cron itself; a missing marker is the implicit failure signal.
+- Written by `POST /api/admin/cron-markers` (workflow-token authenticated). The same handler performs a lazy `deleteMany({ where: { ranAt: { lt: now() - 7d } } })` wrapped in try/catch, keeping the table bounded without a separate cron.
+- No backfill on migration: the first nightly run after deploy writes the first row. Until then, the dashboard's cron alert fires (acceptable false-positive — it surfaces the marker outage too).
+
 ### VerificationToken
 
 NextAuth.js email verification tokens.
