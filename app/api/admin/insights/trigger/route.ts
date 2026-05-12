@@ -187,7 +187,6 @@ export async function POST(request: NextRequest): Promise<Response> {
           job_id: String(jobId),
           period_start: periodStart.toISOString(),
           period_end: periodEnd.toISOString(),
-          app_url: process.env.APP_URL ?? 'http://localhost:3000',
         },
       });
     } catch (error) {

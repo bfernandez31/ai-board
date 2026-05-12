@@ -21,10 +21,6 @@ on:
         description: 'ISO 8601 upper bound (exclusive)'
         required: true
         type: string
-      app_url:
-        description: 'Base URL of the deployment that triggered the run'
-        required: true
-        type: string
 
 jobs:
   analyze:
@@ -32,12 +28,14 @@ jobs:
     # Buffer below INSIGHTS_RUN_TIMEOUT_MINUTES (default 60) so the workflow
     # surfaces its own failure before reconciliation auto-FAILs the row.
     timeout-minutes: 50
+    env:
+      APP_URL: ${{ vars.APP_URL }}
     steps:
       - uses: actions/checkout@v4
 
       - name: PATCH job status -> RUNNING
         run: |
-          curl -fsS -X PATCH "${{ inputs.app_url }}/api/jobs/${{ inputs.job_id }}/status" \
+          curl -fsS -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{"status":"RUNNING"}'
@@ -48,7 +46,7 @@ jobs:
           set -euo pipefail
           curl -fsS \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
-            "${{ inputs.app_url }}/api/admin/insights/jobs?periodStart=${{ inputs.period_start }}&periodEnd=${{ inputs.period_end }}" \
+            "${APP_URL}/api/admin/insights/jobs?periodStart=${{ inputs.period_start }}&periodEnd=${{ inputs.period_end }}" \
             > jobs.json
           echo "session_count=$(jq '.jobs | length' jobs.json)" >> "$GITHUB_OUTPUT"
 
@@ -71,7 +69,7 @@ jobs:
             jobId=$(echo "$row" | jq -r .jobId)
             curl -fsS \
               -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
-              "${{ inputs.app_url }}/api/admin/insights/jobs/${jobId}/raw-native" \
+              "${APP_URL}/api/admin/insights/jobs/${jobId}/raw-native" \
               -o "./sessions/${jobId}.jsonl.gz"
             gunzip "./sessions/${jobId}.jsonl.gz"
           done
@@ -109,7 +107,7 @@ jobs:
         run: |
           set -euo pipefail
           response=$(curl -sS -w "\n%{http_code}" \
-            -X PUT "${{ inputs.app_url }}/api/admin/insights/reports/${{ inputs.report_id }}/finalize" \
+            -X PUT "${APP_URL}/api/admin/insights/reports/${{ inputs.report_id }}/finalize" \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
             -H "Content-Type: text/html; charset=utf-8" \
             --data-binary @report.html)
@@ -147,7 +145,7 @@ jobs:
             --argjson asz ${{ steps.finalize.outputs.artifact_size }} \
             '{status:$status, sessionsCount:$sc, ticketsCount:$tc, artifactKey:$ak, artifactSize:$asz}')
           curl -fsS -X PATCH \
-            "${{ inputs.app_url }}/api/admin/insights/reports/${{ inputs.report_id }}/status" \
+            "${APP_URL}/api/admin/insights/reports/${{ inputs.report_id }}/status" \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "$payload"
@@ -155,7 +153,7 @@ jobs:
       - name: PATCH job status -> COMPLETED
         if: success()
         run: |
-          curl -fsS -X PATCH "${{ inputs.app_url }}/api/jobs/${{ inputs.job_id }}/status" \
+          curl -fsS -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{"status":"COMPLETED"}'
@@ -165,12 +163,12 @@ jobs:
         run: |
           reason="${INSIGHTS_FAILURE_REASON:-Workflow step failed; see workflow logs}"
           curl -fsS -X PATCH \
-            "${{ inputs.app_url }}/api/admin/insights/reports/${{ inputs.report_id }}/status" \
+            "${APP_URL}/api/admin/insights/reports/${{ inputs.report_id }}/status" \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "$(jq -n --arg status 'FAILED' --arg er "$reason" '{status:$status, errorReason:$er}')"
           curl -fsS -X PATCH \
-            "${{ inputs.app_url }}/api/jobs/${{ inputs.job_id }}/status" \
+            "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{"status":"FAILED"}'
