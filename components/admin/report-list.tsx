@@ -40,21 +40,19 @@ export default function ReportList({ reports, selectedReportId, onSelectReport }
                 onClick={() => onSelectReport(report.id)}
                 aria-pressed={isSelected}
                 className={cn(
-                  'h-auto w-full justify-between p-3 text-left',
+                  'h-auto w-full justify-between gap-3 p-3 text-left',
                   isSelected && 'bg-accent text-accent-foreground'
                 )}
               >
-                <div className="flex w-full items-center justify-between gap-3">
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">{report.analysisType}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(report.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <Badge variant={report.status === 'COMPLETED' ? 'default' : 'secondary'}>
-                    {report.status}
-                  </Badge>
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">{report.analysisType}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {new Date(report.createdAt).toLocaleDateString()}
+                  </span>
                 </div>
+                <Badge variant={report.status === 'COMPLETED' ? 'default' : 'secondary'}>
+                  {report.status}
+                </Badge>
               </Button>
             )
           })}
