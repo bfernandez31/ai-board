@@ -3,6 +3,9 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { AlertStack } from './alert-stack';
 import { PulseStrip } from './pulse-strip';
+import { BusinessRow } from './business-row';
+import { TrendsRow } from './trends-row';
+import { DetailsGrid } from './details-grid';
 import type { AdminHomeSnapshot } from '@/lib/admin/home/types';
 
 async function fetchSnapshot(): Promise<AdminHomeSnapshot> {
@@ -47,35 +50,14 @@ export function AdminHomePage({ initialData }: AdminHomePageProps) {
       {/* Pulse KPIs */}
       <PulseStrip pulse={data?.pulse ?? initialData.pulse} />
 
-      {/* Santé Business placeholder */}
-      <section aria-label="Santé Business">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Santé Business
-        </h2>
-        <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
-          Business health panels coming soon
-        </div>
-      </section>
+      {/* Santé Business */}
+      <BusinessRow business={data?.business ?? initialData.business} />
 
-      {/* Tendances placeholder */}
-      <section aria-label="Tendances">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Tendances
-        </h2>
-        <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
-          Trend charts coming soon
-        </div>
-      </section>
+      {/* Tendances */}
+      <TrendsRow trends={data?.trends ?? initialData.trends} />
 
-      {/* Détails actionnables placeholder */}
-      <section aria-label="Détails actionnables">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Détails actionnables
-        </h2>
-        <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
-          Detail tables coming soon
-        </div>
-      </section>
+      {/* Détails actionnables */}
+      <DetailsGrid tables={data?.tables ?? initialData.tables} />
     </div>
   );
 }

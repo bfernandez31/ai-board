@@ -92,9 +92,9 @@ Single Next.js app (App Router) at repository root. Source under `app/`, `compon
 
 ### Tests for User Story 5
 
-- [ ] T030 [P] [US5] Create `tests/integration/api/admin/home/parity-404.test.ts` (sibling of `tests/integration/api/admin/insights/parity-404.test.ts`). Cover: non-admin authenticated GET → 404 empty body `text/html`; unauthenticated GET → identical 404; admin GET with test-override blocked → identical 404. Bytes-for-bytes equivalent.
-- [ ] T031 [P] [US5] Extend `tests/integration/admin-shell-isolation.test.ts` (existing) with: admin GET `/admin` renders the dashboard markers (headings/landmarks: `Alertes`, `Pulse`, `Santé Business`, `Tendances`, `Détails actionnables`); non-admin GET `/admin` returns the byte-equivalent 404.
-- [ ] T032 [US5] Create `tests/unit/components/admin/home/admin-home-page.test.tsx` asserting no skeleton flash on background refresh: render under `QueryClientProvider`, seed the cache, simulate a refetch in flight via the query client, assert previous Pulse tiles remain mounted with previous values. Also assert the `aria-live="polite"` failed-refresh indicator appears when `useQuery` reports `isError` while still showing stale data.
+- [x] T030 [P] [US5] Create `tests/integration/api/admin/home/parity-404.test.ts` (sibling of `tests/integration/api/admin/insights/parity-404.test.ts`). Cover: non-admin authenticated GET → 404 empty body `text/html`; unauthenticated GET → identical 404; admin GET with test-override blocked → identical 404. Bytes-for-bytes equivalent.
+- [x] T031 [P] [US5] Extend `tests/integration/admin-shell-isolation.test.ts` (existing) with: admin GET `/admin` renders the dashboard markers (headings/landmarks: `Alertes`, `Pulse`, `Santé Business`, `Tendances`, `Détails actionnables`); non-admin GET `/admin` returns the byte-equivalent 404.
+- [x] T032 [US5] Create `tests/unit/components/admin/home/admin-home-page.test.tsx` asserting no skeleton flash on background refresh: render under `QueryClientProvider`, seed the cache, simulate a refetch in flight via the query client, assert previous Pulse tiles remain mounted with previous values. Also assert the `aria-live="polite"` failed-refresh indicator appears when `useQuery` reports `isError` while still showing stale data.
 
 **Checkpoint**: 404 parity is enforced, refresh-without-flash is asserted at the component layer.
 
@@ -108,19 +108,19 @@ Single Next.js app (App Router) at repository root. Source under `app/`, `compon
 
 ### Tests for User Story 2
 
-- [ ] T033 [P] [US2] Create unit tests for business aggregators in `tests/unit/lib/admin/home/business.test.ts` covering: `computePlanDistribution` returns FREE/PRO/TEAM each with absolute counts (zero-count segments still present); `computeActivationFunnel` 30-day cohort denominator, step counts, `stepRate=null` when prior step is zero; `computeChurn` cancellations/downgrades/mrrLostUsd/netMrrDeltaUsd for current calendar month, including the downgrade approximation documented in data-model.md.
-- [ ] T034 [P] [US2] Create unit tests for `components/admin/home/plan-donut.tsx` in `tests/unit/components/admin/home/plan-donut.test.tsx`: 3 segments rendered; zero-count plan still shown in legend per spec edge case; uses `hsl(var(--chart-N))` not hex.
-- [ ] T035 [P] [US2] Create unit tests for `components/admin/home/activation-funnel.tsx` in `tests/unit/components/admin/home/activation-funnel.test.tsx`: 4 steps in order (SIGNUP → FIRST_PROJECT → FIRST_JOB → FIRST_PAID); `stepRate=null` renders as `—` not `NaN%`; cohort size of 0 renders empty-state per FR-029.
-- [ ] T036 [P] [US2] Create unit tests for `components/admin/home/churn-panel.tsx` in `tests/unit/components/admin/home/churn-panel.test.tsx`: counts/MRR lost/net delta render; net delta shows correct sign; zero cancellations → renders zeros without errors.
+- [x] T033 [P] [US2] Create unit tests for business aggregators in `tests/unit/lib/admin/home/business.test.ts` covering: `computePlanDistribution` returns FREE/PRO/TEAM each with absolute counts (zero-count segments still present); `computeActivationFunnel` 30-day cohort denominator, step counts, `stepRate=null` when prior step is zero; `computeChurn` cancellations/downgrades/mrrLostUsd/netMrrDeltaUsd for current calendar month, including the downgrade approximation documented in data-model.md.
+- [x] T034 [P] [US2] Create unit tests for `components/admin/home/plan-donut.tsx` in `tests/unit/components/admin/home/plan-donut.test.tsx`: 3 segments rendered; zero-count plan still shown in legend per spec edge case; uses `hsl(var(--chart-N))` not hex.
+- [x] T035 [P] [US2] Create unit tests for `components/admin/home/activation-funnel.tsx` in `tests/unit/components/admin/home/activation-funnel.test.tsx`: 4 steps in order (SIGNUP → FIRST_PROJECT → FIRST_JOB → FIRST_PAID); `stepRate=null` renders as `—` not `NaN%`; cohort size of 0 renders empty-state per FR-029.
+- [x] T036 [P] [US2] Create unit tests for `components/admin/home/churn-panel.tsx` in `tests/unit/components/admin/home/churn-panel.test.tsx`: counts/MRR lost/net delta render; net delta shows correct sign; zero cancellations → renders zeros without errors.
 
 ### Implementation for User Story 2
 
-- [ ] T037 [US2] Implement `lib/admin/home/business.ts` exporting `computePlanDistribution`, `computeActivationFunnel`, `computeChurn`. Document the downgrade approximation inline (per data-model.md §Subscription: catalog-price comparison via `stripePriceId`). MRR math uses `PLANS` from `lib/billing/plans.ts`.
-- [ ] T038 [US2] Wire `computePlanDistribution`, `computeActivationFunnel`, `computeChurn` into `lib/admin/home/snapshot.ts` `buildSnapshot()` so the `business` section of the response is populated.
-- [ ] T039 [P] [US2] Create `components/admin/home/plan-donut.tsx`: Recharts `PieChart` + `ResponsiveContainer`, `hsl(var(--chart-1..3))` for FREE/PRO/TEAM, absolute count shown next to each segment.
-- [ ] T040 [P] [US2] Create `components/admin/home/activation-funnel.tsx`: 4 stacked rows or stepped bars (SIGNUP → FIRST_PROJECT → FIRST_JOB → FIRST_PAID) with cohort count and inter-step `stepRate` percentage (or `—` when null).
-- [ ] T041 [P] [US2] Create `components/admin/home/churn-panel.tsx`: 4-stat block (cancellations / downgrades / `mrrLostUsd` formatted USD / `netMrrDeltaUsd` formatted USD with +/− sign).
-- [ ] T042 [US2] Create `components/admin/home/business-row.tsx` composing the three panels in a 3-column responsive grid; integrate into `components/admin/home/admin-home-page.tsx` (replace the empty placeholder).
+- [x] T037 [US2] Implement `lib/admin/home/business.ts` exporting `computePlanDistribution`, `computeActivationFunnel`, `computeChurn`. Document the downgrade approximation inline (per data-model.md §Subscription: catalog-price comparison via `stripePriceId`). MRR math uses `PLANS` from `lib/billing/plans.ts`.
+- [x] T038 [US2] Wire `computePlanDistribution`, `computeActivationFunnel`, `computeChurn` into `lib/admin/home/snapshot.ts` `buildSnapshot()` so the `business` section of the response is populated.
+- [x] T039 [P] [US2] Create `components/admin/home/plan-donut.tsx`: Recharts `PieChart` + `ResponsiveContainer`, `hsl(var(--chart-1..3))` for FREE/PRO/TEAM, absolute count shown next to each segment.
+- [x] T040 [P] [US2] Create `components/admin/home/activation-funnel.tsx`: 4 stacked rows or stepped bars (SIGNUP → FIRST_PROJECT → FIRST_JOB → FIRST_PAID) with cohort count and inter-step `stepRate` percentage (or `—` when null).
+- [x] T041 [P] [US2] Create `components/admin/home/churn-panel.tsx`: 4-stat block (cancellations / downgrades / `mrrLostUsd` formatted USD / `netMrrDeltaUsd` formatted USD with +/− sign).
+- [x] T042 [US2] Create `components/admin/home/business-row.tsx` composing the three panels in a 3-column responsive grid; integrate into `components/admin/home/admin-home-page.tsx` (replace the empty placeholder).
 
 **Checkpoint**: Business health overview rendering with real data.
 
@@ -134,16 +134,16 @@ Single Next.js app (App Router) at repository root. Source under `app/`, `compon
 
 ### Tests for User Story 3
 
-- [ ] T043 [P] [US3] Create unit tests for trend aggregators in `tests/unit/lib/admin/home/trends.test.ts` covering: `computeSignupsDaily(30)` returns exactly 30 points oldest-first with `{d, v}` shape (missing days = 0); `computeJobsDaily(30)` returns 30 points with `{d, completed, failed}` shape; `computeMrrMonthly(12)` returns ≤ 12 points with `{m, v}` shape, fewer if the platform is younger.
+- [x] T043 [P] [US3] Create unit tests for trend aggregators in `tests/unit/lib/admin/home/trends.test.ts` covering: `computeSignupsDaily(30)` returns exactly 30 points oldest-first with `{d, v}` shape (missing days = 0); `computeJobsDaily(30)` returns 30 points with `{d, completed, failed}` shape; `computeMrrMonthly(12)` returns ≤ 12 points with `{m, v}` shape, fewer if the platform is younger.
 
 ### Implementation for User Story 3
 
-- [ ] T044 [US3] Implement `lib/admin/home/trends.ts` exporting `computeSignupsDaily(days=30)`, `computeJobsDaily(days=30)`, `computeMrrMonthly(months=12)`. Daily series use raw SQL via `prisma.$queryRaw` (Prisma `groupBy` does not support `DATE_TRUNC`). MRR monthly replays acquisitions/cancellations against the catalog at each month boundary.
-- [ ] T045 [US3] Wire the three trend aggregators into `lib/admin/home/snapshot.ts` `buildSnapshot()` so the `trends` section is populated.
-- [ ] T046 [P] [US3] Create `components/admin/home/signups-trend.tsx`: Recharts `LineChart` with `ResponsiveContainer`, `hsl(var(--chart-1))` line color, empty-state placeholder when array is all zeros.
-- [ ] T047 [P] [US3] Create `components/admin/home/jobs-trend.tsx`: Recharts stacked `BarChart` with two stacks (completed / failed) using `hsl(var(--chart-2))` and `hsl(var(--chart-3))`.
-- [ ] T048 [P] [US3] Create `components/admin/home/mrr-trend.tsx`: Recharts `LineChart` (or `AreaChart`) over up to 12 months, USD formatting via `formatUsdCents` from `lib/admin/home/format.ts`.
-- [ ] T049 [US3] Create `components/admin/home/trends-row.tsx` composing the three charts in a 3-column responsive grid; integrate into `components/admin/home/admin-home-page.tsx`.
+- [x] T044 [US3] Implement `lib/admin/home/trends.ts` exporting `computeSignupsDaily(days=30)`, `computeJobsDaily(days=30)`, `computeMrrMonthly(months=12)`. Daily series use raw SQL via `prisma.$queryRaw` (Prisma `groupBy` does not support `DATE_TRUNC`). MRR monthly replays acquisitions/cancellations against the catalog at each month boundary.
+- [x] T045 [US3] Wire the three trend aggregators into `lib/admin/home/snapshot.ts` `buildSnapshot()` so the `trends` section is populated.
+- [x] T046 [P] [US3] Create `components/admin/home/signups-trend.tsx`: Recharts `LineChart` with `ResponsiveContainer`, `hsl(var(--chart-1))` line color, empty-state placeholder when array is all zeros.
+- [x] T047 [P] [US3] Create `components/admin/home/jobs-trend.tsx`: Recharts stacked `BarChart` with two stacks (completed / failed) using `hsl(var(--chart-2))` and `hsl(var(--chart-3))`.
+- [x] T048 [P] [US3] Create `components/admin/home/mrr-trend.tsx`: Recharts `LineChart` (or `AreaChart`) over up to 12 months, USD formatting via `formatUsdCents` from `lib/admin/home/format.ts`.
+- [x] T049 [US3] Create `components/admin/home/trends-row.tsx` composing the three charts in a 3-column responsive grid; integrate into `components/admin/home/admin-home-page.tsx`.
 
 **Checkpoint**: Trend charts rendering 30-day and 12-month windows.
 
@@ -157,18 +157,18 @@ Single Next.js app (App Router) at repository root. Source under `app/`, `compon
 
 ### Tests for User Story 4
 
-- [ ] T050 [P] [US4] Create unit tests for table aggregators in `tests/unit/lib/admin/home/tables.test.ts` covering: `listNewPayingUsers(30, 50)` returns paying users (PRO+TEAM, ACTIVE/TRIALING) with `createdAt >= now()-30d`, ordered most-recent-first, capped at 50; `listRecentCancellations(30, 50)` returns subs with `canceledAt >= now()-30d`, ordered by `canceledAt desc`, capped at 50; `listTopUsersThisMonth(5)` aggregates jobs by `project.userId` (with `ticketId IS NULL` fallback via `Job.projectId`), order desc by count, limit 5; `listTopProjectsThisMonth(5)` groups by `projectId`, order desc by count, limit 5.
-- [ ] T051 [P] [US4] Create unit tests for the four table components in `tests/unit/components/admin/home/tables.test.tsx`: empty arrays render `text-muted-foreground` "no data yet" placeholder; rows render expected columns (`email`/`plan`/`accountAgeDays` for new paying; `email`/`lostPlan`/`accountAgeDays` for cancellations; `email`/`plan`/`jobsThisMonth` for top users; `projectKey`/`ownerEmail`/`jobsThisMonth` for top projects); top-N tables enforce max 5 rows.
+- [x] T050 [P] [US4] Create unit tests for table aggregators in `tests/unit/lib/admin/home/tables.test.ts` covering: `listNewPayingUsers(30, 50)` returns paying users (PRO+TEAM, ACTIVE/TRIALING) with `createdAt >= now()-30d`, ordered most-recent-first, capped at 50; `listRecentCancellations(30, 50)` returns subs with `canceledAt >= now()-30d`, ordered by `canceledAt desc`, capped at 50; `listTopUsersThisMonth(5)` aggregates jobs by `project.userId` (with `ticketId IS NULL` fallback via `Job.projectId`), order desc by count, limit 5; `listTopProjectsThisMonth(5)` groups by `projectId`, order desc by count, limit 5.
+- [x] T051 [P] [US4] Create unit tests for the four table components in `tests/unit/components/admin/home/tables.test.tsx`: empty arrays render `text-muted-foreground` "no data yet" placeholder; rows render expected columns (`email`/`plan`/`accountAgeDays` for new paying; `email`/`lostPlan`/`accountAgeDays` for cancellations; `email`/`plan`/`jobsThisMonth` for top users; `projectKey`/`ownerEmail`/`jobsThisMonth` for top projects); top-N tables enforce max 5 rows.
 
 ### Implementation for User Story 4
 
-- [ ] T052 [US4] Implement `lib/admin/home/tables.ts` exporting `listNewPayingUsers`, `listRecentCancellations`, `listTopUsersThisMonth`, `listTopProjectsThisMonth`. Top users use raw SQL via `$queryRaw` (groupBy across relations not supported). Top projects use `prisma.job.groupBy({ by: ['projectId'], ... })` then enrich with project key + owner email.
-- [ ] T053 [US4] Wire the four list helpers into `lib/admin/home/snapshot.ts` `buildSnapshot()` so the `tables` section is populated.
-- [ ] T054 [P] [US4] Create `components/admin/home/new-paying-table.tsx` rendering email / plan / accountAgeDays columns, most-recent-first.
-- [ ] T055 [P] [US4] Create `components/admin/home/cancellations-table.tsx` rendering email / lostPlan / accountAgeDays columns, ordered by `canceledAt desc`.
-- [ ] T056 [P] [US4] Create `components/admin/home/top-users-table.tsx` rendering email / plan / jobsThisMonth columns, max 5 rows ordered desc.
-- [ ] T057 [P] [US4] Create `components/admin/home/top-projects-table.tsx` rendering projectKey / ownerEmail / jobsThisMonth columns, max 5 rows ordered desc.
-- [ ] T058 [US4] Create `components/admin/home/details-grid.tsx` arranging the four tables in a 2×2 responsive grid; integrate into `components/admin/home/admin-home-page.tsx`.
+- [x] T052 [US4] Implement `lib/admin/home/tables.ts` exporting `listNewPayingUsers`, `listRecentCancellations`, `listTopUsersThisMonth`, `listTopProjectsThisMonth`. Top users use raw SQL via `$queryRaw` (groupBy across relations not supported). Top projects use `prisma.job.groupBy({ by: ['projectId'], ... })` then enrich with project key + owner email.
+- [x] T053 [US4] Wire the four list helpers into `lib/admin/home/snapshot.ts` `buildSnapshot()` so the `tables` section is populated.
+- [x] T054 [P] [US4] Create `components/admin/home/new-paying-table.tsx` rendering email / plan / accountAgeDays columns, most-recent-first.
+- [x] T055 [P] [US4] Create `components/admin/home/cancellations-table.tsx` rendering email / lostPlan / accountAgeDays columns, ordered by `canceledAt desc`.
+- [x] T056 [P] [US4] Create `components/admin/home/top-users-table.tsx` rendering email / plan / jobsThisMonth columns, max 5 rows ordered desc.
+- [x] T057 [P] [US4] Create `components/admin/home/top-projects-table.tsx` rendering projectKey / ownerEmail / jobsThisMonth columns, max 5 rows ordered desc.
+- [x] T058 [US4] Create `components/admin/home/details-grid.tsx` arranging the four tables in a 2×2 responsive grid; integrate into `components/admin/home/admin-home-page.tsx`.
 
 **Checkpoint**: All four detail tables render. Dashboard is feature-complete per spec.
 
@@ -178,8 +178,8 @@ Single Next.js app (App Router) at repository root. Source under `app/`, `compon
 
 **Purpose**: One golden-path E2E, type/lint hygiene, performance check.
 
-- [ ] T059 [P] Create `tests/e2e/admin/home-dashboard.spec.ts` (Playwright, golden path only): sign in as `[e2e]` admin via `x-test-user-id` header, navigate to `/admin`, assert the four Pulse tile headings are visible, seed a synthetic Stripe `WebhookOutcome` FAILURE row in the last 24 h and assert the Stripe-error alert banner appears on the next 30-second refresh without a global skeleton flash (SC-005).
-- [ ] T060 [P] Run `bun run type-check` and `bun run lint` from repo root; fix any reported issues introduced by this feature (including any pre-existing errors uncovered, per CLAUDE.md commit rules).
+- [x] T059 [P] Create `tests/e2e/admin/home-dashboard.spec.ts` (Playwright, golden path only): sign in as `[e2e]` admin via `x-test-user-id` header, navigate to `/admin`, assert the four Pulse tile headings are visible, seed a synthetic Stripe `WebhookOutcome` FAILURE row in the last 24 h and assert the Stripe-error alert banner appears on the next 30-second refresh without a global skeleton flash (SC-005).
+- [x] T060 [P] Run `bun run type-check` and `bun run lint` from repo root; fix any reported issues introduced by this feature (including any pre-existing errors uncovered, per CLAUDE.md commit rules).
 - [ ] T061 Manual smoke check (recorded in PR description): start dev server, sign in as a seeded admin, load `/admin`, confirm first paint < 3 s (SC-001) and no visible global skeleton during a 30-second refresh cycle (SC-005). Note any deviations.
 
 ---
