@@ -129,19 +129,14 @@ Web app — single Next.js App Router monolith. All paths are relative to repo r
 
 ### Tests for User Story 3
 
-- [ ] T047 [P] [US3] Create unit test for `actionable.ts`: (a) `newPayingUsers` sorted by `activatedAt DESC` then `userId ASC`, capped at 25 rows, `totals.newPayingUsersTotal` returns uncapped count; (b) `recentCancellations` sorted by `canceledAt DESC` then `userId ASC`, capped at 25; (c) `topActiveUsers` length ≤ 5, sorted `jobCount DESC` → `lastJobAt DESC` → `userId ASC` (FR-022, SC-008); (d) `topProjects` length ≤ 5, same tie-break with `projectId ASC` tertiary; (e) empty fixture returns empty arrays + zero totals (FR-023) in new file `tests/unit/lib/admin/home/actionable.test.ts`
-- [ ] T048 [P] [US3] Create unit test for `<ActionableTable>` component covering tie-break determinism (SC-008 — two adjacent renders of same tied-rows fixture produce identical DOM row order), 25-row cap with "X au total" badge for `total > 25` (FR-024), empty-state row when rows array is empty (FR-023) in new file `tests/unit/components/admin/home/top-tables.test.tsx`
+- [X] T047 ✅ DONE [P] [US3] Create unit test for `actionable.ts`
+- [X] T048 ✅ DONE [P] [US3] Create unit test for `<ActionableTable>` component
 
 ### Implementation for User Story 3
 
-- [ ] T049 [P] [US3] Replace `app/lib/admin/home/actionable.ts` stub with real implementation:
-  - `computeNewPayingUsers`: `prisma.subscription.findMany({ where: { plan: { in: ['PRO', 'TEAM'] }, status: { in: ['ACTIVE', 'TRIALING'] }, createdAt: { gte: thirtyDaysAgoUTC } }, include: { user: { select: { id: true, email: true } } }, orderBy: [{ createdAt: 'desc' }, { userId: 'asc' }] })` → map to `PaidUserRow` with `daysSinceActivation`; cap at 25 rows; capture `totals.newPayingUsersTotal` via separate `count()`.
-  - `computeRecentCancellations`: `prisma.subscription.findMany({ where: { canceledAt: { gte: thirtyDaysAgoUTC } }, orderBy: [{ canceledAt: 'desc' }, { userId: 'asc' }], include: { user: ... } })` → `CancellationRow[]`; cap at 25; capture `totals.recentCancellationsTotal`.
-  - `computeTopActiveUsers`: `prisma.job.groupBy({ by: ['userId'], where: { createdAt: { gte: startOfMonthUTC } }, _count: { id: true }, _max: { createdAt: true }, orderBy: [{ _count: { id: 'desc' } }, { _max: { createdAt: 'desc' } }, { userId: 'asc' }], take: 5 })` → enrich with `user.email` and effective plan via `getEffectivePlan` (research §Existing Files `lib/billing/subscription.ts`).
-  - `computeTopProjects`: same shape `groupBy: ['projectId']`, enrich with project key/name and owner email; tertiary tie-break by `projectId ASC`.
-  Compose into `computeActionable(): Promise<{ tables, totals }>` returning all four arrays + totals.
-- [ ] T050 [P] [US3] Create generic `<ActionableTable>` primitive — accepts `title`, `columns`, `rows` (typed generic), optional `total` for "X au total" badge when `total > rows.length` (FR-024). Renders shadcn `Card` + simple HTML `<table>` (or `<div role="table">` for compactness) with theme tokens for borders. Empty-state row rendered when `rows.length === 0` (FR-023). New file `components/admin/home/actionable-table.tsx`
-- [ ] T051 [US3] Modify `components/admin/home/admin-home-dashboard.tsx` (from T030/T046) to add the actionable 2×2 grid as the final section: 4 instances of `<ActionableTable>` configured for `snapshot.actionable.newPayingUsers` (with `snapshot.meta.newPayingUsersTotal`), `snapshot.actionable.recentCancellations` (with `snapshot.meta.recentCancellationsTotal`), `snapshot.actionable.topActiveUsers`, `snapshot.actionable.topProjects` — each with appropriate columns per data-model.md actionable row types
+- [X] T049 ✅ DONE [P] [US3] Replace `app/lib/admin/home/actionable.ts` stub with real implementation
+- [X] T050 ✅ DONE [P] [US3] Create generic `<ActionableTable>` primitive
+- [X] T051 ✅ DONE [US3] Wire 2×2 actionable grid into `admin-home-dashboard.tsx`
 
 **Checkpoint**: All four actionable tables render with deterministic ordering; 25-row cap + count badge visible on large fixtures; tie-break holds across polls.
 
