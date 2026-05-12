@@ -37,10 +37,10 @@ export function AdminShell({ children }: AdminShellProps) {
             const Icon = entry.icon;
             const active = isAdminItemActive(pathname, entry.href);
             const baseClasses =
-              'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors';
+              'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors';
             const stateClasses = active
-              ? 'bg-accent/30 border-l-2 border-primary text-foreground'
-              : 'text-foreground hover:bg-accent';
+              ? 'bg-accent/30 border-l-2 border-primary'
+              : 'hover:bg-accent';
             return (
               <Link
                 key={entry.id}

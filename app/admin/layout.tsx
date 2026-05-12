@@ -9,8 +9,7 @@ export const dynamic = 'force-dynamic';
  * Admin shell layout. Calls notFound() for any caller who is not in
  * `ADMIN_ALLOWLIST`, producing the byte-equivalent 404 a non-existent route
  * would yield (AIB-791 FR-003, D-10). The global Header from the root layout
- * stays visible. AIB-796 replaces the inline placeholder sidebar with the
- * `<AdminShell>` Client Component (sidebar + main scaffold + active state).
+ * stays visible.
  */
 export default async function AdminLayout({
   children,
