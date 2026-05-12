@@ -12,7 +12,7 @@ export interface InsightsReport {
     linesAnalyzed: number
     filesAnalyzed: number
     findingsCount: number
-    [key: string]: any
+    [key: string]: unknown
   }
   content?: string
   blobUrl?: string

@@ -3,7 +3,12 @@ async function auth() {
   return { user: null }
 }
 
-export function checkAdminAccess(user: any): boolean {
+interface AdminUserShape {
+  role?: string | null
+  email?: string | null
+}
+
+export function checkAdminAccess(user: AdminUserShape | null | undefined): boolean {
   // In a real implementation, this would check the user's role
   // For now, we'll implement a basic check
   if (!user) {
@@ -17,7 +22,7 @@ export function checkAdminAccess(user: any): boolean {
 
   // Check if user email is in the admin emails list
   const adminEmails = process.env.ADMIN_EMAILS?.split(',') || []
-  if (adminEmails.includes(user.email)) {
+  if (user.email && adminEmails.includes(user.email)) {
     return true
   }
 
