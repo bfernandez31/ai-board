@@ -30,7 +30,7 @@ export async function POST(
       },
     });
 
-    if (!job) {
+    if (!job || !job.ticket) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 

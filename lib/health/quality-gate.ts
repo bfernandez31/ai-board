@@ -173,14 +173,21 @@ export async function getQualityGateData(projectId: number): Promise<QualityGate
     currentJobs.map((j) => j.qualityScoreDetails),
   );
 
-  const recentTickets: QualityGateTicket[] = currentJobs.map((j) => ({
+  // The query above filters to verify jobs whose ticket has stage='SHIP',
+  // workflowType='FULL', so j.ticket cannot be null in practice. Narrow
+  // explicitly to silence the new nullable-ticketId type signal (AIB-791).
+  const currentJobsWithTicket = currentJobs.filter(
+    (j): j is typeof j & { ticket: NonNullable<typeof j.ticket> } => j.ticket !== null
+  );
+
+  const recentTickets: QualityGateTicket[] = currentJobsWithTicket.map((j) => ({
     ticketKey: j.ticket.ticketKey,
     title: j.ticket.title,
     score: j.qualityScore!,
     completedAt: j.completedAt!.toISOString(),
   }));
 
-  const trendData: QualityGateTrendPoint[] = [...currentJobs]
+  const trendData: QualityGateTrendPoint[] = [...currentJobsWithTicket]
     .sort((a, b) => (a.completedAt!.getTime() - b.completedAt!.getTime()))
     .map((j) => ({
       ticketKey: j.ticket.ticketKey,

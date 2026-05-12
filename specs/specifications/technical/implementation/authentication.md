@@ -299,6 +299,26 @@ Shared authorization helpers enforce the standard access rules:
 
 These helpers accept an optional `NextRequest` so routes that support PATs can resolve identity from either session or token.
 
+## Admin Allowlist
+
+**File**: `app/lib/auth/admin.ts`
+
+The `/admin/*` area uses a configuration-driven allowlist rather than a database role. The allowlist is the comma-separated `ADMIN_ALLOWLIST` environment variable and is re-parsed on every request — operator additions/removals take effect on the next request without restart, schema migration, or cache flush.
+
+| Helper | Purpose |
+|--------|---------|
+| `getAdminAllowlist()` | Returns the normalized (trimmed, lowercased, non-empty) list of admin emails parsed from `ADMIN_ALLOWLIST` |
+| `isUserAdmin(email)` | Case-insensitive membership check; treats null/undefined as not-admin |
+| `requireAdminOrNotFound(request)` | API-route guard. Resolves the current user via `getCurrentUserOrNull(request)`; returns `{ ok: true, email }` for an allowlisted admin or `{ ok: false, response }` with a byte-equivalent 404 Response for everything else |
+| `requireAdminPageOrNotFound(request)` | Page-route variant. Calls Next.js `notFound()` for non-admins so the framework renders its default 404 page |
+| `adminNotFoundResponse()` | Constructs the canonical 404 Response (empty body, `Content-Type: text/html; charset=utf-8`, no other headers) used by API routes |
+
+### Byte-Equivalent 404 Parity
+
+Every admin route — page, API, asset, report-body — returns a response byte-equivalent to a genuinely missing path for any non-allowlisted caller (unauthenticated or authenticated). Status code, body bytes, and headers all match a control 404 against `/this-path-does-not-exist`. No JSON error body, no descriptive error string, no `Forbidden` status — a probe cannot distinguish "I exist but you can't see me" from "I do not exist". Tests in `tests/integration/api/admin/insights/parity-404.test.ts` assert byte equality across status, body, and headers for every admin path against an unauthenticated caller and an authenticated non-admin caller.
+
+Workflow-token-authenticated admin endpoints (PATCH/PUT/GET callbacks dispatched by `insights-analyze.yml`) are **not** subject to this rule — they return JSON `{ "error": "Unauthorized" }` with 401 on auth failure, consistent with other workflow-token endpoints, because these paths are not user-discoverable.
+
 ## Test Authentication
 
 **Primary files**:
@@ -345,6 +365,15 @@ TEST_WORKFLOW_TOKEN=<test-only-workflow-token>
 ```
 
 `TEST_WORKFLOW_TOKEN` is accepted by `getAcceptedWorkflowTokens()` and returned by `getWorkflowToken()` only when `isWorkflowTokenTestContext()` is true (i.e. `NODE_ENV=test`, `TEST_MODE=true`, or `VITEST_INTEGRATION=1`). It is never accepted in production contexts.
+
+### Required for Admin Insights
+
+```env
+ADMIN_ALLOWLIST=alice@example.com,bob@example.com
+INSIGHTS_RUN_TIMEOUT_MINUTES=60
+```
+
+`ADMIN_ALLOWLIST` is a comma-separated list of admin emails resolved at request time (re-parsed on every call so rotations take effect without restart). An empty or unset value means no users are admins; every admin route returns a byte-equivalent 404. `INSIGHTS_RUN_TIMEOUT_MINUTES` (default 60) controls how long a RUNNING insights report waits before lazy reconciliation auto-FAILs it.
 
 ## Security Notes
 

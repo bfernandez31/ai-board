@@ -61,3 +61,57 @@ export async function deleteJobLogArtifact(key: string): Promise<{ deleted: bool
     throw error;
   }
 }
+
+// Admin Insights (AIB-791). Same Vercel Blob wrapper, two siblings of the
+// job-log helpers. Stores HTML reports under deterministic keys
+// (`insights/reports/<reportId>.html`) so the iframe `src` can serve the
+// artifact directly without an extra lookup column (D-1, D-2).
+
+export async function uploadInsightsReportArtifact(
+  key: string,
+  html: Buffer | Uint8Array
+): Promise<{ key: string; size: number }> {
+  const token = requireToken();
+  const buf = Buffer.isBuffer(html) ? html : Buffer.from(html);
+  if (buf.byteLength <= 0) {
+    throw new Error('Insights report artifact must be non-empty');
+  }
+  const result = await put(key, buf, {
+    access: 'private',
+    token,
+    contentType: 'text/html; charset=utf-8',
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+  return { key: result.pathname, size: buf.byteLength };
+}
+
+export async function streamInsightsReportArtifact(
+  key: string
+): Promise<{
+  stream: ReadableStream<Uint8Array>;
+  contentType: string;
+  size: number;
+} | null> {
+  const token = requireToken();
+  let result;
+  try {
+    result = await get(key, { access: 'private', token });
+  } catch (error) {
+    const status = (error as { status?: number } | null)?.status;
+    if (status === 404) return null;
+    throw error;
+  }
+  // Treat 200 as the only success status. The @vercel/blob `GetBlobResult`
+  // union also documents 304 Not Modified (with a null stream) — this
+  // helper never sends conditional fetch headers so 304 is unreachable
+  // today; if a future caller adds `If-None-Match`/`If-Modified-Since`
+  // support, expand this guard before the null return masks a valid
+  // artifact as missing.
+  if (!result || result.statusCode !== 200 || !result.stream) return null;
+  return {
+    stream: result.stream,
+    contentType: result.blob.contentType ?? 'text/html; charset=utf-8',
+    size: result.blob.size,
+  };
+}

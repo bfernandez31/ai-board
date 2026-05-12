@@ -69,6 +69,7 @@ async function getAvailableAgentsForUser(
   );
 
   for (const job of jobs) {
+    if (!job.ticket) continue;
     const effective = (job.ticket.agent ?? job.ticket.project.defaultAgent) as NamedAgent;
     counts.set(effective, (counts.get(effective) ?? 0) + 1);
   }

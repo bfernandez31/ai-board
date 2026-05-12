@@ -325,6 +325,26 @@ enum SubscriptionStatus {
 }
 ```
 
+### InsightsRunStatus
+
+Lifecycle states for an `InsightsReport` row (Claude Code `/insights` analysis run).
+
+```prisma
+enum InsightsRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+```
+
+| Value | Description | Terminal? | Transitions To |
+|-------|-------------|-----------|----------------|
+| `RUNNING` | Row inserted by trigger; workflow dispatched; awaiting terminal callback or orphan reconciliation | No | `COMPLETED`, `FAILED` |
+| `COMPLETED` | Workflow PATCHed success AND server-side output validation passed | Yes | — |
+| `FAILED` | Workflow PATCHed failure, server-side output validation rejected the artifact, dispatch failed (rollback), or orphan reconciliation timed the row out | Yes | — |
+
+Terminal rows are immutable. All transitions use the atomic guard `WHERE id = ? AND status = 'RUNNING'`; late callbacks against an already-terminal row are no-ops. A FAILED run does not advance the previous-successful-run high-water mark used by period semantics.
+
 ### TicketAnalysisStatus
 
 Lifecycle of an inbox ticket analysis run.

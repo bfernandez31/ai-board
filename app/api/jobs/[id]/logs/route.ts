@@ -41,9 +41,10 @@ export async function POST(
     where: { id: jobId },
     select: { id: true, status: true, projectId: true, ticketId: true },
   });
-  if (!job) {
+  if (!job || job.ticketId === null) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
+  const ticketId = job.ticketId;
   if (job.status === 'PENDING' || job.status === 'RUNNING') {
     return NextResponse.json(
       { error: 'Job is not in a terminal state', code: 'JOB_NOT_TERMINAL' },
@@ -75,10 +76,10 @@ export async function POST(
 
     const rawUrl =
       row.captureStatus === 'CAPTURED'
-        ? buildJobLogRawUrl(job.projectId, job.ticketId, jobId)
+        ? buildJobLogRawUrl(job.projectId, ticketId, jobId)
         : null;
     const rawNativeUrl = row.rawArtifactKey
-      ? buildJobLogRawNativeUrl(job.projectId, job.ticketId, jobId)
+      ? buildJobLogRawNativeUrl(job.projectId, ticketId, jobId)
       : null;
 
     return NextResponse.json(

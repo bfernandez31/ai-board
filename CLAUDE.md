@@ -18,7 +18,7 @@
 - **Database**: PostgreSQL 14+, Prisma 6.x
 - **Styling**: TailwindCSS 3.4, shadcn/ui, lucide-react
 - **Charts**: Recharts 3.x (analytics dashboard)
-- **State**: TanStack Query v5.95.2, client-side polling (2s jobs, 10s comments, 15s notifications, 15s analytics, 15s usage)
+- **State**: TanStack Query v5.95.2, client-side polling (2s jobs, 10s comments, 15s notifications, 15s analytics, 15s usage, 15s admin-insights while RUNNING)
 - **Testing**: Vitest (unit + integration), Playwright (E2E browser tests)
 - **Auth**: NextAuth.js (session-based)
 - **Push Notifications**: web-push ^3.6.x (VAPID), Web Push API, Service Worker (/public/sw.js)
@@ -59,7 +59,7 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 - `workflowType`: FULL|QUICK — set once, never changes (CLEAN retained in DB enum for historical data)
 - `defaultBranch`: Repository default branch (auto-updated during config sync, defaults to `"main"`)
 - `previewUrl`: Single per project (auto-replaces on deploy)
-- Job commands: `specify`, `plan`, `implement`, `verify`, `ship`, `quick-impl`, `deploy-preview`, `rollback-reset`, `iterate`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`, `comment-ship`, `health-scan`
+- Job commands: `specify`, `plan`, `implement`, `verify`, `ship`, `quick-impl`, `deploy-preview`, `rollback-reset`, `iterate`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`, `comment-ship`, `health-scan`, `insights-analyze`
 - Notifications: 15s polling, soft delete with 30-day retention
 - PushSubscriptions: Multiple per user, auto-cleanup on 410/404
 - Subscription: One per user (FREE/PRO/TEAM), effective plan considers grace period; `lib/billing/` for billing logic; `PlanLimits` includes `maxMembersPerProject` (0=not allowed, 10=Team)

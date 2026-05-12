@@ -311,7 +311,7 @@ Jobs track GitHub Actions workflow executions.
 ```prisma
 model Job {
   id              Int       @id @default(autoincrement())
-  ticketId        Int
+  ticketId        Int?
   projectId       Int
   command         String    @db.VarChar(50)
   status          JobStatus @default(PENDING)
@@ -347,9 +347,10 @@ model Job {
   pluginVersion       String?   @db.VarChar(50)   // ai-board plugin version (.claude-plugin/plugin.json)
   agentCliVersion     String?   @db.VarChar(100)  // Agent CLI version (claude/codex/vibe/gemini --version)
 
-  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticket      Ticket?   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   log         JobLog?
+  insightsReport InsightsReport?
 
   @@index([ticketId])
   @@index([projectId])
@@ -363,9 +364,9 @@ model Job {
 
 **Fields**:
 - `id`: Auto-incrementing unique identifier
-- `ticketId`: Associated ticket (required foreign key)
-- `projectId`: Parent project (required foreign key, for polling queries)
-- `command`: Spec-kit command executed (specify|plan|implement|verify|ship|quick-impl|deploy-preview|rollback-reset|iterate|comment-specify|comment-plan|comment-build|comment-verify|comment-ship|health-scan, max 50 chars)
+- `ticketId`: Associated ticket (nullable foreign key — null for application-wide jobs like `insights-analyze` that have no driving ticket)
+- `projectId`: Parent project (required foreign key, for polling queries). For application-wide jobs (`insights-analyze`) the value is the ai-board host project so existing project-scoped log queries still resolve.
+- `command`: Job command executed (specify|plan|implement|verify|ship|quick-impl|deploy-preview|rollback-reset|iterate|comment-specify|comment-plan|comment-build|comment-verify|comment-ship|health-scan|insights-analyze, max 50 chars)
 - `status`: Current execution state (enum: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
 - `branch`: Git branch name (max 200 chars, nullable)
 - `commitSha`: Git commit hash (max 40 chars, nullable)
@@ -392,8 +393,9 @@ model Job {
 - `agentCliVersion`: Underlying agent CLI version active at job start (max 100 chars, nullable). Captured by parsing the first line of `<cli> --version` (claude/codex/vibe/gemini); leading binary name and `v` prefix are stripped. Null for jobs predating runtime version capture or runs where the CLI did not report a version.
 
 **Relationships**:
-- Belongs to Ticket (required, cascade delete)
+- Belongs to Ticket (optional, cascade delete) — null for `insights-analyze` jobs
 - Belongs to Project (required, cascade delete)
+- One-to-one with `InsightsReport` (this side null for every command except `insights-analyze`)
 
 **Constraints**:
 - Index on ticketId for job history queries
@@ -530,6 +532,87 @@ model JobLog {
 - Prune order per record: delete the normalized Blob object first, then the raw Blob object when present (each `404` treated as success); the row is only marked `PRUNED` after both deletes confirm
 - Access for read endpoints follows the parent ticket's ownership and membership rules via `verifyTicketAccess`
 - Blob artifact pathname is never rendered client-side — reads are proxied through the authenticated API
+
+### InsightsReport
+
+Metadata row for one Claude Code `/insights` analysis attempt produced by the admin Insights page.
+
+```prisma
+model InsightsReport {
+  id            Int               @id @default(autoincrement())
+  status        InsightsRunStatus @default(RUNNING)
+  generatedAt   DateTime          @default(now())
+  periodStart   DateTime
+  periodEnd     DateTime
+  sessionsCount Int?
+  ticketsCount  Int?
+  artifactKey   String?           @db.VarChar(300)
+  artifactSize  Int?
+  errorReason   String?           @db.VarChar(500)
+  jobId         Int?              @unique
+  job           Job?              @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  completedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([status, createdAt])
+  @@index([generatedAt])
+  @@index([periodEnd])
+}
+```
+
+**Purpose**: Persist the metadata for each Insights run so the admin page can list past reports, render the latest, and reconcile orphaned runs. The HTML body is stored separately in Vercel Blob at `insights/reports/<id>.html` and is referenced by `artifactKey`.
+
+**Fields**:
+- `id`: Auto-incrementing primary key — also the report's identity in URL paths and the deterministic blob key
+- `status`: Lifecycle state (`RUNNING`, `COMPLETED`, `FAILED`); always inserted as `RUNNING`
+- `generatedAt`: Trigger timestamp — fixed at insert, used in the canonical metadata header
+- `periodStart`: Half-open window start (inclusive). First-ever run: earliest Claude job's `startedAt`. Subsequent runs: previous COMPLETED row's `periodEnd`
+- `periodEnd`: Half-open window end (exclusive). Equal to `generatedAt` at insert
+- `sessionsCount`: Count of Claude Code sessions fed into `/insights` (populated only on COMPLETED, `>= 0`)
+- `ticketsCount`: Count of distinct tickets the sessions belonged to (populated only on COMPLETED, `>= 0`)
+- `artifactKey`: Blob key (`insights/reports/<id>.html`) — deterministic from `id`; stored explicitly so a future key-shape change does not break old rows. Populated only on COMPLETED
+- `artifactSize`: HTML body size in bytes (populated only on COMPLETED, `> 0`)
+- `errorReason`: Non-secret, operator-actionable failure reason (populated only on FAILED, ≤ 500 chars)
+- `jobId`: Optional FK to the companion `Job` row (the `insights-analyze` job that drove the workflow). `onDelete: SetNull` so a pruned job does not cascade-delete the audit record
+- `completedAt`: Terminal-state timestamp (set on either COMPLETED or FAILED)
+- `createdAt` / `updatedAt`: Row timestamps
+
+**Relationships**:
+- Optional one-to-one with `Job` via `jobId` — the companion `Job` row has `command = 'insights-analyze'`, `ticketId = null`, and `projectId` set to the ai-board host project
+- No relationship to `Project` or `Ticket` — reports are application-wide by design
+
+**Constraints**:
+- `@@index([status, createdAt])` services orphan reconciliation (find stale RUNNING rows) and the concurrency gate (`exists RUNNING`)
+- `@@index([generatedAt])` services the list endpoint's `ORDER BY generatedAt DESC LIMIT 200`
+- `@@index([periodEnd])` services `getLastCompletedRunEnd()` — `ORDER BY periodEnd DESC LIMIT 1 WHERE status='COMPLETED'`
+- `jobId` is unique — one report per insights job
+
+**State Machine**:
+```
+(insert) → RUNNING ──┬─► COMPLETED  (workflow PATCH success + output validation passes)
+                     │
+                     └─► FAILED     (workflow PATCH failure, validation failure,
+                                     dispatch failure rollback, or reconciliation timeout)
+```
+
+Terminal states never transition further. Every transition uses the atomic conditional pattern:
+```ts
+await prisma.insightsReport.updateMany({
+  where: { id, status: 'RUNNING' },
+  data:  { status: '...', ... },
+});
+```
+A late workflow callback for a row already auto-FAILED finds no row matching the guard; the update is a no-op (`count === 0`) and the terminal status is preserved.
+
+**Business Rules**:
+- Row is inserted in `RUNNING` BEFORE workflow dispatch so dispatch failures still leave an auditable record
+- A FAILED run does **not** advance the previous-successful-run high-water mark — the next attempt re-covers the same window
+- A COMPLETED row requires all of: `artifactKey`, `artifactSize`, `sessionsCount`, `ticketsCount`, `completedAt`
+- A FAILED row requires a non-empty `errorReason` (examples: `"Workflow dispatch failed: 404 …"`, `"Insights output validation failed"`, `"Artifact upload rejected by storage"`, `"Run timed out — workflow did not report terminal status"`)
+- `artifactKey`, when present, equals `buildInsightsReportKey(id)`; a mismatch is treated as a missing-blob (FR-024 placeholder) at serve time
+- Orphan reconciliation auto-transitions any RUNNING row whose `createdAt < now() - INSIGHTS_RUN_TIMEOUT_MINUTES` (default 60 minutes) to FAILED with reason `"Run timed out — workflow did not report terminal status"`; this runs lazily on every list-endpoint and trigger-endpoint call
+- Reports are read-only after creation — no edit, delete, annotate, or rename surface; retention is operator-managed at the storage layer
 
 ### Comment
 

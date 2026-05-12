@@ -41,7 +41,7 @@ export async function PUT(
     where: { id: jobId },
     select: { id: true, projectId: true, ticketId: true },
   });
-  if (!job) {
+  if (!job || job.ticketId === null) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 
@@ -108,7 +108,7 @@ export async function DELETE(
     where: { id: jobId },
     select: { projectId: true, ticketId: true },
   });
-  if (!job) {
+  if (!job || job.ticketId === null) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 

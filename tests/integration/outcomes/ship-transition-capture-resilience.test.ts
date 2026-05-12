@@ -191,3 +191,68 @@ describe('SHIP transition is resilient to capture failure (T019, FR-019)', () =>
     expect(calibration).toBeNull();
   });
 });
+
+// AIB-791 T021: predicate count vs list agreement across a mixed-agent window.
+import {
+  countShippedClaudeTicketsSince,
+  listShippedClaudeJobsForWindow,
+} from '@/app/lib/insights/predicate';
+
+describe('insights predicate: count vs list agreement (AIB-791 T021)', () => {
+  let ctx: TestContext;
+  const prisma = getPrismaClient();
+
+  beforeEach(async () => {
+    ctx = await getTestContext();
+    await ctx.cleanup();
+  });
+
+  it('countShippedClaudeTicketsSince agrees with listShippedClaudeJobsForWindow for a mixed-agent window', async () => {
+    const windowStart = new Date('2026-05-01T00:00:00Z');
+    const windowEnd = new Date('2026-05-12T00:00:00Z');
+
+    // Three tickets: (Claude+ticket-agent), (Claude+project-default),
+    // (Codex+ticket-agent) shipped inside the window.
+    const tCla = await ctx.createTicket({ title: '[e2e] claude-ticket-agent', description: 'x' });
+    const tInh = await ctx.createTicket({ title: '[e2e] claude-project-default', description: 'x' });
+    const tCod = await ctx.createTicket({ title: '[e2e] codex-ticket-agent', description: 'x' });
+
+    await prisma.ticket.update({ where: { id: tCla.id }, data: { agent: 'CLAUDE' } });
+    await prisma.ticket.update({ where: { id: tInh.id }, data: { agent: null } });
+    await prisma.ticket.update({ where: { id: tCod.id }, data: { agent: 'CODEX' } });
+    await prisma.project.update({ where: { id: ctx.projectId }, data: { defaultAgent: 'CLAUDE' } });
+
+    const baseOutcome = {
+      workflowType: WorkflowType.FULL,
+      ruleSetVersion: 1,
+      projectId: ctx.projectId,
+    };
+    for (const ticket of [tCla, tInh, tCod]) {
+      await prisma.job.create({
+        data: {
+          ticketId: ticket.id,
+          projectId: ctx.projectId,
+          command: 'implement',
+          status: JobStatus.COMPLETED,
+          startedAt: new Date('2026-05-05T00:00:00Z'),
+          completedAt: new Date('2026-05-05T00:30:00Z'),
+          updatedAt: new Date('2026-05-05T00:30:00Z'),
+        },
+      });
+      await prisma.ticketOutcome.create({
+        data: {
+          ...baseOutcome,
+          ticketId: ticket.id,
+          shippedAt: new Date('2026-05-05T01:00:00Z'),
+        },
+      });
+    }
+
+    const count = await countShippedClaudeTicketsSince(windowStart);
+    const list = await listShippedClaudeJobsForWindow(windowStart, windowEnd);
+
+    expect(count).toBe(2);
+    expect(new Set(list.map((j) => j.ticketId))).toEqual(new Set([tCla.id, tInh.id]));
+    expect(list.every((j) => j.rawArtifactKey.startsWith('raw-logs/'))).toBe(true);
+  });
+});
