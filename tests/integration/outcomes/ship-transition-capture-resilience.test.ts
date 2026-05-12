@@ -228,7 +228,7 @@ describe('insights predicate: count vs list agreement (AIB-791 T021)', () => {
       projectId: ctx.projectId,
     };
     for (const ticket of [tCla, tInh, tCod]) {
-      await prisma.job.create({
+      const job = await prisma.job.create({
         data: {
           ticketId: ticket.id,
           projectId: ctx.projectId,
@@ -237,6 +237,16 @@ describe('insights predicate: count vs list agreement (AIB-791 T021)', () => {
           startedAt: new Date('2026-05-05T00:00:00Z'),
           completedAt: new Date('2026-05-05T00:30:00Z'),
           updatedAt: new Date('2026-05-05T00:30:00Z'),
+        },
+      });
+      // Predicate gates on JobLog.rawArtifactKey presence.
+      await prisma.jobLog.create({
+        data: {
+          jobId: job.id,
+          captureStatus: 'CAPTURED',
+          preview: '',
+          rawArtifactKey: `raw-logs/${ctx.projectId}/${ticket.id}/${job.id}.jsonl.gz`,
+          rawArtifactSize: 1,
         },
       });
       await prisma.ticketOutcome.create({

@@ -33,7 +33,7 @@ async function seedShippedClaudeTicket(ctx: TestContext, when: Date) {
   const ticket = await ctx.createTicket({ title: '[e2e] shipped' });
   await prisma.ticket.update({ where: { id: ticket.id }, data: { agent: 'CLAUDE' } });
   await prisma.project.update({ where: { id: ctx.projectId }, data: { defaultAgent: 'CLAUDE' } });
-  await prisma.job.create({
+  const job = await prisma.job.create({
     data: {
       ticketId: ticket.id,
       projectId: ctx.projectId,
@@ -42,6 +42,17 @@ async function seedShippedClaudeTicket(ctx: TestContext, when: Date) {
       startedAt: when,
       completedAt: when,
       updatedAt: when,
+    },
+  });
+  // Predicate gates on JobLog.rawArtifactKey — the analyzable corpus is the
+  // set of sessions the workflow can actually fetch via /raw-native.
+  await prisma.jobLog.create({
+    data: {
+      jobId: job.id,
+      captureStatus: 'CAPTURED',
+      preview: '',
+      rawArtifactKey: `raw-logs/${ctx.projectId}/${ticket.id}/${job.id}.jsonl.gz`,
+      rawArtifactSize: 1,
     },
   });
   await prisma.ticketOutcome.create({

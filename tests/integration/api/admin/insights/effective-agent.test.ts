@@ -48,7 +48,7 @@ describe('FR-025: pre-flight count and workflow enumeration agree (US3)', () => 
 
     const baseShipped = new Date('2026-05-05T00:00:00Z');
     for (const t of [tCla, tInh, tCod]) {
-      await prisma.job.create({
+      const job = await prisma.job.create({
         data: {
           ticketId: t.id,
           projectId: ctx.projectId,
@@ -57,6 +57,17 @@ describe('FR-025: pre-flight count and workflow enumeration agree (US3)', () => 
           startedAt: baseShipped,
           completedAt: baseShipped,
           updatedAt: baseShipped,
+        },
+      });
+      // Predicate gates on JobLog.rawArtifactKey presence: the analyzer
+      // corpus is the set of sessions the workflow can actually fetch.
+      await prisma.jobLog.create({
+        data: {
+          jobId: job.id,
+          captureStatus: 'CAPTURED',
+          preview: '',
+          rawArtifactKey: `raw-logs/${ctx.projectId}/${t.id}/${job.id}.jsonl.gz`,
+          rawArtifactSize: 1,
         },
       });
       await prisma.ticketOutcome.create({

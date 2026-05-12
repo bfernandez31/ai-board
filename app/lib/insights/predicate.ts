@@ -45,6 +45,12 @@ interface RawJobRow {
  *   - `start === null` → no lower bound (used by first-ever pre-flight)
  *   - half-open: shippedAt >= start, shippedAt < end (or no upper bound when
  *     end === null — used by pre-flight's "since X" probe)
+ *
+ * Jobs without an uploaded raw-native artifact (`JobLog.rawArtifactKey IS
+ * NULL`) are excluded — the analyzer corpus is the set of sessions the
+ * workflow can actually fetch via `/api/admin/insights/jobs/:jobId/raw-native`.
+ * Including unfetchable jobs would let pre-flight promise sessions the
+ * download step cannot retrieve, killing the workflow on the first 404.
  */
 async function queryShippedJobs(
   start: Date | null,
@@ -79,6 +85,7 @@ async function queryShippedJobs(
     where: {
       ticketId: { in: ticketIds },
       status: 'COMPLETED',
+      log: { rawArtifactKey: { not: null } },
     },
     select: {
       id: true,

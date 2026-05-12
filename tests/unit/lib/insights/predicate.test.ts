@@ -231,4 +231,67 @@ describe('insights predicate (AIB-791)', () => {
       expect(await getEarliestClaudeJobTimestamp()).toBeNull();
     });
   });
+
+  describe('raw-artifact gating (workflow corpus alignment)', () => {
+    it('passes log.rawArtifactKey not-null filter to job.findMany', async () => {
+      mockedPrisma.ticketOutcome.findMany.mockResolvedValue([
+        makeOutcome({
+          ticketId: 1,
+          projectId: 10,
+          ticketAgent: 'CLAUDE',
+          projectDefaultAgent: 'CODEX',
+          shippedAt: new Date('2026-05-09T00:00:00Z'),
+        }),
+      ]);
+      mockedPrisma.job.findMany.mockResolvedValue([]);
+
+      await listShippedClaudeJobsForWindow(
+        new Date('2026-05-01T00:00:00Z'),
+        new Date('2026-05-11T00:00:00Z')
+      );
+
+      expect(mockedPrisma.job.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            log: { rawArtifactKey: { not: null } },
+          }),
+        })
+      );
+    });
+
+    it('excludes shipped Claude tickets whose only job lacks a raw artifact', async () => {
+      // The DB-level filter on `log.rawArtifactKey` causes job.findMany to
+      // return only jobs with an uploaded artifact. A ticket whose sole job
+      // had no artifact is therefore absent from the enumeration even though
+      // its outcome row still satisfies the window.
+      mockedPrisma.ticketOutcome.findMany.mockResolvedValue([
+        makeOutcome({
+          ticketId: 1,
+          projectId: 10,
+          ticketAgent: 'CLAUDE',
+          projectDefaultAgent: 'CODEX',
+          shippedAt: new Date('2026-05-09T00:00:00Z'),
+        }),
+      ]);
+      mockedPrisma.job.findMany.mockResolvedValue([]);
+
+      const list = await listShippedClaudeJobsForWindow(
+        new Date('2026-05-01T00:00:00Z'),
+        new Date('2026-05-11T00:00:00Z')
+      );
+      expect(list).toHaveLength(0);
+
+      mockedPrisma.ticketOutcome.findMany.mockResolvedValue([
+        makeOutcome({
+          ticketId: 1,
+          projectId: 10,
+          ticketAgent: 'CLAUDE',
+          projectDefaultAgent: 'CODEX',
+          shippedAt: new Date('2026-05-09T00:00:00Z'),
+        }),
+      ]);
+      mockedPrisma.job.findMany.mockResolvedValue([]);
+      expect(await countShippedClaudeTicketsSince(null)).toBe(0);
+    });
+  });
 });
