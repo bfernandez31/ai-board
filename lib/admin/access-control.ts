@@ -9,24 +9,16 @@ async function auth(): Promise<{ user: AdminCandidate | null }> {
 }
 
 export function checkAdminAccess(user: AdminCandidate | null | undefined): boolean {
-  // In a real implementation, this would check the user's role
-  // For now, we'll implement a basic check
   if (!user) {
     return false
   }
 
-  // Check if user has admin role
   if (user.role === 'ADMIN') {
     return true
   }
 
-  // Check if user email is in the admin emails list
-  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || []
-  if (user.email && adminEmails.includes(user.email)) {
-    return true
-  }
-
-  return false
+  const adminEmails = process.env.ADMIN_EMAILS?.split(',') ?? []
+  return !!user.email && adminEmails.includes(user.email)
 }
 
 export async function getCurrentUser() {
