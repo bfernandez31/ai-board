@@ -391,28 +391,33 @@ jobs:
                 OUTPUT=$(printf '@[%s:%s] ❌ **Review Failed**\n\nNo PR found for branch `%s`.\n\nPlease ensure a PR has been created before requesting a review.' "$USER_ID" "$USER" "$BRANCH")
               else
                 echo "✅ Found PR #$PR_NUMBER for branch $BRANCH"
-                # Always use Claude for code review — the command orchestrates Haiku/Sonnet agents.
-                # Tee stdout to a log so we can parse the QUALITY_SCORE_JSON marker afterwards.
+                # Tee stdout (only) to a log so we can parse the QUALITY_SCORE_JSON marker
+                # afterwards. Keep stderr on the GitHub Actions console — out of the
+                # ticket comment and out of the grep target.
                 CODE_REVIEW_LOG="/tmp/ai-board-review-${TICKET_ID}.log"
-                OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.code-review" "$PR_NUMBER --force" 2>&1 | tee "$CODE_REVIEW_LOG" || true)
+                OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.code-review" "$PR_NUMBER --force" 2> >(tee /dev/stderr) | tee "$CODE_REVIEW_LOG" || true)
 
                 # Backfill quality score onto the ticket's latest verify job when it was
                 # missing (e.g., original VERIFY workflow hit a token limit before emitting
                 # QUALITY_SCORE_JSON). The endpoint is idempotent — when a score already
                 # exists, it returns applied=false and we keep the assistant's no-save
                 # behaviour for routine re-reviews.
+                echo "🔍 Scanning code-review output for QUALITY_SCORE_JSON marker..."
                 if grep -q "QUALITY_SCORE_JSON:" "$CODE_REVIEW_LOG" 2>/dev/null; then
+                  echo "📊 QUALITY_SCORE_JSON marker found"
                   QUALITY_DETAILS=$(grep "QUALITY_SCORE_JSON:" "$CODE_REVIEW_LOG" | tail -1 | sed 's/.*QUALITY_SCORE_JSON://' | sed 's/[^}]*$//' | sed 's/^[^{]*//')
                   QUALITY_SCORE=$(echo "$QUALITY_DETAILS" | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).qualityScore))" 2>/dev/null || echo "")
                   if [ -n "$QUALITY_SCORE" ]; then
                     ESCAPED_DETAILS=$(echo "$QUALITY_DETAILS" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))")
                     BACKFILL_PAYLOAD="{\"qualityScore\": ${QUALITY_SCORE}, \"qualityScoreDetails\": ${ESCAPED_DETAILS}}"
-                    echo "🔁 Attempting quality-score backfill (score=${QUALITY_SCORE})..."
-                    curl -s -S -X PATCH "${APP_URL%/}/api/tickets/${TICKET_ID}/verify-quality-score" \
+                    echo "🔁 Calling PATCH /api/tickets/${TICKET_ID}/verify-quality-score (score=${QUALITY_SCORE})..."
+                    BACKFILL_RESPONSE=$(curl -s -S -w "\n%{http_code}" -X PATCH "${APP_URL%/}/api/tickets/${TICKET_ID}/verify-quality-score" \
                       -H "Content-Type: application/json" \
                       -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-                      -d "$BACKFILL_PAYLOAD" || echo "⚠️ Backfill call failed (non-fatal)"
-                    echo ""
+                      -d "$BACKFILL_PAYLOAD" || echo $'\n000')
+                    BACKFILL_STATUS=$(echo "$BACKFILL_RESPONSE" | tail -1)
+                    BACKFILL_BODY=$(echo "$BACKFILL_RESPONSE" | sed '$d')
+                    echo "🔁 Backfill HTTP ${BACKFILL_STATUS}: ${BACKFILL_BODY}"
                   else
                     echo "ℹ️ QUALITY_SCORE_JSON marker present but qualityScore could not be parsed — skipping backfill"
                   fi
@@ -431,6 +436,31 @@ jobs:
                   if ! echo "$OUTPUT" | grep -q "^@\[$USER_ID"; then
                     OUTPUT=$(printf '@[%s:%s] ✅ **Code Review Complete**\n\nReviewed PR #%s for branch `%s`.\n\n%s' "$USER_ID" "$USER" "$PR_NUMBER" "$BRANCH" "$OUTPUT")
                   fi
+                fi
+
+                # /review does not produce specs/$BRANCH/.ai-board-result.md (the
+                # code-review command only posts a PR comment). Without this file the
+                # downstream status-detection block falls back to `git diff` (l.~516)
+                # and, finding no changes, marks the assist job FAILED. Write a
+                # synthetic SUCCESS result so /review terminates cleanly.
+                RESULT_DIR="specs/$BRANCH"
+                mkdir -p "$RESULT_DIR" 2>/dev/null || true
+                if [ -d "$RESULT_DIR" ]; then
+                  cat > "$RESULT_DIR/.ai-board-result.md" <<RESULT_EOF
+# AI-BOARD Assist Result
+
+## Status
+SUCCESS
+
+## Message
+Code review re-run on PR #${PR_NUMBER}.
+
+## Files Modified
+None
+
+## Summary
+Posted code review comment on PR #${PR_NUMBER}.
+RESULT_EOF
                 fi
               fi
             fi
