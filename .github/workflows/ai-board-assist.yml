@@ -391,8 +391,39 @@ jobs:
                 OUTPUT=$(printf '@[%s:%s] ❌ **Review Failed**\n\nNo PR found for branch `%s`.\n\nPlease ensure a PR has been created before requesting a review.' "$USER_ID" "$USER" "$BRANCH")
               else
                 echo "✅ Found PR #$PR_NUMBER for branch $BRANCH"
-                # Always use Claude for code review — the command orchestrates Haiku/Sonnet agents
-                OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.code-review" "$PR_NUMBER --force" || true)
+                # Always use Claude for code review — the command orchestrates Haiku/Sonnet agents.
+                # Tee stdout to a log so we can parse the QUALITY_SCORE_JSON marker afterwards.
+                CODE_REVIEW_LOG="/tmp/ai-board-review-${TICKET_ID}.log"
+                OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.code-review" "$PR_NUMBER --force" 2>&1 | tee "$CODE_REVIEW_LOG" || true)
+
+                # Backfill quality score onto the ticket's latest verify job when it was
+                # missing (e.g., original VERIFY workflow hit a token limit before emitting
+                # QUALITY_SCORE_JSON). The endpoint is idempotent — when a score already
+                # exists, it returns applied=false and we keep the assistant's no-save
+                # behaviour for routine re-reviews.
+                if grep -q "QUALITY_SCORE_JSON:" "$CODE_REVIEW_LOG" 2>/dev/null; then
+                  QUALITY_DETAILS=$(grep "QUALITY_SCORE_JSON:" "$CODE_REVIEW_LOG" | tail -1 | sed 's/.*QUALITY_SCORE_JSON://' | sed 's/[^}]*$//' | sed 's/^[^{]*//')
+                  QUALITY_SCORE=$(echo "$QUALITY_DETAILS" | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).qualityScore))" 2>/dev/null || echo "")
+                  if [ -n "$QUALITY_SCORE" ]; then
+                    ESCAPED_DETAILS=$(echo "$QUALITY_DETAILS" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))")
+                    BACKFILL_PAYLOAD="{\"qualityScore\": ${QUALITY_SCORE}, \"qualityScoreDetails\": ${ESCAPED_DETAILS}}"
+                    echo "🔁 Attempting quality-score backfill (score=${QUALITY_SCORE})..."
+                    curl -s -S -X PATCH "${APP_URL%/}/api/tickets/${TICKET_ID}/verify-quality-score" \
+                      -H "Content-Type: application/json" \
+                      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+                      -d "$BACKFILL_PAYLOAD" || echo "⚠️ Backfill call failed (non-fatal)"
+                    echo ""
+                  else
+                    echo "ℹ️ QUALITY_SCORE_JSON marker present but qualityScore could not be parsed — skipping backfill"
+                  fi
+                else
+                  echo "ℹ️ No QUALITY_SCORE_JSON marker in code-review output — skipping backfill"
+                fi
+                rm -f "$CODE_REVIEW_LOG" || true
+
+                # Strip the QUALITY_SCORE_JSON marker line from the user-facing comment
+                # (it is a machine-readable line consumed by the backfill step above).
+                OUTPUT=$(echo "$OUTPUT" | grep -v "QUALITY_SCORE_JSON:" || true)
 
                 # Add user mention and summary wrapper if code-review succeeded
                 if [ -n "$OUTPUT" ]; then

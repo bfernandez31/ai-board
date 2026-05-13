@@ -1539,6 +1539,58 @@ Check if AI-BOARD can be mentioned for a given ticket.
 - `400`: Invalid ticket ID
 - `500`: Internal server error
 
+### PATCH /api/tickets/:id/verify-quality-score
+
+Idempotent backfill of the quality score on the ticket's latest verify job. Invoked by `ai-board-assist.yml` after a manual `/review`, so a rerun can persist the score that the original VERIFY workflow lost (typically a token-limit truncation before the `QUALITY_SCORE_JSON` marker).
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation (no project membership check)
+
+**Path Parameters**:
+- `id` (number, required): Ticket ID
+
+**Request Body**:
+```json
+{
+  "qualityScore": 83,
+  "qualityScoreDetails": "{\"version\":1,\"qualityScore\":83,\"threshold\":\"Good\",\"dimensions\":[...]}"
+}
+```
+
+**Validation**:
+- `qualityScore`: Required, integer 0-100 inclusive
+- `qualityScoreDetails`: Optional, JSON string containing dimension sub-scores
+
+**Behavior**:
+- Looks up the latest `command='verify'` Job for the ticket, ordered by `startedAt` desc
+- Conditional write: updates `qualityScore` and `qualityScoreDetails` only when the target job currently has `qualityScore = null`
+- Race-safe — the underlying update is gated on `qualityScore IS NULL` inside the same SQL statement, so concurrent callers cannot overwrite an existing score
+- Does not touch the verify job's `status` and does not re-trigger the auto-transition hook attached to `PATCH /api/jobs/:id/status`
+
+**Response** (200 OK — applied):
+```json
+{
+  "applied": true,
+  "jobId": 123,
+  "qualityScore": 83
+}
+```
+
+**Response** (200 OK — no-op when a score is already persisted):
+```json
+{
+  "applied": false,
+  "reason": "already_set",
+  "jobId": 123,
+  "qualityScore": 91
+}
+```
+
+**Errors**:
+- `400`: Invalid ticket ID or invalid request body
+- `401`: Invalid or missing workflow token
+- `404`: No verify job exists for the ticket (`{ "applied": false, "reason": "no_verify_job" }`)
+
 ### GET /api/projects/:projectId/tickets/verify
 
 Fetch all VERIFY-stage tickets for a project (workflow-only endpoint).

@@ -87,6 +87,12 @@ Some `@ai-board` comments use structured slash commands for specific automated a
 | `@ai-board /compare` | Any | Compares two tickets by telemetry and spec data |
 | `@ai-board /fix [numbers\|all]` | VERIFY only | Applies fixes for PR review findings from all sources |
 
+**`/review` Command**:
+
+`/review` re-runs the same `ai-board.code-review` orchestration used by the VERIFY workflow against the ticket's open PR. The review markdown is always (re-)posted as a PR comment.
+
+The quality score produced by the rerun is backfilled onto the ticket's latest verify job **only when that job has no quality score yet** — typically because the original VERIFY workflow's code-review step hit a token limit before emitting its `QUALITY_SCORE_JSON` marker. When a score is already recorded, the rerun does not overwrite it, so repeated `/review` invocations remain non-persistent and only the original verify job's score appears in dashboards and analytics.
+
 **`/fix` Command**:
 
 The `/fix` command automatically addresses PR review findings from three sources: ai-board custom reviews (`### Code review` format), Codex bot inline comments (`chatgpt-codex-connector[bot]`), and GitHub Copilot inline comments.
