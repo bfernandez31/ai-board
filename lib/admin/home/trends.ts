@@ -65,19 +65,15 @@ export async function computeMrrMonthly(months = 12): Promise<MrrMonthPoint[]> {
     const activeSubs = await prisma.subscription.findMany({
       where: {
         createdAt: { lt: monthEnd },
-        status: { in: ['ACTIVE', 'TRIALING'] },
         plan: { in: ['PRO', 'TEAM'] },
-        OR: [
-          { cancelAt: null },
-          { cancelAt: { gt: monthStart } },
-          { canceledAt: null },
-          { canceledAt: { gt: monthStart } },
+        AND: [
+          { OR: [{ cancelAt: null }, { cancelAt: { gt: monthStart } }] },
+          { OR: [{ canceledAt: null }, { canceledAt: { gt: monthStart } }] },
+          { OR: [{ trialEnd: null }, { trialEnd: { lte: monthStart } }] },
         ],
       },
       select: { plan: true },
     });
-
-    if (activeSubs.length === 0 && i > 0) continue;
 
     const mrr = activeSubs.reduce((sum, s) => sum + PLANS[s.plan].priceMonthly, 0);
     result.push({ m: monthKey, v: mrr });

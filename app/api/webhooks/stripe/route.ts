@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
         break;
       default:
-        return NextResponse.json({ received: true }, { status: 200 });
+        break;
     }
 
     await recordWebhookOutcome(event.id, event.type, 'SUCCESS');

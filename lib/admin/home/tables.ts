@@ -34,7 +34,10 @@ export async function listRecentCancellations(days = 30, limit = 50): Promise<Ca
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   const subs = await prisma.subscription.findMany({
-    where: { canceledAt: { gte: since } },
+    where: {
+      canceledAt: { gte: since },
+      plan: { in: ['PRO', 'TEAM'] },
+    },
     include: { user: { select: { email: true, createdAt: true } } },
     orderBy: { canceledAt: 'desc' },
     take: limit,
@@ -76,14 +79,17 @@ export async function listTopUsersThisMonth(limit = 5): Promise<TopUserRow[]> {
 
   const userMap = new Map(users.map((u) => [u.id, u]));
 
-  return rows.map((r) => {
+  const result: TopUserRow[] = [];
+  for (const r of rows) {
     const user = userMap.get(r.user_id);
-    return {
-      email: user?.email ?? r.user_id,
-      plan: user?.subscription?.plan ?? 'FREE',
+    if (!user) continue;
+    result.push({
+      email: user.email,
+      plan: user.subscription?.plan ?? 'FREE',
       jobsThisMonth: Number(r.job_count),
-    };
-  });
+    });
+  }
+  return result;
 }
 
 export async function listTopProjectsThisMonth(limit = 5): Promise<TopProjectRow[]> {
@@ -108,12 +114,15 @@ export async function listTopProjectsThisMonth(limit = 5): Promise<TopProjectRow
 
   const projectMap = new Map(projects.map((p) => [p.id, p]));
 
-  return grouped.map((g) => {
+  const result: TopProjectRow[] = [];
+  for (const g of grouped) {
     const project = projectMap.get(g.projectId);
-    return {
-      projectKey: project?.key ?? String(g.projectId),
-      ownerEmail: project?.user?.email ?? '',
+    if (!project) continue;
+    result.push({
+      projectKey: project.key,
+      ownerEmail: project.user?.email ?? '',
       jobsThisMonth: g._count.id,
-    };
-  });
+    });
+  }
+  return result;
 }

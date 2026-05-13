@@ -49,21 +49,21 @@ export async function computeAlerts(): Promise<Alert[]> {
     alerts.push({
       kind: 'STRIPE_WEBHOOK_ERRORS',
       message: `${webhookFailures} Stripe webhook failure${webhookFailures > 1 ? 's' : ''} in the last 24 hours`,
-      href: '/admin',
+      href: '/admin/insights',
     });
   }
 
   // STALE_CRITICAL_CRON
   const cronRunMap = new Map(cronRuns.map((r) => [r.cron, r.lastSuccessAt]));
-  const thresholdMs = 36 * 60 * 60 * 1000;
 
   for (const entry of CRITICAL_CRONS) {
     const lastRun = cronRunMap.get(entry.key);
-    if (!lastRun || now.getTime() - lastRun.getTime() > thresholdMs) {
+    const thresholdMs = entry.thresholdHours * 60 * 60 * 1000;
+    if (lastRun && now.getTime() - lastRun.getTime() > thresholdMs) {
       alerts.push({
         kind: 'STALE_CRITICAL_CRON',
         message: `Critical cron "${entry.label}" has not run in the last ${entry.thresholdHours} hours`,
-        href: '/admin',
+        href: '/admin/insights',
       });
     }
   }

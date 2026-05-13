@@ -87,7 +87,10 @@ export async function computeChurn(): Promise<Churn> {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const canceledThisMonth = await prisma.subscription.findMany({
-    where: { canceledAt: { gte: startOfMonth } },
+    where: {
+      canceledAt: { gte: startOfMonth },
+      plan: { in: ['PRO', 'TEAM'] },
+    },
     select: { plan: true },
   });
   const cancellations = canceledThisMonth.length;
@@ -122,7 +125,7 @@ export async function computeChurn(): Promise<Churn> {
     where: {
       createdAt: { gte: startOfMonth },
       plan: { in: ['PRO', 'TEAM'] },
-      status: { in: ['ACTIVE', 'TRIALING'] },
+      status: 'ACTIVE',
     },
     select: { plan: true },
   });

@@ -8,7 +8,7 @@ const bodySchema = z.object({ cron: z.nativeEnum(CriticalCron) }).strict();
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get('Authorization');
   const expectedToken = process.env.WORKFLOW_API_TOKEN;
-  if (!authHeader || authHeader !== `Bearer ${expectedToken}`) {
+  if (!expectedToken || !authHeader || authHeader !== `Bearer ${expectedToken}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

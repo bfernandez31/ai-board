@@ -21,8 +21,8 @@ export function PulseStrip({ pulse }: PulseStripProps) {
           title="Users"
           value={users.value}
           deltas={[
-            { label: '7d', value: formatDelta(users.delta7d, 0) },
-            { label: '30d', value: formatDelta(users.delta30d, 0) },
+            { label: 'vs prev 7d', value: formatDelta(users.value, users.value - users.delta7d) },
+            { label: 'vs prev 30d', value: formatDelta(users.value, users.value - users.delta30d) },
           ]}
           spark={users.spark}
         />
@@ -49,7 +49,7 @@ export function PulseStrip({ pulse }: PulseStripProps) {
                 ? `+${formatUsdCents(mrr.deltaUsdThisMonth)}`
                 : formatUsdCents(mrr.deltaUsdThisMonth),
             },
-            { label: `${mrr.proCount} PRO / ${mrr.teamCount} TEAM`, value: '' },
+            { label: 'PRO / TEAM', value: `${mrr.proCount} / ${mrr.teamCount}` },
           ]}
           spark={mrr.spark}
         />

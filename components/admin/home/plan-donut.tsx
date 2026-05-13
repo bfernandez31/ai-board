@@ -20,6 +20,14 @@ interface PlanDonutProps {
 }
 
 export function PlanDonut({ data }: PlanDonutProps) {
+  const total = data.reduce((sum, row) => sum + row.count, 0);
+  if (total === 0) {
+    return (
+      <div className="flex h-32 items-center justify-center text-xs text-muted-foreground">
+        No plan data
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-3">
       <div className="h-32">

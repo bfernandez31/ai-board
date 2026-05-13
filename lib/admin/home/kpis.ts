@@ -53,7 +53,7 @@ export async function computePulseKpis(): Promise<PulseSnapshot> {
     `,
     prisma.subscription.findMany({
       where: {
-        status: { in: ['ACTIVE', 'TRIALING'] },
+        status: 'ACTIVE',
         plan: { in: ['PRO', 'TEAM'] },
         OR: [{ cancelAt: null }, { cancelAt: { gt: now } }],
       },
@@ -102,9 +102,7 @@ export async function computePulseKpis(): Promise<PulseSnapshot> {
     }
   }
 
-  // Sparklines
   const userSpark = padSpark(userSparkRaw, 30);
-  const emptyDays = userSpark.map((p) => ({ d: p.d, v: 0 }));
 
   return {
     users: {
@@ -117,7 +115,7 @@ export async function computePulseKpis(): Promise<PulseSnapshot> {
       value: mauValue,
       deltaPrev30d: mauValue - prevMauValue,
       shareOfBase: totalUsers > 0 ? mauValue / totalUsers : null,
-      spark: emptyDays,
+      spark: [],
     },
     mrr: {
       value: mrrUsd,
@@ -127,13 +125,13 @@ export async function computePulseKpis(): Promise<PulseSnapshot> {
       teamCount,
       proUsd,
       teamUsd,
-      spark: emptyDays,
+      spark: [],
     },
     activePaying: {
       value: activePayingValue,
       delta30d: activePaying30dDelta,
       conversionRate: totalUsers > 0 ? activePayingValue / totalUsers : null,
-      spark: emptyDays,
+      spark: [],
     },
   };
 }
