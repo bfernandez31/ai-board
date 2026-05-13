@@ -446,21 +446,21 @@ jobs:
                 RESULT_DIR="specs/$BRANCH"
                 mkdir -p "$RESULT_DIR" 2>/dev/null || true
                 if [ -d "$RESULT_DIR" ]; then
-                  cat > "$RESULT_DIR/.ai-board-result.md" <<RESULT_EOF
-# AI-BOARD Assist Result
-
-## Status
-SUCCESS
-
-## Message
-Code review re-run on PR #${PR_NUMBER}.
-
-## Files Modified
-None
-
-## Summary
-Posted code review comment on PR #${PR_NUMBER}.
-RESULT_EOF
+                  {
+                    echo "# AI-BOARD Assist Result"
+                    echo ""
+                    echo "## Status"
+                    echo "SUCCESS"
+                    echo ""
+                    echo "## Message"
+                    echo "Code review re-run on PR #${PR_NUMBER}."
+                    echo ""
+                    echo "## Files Modified"
+                    echo "None"
+                    echo ""
+                    echo "## Summary"
+                    echo "Posted code review comment on PR #${PR_NUMBER}."
+                  } > "$RESULT_DIR/.ai-board-result.md"
                 fi
               fi
             fi
