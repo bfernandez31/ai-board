@@ -30,6 +30,7 @@ const PUBLIC_PATTERNS = [
   /^\/api\/projects\/\d+\/tickets\/[^/]+\/preview-url$/,
   /^\/api\/projects\/\d+\/tickets\/search$/,
   /^\/api\/projects\/\d+\/tickets\/\d+\/jobs$/,
+  /^\/api\/tickets\/\d+\/verify-quality-score$/,
   /^\/api\/projects\/\d+\/health\/scans\/\d+\/status$/,
   /^\/api\/projects\/\d+\/health\/scans$/,
   /^\/api\/projects\/\d+\/setup\/jobs\/\d+\/status$/,
