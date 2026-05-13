@@ -58,13 +58,11 @@ test.describe('Inbox Analysis a11y smoke', () => {
 
     const trigger = page.getByTestId('inbox-analysis-trigger');
     if (await trigger.isVisible().catch(() => false)) {
-      // The trigger label is `Run analysis` while the cost is still loading,
-      // and `Run analysis — estimated cost ${amount}` once it resolves. Wait
-      // for the button to become enabled (API responded, data loaded), then
-      // verify both halves of the a11y label. Use a generous timeout because
-      // the analysis GET endpoint can be slow under CI load.
-      await expect(trigger).not.toBeDisabled({ timeout: 10000 });
-      await expect(trigger).toHaveAttribute('aria-label', /estimated cost/);
+      // The button is enabled immediately (triggerable=true, no rate-limit exhausted).
+      // The aria-label gains the estimated cost once the eligibility GET resolves.
+      // Use a generous timeout because the analysis GET endpoint can be slow under CI load.
+      await expect(trigger).not.toBeDisabled({ timeout: 5000 });
+      await expect(trigger).toHaveAttribute('aria-label', /estimated cost/, { timeout: 15000 });
       const label = await trigger.getAttribute('aria-label');
       expect(label).toContain('Run analysis');
       expect(label).toContain('cost');

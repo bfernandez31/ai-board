@@ -125,7 +125,7 @@ export function InboxAnalysisPanel({
 }: InboxAnalysisPanelProps) {
   const [isPending, setIsPending] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const { data, isLoading, refetch } = useTicketAnalysis(projectId, ticketId);
+  const { data, refetch } = useTicketAnalysis(projectId, ticketId);
   const { toast } = useToast();
 
   const handleTrigger = async () => {
@@ -177,7 +177,7 @@ export function InboxAnalysisPanel({
           estimatedCostUsd={eligibility.estimatedCostUsd}
           rateLimit={eligibility.rateLimit}
           onTrigger={handleTrigger}
-          isPending={isPending || (isLoading && !data)}
+          isPending={isPending}
           showCost={showCostLabel}
         />
       </div>
