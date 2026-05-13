@@ -59,7 +59,7 @@ export async function computeAlerts(): Promise<Alert[]> {
   for (const entry of CRITICAL_CRONS) {
     const lastRun = cronRunMap.get(entry.key);
     const thresholdMs = entry.thresholdHours * 60 * 60 * 1000;
-    if (lastRun && now.getTime() - lastRun.getTime() > thresholdMs) {
+    if (!lastRun || now.getTime() - lastRun.getTime() > thresholdMs) {
       alerts.push({
         kind: 'STALE_CRITICAL_CRON',
         message: `Critical cron "${entry.label}" has not run in the last ${entry.thresholdHours} hours`,

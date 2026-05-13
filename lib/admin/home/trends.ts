@@ -55,27 +55,39 @@ export async function computeJobsDaily(days = 30): Promise<JobTrendPoint[]> {
 
 export async function computeMrrMonthly(months = 12): Promise<MrrMonthPoint[]> {
   const now = new Date();
-  const result: MrrMonthPoint[] = [];
+  const earliestMonthStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (months - 1), 1),
+  );
 
+  // Single query: every PRO/TEAM sub that could plausibly contribute to any month
+  // in the window. We compute month-by-month membership in memory.
+  const candidates = await prisma.subscription.findMany({
+    where: {
+      plan: { in: ['PRO', 'TEAM'] },
+      createdAt: { lte: now },
+      OR: [
+        { canceledAt: null },
+        { canceledAt: { gt: earliestMonthStart } },
+      ],
+    },
+    select: { plan: true, createdAt: true, cancelAt: true, canceledAt: true, trialEnd: true },
+  });
+
+  const result: MrrMonthPoint[] = [];
   for (let i = months - 1; i >= 0; i--) {
-    const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i + 1, 1));
     const monthKey = monthStart.toISOString().slice(0, 7);
 
-    const activeSubs = await prisma.subscription.findMany({
-      where: {
-        createdAt: { lt: monthEnd },
-        plan: { in: ['PRO', 'TEAM'] },
-        AND: [
-          { OR: [{ cancelAt: null }, { cancelAt: { gt: monthStart } }] },
-          { OR: [{ canceledAt: null }, { canceledAt: { gt: monthStart } }] },
-          { OR: [{ trialEnd: null }, { trialEnd: { lte: monthStart } }] },
-        ],
-      },
-      select: { plan: true },
-    });
-
-    const mrr = activeSubs.reduce((sum, s) => sum + PLANS[s.plan].priceMonthly, 0);
+    let mrr = 0;
+    for (const sub of candidates) {
+      if (sub.createdAt >= monthEnd) continue;
+      if (sub.cancelAt && sub.cancelAt <= monthStart) continue;
+      if (sub.canceledAt && sub.canceledAt <= monthStart) continue;
+      // Trial subs are not counted as MRR until their trial ends.
+      if (sub.trialEnd && sub.trialEnd > monthStart) continue;
+      mrr += PLANS[sub.plan].priceMonthly;
+    }
     result.push({ m: monthKey, v: mrr });
   }
 

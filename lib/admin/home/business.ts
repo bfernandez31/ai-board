@@ -53,11 +53,22 @@ export async function computeActivationFunnel(): Promise<ActivationFunnel> {
   });
   const step2Count = usersWithProject.length;
 
+  // A cohort user has reached FIRST_JOB if a job has run inside any project
+  // they own OR belong to as a member — TEAM members reach this milestone
+  // through a project owned by their inviter.
   const usersWithJob = await prisma.$queryRaw<{ user_id: string }[]>`
-    SELECT DISTINCT p."userId" AS user_id
-    FROM "Job" j
-    JOIN "Project" p ON p.id = j."projectId"
-    WHERE p."userId" = ANY(${cohortIds}::text[])
+    SELECT DISTINCT u_id AS user_id
+    FROM (
+      SELECT p."userId" AS u_id
+      FROM "Job" j
+      JOIN "Project" p ON p.id = j."projectId"
+      WHERE p."userId" = ANY(${cohortIds}::text[])
+      UNION
+      SELECT pm."userId" AS u_id
+      FROM "Job" j
+      JOIN "ProjectMember" pm ON pm."projectId" = j."projectId"
+      WHERE pm."userId" = ANY(${cohortIds}::text[])
+    ) jobs_per_cohort_user
   `;
   const step3Count = usersWithJob.length;
 
@@ -95,24 +106,12 @@ export async function computeChurn(): Promise<Churn> {
   });
   const cancellations = canceledThisMonth.length;
 
-  // Downgrade approximation: subs updated this month whose plan is less valuable
-  // than what TEAM pricing suggests. We look for subs with updatedAt >= startOfMonth
-  // that have plan = PRO (possible downgrade from TEAM).
-  const updatedThisMonth = await prisma.subscription.findMany({
-    where: {
-      updatedAt: { gte: startOfMonth },
-      plan: 'PRO',
-      status: { in: ['ACTIVE', 'TRIALING'] },
-    },
-    select: { stripePriceId: true },
-  });
-
-  // Approximate: a downgrade if the current stripePriceId maps to a TEAM-priced plan
-  // but the subscription is PRO. This is documented as an approximation.
-  const teamPriceId = PLANS.TEAM.stripePriceId;
-  const downgrades = teamPriceId
-    ? updatedThisMonth.filter((s) => s.stripePriceId === teamPriceId).length
-    : 0;
+  // True downgrade detection requires subscription-plan history, which we do
+  // not record. Report 0 rather than the previous approximation, which was
+  // structurally impossible to fire (it looked for plan=PRO subs whose
+  // stripePriceId matched the TEAM price, but plan is derived from
+  // stripePriceId so that combination never occurs).
+  const downgrades = 0;
 
   const mrrLostCancellations = canceledThisMonth.reduce(
     (sum, s) => sum + (PLANS[s.plan]?.priceMonthly ?? 0),

@@ -6,6 +6,11 @@ export function formatDelta(current: number, prior: number): string {
   return `${sign}${pct.toFixed(1)}%`;
 }
 
+export function formatCountDelta(delta: number): string {
+  if (delta === 0) return '—';
+  return delta > 0 ? `+${delta}` : `${delta}`;
+}
+
 const usdFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',

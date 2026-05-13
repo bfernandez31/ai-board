@@ -10,6 +10,8 @@ export default async function AdminRootPage() {
   const requestHeaders = await headers();
   const requestLike = {
     headers: requestHeaders,
+    nextUrl: { pathname: '/admin' },
+    url: '/admin',
   } as unknown as NextRequest;
 
   await requireAdminPageOrNotFound(requestLike);

@@ -14,9 +14,10 @@ interface PulseTileProps {
   deltas: DeltaItem[];
   spark: TrendPoint[];
   formatter?: (v: number) => string;
+  sparkStroke?: string;
 }
 
-export function PulseTile({ title, value, deltas, spark, formatter }: PulseTileProps) {
+export function PulseTile({ title, value, deltas, spark, formatter, sparkStroke = 'hsl(var(--chart-1))' }: PulseTileProps) {
   const displayValue = typeof value === 'number' && formatter ? formatter(value) : String(value);
 
   return (
@@ -45,7 +46,7 @@ export function PulseTile({ title, value, deltas, spark, formatter }: PulseTileP
               <Line
                 type="monotone"
                 dataKey="v"
-                stroke="hsl(var(--chart-1))"
+                stroke={sparkStroke}
                 dot={false}
                 strokeWidth={1.5}
               />

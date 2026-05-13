@@ -1,7 +1,7 @@
 'use client';
 
 import { PulseTile } from './pulse-tile';
-import { formatUsdCents, formatDelta } from '@/lib/admin/home/format';
+import { formatUsdCents, formatCountDelta } from '@/lib/admin/home/format';
 import type { PulseSnapshot } from '@/lib/admin/home/types';
 
 interface PulseStripProps {
@@ -21,22 +21,24 @@ export function PulseStrip({ pulse }: PulseStripProps) {
           title="Users"
           value={users.value}
           deltas={[
-            { label: 'vs prev 7d', value: formatDelta(users.value, users.value - users.delta7d) },
-            { label: 'vs prev 30d', value: formatDelta(users.value, users.value - users.delta30d) },
+            { label: 'new 7d', value: formatCountDelta(users.delta7d) },
+            { label: 'new 30d', value: formatCountDelta(users.delta30d) },
           ]}
           spark={users.spark}
+          sparkStroke="hsl(var(--chart-1))"
         />
         <PulseTile
           title="MAU"
           value={mau.value}
           deltas={[
-            { label: 'vs prev 30d', value: formatDelta(mau.value, mau.value - mau.deltaPrev30d) },
+            { label: 'vs prev 30d', value: formatCountDelta(mau.deltaPrev30d) },
             {
               label: 'of base',
               value: mau.shareOfBase !== null ? `${(mau.shareOfBase * 100).toFixed(1)}%` : '—',
             },
           ]}
           spark={mau.spark}
+          sparkStroke="hsl(var(--chart-2))"
         />
         <PulseTile
           title="MRR"
@@ -52,12 +54,13 @@ export function PulseStrip({ pulse }: PulseStripProps) {
             { label: 'PRO / TEAM', value: `${mrr.proCount} / ${mrr.teamCount}` },
           ]}
           spark={mrr.spark}
+          sparkStroke="hsl(var(--chart-3))"
         />
         <PulseTile
           title="Active Paying"
           value={activePaying.value}
           deltas={[
-            { label: '30d', value: formatDelta(activePaying.value, activePaying.value - activePaying.delta30d) },
+            { label: '30d', value: formatCountDelta(activePaying.delta30d) },
             {
               label: 'conversion',
               value: activePaying.conversionRate !== null
@@ -66,6 +69,7 @@ export function PulseStrip({ pulse }: PulseStripProps) {
             },
           ]}
           spark={activePaying.spark}
+          sparkStroke="hsl(var(--chart-4))"
         />
       </div>
     </section>

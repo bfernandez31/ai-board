@@ -62,7 +62,16 @@ describe('POST /api/webhooks/stripe — WebhookOutcome capture', () => {
   });
 
   it('writes exactly one FAILURE row with truncated errorMessage when handler throws', async () => {
-    const event = { id: 'evt_002', type: 'invoice.payment_succeeded', data: { object: { id: 'inv_1', parent: null } } };
+    const event = {
+      id: 'evt_002',
+      type: 'invoice.payment_succeeded',
+      data: {
+        object: {
+          id: 'inv_1',
+          parent: { subscription_details: { subscription: 'sub_failure' } },
+        },
+      },
+    };
     constructEventMock.mockReturnValue(event);
     createStripeEventMock.mockResolvedValue({});
     webhookOutcomeCreateMock.mockResolvedValue({});
@@ -92,7 +101,16 @@ describe('POST /api/webhooks/stripe — WebhookOutcome capture', () => {
   });
 
   it('preserves the 500 response even when recordWebhookOutcome itself throws', async () => {
-    const event = { id: 'evt_004', type: 'invoice.payment_succeeded', data: { object: { id: 'inv_2', parent: null } } };
+    const event = {
+      id: 'evt_004',
+      type: 'invoice.payment_succeeded',
+      data: {
+        object: {
+          id: 'inv_2',
+          parent: { subscription_details: { subscription: 'sub_recovery' } },
+        },
+      },
+    };
     constructEventMock.mockReturnValue(event);
     createStripeEventMock.mockResolvedValue({});
 

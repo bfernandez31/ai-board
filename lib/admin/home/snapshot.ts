@@ -31,43 +31,34 @@ export async function buildSnapshot(): Promise<AdminHomeSnapshot> {
   const [alerts, pulse, business, trends, tables] = await Promise.all([
     safe('computeAlerts', computeAlerts, []),
     safe('computePulseKpis', computePulseKpis, emptyPulse()),
-    safe(
-      'business aggregators',
-      async () => {
-        const [planDistribution, activationFunnel, churn] = await Promise.all([
-          computePlanDistribution(),
-          computeActivationFunnel(),
-          computeChurn(),
-        ]);
-        return { planDistribution, activationFunnel, churn };
-      },
-      emptyBusiness()
-    ),
-    safe(
-      'trends aggregators',
-      async () => {
-        const [signupsDaily, jobsDaily, mrrMonthly] = await Promise.all([
-          computeSignupsDaily(30),
-          computeJobsDaily(30),
-          computeMrrMonthly(12),
-        ]);
-        return { signupsDaily, jobsDaily, mrrMonthly };
-      },
-      emptyTrends()
-    ),
-    safe(
-      'tables aggregators',
-      async () => {
-        const [newPaying, cancellations, topUsers, topProjects] = await Promise.all([
-          listNewPayingUsers(30, 50),
-          listRecentCancellations(30, 50),
-          listTopUsersThisMonth(5),
-          listTopProjectsThisMonth(5),
-        ]);
-        return { newPaying, cancellations, topUsers, topProjects };
-      },
-      emptyTables()
-    ),
+    (async () => {
+      const empty = emptyBusiness();
+      const [planDistribution, activationFunnel, churn] = await Promise.all([
+        safe('computePlanDistribution', computePlanDistribution, empty.planDistribution),
+        safe('computeActivationFunnel', computeActivationFunnel, empty.activationFunnel),
+        safe('computeChurn', computeChurn, empty.churn),
+      ]);
+      return { planDistribution, activationFunnel, churn };
+    })(),
+    (async () => {
+      const empty = emptyTrends();
+      const [signupsDaily, jobsDaily, mrrMonthly] = await Promise.all([
+        safe('computeSignupsDaily', () => computeSignupsDaily(30), empty.signupsDaily),
+        safe('computeJobsDaily', () => computeJobsDaily(30), empty.jobsDaily),
+        safe('computeMrrMonthly', () => computeMrrMonthly(12), empty.mrrMonthly),
+      ]);
+      return { signupsDaily, jobsDaily, mrrMonthly };
+    })(),
+    (async () => {
+      const empty = emptyTables();
+      const [newPaying, cancellations, topUsers, topProjects] = await Promise.all([
+        safe('listNewPayingUsers', () => listNewPayingUsers(30, 50), empty.newPaying),
+        safe('listRecentCancellations', () => listRecentCancellations(30, 50), empty.cancellations),
+        safe('listTopUsersThisMonth', () => listTopUsersThisMonth(5), empty.topUsers),
+        safe('listTopProjectsThisMonth', () => listTopProjectsThisMonth(5), empty.topProjects),
+      ]);
+      return { newPaying, cancellations, topUsers, topProjects };
+    })(),
   ]);
 
   return {
