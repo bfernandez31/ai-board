@@ -2,6 +2,7 @@
 
 import { ResponsiveContainer, LineChart, Line, XAxis, Tooltip } from 'recharts';
 import type { TrendPoint } from '@/lib/admin/home/types';
+import { ChartTooltipContent } from './chart-tooltip';
 
 interface SignupsTrendProps {
   data: TrendPoint[];
@@ -23,7 +24,26 @@ export function SignupsTrend({ data }: SignupsTrendProps) {
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data}>
           <XAxis dataKey="d" hide />
-          <Tooltip />
+          <Tooltip
+            cursor={{ stroke: 'hsl(var(--ctp-mauve) / 0.4)', strokeDasharray: '3 3' }}
+            content={({ active, payload }) => {
+              if (!active || !payload?.length) return null;
+              const point = payload[0]?.payload as TrendPoint | undefined;
+              if (!point) return null;
+              return (
+                <ChartTooltipContent
+                  title={point.d}
+                  rows={[
+                    {
+                      label: 'Signups',
+                      value: point.v,
+                      color: 'hsl(var(--chart-1))',
+                    },
+                  ]}
+                />
+              );
+            }}
+          />
           <Line
             type="monotone"
             dataKey="v"
