@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/db/client';
-import { buildJobLogRawArtifactKey } from '@/app/lib/logs/artifact-key';
 
 /**
  * Single source of truth for "is this Job a Claude session worth analyzing?"
@@ -34,6 +33,7 @@ interface RawJobRow {
   projectDefaultAgent: string | null;
   shippedAt: Date;
   jobStartedAt: Date;
+  rawArtifactKey: string;
 }
 
 /**
@@ -92,6 +92,7 @@ async function queryShippedJobs(
       projectId: true,
       ticketId: true,
       startedAt: true,
+      log: { select: { rawArtifactKey: true } },
     },
   });
 
@@ -102,6 +103,7 @@ async function queryShippedJobs(
     if (job.ticketId === null) continue;
     const outcome = outcomeByTicket.get(job.ticketId);
     if (!outcome) continue;
+    if (!job.log?.rawArtifactKey) continue;
     result.push({
       jobId: job.id,
       projectId: job.projectId,
@@ -110,6 +112,7 @@ async function queryShippedJobs(
       projectDefaultAgent: outcome.ticket.project.defaultAgent ?? null,
       shippedAt: outcome.shippedAt,
       jobStartedAt: job.startedAt,
+      rawArtifactKey: job.log.rawArtifactKey,
     });
   }
 
@@ -171,11 +174,7 @@ export async function listShippedClaudeJobsForWindow(
     jobId: row.jobId,
     projectId: row.projectId,
     ticketId: row.ticketId,
-    rawArtifactKey: buildJobLogRawArtifactKey(
-      row.projectId,
-      row.ticketId,
-      row.jobId
-    ),
+    rawArtifactKey: row.rawArtifactKey,
   }));
 }
 

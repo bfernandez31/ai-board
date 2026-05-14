@@ -20,7 +20,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { streamJobLogArtifact } from '@/app/lib/blob/client';
-import { buildJobLogRawArtifactKey } from '@/app/lib/logs/artifact-key';
+import { canonicalizeRawArtifactKey } from '@/app/lib/logs/artifact-key';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,11 +75,31 @@ export async function GET(
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 
-  const artifactKey = buildJobLogRawArtifactKey(
+  // The DB row's rawArtifactKey is the authoritative blob key for this job —
+  // it may carry either the current `.tar.gz` extension or the legacy
+  // `.jsonl.gz` (the insights workflow handles both at consume time). Resolve
+  // through canonicalize so we still reject keys pointing outside this job's
+  // canonical path under either layout.
+  const jobLog = await prisma.jobLog.findUnique({
+    where: { jobId: job.id },
+    select: { rawArtifactKey: true },
+  });
+  if (!jobLog || !jobLog.rawArtifactKey) {
+    return NextResponse.json({ error: 'Artifact not found' }, { status: 404 });
+  }
+  const artifactKey = canonicalizeRawArtifactKey(
+    jobLog.rawArtifactKey,
     job.projectId,
     job.ticketId,
-    job.id
+    job.id,
   );
+  if (!artifactKey) {
+    console.error('[GET admin/insights/jobs/:jobId/raw-native] key mismatch', {
+      jobId: job.id,
+      actualArtifactKey: jobLog.rawArtifactKey,
+    });
+    return NextResponse.json({ error: 'Artifact not found' }, { status: 404 });
+  }
 
   let result;
   try {

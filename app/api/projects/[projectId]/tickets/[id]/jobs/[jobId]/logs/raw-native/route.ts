@@ -3,8 +3,9 @@ import { prisma } from '@/lib/db/client';
 import { verifyTicketAccess } from '@/lib/db/auth-helpers';
 import { streamJobLogArtifact } from '@/app/lib/blob/client';
 import {
-  buildJobLogRawArtifactKey,
   buildJobLogRawNativeUrl,
+  canonicalizeRawArtifactKey,
+  isLegacyRawArtifactKey,
 } from '@/app/lib/logs/artifact-key';
 
 export async function GET(
@@ -60,11 +61,15 @@ export async function GET(
     return NextResponse.json({ error: 'Artifact not available' }, { status: 404 });
   }
 
-  const artifactKey = buildJobLogRawArtifactKey(projectId, ticketId, jobId);
-  if (log.rawArtifactKey !== artifactKey) {
+  const artifactKey = canonicalizeRawArtifactKey(
+    log.rawArtifactKey,
+    projectId,
+    ticketId,
+    jobId,
+  );
+  if (!artifactKey) {
     console.error('[GET /logs/raw-native] Stored artifact key mismatch', {
       jobId,
-      expectedArtifactKey: artifactKey,
       actualArtifactKey: log.rawArtifactKey,
       rawUrl: buildJobLogRawNativeUrl(projectId, ticketId, jobId),
     });
@@ -91,6 +96,8 @@ export async function GET(
   const url = new URL(request.url);
   const isDownload = url.searchParams.get('format') === 'jsonl';
   const ticketKey = ticket.ticketKey ?? `ticket-${ticketId}`;
+  const legacy = isLegacyRawArtifactKey(artifactKey);
+  const downloadExt = legacy ? 'jsonl.gz' : 'tar.gz';
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/gzip',
@@ -98,7 +105,7 @@ export async function GET(
     'Content-Length': String(result.size),
   };
   if (isDownload) {
-    headers['Content-Disposition'] = `attachment; filename="${ticketKey}-job-${jobId}-raw.jsonl.gz"`;
+    headers['Content-Disposition'] = `attachment; filename="${ticketKey}-job-${jobId}-raw.${downloadExt}"`;
   }
 
   return new Response(result.stream, { status: 200, headers });

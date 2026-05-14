@@ -77,21 +77,35 @@ jobs:
             echo "Aborting: no sessions in window"
             exit 1
           fi
+          # Two artifact formats live in Vercel Blob:
+          #   - tar.gz (new): preserves the native `<sessionId>.jsonl` filenames
+          #     /insights expects. Extract directly into the sessions dir.
+          #   - jsonl.gz (legacy): concat of all sessions for a job. Decompress
+          #     then split by internal sessionId via the Python helper.
+          # Detect by trying `tar -tzf`; fall back to gunzip+split on failure.
+          DOWNLOAD_DIR="$(mktemp -d)"
           jq -c '.jobs[]' jobs.json | while read -r row; do
             jobId=$(echo "$row" | jq -r .jobId)
+            archive="${DOWNLOAD_DIR}/${jobId}.gz"
             curl -fsS \
               -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
               "${APP_URL}/api/admin/insights/jobs/${jobId}/raw-native" \
-              -o "${CLAUDE_SESSIONS_DIR}/${jobId}.jsonl.gz"
-            gunzip "${CLAUDE_SESSIONS_DIR}/${jobId}.jsonl.gz"
+              -o "${archive}"
+            if tar -tzf "${archive}" >/dev/null 2>&1; then
+              tar -xzf "${archive}" -C "${CLAUDE_SESSIONS_DIR}"
+            else
+              # Legacy concat layout: decompress as <jobId>.jsonl so the splitter
+              # below can read it. Filename is non-UUID and will be split away.
+              gunzip -c "${archive}" > "${CLAUDE_SESSIONS_DIR}/${jobId}.jsonl"
+            fi
+            rm -f "${archive}"
           done
+          rmdir "${DOWNLOAD_DIR}" 2>/dev/null || true
 
-          # /insights requires filename == sessionId (UUID): see decompiled
-          # rO_() — basenames that aren't UUIDs are silently skipped. Our raw
-          # artifact is also a concat of N sessions per job (one file per
-          # `~/.claude/projects/<cwd>/<sessionId>.jsonl` aggregated in
-          # capture-agent-logs.sh). Split by internal sessionId into one
-          # `<sessionId>.jsonl` per group so /insights can pick them up.
+          # Legacy compat: any file that isn't already a `<sessionId>.jsonl`
+          # (UUID basename) must be split by internal sessionId so /insights'
+          # rO_() — which derives sessionId from the basename — can see them.
+          # New tar.gz artifacts already have UUID names; the splitter no-ops.
           python3 - "${CLAUDE_SESSIONS_DIR}" <<'PY'
           import json, os, sys
           outdir = sys.argv[1]
@@ -165,30 +179,6 @@ jobs:
           # .github/scripts/run-agent.sh which centralizes Claude CLI install
           # (npm, not bunx — see in-script note), auth, and raw-log capture.
           ./.github/scripts/run-agent.sh CLAUDE insights
-
-      - name: Debug /insights cache (temporary, AIB-791)
-        if: always()
-        run: |
-          set +e
-          echo "=== Seeded JSONL files ==="
-          find "${HOME}/.claude/projects" -name '*.jsonl' -exec wc -l {} \;
-          echo "=== Facets generated ==="
-          ls -la "${HOME}/.claude/usage-data/facets/" 2>&1 | head -20
-          echo "=== Session-meta generated ==="
-          ls -la "${HOME}/.claude/usage-data/session-meta/" 2>&1 | head -20
-          echo "=== Per-JSONL user message stats ==="
-          for f in $(find "${HOME}/.claude/projects" -name '*.jsonl' 2>/dev/null); do
-            user_msgs=$(jq -c 'select(.type=="user" and (.message.content | type == "string" and (length > 0)) or (.type=="user" and (.message.content | type == "array") ))' "$f" 2>/dev/null | wc -l)
-            total=$(wc -l < "$f")
-            echo "  $(basename "$f"): total=${total} user_msg=${user_msgs}"
-            jq -c 'select(.type=="user") | {ts: .timestamp, content_type: (.message.content | type), preview: (if (.message.content | type == "string") then (.message.content | tostring | .[0:120]) else "<array>" end)}' "$f" 2>/dev/null | head -2
-          done
-          echo "=== Report size & head ==="
-          wc -c "${HOME}/.claude/usage-data/report.html" 2>/dev/null || echo "no report.html"
-          head -c 2500 "${HOME}/.claude/usage-data/report.html" 2>/dev/null
-          echo
-          echo "=== Report tail ==="
-          tail -c 1500 "${HOME}/.claude/usage-data/report.html" 2>/dev/null
 
       - name: Collect insights report
         run: |

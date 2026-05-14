@@ -31,8 +31,13 @@ RAW_LOG="${TMPDIR}/agent-raw-${JOB_ID}.log"
 NORMALIZED="${TMPDIR}/agent-normalized-${JOB_ID}.jsonl"
 REDACTED="${TMPDIR}/agent-redacted-${JOB_ID}.jsonl"
 ARTIFACT="${TMPDIR}/agent-redacted-${JOB_ID}.jsonl.gz"
-RAW_REDACTED="${TMPDIR}/agent-redacted-raw-${JOB_ID}.jsonl"
-RAW_ARTIFACT="${TMPDIR}/agent-redacted-raw-${JOB_ID}.jsonl.gz"
+# Raw native session capture: each Claude session JSONL is redacted in place
+# and packaged into a tar.gz that preserves the native
+# `~/.claude/projects/<cwd>/<sessionId>.jsonl` filename structure. /insights
+# requires filename == sessionId (UUID); the legacy concat-then-gzip layout
+# lost that boundary and required a downstream splitter to recover it.
+RAW_STAGING_DIR="${TMPDIR}/agent-raw-staging-${JOB_ID}"
+RAW_ARTIFACT="${TMPDIR}/agent-redacted-raw-${JOB_ID}.tar.gz"
 
 AGENT_UPPER="$(echo "${AGENT_TYPE}" | tr '[:lower:]' '[:upper:]')"
 STARTED_AT="${CAPTURE_STARTED_AT:-$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)}"
@@ -40,7 +45,8 @@ ENDED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ 2>/dev/null || date -u +%Y-%m-%dT%H:
 
 cleanup() {
   rm -f "${NORMALIZED}" "${REDACTED}" "${ARTIFACT}" 2>/dev/null || true
-  rm -f "${RAW_REDACTED}" "${RAW_ARTIFACT}" 2>/dev/null || true
+  rm -f "${RAW_ARTIFACT}" 2>/dev/null || true
+  rm -rf "${RAW_STAGING_DIR}" 2>/dev/null || true
   rm -f "${RAW_LOG}" 2>/dev/null || true
   [[ -n "${CLAUDE_AGGREGATED:-}" ]] && rm -f "${CLAUDE_AGGREGATED}" 2>/dev/null || true
 }
@@ -245,28 +251,44 @@ if [[ "${AGENT_UPPER}" != "CLAUDE" ]]; then
   : # non-Claude: silently skip. No log line. No raw artifact. (FR-008)
 elif [[ "${CAPTURE_STATUS}" != "CAPTURED" ]]; then
   : # normalized failed: do not run raw. Same exit point as non-Claude.
-elif [[ -z "${CLAUDE_AGGREGATED:-}" || ! -s "${CLAUDE_AGGREGATED}" ]]; then
+elif [[ -z "${CLAUDE_SESSIONS_DIR:-}" || ! -d "${CLAUDE_SESSIONS_DIR}" ]]; then
   echo "capture-agent-logs: raw_capture skipped reason=no_session_data jobId=${JOB_ID}"
 else
+  # Redact each session JSONL in place into RAW_STAGING_DIR, preserving the
+  # native `<sessionId>.jsonl` filename so the downstream tar archive carries
+  # the boundary `/insights` needs to dispatch per-session.
   redact_native() {
     node --input-type=module -e "
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { redactNativeJsonl } from '${LIB_DIR}/redactor.mjs';
-const raw = readFileSync('${CLAUDE_AGGREGATED}', 'utf-8');
-const lines = raw.split(/\r?\n/);
-const out = lines
-  .map(l => l.length === 0 ? l : redactNativeJsonl(l))
-  .join('\n');
-writeFileSync('${RAW_REDACTED}', out);
+const src = '${CLAUDE_SESSIONS_DIR}';
+const dst = '${RAW_STAGING_DIR}';
+mkdirSync(dst, { recursive: true });
+const files = readdirSync(src).filter((n) => n.endsWith('.jsonl'));
+if (files.length === 0) process.exit(2);
+for (const name of files) {
+  const raw = readFileSync(join(src, name), 'utf-8');
+  const out = raw.split(/\r?\n/)
+    .map((l) => l.length === 0 ? l : redactNativeJsonl(l))
+    .join('\n');
+  writeFileSync(join(dst, name), out);
+}
 "
   }
 
-  if ! redact_native 2>/tmp/raw-redact-error.log; then
+  redact_status=0
+  redact_native 2>/tmp/raw-redact-error.log || redact_status=$?
+  if [[ "${redact_status}" -eq 2 ]]; then
+    echo "capture-agent-logs: raw_capture skipped reason=no_session_data jobId=${JOB_ID}"
+    RAW_ARTIFACT_KEY=""
+    RAW_ARTIFACT_SIZE=0
+  elif [[ "${redact_status}" -ne 0 ]]; then
     echo "capture-agent-logs: raw_capture FAILED reason=redaction_failed jobId=${JOB_ID}" >&2
     RAW_ARTIFACT_KEY=""
     RAW_ARTIFACT_SIZE=0
   else
-    gzip -c "${RAW_REDACTED}" > "${RAW_ARTIFACT}"
+    tar -czf "${RAW_ARTIFACT}" -C "${RAW_STAGING_DIR}" .
     RAW_ARTIFACT_SIZE=$(stat -c%s "${RAW_ARTIFACT}" 2>/dev/null || stat -f%z "${RAW_ARTIFACT}" 2>/dev/null || wc -c < "${RAW_ARTIFACT}")
 
     # Namespace by JOB_ID so concurrent capture runs on the same runner can't

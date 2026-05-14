@@ -43,9 +43,18 @@ function makeJob(
   jobId: number,
   ticketId: number | null,
   projectId: number,
-  startedAt: Date = new Date('2026-05-10T00:00:00Z')
+  startedAt: Date = new Date('2026-05-10T00:00:00Z'),
+  rawArtifactKey: string | null = ticketId !== null
+    ? `raw-logs/${projectId}/${ticketId}/${jobId}.jsonl.gz`
+    : null,
 ) {
-  return { id: jobId, projectId, ticketId, startedAt };
+  return {
+    id: jobId,
+    projectId,
+    ticketId,
+    startedAt,
+    log: rawArtifactKey ? { rawArtifactKey } : null,
+  };
 }
 
 describe('insights predicate (AIB-791)', () => {
