@@ -28,6 +28,10 @@ test.describe('First-Time User Creation', () => {
     await prisma.account.deleteMany({
       where: { userId: testUserId },
     });
+    // Clean up stale project with key 'NEW' from any previous incomplete run
+    await prisma.project.deleteMany({
+      where: { key: 'NEW' },
+    });
     await prisma.user.deleteMany({
       where: { email: testEmail },
     });
@@ -112,29 +116,33 @@ test.describe('First-Time User Creation', () => {
   });
 
   test('new user can create project without foreign key errors', async () => {
-    // Create user
-    await prisma.user.create({
-      data: {
-        id: testUserId,
-        email: testEmail,
-        name: 'Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(),
-      },
-    });
+    // Use a transaction so both writes share the same DB connection, ensuring
+    // the newly-created user is visible to the FK check on project insert.
+    const { project } = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          id: testUserId,
+          email: testEmail,
+          name: 'Test User',
+          emailVerified: new Date(),
+          updatedAt: new Date(),
+        },
+      });
 
-    // Verify user can create project (no FK constraint error)
-    const project = await prisma.project.create({
-      data: {
-        name: '[e2e] Test Project',
-        description: 'Test project for new user',
-        githubOwner: 'test-owner',
-        githubRepo: 'test-repo-' + Date.now(),
-        userId: testUserId,
-        key: 'NEW',
-        updatedAt: new Date(),
-        createdAt: new Date(),
-      },
+      const project = await tx.project.create({
+        data: {
+          name: '[e2e] Test Project',
+          description: 'Test project for new user',
+          githubOwner: 'test-owner',
+          githubRepo: 'test-repo-' + Date.now(),
+          userId: user.id,
+          key: 'NEW',
+          updatedAt: new Date(),
+          createdAt: new Date(),
+        },
+      });
+
+      return { project };
     });
 
     expect(project).not.toBeNull();

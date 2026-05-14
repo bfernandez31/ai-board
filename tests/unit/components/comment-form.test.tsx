@@ -5,6 +5,7 @@
  * Verifies text input, character count, and Cmd/Ctrl+Enter submission.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent } from '@testing-library/react';
 import { renderWithProviders, screen, userEvent, waitFor } from '@/tests/utils/component-test-utils';
 import { CommentForm } from '@/components/comments/comment-form';
 
@@ -113,13 +114,14 @@ describe('CommentForm', () => {
       expect(screen.getByText(/5 \/ 2000/i)).toBeInTheDocument();
     });
 
-    it('should show red character count when exceeding max length', async () => {
-      const user = userEvent.setup();
+    it('should show red character count when exceeding max length', () => {
       renderWithProviders(<CommentForm {...defaultProps} />);
 
-      // Type more than 2000 characters
+      // Use fireEvent.change to avoid userEvent.type timeout with 2001 chars
       const longText = 'A'.repeat(2001);
-      await user.type(screen.getByPlaceholderText(/write a comment/i), longText);
+      fireEvent.change(screen.getByPlaceholderText(/write a comment/i), {
+        target: { value: longText },
+      });
 
       // The character count should be styled differently (red)
       const charCount = screen.getByText(/2001 \/ 2000/i);

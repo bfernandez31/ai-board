@@ -363,8 +363,11 @@ resolve_agent_cli_version() {
   fi
   # `<cli> --version` output varies (e.g. "claude 1.2.3", "codex v0.4.0", multi-line).
   # Take the first non-empty line and strip leading binary name + leading 'v'.
-  local raw
-  raw="$("$cli" --version 2>/dev/null | head -n 1 | tr -d '\r')" || return 1
+  # Capture full output first to avoid SIGPIPE under `pipefail` when head exits
+  # after the first line and the CLI is still writing subsequent lines.
+  local raw version_out
+  version_out="$("$cli" --version 2>/dev/null)" || return 1
+  raw="$(printf '%s\n' "$version_out" | head -n 1 | tr -d '\r')"
   [[ -z "$raw" ]] && return 1
   # Strip common prefixes like "claude " or "codex v" — keep the rest verbatim.
   raw="${raw#"$cli" }"
