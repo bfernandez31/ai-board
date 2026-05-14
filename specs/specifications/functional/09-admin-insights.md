@@ -58,12 +58,14 @@ All sidebar visuals — typography, colors, hover state, active state, divider, 
 
 ## The Insights Page
 
-`/admin/insights` is a single page that presents:
+`/admin/insights` is a single page presented inside the admin shell — the sidebar entry "Insights LLM" is the sole on-screen name for the page, there is no internal page heading, and the browser tab title is `Insights LLM`.
 
-1. The **latest COMPLETED report** rendered inline
-2. A **metadata header** describing the report's scope
-3. A **past-reports list** (reverse-chronological) for switching between reports
-4. A **"Run new analysis"** action to trigger a new run
+The main content area uses a two-column internal layout:
+
+- A left panel (~280px on desktop viewports) holding the **past-reports list** as a dense table
+- A right panel filling the remaining width, holding the **selected report's metadata header**, **body** (rendered report, FAILED diagnostics, or running placeholder), and the **"Run new analysis"** action in the top-right
+
+Below the tablet breakpoint, the two panels stack vertically — past-reports table above, selected report below — without hiding either behind a drawer.
 
 ### Latest Report Rendering
 
@@ -122,20 +124,38 @@ A FAILED run does **not** advance the high-water mark — the next attempt re-co
 
 ## Past Reports List
 
-The page displays past reports in reverse-chronological order (newest first). Each entry shows:
+The left panel renders past reports in reverse-chronological order (newest first) as a dense table. Each row is between 30 and 36 pixels tall and surfaces four columns in order:
 
-- Date generated
-- Period covered (start → end)
-- Sessions count and tickets count
-- Run status (COMPLETED, FAILED, or RUNNING)
+| Column | Content |
+|--------|---------|
+| Date | Generation date (full year) |
+| Period | Compact period covered — `M/D → M/D` within a single calendar year, `M/D/YY → M/D/YY` when crossing year boundaries, `M/D` for single-day periods |
+| Status | Run status badge (COMPLETED, FAILED, or RUNNING) |
+| Duration | Compact elapsed time (`<1s`, `Ns`, `Nm`, or `Hh Mm`) for COMPLETED rows only — blank for RUNNING and FAILED rows |
 
-The list is capped at 200 entries server-side regardless of how many reports exist in storage. There is no pagination UI, no filter, no search, and no custom date-range selector.
+The currently selected row is visually marked with both a subtle background tint and a left-edge lateral indicator, matching the admin sidebar's active-state convention.
+
+The table is capped at 200 entries server-side and bounds its height with internal scrolling. There is no pagination UI, no filter, no search, and no custom date-range selector. Sessions and tickets counts are not shown in the dense list — they appear in the right panel's metadata header for the selected report.
+
+Selection lives in client memory only. Reloading the page resets selection to the default — the latest COMPLETED report, or the latest row if no COMPLETED row exists.
 
 ### Selecting Entries
 
+Clicking any row updates the right panel and the selection indicator in place without a full page reload.
+
 - **COMPLETED entry**: switches the rendered HTML and metadata header to that report. The latest report remains in the list and can be reselected.
-- **FAILED entry**: replaces the HTML body with the failure reason; the metadata header still displays the period and counts.
-- **RUNNING entry**: shows the "Running…" placeholder.
+- **FAILED entry**: the right panel renders the failure diagnostics view described below.
+- **RUNNING entry**: shows the "Running…" placeholder; the 15-second poll resolves the row to a terminal status without operator action.
+
+### FAILED Report Diagnostics
+
+When a FAILED row is selected, the right panel renders an inline diagnostics view containing:
+
+- The report's `errorReason` displayed inline with whitespace and line breaks preserved (multi-line reasons remain readable). When `errorReason` is empty or null, a stable fallback message is shown.
+- A labeled link **"Open workflow run on GitHub"** that opens the corresponding GitHub Actions workflow run in a new tab when the underlying job's `workflowRunId` is known. When `workflowRunId` is null (dispatch never landed, or the row was auto-failed by reconciliation before dispatch), the link is omitted and a short explanation indicates no workflow run is associated with this row.
+- A **"Reessayer"** retry button that invokes the same trigger flow as the top-right "Run new analysis" button (same endpoint, same pre-flight gating, same single-flight protection, same optimistic update, same refusal surfacing). A FAILED run does not advance the high-water mark — clicking "Reessayer" naturally re-covers the unanalyzed window; if a later COMPLETED run has already advanced the mark, the retry covers the current unanalyzed window and the new row's metadata header honestly reflects that window.
+
+The top-right "Run new analysis" button remains visible and behaves identically regardless of which row is selected.
 
 ## Reports Are Read-Only
 

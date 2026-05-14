@@ -114,9 +114,9 @@ List past reports in reverse-chronological order, capped at 200.
 **Server flow**:
 1. `requireAdminOrNotFound(request)`.
 2. `reconcileOrphanedRunningReports(new Date())`.
-3. `prisma.insightsReport.findMany({ orderBy: { generatedAt: 'desc' }, take: 200 })`.
+3. `prisma.insightsReport.findMany({ orderBy: { generatedAt: 'desc' }, take: 200, include: { job: { select: { workflowRunId: true } } } })`.
 
-The 200-row cap is enforced at the database query level, not only at response serialization.
+The 200-row cap is enforced at the database query level, not only at response serialization. The driving `Job.workflowRunId` is joined into each row so the client can render the FAILED diagnostics view's GitHub Actions link without a second round trip.
 
 **Response** (200 OK):
 ```json
@@ -132,11 +132,14 @@ The 200-row cap is enforced at the database query level, not only at response se
       "ticketsCount": 17,
       "errorReason": null,
       "completedAt": "2026-05-11T12:39:12.345Z",
-      "createdAt": "2026-05-11T12:34:56.789Z"
+      "createdAt": "2026-05-11T12:34:56.789Z",
+      "workflowRunId": "8123456789"
     }
   ]
 }
 ```
+
+`workflowRunId` is the underlying `Job.workflowRunId` serialized as a decimal string (BigInt → string at the API boundary) or `null` when the linked job has no recorded run id (e.g. dispatch failed atomically, or the row was auto-FAILED by reconciliation before dispatch). The client composes the GitHub Actions run URL from this value plus the centralized-workflow repository configuration (`GITHUB_OWNER` / `GITHUB_REPO`).
 
 `artifactKey` is never returned. The client fetches the HTML body via `GET /api/admin/insights/reports/:id/html`.
 
@@ -326,6 +329,8 @@ Stream a single raw native Claude Code session JSONL artifact for a Claude job. 
 
 `GET /admin` and `GET /admin/insights` are Server Components gated by `requireAdminPageOrNotFound` (the page-route variant that calls Next.js `notFound()` rather than returning a `Response`). `/admin` redirects to `/admin/insights`. Both responses carry `Cache-Control: private, no-store`; the admin shell layer sets `X-Frame-Options: DENY` on top-level admin paths to prevent click-jacking of the shell itself.
 
+`/admin/insights` declares its document title via the Next.js segment-level `export const metadata: Metadata = { title: 'Insights LLM' }`, so the browser tab and admin sidebar entry stay in sync. The page itself renders no internal page-level heading.
+
 Non-admin requests to any `/admin/...` path — including paths that don't resolve to a defined page route — produce a Not Found response indistinguishable from a request to `/this-path-does-not-exist`.
 
 ## Configuration
@@ -337,6 +342,7 @@ Non-admin requests to any `/admin/...` path — including paths that don't resol
 | `WORKFLOW_API_TOKEN` | _(required in prod)_ | Bearer token for workflow-authenticated endpoints. |
 | `BLOB_READ_WRITE_TOKEN` | _(required in prod)_ | Vercel Blob credentials for `insights/reports/*.html`. |
 | `ANTHROPIC_API_KEY` | _(required in workflow)_ | Used by the workflow to authenticate `bunx @anthropic-ai/claude-code /insights`. |
+| `GITHUB_OWNER` / `GITHUB_REPO` | _(required in prod)_ | AI-BOARD centralized-workflow repository identity. Used both to dispatch `insights-analyze.yml` and to compose the GitHub Actions run URL surfaced in the FAILED diagnostics view (`https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/actions/runs/{workflowRunId}`). |
 
 ## Workflow
 
