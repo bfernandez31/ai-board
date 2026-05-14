@@ -5,10 +5,10 @@ const completeHtml = `
 <!DOCTYPE html>
 <html><body>
 <h1>Claude Code Insights</h1>
-<h2>Big wins</h2><ul><li>...</li></ul>
+<h2>Big Wins</h2><ul><li>...</li></ul>
 <h2>Horizon</h2><p>...</p>
 <h2>Friction</h2><p>...</p>
-<h2>Suggested CLAUDE.md additions</h2><pre>...</pre>
+<h2>Suggested CLAUDE.md Additions</h2><pre>...</pre>
 </body></html>
 `;
 
@@ -24,23 +24,23 @@ describe('validateInsightsOutput (AIB-791)', () => {
   });
 
   it('rejects non-HTML input', () => {
-    const result = validateInsightsOutput('big wins horizon friction Suggested CLAUDE.md additions');
+    const result = validateInsightsOutput('big wins horizon friction Suggested CLAUDE.md Additions');
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toMatch(/not html/i);
   });
 
-  it('rejects when "Suggested CLAUDE.md additions" is missing', () => {
-    const html = completeHtml.replace('Suggested CLAUDE.md additions', 'Other section');
+  it('rejects when "Suggested CLAUDE.md Additions" is missing', () => {
+    const html = completeHtml.replace('Suggested CLAUDE.md Additions', 'Other section');
     const result = validateInsightsOutput(html);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toContain('Suggested CLAUDE.md additions');
+    if (!result.ok) expect(result.reason).toContain('Suggested CLAUDE.md Additions');
   });
 
-  it('rejects when "Big wins" is missing', () => {
-    const html = completeHtml.replace('Big wins', 'Wins');
+  it('rejects when "Big Wins" is missing', () => {
+    const html = completeHtml.replace('Big Wins', 'Wins');
     const result = validateInsightsOutput(html);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toContain('Big wins');
+    if (!result.ok) expect(result.reason).toContain('Big Wins');
   });
 
   it('rejects when "Horizon" is missing', () => {

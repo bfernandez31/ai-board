@@ -14,8 +14,8 @@ export type InsightsOutputValidation =
   | { ok: false; reason: string };
 
 const STRUCTURAL_MARKERS = [
-  'Suggested CLAUDE.md additions',
-  'Big wins',
+  'Suggested CLAUDE.md Additions',
+  'Big Wins',
   'Horizon',
 ];
 
