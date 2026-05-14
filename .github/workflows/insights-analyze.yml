@@ -205,7 +205,7 @@ jobs:
       - name: Validate output (structural markers)
         run: |
           set -euo pipefail
-          for marker in "Suggested CLAUDE.md Additions" "Big Wins" "Horizon"; do
+          for marker in "Suggested CLAUDE.md Additions" 'id="section-wins"' 'id="section-horizon"' 'id="section-friction"'; do
             grep -F -q "$marker" report.html || {
               echo "INSIGHTS_FAILURE_REASON=Insights output validation failed" >> "$GITHUB_ENV"
               echo "Missing marker: $marker"

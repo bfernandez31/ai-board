@@ -13,16 +13,17 @@ export type InsightsOutputValidation =
   | { ok: true }
   | { ok: false; reason: string };
 
+// Section IDs are stable across /insights wording changes (`<h2 id="section-X">`).
+// We keep the "Suggested CLAUDE.md Additions" h3 by its rendered title because
+// it has no id but is emitted as a static template.
 const STRUCTURAL_MARKERS = [
   'Suggested CLAUDE.md Additions',
-  'Big Wins',
-  'Horizon',
+  'id="section-wins"',
+  'id="section-horizon"',
 ];
 
 const FRICTION_SECTION_HEADERS = [
-  'Friction',
-  'Pain points',
-  'What hurt',
+  'id="section-friction"',
 ];
 
 export function validateInsightsOutput(html: string): InsightsOutputValidation {

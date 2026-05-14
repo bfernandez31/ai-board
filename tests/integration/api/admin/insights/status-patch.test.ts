@@ -48,8 +48,8 @@ function streamFromString(s: string) {
 
 const VALID_HTML = [
   '<!DOCTYPE html><html><body>',
-  '<h2>Big Wins</h2><h2>Horizon</h2>',
-  '<h2>Friction</h2><h2>Suggested CLAUDE.md Additions</h2>',
+  '<h2 id="section-wins">Wins</h2><h2 id="section-horizon">Horizon</h2>',
+  '<h2 id="section-friction">Friction</h2><h3>Suggested CLAUDE.md Additions</h3>',
   '</body></html>',
 ].join('');
 
