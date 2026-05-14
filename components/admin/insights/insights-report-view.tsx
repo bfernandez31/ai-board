@@ -13,6 +13,7 @@ import {
 import type { ReportListEntry } from '@/app/lib/insights/repository';
 import { ReportErrorPlaceholder } from '@/components/admin/insights/report-error-placeholder';
 import { RunAnalysisButton } from '@/components/admin/insights/run-analysis-button';
+import { ExternalLink } from 'lucide-react';
 
 interface InsightsReportViewProps {
   reports: ReportListEntry[];
@@ -27,13 +28,24 @@ function formatDate(iso: string | null): string {
   return d.toISOString().slice(0, 10);
 }
 
+function formatDuration(createdAt: string, completedAt: string | null): string | null {
+  if (!completedAt) return null;
+  const ms = new Date(completedAt).getTime() - new Date(createdAt).getTime();
+  if (ms < 0 || Number.isNaN(ms)) return null;
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${seconds}s`;
+}
+
+function compactPeriod(start: string, end: string): string {
+  return `${formatDate(start)} → ${formatDate(end)}`;
+}
+
 function formatMetadataPhrasing(report: ReportListEntry): string {
   const start = formatDate(report.periodStart);
   const end = formatDate(report.periodEnd);
   if (report.status !== 'COMPLETED' || report.sessionsCount === null) {
-    // Sessions/tickets counts are only meaningful for COMPLETED rows.
-    // Rendering "Analyzed 0 … 0 …" for an in-flight or failed row would
-    // misrepresent the run as having processed zero items.
     if (report.status === 'RUNNING') {
       return `Analyzing Claude Code sessions for tickets shipped between ${start} and ${end}…`;
     }
@@ -87,9 +99,6 @@ export function InsightsReportView({
 }: InsightsReportViewProps) {
   const { data: reports = initialReports } = useInsightsReports(initialReports);
   const latestIsRunning = reports.some((r) => r.status === 'RUNNING');
-  // Live preflight refreshes off the server's authoritative refusal logic
-  // so the trigger button re-enables automatically when a RUNNING report
-  // transitions and `shippedSincePreviousRun` rolls forward.
   const { data: preflight = initialPreflight } = useInsightsPreflight(
     initialPreflight,
     latestIsRunning
@@ -104,9 +113,6 @@ export function InsightsReportView({
     return reports.find((r) => r.id === selectedId) ?? null;
   }, [reports, selectedId]);
 
-  // Derive the default display from the live reports list so RUNNING or
-  // FAILED entries surface immediately after polling (instead of the
-  // empty-state placeholder) when no COMPLETED row exists yet.
   const latestCompleted = useMemo(
     () => reports.find((r) => r.status === 'COMPLETED') ?? null,
     [reports]
@@ -115,8 +121,6 @@ export function InsightsReportView({
   const display = selected ?? defaultDisplay;
 
   const canTrigger = preflight.canTrigger && !latestIsRunning;
-  // The API returns refusal messages with ISO timestamps; format them for
-  // display while preserving the structured refusalCode contract.
   const refusal = useMemo(() => {
     if (!preflight.refusal) return null;
     const { refusalCode } = preflight.refusal;
@@ -136,91 +140,114 @@ export function InsightsReportView({
   }, [preflight.refusal, preflight.previousRunEnd, preflight.runningSince]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <header className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold">Claude Code Insights</h1>
-          <p className="text-sm text-muted-foreground">
-            Shipped Claude tickets since previous run:{' '}
-            <strong className="text-foreground">
-              {preflight.shippedSincePreviousRun}
-            </strong>
-            {preflight.previousRunEnd
-              ? ` (last analyzed up to ${formatDate(preflight.previousRunEnd)})`
-              : ' (no prior run on record)'}
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Shipped Claude tickets since previous run:{' '}
+          <strong className="text-foreground">
+            {preflight.shippedSincePreviousRun}
+          </strong>
+          {preflight.previousRunEnd
+            ? ` (last analyzed up to ${formatDate(preflight.previousRunEnd)})`
+            : ' (no prior run on record)'}
+        </p>
         <RunAnalysisButton
           preflight={{ canTrigger, refusal }}
           latestIsRunning={latestIsRunning}
         />
       </header>
 
-      {display ? (
-        <Card className="aurora-bg-card-blue">
-          <CardContent className="p-5">
-            <p className="text-sm text-foreground">
-              {formatMetadataPhrasing(display)}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Report #{display.id} — generated {formatDate(display.generatedAt)}
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {display ? (
-        renderReportBody(display)
-      ) : (
-        <ReportErrorPlaceholder
-          title="No Insights reports yet"
-          detail="Trigger a run to generate the first report."
-        />
-      )}
-
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-foreground">
-          Past reports
-        </h2>
-        {reports.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No prior runs.</p>
-        ) : (
-          <ul className="divide-y divide-border rounded-md border border-border">
-            {reports.map((entry) => {
-              const isSelected = entry.id === (selected?.id ?? latest?.id);
-              return (
-                <li key={entry.id}>
-                  <button
-                    type="button"
-                    aria-pressed={isSelected}
-                    onClick={() => setSelectedId(entry.id)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm hover:bg-accent/40"
-                  >
-                    <span className="flex flex-col">
-                      <span className="font-medium text-foreground">
+      <div className="flex flex-col gap-4 md:flex-row md:gap-6">
+        <aside className="w-full md:w-[280px] md:shrink-0">
+          {reports.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No prior runs.</p>
+          ) : (
+            <ul className="divide-y divide-border rounded-md border border-border">
+              {reports.map((entry) => {
+                const isSelected = entry.id === (display?.id ?? null);
+                const duration = formatDuration(entry.createdAt, entry.completedAt);
+                return (
+                  <li key={entry.id}>
+                    <button
+                      type="button"
+                      aria-pressed={isSelected}
+                      aria-label={`Report ${formatDate(entry.generatedAt)} ${entry.status}`}
+                      onClick={() => setSelectedId(entry.id)}
+                      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent/40 ${
+                        isSelected
+                          ? 'bg-accent/50 border-l-2 border-primary'
+                          : ''
+                      }`}
+                    >
+                      <span className="truncate font-medium text-foreground">
                         {formatDate(entry.generatedAt)}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(entry.periodStart)} → {formatDate(entry.periodEnd)}
+                      <span className="hidden truncate text-muted-foreground sm:inline">
+                        {compactPeriod(entry.periodStart, entry.periodEnd)}
                       </span>
-                    </span>
-                    <span className="flex items-center gap-2">
-                      {entry.sessionsCount !== null ? (
-                        <span className="text-xs text-muted-foreground">
-                          {entry.sessionsCount} sessions / {entry.ticketsCount ?? 0} tickets
-                        </span>
-                      ) : null}
-                      <Badge variant={statusBadgeVariant(entry.status)}>
+                      {duration && (
+                        <span className="text-muted-foreground">{duration}</span>
+                      )}
+                      <Badge
+                        variant={statusBadgeVariant(entry.status)}
+                        className="ml-auto text-[10px] px-1.5 py-0"
+                      >
                         {entry.status}
                       </Badge>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </aside>
+
+        <main className="flex-1 min-w-0">
+          {display ? (
+            <div className="flex flex-col gap-4">
+              <Card className="aurora-bg-card-blue">
+                <CardContent className="p-5">
+                  <p className="text-sm text-foreground">
+                    {formatMetadataPhrasing(display)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Report #{display.id} — generated {formatDate(display.generatedAt)}
+                  </p>
+                </CardContent>
+              </Card>
+              {display.status === 'FAILED' && (
+                <div className="flex items-center gap-3">
+                  {display.githubActionsUrl && (
+                    <a
+                      href={display.githubActionsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      View GitHub Actions run
+                    </a>
+                  )}
+                  <RunAnalysisButton
+                    preflight={{ canTrigger, refusal }}
+                    latestIsRunning={latestIsRunning}
+                    retryPeriod={{
+                      periodStart: display.periodStart,
+                      periodEnd: display.periodEnd,
+                    }}
+                  />
+                </div>
+              )}
+              {renderReportBody(display)}
+            </div>
+          ) : (
+            <ReportErrorPlaceholder
+              title="No Insights reports yet"
+              detail="Trigger a run to generate the first report."
+            />
+          )}
+        </main>
+      </div>
     </div>
   );
 }

@@ -42,15 +42,19 @@ export async function getLastCompletedRunEnd(): Promise<Date | null> {
 
 export async function listReports(
   limit: number = LIST_DEFAULT_LIMIT
-): Promise<InsightsReport[]> {
+) {
   return prisma.insightsReport.findMany({
     orderBy: { generatedAt: 'desc' },
     take: Math.min(Math.max(1, limit), LIST_DEFAULT_LIMIT),
+    include: { job: { select: { workflowRunId: true } } },
   });
 }
 
-export async function getReportById(id: number): Promise<InsightsReport | null> {
-  return prisma.insightsReport.findUnique({ where: { id } });
+export async function getReportById(id: number) {
+  return prisma.insightsReport.findUnique({
+    where: { id },
+    include: { job: { select: { workflowRunId: true } } },
+  });
 }
 
 export async function getRunningReport(): Promise<InsightsReport | null> {
@@ -150,9 +154,29 @@ export interface ReportListEntry {
   errorReason: string | null;
   completedAt: string | null;
   createdAt: string;
+  workflowRunId: string | null;
+  githubActionsUrl: string | null;
 }
 
-export function toListEntry(row: InsightsReport): ReportListEntry {
+export function buildGithubActionsUrl(
+  workflowRunId: bigint | null | undefined,
+  owner?: string,
+  repo?: string
+): string | null {
+  if (!workflowRunId || !owner || !repo) return null;
+  return `https://github.com/${owner}/${repo}/actions/runs/${String(workflowRunId)}`;
+}
+
+type ReportWithJob = InsightsReport & {
+  job?: { workflowRunId: bigint | null } | null;
+};
+
+export function toListEntry(
+  row: ReportWithJob,
+  owner?: string,
+  repo?: string
+): ReportListEntry {
+  const workflowRunId = row.job?.workflowRunId ?? null;
   return {
     id: row.id,
     status: row.status,
@@ -165,5 +189,7 @@ export function toListEntry(row: InsightsReport): ReportListEntry {
     errorReason: row.errorReason,
     completedAt: row.completedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
+    workflowRunId: workflowRunId ? String(workflowRunId) : null,
+    githubActionsUrl: buildGithubActionsUrl(workflowRunId, owner, repo),
   };
 }

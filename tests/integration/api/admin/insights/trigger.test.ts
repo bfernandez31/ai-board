@@ -20,10 +20,10 @@ vi.mock('@/app/lib/workflows/test-mode', () => ({
 
 import { POST } from '@/app/api/admin/insights/trigger/route';
 
-function makeRequest(): NextRequest {
+function makeRequest(body: Record<string, unknown> = {}): NextRequest {
   return new NextRequest('http://localhost/api/admin/insights/trigger', {
     method: 'POST',
-    body: JSON.stringify({}),
+    body: JSON.stringify(body),
     headers: { 'Content-Type': 'application/json' },
   });
 }
@@ -164,5 +164,68 @@ describe('POST /api/admin/insights/trigger (US3, AIB-791)', () => {
     const job = await prisma.job.findUnique({ where: { id: row!.jobId! } });
     expect(job?.command).toBe('insights-analyze');
     expect(job?.ticketId).toBeNull();
+  });
+
+  it('retry with valid period params creates a new report (201)', async () => {
+    requireAdminOrNotFound.mockResolvedValue({ ok: true, email: 'admin@e2e.local' });
+
+    const res = await POST(
+      makeRequest({
+        periodStart: '2026-05-01T00:00:00.000Z',
+        periodEnd: '2026-05-10T00:00:00.000Z',
+      })
+    );
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { id: number; status: string };
+    expect(body.status).toBe('RUNNING');
+
+    const row = await prisma.insightsReport.findUnique({ where: { id: body.id } });
+    expect(row?.status).toBe('RUNNING');
+    expect(row?.periodStart.toISOString()).toBe('2026-05-01T00:00:00.000Z');
+    expect(row?.periodEnd.toISOString()).toBe('2026-05-10T00:00:00.000Z');
+  });
+
+  it('retry with mismatched params (one missing) returns 400', async () => {
+    requireAdminOrNotFound.mockResolvedValue({ ok: true, email: 'admin@e2e.local' });
+
+    const res = await POST(
+      makeRequest({ periodStart: '2026-05-01T00:00:00.000Z' })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('retry with periodStart >= periodEnd returns 400', async () => {
+    requireAdminOrNotFound.mockResolvedValue({ ok: true, email: 'admin@e2e.local' });
+
+    const res = await POST(
+      makeRequest({
+        periodStart: '2026-05-10T00:00:00.000Z',
+        periodEnd: '2026-05-01T00:00:00.000Z',
+      })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('retry is still blocked by ALREADY_RUNNING gate (409)', async () => {
+    requireAdminOrNotFound.mockResolvedValue({ ok: true, email: 'admin@e2e.local' });
+
+    await prisma.insightsReport.create({
+      data: {
+        status: 'RUNNING',
+        generatedAt: new Date(),
+        periodStart: new Date(Date.now() - 60_000),
+        periodEnd: new Date(),
+      },
+    });
+
+    const res = await POST(
+      makeRequest({
+        periodStart: '2026-05-01T00:00:00.000Z',
+        periodEnd: '2026-05-10T00:00:00.000Z',
+      })
+    );
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { refusalCode: string };
+    expect(body.refusalCode).toBe('ALREADY_RUNNING');
   });
 });

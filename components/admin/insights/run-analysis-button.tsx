@@ -17,6 +17,7 @@ interface RunAnalysisButtonProps {
   /** Disable when the most-recent visible row is RUNNING — the API would
    *  refuse with ALREADY_RUNNING, but disabling avoids the round trip. */
   latestIsRunning: boolean;
+  retryPeriod?: { periodStart: string; periodEnd: string };
 }
 
 interface TriggerResponse {
@@ -50,12 +51,15 @@ function buildOptimisticEntry(now: Date): ReportListEntry {
     errorReason: null,
     completedAt: null,
     createdAt: iso,
+    workflowRunId: null,
+    githubActionsUrl: null,
   };
 }
 
 export function RunAnalysisButton({
   preflight,
   latestIsRunning,
+  retryPeriod,
 }: RunAnalysisButtonProps) {
   const queryClient = useQueryClient();
   const [message, setMessage] = useState<string | null>(null);
@@ -65,7 +69,7 @@ export function RunAnalysisButton({
       const response = await fetch('/api/admin/insights/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify(retryPeriod ?? {}),
       });
       if (response.status === 201) {
         return (await response.json()) as TriggerResponse;
@@ -122,7 +126,7 @@ export function RunAnalysisButton({
         disabled={disabled}
         aria-disabled={disabled}
       >
-        {mutation.isPending ? 'Starting…' : 'Run new analysis'}
+        {mutation.isPending ? 'Starting…' : retryPeriod ? 'Retry analysis' : 'Run new analysis'}
       </Button>
       {message ? (
         <p className="text-xs text-destructive">{message}</p>

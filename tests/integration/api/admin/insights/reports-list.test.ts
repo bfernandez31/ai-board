@@ -118,4 +118,174 @@ describe('GET /api/admin/insights/reports (US1, AIB-791)', () => {
     expect(body.reports[0].status).toBe('FAILED');
     expect(body.reports[0].errorReason).toMatch(/timed out/i);
   });
+
+  it('response includes workflowRunId as string when Job has a run ID', async () => {
+    requireAdminOrNotFound.mockResolvedValue({ ok: true, email: 'admin@e2e.local' });
+
+    const now = new Date();
+    const job = await prisma.job.create({
+      data: {
+        command: 'insights-analyze',
+        status: 'COMPLETED',
+        projectId: ctx.projectId,
+        startedAt: now,
+        completedAt: now,
+        updatedAt: now,
+        workflowRunId: BigInt('9876543210'),
+      },
+    });
+    await prisma.insightsReport.create({
+      data: {
+        status: 'COMPLETED',
+        generatedAt: now,
+        periodStart: new Date(now.getTime() - 86_400_000),
+        periodEnd: now,
+        sessionsCount: 1,
+        ticketsCount: 1,
+        artifactKey: 'insights/reports/wf-test.html',
+        artifactSize: 100,
+        completedAt: now,
+        jobId: job.id,
+      },
+    });
+
+    const res = await GET(makeRequest());
+    const body = (await res.json()) as { reports: ReportListEntry[] };
+    const entry = body.reports.find((r) => r.workflowRunId === '9876543210');
+    expect(entry).toBeDefined();
+    expect(entry?.workflowRunId).toBe('9876543210');
+  });
+
+  it('response includes githubActionsUrl when env vars are configured', async () => {
+    requireAdminOrNotFound.mockResolvedValue({ ok: true, email: 'admin@e2e.local' });
+
+    const prevOwner = process.env.GITHUB_OWNER;
+    const prevRepo = process.env.GITHUB_REPO;
+    process.env.GITHUB_OWNER = 'test-org';
+    process.env.GITHUB_REPO = 'test-repo';
+
+    try {
+      const now = new Date();
+      const job = await prisma.job.create({
+        data: {
+          command: 'insights-analyze',
+          status: 'COMPLETED',
+          projectId: ctx.projectId,
+          startedAt: now,
+          completedAt: now,
+          updatedAt: now,
+          workflowRunId: BigInt('1111111111'),
+        },
+      });
+      await prisma.insightsReport.create({
+        data: {
+          status: 'COMPLETED',
+          generatedAt: now,
+          periodStart: new Date(now.getTime() - 86_400_000),
+          periodEnd: now,
+          sessionsCount: 1,
+          ticketsCount: 1,
+          artifactKey: 'insights/reports/url-test.html',
+          artifactSize: 100,
+          completedAt: now,
+          jobId: job.id,
+        },
+      });
+
+      const res = await GET(makeRequest());
+      const body = (await res.json()) as { reports: ReportListEntry[] };
+      const entry = body.reports.find((r) => r.workflowRunId === '1111111111');
+      expect(entry).toBeDefined();
+      expect(entry?.githubActionsUrl).toBe(
+        'https://github.com/test-org/test-repo/actions/runs/1111111111'
+      );
+    } finally {
+      if (prevOwner !== undefined) process.env.GITHUB_OWNER = prevOwner;
+      else delete process.env.GITHUB_OWNER;
+      if (prevRepo !== undefined) process.env.GITHUB_REPO = prevRepo;
+      else delete process.env.GITHUB_REPO;
+    }
+  });
+
+  it('workflowRunId is null when Job has no run ID', async () => {
+    requireAdminOrNotFound.mockResolvedValue({ ok: true, email: 'admin@e2e.local' });
+
+    const now = new Date();
+    const job = await prisma.job.create({
+      data: {
+        command: 'insights-analyze',
+        status: 'COMPLETED',
+        projectId: ctx.projectId,
+        startedAt: now,
+        completedAt: now,
+        updatedAt: now,
+      },
+    });
+    await prisma.insightsReport.create({
+      data: {
+        status: 'COMPLETED',
+        generatedAt: now,
+        periodStart: new Date(now.getTime() - 86_400_000),
+        periodEnd: now,
+        sessionsCount: 1,
+        ticketsCount: 1,
+        artifactKey: 'insights/reports/no-wf.html',
+        artifactSize: 100,
+        completedAt: now,
+        jobId: job.id,
+      },
+    });
+
+    const res = await GET(makeRequest());
+    const body = (await res.json()) as { reports: ReportListEntry[] };
+    const entry = body.reports.find((r) => (r as ReportListEntry).id > 0);
+    expect(entry?.workflowRunId).toBeNull();
+  });
+
+  it('githubActionsUrl is null when env vars are missing', async () => {
+    requireAdminOrNotFound.mockResolvedValue({ ok: true, email: 'admin@e2e.local' });
+
+    const prevOwner = process.env.GITHUB_OWNER;
+    const prevRepo = process.env.GITHUB_REPO;
+    delete process.env.GITHUB_OWNER;
+    delete process.env.GITHUB_REPO;
+
+    try {
+      const now = new Date();
+      const job = await prisma.job.create({
+        data: {
+          command: 'insights-analyze',
+          status: 'COMPLETED',
+          projectId: ctx.projectId,
+          startedAt: now,
+          completedAt: now,
+          updatedAt: now,
+          workflowRunId: BigInt('5555555555'),
+        },
+      });
+      await prisma.insightsReport.create({
+        data: {
+          status: 'COMPLETED',
+          generatedAt: now,
+          periodStart: new Date(now.getTime() - 86_400_000),
+          periodEnd: now,
+          sessionsCount: 1,
+          ticketsCount: 1,
+          artifactKey: 'insights/reports/no-env.html',
+          artifactSize: 100,
+          completedAt: now,
+          jobId: job.id,
+        },
+      });
+
+      const res = await GET(makeRequest());
+      const body = (await res.json()) as { reports: ReportListEntry[] };
+      const entry = body.reports.find((r) => r.workflowRunId === '5555555555');
+      expect(entry).toBeDefined();
+      expect(entry?.githubActionsUrl).toBeNull();
+    } finally {
+      if (prevOwner !== undefined) process.env.GITHUB_OWNER = prevOwner;
+      if (prevRepo !== undefined) process.env.GITHUB_REPO = prevRepo;
+    }
+  });
 });
