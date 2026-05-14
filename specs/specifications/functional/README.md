@@ -140,7 +140,7 @@ Describes the Health Dashboard page, which provides a global health score (0–1
 ### [09-admin-insights.md](09-admin-insights.md)
 **Admin Insights**
 
-Describes the `/admin/insights` page — the only page in the platform's admin shell — which hosts a manually triggered, archived series of Claude Code `/insights` reports synthesized from raw native session JSONL across every project.
+Describes the `/admin/insights` page, which hosts a manually triggered, archived series of Claude Code `/insights` reports synthesized from raw native session JSONL across every project.
 
 **Key Topics**:
 - Allowlist-based admin access with byte-equivalent 404 parity for non-admins
@@ -151,6 +151,22 @@ Describes the `/admin/insights` page — the only page in the platform's admin s
 - Past-reports list (reverse-chronological, capped at 200)
 - Orphan-row reconciliation and atomic state transitions
 - Read-only reports — no edit, delete, or notification surfaces
+
+---
+
+### [10-admin-home.md](10-admin-home.md)
+**Admin Home Dashboard**
+
+Describes the `/admin` page — the operator's at-a-glance view of platform health. One screen surfaces conditional alert banners, a four-tile KPI strip (Users / MAU / MRR / Active Paying), three business-health panels (plan donut, 30-day activation funnel, current-month churn), three trend charts, and four actionable detail tables.
+
+**Key Topics**:
+- Same allowlist + byte-equivalent 404 gate as the rest of `/admin/*`
+- Five vertical strata (Alerts, Pulse, Santé Business, Tendances, Détails actionnables)
+- Three alert types (low success rate, Stripe webhook errors, stale critical cron) with curated trigger conditions
+- KPI definitions (MRR as PRO+TEAM monthly contribution, MAU as job-active users in trailing 30d, FREE→PAID as snapshot ratio)
+- Cohort-based 30-day activation funnel
+- 30-second auto-refresh with no global skeleton flash and fail-soft on transient errors
+- Graceful empty / divide-by-zero handling
 
 ---
 

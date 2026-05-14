@@ -345,6 +345,33 @@ enum InsightsRunStatus {
 
 Terminal rows are immutable. All transitions use the atomic guard `WHERE id = ? AND status = 'RUNNING'`; late callbacks against an already-terminal row are no-ops. A FAILED run does not advance the previous-successful-run high-water mark used by period semantics.
 
+### WebhookOutcomeStatus
+
+Outcome of one inbound provider-webhook delivery, recorded by the webhook handler after the idempotency claim succeeds. Drives the Admin Home dashboard's webhook-error alert.
+
+```prisma
+enum WebhookOutcomeStatus {
+  SUCCESS
+  FAILURE
+}
+```
+
+Stripe re-deliveries of a failed event arrive with the same `event.id`; each delivery produces one additional `FAILURE` row, so the alert's "1+ failure in last 24 h" rule already covers the "retries exhausted" case without a third status value.
+
+### CriticalCron
+
+Allowlist of scheduled workflows whose freshness is monitored by the Admin Home dashboard. Each value maps to one `CronRun` row (keyed on `cron`); the dashboard alerts when `lastSuccessAt < now()-36h` or no row exists.
+
+```prisma
+enum CriticalCron {
+  NIGHTLY_LOG_PRUNE
+  NIGHTLY_HEALTH_SCANS
+  BILLING_RECONCILE
+}
+```
+
+The TypeScript-side registry in `lib/admin/cron/registry.ts` mirrors this enum with `{ key, label, thresholdHours }` so the UI can render human-readable names without depending on the raw enum string.
+
 ### TicketAnalysisStatus
 
 Lifecycle of an inbox ticket analysis run.

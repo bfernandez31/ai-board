@@ -43,7 +43,11 @@ beforeEach(() => {
   }) as unknown as typeof fetch;
 });
 
+import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Header } from '@/components/layout/header';
+import { AdminHomePage } from '@/components/admin/home/admin-home-page';
+import type { AdminHomeSnapshot } from '@/lib/admin/home/types';
 
 function assertNoAdminMarkup(html: string) {
   expect(html).not.toMatch(/href="\/admin/);
@@ -51,6 +55,36 @@ function assertNoAdminMarkup(html: string) {
   expect(html).not.toMatch(/>Admin</);
   expect(html).not.toMatch(/data-admin/);
 }
+
+const EMPTY_SNAPSHOT: AdminHomeSnapshot = {
+  generatedAt: new Date().toISOString(),
+  alerts: [],
+  pulse: {
+    users: { value: 0, delta7d: 0, delta30d: 0, spark: [] },
+    mau: { value: 0, deltaPrev30d: 0, shareOfBase: null, spark: [] },
+    mrr: { value: 0, valueUsd: 0, deltaUsdThisMonth: 0, proCount: 0, teamCount: 0, proUsd: 0, teamUsd: 0, spark: [] },
+    activePaying: { value: 0, delta30d: 0, conversionRate: null, spark: [] },
+  },
+  business: {
+    planDistribution: [
+      { plan: 'FREE', count: 0 },
+      { plan: 'PRO', count: 0 },
+      { plan: 'TEAM', count: 0 },
+    ],
+    activationFunnel: {
+      cohortSize: 0,
+      steps: [
+        { key: 'SIGNUP', count: 0, stepRate: null },
+        { key: 'FIRST_PROJECT', count: 0, stepRate: null },
+        { key: 'FIRST_JOB', count: 0, stepRate: null },
+        { key: 'FIRST_PAID', count: 0, stepRate: null },
+      ],
+    },
+    churn: { cancellations: 0, downgrades: 0, mrrLostUsd: 0, netMrrDeltaUsd: 0 },
+  },
+  trends: { signupsDaily: [], jobsDaily: [], mrrMonthly: [] },
+  tables: { newPaying: [], cancellations: [], topUsers: [], topProjects: [] },
+};
 
 describe('admin-shell isolation — no admin markup for non-admins (SC-002)', () => {
   it('does not render any admin markup for an authenticated non-admin', () => {
@@ -68,5 +102,24 @@ describe('admin-shell isolation — no admin markup for non-admins (SC-002)', ()
 
     const html = renderToStaticMarkup(React.createElement(Header, { isAdmin: false }));
     assertNoAdminMarkup(html);
+  });
+});
+
+describe('AdminHomePage dashboard landmarks (AIB-800)', () => {
+  it('renders all five section landmarks for an admin', () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      React.createElement(
+        QueryClientProvider,
+        { client: qc },
+        React.createElement(AdminHomePage, { initialData: EMPTY_SNAPSHOT })
+      )
+    );
+
+    expect(screen.getByRole('region', { name: 'Alertes' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Pulse' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Santé Business' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Tendances' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Détails actionnables' })).toBeTruthy();
   });
 });

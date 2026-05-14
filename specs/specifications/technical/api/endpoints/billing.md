@@ -183,9 +183,16 @@ Stripe webhook handler. Receives and processes subscription lifecycle events.
 - `customer.subscription.updated` → Sync plan, status, period dates
 - `customer.subscription.deleted` → Set status CANCELED (record preserved for audit; user reverts to FREE limits)
 
-**Response** (200 OK): `{ "received": true }`
+**Response** (200 OK): `{ "received": true }` (with `skipped: 'duplicate'` when the event was already claimed in `StripeEvent`).
 
-**Idempotency**: Events already in the `StripeEvent` table are silently skipped.
+**Processing order**:
+
+1. Signature verification — 400 on failure; no rows written.
+2. Idempotency claim via `createStripeEvent(event.id, event.type)`. P2002 duplicate short-circuits to 200 `{ received: true, skipped: 'duplicate' }`; no `WebhookOutcome` row is written for duplicates.
+3. Per-type handler dispatch.
+4. **Outcome recording**: `recordWebhookOutcome(event.id, event.type, status, errorMessage?)` writes exactly one `WebhookOutcome` row keyed on the (claimed) Stripe event. `SUCCESS` rows have `errorMessage = null`; `FAILURE` rows carry the catch-block error truncated to 1000 chars. If the outcome insert itself throws, the failure is logged via `console.error('Failed to record webhook outcome', …)` and swallowed — the original 200/500 response to Stripe is preserved so Stripe's retry behavior is unaffected.
+
+The `WebhookOutcome` rows power the Admin Home dashboard's `STRIPE_WEBHOOK_ERRORS` alert (1+ `FAILURE` row with `receivedAt ≥ now()-24h` → alert fires). Retries-exhausted is not modeled as a separate status: Stripe re-delivers a failed event as the same `event.id`, each delivery producing one additional `FAILURE` row, which is already captured by the alert's "1+ failure in 24 h" rule.
 
 **Errors**:
 - `400`: Invalid signature or malformed event

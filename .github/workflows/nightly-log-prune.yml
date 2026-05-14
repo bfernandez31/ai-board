@@ -24,3 +24,20 @@ jobs:
           echo "HTTP $code"
           echo "$body"
           [ "$code" = "200" ]
+
+      - name: Cron heartbeat
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          response=$(curl -sS -w "\n%{http_code}" \
+            -X POST "$APP_URL/api/maintenance/cron-heartbeat" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $WORKFLOW_API_TOKEN" \
+            -d '{"cron":"NIGHTLY_LOG_PRUNE"}')
+          body=$(echo "$response" | head -n -1)
+          code=$(echo "$response" | tail -n 1)
+          echo "HTTP $code"
+          echo "$body"
+          [ "$code" = "200" ]

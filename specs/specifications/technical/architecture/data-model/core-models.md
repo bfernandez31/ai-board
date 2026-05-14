@@ -928,6 +928,66 @@ model StripeEvent {
 - Webhook handler checks for existing record before processing; duplicate events are silently ignored
 - Records are never deleted (permanent audit log of processed events)
 
+### WebhookOutcome
+
+Outcome row per inbound provider-webhook delivery that passed the idempotency claim. Drives the Admin Home dashboard's `STRIPE_WEBHOOK_ERRORS` alert.
+
+```prisma
+model WebhookOutcome {
+  id           Int                  @id @default(autoincrement())
+  provider     String               @db.VarChar(50)
+  eventId      String               @db.VarChar(255)
+  eventType    String               @db.VarChar(100)
+  status       WebhookOutcomeStatus
+  errorMessage String?              @db.VarChar(1000)
+  receivedAt   DateTime             @default(now())
+
+  @@index([status, receivedAt])
+  @@index([provider, receivedAt])
+}
+```
+
+**Purpose**: Persistent record of whether each processed webhook delivery succeeded or failed, used as the data source for the Stripe-error alert and as a forensic trail for partial outages.
+
+**Fields**:
+- `provider`: `"stripe"` today; the column is generic so future providers can share the table without a migration
+- `eventId`: Stripe event id (`evt_…`). NOT unique — a redelivery short-circuited at the `StripeEvent` claim never reaches this row, so a single event never produces two outcome rows under normal operation
+- `eventType`: Stripe event type (e.g., `invoice.payment_failed`)
+- `status`: `SUCCESS | FAILURE` per the `WebhookOutcomeStatus` enum
+- `errorMessage`: Catch-block error truncated to 1000 chars; `null` when `status === 'SUCCESS'`
+- `receivedAt`: Insert timestamp; the value the dashboard's 24-hour alert window is computed against
+
+**Business Rules**:
+- Write-once: rows are never updated. Status is decided at insert time.
+- Inserted by `POST /api/webhooks/stripe` *after* the existing `StripeEvent` idempotency claim succeeds; never inserted on duplicate redeliveries.
+- If the insert itself throws, the route logs and swallows so the original Stripe-facing 200/500 response is preserved.
+- Not auto-pruned by this feature — alert window is 24 h; older rows are inert and can be pruned by a follow-up retention task.
+
+### CronRun
+
+Last-success heartbeat per critical cron, used by the Admin Home dashboard's stale-cron alert.
+
+```prisma
+model CronRun {
+  id            Int          @id @default(autoincrement())
+  cron          CriticalCron @unique
+  lastSuccessAt DateTime
+  updatedAt     DateTime     @updatedAt
+}
+```
+
+**Purpose**: Records when each registered critical cron last completed successfully so the dashboard can detect staleness ( > 36 h ) without polling GitHub Actions APIs.
+
+**Fields**:
+- `cron`: `CriticalCron` enum value identifying the registered workflow. `@unique` enforces one row per cron.
+- `lastSuccessAt`: Timestamp of the most recent successful heartbeat. Advanced monotonically by the heartbeat upsert.
+- `updatedAt`: Bookkeeping.
+
+**Business Rules**:
+- One row per cron, created on first heartbeat (upsert keyed on `cron`); never deleted; no deletion path is exposed.
+- Updated only by `POST /api/maintenance/cron-heartbeat`, which is the **last** step of each registered workflow. If the workflow's functional steps fail, the heartbeat step is skipped → `lastSuccessAt` does not advance → the dashboard alert eventually fires.
+- A cron registered in the allowlist but without a `CronRun` row is treated as stale (the alert fires on the first scheduled tick after registration).
+
 ### VerificationToken
 
 NextAuth.js email verification tokens.
