@@ -89,8 +89,9 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
   const isRetry = parsed.data.periodStart != null && parsed.data.periodEnd != null;
 
+  let prevEnd: Date | null = null;
   if (!isRetry) {
-    const prevEnd = await getLastCompletedRunEnd();
+    prevEnd = await getLastCompletedRunEnd();
     const shippedSince = await countShippedClaudeTicketsSince(prevEnd);
 
     if (shippedSince === 0) {
@@ -122,7 +123,6 @@ export async function POST(request: NextRequest): Promise<Response> {
     periodStart = new Date(parsed.data.periodStart!);
     periodEnd = new Date(parsed.data.periodEnd!);
   } else {
-    const prevEnd = await getLastCompletedRunEnd();
     periodStart = prevEnd ?? (await getEarliestClaudeJobTimestamp()) ?? now;
     periodEnd = now;
   }

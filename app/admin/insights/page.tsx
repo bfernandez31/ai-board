@@ -17,13 +17,13 @@ export default async function InsightsPage() {
   const owner = process.env.GITHUB_OWNER;
   const repo = process.env.GITHUB_REPO;
   const reportEntries = reports.map((r) => toListEntry(r, owner, repo));
-  // Prefer the latest COMPLETED report (sortable by generatedAt desc), but
-  // fall back to the first row (which may be RUNNING or FAILED) so the view
-  // surfaces in-flight or failed runs instead of the empty-state placeholder
-  // when no COMPLETED report exists yet.
-  const latestCompleted = reports.find((r) => r.status === 'COMPLETED') ?? null;
-  const defaultDisplay = latestCompleted ?? reports[0] ?? null;
-  const latestEntry = defaultDisplay ? toListEntry(defaultDisplay, owner, repo) : null;
+  // Prefer the latest COMPLETED report, but fall back to the first row (which
+  // may be RUNNING or FAILED) so the view surfaces in-flight or failed runs
+  // instead of the empty-state placeholder when no COMPLETED report exists.
+  const latestEntry =
+    reportEntries.find((r) => r.status === 'COMPLETED') ??
+    reportEntries[0] ??
+    null;
 
   const preflight = await computePreflightSnapshot();
 
