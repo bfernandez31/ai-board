@@ -13,6 +13,10 @@ on:
         description: 'Companion Job.id for status PATCH and log capture'
         required: true
         type: string
+      project_id:
+        description: 'Host Project.id used to resolve the Anthropic credential'
+        required: true
+        type: string
       period_start:
         description: 'ISO 8601 lower bound (inclusive)'
         required: true
@@ -30,6 +34,7 @@ jobs:
     timeout-minutes: 50
     env:
       APP_URL: ${{ vars.APP_URL }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -74,10 +79,34 @@ jobs:
             gunzip "./sessions/${jobId}.jsonl.gz"
           done
 
+      - name: Fetch Anthropic credential
+        run: |
+          set -euo pipefail
+          echo "🔑 Fetching Anthropic credential for host project ${{ inputs.project_id }}..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "${APP_URL}/api/internal/credentials?projectId=${{ inputs.project_id }}&provider=ANTHROPIC" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "ℹ️  No Anthropic credential found (HTTP $HTTP_CODE) — falling back to repo secret"
+          else
+            CRED_VALUE_B64=$(echo "$BODY" | jq -r '.value')
+            echo "::add-mask::${CRED_VALUE_B64}"
+            CRED_VALUE=$(echo "$CRED_VALUE_B64" | base64 -d)
+            echo "::add-mask::${CRED_VALUE}"
+            {
+              echo "CLAUDE_CODE_OAUTH_TOKEN<<CREDENTIAL_EOF"
+              echo "${CRED_VALUE}"
+              echo "CREDENTIAL_EOF"
+            } >> "$GITHUB_ENV"
+            echo "✅ Anthropic credential loaded"
+          fi
+
       - name: Run Claude Code /insights
         id: insights
         env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
           JOB_ID: ${{ inputs.job_id }}
         run: |

@@ -185,6 +185,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         inputs: {
           report_id: String(report.id),
           job_id: String(jobId),
+          project_id: String(fallbackProject.id),
           period_start: periodStart.toISOString(),
           period_end: periodEnd.toISOString(),
         },
