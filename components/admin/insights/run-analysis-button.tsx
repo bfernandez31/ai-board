@@ -50,6 +50,7 @@ function buildOptimisticEntry(now: Date): ReportListEntry {
     errorReason: null,
     completedAt: null,
     createdAt: iso,
+    workflowRunId: null,
   };
 }
 

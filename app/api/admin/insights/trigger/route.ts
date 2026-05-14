@@ -15,7 +15,6 @@ import {
   getLastCompletedRunEnd,
   getRunningReport,
   markFailed,
-  toListEntry,
 } from '@/app/lib/insights/repository';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
 
@@ -212,7 +211,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const body: TriggerSuccessBody = {
     id: report.id,
     status: 'RUNNING',
-    createdAt: toListEntry(report).createdAt,
+    createdAt: report.createdAt.toISOString(),
   };
   return NextResponse.json(body, { status: 201 });
 }

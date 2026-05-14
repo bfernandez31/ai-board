@@ -29,7 +29,7 @@ description: "Dependency-ordered task list for AIB-798 — Admin Insights page c
 
 **Purpose**: Confirm prerequisite tooling. No new dependencies are required for AIB-798 (no schema change, no new package).
 
-- [ ] T001 Confirm baseline checks pass before any code change by running `bun run type-check` and `bun run lint` from the repo root (no edits in this task — establishes the green baseline so later phases attribute failures correctly)
+- [X] T001 ✅ DONE Confirm baseline checks pass before any code change by running `bun run type-check` and `bun run lint` from the repo root (no edits in this task — establishes the green baseline so later phases attribute failures correctly)
 
 ---
 
@@ -39,8 +39,8 @@ description: "Dependency-ordered task list for AIB-798 — Admin Insights page c
 
 **⚠️ CRITICAL**: No user story work begins until this phase is complete.
 
-- [ ] T002 In `app/lib/insights/repository.ts`: (a) extend `listReports` to use `include: { job: { select: { workflowRunId: true } } }`; (b) extend the exported `ReportListEntry` interface with `workflowRunId: string | null`; (c) extend `toListEntry`'s row parameter type to `InsightsReport & { job: { workflowRunId: bigint | null } | null }` and emit `workflowRunId: row.job?.workflowRunId?.toString() ?? null` (per data-model.md "Serialization note" and research.md P-4)
-- [ ] T003 [P] In `components/admin/insights/run-analysis-button.tsx`: update `buildOptimisticEntry` to set `workflowRunId: null` on the returned `ReportListEntry` so the optimistic RUNNING insertion typechecks against the extended interface (data-model.md "Backwards compatibility")
+- [X] T002 ✅ DONE In `app/lib/insights/repository.ts`: (a) extend `listReports` to use `include: { job: { select: { workflowRunId: true } } }`; (b) extend the exported `ReportListEntry` interface with `workflowRunId: string | null`; (c) extend `toListEntry`'s row parameter type to `InsightsReport & { job: { workflowRunId: bigint | null } | null }` and emit `workflowRunId: row.job?.workflowRunId?.toString() ?? null` (per data-model.md "Serialization note" and research.md P-4)
+- [X] T003 ✅ DONE [P] In `components/admin/insights/run-analysis-button.tsx`: update `buildOptimisticEntry` to set `workflowRunId: null` on the returned `ReportListEntry` so the optimistic RUNNING insertion typechecks against the extended interface (data-model.md "Backwards compatibility")
 
 **Checkpoint**: `ReportListEntry` now carries `workflowRunId`; the optimistic insertion path is type-safe. User stories can begin in parallel.
 

@@ -40,17 +40,27 @@ export async function getLastCompletedRunEnd(): Promise<Date | null> {
   return row?.periodEnd ?? null;
 }
 
+export type InsightsReportWithJob = InsightsReport & {
+  job: { workflowRunId: bigint | null } | null;
+};
+
 export async function listReports(
   limit: number = LIST_DEFAULT_LIMIT
-): Promise<InsightsReport[]> {
+): Promise<InsightsReportWithJob[]> {
   return prisma.insightsReport.findMany({
     orderBy: { generatedAt: 'desc' },
     take: Math.min(Math.max(1, limit), LIST_DEFAULT_LIMIT),
+    include: { job: { select: { workflowRunId: true } } },
   });
 }
 
-export async function getReportById(id: number): Promise<InsightsReport | null> {
-  return prisma.insightsReport.findUnique({ where: { id } });
+export async function getReportById(
+  id: number
+): Promise<InsightsReportWithJob | null> {
+  return prisma.insightsReport.findUnique({
+    where: { id },
+    include: { job: { select: { workflowRunId: true } } },
+  });
 }
 
 export async function getRunningReport(): Promise<InsightsReport | null> {
@@ -150,9 +160,10 @@ export interface ReportListEntry {
   errorReason: string | null;
   completedAt: string | null;
   createdAt: string;
+  workflowRunId: string | null;
 }
 
-export function toListEntry(row: InsightsReport): ReportListEntry {
+export function toListEntry(row: InsightsReportWithJob): ReportListEntry {
   return {
     id: row.id,
     status: row.status,
@@ -165,5 +176,6 @@ export function toListEntry(row: InsightsReport): ReportListEntry {
     errorReason: row.errorReason,
     completedAt: row.completedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
+    workflowRunId: row.job?.workflowRunId?.toString() ?? null,
   };
 }
