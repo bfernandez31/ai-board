@@ -86,6 +86,47 @@ jobs:
             gunzip "${CLAUDE_SESSIONS_DIR}/${jobId}.jsonl.gz"
           done
 
+          # /insights requires filename == sessionId (UUID): see decompiled
+          # rO_() — basenames that aren't UUIDs are silently skipped. Our raw
+          # artifact is also a concat of N sessions per job (one file per
+          # `~/.claude/projects/<cwd>/<sessionId>.jsonl` aggregated in
+          # capture-agent-logs.sh). Split by internal sessionId into one
+          # `<sessionId>.jsonl` per group so /insights can pick them up.
+          python3 - "${CLAUDE_SESSIONS_DIR}" <<'PY'
+          import json, os, sys
+          outdir = sys.argv[1]
+          for name in os.listdir(outdir):
+              src = os.path.join(outdir, name)
+              if not os.path.isfile(src) or not name.endswith('.jsonl'):
+                  continue
+              groups = {}
+              with open(src, encoding='utf-8') as f:
+                  for line in f:
+                      line = line.strip()
+                      if not line:
+                          continue
+                      try:
+                          obj = json.loads(line)
+                      except Exception:
+                          continue
+                      sid = obj.get('sessionId')
+                      if not sid:
+                          continue
+                      groups.setdefault(sid, []).append(line)
+              # If the basename is already a UUID-shaped sessionId and the file
+              # contains exactly one session matching, leave it alone.
+              base = name[:-len('.jsonl')]
+              if len(groups) == 1 and base in groups:
+                  continue
+              for sid, lines in groups.items():
+                  dst = os.path.join(outdir, f'{sid}.jsonl')
+                  # Append-safe (multiple jobs could carry the same session).
+                  with open(dst, 'a', encoding='utf-8') as out:
+                      out.write('\n'.join(lines))
+                      out.write('\n')
+              os.unlink(src)
+          PY
+
       - name: Fetch Anthropic credential
         run: |
           set -euo pipefail
