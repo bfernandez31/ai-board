@@ -1,5 +1,7 @@
 'use client';
 
+import type { ReactElement } from 'react';
+
 export interface ChartTooltipRow {
   label: string;
   value: string | number;
@@ -37,4 +39,21 @@ export function ChartTooltipContent({ title, rows }: ChartTooltipContentProps) {
       </div>
     </div>
   );
+}
+
+interface RechartsTooltipRenderProps {
+  active?: boolean;
+  payload?: ReadonlyArray<{ payload?: unknown }>;
+}
+
+export function renderChartTooltip<T>(
+  build: (point: T) => { title: string; rows: ChartTooltipRow[] }
+): (props: RechartsTooltipRenderProps) => ReactElement | null {
+  return function RenderChartTooltip({ active, payload }) {
+    if (!active || !payload?.length) return null;
+    const point = payload[0]?.payload as T | undefined;
+    if (!point) return null;
+    const { title, rows } = build(point);
+    return <ChartTooltipContent title={title} rows={rows} />;
+  };
 }

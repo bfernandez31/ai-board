@@ -2,7 +2,7 @@
 
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import type { PlanDistributionRow } from '@/lib/admin/home/types';
-import { ChartTooltipContent } from './chart-tooltip';
+import { renderChartTooltip } from './chart-tooltip';
 
 const COLORS = [
   'hsl(var(--chart-1))',
@@ -39,23 +39,18 @@ export function PlanDonut({ data }: PlanDonutProps) {
                 ))}
               </Pie>
               <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const entry = payload[0]?.payload as PlanDistributionRow | undefined;
-                  if (!entry) return null;
+                content={renderChartTooltip<PlanDistributionRow>((entry) => {
                   const idx = data.findIndex((row) => row.plan === entry.plan);
                   const color = COLORS[idx % COLORS.length] ?? 'hsl(var(--chart-1))';
                   const share = total > 0 ? Math.round((entry.count / total) * 100) : 0;
-                  return (
-                    <ChartTooltipContent
-                      title={PLAN_LABELS[entry.plan] ?? entry.plan}
-                      rows={[
-                        { label: 'Users', value: entry.count, color },
-                        { label: 'Share', value: `${share}%` },
-                      ]}
-                    />
-                  );
-                }}
+                  return {
+                    title: PLAN_LABELS[entry.plan] ?? entry.plan,
+                    rows: [
+                      { label: 'Users', value: entry.count, color },
+                      { label: 'Share', value: `${share}%` },
+                    ],
+                  };
+                })}
               />
             </PieChart>
           </ResponsiveContainer>
