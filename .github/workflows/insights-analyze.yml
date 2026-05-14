@@ -125,6 +125,30 @@ jobs:
           # (npm, not bunx — see in-script note), auth, and raw-log capture.
           ./.github/scripts/run-agent.sh CLAUDE insights
 
+      - name: Debug /insights cache (temporary, AIB-791)
+        if: always()
+        run: |
+          set +e
+          echo "=== Seeded JSONL files ==="
+          find "${HOME}/.claude/projects" -name '*.jsonl' -exec wc -l {} \;
+          echo "=== Facets generated ==="
+          ls -la "${HOME}/.claude/usage-data/facets/" 2>&1 | head -20
+          echo "=== Session-meta generated ==="
+          ls -la "${HOME}/.claude/usage-data/session-meta/" 2>&1 | head -20
+          echo "=== Per-JSONL user message stats ==="
+          for f in $(find "${HOME}/.claude/projects" -name '*.jsonl' 2>/dev/null); do
+            user_msgs=$(jq -c 'select(.type=="user" and (.message.content | type == "string" and (length > 0)) or (.type=="user" and (.message.content | type == "array") ))' "$f" 2>/dev/null | wc -l)
+            total=$(wc -l < "$f")
+            echo "  $(basename "$f"): total=${total} user_msg=${user_msgs}"
+            jq -c 'select(.type=="user") | {ts: .timestamp, content_type: (.message.content | type), preview: (if (.message.content | type == "string") then (.message.content | tostring | .[0:120]) else "<array>" end)}' "$f" 2>/dev/null | head -2
+          done
+          echo "=== Report size & head ==="
+          wc -c "${HOME}/.claude/usage-data/report.html" 2>/dev/null || echo "no report.html"
+          head -c 2500 "${HOME}/.claude/usage-data/report.html" 2>/dev/null
+          echo
+          echo "=== Report tail ==="
+          tail -c 1500 "${HOME}/.claude/usage-data/report.html" 2>/dev/null
+
       - name: Collect insights report
         run: |
           set -euo pipefail
