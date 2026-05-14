@@ -1,9 +1,12 @@
+import type { Metadata } from 'next';
 import { reconcileOrphanedRunningReports } from '@/app/lib/insights/reconcile';
 import { listReports, toListEntry } from '@/app/lib/insights/repository';
 import { computePreflightSnapshot } from '@/app/lib/insights/preflight';
 import { InsightsReportView } from '@/components/admin/insights/insights-report-view';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = { title: 'Insights LLM' };
 
 /**
  * /admin/insights — hosts the report view. Reconciliation runs FIRST so

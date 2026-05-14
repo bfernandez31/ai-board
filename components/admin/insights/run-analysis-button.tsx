@@ -17,6 +17,10 @@ interface RunAnalysisButtonProps {
   /** Disable when the most-recent visible row is RUNNING — the API would
    *  refuse with ALREADY_RUNNING, but disabling avoids the round trip. */
   latestIsRunning: boolean;
+  /** Optional idle-state label. Defaults to 'Run new analysis'. The pending
+   *  state always shows 'Starting…' regardless of label so both call sites
+   *  share a recognizable in-flight indicator. */
+  label?: string;
 }
 
 interface TriggerResponse {
@@ -57,6 +61,7 @@ function buildOptimisticEntry(now: Date): ReportListEntry {
 export function RunAnalysisButton({
   preflight,
   latestIsRunning,
+  label,
 }: RunAnalysisButtonProps) {
   const queryClient = useQueryClient();
   const [message, setMessage] = useState<string | null>(null);
@@ -123,7 +128,7 @@ export function RunAnalysisButton({
         disabled={disabled}
         aria-disabled={disabled}
       >
-        {mutation.isPending ? 'Starting…' : 'Run new analysis'}
+        {mutation.isPending ? 'Starting…' : (label ?? 'Run new analysis')}
       </Button>
       {message ? (
         <p className="text-xs text-destructive">{message}</p>

@@ -25,10 +25,14 @@ test.describe('Admin Insights happy path', () => {
     expect(response?.status()).toBe(404);
   });
 
-  test('admin sees the metadata header and a sandboxed iframe', async ({ page }) => {
+  test('admin sees the tab title, no internal H1, and a sandboxed iframe', async ({ page }) => {
     await page.setExtraHTTPHeaders({ 'x-test-user-id': ADMIN_EMAIL });
     await page.goto('/admin/insights');
-    await expect(page.getByRole('heading', { name: /Claude Code Insights/i })).toBeVisible();
+
+    await expect(page).toHaveTitle(/Insights LLM/);
+    expect(
+      await page.getByRole('heading', { name: /claude code insights/i }).count()
+    ).toBe(0);
 
     const iframe = page.locator('iframe[sandbox]');
     if (await iframe.count() > 0) {

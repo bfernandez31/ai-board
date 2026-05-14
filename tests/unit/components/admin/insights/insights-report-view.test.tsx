@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
 import { InsightsReportView } from '@/components/admin/insights/insights-report-view';
 import type { ReportListEntry } from '@/app/lib/insights/repository';
@@ -16,11 +16,20 @@ function makeReport(overrides: Partial<ReportListEntry>): ReportListEntry {
     errorReason: null,
     completedAt: '2026-05-11T12:05:00.000Z',
     createdAt: '2026-05-11T12:00:00.000Z',
+    workflowRunId: null,
     ...overrides,
   };
 }
 
 describe('InsightsReportView (US1, AIB-791)', () => {
+  beforeEach(() => {
+    vi.stubEnv('GITHUB_OWNER', 'acme');
+    vi.stubEnv('GITHUB_REPO', 'ai-board');
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it('renders the sandboxed iframe with src pointing at the html endpoint', () => {
     const latest = makeReport({ id: 42 });
     renderWithProviders(
@@ -90,10 +99,11 @@ describe('InsightsReportView (US1, AIB-791)', () => {
     expect(screen.getByText(/No Insights reports yet/i)).toBeInTheDocument();
   });
 
-  it('renders the FAILED placeholder when the latest entry is FAILED', () => {
+  it('renders the FAILED diagnostics panel when the latest entry is FAILED', () => {
     const failed = makeReport({
       status: 'FAILED',
       errorReason: 'Workflow dispatch failed',
+      workflowRunId: '12345',
     });
     renderWithProviders(
       <InsightsReportView
@@ -113,5 +123,58 @@ describe('InsightsReportView (US1, AIB-791)', () => {
     );
     expect(screen.getByText(/This run failed/i)).toBeInTheDocument();
     expect(screen.getByText(/Workflow dispatch failed/)).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /workflow run/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Reessayer/i })
+    ).toBeInTheDocument();
+  });
+
+  it('does not render an H1 with "Claude Code Insights" text (FR-002)', () => {
+    const latest = makeReport({ id: 7 });
+    renderWithProviders(
+      <InsightsReportView
+        reports={[latest]}
+        latest={latest}
+        preflight={{
+          canTrigger: false,
+          shippedSincePreviousRun: 0,
+          previousRunEnd: latest.periodEnd,
+          runningSince: null,
+          refusal: {
+            refusalCode: 'NO_NEW_SHIPPED',
+            message: 'No new shipped tickets',
+          },
+        }}
+      />
+    );
+    expect(
+      screen.queryByRole('heading', { name: /claude code insights/i })
+    ).toBeNull();
+  });
+
+  it('renders a two-column desktop grid (md:grid-cols-[280px_minmax(0,1fr)]) (FR-005)', () => {
+    const latest = makeReport({ id: 8 });
+    const { container } = renderWithProviders(
+      <InsightsReportView
+        reports={[latest]}
+        latest={latest}
+        preflight={{
+          canTrigger: false,
+          shippedSincePreviousRun: 0,
+          previousRunEnd: latest.periodEnd,
+          runningSince: null,
+          refusal: {
+            refusalCode: 'NO_NEW_SHIPPED',
+            message: 'No new shipped tickets',
+          },
+        }}
+      />
+    );
+    const grid = container.querySelector(
+      '[class*="md:grid-cols-[280px_minmax(0,1fr)]"]'
+    );
+    expect(grid).not.toBeNull();
   });
 });
