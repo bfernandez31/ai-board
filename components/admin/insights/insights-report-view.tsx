@@ -31,13 +31,12 @@ function formatDate(iso: string | null): string {
 function formatMetadataPhrasing(report: ReportListEntry): string {
   const start = formatDate(report.periodStart);
   const end = formatDate(report.periodEnd);
+  if (report.status === 'RUNNING') {
+    return `Analyzing Claude Code sessions for tickets shipped between ${start} and ${end}…`;
+  }
+  // Sessions/tickets counts are only meaningful for COMPLETED rows — rendering
+  // "Analyzed 0 … 0 …" for a failed row would misrepresent the run.
   if (report.status !== 'COMPLETED' || report.sessionsCount === null) {
-    // Sessions/tickets counts are only meaningful for COMPLETED rows.
-    // Rendering "Analyzed 0 … 0 …" for an in-flight or failed row would
-    // misrepresent the run as having processed zero items.
-    if (report.status === 'RUNNING') {
-      return `Analyzing Claude Code sessions for tickets shipped between ${start} and ${end}…`;
-    }
     return `Run window: ${start} to ${end} (counts unavailable)`;
   }
   return `Analyzed ${report.sessionsCount} Claude Code sessions across ${
