@@ -4,6 +4,7 @@ import { NewPayingTable } from './new-paying-table';
 import { CancellationsTable } from './cancellations-table';
 import { TopUsersTable } from './top-users-table';
 import { TopProjectsTable } from './top-projects-table';
+import { SectionPanel } from './section-panel';
 import type { TablesSnapshot } from '@/lib/admin/home/types';
 
 interface DetailsGridProps {
@@ -17,30 +18,18 @@ export function DetailsGrid({ tables }: DetailsGridProps) {
         Détails actionnables
       </h2>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="rounded-lg border bg-card p-4">
-          <h3 className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            New paying users (30d)
-          </h3>
+        <SectionPanel title="New paying users (30d)">
           <NewPayingTable data={tables.newPaying} />
-        </div>
-        <div className="rounded-lg border bg-card p-4">
-          <h3 className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Recent cancellations (30d)
-          </h3>
+        </SectionPanel>
+        <SectionPanel title="Recent cancellations (30d)">
           <CancellationsTable data={tables.cancellations} />
-        </div>
-        <div className="rounded-lg border bg-card p-4">
-          <h3 className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Top users this month
-          </h3>
+        </SectionPanel>
+        <SectionPanel title="Top users this month">
           <TopUsersTable data={tables.topUsers} />
-        </div>
-        <div className="rounded-lg border bg-card p-4">
-          <h3 className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Top projects this month
-          </h3>
+        </SectionPanel>
+        <SectionPanel title="Top projects this month">
           <TopProjectsTable data={tables.topProjects} />
-        </div>
+        </SectionPanel>
       </div>
     </section>
   );
