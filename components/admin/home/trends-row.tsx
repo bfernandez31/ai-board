@@ -3,7 +3,7 @@
 import { SignupsTrend } from './signups-trend';
 import { JobsTrend } from './jobs-trend';
 import { MrrTrend } from './mrr-trend';
-import { Card, CardContent } from '@/components/ui/card';
+import { SectionPanel } from './section-panel';
 import type { TrendsSnapshot } from '@/lib/admin/home/types';
 
 interface TrendsRowProps {
@@ -17,30 +17,15 @@ export function TrendsRow({ trends }: TrendsRowProps) {
         Tendances
       </h2>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="bg-card">
-          <CardContent className="p-4">
-            <h3 className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Signups / day (30d)
-            </h3>
-            <SignupsTrend data={trends.signupsDaily} />
-          </CardContent>
-        </Card>
-        <Card className="bg-card">
-          <CardContent className="p-4">
-            <h3 className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Jobs / day (30d)
-            </h3>
-            <JobsTrend data={trends.jobsDaily} />
-          </CardContent>
-        </Card>
-        <Card className="bg-card">
-          <CardContent className="p-4">
-            <h3 className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              MRR / month (12m)
-            </h3>
-            <MrrTrend data={trends.mrrMonthly} />
-          </CardContent>
-        </Card>
+        <SectionPanel title="Signups / day (30d)">
+          <SignupsTrend data={trends.signupsDaily} />
+        </SectionPanel>
+        <SectionPanel title="Jobs / day (30d)">
+          <JobsTrend data={trends.jobsDaily} />
+        </SectionPanel>
+        <SectionPanel title="MRR / month (12m)">
+          <MrrTrend data={trends.mrrMonthly} />
+        </SectionPanel>
       </div>
     </section>
   );
