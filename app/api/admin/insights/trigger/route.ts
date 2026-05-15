@@ -79,7 +79,22 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   await reconcileOrphanedRunningReports(new Date());
 
-  const rawBody: unknown = await request.json().catch(() => ({}));
+  // Distinguish an empty body (legitimate fresh-run request) from a parse
+  // failure on a non-empty body. Silently coercing malformed JSON to `{}`
+  // would let a bad retry payload start a fresh analysis instead of
+  // returning the documented 400 validation error.
+  const rawText = await request.text();
+  let rawBody: unknown = {};
+  if (rawText.trim().length > 0) {
+    try {
+      rawBody = JSON.parse(rawText);
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON body' },
+        { status: 400 }
+      );
+    }
+  }
   const parsed = triggerBodySchema.safeParse(rawBody);
   if (!parsed.success) {
     return NextResponse.json(

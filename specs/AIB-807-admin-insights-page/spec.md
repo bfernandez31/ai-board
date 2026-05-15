@@ -131,7 +131,7 @@ An admin triggers a fresh analysis from the updated Insights page. The "Run new 
 - **FR-014**: When the linked job has no workflow run ID, the GitHub Actions link MUST NOT appear (graceful degradation, no broken link).
 - **FR-015**: For a FAILED report, a retry button MUST be displayed in the right pane.
 - **FR-016**: The retry button MUST trigger a new analysis using the exact same `periodStart` and `periodEnd` from the failed report.
-- **FR-017**: The retry MUST go through the same preflight checks and eligibility rules as the normal "Run new analysis" trigger, displaying refusal reasons when applicable.
+- **FR-017**: The retry MUST enforce only the concurrency gate (`ALREADY_RUNNING`) — the `NO_CLAUDE_JOBS` and `NO_NEW_SHIPPED` shipped-count gates are skipped because the original run already proved eligibility for that same window. Refusal reasons MUST still be displayed when the concurrency gate blocks the retry.
 - **FR-018**: The "Run new analysis" button MUST remain accessible at the top-right of the main content area with its existing preflight logic preserved identically.
 - **FR-019**: Live polling (15-second interval while RUNNING rows exist) MUST continue to function, updating both the past-reports list and the right pane when a report's status transitions.
 - **FR-020**: For a RUNNING report, the right pane MUST show an "in progress" placeholder with the run start date.

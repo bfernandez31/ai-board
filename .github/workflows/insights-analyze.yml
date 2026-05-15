@@ -34,11 +34,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: PATCH job status -> RUNNING
+        # AIB-807: include `workflowRunId` so the FAILED-report diagnostics
+        # pane can surface a GitHub Actions link. Without this, the
+        # `githubActionsUrl` field on the report serializes as null.
         run: |
           curl -fsS -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"status":"RUNNING"}'
+            -d '{"status":"RUNNING","workflowRunId":${{ github.run_id }}}'
 
       - name: Enumerate Claude sessions in window
         id: enumerate

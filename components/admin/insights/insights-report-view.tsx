@@ -139,6 +139,25 @@ export function InsightsReportView({
     return preflight.refusal;
   }, [preflight.refusal, preflight.previousRunEnd, preflight.runningSince]);
 
+  // Retries bypass NO_CLAUDE_JOBS / NO_NEW_SHIPPED on the server (the
+  // original run already proved eligibility for that window). Only the
+  // concurrency gate and the latestIsRunning short-circuit apply here, so
+  // the retry button stays enabled even when the header is gated by
+  // shipped-count refusals. The message is also reworded so the admin can
+  // tell which button is blocked.
+  const retryRefusalCode = preflight.refusal?.refusalCode ?? null;
+  const retryCanTrigger =
+    !latestIsRunning && retryRefusalCode !== 'ALREADY_RUNNING';
+  const retryRefusal =
+    retryRefusalCode === 'ALREADY_RUNNING'
+      ? {
+          refusalCode: 'ALREADY_RUNNING',
+          message: preflight.runningSince
+            ? `Another analysis is running (started ${formatDate(preflight.runningSince)}) — retry will be available when it finishes.`
+            : 'Another analysis is running — retry will be available when it finishes.',
+        }
+      : null;
+
   return (
     <div className="flex flex-col gap-4">
       <header className="flex items-start justify-between gap-4">
@@ -165,7 +184,13 @@ export function InsightsReportView({
             <ul className="divide-y divide-border rounded-md border border-border">
               {reports.map((entry) => {
                 const isSelected = entry.id === (display?.id ?? null);
-                const duration = formatDuration(entry.createdAt, entry.completedAt);
+                // FR-006/FR-007: duration is a COMPLETED-only column. FAILED
+                // rows also have `completedAt` (set by `markFailed`), but
+                // showing wall-clock time on a failure is misleading.
+                const duration =
+                  entry.status === 'COMPLETED'
+                    ? formatDuration(entry.createdAt, entry.completedAt)
+                    : null;
                 return (
                   <li key={entry.id}>
                     <button
@@ -229,7 +254,10 @@ export function InsightsReportView({
                     </a>
                   )}
                   <RunAnalysisButton
-                    preflight={{ canTrigger, refusal }}
+                    preflight={{
+                      canTrigger: retryCanTrigger,
+                      refusal: retryRefusal,
+                    }}
                     latestIsRunning={latestIsRunning}
                     retryPeriod={{
                       periodStart: display.periodStart,
@@ -241,10 +269,16 @@ export function InsightsReportView({
               {renderReportBody(display)}
             </div>
           ) : (
-            <ReportErrorPlaceholder
-              title="No Insights reports yet"
-              detail="Trigger a run to generate the first report."
-            />
+            <div className="flex flex-col gap-4">
+              <ReportErrorPlaceholder
+                title="No Insights reports yet"
+                detail="Trigger a run to generate the first report."
+              />
+              <RunAnalysisButton
+                preflight={{ canTrigger, refusal }}
+                latestIsRunning={latestIsRunning}
+              />
+            </div>
           )}
         </main>
       </div>

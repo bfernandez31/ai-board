@@ -72,7 +72,7 @@ Same `ReportListEntry` shape as the list endpoint — gains the same two new fie
 - Both fields must be present together or both absent (Zod `.refine()`)
 - Both must parse as valid ISO 8601 datetime strings
 - `periodStart` must be strictly before `periodEnd`
-- When present, these override the computed period — the endpoint still runs all preflight checks (NO_CLAUDE_JOBS, NO_NEW_SHIPPED, ALREADY_RUNNING) but the shipped-count check uses the override period's floor instead of `prevEnd`
+- When present, these override the computed period — the endpoint **skips** the `NO_CLAUDE_JOBS` and `NO_NEW_SHIPPED` shipped-count gates (the original run already proved eligibility for the same window) and only enforces the `ALREADY_RUNNING` concurrency gate
 
 **Behavior when period params are provided**:
 1. Reconcile orphaned RUNNING reports (unchanged)

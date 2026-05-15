@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { insightsReportsQueryKey } from '@/app/lib/hooks/queries/use-insights-reports';
@@ -20,6 +20,12 @@ interface RunAnalysisButtonProps {
   retryPeriod?: { periodStart: string; periodEnd: string };
 }
 
+// Shared across every <RunAnalysisButton/> instance so the header and the
+// FAILED-row retry button cannot fire concurrent POSTs (each instance has its
+// own useMutation otherwise). `useIsMutating` returns >0 while any instance
+// keyed with this same array is in flight.
+const TRIGGER_MUTATION_KEY = ['admin', 'insights', 'trigger'] as const;
+
 interface TriggerResponse {
   id: number;
   status: 'RUNNING';
@@ -37,14 +43,19 @@ interface OptimisticContext {
 
 const OPTIMISTIC_ID = -1;
 
-function buildOptimisticEntry(now: Date): ReportListEntry {
+function buildOptimisticEntry(
+  now: Date,
+  retryPeriod?: { periodStart: string; periodEnd: string }
+): ReportListEntry {
   const iso = now.toISOString();
   return {
     id: OPTIMISTIC_ID,
     status: 'RUNNING',
     generatedAt: iso,
-    periodStart: iso,
-    periodEnd: iso,
+    // Retries reuse the failed report's exact window — the server uses these
+    // same values, so showing `now → now` until the refetch is misleading.
+    periodStart: retryPeriod?.periodStart ?? iso,
+    periodEnd: retryPeriod?.periodEnd ?? iso,
     sessionsCount: null,
     ticketsCount: null,
     artifactSize: null,
@@ -65,6 +76,7 @@ export function RunAnalysisButton({
   const [message, setMessage] = useState<string | null>(null);
 
   const mutation = useMutation<TriggerResponse, Error, void, OptimisticContext>({
+    mutationKey: TRIGGER_MUTATION_KEY,
     mutationFn: async () => {
       const response = await fetch('/api/admin/insights/trigger', {
         method: 'POST',
@@ -93,7 +105,10 @@ export function RunAnalysisButton({
       );
       queryClient.setQueryData<ReportListEntry[]>(
         insightsReportsQueryKey,
-        (current) => [buildOptimisticEntry(new Date()), ...(current ?? [])]
+        (current) => [
+          buildOptimisticEntry(new Date(), retryPeriod),
+          ...(current ?? []),
+        ]
       );
       return { previousReports };
     },
@@ -114,8 +129,15 @@ export function RunAnalysisButton({
     },
   });
 
+  // >0 if either button instance is mid-POST. Prevents two optimistic
+  // RUNNING rows briefly appearing if both buttons are clicked in quick
+  // succession (the DB partial-unique index already prevents corruption).
+  const triggerInFlight = useIsMutating({ mutationKey: TRIGGER_MUTATION_KEY }) > 0;
   const disabled =
-    mutation.isPending || latestIsRunning || preflight.canTrigger === false;
+    mutation.isPending ||
+    triggerInFlight ||
+    latestIsRunning ||
+    preflight.canTrigger === false;
   const reason = preflight.refusal?.message ?? null;
 
   return (
