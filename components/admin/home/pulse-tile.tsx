@@ -22,7 +22,7 @@ export function PulseTile({ title, value, deltas, spark, formatter, sparkStroke 
   const displayValue = typeof value === 'number' && formatter ? formatter(value) : String(value);
 
   return (
-    <Card className="bg-card">
+    <Card className="aurora-bg-section">
       <CardContent className="flex flex-col gap-2 p-4">
         <span className="text-sm text-muted-foreground">{title}</span>
         <span className="text-2xl font-semibold tabular-nums">{displayValue}</span>

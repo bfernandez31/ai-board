@@ -8,7 +8,7 @@ interface SectionPanelProps {
 
 export function SectionPanel({ title, children }: SectionPanelProps) {
   return (
-    <Card className="bg-card">
+    <Card className="aurora-bg-section">
       <CardContent className="p-4">
         <h3 className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           {title}
