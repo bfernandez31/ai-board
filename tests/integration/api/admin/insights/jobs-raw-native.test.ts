@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JobStatus } from '@prisma/client';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import { buildJobLogRawArtifactKey } from '@/app/lib/logs/artifact-key';
 
 const { streamJobLogArtifact, validateWorkflowAuth } = vi.hoisted(() => ({
   streamJobLogArtifact: vi.fn(),
@@ -65,6 +66,14 @@ async function makeJobForAgent(
       startedAt: new Date(),
       completedAt: new Date(),
       updatedAt: new Date(),
+    },
+  });
+  await prisma.jobLog.create({
+    data: {
+      jobId: job.id,
+      captureStatus: 'CAPTURED',
+      preview: 'p',
+      rawArtifactKey: buildJobLogRawArtifactKey(ctx.projectId, ticket.id, job.id),
     },
   });
   return job.id;

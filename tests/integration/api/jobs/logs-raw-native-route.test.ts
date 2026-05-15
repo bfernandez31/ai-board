@@ -300,7 +300,7 @@ describe('GET /api/projects/:projectId/tickets/:id/jobs/:jobId/logs/raw-native',
     });
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Disposition')).toBe(
-      `attachment; filename="${TICKET_KEY_FALLBACK}-job-${jobId}-raw.jsonl.gz"`,
+      `attachment; filename="${TICKET_KEY_FALLBACK}-job-${jobId}-raw.tar.gz"`,
     );
   });
 });

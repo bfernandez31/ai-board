@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 /**
  * Integration: SC-002 — for any non-admin viewer (authenticated or anonymous),
  * the rendered global-header HTML contains ZERO admin-related markup. We
