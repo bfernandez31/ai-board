@@ -58,35 +58,55 @@ All sidebar visuals — typography, colors, hover state, active state, divider, 
 
 ## The Insights Page
 
-`/admin/insights` is a single page that presents:
+`/admin/insights` is a single page that presents a side-by-side layout:
 
-1. The **latest COMPLETED report** rendered inline
-2. A **metadata header** describing the report's scope
-3. A **past-reports list** (reverse-chronological) for switching between reports
-4. A **"Run new analysis"** action to trigger a new run
+- A **left pane** (~280 px wide) listing past reports in a compact, dense format
+- A **right pane** showing the selected report's content (metadata header, body, and actions)
+- A **header row** above both panes with the shipped-tickets counter and the "Run new analysis" button
 
-### Latest Report Rendering
+The page does not render its own H1 heading — the admin sidebar's "Insights LLM" label is the sole page identifier.
 
-When at least one COMPLETED report exists, the page renders the most recent COMPLETED report's HTML body inline inside a sandboxed iframe. The iframe loads from a dedicated authenticated endpoint and executes the report's scripts and charts (which the `/insights` analyzer needs for its interactive content) while remaining isolated from the host application's cookies, storage, and DOM.
+On screens below the medium breakpoint the two panes stack vertically (past-reports list above, report content below).
+
+### Report Selection
+
+When the page loads, the most recent COMPLETED report is selected by default. If no COMPLETED report exists, the most recent report of any status is selected.
+
+Clicking any report in the left pane updates the right pane to show that report's content without a full page reload. The selected row receives an accent background with a left-edge border indicator, visually distinct from the admin sidebar's own active-state styling.
+
+### Report Rendering (Right Pane)
+
+- **COMPLETED**: The report's HTML body renders inside a sandboxed iframe (`sandbox="allow-scripts"`, no `allow-same-origin`). The iframe loads from a dedicated authenticated endpoint and executes the report's scripts and charts while remaining isolated from the host application's cookies, storage, and DOM.
+- **FAILED**: The right pane displays the failure reason text, an optional GitHub Actions link (see [Failed Report Diagnostics](#failed-report-diagnostics)), and a retry button.
+- **RUNNING**: A "Run in progress" placeholder with the run start date.
 
 ### Metadata Header
 
-Each rendered report displays a metadata header in the exact canonical form:
+Each selected report displays a metadata header in the exact canonical form:
 
 > Analyzed **N** Claude Code sessions across **M** tickets shipped between **START_DATE** and **END_DATE**.
 
-The header also displays the report's generated timestamp. `N` and `M` are derived from the same enumeration the workflow used as analysis input, so the header and report content never drift.
+The header also displays the report's generated timestamp. `N` and `M` are derived from the same enumeration the workflow used as analysis input, so the header and report content never drift. For non-COMPLETED reports, the header shows the analysis window with a note that counts are unavailable.
 
 ### Empty State
 
-When no COMPLETED report has ever been produced, the page displays a clear empty state explaining that no analysis has been run yet, alongside the "Run new analysis" action (subject to the pre-flight check below).
+When no report has ever been produced, the left pane shows "No prior runs" and the right pane displays a placeholder prompting the admin to trigger a first run, alongside the "Run new analysis" action (subject to the pre-flight check below).
 
 ### Running State
 
 When a report is currently RUNNING:
-- The page shows a "Running since RUN_START_DATE" placeholder
+- The page shows a "Running since RUN_START_DATE" placeholder in the right pane
+- The RUNNING entry appears in the left pane's past-reports list with a status badge
 - The "Run new analysis" button is disabled
-- The page polls for status changes every 15 seconds and updates automatically when the run reaches a terminal state
+- The page polls for status changes every 15 seconds and updates both panes automatically when the run reaches a terminal state
+
+## Failed Report Diagnostics
+
+When a FAILED report is selected, the right pane provides diagnostic information and recovery actions:
+
+1. **Error reason**: The failure reason text is displayed in a readable, well-formatted presentation.
+2. **GitHub Actions link**: When the failed report's linked job has a recorded workflow run ID, a clickable link opens the corresponding GitHub Actions run page in a new tab. The URL is constructed server-side from the job's `workflowRunId` and the repository coordinates (never exposed as raw environment variables to the client). When no workflow run ID is recorded, the link is simply absent — no broken link is shown.
+3. **Retry button**: A "Retry analysis" button triggers a new analysis using the exact same `periodStart` and `periodEnd` from the failed report. The retry goes through the same concurrency gate (ALREADY_RUNNING blocks retry) but skips the shipped-tickets pre-flight check (the original run proved eligibility for that window). On success, a new RUNNING entry appears in the past-reports list. Preflight refusals are displayed to the admin.
 
 ## Triggering a New Analysis
 
@@ -122,20 +142,24 @@ A FAILED run does **not** advance the high-water mark — the next attempt re-co
 
 ## Past Reports List
 
-The page displays past reports in reverse-chronological order (newest first). Each entry shows:
+The left pane displays past reports in reverse-chronological order (newest first) as a dense, compact list. Each row is ~30–36 px tall and shows:
 
-- Date generated
-- Period covered (start → end)
-- Sessions count and tickets count
-- Run status (COMPLETED, FAILED, or RUNNING)
+- **Generation date** (YYYY-MM-DD)
+- **Period window** (compact start → end form, hidden on small screens)
+- **Duration** (for COMPLETED reports only — computed from the report's creation timestamp to its completion timestamp, formatted as "Xm Ys"; omitted when the completion timestamp is unavailable)
+- **Status badge** (COMPLETED, FAILED, or RUNNING — rendered as a small badge aligned to the right edge of the row)
 
 The list is capped at 200 entries server-side regardless of how many reports exist in storage. There is no pagination UI, no filter, no search, and no custom date-range selector.
 
 ### Selecting Entries
 
-- **COMPLETED entry**: switches the rendered HTML and metadata header to that report. The latest report remains in the list and can be reselected.
-- **FAILED entry**: replaces the HTML body with the failure reason; the metadata header still displays the period and counts.
-- **RUNNING entry**: shows the "Running…" placeholder.
+Clicking any row in the list selects that report and updates the right pane:
+
+- **COMPLETED entry**: switches the rendered HTML and metadata header to that report.
+- **FAILED entry**: shows the failure reason, an optional GitHub Actions link, and a retry button (see [Failed Report Diagnostics](#failed-report-diagnostics)).
+- **RUNNING entry**: shows the "Run in progress" placeholder with the run start date.
+
+The selected row is visually highlighted with an accent background and a left-edge border, distinct from the admin sidebar's active-state indicator.
 
 ## Reports Are Read-Only
 
@@ -163,7 +187,7 @@ Every accepted trigger leaves exactly one report row in a terminal status (COMPL
 
 - No user management UI or other admin-section pages beyond Insights LLM and the [Admin Home Dashboard](10-admin-home.md)
 - No database-backed admin role system or runtime UI to grant/revoke admin status
-- No scheduled, recurring, or event-driven triggers — manual button only
+- No scheduled, recurring, or event-driven triggers — manual button and retry only
 - No analysis of non-Claude agent sessions
 - No filtering, search, custom date ranges, or pagination UI on the list
 - No editing, annotating, renaming, or deletion of reports

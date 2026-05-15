@@ -82,4 +82,51 @@ describe('RunAnalysisButton (US3, AIB-791)', () => {
       expect(screen.getByText(/Workflow dispatch failed/)).toBeInTheDocument()
     );
   });
+
+  it('shows "Retry analysis" label when retryPeriod is provided', () => {
+    renderWithProviders(
+      <RunAnalysisButton
+        preflight={{ canTrigger: true, refusal: null }}
+        latestIsRunning={false}
+        retryPeriod={{
+          periodStart: '2026-05-01T00:00:00.000Z',
+          periodEnd: '2026-05-10T00:00:00.000Z',
+        }}
+      />
+    );
+    expect(screen.getByRole('button', { name: /retry analysis/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /run new analysis/i })).not.toBeInTheDocument();
+  });
+
+  it('sends periodStart/periodEnd in POST body when retryPeriod is provided', async () => {
+    fetchMock.mockResolvedValueOnce({
+      status: 201,
+      json: async () => ({ id: 99, status: 'RUNNING', createdAt: new Date().toISOString() }),
+    });
+
+    renderWithProviders(
+      <RunAnalysisButton
+        preflight={{ canTrigger: true, refusal: null }}
+        latestIsRunning={false}
+        retryPeriod={{
+          periodStart: '2026-05-01T00:00:00.000Z',
+          periodEnd: '2026-05-10T00:00:00.000Z',
+        }}
+      />
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /retry analysis/i }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/admin/insights/trigger',
+      expect.objectContaining({ method: 'POST' })
+    );
+
+    const callBody = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(callBody).toEqual({
+      periodStart: '2026-05-01T00:00:00.000Z',
+      periodEnd: '2026-05-10T00:00:00.000Z',
+    });
+  });
 });

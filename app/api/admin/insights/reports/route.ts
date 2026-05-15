@@ -19,6 +19,8 @@ export async function GET(request: NextRequest): Promise<Response> {
 
   await reconcileOrphanedRunningReports(new Date());
   const rows = await listReports(200);
+  const owner = process.env.GITHUB_OWNER;
+  const repo = process.env.GITHUB_REPO;
 
-  return NextResponse.json({ reports: rows.map(toListEntry) });
+  return NextResponse.json({ reports: rows.map((r) => toListEntry(r, owner, repo)) });
 }

@@ -2,6 +2,7 @@ import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { requireAdminOrNotFound } from '@/app/lib/auth/admin';
 import { reconcileOrphanedRunningReports } from '@/app/lib/insights/reconcile';
@@ -22,6 +23,23 @@ import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
 export const dynamic = 'force-dynamic';
 
 const WORKFLOW_FILE = 'insights-analyze.yml';
+
+const triggerBodySchema = z
+  .object({
+    periodStart: z.string().datetime().optional(),
+    periodEnd: z.string().datetime().optional(),
+  })
+  .refine(
+    (d) => (d.periodStart == null) === (d.periodEnd == null),
+    { message: 'periodStart and periodEnd must both be present or both absent' }
+  )
+  .refine(
+    (d) =>
+      !d.periodStart ||
+      !d.periodEnd ||
+      new Date(d.periodStart) < new Date(d.periodEnd),
+    { message: 'periodStart must be before periodEnd' }
+  );
 
 interface TriggerSuccessBody {
   id: number;
@@ -61,32 +79,50 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   await reconcileOrphanedRunningReports(new Date());
 
-  const prevEnd = await getLastCompletedRunEnd();
-  const shippedSince = await countShippedClaudeTicketsSince(prevEnd);
-
-  if (shippedSince === 0) {
-    // First-ever run with zero shipped Claude tickets: NO_CLAUDE_JOBS. Once
-    // any Claude ticket has shipped, `shippedSince` (counted against a null
-    // floor) will be ≥ 1 and we land in the NO_NEW_SHIPPED branch below
-    // with a real `prevEnd` to reference. Never synthesize `new Date()` as
-    // a "last run" — the operator would see a fabricated timestamp that
-    // does not correspond to any real run.
-    if (prevEnd === null) {
-      return refusal(
-        'NO_CLAUDE_JOBS',
-        'No shipped Claude tickets to analyze yet'
+  // Distinguish an empty body (legitimate fresh-run request) from a parse
+  // failure on a non-empty body. Silently coercing malformed JSON to `{}`
+  // would let a bad retry payload start a fresh analysis instead of
+  // returning the documented 400 validation error.
+  const rawText = await request.text();
+  let rawBody: unknown = {};
+  if (rawText.trim().length > 0) {
+    try {
+      rawBody = JSON.parse(rawText);
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON body' },
+        { status: 400 }
       );
     }
-    return refusal(
-      'NO_NEW_SHIPPED',
-      `No new shipped tickets since last run on ${prevEnd.toISOString()}`
+  }
+  const parsed = triggerBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? 'Invalid request body' },
+      { status: 400 }
     );
   }
+  const isRetry = parsed.data.periodStart != null && parsed.data.periodEnd != null;
 
-  // Fast-path read for the common case where a run is already visible. The
-  // authoritative gate is the partial-unique index enforced inside
-  // createRunningReportAndJob — this early refusal just avoids an
-  // unnecessary transaction round trip.
+  let prevEnd: Date | null = null;
+  if (!isRetry) {
+    prevEnd = await getLastCompletedRunEnd();
+    const shippedSince = await countShippedClaudeTicketsSince(prevEnd);
+
+    if (shippedSince === 0) {
+      if (prevEnd === null) {
+        return refusal(
+          'NO_CLAUDE_JOBS',
+          'No shipped Claude tickets to analyze yet'
+        );
+      }
+      return refusal(
+        'NO_NEW_SHIPPED',
+        `No new shipped tickets since last run on ${prevEnd.toISOString()}`
+      );
+    }
+  }
+
   const running = await getRunningReport();
   if (running) {
     return refusal(
@@ -96,8 +132,15 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const now = new Date();
-  const periodStart = prevEnd ?? (await getEarliestClaudeJobTimestamp()) ?? now;
-  const periodEnd = now;
+  let periodStart: Date;
+  let periodEnd: Date;
+  if (isRetry) {
+    periodStart = new Date(parsed.data.periodStart!);
+    periodEnd = new Date(parsed.data.periodEnd!);
+  } else {
+    periodStart = prevEnd ?? (await getEarliestClaudeJobTimestamp()) ?? now;
+    periodEnd = now;
+  }
 
   // The driving Job needs a projectId. Insights jobs aren't tied to a single
   // project; we record the configured ai-board host project (the repo we

@@ -30,5 +30,7 @@ export async function GET(
     return adminNotFoundResponse();
   }
 
-  return NextResponse.json(toListEntry(row));
+  const owner = process.env.GITHUB_OWNER;
+  const repo = process.env.GITHUB_REPO;
+  return NextResponse.json(toListEntry(row, owner, repo));
 }

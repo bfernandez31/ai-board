@@ -20,6 +20,8 @@ function makeReport(overrides: Partial<ReportListEntry>): ReportListEntry {
     errorReason: null,
     completedAt: '2026-05-10T12:05:00.000Z',
     createdAt: '2026-05-10T12:00:00.000Z',
+    workflowRunId: null,
+    githubActionsUrl: null,
     ...overrides,
   };
 }
@@ -127,11 +129,92 @@ describe('InsightsReportView list selection (US4, AIB-791)', () => {
       />
     );
     const user = userEvent.setup();
-    // Click the older COMPLETED entry (id=1)
-    const olderRow = screen.getByText('5 sessions / 2 tickets').closest('button')!;
+    // Click the older COMPLETED entry (id=1) by finding its row button
+    const buttons = screen.getAllByRole('button', { name: /2026-05-10/i });
+    // The last COMPLETED button corresponds to id=1
+    const olderRow = buttons[buttons.length - 1];
     await user.click(olderRow);
 
     const iframe = screen.getByTitle('Insights report 1') as HTMLIFrameElement;
     expect(iframe.getAttribute('src')).toBe('/api/admin/insights/reports/1/html');
+  });
+
+  it('dense rows show generation date, status badge, and duration for COMPLETED (FR-006, FR-007)', () => {
+    const denseReports: ReportListEntry[] = [
+      makeReport({
+        id: 10,
+        status: 'COMPLETED',
+        generatedAt: '2026-05-10T12:00:00.000Z',
+        createdAt: '2026-05-10T12:00:00.000Z',
+        completedAt: '2026-05-10T12:02:15.000Z',
+      }),
+    ];
+
+    renderWithProviders(
+      <InsightsReportView
+        reports={denseReports}
+        latest={denseReports[0]}
+        preflight={{
+          canTrigger: false,
+          shippedSincePreviousRun: 0,
+          previousRunEnd: null,
+          runningSince: null,
+          refusal: {
+            refusalCode: 'NO_CLAUDE_JOBS',
+            message: 'No shipped Claude tickets to analyze yet',
+          },
+        }}
+      />
+    );
+
+    expect(screen.getByText('2026-05-10')).toBeInTheDocument();
+    expect(screen.getByText('COMPLETED')).toBeInTheDocument();
+    expect(screen.getByText('2m 15s')).toBeInTheDocument();
+  });
+
+  it('applies active selection highlight class to the selected row (FR-008)', async () => {
+    renderWithProviders(
+      <InsightsReportView
+        reports={reports}
+        latest={reports[2]}
+        preflight={{
+          canTrigger: false,
+          shippedSincePreviousRun: 0,
+          previousRunEnd: null,
+          runningSince: null,
+          refusal: {
+            refusalCode: 'NO_CLAUDE_JOBS',
+            message: 'No shipped Claude tickets to analyze yet',
+          },
+        }}
+      />
+    );
+
+    const selectedButton = screen.getByRole('button', { pressed: true });
+    expect(selectedButton.className).toContain('bg-accent/50');
+    expect(selectedButton.className).toContain('border-l-2');
+    expect(selectedButton.className).toContain('border-primary');
+  });
+
+  it('uses responsive md:flex-row class for mobile stacking (FR-005)', () => {
+    renderWithProviders(
+      <InsightsReportView
+        reports={reports}
+        latest={reports[2]}
+        preflight={{
+          canTrigger: false,
+          shippedSincePreviousRun: 0,
+          previousRunEnd: null,
+          runningSince: null,
+          refusal: {
+            refusalCode: 'NO_CLAUDE_JOBS',
+            message: 'No shipped Claude tickets to analyze yet',
+          },
+        }}
+      />
+    );
+
+    const aside = document.querySelector('aside');
+    expect(aside?.parentElement?.className).toContain('md:flex-row');
   });
 });

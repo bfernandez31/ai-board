@@ -58,23 +58,34 @@ Start a new Insights analysis run. Subject to the pre-flight (shipped Claude tic
 
 **Authentication**: A-ADMIN
 
-**Request body**: empty (`Content-Type: application/json` accepted with empty body).
+**Request body** (`Content-Type: application/json`): Optional. When empty (or `{}`), the endpoint computes a fresh analysis window. To retry a failed report with the same period window, pass:
+
+```json
+{
+  "periodStart": "2026-05-04T09:00:00.000Z",
+  "periodEnd": "2026-05-11T12:34:56.789Z"
+}
+```
+
+Validated with Zod: both fields must be present together or both absent; `periodStart` must be before `periodEnd`. Returns 400 on validation failure.
 
 **Server flow** (in order):
 
 1. `requireAdminOrNotFound(request)` → admin email.
 2. `reconcileOrphanedRunningReports(new Date())` — lazy reconciliation auto-FAILs any RUNNING row older than `INSIGHTS_RUN_TIMEOUT_MINUTES`.
-3. Pre-flight: compute `prevEnd = getLastCompletedRunEnd()` and `count = countShippedClaudeTicketsSince(prevEnd)`. If `count === 0`:
+3. Parse and validate request body via `triggerBodySchema`.
+4. **Fresh run** (no period params): Pre-flight: compute `prevEnd = getLastCompletedRunEnd()` and `count = countShippedClaudeTicketsSince(prevEnd)`. If `count === 0`:
    - When `prevEnd === null` → refuse with `NO_CLAUDE_JOBS` (no Claude tickets have shipped yet).
    - Otherwise → refuse with `NO_NEW_SHIPPED` with the prior run's `periodEnd` as the boundary; never synthesize `new Date()` as a fabricated "last run" timestamp.
-4. Concurrency gate: if a RUNNING row exists, refuse with `ALREADY_RUNNING`.
-5. Compute period bounds — `periodStart = prevEnd ?? getEarliestClaudeJobTimestamp()`; `periodEnd = now`.
-6. In a single transaction:
+   **Retry** (period params present): Skip the pre-flight shipped-tickets check (the original run proved eligibility for that window).
+5. Concurrency gate (always enforced): if a RUNNING row exists, refuse with `ALREADY_RUNNING`.
+6. Compute period bounds — **fresh run**: `periodStart = prevEnd ?? getEarliestClaudeJobTimestamp()`; `periodEnd = now`. **Retry**: use the provided `periodStart` and `periodEnd` directly.
+7. In a single transaction:
    - Insert `InsightsReport` with `status='RUNNING'`, `generatedAt=now`, `periodStart`, `periodEnd`.
    - Insert companion `Job` with `command='insights-analyze'`, `status='PENDING'`, `ticketId=null`, `projectId=<host project id>` (the ai-board host project — used so existing project-scoped log queries resolve).
    - Link the report to the job via `jobId`.
-7. Dispatch `.github/workflows/insights-analyze.yml` on the ai-board repository with inputs `report_id`, `job_id`, `period_start`, `period_end`, `app_url`.
-8. On Octokit `RequestError`, atomically transition the report to FAILED with `errorReason="Workflow dispatch failed: <status> <message>"`, delete the job row, and return 502 with `DISPATCH_FAILED`.
+8. Dispatch `.github/workflows/insights-analyze.yml` on the ai-board repository with inputs `report_id`, `job_id`, `period_start`, `period_end`, `app_url`.
+9. On Octokit `RequestError`, atomically transition the report to FAILED with `errorReason="Workflow dispatch failed: <status> <message>"`, delete the job row, and return 502 with `DISPATCH_FAILED`.
 
 **Success response** (201):
 ```json
@@ -114,9 +125,9 @@ List past reports in reverse-chronological order, capped at 200.
 **Server flow**:
 1. `requireAdminOrNotFound(request)`.
 2. `reconcileOrphanedRunningReports(new Date())`.
-3. `prisma.insightsReport.findMany({ orderBy: { generatedAt: 'desc' }, take: 200 })`.
+3. `prisma.insightsReport.findMany({ orderBy: { generatedAt: 'desc' }, take: 200, include: { job: { select: { workflowRunId: true } } } })`.
 
-The 200-row cap is enforced at the database query level, not only at response serialization.
+The 200-row cap is enforced at the database query level, not only at response serialization. Each row is serialized via `toListEntry()`, which joins the linked Job's `workflowRunId` and constructs the `githubActionsUrl` server-side from `GITHUB_OWNER`/`GITHUB_REPO` environment variables.
 
 **Response** (200 OK):
 ```json
@@ -132,11 +143,15 @@ The 200-row cap is enforced at the database query level, not only at response se
       "ticketsCount": 17,
       "errorReason": null,
       "completedAt": "2026-05-11T12:39:12.345Z",
-      "createdAt": "2026-05-11T12:34:56.789Z"
+      "createdAt": "2026-05-11T12:34:56.789Z",
+      "workflowRunId": "12345678",
+      "githubActionsUrl": "https://github.com/owner/repo/actions/runs/12345678"
     }
   ]
 }
 ```
+
+`workflowRunId` is the Job's BigInt workflow run ID serialized as a string, or `null` when the linked job has no run ID. `githubActionsUrl` is the full GitHub Actions URL constructed from the `workflowRunId` and the repository coordinates, or `null` when either the run ID or the repository environment variables are missing.
 
 `artifactKey` is never returned. The client fetches the HTML body via `GET /api/admin/insights/reports/:id/html`.
 
@@ -150,7 +165,7 @@ Fetch a single report's metadata.
 
 **Authentication**: A-ADMIN
 
-**Response** (200 OK): Same shape as one entry from the list endpoint.
+**Response** (200 OK): Same shape as one entry from the list endpoint (includes `workflowRunId` and `githubActionsUrl`).
 
 **Not-found response**: Byte-equivalent 404 (same shape as non-admin response, so a probe cannot distinguish "no such row" from "no such page").
 
