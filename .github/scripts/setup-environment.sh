@@ -131,7 +131,23 @@ MANAGER=$(yq eval '.runtime.manager' "$CONFIG_FILE")
 MANAGER_VERSION=$(yq eval '.runtime.manager_version // ""' "$CONFIG_FILE")
 INSTALL_CMD=$(yq eval '.commands.install' "$CONFIG_FILE")
 AGENT_CLI=$(yq eval '.agent.cli' "$CONFIG_FILE")
-SYSTEM_PACKAGES=$(yq eval '.runtime.system_packages // [] | .[]' "$CONFIG_FILE" 2>/dev/null | tr '\n' ' ' | sed 's/ *$//')
+
+# Read system_packages into an array so each entry is a separate argv element.
+# Each entry is re-validated against a strict Debian-package-name regex; any
+# entry containing characters that could be interpreted by apt-get as an option
+# (leading '-') or by the shell aborts setup. lib/validations/config.ts enforces
+# the same regex at config-sync time — this is a defense-in-depth check in case
+# the workflow runs against a target repo with an unvalidated config.yml.
+SYSTEM_PACKAGES=()
+DEBIAN_PACKAGE_NAME_REGEX='^[a-z0-9][a-z0-9+.\-]*$'
+while IFS= read -r pkg; do
+  [[ -z "$pkg" ]] && continue
+  if [[ ! "$pkg" =~ $DEBIAN_PACKAGE_NAME_REGEX ]]; then
+    error "Invalid runtime.system_packages entry: '$pkg' (must match $DEBIAN_PACKAGE_NAME_REGEX)"
+    exit 1
+  fi
+  SYSTEM_PACKAGES+=("$pkg")
+done < <(yq eval '.runtime.system_packages // [] | .[]' "$CONFIG_FILE" 2>/dev/null)
 
 success "Config loaded: manager=$MANAGER, agent=$AGENT_CLI"
 
@@ -142,7 +158,7 @@ success "Config loaded: manager=$MANAGER, agent=$AGENT_CLI"
 # specify/plan don't compile.
 
 install_system_packages() {
-  if [[ -z "$SYSTEM_PACKAGES" ]]; then
+  if [[ ${#SYSTEM_PACKAGES[@]} -eq 0 ]]; then
     return 0
   fi
 
@@ -151,10 +167,11 @@ install_system_packages() {
     exit 1
   fi
 
-  info "Installing system packages: $SYSTEM_PACKAGES"
+  info "Installing system packages: ${SYSTEM_PACKAGES[*]}"
   sudo apt-get update -qq
-  # shellcheck disable=SC2086
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $SYSTEM_PACKAGES
+  # '--' stops option parsing so any entry that somehow starts with '-'
+  # would be treated as a package name, not an apt-get option.
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -- "${SYSTEM_PACKAGES[@]}"
   success "System packages installed"
 }
 

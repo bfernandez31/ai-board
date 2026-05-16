@@ -77,6 +77,11 @@ export const ProjectSectionSchema = z.object({
   framework: ProjectFrameworkSchema.default('none'),
 }).strict();
 
+// Debian package name regex: must start with alphanumeric, then alphanumerics,
+// '+', '.', or '-'. Blocks shell/apt-option injection (leading '-', '/', spaces,
+// quoting characters) when entries flow into `apt-get install` in setup-environment.sh.
+export const DebianPackageNameRegex = /^[a-z0-9][a-z0-9+.\-]*$/;
+
 export const RuntimeSectionSchema = z.object({
   manager: PackageManagerSchema,
   manager_version: z.string().optional(),
@@ -85,7 +90,17 @@ export const RuntimeSectionSchema = z.object({
   java: z.string().optional(),
   go: z.string().optional(),
   rust: z.string().optional(),
-  system_packages: z.array(z.string().min(1)).optional(),
+  system_packages: z
+    .array(
+      z
+        .string()
+        .min(1)
+        .regex(
+          DebianPackageNameRegex,
+          "must be a valid Debian package name (lowercase letters, digits, '+', '.', '-'; must start with letter/digit)",
+        ),
+    )
+    .optional(),
 }).strict();
 
 export const CommandsSectionSchema = z.object({

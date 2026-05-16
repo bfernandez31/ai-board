@@ -516,6 +516,142 @@ describe('validateConfig — unknown fields produce errors', () => {
   });
 });
 
+// ─── runtime.system_packages — Debian package name validation (AIB-819) ─
+
+describe('validateConfig — runtime.system_packages (AIB-819)', () => {
+  it('accepts valid Debian package names', () => {
+    const result = validateConfig(
+      validConfig({
+        runtime: {
+          manager: 'bun',
+          system_packages: [
+            'libssl3',
+            'libx11-6',
+            'g++',
+            'lib32z1',
+            'python3.12',
+            'libgl1-mesa-glx',
+          ],
+        },
+      }),
+    );
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.runtime.system_packages).toHaveLength(6);
+  });
+
+  it('accepts omitted system_packages (optional field)', () => {
+    const result = validateConfig(validConfig());
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.runtime.system_packages).toBeUndefined();
+  });
+
+  it('accepts empty system_packages array', () => {
+    const result = validateConfig(
+      validConfig({
+        runtime: { manager: 'bun', system_packages: [] },
+      }),
+    );
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.runtime.system_packages).toEqual([]);
+  });
+
+  it('rejects entries starting with "-" (apt-get option injection)', () => {
+    const result = validateConfig(
+      validConfig({
+        runtime: {
+          manager: 'bun',
+          system_packages: ['-oDir::Etc::sourcelist=/dev/stdin'],
+        },
+      }),
+    );
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    const err = result.errors.find((e) => e.path.startsWith('runtime.system_packages'));
+    expect(err).toBeDefined();
+  });
+
+  it('rejects entries containing path separators (e.g. local .deb files)', () => {
+    const result = validateConfig(
+      validConfig({
+        runtime: {
+          manager: 'bun',
+          system_packages: ['./payload.deb'],
+        },
+      }),
+    );
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects entries with whitespace (shell argument splitting)', () => {
+    const result = validateConfig(
+      validConfig({
+        runtime: {
+          manager: 'bun',
+          system_packages: ['libssl3 libfoo'],
+        },
+      }),
+    );
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects entries with shell metacharacters', () => {
+    for (const malicious of [
+      'libssl3;rm -rf /',
+      'libssl3$(whoami)',
+      'libssl3`id`',
+      'libssl3|cat',
+      'libssl3&&id',
+      'libssl3>out',
+      "libssl3'quoted'",
+    ]) {
+      const result = validateConfig(
+        validConfig({
+          runtime: { manager: 'bun', system_packages: [malicious] },
+        }),
+      );
+      expect(result.success, `expected rejection of: ${malicious}`).toBe(false);
+    }
+  });
+
+  it('rejects entries starting with non-alphanumeric (e.g. "+package", ".pkg")', () => {
+    for (const bad of ['+invalid', '.invalid', '-invalid']) {
+      const result = validateConfig(
+        validConfig({
+          runtime: { manager: 'bun', system_packages: [bad] },
+        }),
+      );
+      expect(result.success, `expected rejection of: ${bad}`).toBe(false);
+    }
+  });
+
+  it('rejects entries with uppercase letters (Debian names are lowercase)', () => {
+    const result = validateConfig(
+      validConfig({
+        runtime: { manager: 'bun', system_packages: ['LibSSL'] },
+      }),
+    );
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects empty-string entries', () => {
+    const result = validateConfig(
+      validConfig({
+        runtime: { manager: 'bun', system_packages: [''] },
+      }),
+    );
+
+    expect(result.success).toBe(false);
+  });
+});
+
 // ─── US1: stripServiceCredentials ───────────────────────────────────
 
 describe('stripServiceCredentials', () => {
