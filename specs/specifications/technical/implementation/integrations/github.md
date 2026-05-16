@@ -645,7 +645,7 @@ agent:
 5. Validates runtime on PATH and symlinks readable
 
 **Phase `full`** (implement, quick-impl, verify, health-scan TESTS) — all of lightweight, plus:
-6. Installs OS-level apt packages declared in `runtime.system_packages` (skipped silently when absent; fails if `apt-get` is unavailable). Runs before the package manager so native libs are present when the workflow's "Install Dependencies" step compiles.
+6. Installs OS-level apt packages declared in `runtime.system_packages` (skipped silently when absent; fails if `apt-get` is unavailable). Each entry is re-validated against the Debian package name regex `/^[a-z0-9][a-z0-9+.\-]*$/` and the list is passed to `apt-get install -- "${SYSTEM_PACKAGES[@]}"` as an explicit argv array with the `--` end-of-options separator, so entries cannot inject apt-get options even if a target repo's `config.yml` was not validated by `lib/validations/config.ts`. Runs before the package manager so native libs are present when the workflow's "Install Dependencies" step compiles.
 7. Installs the agent CLI specified by `agent.cli` (`claude-code` or `codex`)
 8. Exports env vars from the config `env` section (workflow secrets take precedence)
 9. Detects Prisma — sets `HAS_PRISMA=true` in `GITHUB_ENV`
