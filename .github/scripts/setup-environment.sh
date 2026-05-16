@@ -131,8 +131,32 @@ MANAGER=$(yq eval '.runtime.manager' "$CONFIG_FILE")
 MANAGER_VERSION=$(yq eval '.runtime.manager_version // ""' "$CONFIG_FILE")
 INSTALL_CMD=$(yq eval '.commands.install' "$CONFIG_FILE")
 AGENT_CLI=$(yq eval '.agent.cli' "$CONFIG_FILE")
+SYSTEM_PACKAGES=$(yq eval '.runtime.system_packages // [] | .[]' "$CONFIG_FILE" 2>/dev/null | tr '\n' ' ' | sed 's/ *$//')
 
 success "Config loaded: manager=$MANAGER, agent=$AGENT_CLI"
+
+# ─── System Packages (apt) Installation ──────────────────────────────────────
+# Installs OS-level libraries declared in .runtime.system_packages (apt names).
+# Needed for projects linking against native libs (X11, OpenGL, SDL, openssl…)
+# during the workflow's "Install Dependencies" step. Runs in 'full' phase only —
+# specify/plan don't compile.
+
+install_system_packages() {
+  if [[ -z "$SYSTEM_PACKAGES" ]]; then
+    return 0
+  fi
+
+  if ! command -v apt-get &>/dev/null; then
+    error "system_packages declared but apt-get not available on this runner"
+    exit 1
+  fi
+
+  info "Installing system packages: $SYSTEM_PACKAGES"
+  sudo apt-get update -qq
+  # shellcheck disable=SC2086
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $SYSTEM_PACKAGES
+  success "System packages installed"
+}
 
 # ─── Package Manager Installation ────────────────────────────────────────────
 
@@ -259,6 +283,10 @@ if [[ "$PHASE" == "post-install" ]]; then
   "$SCRIPT_DIR/run-command.sh" "$TARGET_DIR" db_setup
   success "Post-install setup complete."
   exit 0
+fi
+
+if [[ "$PHASE" == "full" ]]; then
+  install_system_packages
 fi
 
 install_package_manager

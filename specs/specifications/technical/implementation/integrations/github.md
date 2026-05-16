@@ -645,11 +645,12 @@ agent:
 5. Validates runtime on PATH and symlinks readable
 
 **Phase `full`** (implement, quick-impl, verify, health-scan TESTS) — all of lightweight, plus:
-6. Installs the agent CLI specified by `agent.cli` (`claude-code` or `codex`)
-7. Exports env vars from the config `env` section (workflow secrets take precedence)
-8. Detects Prisma — sets `HAS_PRISMA=true` in `GITHUB_ENV`
-9. Detects Playwright — sets `HAS_PLAYWRIGHT=true` in `GITHUB_ENV`
-10. Validates agent CLI on PATH
+6. Installs OS-level apt packages declared in `runtime.system_packages` (skipped silently when absent; fails if `apt-get` is unavailable). Runs before the package manager so native libs are present when the workflow's "Install Dependencies" step compiles.
+7. Installs the agent CLI specified by `agent.cli` (`claude-code` or `codex`)
+8. Exports env vars from the config `env` section (workflow secrets take precedence)
+9. Detects Prisma — sets `HAS_PRISMA=true` in `GITHUB_ENV`
+10. Detects Playwright — sets `HAS_PLAYWRIGHT=true` in `GITHUB_ENV`
+11. Validates agent CLI on PATH
 
 Note: Dependency installation is NOT done by setup-environment.sh — workflows handle it explicitly via `run-command.sh target install` for visibility in CI logs.
 

@@ -85,6 +85,7 @@ export const RuntimeSectionSchema = z.object({
   java: z.string().optional(),
   go: z.string().optional(),
   rust: z.string().optional(),
+  system_packages: z.array(z.string().min(1)).optional(),
 }).strict();
 
 export const CommandsSectionSchema = z.object({
