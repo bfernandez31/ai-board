@@ -8,6 +8,7 @@ import { listTickets } from "./tools/list-tickets.js";
 import { getTicket } from "./tools/get-ticket.js";
 import { createTicket } from "./tools/create-ticket.js";
 import { moveTicket } from "./tools/move-ticket.js";
+import { updateTicket } from "./tools/update-ticket.js";
 
 type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean };
 
@@ -92,6 +93,35 @@ export function createServer(config: Config): McpServer {
       handleToolCall(
         () => createTicket(config, { projectId, title, description }),
         (ticket) => `Created ticket ${ticket.ticketKey}\n\n${JSON.stringify(ticket, null, 2)}`
+      )
+  );
+
+  server.tool(
+    "update_ticket",
+    "Update the title and/or description of a ticket. Only allowed when the ticket is in INBOX stage. At least one of title or description must be provided. The MCP server fetches the current ticket to verify the stage and handle optimistic concurrency.",
+    {
+      projectId: z.number().int().positive().describe("Project ID the ticket belongs to"),
+      ticketKey: z
+        .string()
+        .regex(/^[A-Z]{3,6}-\d+$/)
+        .describe("Ticket key (e.g., 'AIB-123')"),
+      title: z
+        .string()
+        .min(1, "Title must be at least 1 character")
+        .max(100, "Title must be at most 100 characters")
+        .optional()
+        .describe("New ticket title (1-100 characters). Omit to leave unchanged."),
+      description: z
+        .string()
+        .min(1, "Description must be at least 1 character")
+        .max(10000, "Description must be at most 10000 characters")
+        .optional()
+        .describe("New functional description in Markdown. Omit to leave unchanged. Do NOT include implementation plans, file paths, or code — the SPECIFY and PLAN stages handle that."),
+    },
+    ({ projectId, ticketKey, title, description }) =>
+      handleToolCall(
+        () => updateTicket(config, { projectId, ticketKey, title, description }),
+        (ticket) => `Updated ticket ${ticket.ticketKey}\n\n${JSON.stringify(ticket, null, 2)}`
       )
   );
 

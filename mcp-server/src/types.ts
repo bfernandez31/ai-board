@@ -111,6 +111,28 @@ export interface CreateTicketResponse {
   updatedAt: string;
 }
 
+export interface UpdateTicketRequest {
+  title?: string;
+  description?: string;
+  version: number;
+}
+
+export interface UpdateTicketResponse {
+  id: number;
+  ticketNumber: number;
+  ticketKey: string;
+  title: string;
+  description: string;
+  stage: Stage;
+  version: number;
+  projectId: number;
+  branch: string | null;
+  autoMode: boolean;
+  workflowType: WorkflowType;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface TransitionRequest {
   targetStage: Stage;
 }
