@@ -377,7 +377,7 @@ External projects declare their environment via `.ai-board/config.yml` (schema v
 | `runtime.java` | string | — | Java version. Auto-detected from `.java-version` or the `java=` entry in `.sdkmanrc`. |
 | `runtime.go` | string | — | Go version. Auto-detected from the `go` directive in `go.mod`. |
 | `runtime.rust` | string | — | Rust toolchain channel. Auto-detected from `rust-toolchain.toml`. |
-| `runtime.system_packages` | string[] | — | OS-level apt packages installed by `setup-environment.sh` during phase `full`, before the package manager. Use for projects that link against native libraries (X11, OpenGL, SDL, libssl, etc.). Requires a Debian/Ubuntu runner; fails clearly if `apt-get` is unavailable. |
+| `runtime.system_packages` | string[] | — | OS-level apt packages installed by `setup-environment.sh` during phase `full`, before the package manager. Use for projects that link against native libraries (X11, OpenGL, SDL, libssl, etc.). Each entry must be a valid Debian package name matching `/^[a-z0-9][a-z0-9+.\-]*$/` — leading `-`, slashes, spaces, and quoting characters are rejected at validation time to prevent apt-option injection when entries reach `apt-get install`. Requires a Debian/Ubuntu runner; fails clearly if `apt-get` is unavailable. |
 | `commands.build` | string | — | Build command (skipped if absent) |
 | `commands.lint` | string | — | Lint command (auto-detected by `detect-stack.sh`; skipped if absent) |
 | `commands.type_check` | string | — | Type-check command (auto-detected; skipped if absent) |
