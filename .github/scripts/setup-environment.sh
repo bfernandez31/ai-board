@@ -138,16 +138,28 @@ AGENT_CLI=$(yq eval '.agent.cli' "$CONFIG_FILE")
 # (leading '-') or by the shell aborts setup. lib/validations/config.ts enforces
 # the same regex at config-sync time — this is a defense-in-depth check in case
 # the workflow runs against a target repo with an unvalidated config.yml.
+# Only parsed/validated in 'full' phase since lightweight phases never invoke
+# install_system_packages — keeps misconfig errors aligned with the phase that
+# would actually use them.
 SYSTEM_PACKAGES=()
 DEBIAN_PACKAGE_NAME_REGEX='^[a-z0-9][a-z0-9+.\-]*$'
-while IFS= read -r pkg; do
-  [[ -z "$pkg" ]] && continue
-  if [[ ! "$pkg" =~ $DEBIAN_PACKAGE_NAME_REGEX ]]; then
-    error "Invalid runtime.system_packages entry: '$pkg' (must match $DEBIAN_PACKAGE_NAME_REGEX)"
+if [[ "$PHASE" == "full" ]]; then
+  # Capture yq output separately so a non-zero exit (e.g. system_packages is a
+  # map or other non-sequence type) surfaces as an explicit error instead of
+  # being silently swallowed by process substitution.
+  if ! SYSTEM_PACKAGES_RAW=$(yq eval '.runtime.system_packages // [] | .[]' "$CONFIG_FILE" 2>&1); then
+    error "Failed to parse runtime.system_packages from $CONFIG_FILE (expected a sequence/list): $SYSTEM_PACKAGES_RAW"
     exit 1
   fi
-  SYSTEM_PACKAGES+=("$pkg")
-done < <(yq eval '.runtime.system_packages // [] | .[]' "$CONFIG_FILE" 2>/dev/null)
+  while IFS= read -r pkg; do
+    [[ -z "$pkg" ]] && continue
+    if [[ ! "$pkg" =~ $DEBIAN_PACKAGE_NAME_REGEX ]]; then
+      error "Invalid runtime.system_packages entry: '$pkg' (must match $DEBIAN_PACKAGE_NAME_REGEX)"
+      exit 1
+    fi
+    SYSTEM_PACKAGES+=("$pkg")
+  done <<< "$SYSTEM_PACKAGES_RAW"
+fi
 
 success "Config loaded: manager=$MANAGER, agent=$AGENT_CLI"
 
