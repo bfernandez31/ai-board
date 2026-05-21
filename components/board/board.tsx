@@ -8,6 +8,8 @@ import { BoardGrid } from './board-grid';
 import { RetroSpecSection } from './retro-spec-section';
 import { BulkActionBar } from './bulk-action-bar';
 import { BulkDeleteConfirmationModal } from './bulk-delete-confirmation-modal';
+import { BulkAgentDialog } from './bulk-agent-dialog';
+import { BulkModelDialog } from './bulk-model-dialog';
 import { Stage } from '@/lib/stage-transitions';
 import { TicketWithVersion } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -65,6 +67,8 @@ export function Board({
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<number>>(() => new Set());
   const lastClickedTicketIdRef = useRef<number | null>(null);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [isBulkAgentOpen, setIsBulkAgentOpen] = useState(false);
+  const [isBulkModelOpen, setIsBulkModelOpen] = useState(false);
 
   // Drop any ids that have transitioned out of INBOX (FR-014 client mirror).
   useEffect(() => {
@@ -311,8 +315,8 @@ export function Board({
 
       <BulkActionBar
         selectionCount={selectedTicketIds.size}
-        onChangeAgent={() => toast({ title: 'Coming soon', description: 'Bulk agent change is under construction.' })}
-        onChangeModel={() => toast({ title: 'Coming soon', description: 'Bulk model change is under construction.' })}
+        onChangeAgent={() => selectedInboxTickets.length > 0 && setIsBulkAgentOpen(true)}
+        onChangeModel={() => selectedInboxTickets.length > 0 && setIsBulkModelOpen(true)}
         onFusion={() => toast({ title: 'Coming soon', description: 'Ticket fusion is under construction.' })}
         onDelete={showBulkDeleteConfirm}
         onClear={clearSelection}
@@ -324,6 +328,29 @@ export function Board({
         onCancel={() => setIsBulkDeleteOpen(false)}
         onConfirm={handleBulkDeleteConfirm}
         isPending={bulkDeleteMutation.isPending}
+      />
+
+      <BulkAgentDialog
+        open={isBulkAgentOpen}
+        onOpenChange={setIsBulkAgentOpen}
+        projectId={projectId}
+        projectDefaultAgent={defaultAgent}
+        tickets={selectedInboxTickets.map((t) => ({ id: t.id, version: t.version }))}
+        onSuccess={(skippedIds) => {
+          if (skippedIds.length === 0) clearSelection();
+          else setSelectedTicketIds(new Set(skippedIds));
+        }}
+      />
+
+      <BulkModelDialog
+        open={isBulkModelOpen}
+        onOpenChange={setIsBulkModelOpen}
+        projectId={projectId}
+        tickets={selectedInboxTickets.map((t) => ({ id: t.id, version: t.version }))}
+        onSuccess={(skippedIds) => {
+          if (skippedIds.length === 0) clearSelection();
+          else setSelectedTicketIds(new Set(skippedIds));
+        }}
       />
 
       <BoardModals
