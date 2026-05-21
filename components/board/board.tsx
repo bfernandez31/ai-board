@@ -10,12 +10,13 @@ import { BulkActionBar } from './bulk-action-bar';
 import { BulkDeleteConfirmationModal } from './bulk-delete-confirmation-modal';
 import { BulkAgentDialog } from './bulk-agent-dialog';
 import { BulkModelDialog } from './bulk-model-dialog';
+import { FusionDialog } from './fusion-dialog';
+import { buildFusionDescription, computeRangeSelection, mergeAttachments } from '@/lib/board/selection';
 import { Stage } from '@/lib/stage-transitions';
 import { TicketWithVersion } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useTicketsByStage, useLoadMoreShipTickets, useShipTotal } from '@/app/lib/hooks/queries/useTickets';
 import { useBulkDeleteTickets } from '@/lib/hooks/mutations/useBulkDeleteTickets';
-import { computeRangeSelection } from '@/lib/board/selection';
 import { formatBulkResultToast } from '@/lib/board/bulk-result-toast';
 import { useRetroSpecState } from './hooks/use-retro-spec-state';
 import { useJobSnapshots } from './hooks/use-job-snapshots';
@@ -69,6 +70,7 @@ export function Board({
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [isBulkAgentOpen, setIsBulkAgentOpen] = useState(false);
   const [isBulkModelOpen, setIsBulkModelOpen] = useState(false);
+  const [isFusionOpen, setIsFusionOpen] = useState(false);
 
   // Drop any ids that have transitioned out of INBOX (FR-014 client mirror).
   useEffect(() => {
@@ -146,6 +148,30 @@ export function Board({
   const showBulkDeleteConfirm = useCallback(() => {
     if (selectedInboxTickets.length > 0) setIsBulkDeleteOpen(true);
   }, [selectedInboxTickets.length]);
+
+  // AIB-820 US3: assemble the fusion draft from the current selection.
+  const fusionDraft = useMemo(() => {
+    if (selectedInboxTickets.length < 2) return null;
+    const sorted = [...selectedInboxTickets].sort((a, b) => a.id - b.id);
+    const anchor = sorted[0]!;
+    const absorbed = sorted.slice(1).map((t) => ({
+      id: t.id,
+      version: t.version,
+      ticketKey: t.ticketKey,
+    }));
+    const { merged, clippedCount } = mergeAttachments(sorted, anchor.id, 5);
+    return {
+      anchor,
+      absorbed,
+      description: buildFusionDescription(sorted, anchor.id),
+      attachments: merged,
+      clippedCount,
+    };
+  }, [selectedInboxTickets]);
+
+  const showFusion = useCallback(() => {
+    if (fusionDraft) setIsFusionOpen(true);
+  }, [fusionDraft]);
 
   const retroSpec = useRetroSpecState({ projectId, hasSpecs });
   const urlModal = useUrlTicketModal({ projectId, allTickets });
@@ -317,7 +343,7 @@ export function Board({
         selectionCount={selectedTicketIds.size}
         onChangeAgent={() => selectedInboxTickets.length > 0 && setIsBulkAgentOpen(true)}
         onChangeModel={() => selectedInboxTickets.length > 0 && setIsBulkModelOpen(true)}
-        onFusion={() => toast({ title: 'Coming soon', description: 'Ticket fusion is under construction.' })}
+        onFusion={showFusion}
         onDelete={showBulkDeleteConfirm}
         onClear={clearSelection}
       />
@@ -352,6 +378,23 @@ export function Board({
           else setSelectedTicketIds(new Set(skippedIds));
         }}
       />
+
+      {fusionDraft && (
+        <FusionDialog
+          open={isFusionOpen}
+          onOpenChange={setIsFusionOpen}
+          projectId={projectId}
+          anchorId={fusionDraft.anchor.id}
+          anchorVersion={fusionDraft.anchor.version}
+          anchorKey={fusionDraft.anchor.ticketKey}
+          initialTitle={fusionDraft.anchor.title}
+          initialDescription={fusionDraft.description}
+          attachments={fusionDraft.attachments}
+          clippedAttachmentCount={fusionDraft.clippedCount}
+          absorbed={fusionDraft.absorbed}
+          onSuccess={() => clearSelection()}
+        />
+      )}
 
       <BoardModals
         projectId={projectId}

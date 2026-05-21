@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { Agent } from '@prisma/client';
 import { isClaudeModelId, STAGE_MODEL_KEYS } from '@/lib/models/claude-models';
-import { isTicketAttachment } from '@/app/lib/types/ticket';
+import { isTicketAttachment, type TicketAttachment } from '@/app/lib/types/ticket';
 
 /**
  * Shared reference to a ticket with its optimistic-concurrency version,
@@ -52,9 +52,10 @@ export const bulkModelSchema = z.object({
 
 export type BulkModelRequest = z.infer<typeof bulkModelSchema>;
 
-const ticketAttachmentZodSchema = z.custom<unknown>((value) => isTicketAttachment(value), {
-  message: 'Invalid attachment shape',
-});
+const ticketAttachmentZodSchema = z.custom<TicketAttachment>(
+  (value) => isTicketAttachment(value),
+  { message: 'Invalid attachment shape' },
+);
 
 export const fusionSchema = z
   .object({
