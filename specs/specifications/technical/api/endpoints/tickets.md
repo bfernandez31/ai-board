@@ -721,6 +721,243 @@ All 5 fields are always returned; `null` means "inherit from project default" at
 - `401`: Not authenticated
 - `404`: Ticket or project not found, or no access
 
+### POST /api/projects/:projectId/tickets/bulk/delete
+
+Delete multiple INBOX tickets in one request with best-effort semantics.
+
+**Authentication**: Required (session or Bearer PAT)
+**Authorization**: Must be project owner or member (`verifyProjectAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "tickets": [
+    { "id": 101, "version": 3 },
+    { "id": 102, "version": 1 }
+  ]
+}
+```
+
+**Validation**:
+- `tickets`: 1–50 entries
+- `tickets[].id`: positive integer
+- `tickets[].version`: positive integer (optimistic concurrency)
+
+**Response** (200 OK):
+```json
+{
+  "affected": [101],
+  "skipped": [
+    { "ticketId": 102, "reason": "VERSION_CONFLICT" }
+  ],
+  "prsClosed": 0
+}
+```
+
+**Semantics**:
+- Best-effort: per-ticket failures populate `skipped`; successful peers commit and appear in `affected`.
+- Each ticket is re-validated server-side: must belong to `projectId`, must currently be in `INBOX`, and `version` must match.
+- For any deleted ticket carrying a `branch`, the standard ticket-delete cleanup runs (close PRs, delete branch). `prsClosed` sums the count across all deleted tickets (typically `0` since INBOX tickets have no branches).
+- No notifications are emitted.
+
+**Skipped reasons**: `NOT_FOUND`, `NOT_IN_INBOX`, `VERSION_CONFLICT`, `ACTIVE_JOB`, `GITHUB_ERROR`, `FORBIDDEN`.
+
+**Errors**:
+- `400` `VALIDATION_ERROR`: empty or oversize `tickets` list, malformed ids/versions
+- `401` `AUTH_ERROR`: missing/invalid auth
+- `404`: project not found or caller not a member/owner (anti-enumeration)
+- `500` `DATABASE_ERROR`
+
+### POST /api/projects/:projectId/tickets/bulk/agent
+
+Set the `agent` field on multiple INBOX tickets in one request.
+
+**Authentication**: Required (session or Bearer PAT)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "agent": "CODEX",
+  "tickets": [
+    { "id": 101, "version": 3 },
+    { "id": 102, "version": 1 }
+  ]
+}
+```
+
+**Validation**:
+- `agent`: one of `CLAUDE | CODEX | MISTRAL | GEMINI | null` (`null` clears the override / inherits project default)
+- `tickets`: 1–50 entries, same shape as bulk delete
+
+**Response** (200 OK):
+```json
+{
+  "affected": [
+    { "ticketId": 101, "version": 4, "agent": "CODEX" }
+  ],
+  "skipped": [
+    { "ticketId": 102, "reason": "VERSION_CONFLICT" }
+  ]
+}
+```
+
+**Semantics**:
+- Best-effort. Each successful update increments `version` by 1; the new value is returned so the client can rehydrate its cache without a refetch.
+- Server-side predicate is `projectId = X AND stage = 'INBOX' AND version = supplied`; any miss is recorded in `skipped`.
+
+**Skipped reasons**: `NOT_FOUND`, `NOT_IN_INBOX`, `VERSION_CONFLICT`.
+
+**Errors**: same as bulk delete; `400` triggered by invalid agent enum or oversize list.
+
+### POST /api/projects/:projectId/tickets/bulk/model
+
+Set or clear a single per-stage Claude model override on multiple INBOX tickets in one request.
+
+**Authentication**: Required (session or Bearer PAT)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "stage": "implementModel",
+  "model": "claude-opus-4-7",
+  "tickets": [
+    { "id": 101, "version": 3 },
+    { "id": 102, "version": 1 }
+  ]
+}
+```
+
+**Validation**:
+- `stage`: one of `specifyModel | planModel | implementModel | quickImplModel | verifyModel`
+- `model`: a whitelisted Claude model id (re-uses `claudeModelIdSchema`), or `null` to clear that stage
+- `tickets`: 1–50 entries
+
+**Response** (200 OK):
+```json
+{
+  "affected": [
+    {
+      "ticketId": 101,
+      "version": 4,
+      "specifyModel": null,
+      "planModel": null,
+      "implementModel": "claude-opus-4-7",
+      "quickImplModel": null,
+      "verifyModel": null
+    }
+  ],
+  "skipped": [
+    { "ticketId": 102, "reason": "VERSION_CONFLICT" }
+  ]
+}
+```
+
+**Semantics**:
+- Only the chosen stage field is updated on each ticket; the other four stage-model fields are left untouched.
+- Best-effort, INBOX-only, version-checked — same predicate as bulk agent.
+- All five stage fields are returned for each affected ticket so clients can refresh the model halo indicator without a follow-up fetch.
+
+**Skipped reasons**: `NOT_FOUND`, `NOT_IN_INBOX`, `VERSION_CONFLICT`.
+
+**Errors**:
+- `400` `INVALID_MODEL_ID`: model not in the allow-list
+- `400` `VALIDATION_ERROR`: invalid `stage`, oversize/empty list
+- Other errors as for bulk delete
+
+### POST /api/projects/:projectId/tickets/bulk/fusion
+
+Atomically merge several INBOX tickets into the lowest-id "anchor" ticket. The anchor is updated with the supplied title/description/attachments; all other selected tickets are deleted in the same transaction.
+
+**Authentication**: Required (session or Bearer PAT)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "anchorId": 101,
+  "anchorVersion": 3,
+  "title": "Add multi-select inbox bar",
+  "description": "Anchor body\n\n---\n\n## [AIB-102] Companion ticket\nAbsorbed body...",
+  "attachments": [
+    {
+      "type": "uploaded",
+      "url": "https://.../a.png",
+      "filename": "a.png",
+      "mimeType": "image/png",
+      "sizeBytes": 1234,
+      "uploadedAt": "2026-05-21T10:00:00Z",
+      "cloudinaryPublicId": "ai-board/tickets/101/a"
+    }
+  ],
+  "absorbed": [
+    { "id": 102, "version": 1 },
+    { "id": 103, "version": 2 }
+  ]
+}
+```
+
+**Validation**:
+- `anchorId`: positive integer; MUST be the lowest id among `{anchorId, absorbed[].id}` (server re-validates)
+- `anchorVersion`: positive integer
+- `title`: 1–100 chars
+- `description`: 1–10,000 chars (the column limit; over-length payloads are rejected at the boundary so the modal must trim before saving)
+- `attachments`: 0–5 entries, each conforming to `TicketAttachment`
+- `absorbed`: 1–49 entries, no duplicate ids, none equal to `anchorId`
+- Total `1 + absorbed.length` ≤ 50
+- All ids (anchor + absorbed) MUST belong to the same `projectId` and currently have `stage = INBOX`
+
+**Response** (200 OK):
+```json
+{
+  "anchor": { /* full TicketWithVersion payload for the updated anchor */ },
+  "deletedIds": [102, 103]
+}
+```
+
+**Atomicity**:
+- Wrapped in `prisma.$transaction`. Per-id `updateMany` checks (`id`, `projectId`, `stage = 'INBOX'`, `version = supplied`) gate every row; if any check returns count 0 the transaction throws and rolls back.
+- On success: anchor's `title`, `description`, `attachments` are updated and `version` is incremented by 1; absorbed rows are hard-deleted; client cache replaces the anchor and removes the absorbed ids.
+- On any failure: no row is modified or deleted.
+
+**Errors**:
+
+| HTTP | Code | When |
+|------|------|------|
+| `400` | `VALIDATION_ERROR` | Title/description length, attachment shape, absorbed list shape, total > 50 |
+| `401` | `AUTH_ERROR` | Missing/invalid auth |
+| `404` | — | Project or anchor not found |
+| `409` | `CONFLICT` | Any version mismatch, stage drift, or missing ticket among the selected set |
+| `500` | `DATABASE_ERROR` | Transaction failure |
+
+**409 response body**:
+```json
+{
+  "error": "Fusion failed — one or more tickets were modified by another user",
+  "code": "CONFLICT",
+  "conflicting": [102]
+}
+```
+
+When 409 is returned, no database mutation has occurred; the client should refresh tickets and let the user retry.
+
+**Side effects**:
+- No notifications are emitted; a single in-session toast (`"Fused N tickets into <anchor.ticketKey>"`) is shown to the actor.
+- Client invalidates `queryKeys.projects.tickets(projectId)`.
+
 ### GET /api/projects/:projectId/tickets/search
 
 Search tickets within a project by key, title, or description.

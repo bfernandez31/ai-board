@@ -871,6 +871,76 @@ When a user navigates to a direct ticket URL:
 - Screen reader compatible (ARIA labels and roles)
 - Focus indicators clearly visible
 
+## Bulk Operations on INBOX
+
+Users can act on multiple INBOX tickets in a single step. Bulk operations are restricted to the INBOX stage so tickets already in flight (with branches, jobs, or PRs) are never touched.
+
+### Selection
+
+- Every INBOX ticket card carries a selection checkbox in its top-left corner. Cards in other stages do not show a checkbox.
+- Clicking a card opens the detail modal; clicking the checkbox toggles selection without opening the modal.
+- Shift-clicking a checkbox extends the selection to every card between the previously clicked card and the shift-clicked one (in display order), additive to the prior selection.
+- A "Select all" checkbox lives in the INBOX column header. It is tri-state: unchecked when nothing is selected, indeterminate when some INBOX cards are selected, checked when every visible INBOX card is selected.
+- Selecting "Select all" when the INBOX contains more than 50 tickets selects the first 50 in display order and surfaces an informational toast explaining the 50-ticket cap.
+- Selection is transient — it lives in memory only, is preserved across polling refetches, and is cleared after a successful bulk operation.
+- Drag-and-drop on an INBOX card continues to drag that single card regardless of whether it is selected; the rest of the selection is not carried along.
+
+### Bulk Action Bar
+
+A floating action bar appears centered at the bottom of the board whenever at least one INBOX ticket is selected. It displays:
+
+- The current selection count (e.g., "4 selected").
+- Buttons: **Change agent**, **Change model**, **Fusion**, **Delete**, and a clear-selection (×) button.
+- A "Limit is 50 tickets per action" warning when the selection exceeds 50.
+
+**Button enablement**:
+- Change agent / Change model / Delete are enabled when the selection is between 1 and 50 tickets.
+- Fusion is enabled only when 2–50 tickets are selected (fusing a single ticket is meaningless).
+- All action buttons are disabled when the selection exceeds 50.
+
+### Bulk Delete
+
+- Opens a confirmation modal listing every selected ticket key with an explicit "this cannot be undone" warning.
+- Best-effort: tickets that have moved out of INBOX between selection and confirmation, or whose `version` no longer matches, are skipped — successful peers still complete.
+- A summary toast reports the outcome (e.g., "3 deleted, 1 already gone"). No per-member notifications are emitted.
+
+### Bulk Change Agent
+
+- Opens a dialog with the same agent choices as the single-ticket Agent edit (CLAUDE / CODEX / MISTRAL / GEMINI / "Inherit project default").
+- Applies the chosen agent to every selected INBOX ticket. Best-effort semantics: per-ticket version conflicts and stage mismatches are reported in the result toast.
+- No confirmation step beyond the dialog itself.
+
+### Bulk Change Model
+
+- Opens a dialog where the user picks a single per-stage model override (Specify / Plan / Implement / Quick-Impl / Verify) and a model identifier from the same allow-list used by single-ticket model edits. "Inherit project default" clears that one stage on every selected ticket.
+- Only the chosen stage's field is touched; the other four stage-model fields on each ticket remain unchanged.
+- Best-effort semantics, same as bulk change agent.
+
+### Fusion (Merge)
+
+Fusion merges two or more INBOX tickets into a single "anchor" ticket — the one with the lowest internal id among the selection — and atomically deletes the others.
+
+**Fusion dialog**:
+- Opens pre-populated with the anchor's title (editable) and a concatenated description built by joining each ticket's description in ascending-id order, separated by `\n\n---\n\n` and a heading line `## [TICKET-KEY] <title>`.
+- Attachments are the union of every selected ticket's attachments, ordered anchor-first then ascending id, deduplicated by URL, and clipped to the 5-image cap; when clipping occurs a banner shows how many images were dropped.
+- A live character counter is always visible on the description field. Description and title are editable directly inside the dialog.
+- **Save is disabled** when the description exceeds 10,000 characters, with a banner showing the excess (e.g., "Description exceeds 10,000 character limit by 2,000 characters — please edit before saving"). Save is re-enabled once the description fits.
+- Save is also disabled while the title is empty or exceeds 100 characters.
+- Cancelling the dialog discards everything; no ticket is modified or deleted.
+
+**Atomicity**:
+- On save, the anchor is updated and every absorbed ticket is deleted in a single database transaction.
+- If any selected ticket was modified by another user between selection and save (version mismatch), the operation aborts with no changes and the dialog reports the conflicting ticket keys.
+- Comments and jobs on absorbed tickets are discarded along with the rows.
+- On success, a toast confirms "Fused N tickets into <anchor.ticketKey>".
+
+### Cross-Cutting Rules
+
+- All four bulk operations require the same access level as single-ticket edits (project owner or member). Tickets the user cannot access, or that have left INBOX, are filtered server-side and surfaced as skipped entries.
+- Best-effort operations (delete, agent, model) succeed for unaffected peers even when some tickets fail; fusion is all-or-nothing.
+- Every bulk operation produces exactly one summary toast for the actor. No notifications are pushed to other members.
+- Bulk operations are limited to 50 tickets per request.
+
 ## Ticket Deletion
 
 ### Drag-to-Trash Feature

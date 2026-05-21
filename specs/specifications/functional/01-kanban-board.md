@@ -158,6 +158,10 @@ Users can enable a per-ticket "auto mode" that automatically chains the SPECIFY 
 - Auto-mode on one ticket does not affect any other ticket
 - Any user permitted to advance the ticket manually (project owner or member) is permitted to toggle auto-mode
 
+### Bulk Selection on INBOX
+
+INBOX ticket cards expose a top-left selection checkbox so multiple tickets can be acted on together. The INBOX column header carries a tri-state "Select all" checkbox, and a floating bulk action bar appears at the bottom of the board whenever at least one INBOX ticket is selected. The bar offers Change agent, Change model, Fusion, and Delete actions over the current selection (capped at 50 tickets per action). Drag-and-drop on a selected INBOX card still moves only the dragged card — the rest of the selection stays in place. Full behavior of the selection, dialogs, and per-operation semantics lives in the Ticket Management specification under "Bulk Operations on INBOX".
+
 ### Cancel Running Jobs
 
 Users can cancel a RUNNING or PENDING job directly from the board without navigating to the ticket detail:

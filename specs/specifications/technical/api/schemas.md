@@ -175,6 +175,160 @@ export type UpdatePreviewUrlInput = z.infer<typeof updatePreviewUrlSchema>;
 - Rejects non-HTTPS URLs, non-Vercel domains, and malformed URLs
 - **Note**: Schema is defined in `app/lib/schemas/deploy-preview.ts` and imported by the route handler
 
+## Bulk Ticket Schemas
+
+Schemas for the four INBOX bulk endpoints (`/api/projects/:projectId/tickets/bulk/{delete|agent|model|fusion}`). Defined in `lib/schemas/bulk-ticket.ts`.
+
+### TicketRefSchema (shared)
+
+```typescript
+export const ticketRefSchema = z.object({
+  id: z.number().int().positive(),
+  version: z.number().int().positive(),
+});
+
+export type TicketRef = z.infer<typeof ticketRefSchema>;
+```
+
+Used to identify a target ticket together with its current `version` for optimistic concurrency.
+
+### BulkDeleteSchema
+
+```typescript
+export const bulkDeleteSchema = z.object({
+  tickets: z.array(ticketRefSchema).min(1).max(50),
+});
+```
+
+**Validation**: 1–50 `{ id, version }` entries.
+
+### BulkAgentSchema
+
+```typescript
+export const bulkAgentSchema = z.object({
+  agent: z.nativeEnum(Agent).nullable(),
+  tickets: z.array(ticketRefSchema).min(1).max(50),
+});
+```
+
+**Validation**:
+- `agent`: `CLAUDE | CODEX | MISTRAL | GEMINI` or `null` (null clears the override / inherits project default)
+- `tickets`: 1–50 entries
+
+### BulkModelSchema
+
+```typescript
+import { claudeModelIdSchema } from '@/app/lib/schemas/model-config';
+
+export const STAGE_MODEL_KEYS = [
+  'specifyModel',
+  'planModel',
+  'implementModel',
+  'quickImplModel',
+  'verifyModel',
+] as const;
+
+export const bulkModelSchema = z.object({
+  stage: z.enum(STAGE_MODEL_KEYS),
+  model: claudeModelIdSchema.nullable(),
+  tickets: z.array(ticketRefSchema).min(1).max(50),
+});
+```
+
+**Validation**:
+- `stage`: one of the five stage-model field names
+- `model`: a whitelisted Claude model id, or `null` to clear that stage (reuses `claudeModelIdSchema` so the allow-list stays single-sourced)
+- `tickets`: 1–50 entries
+
+### FusionSchema
+
+```typescript
+export const fusionSchema = z
+  .object({
+    anchorId: z.number().int().positive(),
+    anchorVersion: z.number().int().positive(),
+    title: z.string().min(1).max(100),
+    description: z.string().min(1).max(10000),
+    attachments: z.array(ticketAttachmentSchema).max(5),
+    absorbed: z.array(ticketRefSchema).min(1).max(49),
+  })
+  .refine(
+    (v) => 1 + v.absorbed.length <= 50,
+    { message: 'Fusion cannot exceed 50 tickets total' },
+  )
+  .refine(
+    (v) => !v.absorbed.some((a) => a.id === v.anchorId),
+    { message: 'absorbed cannot include anchorId' },
+  )
+  .refine(
+    (v) => new Set(v.absorbed.map((a) => a.id)).size === v.absorbed.length,
+    { message: 'absorbed contains duplicate ids' },
+  );
+```
+
+**Constraint mirroring** (matches `Ticket` column limits):
+- `title`: 1–100 chars ↔ `@db.VarChar(100)`
+- `description`: 1–10,000 chars ↔ `@db.VarChar(10000)` — over-length descriptions are rejected at the boundary; the fusion modal enforces the same cap before allowing Save
+- `attachments`: 0–5 entries ↔ existing per-ticket attachment cap
+- Total `1 + absorbed.length` ≤ 50 ↔ the 50-ticket bulk cap
+
+**Server-side re-checks** layered on top of Zod:
+- All ids (anchor + absorbed) belong to the request's `projectId`
+- All selected tickets currently have `stage = 'INBOX'`
+- `anchorId` is the lowest id in the selected set
+- Anchor and absorbed versions match the supplied values
+
+Any failure of these checks aborts the `prisma.$transaction` and returns `409 CONFLICT` with the conflicting ids.
+
+### Response Shapes
+
+```typescript
+type SkipReason =
+  | 'NOT_FOUND'
+  | 'NOT_IN_INBOX'
+  | 'VERSION_CONFLICT'
+  | 'ACTIVE_JOB'    // bulk delete only
+  | 'GITHUB_ERROR'  // bulk delete only
+  | 'FORBIDDEN';
+
+interface BulkDeleteResponse {
+  affected: number[];
+  skipped: Array<{ ticketId: number; reason: SkipReason }>;
+  prsClosed: number;
+}
+
+interface BulkAgentResponse {
+  affected: Array<{ ticketId: number; version: number; agent: Agent | null }>;
+  skipped: Array<{ ticketId: number; reason: SkipReason }>;
+}
+
+interface BulkModelResponse {
+  affected: Array<{
+    ticketId: number;
+    version: number;
+    specifyModel: string | null;
+    planModel: string | null;
+    implementModel: string | null;
+    quickImplModel: string | null;
+    verifyModel: string | null;
+  }>;
+  skipped: Array<{ ticketId: number; reason: SkipReason }>;
+}
+
+interface FusionResponse {
+  anchor: TicketWithVersion;
+  deletedIds: number[];
+}
+
+interface FusionConflictResponse {
+  error: string;
+  code: 'CONFLICT';
+  conflicting: number[];
+}
+```
+
+The first three operations are best-effort: each successful row appears in `affected` (with its new `version`); per-ticket failures (missing, no longer INBOX, version mismatch) appear in `skipped`. Fusion is all-or-nothing — 200 means every row committed, 409 means none did.
+
 ## Search Schemas
 
 ### SearchTicketsSchema
