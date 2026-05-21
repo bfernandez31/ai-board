@@ -71,15 +71,11 @@ export function BulkModelDialog({
         model: model === INHERIT_VALUE ? null : model,
         tickets,
       });
-      const summary = formatBulkResultToast({
+      toast(formatBulkResultToast({
         successCount: data.affected.length,
         skipped: data.skipped,
         verbPast: 'updated',
-      });
-      toast({
-        title: summary.title,
-        ...(summary.description ? { description: summary.description } : {}),
-      });
+      }));
       onSuccess?.(data.skipped.map((s) => s.ticketId));
       onOpenChange(false);
     } catch (err) {

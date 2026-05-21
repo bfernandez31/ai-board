@@ -28,16 +28,16 @@ export function BulkDeleteConfirmationModal({
   isPending = false,
 }: BulkDeleteConfirmationModalProps) {
   const count = ticketKeys.length;
+  const ticketWord = count === 1 ? 'ticket' : 'tickets';
 
   return (
     <AlertDialog open={open} onOpenChange={(next) => { if (!next) onCancel(); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {count} {count === 1 ? 'ticket' : 'tickets'}?</AlertDialogTitle>
+          <AlertDialogTitle>Delete {count} {ticketWord}?</AlertDialogTitle>
           <AlertDialogDescription className="space-y-2">
             <span className="block">
-              You are about to permanently delete the following INBOX{' '}
-              {count === 1 ? 'ticket' : 'tickets'}:
+              You are about to permanently delete the following INBOX {ticketWord}:
             </span>
             <ScrollArea className="max-h-40 rounded-md border border-border bg-muted/30 p-2">
               <ul className="space-y-1 font-mono text-xs">
@@ -61,7 +61,7 @@ export function BulkDeleteConfirmationModal({
             disabled={isPending || count === 0}
             variant="destructive"
           >
-            {isPending ? 'Deleting...' : `Delete ${count} ${count === 1 ? 'ticket' : 'tickets'}`}
+            {isPending ? 'Deleting...' : `Delete ${count} ${ticketWord}`}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

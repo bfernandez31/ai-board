@@ -122,12 +122,11 @@ export function Board({
       { tickets },
       {
         onSuccess: (data) => {
-          const summary = formatBulkResultToast({
+          toast(formatBulkResultToast({
             successCount: data.affected.length,
             skipped: data.skipped,
             verbPast: 'deleted',
-          });
-          toast({ title: summary.title, ...(summary.description ? { description: summary.description } : {}) });
+          }));
           if (data.skipped.length === 0) clearSelection();
           else {
             setSelectedTicketIds(new Set(data.skipped.map((s) => s.ticketId)));

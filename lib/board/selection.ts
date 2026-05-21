@@ -18,26 +18,21 @@ export function computeRangeSelection(
   shiftKey: boolean,
 ): Set<number> {
   const next = new Set(currentSelection);
+  const toggleClicked = (): Set<number> => {
+    if (next.has(clickedId)) next.delete(clickedId);
+    else next.add(clickedId);
+    return next;
+  };
 
   if (!shiftKey || anchorId == null || anchorId === clickedId) {
-    if (next.has(clickedId)) {
-      next.delete(clickedId);
-    } else {
-      next.add(clickedId);
-    }
-    return next;
+    return toggleClicked();
   }
 
   const anchorIndex = allTickets.findIndex((t) => t.id === anchorId);
   const clickedIndex = allTickets.findIndex((t) => t.id === clickedId);
 
   if (anchorIndex === -1 || clickedIndex === -1) {
-    if (next.has(clickedId)) {
-      next.delete(clickedId);
-    } else {
-      next.add(clickedId);
-    }
-    return next;
+    return toggleClicked();
   }
 
   const start = Math.min(anchorIndex, clickedIndex);

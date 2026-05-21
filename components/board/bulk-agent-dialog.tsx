@@ -31,15 +31,11 @@ export function BulkAgentDialog({
   const handleSave = React.useCallback(
     async (agent: Agent | null) => {
       const data = await mutation.mutateAsync({ agent, tickets });
-      const summary = formatBulkResultToast({
+      toast(formatBulkResultToast({
         successCount: data.affected.length,
         skipped: data.skipped,
         verbPast: 'updated',
-      });
-      toast({
-        title: summary.title,
-        ...(summary.description ? { description: summary.description } : {}),
-      });
+      }));
       onSuccess?.(data.skipped.map((s) => s.ticketId));
     },
     [mutation, tickets, toast, onSuccess],

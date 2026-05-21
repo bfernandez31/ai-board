@@ -65,6 +65,7 @@ export function FusionDialog({
     }
   }, [open, initialTitle, initialDescription]);
 
+  const totalCount = 1 + absorbed.length;
   const descriptionLen = description.length;
   const tooLong = descriptionLen > DESCRIPTION_LIMIT;
   const tooShort = description.trim().length === 0;
@@ -83,7 +84,7 @@ export function FusionDialog({
         absorbed: absorbed.map(({ id, version }) => ({ id, version })),
       });
       toast({
-        title: `Fused ${1 + absorbed.length} tickets into ${result.anchor.ticketKey}`,
+        title: `Fused ${totalCount} tickets into ${result.anchor.ticketKey}`,
       });
       onSuccess?.(result.anchor.ticketKey);
       onOpenChange(false);
@@ -109,7 +110,7 @@ export function FusionDialog({
       <DialogContent className="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle className="inline-flex items-center gap-2">
-            <GitMerge className="h-5 w-5" /> Fuse {1 + absorbed.length} tickets into {anchorKey}
+            <GitMerge className="h-5 w-5" /> Fuse {totalCount} tickets into {anchorKey}
           </DialogTitle>
           <DialogDescription>
             The anchor will be updated with the combined title, description, and attachments below.
@@ -211,7 +212,7 @@ export function FusionDialog({
           </Button>
           <Button type="button" onClick={handleSave} disabled={saveDisabled}>
             {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {mutation.isPending ? 'Fusing...' : `Fuse ${1 + absorbed.length} tickets`}
+            {mutation.isPending ? 'Fusing...' : `Fuse ${totalCount} tickets`}
           </Button>
         </DialogFooter>
       </DialogContent>
