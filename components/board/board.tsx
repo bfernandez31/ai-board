@@ -173,6 +173,34 @@ export function Board({
     if (fusionDraft) setIsFusionOpen(true);
   }, [fusionDraft]);
 
+  // T043: "Select all in INBOX" header checkbox — caps to first 50 ids by display order.
+  const handleSelectAllInbox = useCallback(() => {
+    const ALL_CAP = 50;
+    if (selectedTicketIds.size === inboxTickets.length && inboxTickets.length > 0) {
+      clearSelection();
+      return;
+    }
+    const ids = inboxTickets.slice(0, ALL_CAP).map((t) => t.id);
+    setSelectedTicketIds(new Set(ids));
+    if (inboxTickets.length > ALL_CAP) {
+      toast({
+        title: `Selected first ${ALL_CAP} of ${inboxTickets.length} INBOX tickets`,
+        description: 'Bulk operations are capped at 50 tickets per action.',
+      });
+    }
+  }, [clearSelection, inboxTickets, selectedTicketIds.size, toast]);
+
+  const selectAllInboxState: boolean | 'indeterminate' = useMemo(() => {
+    if (selectedTicketIds.size === 0) return false;
+    if (
+      inboxTickets.length > 0 &&
+      inboxTickets.every((t) => selectedTicketIds.has(t.id))
+    ) {
+      return true;
+    }
+    return 'indeterminate';
+  }, [inboxTickets, selectedTicketIds]);
+
   const retroSpec = useRetroSpecState({ projectId, hasSpecs });
   const urlModal = useUrlTicketModal({ projectId, allTickets });
 
@@ -337,6 +365,8 @@ export function Board({
         closeZone={closeZone}
         selectedTicketIds={selectedTicketIds}
         onTicketSelectToggle={handleTicketSelectToggle}
+        onSelectAllInbox={handleSelectAllInbox}
+        selectAllInboxState={selectAllInboxState}
       />
 
       <BulkActionBar

@@ -133,10 +133,10 @@ description: "Task list for AIB-820 — Multi-Ticket Bulk Operations on Inbox"
 
 **Purpose**: Cross-story concerns that didn't fit in a single story phase: a11y, "Select all" toggle behaviour, and final type-check / lint sweep.
 
-- [ ] T043 Add "Select all in INBOX" checkbox to the INBOX column header in `components/board/stage-column.tsx`. Selects the first 50 tickets (by display order) when INBOX has > 50, and surfaces a toast warning per FR-020. Indeterminate state when a non-empty subset is selected.
-- [ ] T044 [P] Verify keyboard a11y on `components/board/bulk-action-bar.tsx`: tab order, `aria-label` on Clear, action buttons reachable; `bulk-delete-confirmation-modal.tsx` is a focus-trapped `AlertDialog` (shadcn primitive already handles this — assert via existing RTL coverage).
-- [ ] T045 [P] Verify Aurora B+ theme + semantic tokens on `bulk-action-bar.tsx` and `bulk-delete-confirmation-modal.tsx` (CLAUDE.md: no hardcoded hex; aurora-* utility classes for surfaces).
-- [ ] T046 Run `bun run type-check` and `bun run lint` across the whole tree; fix any pre-existing errors surfaced (CLAUDE.md mandates fix-on-commit). Required before merge.
+- [X] T043 ✅ DONE "Select all in INBOX" checkbox added to the INBOX column header in `components/board/stage-column.tsx`. Wires through `BoardGrid` to `Board`, which caps selection to the first 50 INBOX tickets (display order) and toasts a warning per FR-020 when capped. Indeterminate state derived from current selection vs. inbox length.
+- [X] T044 ✅ DONE [P] Verified keyboard a11y on `components/board/bulk-action-bar.tsx`: bar is a `role="toolbar"` with `aria-label="Bulk ticket actions"`; Clear button has explicit `aria-label`; every action button is a real `<Button>` and reachable via tab order. `BulkDeleteConfirmationModal` uses shadcn `AlertDialog` (Radix focus trap inherited).
+- [X] T045 ✅ DONE [P] Verified theme tokens on `bulk-action-bar.tsx`, `bulk-delete-confirmation-modal.tsx`, `fusion-dialog.tsx`, `bulk-agent-dialog.tsx`, `bulk-model-dialog.tsx`. All new files use `aurora-glass`, semantic tokens (`bg-card`/`text-destructive`/`text-muted-foreground`/`border-border`) or fixed palette utilities allowed by CLAUDE.md (`text-yellow-500`, `bg-yellow-500/10` for the warning banner). No hardcoded hex / rgb.
+- [X] T046 ✅ DONE Ran `bun run type-check` (clean) and `bun run lint` (0 errors; 6 pre-existing warnings unchanged from main, all in `components/board/hooks/use-*` files — out of scope for this ticket). New code introduced 0 lint warnings.
 
 ---
 

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Stage } from '@/lib/stage-transitions';
 import { TicketCard, type TicketSelectionState } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { MobileScrollButton } from './mobile-scroll-button';
 import { TicketWithVersion } from '@/lib/types';
 import { Ban, Inbox, Loader2, ChevronDown } from 'lucide-react';
@@ -31,6 +32,10 @@ interface StageColumnProps {
   selectedTicketIds?: ReadonlySet<number>;
   /** AIB-820: callback when a checkbox is clicked (INBOX only). */
   onTicketSelectToggle?: (ticketId: number, event: React.MouseEvent) => void;
+  /** AIB-820 T043: callback when the column-header "select all" checkbox is toggled (INBOX only). */
+  onSelectAllInbox?: () => void;
+  /** Indeterminate when some-but-not-all INBOX tickets are selected; true when all selected; false when none. */
+  selectAllState?: boolean | 'indeterminate';
 }
 
 // Stage configuration matching original design
@@ -155,6 +160,8 @@ export const StageColumn = React.memo(
     isLoadingMore = false,
     selectedTicketIds,
     onTicketSelectToggle,
+    onSelectAllInbox,
+    selectAllState,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
@@ -238,11 +245,27 @@ export const StageColumn = React.memo(
         >
           <div className="flex items-center justify-between gap-3">
             {/* Stage name */}
-            <h2
-              className={`text-[0.65rem] font-semibold uppercase tracking-[0.28em] ${stageConfig.textColor}`}
-            >
-              {stageConfig.label}
-            </h2>
+            <div className="flex items-center gap-2">
+              {stage === Stage.INBOX && onSelectAllInbox && tickets.length > 0 && (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectAllInbox();
+                  }}
+                  data-testid="inbox-select-all"
+                >
+                  <Checkbox
+                    checked={selectAllState ?? false}
+                    aria-label="Select all INBOX tickets"
+                  />
+                </span>
+              )}
+              <h2
+                className={`text-[0.65rem] font-semibold uppercase tracking-[0.28em] ${stageConfig.textColor}`}
+              >
+                {stageConfig.label}
+              </h2>
+            </div>
             {/* Ticket count badge */}
             <span
               className={`flex h-6 min-w-6 px-1.5 items-center justify-center rounded-full text-[0.58rem] font-semibold shadow-[0_0_8px_hsl(var(--ctp-crust)/0.5)] ring-1 ring-inset ring-border/20 ${stageConfig.badgeBgColor} ${stageConfig.badgeTextColor}`}
