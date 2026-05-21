@@ -27,6 +27,12 @@ import { QualityScoreBadge } from '@/components/ticket/quality-score-badge';
 import { isAutoModeEligible } from '@/app/lib/tickets/auto-mode-eligibility';
 import { X } from 'lucide-react';
 import { STAGE_MODEL_KEYS, STAGE_MODEL_LABELS } from '@/lib/models/claude-models';
+import { Checkbox } from '@/components/ui/checkbox';
+
+export interface TicketSelectionState {
+  selected: boolean;
+  onToggle: (e: React.MouseEvent) => void;
+}
 
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
@@ -40,6 +46,8 @@ interface DraggableTicketCardProps {
   activePreviewTicket?: { ticketKey: string } | null;
   /** Ticket ID with active deployment (PENDING/RUNNING deploy job) */
   activeDeploymentTicket?: number | null;
+  /** Multi-select state — only supplied for INBOX cards (AIB-820). */
+  selectionState?: TicketSelectionState;
 }
 
 /**
@@ -55,7 +63,8 @@ export const TicketCard = React.memo(
     isDraggable = true,
     onTicketClick,
     activePreviewTicket,
-    activeDeploymentTicket
+    activeDeploymentTicket,
+    selectionState,
   }: DraggableTicketCardProps) => {
     const isMounted = useHasMounted();
     const [showDeployModal, setShowDeployModal] = useState(false);
@@ -158,15 +167,35 @@ export const TicketCard = React.memo(
         data-ticket-id={ticket.id}
         data-testid="ticket-card"
         data-draggable={isDraggable ? 'true' : 'false'}
+        data-selected={selectionState?.selected ? 'true' : undefined}
         onClick={handleClick}
         className={`
-        transition-opacity touch-none
+        relative transition-opacity touch-none
         ${isDragging ? 'opacity-30' : 'opacity-100'}
         ${isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-60'}
       `}
         {...(isMounted ? attributes : {})}
         {...(isMounted ? listeners : {})}
       >
+        {selectionState && (
+          <span
+            className="absolute left-2 top-2 z-10"
+            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              selectionState.onToggle(e);
+            }}
+            data-testid="ticket-select-overlay"
+          >
+            <Checkbox
+              checked={selectionState.selected}
+              onCheckedChange={() => {}}
+              aria-label={`Select ticket ${ticket.ticketKey}`}
+              data-testid="ticket-select-checkbox"
+            />
+          </span>
+        )}
         <Card
           className="group aurora-glass aurora-glass-hover border p-4 transition-all hover:-translate-y-0.5 overflow-hidden"
           role="article"

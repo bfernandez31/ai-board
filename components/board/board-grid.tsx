@@ -46,6 +46,10 @@ interface BoardGridProps {
   // Zones
   trashZone: ZoneState;
   closeZone: ZoneState;
+
+  // AIB-820: bulk selection for INBOX (omit on non-multi-select boards)
+  selectedTicketIds?: ReadonlySet<number>;
+  onTicketSelectToggle?: (ticketId: number, event: React.MouseEvent) => void;
 }
 
 /**
@@ -77,6 +81,8 @@ export function BoardGrid({
   onDragCancel,
   trashZone,
   closeZone,
+  selectedTicketIds,
+  onTicketSelectToggle,
 }: BoardGridProps) {
   // AIB-148: Filter out CLOSED stage from board display — CLOSED tickets are not shown on the board
   const stages = getAllStages().filter((s) => s !== Stage.CLOSED);
@@ -132,6 +138,10 @@ export function BoardGrid({
                   totalCount: shipTotal,
                   onLoadMore: onLoadMoreShip,
                   isLoadingMore: isLoadingMoreShip,
+                })}
+                {...(stage === Stage.INBOX && {
+                  selectedTicketIds,
+                  onTicketSelectToggle,
                 })}
               />
             );

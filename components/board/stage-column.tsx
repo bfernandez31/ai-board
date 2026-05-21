@@ -6,7 +6,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Stage } from '@/lib/stage-transitions';
-import { TicketCard } from './ticket-card';
+import { TicketCard, type TicketSelectionState } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
 import { MobileScrollButton } from './mobile-scroll-button';
 import { TicketWithVersion } from '@/lib/types';
@@ -27,6 +27,10 @@ interface StageColumnProps {
   totalCount?: number; // Total tickets for this stage (for pagination)
   onLoadMore?: () => void; // Callback to load more tickets
   isLoadingMore?: boolean; // Whether more tickets are being loaded
+  /** AIB-820: ids currently selected for bulk operations (INBOX only). */
+  selectedTicketIds?: ReadonlySet<number>;
+  /** AIB-820: callback when a checkbox is clicked (INBOX only). */
+  onTicketSelectToggle?: (ticketId: number, event: React.MouseEvent) => void;
 }
 
 // Stage configuration matching original design
@@ -149,6 +153,8 @@ export const StageColumn = React.memo(
     totalCount,
     onLoadMore,
     isLoadingMore = false,
+    selectedTicketIds,
+    onTicketSelectToggle,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
@@ -261,6 +267,13 @@ export const StageColumn = React.memo(
               <>
                 {tickets.map((ticket) => {
                   const dualJobs = getTicketJobs?.(ticket.id);
+                  const selectionState: TicketSelectionState | undefined =
+                    stage === Stage.INBOX && onTicketSelectToggle
+                      ? {
+                          selected: selectedTicketIds?.has(ticket.id) ?? false,
+                          onToggle: (e) => onTicketSelectToggle(ticket.id, e),
+                        }
+                      : undefined;
                   return (
                     <TicketCard
                       key={ticket.id}
@@ -273,6 +286,7 @@ export const StageColumn = React.memo(
                       activePreviewTicket={activePreviewTicket || null}
                       activeDeploymentTicket={activeDeploymentTicket || null}
                       {...(onTicketClick && { onTicketClick })}
+                      {...(selectionState && { selectionState })}
                     />
                   );
                 })}

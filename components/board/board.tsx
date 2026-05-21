@@ -1,15 +1,20 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Job } from '@prisma/client';
 import { OfflineIndicator } from './offline-indicator';
 import { BoardModals } from './board-modals';
 import { BoardGrid } from './board-grid';
 import { RetroSpecSection } from './retro-spec-section';
+import { BulkActionBar } from './bulk-action-bar';
+import { BulkDeleteConfirmationModal } from './bulk-delete-confirmation-modal';
 import { Stage } from '@/lib/stage-transitions';
 import { TicketWithVersion } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useTicketsByStage, useLoadMoreShipTickets, useShipTotal } from '@/app/lib/hooks/queries/useTickets';
+import { useBulkDeleteTickets } from '@/lib/hooks/mutations/useBulkDeleteTickets';
+import { computeRangeSelection } from '@/lib/board/selection';
+import { formatBulkResultToast } from '@/lib/board/bulk-result-toast';
 import { useRetroSpecState } from './hooks/use-retro-spec-state';
 import { useJobSnapshots } from './hooks/use-job-snapshots';
 import { useUrlTicketModal } from './hooks/use-url-ticket-modal';
@@ -51,6 +56,92 @@ export function Board({
   const handleLoadMoreShip = useCallback(() => loadMoreShip(shipTicketCount), [loadMoreShip, shipTicketCount]);
 
   const allTickets = useMemo(() => Object.values(ticketsByStage).flat(), [ticketsByStage]);
+
+  // AIB-820: INBOX bulk selection state.
+  const inboxTickets = useMemo(
+    () => ticketsByStage[Stage.INBOX] ?? [],
+    [ticketsByStage],
+  );
+  const [selectedTicketIds, setSelectedTicketIds] = useState<Set<number>>(() => new Set());
+  const lastClickedTicketIdRef = useRef<number | null>(null);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+
+  // Drop any ids that have transitioned out of INBOX (FR-014 client mirror).
+  useEffect(() => {
+    setSelectedTicketIds((current) => {
+      if (current.size === 0) return current;
+      const validIds = new Set(inboxTickets.map((t) => t.id));
+      let changed = false;
+      const next = new Set<number>();
+      for (const id of current) {
+        if (validIds.has(id)) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : current;
+    });
+  }, [inboxTickets]);
+
+  const handleTicketSelectToggle = useCallback(
+    (ticketId: number, event: React.MouseEvent) => {
+      setSelectedTicketIds((current) =>
+        computeRangeSelection(
+          inboxTickets,
+          lastClickedTicketIdRef.current,
+          ticketId,
+          current,
+          event.shiftKey,
+        ),
+      );
+      lastClickedTicketIdRef.current = ticketId;
+    },
+    [inboxTickets],
+  );
+
+  const clearSelection = useCallback(() => {
+    setSelectedTicketIds(new Set());
+    lastClickedTicketIdRef.current = null;
+  }, []);
+
+  const selectedInboxTickets = useMemo(
+    () => inboxTickets.filter((t) => selectedTicketIds.has(t.id)),
+    [inboxTickets, selectedTicketIds],
+  );
+
+  const bulkDeleteMutation = useBulkDeleteTickets(projectId);
+
+  const handleBulkDeleteConfirm = useCallback(() => {
+    const tickets = selectedInboxTickets.map((t) => ({ id: t.id, version: t.version }));
+    if (tickets.length === 0) return;
+    bulkDeleteMutation.mutate(
+      { tickets },
+      {
+        onSuccess: (data) => {
+          const summary = formatBulkResultToast({
+            successCount: data.affected.length,
+            skipped: data.skipped,
+            verbPast: 'deleted',
+          });
+          toast({ title: summary.title, ...(summary.description ? { description: summary.description } : {}) });
+          if (data.skipped.length === 0) clearSelection();
+          else {
+            setSelectedTicketIds(new Set(data.skipped.map((s) => s.ticketId)));
+          }
+          setIsBulkDeleteOpen(false);
+        },
+        onError: (error) => {
+          toast({
+            variant: 'destructive',
+            title: 'Bulk delete failed',
+            description: error.message ?? 'Please try again.',
+          });
+        },
+      },
+    );
+  }, [bulkDeleteMutation, clearSelection, selectedInboxTickets, toast]);
+
+  const showBulkDeleteConfirm = useCallback(() => {
+    if (selectedInboxTickets.length > 0) setIsBulkDeleteOpen(true);
+  }, [selectedInboxTickets.length]);
 
   const retroSpec = useRetroSpecState({ projectId, hasSpecs });
   const urlModal = useUrlTicketModal({ projectId, allTickets });
@@ -214,6 +305,25 @@ export function Board({
         onDragCancel={drag.handleDragCancel}
         trashZone={trashZone}
         closeZone={closeZone}
+        selectedTicketIds={selectedTicketIds}
+        onTicketSelectToggle={handleTicketSelectToggle}
+      />
+
+      <BulkActionBar
+        selectionCount={selectedTicketIds.size}
+        onChangeAgent={() => toast({ title: 'Coming soon', description: 'Bulk agent change is under construction.' })}
+        onChangeModel={() => toast({ title: 'Coming soon', description: 'Bulk model change is under construction.' })}
+        onFusion={() => toast({ title: 'Coming soon', description: 'Ticket fusion is under construction.' })}
+        onDelete={showBulkDeleteConfirm}
+        onClear={clearSelection}
+      />
+
+      <BulkDeleteConfirmationModal
+        open={isBulkDeleteOpen}
+        ticketKeys={selectedInboxTickets.map((t) => t.ticketKey)}
+        onCancel={() => setIsBulkDeleteOpen(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        isPending={bulkDeleteMutation.isPending}
       />
 
       <BoardModals
