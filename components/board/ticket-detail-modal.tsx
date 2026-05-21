@@ -200,23 +200,27 @@ export function TicketDetailModal({
     open && !!ticket
   );
 
-  // Update local ticket when a different ticket is selected, version changes, or branch changes
+  // Update local ticket when a different ticket is selected, version changes, or branch changes.
+  // Reset to null on close so derived edit-hook initialValues change, which lets the inline
+  // edit hooks discard in-progress edits instead of leaking them to the next ticket.
   useEffect(() => {
-    if (ticket) {
-      setLocalTicket((current) => {
-        // Only update if different ticket, newer version, or branch changed
-        // Branch comparison is needed because branch updates don't bump version
-        if (
-          !current ||
-          current.id !== ticket.id ||
-          current.version !== ticket.version ||
-          current.branch !== ticket.branch
-        ) {
-          return ticket;
-        }
-        return current;
-      });
+    if (!ticket) {
+      setLocalTicket(null);
+      return;
     }
+    setLocalTicket((current) => {
+      // Only update if different ticket, newer version, or branch changed
+      // Branch comparison is needed because branch updates don't bump version
+      if (
+        !current ||
+        current.id !== ticket.id ||
+        current.version !== ticket.version ||
+        current.branch !== ticket.branch
+      ) {
+        return ticket;
+      }
+      return current;
+    });
   }, [ticket]);
 
   // Sync activeTab with initialTab when modal opens or initialTab changes

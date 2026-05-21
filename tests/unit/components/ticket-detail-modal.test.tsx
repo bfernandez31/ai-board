@@ -897,6 +897,119 @@ describe('TicketDetailModal', () => {
     });
   });
 
+  describe('edit mode does not leak between tickets', () => {
+    it('exits description edit mode when modal closes (ticket becomes null)', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ stage: 'INBOX', description: 'Ticket A description' });
+
+      const { rerender } = renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Enter edit mode on description by clicking it
+      await user.click(screen.getByTestId('ticket-description'));
+      expect(screen.getByTestId('description-textarea')).toBeInTheDocument();
+
+      // Close the modal (mimics handleModalClose: ticket=null + open=false)
+      rerender(
+        <TicketDetailModal
+          ticket={null}
+          open={false}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Reopen with a different ticket
+      const otherTicket = createMockTicket({
+        id: 2,
+        ticketKey: 'TEST-2',
+        ticketNumber: 2,
+        stage: 'INBOX',
+        description: 'Ticket B description',
+      });
+      rerender(
+        <TicketDetailModal
+          ticket={otherTicket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // The textarea from the previous edit session must not still be present
+      await waitFor(() => {
+        expect(screen.queryByTestId('description-textarea')).not.toBeInTheDocument();
+      });
+      expect(screen.getByText('Ticket B description')).toBeInTheDocument();
+    });
+
+    it('exits description edit mode when reopening the same ticket after closing', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ stage: 'INBOX', description: 'Ticket A description' });
+
+      const { rerender } = renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      await user.click(screen.getByTestId('ticket-description'));
+      expect(screen.getByTestId('description-textarea')).toBeInTheDocument();
+
+      // Close
+      rerender(
+        <TicketDetailModal
+          ticket={null}
+          open={false}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Reopen same ticket
+      rerender(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('description-textarea')).not.toBeInTheDocument();
+      });
+      expect(screen.getByText('Ticket A description')).toBeInTheDocument();
+    });
+  });
+
   describe('AIB-743: InboxAnalysisPanel mount', () => {
     it('mounts the panel inside the Details tab', () => {
       const ticket = createMockTicket({ stage: 'INBOX' });

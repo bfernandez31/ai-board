@@ -39,14 +39,20 @@ export function useTicketEdit({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const originalValueRef = useRef<string>(initialValue);
+  const lastSyncedInitialValueRef = useRef<string>(initialValue);
 
-  // Update internal value when initialValue changes
+  // When the source value changes from outside (different ticket loaded, modal closed,
+  // save completed), discard any in-progress edit and re-sync. Without this, the
+  // modal — which stays mounted across openings — leaks edit mode between tickets.
   useEffect(() => {
-    if (!isEditing) {
+    if (initialValue !== lastSyncedInitialValueRef.current) {
+      lastSyncedInitialValueRef.current = initialValue;
       setValue(initialValue);
+      setIsEditing(false);
+      setError(null);
       originalValueRef.current = initialValue;
     }
-  }, [initialValue, isEditing]);
+  }, [initialValue]);
 
   // Auto-focus when entering edit mode
   useEffect(() => {
