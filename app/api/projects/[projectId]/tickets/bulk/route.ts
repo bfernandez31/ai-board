@@ -4,6 +4,7 @@ import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { bulkActionSchema } from '@/lib/validations/bulk-actions';
 import { bulkDeleteInboxTickets } from '@/lib/tickets/deletion';
 import { mergeInboxTickets } from '@/lib/tickets/merge';
+import { bulkUpdateAgent, bulkUpdateModel } from '@/lib/tickets/bulk-update';
 
 export async function POST(
   request: NextRequest,
@@ -62,17 +63,13 @@ export async function POST(
       }
 
       case 'update-agent': {
-        return NextResponse.json(
-          { error: 'Not implemented', code: 'NOT_IMPLEMENTED' },
-          { status: 501 }
-        );
+        const result = await bulkUpdateAgent(projectId, action.ticketIds, action.agent);
+        return NextResponse.json({ action: 'update-agent', ...result });
       }
 
       case 'update-model': {
-        return NextResponse.json(
-          { error: 'Not implemented', code: 'NOT_IMPLEMENTED' },
-          { status: 501 }
-        );
+        const result = await bulkUpdateModel(projectId, action.ticketIds, action.model);
+        return NextResponse.json({ action: 'update-model', ...result });
       }
 
       default:

@@ -1,13 +1,27 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Trash2, GitMerge, X } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Trash2, GitMerge, X, Bot, Cpu } from 'lucide-react';
+import { Agent } from '@prisma/client';
+import { getAgentLabel } from '@/app/lib/utils/agent-icons';
+import { AgentIcon } from '@/components/ui/agent-icon';
+import { CLAUDE_MODEL_IDS, CLAUDE_MODEL_LABELS, type ClaudeModelId } from '@/lib/models/claude-models';
+
+const AGENTS: Agent[] = ['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI'];
 
 interface FloatingActionBarProps {
   selectedCount: number;
   onDelete: () => void;
   onMerge: () => void;
   onCancel: () => void;
+  onChangeAgent?: (agent: Agent) => void;
+  onChangeModel?: (model: string) => void;
 }
 
 export function FloatingActionBar({
@@ -15,6 +29,8 @@ export function FloatingActionBar({
   onDelete,
   onMerge,
   onCancel,
+  onChangeAgent,
+  onChangeModel,
 }: FloatingActionBarProps) {
   if (selectedCount === 0) return null;
 
@@ -51,6 +67,43 @@ export function FloatingActionBar({
         <Trash2 className="h-4 w-4" />
         Delete
       </Button>
+
+      {onChangeAgent && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-1.5 text-sm" data-testid="bulk-change-agent-button">
+              <Bot className="h-4 w-4" />
+              Agent
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center">
+            {AGENTS.map((agent) => (
+              <DropdownMenuItem key={agent} onClick={() => onChangeAgent(agent)}>
+                <AgentIcon agent={agent} size={16} />
+                <span className="ml-2">{getAgentLabel(agent)}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
+      {onChangeModel && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-1.5 text-sm" data-testid="bulk-change-model-button">
+              <Cpu className="h-4 w-4" />
+              Model
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center">
+            {CLAUDE_MODEL_IDS.map((modelId) => (
+              <DropdownMenuItem key={modelId} onClick={() => onChangeModel(modelId)}>
+                {CLAUDE_MODEL_LABELS[modelId as ClaudeModelId]}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       <div className="h-5 w-px bg-border" />
 

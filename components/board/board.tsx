@@ -21,6 +21,8 @@ import { useBoardKeyboardShortcuts } from './hooks/use-board-keyboard-shortcuts'
 import { useZoneStates } from './hooks/use-zone-states';
 import { useTicketSelection } from './hooks/use-ticket-selection';
 import { FloatingActionBar } from './floating-action-bar';
+import { useBulkUpdateAgent, useBulkUpdateModel } from '@/lib/hooks/mutations/useBulkTicketActions';
+import type { Agent } from '@prisma/client';
 
 interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
@@ -64,6 +66,55 @@ export function Board({
   const handleRangeSelect = useCallback(
     (id: number) => selection.rangeSelect(id, inboxTicketIds),
     [selection, inboxTicketIds]
+  );
+
+  const bulkUpdateAgentMutation = useBulkUpdateAgent(projectId);
+  const bulkUpdateModelMutation = useBulkUpdateModel(projectId);
+
+  const handleBulkChangeAgent = useCallback(
+    (agent: Agent) => {
+      if (selection.selectedIds.size === 0) return;
+      bulkUpdateAgentMutation.mutate(
+        { ticketIds: Array.from(selection.selectedIds), agent },
+        {
+          onSuccess: (data) => {
+            const { summary } = data;
+            toast({
+              title: `Updated agent for ${summary.succeeded} ticket${summary.succeeded !== 1 ? 's' : ''}`,
+              ...(summary.skipped > 0 && { description: `${summary.skipped} skipped` }),
+            });
+            selection.clearSelection();
+          },
+          onError: (error) => {
+            toast({ variant: 'destructive', title: 'Failed to update agent', description: error.message });
+          },
+        }
+      );
+    },
+    [selection, bulkUpdateAgentMutation, toast]
+  );
+
+  const handleBulkChangeModel = useCallback(
+    (model: string) => {
+      if (selection.selectedIds.size === 0) return;
+      bulkUpdateModelMutation.mutate(
+        { ticketIds: Array.from(selection.selectedIds), model },
+        {
+          onSuccess: (data) => {
+            const { summary } = data;
+            toast({
+              title: `Updated model for ${summary.succeeded} ticket${summary.succeeded !== 1 ? 's' : ''}`,
+              ...(summary.skipped > 0 && { description: `${summary.skipped} skipped` }),
+            });
+            selection.clearSelection();
+          },
+          onError: (error) => {
+            toast({ variant: 'destructive', title: 'Failed to update model', description: error.message });
+          },
+        }
+      );
+    },
+    [selection, bulkUpdateModelMutation, toast]
   );
 
   const retroSpec = useRetroSpecState({ projectId, hasSpecs });
@@ -241,6 +292,8 @@ export function Board({
         onDelete={() => setBulkDeleteModalOpen(true)}
         onMerge={() => setBulkMergeModalOpen(true)}
         onCancel={selection.clearSelection}
+        onChangeAgent={handleBulkChangeAgent}
+        onChangeModel={handleBulkChangeModel}
       />
 
       <BoardModals

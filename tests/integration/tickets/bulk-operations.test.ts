@@ -244,4 +244,115 @@ describe('POST /api/projects/:projectId/tickets/bulk', () => {
       expect(res.data.baseTicket.id).toBe(lowestId);
     });
   });
+
+  describe('action: update-agent', () => {
+    it('should update agent for multiple tickets', async () => {
+      const t1 = await createInboxTicket('[e2e] agent-1');
+      const t2 = await createInboxTicket('[e2e] agent-2');
+
+      const res = await ctx.api.post<{
+        action: string;
+        results: { succeeded: Array<{ ticketId: number; version: number }>; skipped: Array<{ ticketId: number }> };
+        summary: { total: number; succeeded: number; skipped: number };
+      }>(`/api/projects/${ctx.projectId}/tickets/bulk`, {
+        action: 'update-agent',
+        ticketIds: [t1.id, t2.id],
+        agent: 'GEMINI',
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.data.action).toBe('update-agent');
+      expect(res.data.summary.succeeded).toBe(2);
+
+      const updated = await prisma.ticket.findMany({
+        where: { id: { in: [t1.id, t2.id] } },
+        select: { agent: true },
+      });
+      expect(updated.every((t) => t.agent === 'GEMINI')).toBe(true);
+    });
+
+    it('should return 400 for invalid agent', async () => {
+      const t1 = await createInboxTicket('[e2e] agent-invalid');
+      const res = await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/bulk`, {
+        action: 'update-agent',
+        ticketIds: [t1.id],
+        agent: 'INVALID',
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('should skip tickets not in INBOX', async () => {
+      const t1 = await createInboxTicket('[e2e] agent-not-inbox');
+      await prisma.ticket.update({ where: { id: t1.id }, data: { stage: 'SPECIFY' } });
+
+      const res = await ctx.api.post<{
+        summary: { succeeded: number; skipped: number };
+      }>(`/api/projects/${ctx.projectId}/tickets/bulk`, {
+        action: 'update-agent',
+        ticketIds: [t1.id],
+        agent: 'GEMINI',
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.data.summary.skipped).toBe(1);
+    });
+  });
+
+  describe('action: update-model', () => {
+    it('should update all stage model keys', async () => {
+      const t1 = await createInboxTicket('[e2e] model-1');
+      const t2 = await createInboxTicket('[e2e] model-2');
+
+      const res = await ctx.api.post<{
+        action: string;
+        results: { succeeded: Array<{ ticketId: number }>; skipped: Array<{ ticketId: number }> };
+        summary: { total: number; succeeded: number; skipped: number };
+      }>(`/api/projects/${ctx.projectId}/tickets/bulk`, {
+        action: 'update-model',
+        ticketIds: [t1.id, t2.id],
+        model: 'claude-opus-4-7',
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.data.action).toBe('update-model');
+      expect(res.data.summary.succeeded).toBe(2);
+
+      const updated = await prisma.ticket.findMany({
+        where: { id: { in: [t1.id, t2.id] } },
+        select: {
+          specifyModel: true,
+          planModel: true,
+          implementModel: true,
+          quickImplModel: true,
+          verifyModel: true,
+        },
+      });
+      for (const t of updated) {
+        expect(t.specifyModel).toBe('claude-opus-4-7');
+        expect(t.planModel).toBe('claude-opus-4-7');
+        expect(t.implementModel).toBe('claude-opus-4-7');
+        expect(t.quickImplModel).toBe('claude-opus-4-7');
+        expect(t.verifyModel).toBe('claude-opus-4-7');
+      }
+    });
+
+    it('should skip concurrently modified tickets', async () => {
+      const t1 = await createInboxTicket('[e2e] model-concurrent');
+      await prisma.ticket.update({
+        where: { id: t1.id },
+        data: { version: 999 },
+      });
+
+      const res = await ctx.api.post<{
+        summary: { succeeded: number; skipped: number };
+      }>(`/api/projects/${ctx.projectId}/tickets/bulk`, {
+        action: 'update-model',
+        ticketIds: [t1.id],
+        model: 'claude-opus-4-7',
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.data.summary.succeeded).toBe(1);
+    });
+  });
 });

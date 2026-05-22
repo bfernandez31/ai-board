@@ -100,13 +100,13 @@
 ### Tests for US3
 **Write these tests FIRST — they must FAIL before implementation**
 
-- [ ] T026 [P] [US3] Extend `tests/integration/tickets/bulk-operations.test.ts` with update-agent and update-model scenarios — valid agent enum, valid model ID, version-based concurrency skip, all 5 STAGE_MODEL_KEYS set on model change
+- [x] T026 [P] [US3] Extend `tests/integration/tickets/bulk-operations.test.ts` with update-agent and update-model scenarios — valid agent enum, valid model ID, version-based concurrency skip, all 5 STAGE_MODEL_KEYS set on model change
 
 ### Implementation for US3
 
-- [ ] T027 [US3] Implement update-agent and update-model action handlers in `app/api/projects/[projectId]/tickets/bulk/route.ts` — fetch tickets, verify INBOX, loop with version-checked updates per ticket, collect success/skipped, return results per contract
-- [ ] T028 [US3] Modify `components/board/floating-action-bar.tsx` — Add "Change agent" dropdown (agents from `app/lib/utils/agent-icons.ts`) and "Change model" dropdown (models from `lib/models/claude-models.ts`); on selection trigger bulk mutation immediately
-- [ ] T029 [US3] Add `useBulkUpdateAgent(projectId)` and `useBulkUpdateModel(projectId)` mutations in `lib/hooks/mutations/useBulkTicketActions.ts` — optimistic cache update of all selected tickets with new agent/model values, rollback on error, toast with success/skip summary
+- [x] T027 [US3] Implement update-agent and update-model action handlers in `app/api/projects/[projectId]/tickets/bulk/route.ts` — fetch tickets, verify INBOX, loop with version-checked updates per ticket, collect success/skipped, return results per contract
+- [x] T028 [US3] Modify `components/board/floating-action-bar.tsx` — Add "Change agent" dropdown (agents from `app/lib/utils/agent-icons.ts`) and "Change model" dropdown (models from `lib/models/claude-models.ts`); on selection trigger bulk mutation immediately
+- [x] T029 [US3] Add `useBulkUpdateAgent(projectId)` and `useBulkUpdateModel(projectId)` mutations in `lib/hooks/mutations/useBulkTicketActions.ts` — optimistic cache update of all selected tickets with new agent/model values, rollback on error, toast with success/skip summary
 
 **Checkpoint**: All four bulk actions fully operational. Selection, delete, merge, agent change, and model change all work independently.
 
