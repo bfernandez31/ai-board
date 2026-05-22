@@ -18,7 +18,8 @@ import type { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
 import { convertTicketForModal, ROLLBACK_MESSAGES, type UpdatedModalTicket } from './utils';
 import { TicketWithVersion as TWV } from '@/lib/types';
 import { BulkDeleteConfirmationModal } from './bulk-delete-confirmation-modal';
-import { useBulkDeleteTickets } from '@/lib/hooks/mutations/useBulkTicketActions';
+import { MergePreviewModal } from './merge-preview-modal';
+import { useBulkDeleteTickets, useMergeTickets } from '@/lib/hooks/mutations/useBulkTicketActions';
 import { useToast } from '@/hooks/use-toast';
 import { useMemo, useCallback } from 'react';
 
@@ -139,6 +140,7 @@ export function BoardModals(props: BoardModalsProps) {
 
   const { toast } = useToast();
   const bulkDeleteMutation = useBulkDeleteTickets(projectId);
+  const mergeMutation = useMergeTickets(projectId);
 
   const selectedTicketsForDelete = useMemo(() => {
     if (!props.selectedIds || !props.inboxTickets) return [];
@@ -175,6 +177,38 @@ export function BoardModals(props: BoardModalsProps) {
       }
     );
   }, [props, bulkDeleteMutation, toast]);
+
+  const handleMergeConfirm = useCallback(
+    (mergedTitle: string, mergedDescription: string, selectedAttachments: string[]) => {
+      if (!props.selectedIds || props.selectedIds.size < 2) return;
+      mergeMutation.mutate(
+        {
+          ticketIds: Array.from(props.selectedIds),
+          mergedTitle,
+          mergedDescription,
+          selectedAttachments,
+        },
+        {
+          onSuccess: (data) => {
+            toast({
+              title: `Merged ${data.summary.merged} tickets`,
+              description: `Base ticket: ${data.baseTicket.ticketKey}`,
+            });
+            props.clearSelection?.();
+            props.setBulkMergeModalOpen?.(false);
+          },
+          onError: (error) => {
+            toast({
+              variant: 'destructive',
+              title: 'Merge failed',
+              description: error.message,
+            });
+          },
+        }
+      );
+    },
+    [props, mergeMutation, toast]
+  );
 
   const rollbackKey = pendingRollback
     ? `${pendingRollback.ticket.stage}→${pendingRollback.targetStage}`
@@ -255,6 +289,15 @@ export function BoardModals(props: BoardModalsProps) {
         onOpenChange={(open) => props.setBulkDeleteModalOpen?.(open)}
         onConfirm={handleBulkDeleteConfirm}
         isDeleting={bulkDeleteMutation.isPending}
+      />
+
+      {/* Merge Preview Modal */}
+      <MergePreviewModal
+        tickets={selectedTicketsForDelete}
+        open={props.bulkMergeModalOpen ?? false}
+        onOpenChange={(open) => props.setBulkMergeModalOpen?.(open)}
+        onConfirm={handleMergeConfirm}
+        isMerging={mergeMutation.isPending}
       />
 
       {/* AIB-585: Generate Specs trigger (FR-013) — only after banner is dismissed, hidden during failure (badge shows retry) */}

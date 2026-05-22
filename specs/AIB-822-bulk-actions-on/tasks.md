@@ -76,16 +76,16 @@
 ### Tests for US2
 **Write these tests FIRST — they must FAIL before implementation**
 
-- [ ] T019 [P] [US2] Extend `tests/integration/tickets/bulk-operations.test.ts` with merge scenarios — min 2 tickets validation, active job blocking, description limit, attachment limit, transaction atomicity, concurrent modification
-- [ ] T020 [P] [US2] Create unit tests for merge preview modal (title/description pre-fill, character counter at 10,000 limit, attachment limit warning, submit disabled states, base ticket badge) in `tests/unit/components/board/merge-preview-modal.test.tsx`
+- [x] T019 [P] [US2] Extend `tests/integration/tickets/bulk-operations.test.ts` with merge scenarios — min 2 tickets validation, active job blocking, description limit, attachment limit, transaction atomicity, concurrent modification
+- [x] T020 [P] [US2] Create unit tests for merge preview modal (title/description pre-fill, character counter at 10,000 limit, attachment limit warning, submit disabled states, base ticket badge) in `tests/unit/components/board/merge-preview-modal.test.tsx`
 
 ### Implementation for US2
 
-- [ ] T021 [US2] Create `mergeInboxTickets(projectId, ticketIds, mergedTitle, mergedDescription, selectedAttachments)` in `lib/tickets/merge.ts` — fetch+validate tickets, verify no active jobs, sort by ID for base, Prisma interactive transaction (update base + deleteMany sources), return updated base + deleted list
-- [ ] T022 [US2] Implement merge action handler in `app/api/projects/[projectId]/tickets/bulk/route.ts` — route "merge" action to `mergeInboxTickets`, return response per contract
-- [ ] T023 [US2] Create merge preview modal in `components/board/merge-preview-modal.tsx` — ordered ticket list with base badge, editable title (max 100), editable description (pre-filled with concatenated format per FR-012, max 10,000 with live counter), attachment manager (checkboxes if combined >5), warnings about data loss, submit button "Merge N tickets"
-- [ ] T024 [US2] Add `useMergeTickets(projectId)` mutation in `lib/hooks/mutations/useBulkTicketActions.ts` — optimistic update of base ticket in cache + remove source tickets, toast on success, clear selection
-- [ ] T025 [US2] Modify `components/board/board-modals.tsx` — Add MergePreviewModal with selection state and merge mutation wiring
+- [x] T021 [US2] Create `mergeInboxTickets(projectId, ticketIds, mergedTitle, mergedDescription, selectedAttachments)` in `lib/tickets/merge.ts` — fetch+validate tickets, verify no active jobs, sort by ID for base, Prisma interactive transaction (update base + deleteMany sources), return updated base + deleted list
+- [x] T022 [US2] Implement merge action handler in `app/api/projects/[projectId]/tickets/bulk/route.ts` — route "merge" action to `mergeInboxTickets`, return response per contract
+- [x] T023 [US2] Create merge preview modal in `components/board/merge-preview-modal.tsx` — ordered ticket list with base badge, editable title (max 100), editable description (pre-filled with concatenated format per FR-012, max 10,000 with live counter), attachment manager (checkboxes if combined >5), warnings about data loss, submit button "Merge N tickets"
+- [x] T024 [US2] Add `useMergeTickets(projectId)` mutation in `lib/hooks/mutations/useBulkTicketActions.ts` — optimistic update of base ticket in cache + remove source tickets, toast on success, clear selection
+- [x] T025 [US2] Modify `components/board/board-modals.tsx` — Add MergePreviewModal with selection state and merge mutation wiring
 
 **Checkpoint**: Users can merge 2+ INBOX tickets via preview modal. Base ticket updated, sources deleted. Attachment and description limits enforced. All US1+US4 functionality still works.
 

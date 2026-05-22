@@ -145,4 +145,103 @@ describe('POST /api/projects/:projectId/tickets/bulk', () => {
       expect(res.status).toBe(401);
     });
   });
+
+  describe('action: merge', () => {
+    it('should merge 2+ INBOX tickets into base ticket', async () => {
+      const t1 = await createInboxTicket('[e2e] merge-base');
+      const t2 = await createInboxTicket('[e2e] merge-source-1');
+      const t3 = await createInboxTicket('[e2e] merge-source-2');
+
+      const res = await ctx.api.post<{
+        action: string;
+        baseTicket: { id: number; ticketKey: string; title: string; version: number };
+        deletedTickets: Array<{ ticketId: number; ticketKey: string }>;
+        summary: { merged: number; deleted: number };
+      }>(`/api/projects/${ctx.projectId}/tickets/bulk`, {
+        action: 'merge',
+        ticketIds: [t1.id, t2.id, t3.id],
+        mergedTitle: 'Merged ticket',
+        mergedDescription: 'Combined description',
+        selectedAttachments: [],
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.data.action).toBe('merge');
+      expect(res.data.baseTicket.id).toBe(t1.id);
+      expect(res.data.baseTicket.title).toBe('Merged ticket');
+      expect(res.data.summary.merged).toBe(3);
+      expect(res.data.summary.deleted).toBe(2);
+      expect(res.data.deletedTickets).toHaveLength(2);
+
+      const baseTicket = await prisma.ticket.findUnique({ where: { id: t1.id } });
+      expect(baseTicket).not.toBeNull();
+      expect(baseTicket?.title).toBe('Merged ticket');
+
+      const source1 = await prisma.ticket.findUnique({ where: { id: t2.id } });
+      const source2 = await prisma.ticket.findUnique({ where: { id: t3.id } });
+      expect(source1).toBeNull();
+      expect(source2).toBeNull();
+    });
+
+    it('should return 400 for fewer than 2 tickets', async () => {
+      const t1 = await createInboxTicket('[e2e] merge-solo');
+      const res = await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/bulk`, {
+        action: 'merge',
+        ticketIds: [t1.id],
+        mergedTitle: 'Title',
+        mergedDescription: 'Desc',
+        selectedAttachments: [],
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('should block merge when any ticket has active job', async () => {
+      const t1 = await createInboxTicket('[e2e] merge-ok');
+      const t2 = await createInboxTicketWithJob('[e2e] merge-active', 'RUNNING');
+
+      const res = await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/bulk`, {
+        action: 'merge',
+        ticketIds: [t1.id, t2.id],
+        mergedTitle: 'Merged',
+        mergedDescription: 'Desc',
+        selectedAttachments: [],
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should reject description exceeding 10,000 characters', async () => {
+      const t1 = await createInboxTicket('[e2e] merge-long-1');
+      const t2 = await createInboxTicket('[e2e] merge-long-2');
+
+      const res = await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/bulk`, {
+        action: 'merge',
+        ticketIds: [t1.id, t2.id],
+        mergedTitle: 'Title',
+        mergedDescription: 'x'.repeat(10001),
+        selectedAttachments: [],
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should use lowest ID as base ticket', async () => {
+      const t1 = await createInboxTicket('[e2e] merge-higher');
+      const t2 = await createInboxTicket('[e2e] merge-lower');
+      const lowestId = Math.min(t1.id, t2.id);
+
+      const res = await ctx.api.post<{
+        baseTicket: { id: number };
+      }>(`/api/projects/${ctx.projectId}/tickets/bulk`, {
+        action: 'merge',
+        ticketIds: [t1.id, t2.id],
+        mergedTitle: 'Merged',
+        mergedDescription: 'Desc',
+        selectedAttachments: [],
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.data.baseTicket.id).toBe(lowestId);
+    });
+  });
 });

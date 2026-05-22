@@ -3,6 +3,7 @@ import { ProjectIdSchema } from '@/lib/validations/ticket';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { bulkActionSchema } from '@/lib/validations/bulk-actions';
 import { bulkDeleteInboxTickets } from '@/lib/tickets/deletion';
+import { mergeInboxTickets } from '@/lib/tickets/merge';
 
 export async function POST(
   request: NextRequest,
@@ -39,10 +40,25 @@ export async function POST(
       }
 
       case 'merge': {
-        return NextResponse.json(
-          { error: 'Not implemented', code: 'NOT_IMPLEMENTED' },
-          { status: 501 }
-        );
+        try {
+          const result = await mergeInboxTickets(
+            projectId,
+            action.ticketIds,
+            action.mergedTitle,
+            action.mergedDescription,
+            action.selectedAttachments
+          );
+          return NextResponse.json({ action: 'merge', ...result });
+        } catch (mergeError: unknown) {
+          if (mergeError instanceof Error && 'status' in mergeError) {
+            const status = (mergeError as { status: number }).status;
+            return NextResponse.json(
+              { error: mergeError.message, code: 'MERGE_ERROR' },
+              { status }
+            );
+          }
+          throw mergeError;
+        }
       }
 
       case 'update-agent': {
