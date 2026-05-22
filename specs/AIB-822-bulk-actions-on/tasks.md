@@ -50,18 +50,18 @@
 ### Tests for US1+US4
 **Write these tests FIRST — they must FAIL before implementation**
 
-- [ ] T010 [P] [US1] Create integration tests for bulk delete API (auth, validation, partial success with active jobs, cascade delete, concurrent modification handling) in `tests/integration/tickets/bulk-operations.test.ts`
-- [ ] T011 [P] [US1] Create unit tests for `useTicketSelection` hook (toggle, range select with Shift, auto-cleanup on ticket removal, clear on Escape) in `tests/unit/hooks/use-ticket-selection.test.ts`
-- [ ] T012 [P] [US1] Create unit tests for floating action bar (render with count, Merge disabled when <2 selected, button callbacks, Cancel clears selection) in `tests/unit/components/board/floating-action-bar.test.tsx`
-- [ ] T013 [P] [US1] Create unit tests for bulk delete confirmation modal (ticket list display, warning text, confirm/cancel callbacks) in `tests/unit/components/board/bulk-delete-confirmation-modal.test.tsx`
+- [x] T010 [P] [US1] Create integration tests for bulk delete API (auth, validation, partial success with active jobs, cascade delete, concurrent modification handling) in `tests/integration/tickets/bulk-operations.test.ts`
+- [x] T011 [P] [US1] Create unit tests for `useTicketSelection` hook (toggle, range select with Shift, auto-cleanup on ticket removal, clear on Escape) in `tests/unit/hooks/use-ticket-selection.test.ts`
+- [x] T012 [P] [US1] Create unit tests for floating action bar (render with count, Merge disabled when <2 selected, button callbacks, Cancel clears selection) in `tests/unit/components/board/floating-action-bar.test.tsx`
+- [x] T013 [P] [US1] Create unit tests for bulk delete confirmation modal (ticket list display, warning text, confirm/cancel callbacks) in `tests/unit/components/board/bulk-delete-confirmation-modal.test.tsx`
 
 ### Implementation for US1+US4
 
-- [ ] T014 [US1] Add `bulkDeleteInboxTickets(projectId, ticketIds)` function in `lib/tickets/deletion.ts` — fetch tickets by ID+project+INBOX, batch-check active jobs, partition into deletable/skipped, deleteMany with cascade, return discriminated result with per-ticket reporting
-- [ ] T015 [US1] Implement delete action handler in `app/api/projects/[projectId]/tickets/bulk/route.ts` — route "delete" action to `bulkDeleteInboxTickets`, return results per contract
-- [ ] T016 [P] [US1] Create bulk delete confirmation modal (AlertDialog listing selected tickets by ticketKey+title, irreversibility warning, confirm triggers mutation) in `components/board/bulk-delete-confirmation-modal.tsx`
-- [ ] T017 [US1] Create `useBulkDeleteTickets(projectId)` mutation hook with optimistic removal of selected tickets from cache, rollback on error, toast with success/skip summary, clear selection on success in `lib/hooks/mutations/useBulkTicketActions.ts`
-- [ ] T018 [US1] Modify `components/board/board-modals.tsx` — Add BulkDeleteConfirmationModal with selection state and delete mutation wiring
+- [x] T014 [US1] Add `bulkDeleteInboxTickets(projectId, ticketIds)` function in `lib/tickets/deletion.ts` — fetch tickets by ID+project+INBOX, batch-check active jobs, partition into deletable/skipped, deleteMany with cascade, return discriminated result with per-ticket reporting
+- [x] T015 [US1] Implement delete action handler in `app/api/projects/[projectId]/tickets/bulk/route.ts` — route "delete" action to `bulkDeleteInboxTickets`, return results per contract
+- [x] T016 [P] [US1] Create bulk delete confirmation modal (AlertDialog listing selected tickets by ticketKey+title, irreversibility warning, confirm triggers mutation) in `components/board/bulk-delete-confirmation-modal.tsx`
+- [x] T017 [US1] Create `useBulkDeleteTickets(projectId)` mutation hook with optimistic removal of selected tickets from cache, rollback on error, toast with success/skip summary, clear selection on success in `lib/hooks/mutations/useBulkTicketActions.ts`
+- [x] T018 [US1] Modify `components/board/board-modals.tsx` — Add BulkDeleteConfirmationModal with selection state and delete mutation wiring
 
 **Checkpoint**: Users can select INBOX tickets (checkbox, Shift+range, Cmd/Ctrl+toggle), see floating action bar, bulk delete with confirmation, and clear selection with Escape/Cancel. Partial failures reported via toast.
 

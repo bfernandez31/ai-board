@@ -17,6 +17,10 @@ import type { useTicketJobs } from '@/app/lib/hooks/queries/useTicketJobs';
 import type { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
 import { convertTicketForModal, ROLLBACK_MESSAGES, type UpdatedModalTicket } from './utils';
 import { TicketWithVersion as TWV } from '@/lib/types';
+import { BulkDeleteConfirmationModal } from './bulk-delete-confirmation-modal';
+import { useBulkDeleteTickets } from '@/lib/hooks/mutations/useBulkTicketActions';
+import { useToast } from '@/hooks/use-toast';
+import { useMemo, useCallback } from 'react';
 
 interface BoardModalsProps {
   projectId: number;
@@ -133,6 +137,45 @@ export function BoardModals(props: BoardModalsProps) {
     handleRetroSpecSuccess,
   } = props;
 
+  const { toast } = useToast();
+  const bulkDeleteMutation = useBulkDeleteTickets(projectId);
+
+  const selectedTicketsForDelete = useMemo(() => {
+    if (!props.selectedIds || !props.inboxTickets) return [];
+    return props.inboxTickets.filter((t) => props.selectedIds!.has(t.id));
+  }, [props.selectedIds, props.inboxTickets]);
+
+  const handleBulkDeleteConfirm = useCallback(() => {
+    if (!props.selectedIds || props.selectedIds.size === 0) return;
+    bulkDeleteMutation.mutate(
+      { ticketIds: Array.from(props.selectedIds) },
+      {
+        onSuccess: (data) => {
+          const { summary } = data;
+          if (summary.skipped > 0) {
+            toast({
+              title: `Deleted ${summary.succeeded} ticket${summary.succeeded !== 1 ? 's' : ''}`,
+              description: `${summary.skipped} ticket${summary.skipped !== 1 ? 's' : ''} skipped (active jobs)`,
+            });
+          } else {
+            toast({
+              title: `Deleted ${summary.succeeded} ticket${summary.succeeded !== 1 ? 's' : ''}`,
+            });
+          }
+          props.clearSelection?.();
+          props.setBulkDeleteModalOpen?.(false);
+        },
+        onError: (error) => {
+          toast({
+            variant: 'destructive',
+            title: 'Bulk delete failed',
+            description: error.message,
+          });
+        },
+      }
+    );
+  }, [props, bulkDeleteMutation, toast]);
+
   const rollbackKey = pendingRollback
     ? `${pendingRollback.ticket.stage}→${pendingRollback.targetStage}`
     : '';
@@ -204,6 +247,15 @@ export function BoardModals(props: BoardModalsProps) {
         onOpenChange={handleShortcutsHelpChange}
       />
       <ShortcutsHelpButton onClick={() => handleShortcutsHelpChange(!isShortcutsHelpOpen)} />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <BulkDeleteConfirmationModal
+        tickets={selectedTicketsForDelete}
+        open={props.bulkDeleteModalOpen ?? false}
+        onOpenChange={(open) => props.setBulkDeleteModalOpen?.(open)}
+        onConfirm={handleBulkDeleteConfirm}
+        isDeleting={bulkDeleteMutation.isPending}
+      />
 
       {/* AIB-585: Generate Specs trigger (FR-013) — only after banner is dismissed, hidden during failure (badge shows retry) */}
       {!hasSpecs && !isRetroSpecCompleted && !isRetroSpecGenerating && !isRetroSpecFailed && isBannerDismissed && (
