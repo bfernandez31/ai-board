@@ -29,7 +29,6 @@ export interface BulkMergePreviewModalProps {
 }
 
 function readAttachments(value: unknown): TicketAttachment[] {
-  if (value == null) return [];
   return isTicketAttachmentArray(value) ? value : [];
 }
 

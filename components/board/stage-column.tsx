@@ -171,6 +171,15 @@ export const StageColumn = React.memo(
     const stageConfig = STAGE_CONFIG[stage];
     const ticketCount = tickets.length;
     const showNewTicketButton = stageConfig.order === 0; // Only show in INBOX
+    const isInbox = stage === Stage.INBOX;
+
+    const inboxIdsSorted = React.useMemo(
+      () =>
+        isInbox && bulkSelection
+          ? [...tickets].sort((a, b) => a.ticketNumber - b.ticketNumber).map((t) => t.id)
+          : [],
+      [isInbox, bulkSelection, tickets]
+    );
 
     // Scroll detection state for mobile scroll buttons
     const [canScrollUp, setCanScrollUp] = React.useState(false);
@@ -269,43 +278,34 @@ export const StageColumn = React.memo(
             {/* Ticket Cards */}
             {tickets.length > 0 ? (
               <>
-                {(() => {
-                  const isInbox = stage === Stage.INBOX;
-                  const inboxIdsSorted =
+                {tickets.map((ticket) => {
+                  const dualJobs = getTicketJobs?.(ticket.id);
+                  const selection: TicketCardSelection | undefined =
                     isInbox && bulkSelection
-                      ? [...tickets]
-                          .sort((a, b) => a.ticketNumber - b.ticketNumber)
-                          .map((t) => t.id)
-                      : [];
-                  return tickets.map((ticket) => {
-                    const dualJobs = getTicketJobs?.(ticket.id);
-                    const selection: TicketCardSelection | undefined =
-                      isInbox && bulkSelection
-                        ? {
-                            isSelected: bulkSelection.selectedIds.has(ticket.id),
-                            isSelectMode: bulkSelection.isSelectMode,
-                            onToggle: () => bulkSelection.toggle(ticket.id),
-                            onRangeSelect: () =>
-                              bulkSelection.rangeSelectTo(ticket.id, inboxIdsSorted),
-                          }
-                        : undefined;
-                    return (
-                      <TicketCard
-                        key={ticket.id}
-                        ticket={ticket}
-                        workflowJob={dualJobs?.workflow || null}
-                        aiBoardJob={dualJobs?.aiBoard || null}
-                        deployJob={dualJobs?.deployJob || null}
-                        qualityScore={ticket.qualityScore}
-                        isDraggable={isDraggable}
-                        activePreviewTicket={activePreviewTicket || null}
-                        activeDeploymentTicket={activeDeploymentTicket || null}
-                        {...(onTicketClick && { onTicketClick })}
-                        {...(selection && { selection })}
-                      />
-                    );
-                  });
-                })()}
+                      ? {
+                          isSelected: bulkSelection.selectedIds.has(ticket.id),
+                          isSelectMode: bulkSelection.isSelectMode,
+                          onToggle: () => bulkSelection.toggle(ticket.id),
+                          onRangeSelect: () =>
+                            bulkSelection.rangeSelectTo(ticket.id, inboxIdsSorted),
+                        }
+                      : undefined;
+                  return (
+                    <TicketCard
+                      key={ticket.id}
+                      ticket={ticket}
+                      workflowJob={dualJobs?.workflow || null}
+                      aiBoardJob={dualJobs?.aiBoard || null}
+                      deployJob={dualJobs?.deployJob || null}
+                      qualityScore={ticket.qualityScore}
+                      isDraggable={isDraggable}
+                      activePreviewTicket={activePreviewTicket || null}
+                      activeDeploymentTicket={activeDeploymentTicket || null}
+                      {...(onTicketClick && { onTicketClick })}
+                      {...(selection && { selection })}
+                    />
+                  );
+                })}
 
                 {/* Load More button for paginated stages */}
                 {onLoadMore && (

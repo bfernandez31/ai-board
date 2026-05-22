@@ -173,9 +173,7 @@ interface BulkMergeOk {
 }
 
 function readAttachments(value: unknown): TicketAttachment[] {
-  if (value == null) return [];
-  if (isTicketAttachmentArray(value)) return value;
-  return [];
+  return isTicketAttachmentArray(value) ? value : [];
 }
 
 export async function bulkMergeInbox(

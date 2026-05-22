@@ -20,8 +20,7 @@ const AGENT_OPTIONS: { value: Agent; label: string }[] = [
   { value: Agent.MISTRAL, label: 'Mistral' },
 ];
 
-const CLEAR_AGENT_VALUE = '__clear__';
-const CLEAR_MODEL_VALUE = '__clear__';
+const CLEAR_VALUE = '__clear__';
 
 export interface BulkActionBarProps {
   count: number;
@@ -97,11 +96,7 @@ export function BulkActionBar({
       <Select
         disabled={dropdownsDisabled}
         onValueChange={(value) => {
-          if (value === CLEAR_AGENT_VALUE) {
-            onAgentChange(null);
-          } else {
-            onAgentChange(value as Agent);
-          }
+          onAgentChange(value === CLEAR_VALUE ? null : (value as Agent));
         }}
       >
         <SelectTrigger
@@ -118,18 +113,14 @@ export function BulkActionBar({
               {opt.label}
             </SelectItem>
           ))}
-          <SelectItem value={CLEAR_AGENT_VALUE}>Inherit from project</SelectItem>
+          <SelectItem value={CLEAR_VALUE}>Inherit from project</SelectItem>
         </SelectContent>
       </Select>
 
       <Select
         disabled={dropdownsDisabled}
         onValueChange={(value) => {
-          if (value === CLEAR_MODEL_VALUE) {
-            onModelChange(null);
-          } else {
-            onModelChange(value as ClaudeModelId);
-          }
+          onModelChange(value === CLEAR_VALUE ? null : (value as ClaudeModelId));
         }}
       >
         <SelectTrigger
@@ -146,7 +137,7 @@ export function BulkActionBar({
               {CLAUDE_MODEL_LABELS[modelId]}
             </SelectItem>
           ))}
-          <SelectItem value={CLEAR_MODEL_VALUE}>Clear (use default)</SelectItem>
+          <SelectItem value={CLEAR_VALUE}>Clear (use default)</SelectItem>
         </SelectContent>
       </Select>
 

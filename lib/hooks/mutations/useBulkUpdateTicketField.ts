@@ -96,6 +96,11 @@ export function useBulkUpdateTicketField(projectId: number) {
 
       const targets = new Set(variables.ticketIds);
 
+      const modelPatch =
+        variables.kind === 'model'
+          ? Object.fromEntries(MODEL_FIELDS.map((f) => [f, variables.value]))
+          : null;
+
       queryClient.setQueryData<TicketsByStage>(
         queryKeys.projects.tickets(projectId),
         (old) => {
@@ -110,11 +115,7 @@ export function useBulkUpdateTicketField(projectId: number) {
               if (variables.kind === 'agent') {
                 return { ...t, agent: variables.value };
               }
-              const patch: Record<string, unknown> = {};
-              for (const field of MODEL_FIELDS) {
-                patch[field] = variables.value;
-              }
-              return { ...t, ...patch } as TicketWithVersion;
+              return { ...t, ...modelPatch } as TicketWithVersion;
             });
           }
           return next;
