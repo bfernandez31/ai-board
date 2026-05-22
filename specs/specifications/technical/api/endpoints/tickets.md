@@ -331,7 +331,8 @@ Hard-delete 1–50 INBOX tickets in a single transaction.
 
 | Status | `code` | When |
 |---|---|---|
-| 400 | `VALIDATION_ERROR` | Zod failure (cap, duplicates, missing expectedVersions key) |
+| 400 | `BULK_LIMIT_EXCEEDED` | More than 50 `ticketIds` submitted |
+| 400 | `VALIDATION_ERROR` | Zod failure (duplicates, missing expectedVersions key) |
 | 401 | `AUTH_ERROR` | Unauthenticated |
 | 403 | `FORBIDDEN_PROJECT` | Actor lacks project access |
 | 403 | `FORBIDDEN_CROSS_PROJECT` | One or more `ticketIds` resolved to a different project |
@@ -398,7 +399,8 @@ Squash 2–50 INBOX tickets into a single surviving base ticket.
 
 | Status | `code` | When |
 |---|---|---|
-| 400 | `VALIDATION_ERROR` | Zod failure (length, base-not-smallest, missing expectedVersions key) |
+| 400 | `BULK_LIMIT_EXCEEDED` | More than 49 `sourceTicketIds` submitted (cap is 50 total including base) |
+| 400 | `VALIDATION_ERROR` | Zod failure (base-not-smallest, duplicates, missing expectedVersions key) |
 | 400 | `BULK_MERGE_REQUIRES_TWO` | Reached only if Zod bypass — `sourceTicketIds` empty |
 | 401 | `AUTH_ERROR` | Unauthenticated |
 | 403 | `FORBIDDEN_PROJECT` | Actor lacks project access |
@@ -408,7 +410,7 @@ Squash 2–50 INBOX tickets into a single surviving base ticket.
 | 500 | `DATABASE_ERROR` | Unexpected DB failure |
 
 **Behavior**:
-- Single transaction: validates preconditions, increments `version` on the base, overwrites the base's `title` and `description`, concatenates attachments as `[...base.attachments, ...sortedSources.flatMap(s => s.attachments)]` (no deduplication), creates `TICKET_MERGED` notifications for non-actor source creators with `mergedIntoTicketId` pointing at the base, then hard-deletes every source ticket
+- Single transaction: validates preconditions, increments `version` on the base, overwrites the base's `title` and `description`, concatenates attachments as `[...base.attachments, ...sortedSources.flatMap(s => s.attachments)]` (no deduplication), creates `TICKET_MERGED` notifications for the non-actor base creator and every non-actor source creator with `mergedIntoTicketId` pointing at the base, then hard-deletes every source ticket
 - Notifications are inserted BEFORE source deletes; the `Notification.ticketId → SetNull` FK preserves the row after the source ticket is removed, so the recipient still sees `ticketKeySnapshot` for the deleted ticket plus a working link to the surviving base
 - Preserved on the base: `id`, `ticketKey`, `ticketNumber`, `agent`, all five model overrides, `autoMode`, `clarificationPolicy`, `workflowType`, `stage`, `branch`, `previewUrl`, `creatorId`
 
@@ -447,7 +449,8 @@ Update only the `agent` field on 1–50 INBOX tickets in one atomic write.
 
 | Status | `code` | When |
 |---|---|---|
-| 400 | `VALIDATION_ERROR` | Zod failure (cap, invalid agent enum) |
+| 400 | `BULK_LIMIT_EXCEEDED` | More than 50 `ticketIds` submitted |
+| 400 | `VALIDATION_ERROR` | Zod failure (invalid agent enum, duplicates) |
 | 401 | `AUTH_ERROR` | Unauthenticated |
 | 403 | `FORBIDDEN_PROJECT` | Actor lacks project access |
 | 403 | `FORBIDDEN_CROSS_PROJECT` | Id resolves to a different project |

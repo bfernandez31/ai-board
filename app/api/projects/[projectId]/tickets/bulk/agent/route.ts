@@ -25,6 +25,15 @@ export async function POST(
     const actorId = await requireAuth(request);
 
     const body = await request.json();
+    if (Array.isArray(body?.ticketIds) && body.ticketIds.length > 50) {
+      return NextResponse.json(
+        {
+          error: 'Select at most 50 tickets per bulk action',
+          code: 'BULK_LIMIT_EXCEEDED',
+        },
+        { status: 400 }
+      );
+    }
     const parseResult = bulkAgentSchema.safeParse(body);
     if (!parseResult.success) {
       return NextResponse.json(

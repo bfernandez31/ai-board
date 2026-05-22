@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -51,6 +52,25 @@ export function BulkActionBar({
   mergePending = false,
   deletePending = false,
 }: BulkActionBarProps) {
+  const [agentResetKey, setAgentResetKey] = React.useState(0);
+  const [modelResetKey, setModelResetKey] = React.useState(0);
+  const prevAgentPending = React.useRef(agentPending);
+  const prevModelPending = React.useRef(modelPending);
+
+  React.useEffect(() => {
+    if (prevAgentPending.current && !agentPending) {
+      setAgentResetKey((k) => k + 1);
+    }
+    prevAgentPending.current = agentPending;
+  }, [agentPending]);
+
+  React.useEffect(() => {
+    if (prevModelPending.current && !modelPending) {
+      setModelResetKey((k) => k + 1);
+    }
+    prevModelPending.current = modelPending;
+  }, [modelPending]);
+
   if (count === 0) return null;
 
   const overLimit = count > BULK_LIMIT;
@@ -94,6 +114,7 @@ export function BulkActionBar({
       </Button>
 
       <Select
+        key={`agent-${agentResetKey}`}
         disabled={dropdownsDisabled}
         onValueChange={(value) => {
           onAgentChange(value === CLEAR_VALUE ? null : (value as Agent));
@@ -118,6 +139,7 @@ export function BulkActionBar({
       </Select>
 
       <Select
+        key={`model-${modelResetKey}`}
         disabled={dropdownsDisabled}
         onValueChange={(value) => {
           onModelChange(value === CLEAR_VALUE ? null : (value as ClaudeModelId));

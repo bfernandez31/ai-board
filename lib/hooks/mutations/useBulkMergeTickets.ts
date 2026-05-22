@@ -55,7 +55,7 @@ export function useBulkMergeTickets(projectId: number) {
       return response.json() as Promise<BulkMergeResponse>;
     },
 
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.tickets(projectId) });
     },
 

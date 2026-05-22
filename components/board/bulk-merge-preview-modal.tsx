@@ -68,7 +68,15 @@ export function BulkMergePreviewModal({
     }
   }, [open, initialTitle, initialDescription]);
 
-  if (!base || sources.length === 0) return null;
+  const hasValidSelection = base != null && sources.length > 0;
+
+  React.useEffect(() => {
+    if (open && !hasValidSelection) {
+      onOpenChange(false);
+    }
+  }, [open, hasValidSelection, onOpenChange]);
+
+  if (base == null || sources.length === 0) return null;
 
   const attachmentCount =
     readAttachments(base.attachments).length +

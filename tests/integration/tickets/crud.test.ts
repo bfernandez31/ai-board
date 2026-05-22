@@ -711,7 +711,7 @@ describe('Tickets CRUD', () => {
         { ticketIds, expectedVersions }
       );
       expect(response.status).toBe(400);
-      expect(response.data.code).toBe('VALIDATION_ERROR');
+      expect(response.data.code).toBe('BULK_LIMIT_EXCEEDED');
     });
 
     it('returns 400 VALIDATION_ERROR when expectedVersions is missing an id', async () => {

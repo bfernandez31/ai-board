@@ -119,12 +119,14 @@ export function BoardGrid({
               !isRollbackToPlan &&
               !isNewRollbackTarget;
 
+            const isInboxInSelectMode =
+              stage === Stage.INBOX && bulkSelection?.isSelectMode === true;
             return (
               <StageColumn
                 key={stage}
                 stage={stage}
                 tickets={ticketsByStage[stage] || []}
-                isDraggable={isOnline}
+                isDraggable={isOnline && !isInboxInSelectMode}
                 onTicketClick={onTicketClick}
                 projectId={projectId}
                 getTicketJobs={getTicketJobs}

@@ -7,7 +7,6 @@
 // - Future: Schedule daily/weekly cron job to run cleanup
 
 import { prisma } from '@/lib/db/client';
-import type { NotificationType } from '@prisma/client';
 
 /**
  * Create a notification for a mention
@@ -20,31 +19,6 @@ export async function createNotificationForMention(params: {
 }) {
   return prisma.notification.create({
     data: params,
-  });
-}
-
-/**
- * Create a notification for a ticket-level action (TICKET_DELETED, TICKET_MERGED).
- * Used OUTSIDE transactions; in-transaction bulk paths use tx.notification.createMany directly.
- */
-export async function createNotificationForTicketAction(params: {
-  recipientId: string;
-  actorId: string;
-  ticketId: number;
-  ticketKeySnapshot: string;
-  type: Exclude<NotificationType, 'MENTION'>;
-  mergedIntoTicketId?: number;
-}) {
-  return prisma.notification.create({
-    data: {
-      recipientId: params.recipientId,
-      actorId: params.actorId,
-      ticketId: params.ticketId,
-      commentId: null,
-      type: params.type,
-      ticketKeySnapshot: params.ticketKeySnapshot,
-      ...(params.mergedIntoTicketId != null && { mergedIntoTicketId: params.mergedIntoTicketId }),
-    },
   });
 }
 
@@ -78,6 +52,13 @@ export async function getNotificationsForUser(userId: string, limit = 5) {
           id: true,
           ticketKey: true,
           title: true,
+          projectId: true,
+        },
+      },
+      mergedIntoTicket: {
+        select: {
+          id: true,
+          ticketKey: true,
           projectId: true,
         },
       },

@@ -20,21 +20,30 @@ export async function GET(_request: NextRequest) {
     const notifications = await getNotificationsForUser(user.id, limit);
     const unreadCount = await getUnreadCount(user.id);
 
-    const notificationsDisplay = notifications.map((n: Awaited<ReturnType<typeof getNotificationsForUser>>[number]) => ({
-      id: n.id,
-      actorName: n.actor.name || n.actor.email,
-      actorImage: n.actor.image,
-      ticketKey: n.ticket?.ticketKey ?? n.ticketKeySnapshot ?? null,
-      commentPreview: n.comment
-        ? n.comment.content.substring(0, 80) + (n.comment.content.length > 80 ? '...' : '')
-        : null,
-      createdAt: n.createdAt.toISOString(),
-      read: n.read,
-      commentId: n.commentId,
-      projectId: n.ticket?.projectId ?? null,
-      type: n.type,
-      mergedIntoTicketId: n.mergedIntoTicketId,
-    }));
+    const notificationsDisplay = notifications.map((n: Awaited<ReturnType<typeof getNotificationsForUser>>[number]) => {
+      const isMerged = n.type === 'TICKET_MERGED';
+      const projectId = isMerged
+        ? n.mergedIntoTicket?.projectId ?? n.ticket?.projectId ?? null
+        : n.ticket?.projectId ?? null;
+      const ticketKey = isMerged
+        ? n.mergedIntoTicket?.ticketKey ?? n.ticket?.ticketKey ?? n.ticketKeySnapshot ?? null
+        : n.ticket?.ticketKey ?? n.ticketKeySnapshot ?? null;
+      return {
+        id: n.id,
+        actorName: n.actor.name || n.actor.email,
+        actorImage: n.actor.image,
+        ticketKey,
+        commentPreview: n.comment
+          ? n.comment.content.substring(0, 80) + (n.comment.content.length > 80 ? '...' : '')
+          : null,
+        createdAt: n.createdAt.toISOString(),
+        read: n.read,
+        commentId: n.commentId,
+        projectId,
+        type: n.type,
+        mergedIntoTicketId: n.mergedIntoTicketId,
+      };
+    });
 
     return NextResponse.json({
       notifications: notificationsDisplay,

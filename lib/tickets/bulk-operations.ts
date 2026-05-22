@@ -31,12 +31,26 @@ interface AssertConflictResult {
   };
 }
 
-export type AssertInboxResult = AssertOkResult | AssertConflictResult;
+interface AssertCrossProjectResult {
+  ok: false;
+  status: 403;
+  body: {
+    error: string;
+    code: 'FORBIDDEN_CROSS_PROJECT';
+    details: { conflictingIds: number[] };
+  };
+}
+
+export type AssertInboxResult =
+  | AssertOkResult
+  | AssertConflictResult
+  | AssertCrossProjectResult;
 
 /**
  * Re-fetch the requested tickets inside the transaction with the INBOX + projectId
- * filter. Returns the rows if every requested id is present and INBOX, otherwise
- * a 409 BULK_CONFLICT_STAGE_DRIFT response with the missing/drifted ids.
+ * filter. Returns the rows if every requested id is present and INBOX. Missing ids
+ * that resolve to a different project yield 403 FORBIDDEN_CROSS_PROJECT; the rest
+ * yield 409 BULK_CONFLICT_STAGE_DRIFT.
  */
 export async function assertInboxAndProject(
   tx: Prisma.TransactionClient,
@@ -49,14 +63,32 @@ export async function assertInboxAndProject(
 
   if (tickets.length !== ticketIds.length) {
     const found = new Set(tickets.map((t) => t.id));
-    const conflictingIds = ticketIds.filter((id) => !found.has(id));
+    const missingIds = ticketIds.filter((id) => !found.has(id));
+    const crossProject = await tx.ticket.findMany({
+      where: { id: { in: missingIds } },
+      select: { id: true, projectId: true },
+    });
+    const crossProjectIds = crossProject
+      .filter((t) => t.projectId !== projectId)
+      .map((t) => t.id);
+    if (crossProjectIds.length > 0) {
+      return {
+        ok: false,
+        status: 403,
+        body: {
+          error: 'One or more tickets belong to a different project',
+          code: 'FORBIDDEN_CROSS_PROJECT',
+          details: { conflictingIds: crossProjectIds },
+        },
+      };
+    }
     return {
       ok: false,
       status: 409,
       body: {
         error: 'Some tickets are no longer in INBOX or do not belong to this project',
         code: 'BULK_CONFLICT_STAGE_DRIFT',
-        details: { conflictingIds },
+        details: { conflictingIds: missingIds },
       },
     };
   }
@@ -132,9 +164,17 @@ export async function bulkDeleteInbox(
     await tx.notification.createMany({ data: notificationRecipients });
   }
 
-  await tx.ticket.deleteMany({
+  const deleteResult = await tx.ticket.deleteMany({
     where: { id: { in: ticketIds }, projectId, stage: 'INBOX' },
   });
+
+  if (deleteResult.count !== ticketIds.length) {
+    throw new BulkConflictError(409, {
+      error: 'Some tickets drifted out of INBOX during bulk delete',
+      code: 'BULK_CONFLICT_STAGE_DRIFT',
+      details: { conflictingIds: ticketIds },
+    });
+  }
 
   return {
     ok: true,
@@ -229,7 +269,7 @@ export async function bulkMergeInbox(
     ...sourcesAsc.flatMap((s) => readAttachments(s.attachments)),
   ];
 
-  const notificationRecipients = sourcesAsc
+  const sourceNotifications = sourcesAsc
     .filter((t) => t.creatorId && t.creatorId !== actorId)
     .map((t) => ({
       recipientId: t.creatorId as string,
@@ -240,6 +280,23 @@ export async function bulkMergeInbox(
       mergedIntoTicketId: baseTicketId,
       ticketKeySnapshot: t.ticketKey,
     }));
+
+  const baseNotification =
+    base.creatorId && base.creatorId !== actorId
+      ? [
+          {
+            recipientId: base.creatorId,
+            actorId,
+            ticketId: base.id,
+            commentId: null,
+            type: 'TICKET_MERGED' as const,
+            mergedIntoTicketId: baseTicketId,
+            ticketKeySnapshot: base.ticketKey,
+          },
+        ]
+      : [];
+
+  const notificationRecipients = [...baseNotification, ...sourceNotifications];
 
   if (notificationRecipients.length > 0) {
     await tx.notification.createMany({ data: notificationRecipients });
@@ -259,18 +316,32 @@ export async function bulkMergeInbox(
     });
   } catch (err) {
     if (err instanceof Error && 'code' in err && (err as { code: string }).code === 'P2025') {
+      const current = await tx.ticket.findUnique({
+        where: { id: baseTicketId },
+        select: { version: true },
+      });
+      const currentVersions: Record<number, number> =
+        current != null ? { [baseTicketId]: current.version } : {};
       throw new BulkConflictError(409, {
         error: 'Base ticket was modified by another user',
         code: 'BULK_CONFLICT_VERSION',
-        details: { conflictingIds: [baseTicketId], currentVersions: {} },
+        details: { conflictingIds: [baseTicketId], currentVersions },
       });
     }
     throw err;
   }
 
-  await tx.ticket.deleteMany({
+  const deleteResult = await tx.ticket.deleteMany({
     where: { id: { in: sourceTicketIds }, projectId, stage: 'INBOX' },
   });
+
+  if (deleteResult.count !== sourceTicketIds.length) {
+    throw new BulkConflictError(409, {
+      error: 'Some source tickets drifted out of INBOX during merge',
+      code: 'BULK_CONFLICT_STAGE_DRIFT',
+      details: { conflictingIds: sourceTicketIds },
+    });
+  }
 
   return {
     ok: true,
@@ -310,7 +381,7 @@ export async function bulkUpdateInboxAgent(
   const precheck = await assertInboxAndProject(tx, projectId, ticketIds);
   if (!precheck.ok) return precheck;
 
-  await tx.ticket.updateMany({
+  const updateResult = await tx.ticket.updateMany({
     where: { id: { in: ticketIds }, projectId, stage: 'INBOX' },
     data: {
       agent,
@@ -318,6 +389,14 @@ export async function bulkUpdateInboxAgent(
       updatedAt: new Date(),
     },
   });
+
+  if (updateResult.count !== ticketIds.length) {
+    throw new BulkConflictError(409, {
+      error: 'Some tickets drifted out of INBOX during bulk agent update',
+      code: 'BULK_CONFLICT_STAGE_DRIFT',
+      details: { conflictingIds: ticketIds },
+    });
+  }
 
   return {
     ok: true,
@@ -361,7 +440,7 @@ export async function bulkUpdateInboxModel(
   const precheck = await assertInboxAndProject(tx, projectId, ticketIds);
   if (!precheck.ok) return precheck;
 
-  await tx.ticket.updateMany({
+  const updateResult = await tx.ticket.updateMany({
     where: { id: { in: ticketIds }, projectId, stage: 'INBOX' },
     data: {
       specifyModel: model,
@@ -373,6 +452,14 @@ export async function bulkUpdateInboxModel(
       updatedAt: new Date(),
     },
   });
+
+  if (updateResult.count !== ticketIds.length) {
+    throw new BulkConflictError(409, {
+      error: 'Some tickets drifted out of INBOX during bulk model update',
+      code: 'BULK_CONFLICT_STAGE_DRIFT',
+      details: { conflictingIds: ticketIds },
+    });
+  }
 
   return {
     ok: true,
