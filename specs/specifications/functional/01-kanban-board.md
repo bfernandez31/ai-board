@@ -177,6 +177,89 @@ Users can cancel a RUNNING or PENDING job directly from the board without naviga
 - PENDING jobs (no workflow run started yet): marked CANCELLED directly without calling GitHub API; if the workflow starts afterward, its first status callback is rejected with 409, causing it to self-abort
 - If the job reaches a terminal state before the cancel request is processed, the UI updates to reflect the current status without showing an error
 
+### Bulk Actions on INBOX Tickets
+
+The INBOX column supports multi-selection so users can clean up large batches of tickets in one pass — typically after an inbox-analysis run produces many tickets that need deduplication, deletion, or default-agent/model changes. Multi-select is INBOX-only; other stages never expose checkboxes.
+
+**Selection affordance**:
+
+- Every INBOX ticket card reveals a checkbox in its corner on hover. Cards in SPECIFY/PLAN/BUILD/VERIFY/SHIP never show a checkbox
+- "Select mode" begins the first time the user clicks a checkbox or Cmd/Ctrl+clicks a card. While in select mode, every INBOX checkbox stays visible regardless of hover
+- The selection cap is 50 tickets per bulk action; the action buttons disable above this with a tooltip "Select at most 50 tickets per bulk action"
+
+**Selection gestures**:
+
+| Gesture | Effect |
+|---|---|
+| Click on checkbox | Toggles that ticket's selection; does not open the detail panel |
+| Cmd/Ctrl+click on card body | Toggles that ticket's selection; does not open the detail panel |
+| Shift+click on card | Range-selects every ticket between the most recent anchor and the shift-clicked card (inclusive, in displayed order) |
+| Plain click on card body | Opens the ticket detail panel as usual, even when select mode is active |
+| Tab | Traverses INBOX checkboxes when select mode is active |
+| Space (with checkbox focused) | Toggles selection |
+| Escape | Clears all selections and exits select mode |
+
+Selection is purely client-side: refreshing the page, navigating away, or unmounting the board discards the selection.
+
+**Floating action bar**:
+
+A floating bar pinned to the bottom of the viewport appears whenever at least one INBOX ticket is selected and stays visible across scroll and viewport resize. From left to right, it shows:
+
+1. A live "N selected" counter (announced via `aria-live="polite"`)
+2. A **Merge** button — disabled when fewer than 2 tickets are selected, or when more than 50 are
+3. A **Delete** button (destructive variant) — disabled above 50 tickets
+4. A **Change agent** dropdown — lists the agents supported by the project's configuration; selection commits immediately
+5. A **Change model** dropdown — lists the project's whitelisted Claude models; selection commits immediately
+6. A **Cancel** button — clears the selection and exits select mode
+
+All buttons are reachable via Tab with a visible focus ring; disabled buttons carry tooltips explaining the disable reason.
+
+**Bulk delete**:
+
+Triggered from the floating bar. A confirmation modal opens showing the count and a warning that the action permanently deletes the tickets, all attachments, comments, and history. On confirm, every selected ticket is hard-deleted in a single atomic operation; the floating bar disappears and select mode exits.
+
+**Bulk merge**:
+
+Triggered from the floating bar when 2–50 tickets are selected. A preview modal opens with:
+
+- The selected ticket with the smallest id labeled as the **base** ("Base: AIB-{n} — {title}")
+- Each non-base ticket listed in ascending id order with a "will be deleted" badge
+- A title field prefilled with the base ticket's current title (editable, up to 100 chars, live character counter)
+- A description textarea prefilled with the base description followed, for each non-base ticket in ascending id order, by `\n\n---\n\n## From <ticketKey>: <title>\n<description>` blocks (editable, up to 10,000 chars, live character counter that turns red and disables submit when the limit is exceeded)
+- A line showing "Combined attachments: {n}" derived from the base + all sources
+
+On submit, the base ticket atomically receives the edited title, the edited description, and the concatenated attachment list from every source, while the source tickets are hard-deleted. The base's id, ticketKey, agent, per-stage model overrides, workflowType, autoMode, clarificationPolicy, branch, previewUrl, and stage are all preserved — merge is content-level squash, never a settings merge.
+
+**Bulk change agent / change model**:
+
+Picking a value from either dropdown commits immediately (no confirmation modal):
+
+- **Change agent** updates only the `agent` field on every selected ticket
+- **Change model** writes the chosen Claude model to all five per-command overrides (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on every selected ticket
+
+After a non-destructive action succeeds, the floating bar shows a brief success indication and select mode stays open with the same tickets selected, so the user can chain another action.
+
+**Atomicity, conflicts, and authorization**:
+
+- Every bulk operation either fully succeeds or leaves all involved tickets untouched — no partial mutations
+- If any selected ticket has moved out of INBOX or been deleted by another user between selection and submission, the whole batch is rejected and the response identifies the conflicting tickets so the user can re-select
+- For delete and merge, optimistic-concurrency version checks block conflicting concurrent edits
+- Bulk operations are limited to a single project board — selecting across projects is not possible
+- Only project owners and members may perform bulk actions
+
+**Edge cases**:
+
+- An empty selection caused by a race (last item deselected just before the click) collapses the floating bar with no action
+- A merge whose prefilled description already exceeds 10,000 chars opens the modal with submit disabled and the counter showing the negative remaining count
+- Merging tickets with different agents or model overrides proceeds normally — the base ticket's values are kept
+- Browser refresh or navigation while in select mode discards selection (client-side only)
+
+**Notifications & audit**:
+
+- Bulk delete and bulk merge send a notification to the original creator of any affected source ticket when that creator is not the actor; the notification names the actor and the action
+- Bulk change-agent and change-model operations are silent — no notifications generated
+- Every bulk operation (delete, merge, change-agent, change-model) is logged to the activity stream with actor, project, affected ticket keys, and operation type
+
 ### Visual Feedback
 
 **Hover States**:

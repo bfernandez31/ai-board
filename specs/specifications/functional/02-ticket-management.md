@@ -934,6 +934,47 @@ Users can delete tickets by dragging them to a trash zone that appears during dr
 - GitHub API returns 404 (not found) or 422 (reference does not exist)
 - Both responses indicate branch is already deleted and are handled gracefully
 
+## Bulk Operations on INBOX Tickets
+
+Tickets in INBOX support four bulk operations — delete, merge, change agent, change model — driven by the multi-select interaction described in the Kanban Board specification. The operations apply only to INBOX tickets, are scoped to a single project, and accept at most 50 tickets per call.
+
+**Bulk delete**:
+
+- Hard-deletes every selected ticket, mirroring the single-ticket INBOX delete behavior
+- INBOX tickets have no branch, so no GitHub cleanup (PR close, branch delete) runs as part of the bulk delete
+- Cascade-removes associated comments, jobs, analyses, and outcomes; surviving notifications that referenced a deleted ticket have their `ticketId` set to null while the captured `ticketKeySnapshot` keeps them readable in the recipient's feed
+- The actor must be the project owner or a member; non-actor creators of any deleted ticket receive a notification naming the actor and the affected ticket key
+
+**Bulk merge**:
+
+- Squashes the content of 2–50 selected INBOX tickets into a single surviving "base" ticket — defined as the selected ticket with the smallest internal id
+- The base ticket's id, ticketKey, agent, all five per-stage model overrides, workflowType, autoMode, clarificationPolicy, branch, previewUrl, and stage are preserved
+- The base ticket's title and description are overwritten with the user-edited values from the merge preview; the description is capped at 10,000 characters
+- Every attachment from every source ticket is concatenated onto the base ticket's `attachments` array in `[base, ...sortedSources]` order with no deduplication
+- Every source ticket is hard-deleted in the same transaction; non-actor creators receive a `TICKET_MERGED` notification linking to the surviving base ticket via `mergedIntoTicketId`
+- Merging tickets that disagree on agent or model overrides is allowed — the base's settings win; the merge is content-level only
+
+**Bulk change agent**:
+
+- Updates only the `agent` field on every selected ticket to a single chosen value (or null to inherit the project default)
+- No notifications are emitted; no other ticket fields change
+
+**Bulk change model**:
+
+- Writes a single chosen Claude model value to all five per-stage override fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on every selected ticket — or null to clear all five
+- No notifications are emitted; no other ticket fields change
+
+**Atomicity, conflicts, and authorization**:
+
+- Every bulk operation is transactional — partial completion is impossible
+- A bulk operation is rejected when any selected ticket has moved out of INBOX, been deleted, or (for delete/merge) seen its `version` advance since the user's last fetch; the response identifies the conflicting tickets and no mutation occurs
+- Cross-project selection is forbidden — every ticket id in the request must belong to the project in the URL path
+- All bulk operations require project ownership or membership
+
+**Activity logging**:
+
+- Every bulk operation (delete, merge, change-agent, change-model) is recorded in the activity stream with actor, project, operation type, and the list of affected ticket keys
+
 ## Data Persistence
 
 ### Automatic Saving
@@ -983,6 +1024,7 @@ Timestamps display in user-friendly formats:
 - **Title**: User-provided short description
 - **Description**: User-provided detailed context
 - **Stage**: Current workflow position (one of six stages)
+- **Creator**: User who created the ticket (nullable for legacy rows with no recorded creator; preserved on bulk merge from the base ticket). Used to address bulk-action notifications to the original author when someone else acts on their ticket
 
 ### Workflow Fields
 

@@ -30,18 +30,35 @@ Fetch notifications for authenticated user with unread count.
       "createdAt": "2025-01-20T14:30:00.000Z",
       "read": false,
       "commentId": 123,
-      "projectId": 1
+      "projectId": 1,
+      "type": "MENTION",
+      "mergedIntoTicketId": null
     },
     {
       "id": 2,
       "actorName": "Bob Johnson",
       "actorImage": null,
       "ticketKey": "ABC-38",
-      "commentPreview": "Thanks for the feedback! I've updated the spec accordingly.",
+      "commentPreview": null,
       "createdAt": "2025-01-19T10:15:00.000Z",
+      "read": false,
+      "commentId": null,
+      "projectId": 1,
+      "type": "TICKET_MERGED",
+      "mergedIntoTicketId": 42
+    },
+    {
+      "id": 3,
+      "actorName": "Bob Johnson",
+      "actorImage": null,
+      "ticketKey": "ABC-19",
+      "commentPreview": null,
+      "createdAt": "2025-01-19T10:14:00.000Z",
       "read": true,
-      "commentId": 118,
-      "projectId": 1
+      "commentId": null,
+      "projectId": 1,
+      "type": "TICKET_DELETED",
+      "mergedIntoTicketId": null
     }
   ],
   "unreadCount": 3,
@@ -50,14 +67,16 @@ Fetch notifications for authenticated user with unread count.
 ```
 
 **Fields**:
-- `actorName`: Display name or email of user who created the mention
+- `actorName`: Display name or email of user who performed the action
 - `actorImage`: Avatar URL (null if not available)
-- `ticketKey`: Human-readable ticket identifier for navigation
-- `commentPreview`: First 80 characters of comment content (truncated with "...")
+- `ticketKey`: Human-readable ticket identifier — falls back to `Notification.ticketKeySnapshot` when the source ticket has been hard-deleted (TICKET_DELETED, TICKET_MERGED source). Null only when both the live ticket and the snapshot are unavailable
+- `commentPreview`: First 80 characters of comment content for `MENTION`; null for `TICKET_DELETED` and `TICKET_MERGED`
 - `createdAt`: ISO 8601 timestamp of notification creation
 - `read`: Boolean indicating if notification has been read
-- `commentId`: ID for comment anchor navigation and scroll targeting
-- `projectId`: Project ID for navigation URL construction and cross-project detection
+- `commentId`: Source comment id for `MENTION`; null for non-mention types
+- `projectId`: Project ID for navigation URL construction and cross-project detection; resolved from the source ticket when present, null when the source ticket was hard-deleted
+- `type`: `MENTION | TICKET_DELETED | TICKET_MERGED` — drives client copy and link target
+- `mergedIntoTicketId`: Surviving base ticket id when `type === 'TICKET_MERGED'` (used to deep-link to the merged-into ticket); null for all other types
 - `unreadCount`: Total number of unread notifications for user
 - `hasMore`: Boolean indicating if more notifications exist beyond limit
 
@@ -270,4 +289,21 @@ Delivery handled by:
 - `sendMentionNotification()` in `app/lib/push/send-notification.ts` (called from comment creation endpoint)
 - Service worker at `/public/sw.js` handles push events and notification clicks in browser
 - VAPID authentication configured via environment variables (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT)
+
+## Notification Sources
+
+The `Notification` table receives rows from three distinct flows; the `type` field discriminates between them.
+
+| `type` | Triggered by | Required fields | Recipient |
+|---|---|---|---|
+| `MENTION` | `@user` syntax in a comment | `commentId`, `ticketId` populated; `mergedIntoTicketId`, `ticketKeySnapshot` null | The mentioned project member (excludes self-mentions and non-members) |
+| `TICKET_DELETED` | Bulk delete on an INBOX ticket the actor did not create | `ticketKeySnapshot` populated; `commentId`, `mergedIntoTicketId` null; `ticketId` cascades to null when the source ticket is removed | The original creator of the deleted ticket (`Ticket.creatorId`) |
+| `TICKET_MERGED` | Bulk merge on a source INBOX ticket the actor did not create | `ticketKeySnapshot` populated; `mergedIntoTicketId` points at the surviving base ticket; `commentId` null; `ticketId` cascades to null after the source delete | The original creator of each absorbed source ticket |
+
+**Behavior shared across all types**:
+- Created in the same `prisma.$transaction` as the action that triggers them (mention/comment, bulk delete, bulk merge) so notification creation never silently diverges from the action
+- Self-actions never produce a notification — the comparison is `recipientId !== actorId` (and, for `TICKET_DELETED`/`TICKET_MERGED`, `Ticket.creatorId !== actorId`)
+- Bulk agent and bulk model updates never emit notifications
+- A ticket with `creatorId = null` (legacy rows) yields no bulk-action notifications — only known creators are notified
+- Notifications are inserted BEFORE the source ticket is deleted; the `Notification.ticketId → SetNull` FK keeps the row readable after the cascade, with `ticketKeySnapshot` providing the human-readable identifier
 
