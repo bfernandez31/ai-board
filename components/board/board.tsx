@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Job } from '@prisma/client';
 import { OfflineIndicator } from './offline-indicator';
 import { BoardModals } from './board-modals';
@@ -19,6 +19,8 @@ import { useDropZoneStyle } from './hooks/use-drop-zone-style';
 import { useBoardCacheSeeding } from './hooks/use-board-cache-seeding';
 import { useBoardKeyboardShortcuts } from './hooks/use-board-keyboard-shortcuts';
 import { useZoneStates } from './hooks/use-zone-states';
+import { useTicketSelection } from './hooks/use-ticket-selection';
+import { FloatingActionBar } from './floating-action-bar';
 
 interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
@@ -51,6 +53,18 @@ export function Board({
   const handleLoadMoreShip = useCallback(() => loadMoreShip(shipTicketCount), [loadMoreShip, shipTicketCount]);
 
   const allTickets = useMemo(() => Object.values(ticketsByStage).flat(), [ticketsByStage]);
+
+  const selection = useTicketSelection(ticketsByStage[Stage.INBOX] ?? []);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+  const [bulkMergeModalOpen, setBulkMergeModalOpen] = useState(false);
+  const inboxTicketIds = useMemo(
+    () => (ticketsByStage[Stage.INBOX] ?? []).map((t) => t.id),
+    [ticketsByStage]
+  );
+  const handleRangeSelect = useCallback(
+    (id: number) => selection.rangeSelect(id, inboxTicketIds),
+    [selection, inboxTicketIds]
+  );
 
   const retroSpec = useRetroSpecState({ projectId, hasSpecs });
   const urlModal = useUrlTicketModal({ projectId, allTickets });
@@ -172,6 +186,8 @@ export function Board({
       transitions.deleteModalOpen ||
       isAnyTransitionPending ||
       retroSpec.isRetroSpecModalOpen,
+    isSelectMode: selection.isSelectMode,
+    onClearSelection: selection.clearSelection,
   });
 
   return (
@@ -214,6 +230,17 @@ export function Board({
         onDragCancel={drag.handleDragCancel}
         trashZone={trashZone}
         closeZone={closeZone}
+        isSelectMode={selection.isSelectMode}
+        selectedIds={selection.selectedIds}
+        onSelectToggle={selection.toggleSelect}
+        onRangeSelect={handleRangeSelect}
+      />
+
+      <FloatingActionBar
+        selectedCount={selection.selectedCount}
+        onDelete={() => setBulkDeleteModalOpen(true)}
+        onMerge={() => setBulkMergeModalOpen(true)}
+        onCancel={selection.clearSelection}
       />
 
       <BoardModals
@@ -256,6 +283,13 @@ export function Board({
         isRetroSpecModalOpen={retroSpec.isRetroSpecModalOpen}
         setIsRetroSpecModalOpen={retroSpec.setIsRetroSpecModalOpen}
         handleRetroSpecSuccess={retroSpec.handleRetroSpecSuccess}
+        selectedIds={selection.selectedIds}
+        inboxTickets={ticketsByStage[Stage.INBOX] ?? []}
+        bulkDeleteModalOpen={bulkDeleteModalOpen}
+        setBulkDeleteModalOpen={setBulkDeleteModalOpen}
+        bulkMergeModalOpen={bulkMergeModalOpen}
+        setBulkMergeModalOpen={setBulkMergeModalOpen}
+        clearSelection={selection.clearSelection}
       />
     </div>
   );

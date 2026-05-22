@@ -16,6 +16,7 @@ import type { JobStatusDto } from '@/app/lib/schemas/job-polling';
 import type { useTicketJobs } from '@/app/lib/hooks/queries/useTicketJobs';
 import type { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
 import { convertTicketForModal, ROLLBACK_MESSAGES, type UpdatedModalTicket } from './utils';
+import { TicketWithVersion as TWV } from '@/lib/types';
 
 interface BoardModalsProps {
   projectId: number;
@@ -73,6 +74,15 @@ interface BoardModalsProps {
   isRetroSpecModalOpen: boolean;
   setIsRetroSpecModalOpen: (open: boolean) => void;
   handleRetroSpecSuccess: () => void;
+
+  // Bulk actions
+  selectedIds?: Set<number>;
+  inboxTickets?: TWV[];
+  bulkDeleteModalOpen?: boolean;
+  setBulkDeleteModalOpen?: (open: boolean) => void;
+  bulkMergeModalOpen?: boolean;
+  setBulkMergeModalOpen?: (open: boolean) => void;
+  clearSelection?: () => void;
 }
 
 /**

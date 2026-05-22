@@ -25,21 +25,23 @@ import { useAutoMode } from '@/app/lib/hooks/mutations/useAutoMode';
 import { useHasMounted } from '@/lib/hooks/use-has-mounted';
 import { QualityScoreBadge } from '@/components/ticket/quality-score-badge';
 import { isAutoModeEligible } from '@/app/lib/tickets/auto-mode-eligibility';
-import { X } from 'lucide-react';
+import { X, Square, CheckSquare } from 'lucide-react';
 import { STAGE_MODEL_KEYS, STAGE_MODEL_LABELS } from '@/lib/models/claude-models';
 
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
-  workflowJob?: Job | null; // User Story 1: Workflow job display
-  aiBoardJob?: Job | null; // User Story 2: AI-BOARD job display
-  deployJob?: Job | null; // User Story: Deploy preview job display
-  qualityScore?: number | null; // Quality score from latest COMPLETED verify job
+  workflowJob?: Job | null;
+  aiBoardJob?: Job | null;
+  deployJob?: Job | null;
+  qualityScore?: number | null;
   isDraggable?: boolean;
   onTicketClick?: (ticket: TicketWithVersion) => void;
-  /** Ticket with active preview (for single-preview warning) */
   activePreviewTicket?: { ticketKey: string } | null;
-  /** Ticket ID with active deployment (PENDING/RUNNING deploy job) */
   activeDeploymentTicket?: number | null;
+  isSelectMode?: boolean;
+  isSelected?: boolean;
+  onSelectToggle?: (id: number) => void;
+  onRangeSelect?: (id: number) => void;
 }
 
 /**
@@ -55,7 +57,11 @@ export const TicketCard = React.memo(
     isDraggable = true,
     onTicketClick,
     activePreviewTicket,
-    activeDeploymentTicket
+    activeDeploymentTicket,
+    isSelectMode = false,
+    isSelected = false,
+    onSelectToggle,
+    onRangeSelect,
   }: DraggableTicketCardProps) => {
     const isMounted = useHasMounted();
     const [showDeployModal, setShowDeployModal] = useState(false);
@@ -144,11 +150,26 @@ export const TicketCard = React.memo(
     // Cancel button: visible when ticket has PENDING or RUNNING workflow job
     const isCancellableJob = workflowJob && (workflowJob.status === 'PENDING' || workflowJob.status === 'RUNNING');
 
-    const handleClick = () => {
-      // Prevent click during drag
-      if (!isDragging && onTicketClick) {
-        onTicketClick(ticket);
+    const handleCheckboxClick = React.useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (e.shiftKey && onRangeSelect) {
+          onRangeSelect(ticket.id);
+        } else if (onSelectToggle) {
+          onSelectToggle(ticket.id);
+        }
+      },
+      [onRangeSelect, onSelectToggle, ticket.id]
+    );
+
+    const handleClick = (e: React.MouseEvent) => {
+      if (isDragging) return;
+      if ((e.metaKey || e.ctrlKey) && onSelectToggle) {
+        e.preventDefault();
+        onSelectToggle(ticket.id);
+        return;
       }
+      onTicketClick?.(ticket);
     };
 
     return (
@@ -168,12 +189,28 @@ export const TicketCard = React.memo(
         {...(isMounted ? listeners : {})}
       >
         <Card
-          className="group aurora-glass aurora-glass-hover border p-4 transition-all hover:-translate-y-0.5 overflow-hidden"
+          className={`group aurora-glass aurora-glass-hover border p-4 transition-all hover:-translate-y-0.5 overflow-hidden ${isSelected ? 'ring-2 ring-primary' : ''}`}
           role="article"
           aria-label={`Ticket ${ticket.ticketKey}: ${ticket.title}`}
         >
           {/* Header: Ticket Key and Badges */}
           <div className="flex items-start justify-between mb-3">
+            {onSelectToggle && (
+              <button
+                onClick={handleCheckboxClick}
+                className={`mr-2 mt-0.5 shrink-0 text-muted-foreground hover:text-foreground transition-opacity ${
+                  isSelectMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                }`}
+                aria-label={isSelected ? `Deselect ${ticket.ticketKey}` : `Select ${ticket.ticketKey}`}
+                data-testid="ticket-checkbox"
+              >
+                {isSelected ? (
+                  <CheckSquare className="h-4 w-4 text-primary" />
+                ) : (
+                  <Square className="h-4 w-4" />
+                )}
+              </button>
+            )}
             {(() => {
               const dashIdx = ticket.ticketKey.indexOf('-');
               const keyPrefix = dashIdx >= 0 ? ticket.ticketKey.slice(0, dashIdx + 1) : ticket.ticketKey;

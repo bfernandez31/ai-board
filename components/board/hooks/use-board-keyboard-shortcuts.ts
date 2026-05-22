@@ -5,6 +5,8 @@ import { STAGE_BY_NUMBER } from '../utils';
 
 interface UseBoardKeyboardShortcutsArgs {
   isAnyModalOpen: boolean;
+  isSelectMode?: boolean;
+  onClearSelection?: () => void;
 }
 
 /**
@@ -12,7 +14,7 @@ interface UseBoardKeyboardShortcutsArgs {
  * (persisted via localStorage), the new-ticket trigger state, and the listener
  * that lets `?` close the help dialog even while modals are open.
  */
-export function useBoardKeyboardShortcuts({ isAnyModalOpen }: UseBoardKeyboardShortcutsArgs) {
+export function useBoardKeyboardShortcuts({ isAnyModalOpen, isSelectMode, onClearSelection }: UseBoardKeyboardShortcutsArgs) {
   const hasHover = useHoverCapability();
 
   const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
@@ -45,8 +47,18 @@ export function useBoardKeyboardShortcuts({ isAnyModalOpen }: UseBoardKeyboardSh
     ),
   });
 
-  // Separate listener for ? key when help dialog is open — useKeyboardShortcuts is
-  // disabled while modals are open, so the help dialog couldn't close itself otherwise.
+  useEffect(() => {
+    if (!isSelectMode || !onClearSelection) return;
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClearSelection!();
+      }
+    }
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isSelectMode, onClearSelection]);
+
   useEffect(() => {
     if (!isShortcutsHelpOpen) return;
     function handleHelpClose(event: KeyboardEvent) {

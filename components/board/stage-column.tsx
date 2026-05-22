@@ -24,9 +24,13 @@ interface StageColumnProps {
   isBlockedByJob?: boolean;
   activePreviewTicket?: { ticketKey: string } | null;
   activeDeploymentTicket?: number | null;
-  totalCount?: number; // Total tickets for this stage (for pagination)
-  onLoadMore?: () => void; // Callback to load more tickets
-  isLoadingMore?: boolean; // Whether more tickets are being loaded
+  totalCount?: number;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
+  isSelectMode?: boolean;
+  selectedIds?: Set<number>;
+  onSelectToggle?: (id: number) => void;
+  onRangeSelect?: (id: number) => void;
 }
 
 // Stage configuration matching original design
@@ -149,6 +153,10 @@ export const StageColumn = React.memo(
     totalCount,
     onLoadMore,
     isLoadingMore = false,
+    isSelectMode = false,
+    selectedIds,
+    onSelectToggle,
+    onRangeSelect,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
@@ -261,6 +269,7 @@ export const StageColumn = React.memo(
               <>
                 {tickets.map((ticket) => {
                   const dualJobs = getTicketJobs?.(ticket.id);
+                  const isInbox = stage === Stage.INBOX;
                   return (
                     <TicketCard
                       key={ticket.id}
@@ -273,6 +282,12 @@ export const StageColumn = React.memo(
                       activePreviewTicket={activePreviewTicket || null}
                       activeDeploymentTicket={activeDeploymentTicket || null}
                       {...(onTicketClick && { onTicketClick })}
+                      {...(isInbox && onSelectToggle && {
+                        isSelectMode,
+                        isSelected: selectedIds?.has(ticket.id) ?? false,
+                        onSelectToggle,
+                        onRangeSelect,
+                      })}
                     />
                   );
                 })}

@@ -46,6 +46,12 @@ interface BoardGridProps {
   // Zones
   trashZone: ZoneState;
   closeZone: ZoneState;
+
+  // Selection (INBOX only)
+  isSelectMode?: boolean;
+  selectedIds?: Set<number>;
+  onSelectToggle?: (id: number) => void;
+  onRangeSelect?: (id: number) => void;
 }
 
 /**
@@ -77,6 +83,10 @@ export function BoardGrid({
   onDragCancel,
   trashZone,
   closeZone,
+  isSelectMode,
+  selectedIds,
+  onSelectToggle,
+  onRangeSelect,
 }: BoardGridProps) {
   // AIB-148: Filter out CLOSED stage from board display — CLOSED tickets are not shown on the board
   const stages = getAllStages().filter((s) => s !== Stage.CLOSED);
@@ -132,6 +142,12 @@ export function BoardGrid({
                   totalCount: shipTotal,
                   onLoadMore: onLoadMoreShip,
                   isLoadingMore: isLoadingMoreShip,
+                })}
+                {...(stage === Stage.INBOX && onSelectToggle && {
+                  isSelectMode,
+                  selectedIds,
+                  onSelectToggle,
+                  onRangeSelect,
                 })}
               />
             );

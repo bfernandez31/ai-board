@@ -29,13 +29,13 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 [P] Create selection state management hook (`useTicketSelection`) with toggle, range-select, clear, and auto-cleanup in `components/board/hooks/use-ticket-selection.ts`
-- [ ] T004 [P] Create floating action bar component with selected count, action buttons (Delete, Merge disabled <2, Change Agent, Change Model, Cancel), and aurora glass styling in `components/board/floating-action-bar.tsx`
-- [ ] T005 Modify `components/board/ticket-card.tsx` — Add `isSelectMode`, `isSelected`, `onSelectToggle`, `onRangeSelect` props; render checkbox (lucide Square/CheckSquare) on hover or always in select-mode; handle Cmd/Ctrl+click to toggle selection; handle Shift+click on checkbox for range-select; stop propagation on checkbox click
-- [ ] T006 Modify `components/board/stage-column.tsx` — Accept selection props from parent and pass selection state and callbacks to each TicketCard for INBOX column only
-- [ ] T007 Modify `components/board/board-grid.tsx` — Pass selection props through to INBOX StageColumn
-- [ ] T008 Modify `components/board/board.tsx` — Initialize `useTicketSelection(ticketsByStage[Stage.INBOX])`, pass selection state to BoardGrid and BoardModals
-- [ ] T009 Modify `components/board/hooks/use-board-keyboard-shortcuts.ts` — Add Escape handler that clears selection when `isSelectMode` is active (takes priority over other Escape behaviors)
+- [x] T003 [P] Create selection state management hook (`useTicketSelection`) with toggle, range-select, clear, and auto-cleanup in `components/board/hooks/use-ticket-selection.ts`
+- [x] T004 [P] Create floating action bar component with selected count, action buttons (Delete, Merge disabled <2, Change Agent, Change Model, Cancel), and aurora glass styling in `components/board/floating-action-bar.tsx`
+- [x] T005 Modify `components/board/ticket-card.tsx` — Add `isSelectMode`, `isSelected`, `onSelectToggle`, `onRangeSelect` props; render checkbox (lucide Square/CheckSquare) on hover or always in select-mode; handle Cmd/Ctrl+click to toggle selection; handle Shift+click on checkbox for range-select; stop propagation on checkbox click
+- [x] T006 Modify `components/board/stage-column.tsx` — Accept selection props from parent and pass selection state and callbacks to each TicketCard for INBOX column only
+- [x] T007 Modify `components/board/board-grid.tsx` — Pass selection props through to INBOX StageColumn
+- [x] T008 Modify `components/board/board.tsx` — Initialize `useTicketSelection(ticketsByStage[Stage.INBOX])`, pass selection state to BoardGrid and BoardModals
+- [x] T009 Modify `components/board/hooks/use-board-keyboard-shortcuts.ts` — Add Escape handler that clears selection when `isSelectMode` is active (takes priority over other Escape behaviors)
 
 **Checkpoint**: Selection infrastructure ready — checkboxes appear on INBOX cards, floating action bar shows on selection, Escape clears. User story implementation can now begin.
 
