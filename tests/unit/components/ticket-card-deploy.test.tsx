@@ -211,6 +211,80 @@ describe('TicketCard deploy button logic', () => {
     });
   });
 
+  describe('checkbox rendering for selection', () => {
+    it('should not render checkbox when onSelectToggle is not provided', () => {
+      const ticket = createTicket({ stage: 'INBOX' });
+
+      renderWithProviders(
+        <TicketCard ticket={ticket} deployJob={null} />
+      );
+
+      expect(screen.queryByTestId('ticket-checkbox')).not.toBeInTheDocument();
+    });
+
+    it('should render checkbox when onSelectToggle is provided', () => {
+      const ticket = createTicket({ stage: 'INBOX' });
+      const onToggle = vi.fn();
+
+      renderWithProviders(
+        <TicketCard ticket={ticket} deployJob={null} onSelectToggle={onToggle} />
+      );
+
+      expect(screen.getByTestId('ticket-checkbox')).toBeInTheDocument();
+    });
+
+    it('should always be visible in select mode (opacity-100)', () => {
+      const ticket = createTicket({ stage: 'INBOX' });
+      const onToggle = vi.fn();
+
+      renderWithProviders(
+        <TicketCard ticket={ticket} deployJob={null} onSelectToggle={onToggle} isSelectMode={true} />
+      );
+
+      const checkbox = screen.getByTestId('ticket-checkbox');
+      expect(checkbox.className).toContain('opacity-100');
+      expect(checkbox.className).not.toContain('opacity-0');
+    });
+
+    it('should be hidden by default outside select mode (opacity-0, visible on hover)', () => {
+      const ticket = createTicket({ stage: 'INBOX' });
+      const onToggle = vi.fn();
+
+      renderWithProviders(
+        <TicketCard ticket={ticket} deployJob={null} onSelectToggle={onToggle} isSelectMode={false} />
+      );
+
+      const checkbox = screen.getByTestId('ticket-checkbox');
+      expect(checkbox.className).toContain('opacity-0');
+      expect(checkbox.className).toContain('group-hover:opacity-100');
+    });
+
+    it('should call onSelectToggle when checkbox is clicked', async () => {
+      const ticket = createTicket({ stage: 'INBOX', id: 42 });
+      const onToggle = vi.fn();
+
+      renderWithProviders(
+        <TicketCard ticket={ticket} deployJob={null} onSelectToggle={onToggle} />
+      );
+
+      screen.getByTestId('ticket-checkbox').click();
+      expect(onToggle).toHaveBeenCalledWith(42);
+    });
+
+    it('should show ring-2 ring-primary when selected', () => {
+      const ticket = createTicket({ stage: 'INBOX' });
+      const onToggle = vi.fn();
+
+      const { container } = renderWithProviders(
+        <TicketCard ticket={ticket} deployJob={null} onSelectToggle={onToggle} isSelected={true} />
+      );
+
+      const card = container.querySelector('[role="article"]');
+      expect(card?.className).toContain('ring-2');
+      expect(card?.className).toContain('ring-primary');
+    });
+  });
+
   describe('isDeployDisabled', () => {
     it('should disable deploy button when another ticket has active deployment', () => {
       mockIsDeployable.mockReturnValue(true);

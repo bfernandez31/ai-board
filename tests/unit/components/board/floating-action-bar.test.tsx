@@ -58,4 +58,59 @@ describe('FloatingActionBar', () => {
     );
     expect(container.firstChild).toBeNull();
   });
+
+  it('should show agent dropdown when onChangeAgent is provided', () => {
+    renderWithProviders(
+      <FloatingActionBar {...defaultProps} onChangeAgent={vi.fn()} />
+    );
+    expect(screen.getByTestId('bulk-change-agent-button')).toBeInTheDocument();
+  });
+
+  it('should not show agent dropdown when onChangeAgent is not provided', () => {
+    renderWithProviders(<FloatingActionBar {...defaultProps} />);
+    expect(screen.queryByTestId('bulk-change-agent-button')).not.toBeInTheDocument();
+  });
+
+  it('should show model dropdown when onChangeModel is provided', () => {
+    renderWithProviders(
+      <FloatingActionBar {...defaultProps} onChangeModel={vi.fn()} />
+    );
+    expect(screen.getByTestId('bulk-change-model-button')).toBeInTheDocument();
+  });
+
+  it('should not show model dropdown when onChangeModel is not provided', () => {
+    renderWithProviders(<FloatingActionBar {...defaultProps} />);
+    expect(screen.queryByTestId('bulk-change-model-button')).not.toBeInTheDocument();
+  });
+
+  it('should update selected count display when re-rendered with new count', () => {
+    const { rerender } = renderWithProviders(
+      <FloatingActionBar {...defaultProps} selectedCount={5} />
+    );
+    expect(screen.getByText('5 selected')).toBeInTheDocument();
+
+    rerender(<FloatingActionBar {...defaultProps} selectedCount={2} />);
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
+    expect(screen.getByTestId('bulk-merge-button')).not.toBeDisabled();
+  });
+
+  it('should hide bar when count drops to 0 after re-render', () => {
+    const { container, rerender } = renderWithProviders(
+      <FloatingActionBar {...defaultProps} selectedCount={3} />
+    );
+    expect(screen.getByText('3 selected')).toBeInTheDocument();
+
+    rerender(<FloatingActionBar {...defaultProps} selectedCount={0} />);
+    expect(container.querySelector('[data-testid="floating-action-bar"]')).not.toBeInTheDocument();
+  });
+
+  it('should disable merge when count drops from 3 to 1 after re-render', () => {
+    const { rerender } = renderWithProviders(
+      <FloatingActionBar {...defaultProps} selectedCount={3} />
+    );
+    expect(screen.getByTestId('bulk-merge-button')).not.toBeDisabled();
+
+    rerender(<FloatingActionBar {...defaultProps} selectedCount={1} />);
+    expect(screen.getByTestId('bulk-merge-button')).toBeDisabled();
+  });
 });

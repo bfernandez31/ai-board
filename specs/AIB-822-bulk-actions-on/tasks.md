@@ -116,8 +116,8 @@
 
 **Purpose**: Verify cross-story interactions and ensure quality
 
-- [ ] T030 [P] Extend `tests/unit/components/ticket-card-deploy.test.tsx` with checkbox rendering tests — verify checkbox appears on hover outside select-mode, always visible in select-mode, Cmd/Ctrl+click toggles selection
-- [ ] T031 Verify floating action bar updates correctly after each bulk operation (count decrements, bar hides when selection empty, Merge re-enables/disables based on remaining count)
+- [x] T030 [P] Extend `tests/unit/components/ticket-card-deploy.test.tsx` with checkbox rendering tests — verify checkbox appears on hover outside select-mode, always visible in select-mode, Cmd/Ctrl+click toggles selection
+- [x] T031 Verify floating action bar updates correctly after each bulk operation (count decrements, bar hides when selection empty, Merge re-enables/disables based on remaining count)
 
 ---
 
