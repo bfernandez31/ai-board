@@ -3,6 +3,67 @@ import { Stage, JobStatus } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { deleteBranchAndPRs } from '@/lib/github/delete-branch-and-prs';
 
+export interface BulkDeleteResult {
+  results: {
+    succeeded: Array<{ ticketId: number; ticketKey: string }>;
+    skipped: Array<{ ticketId: number; ticketKey: string; reason: string }>;
+  };
+  summary: { total: number; succeeded: number; skipped: number };
+}
+
+export async function bulkDeleteInboxTickets(
+  projectId: number,
+  ticketIds: number[]
+): Promise<BulkDeleteResult> {
+  const tickets = await prisma.ticket.findMany({
+    where: { id: { in: ticketIds }, projectId, stage: Stage.INBOX },
+    select: { id: true, ticketKey: true },
+  });
+
+  const foundIds = new Set(tickets.map((t) => t.id));
+  const skipped: BulkDeleteResult['results']['skipped'] = [];
+
+  for (const id of ticketIds) {
+    if (!foundIds.has(id)) {
+      skipped.push({ ticketId: id, ticketKey: `unknown-${id}`, reason: 'Ticket not found or not in INBOX' });
+    }
+  }
+
+  const activeJobs = await prisma.job.findMany({
+    where: {
+      ticketId: { in: tickets.map((t) => t.id) },
+      status: { in: [JobStatus.PENDING, JobStatus.RUNNING] },
+    },
+    select: { ticketId: true, status: true },
+  });
+  const activeJobTicketIds = new Set(activeJobs.map((j) => j.ticketId));
+
+  const deletable: Array<{ ticketId: number; ticketKey: string }> = [];
+  for (const ticket of tickets) {
+    if (activeJobTicketIds.has(ticket.id)) {
+      const job = activeJobs.find((j) => j.ticketId === ticket.id);
+      skipped.push({
+        ticketId: ticket.id,
+        ticketKey: ticket.ticketKey,
+        reason: `Ticket has an active job (${job?.status})`,
+      });
+    } else {
+      deletable.push({ ticketId: ticket.id, ticketKey: ticket.ticketKey });
+    }
+  }
+
+  if (deletable.length > 0) {
+    await prisma.ticket.deleteMany({
+      where: { id: { in: deletable.map((d) => d.ticketId) } },
+    });
+  }
+
+  return {
+    results: { succeeded: deletable, skipped },
+    summary: { total: ticketIds.length, succeeded: deletable.length, skipped: skipped.length },
+  };
+}
+
 /** Discriminated result for deleteTicketWithCleanup. */
 export type DeleteTicketResult =
   | { ok: true; prsClosed: number }

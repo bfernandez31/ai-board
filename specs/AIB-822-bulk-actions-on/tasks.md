@@ -18,8 +18,8 @@
 
 **Purpose**: Create validation schemas and API route skeleton shared by all bulk actions
 
-- [ ] T001 Create Zod discriminated union schemas for all bulk action payloads in `lib/validations/bulk-actions.ts`
-- [ ] T002 Create bulk operations API route skeleton with auth, validation, and action routing in `app/api/projects/[projectId]/tickets/bulk/route.ts`
+- [x] T001 Create Zod discriminated union schemas for all bulk action payloads in `lib/validations/bulk-actions.ts`
+- [x] T002 Create bulk operations API route skeleton with auth, validation, and action routing in `app/api/projects/[projectId]/tickets/bulk/route.ts`
 
 ---
 
