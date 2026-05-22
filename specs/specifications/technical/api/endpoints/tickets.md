@@ -838,6 +838,184 @@ Delete ticket with GitHub cleanup (permanent deletion).
 - Preview deployments become orphaned (Vercel cleanup is manual)
 - TanStack Query optimistic update removes ticket immediately from UI
 
+### POST /api/projects/:projectId/tickets/bulk
+
+Run a bulk action against multiple INBOX tickets in a single request. The action is selected by a discriminated union on the `action` field: `delete`, `merge`, `update-agent`, or `update-model`. All actions reject tickets not in INBOX stage and require project access.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (`verifyProjectAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**: Discriminated union by `action` — see `BulkActionSchema`. Common validation: every `ticketIds[*]` must be a positive integer; all referenced tickets must belong to `projectId` and be in INBOX stage.
+
+#### Action: `delete`
+
+Hard-delete the selected INBOX tickets along with their related jobs, comments, notifications, analyses, outcomes, and comparison records (Prisma cascade). INBOX tickets have no Git branches, so no GitHub cleanup runs.
+
+**Request**:
+```json
+{
+  "action": "delete",
+  "ticketIds": [10, 15, 20]
+}
+```
+
+**Behavior**:
+- Tickets with `PENDING` or `RUNNING` jobs are skipped with reason `"Ticket has an active job ({STATUS})"`
+- Tickets not in INBOX or not found are skipped with reason `"Ticket not found or not in INBOX"`
+- Remaining tickets are deleted via a single `prisma.ticket.deleteMany`
+- No version check — concurrent modification on a still-INBOX ticket does not block deletion
+
+**Response** (200 OK):
+```json
+{
+  "action": "delete",
+  "results": {
+    "succeeded": [
+      { "ticketId": 10, "ticketKey": "AIB-10" },
+      { "ticketId": 20, "ticketKey": "AIB-20" }
+    ],
+    "skipped": [
+      { "ticketId": 15, "ticketKey": "AIB-15", "reason": "Ticket has an active job (RUNNING)" }
+    ]
+  },
+  "summary": { "total": 3, "succeeded": 2, "skipped": 1 }
+}
+```
+
+#### Action: `merge`
+
+Consolidate 2+ INBOX tickets into the base ticket (lowest ID). Atomic — the entire merge is rejected if any precondition fails.
+
+**Request**:
+```json
+{
+  "action": "merge",
+  "ticketIds": [10, 15, 20],
+  "mergedTitle": "Consolidated ticket title",
+  "mergedDescription": "Combined description text...",
+  "selectedAttachments": ["att-uuid-1", "att-uuid-2"]
+}
+```
+
+**Validation**:
+- `ticketIds`: array of positive integers, minimum length 2
+- `mergedTitle`: 1–100 characters
+- `mergedDescription`: max 10,000 characters (empty allowed)
+- `selectedAttachments`: array of strings, max length 5 (defaults to `[]`)
+
+**Behavior**:
+1. Fetch all selected tickets in INBOX stage ordered by `id` ascending; reject with 400 if fewer than 2 are returned
+2. Reject with 404 if any requested ticket ID is missing from the result set
+3. Reject with 400 if any selected ticket has a `PENDING` or `RUNNING` job; error message lists the offending ticket keys
+4. Inside a Prisma interactive transaction:
+   - Update the base ticket (lowest ID) with `mergedTitle`, `mergedDescription`, `selectedAttachments` and increment `version`
+   - `deleteMany` on the source ticket IDs (cascade removes jobs, comments, notifications, analyses, outcomes, comparison records)
+
+**Response** (200 OK):
+```json
+{
+  "action": "merge",
+  "baseTicket": {
+    "id": 10,
+    "ticketKey": "AIB-10",
+    "title": "Consolidated ticket title",
+    "description": "Combined description text...",
+    "attachments": ["att-uuid-1", "att-uuid-2"],
+    "version": 2
+  },
+  "deletedTickets": [
+    { "ticketId": 15, "ticketKey": "AIB-15" },
+    { "ticketId": 20, "ticketKey": "AIB-20" }
+  ],
+  "summary": { "merged": 3, "deleted": 2 }
+}
+```
+
+**Merge errors** (status 400/404 with `code: "MERGE_ERROR"`):
+- `"At least 2 INBOX tickets required for merge"`
+- `"Tickets not found or not in INBOX: {ids}"` (404)
+- `"Cannot merge: tickets with active jobs: {keys}"`
+
+#### Action: `update-agent`
+
+Apply the same agent to every selected INBOX ticket. Concurrent modification is non-fatal — per-ticket success/skip reporting.
+
+**Request**:
+```json
+{
+  "action": "update-agent",
+  "ticketIds": [10, 15, 20],
+  "agent": "GEMINI"
+}
+```
+
+**Validation**:
+- `agent`: enum `CLAUDE | CODEX | MISTRAL | GEMINI`
+
+**Behavior**: Loops over each ticket with `prisma.ticket.update`, incrementing `version`. Any update failure (concurrent modification, ticket no longer in INBOX) is captured per-ticket as a skip with reason `"Concurrent modification"`. Tickets not found are skipped with `"Ticket not found or not in INBOX"`.
+
+**Response** (200 OK):
+```json
+{
+  "action": "update-agent",
+  "results": {
+    "succeeded": [
+      { "ticketId": 10, "ticketKey": "AIB-10", "version": 2 },
+      { "ticketId": 15, "ticketKey": "AIB-15", "version": 3 },
+      { "ticketId": 20, "ticketKey": "AIB-20", "version": 2 }
+    ],
+    "skipped": []
+  },
+  "summary": { "total": 3, "succeeded": 3, "skipped": 0 }
+}
+```
+
+#### Action: `update-model`
+
+Set all five stage-level model overrides (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on each selected INBOX ticket to the same model. Per-stage selection is not exposed in the bulk endpoint.
+
+**Request**:
+```json
+{
+  "action": "update-model",
+  "ticketIds": [10, 15, 20],
+  "model": "claude-opus-4-7"
+}
+```
+
+**Validation**:
+- `model`: non-empty string. The bulk endpoint accepts any non-empty value (validation lives in Zod) but downstream model resolution rejects unknown IDs
+
+**Behavior**: Same per-ticket success/skip pattern as `update-agent`. Each selected ticket's five stage-level fields are written in a single `prisma.ticket.update`, and `version` is incremented.
+
+**Response** (200 OK):
+```json
+{
+  "action": "update-model",
+  "results": {
+    "succeeded": [
+      { "ticketId": 10, "ticketKey": "AIB-10", "version": 2 },
+      { "ticketId": 15, "ticketKey": "AIB-15", "version": 3 }
+    ],
+    "skipped": [
+      { "ticketId": 20, "ticketKey": "AIB-20", "reason": "Concurrent modification" }
+    ]
+  },
+  "summary": { "total": 3, "succeeded": 2, "skipped": 1 }
+}
+```
+
+#### Endpoint-Level Errors
+
+- `400` `VALIDATION_ERROR`: Invalid `projectId` path parameter, malformed body, or Zod failure (e.g., merge with fewer than 2 ticketIds, description > 10,000 characters, > 5 attachments, invalid agent enum)
+- `400` `MERGE_ERROR`: Merge precondition failed (active job, fewer than 2 INBOX tickets returned)
+- `401` `AUTH_ERROR`: Not authenticated
+- `404` `NOT_FOUND`: Project not found, or merge target tickets missing
+- `500` `INTERNAL_ERROR`: Unexpected server error
+
 ### POST /api/projects/:projectId/tickets/:id/close
 
 Close ticket from VERIFY stage (transition to CLOSED).

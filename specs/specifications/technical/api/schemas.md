@@ -148,6 +148,64 @@ export type DeleteTicketParams = z.infer<typeof deleteTicketParamsSchema>;
 - Ticket cannot have PENDING or RUNNING jobs
 - GitHub artifacts (PRs, branch) must be deleted before database deletion
 
+### BulkActionSchema
+
+Discriminated union that validates the body of `POST /api/projects/:projectId/tickets/bulk`. Each variant carries the IDs of the INBOX tickets to act on, plus any action-specific payload.
+
+```typescript
+// lib/validations/bulk-actions.ts
+const ticketIdsSchema = z.array(z.number().int().positive()).min(1);
+
+export const bulkDeleteSchema = z.object({
+  action: z.literal('delete'),
+  ticketIds: ticketIdsSchema,
+});
+
+export const bulkMergeSchema = z.object({
+  action: z.literal('merge'),
+  ticketIds: z.array(z.number().int().positive()).min(2),
+  mergedTitle: z.string().min(1).max(100),
+  mergedDescription: z.string().max(10000),
+  selectedAttachments: z.array(z.string()).max(5).default([]),
+});
+
+export const bulkUpdateAgentSchema = z.object({
+  action: z.literal('update-agent'),
+  ticketIds: ticketIdsSchema,
+  agent: z.enum(['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI']),
+});
+
+export const bulkUpdateModelSchema = z.object({
+  action: z.literal('update-model'),
+  ticketIds: ticketIdsSchema,
+  model: z.string().min(1),
+});
+
+export const bulkActionSchema = z.discriminatedUnion('action', [
+  bulkDeleteSchema,
+  bulkMergeSchema,
+  bulkUpdateAgentSchema,
+  bulkUpdateModelSchema,
+]);
+
+export type BulkAction = z.infer<typeof bulkActionSchema>;
+```
+
+**Validation Rules**:
+- **action**: discriminator — one of `delete | merge | update-agent | update-model`
+- **ticketIds**: positive integers; minimum 1 for delete/update-agent/update-model, minimum 2 for merge
+- **mergedTitle**: 1–100 characters
+- **mergedDescription**: max 10,000 characters (empty allowed)
+- **selectedAttachments**: max 5 entries; defaults to `[]`
+- **agent**: enum value
+- **model**: non-empty string (downstream resolution validates the model ID)
+
+**Business Validation** (performed in API route / service layer, not in the schema):
+- All referenced tickets must belong to `projectId` and be in INBOX stage
+- For `delete`: tickets with PENDING/RUNNING jobs are reported as skipped, not rejected
+- For `merge`: any selected ticket with a PENDING/RUNNING job blocks the entire operation; merged description ≤ 10,000 characters and attachments ≤ 5 after server-side normalization
+- For `update-agent` / `update-model`: per-ticket version increment with concurrent-modification failures reported as skipped rather than rejected
+
 ### UpdatePreviewUrlSchema
 
 ```typescript

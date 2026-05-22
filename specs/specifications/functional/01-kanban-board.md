@@ -287,7 +287,7 @@ Shortcuts are enabled only when the CSS media query `(hover: hover)` matches, in
 | `S` or `/` | Focus the search input |
 | `1` – `6` | Scroll board to column (1=INBOX, 2=SPECIFY, 3=PLAN, 4=BUILD, 5=VERIFY, 6=SHIP) |
 | `?` | Toggle keyboard shortcuts help overlay |
-| `Esc` | Close the topmost open modal or overlay |
+| `Esc` | Clear the INBOX multi-select if any tickets are selected; otherwise close the topmost open modal or overlay |
 
 ### Shortcut Suppression
 

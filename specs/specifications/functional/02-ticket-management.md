@@ -934,6 +934,89 @@ Users can delete tickets by dragging them to a trash zone that appears during dr
 - GitHub API returns 404 (not found) or 422 (reference does not exist)
 - Both responses indicate branch is already deleted and are handled gracefully
 
+## Bulk Actions (INBOX)
+
+Users can act on multiple INBOX tickets at once through a multi-select interaction with a floating action bar. Bulk actions are available only on the INBOX column; all other stage columns are unaffected.
+
+### Selection
+
+**Checkbox visibility**:
+- A selection checkbox appears on each INBOX ticket card on hover when no ticket is selected
+- Once at least one INBOX ticket is selected, the board enters select-mode and checkboxes become persistently visible on every INBOX card
+- Select-mode ends when the selection is fully cleared
+
+**Selection interactions**:
+- **Click a checkbox**: toggle that ticket's selection
+- **Shift+click a checkbox**: range-select all tickets between the last clicked checkbox and the new one (inclusive)
+- **Cmd/Ctrl+click on a card** (anywhere, not just the checkbox): toggle the ticket's selection without opening the ticket detail modal
+- **Escape**: clear the selection and exit select-mode
+- **Cancel button** on the floating action bar: clear the selection and exit select-mode
+- If a selected ticket disappears from the INBOX (concurrent delete or move), it is removed from the selection automatically
+
+**Permission scope**:
+- Multi-select UI is only visible to project owners and members — the same authorization that gates all other ticket actions
+- Empty INBOX columns show no checkboxes and no floating action bar
+
+### Floating Action Bar
+
+When at least one INBOX ticket is selected, a floating action bar appears at the bottom of the screen using the aurora glass styling. It displays:
+
+- Selected count (e.g., "3 selected")
+- **Merge** button — disabled when fewer than 2 tickets are selected
+- **Delete** button
+- **Change agent** dropdown — lists all available agents (`CLAUDE`, `CODEX`, `MISTRAL`, `GEMINI`)
+- **Change model** dropdown — lists all whitelisted Claude models
+- **Cancel** button — exits select-mode
+
+### Bulk Delete
+
+Clicking Delete opens a confirmation modal that lists every selected ticket by key and title and warns that the action is irreversible: each deleted ticket and all its associated jobs, comments, and notifications are permanently removed (hard delete with cascade).
+
+**Partial-success behavior**:
+- Tickets with PENDING or RUNNING jobs are skipped (not deleted), with a per-ticket reason
+- Tickets that have been concurrently modified, moved, or deleted are skipped with a conflict reason
+- All other eligible tickets in the selection are deleted
+- A summary toast reports the number of successes and skips when the operation completes
+
+INBOX tickets have no Git branches, so bulk delete does not perform any GitHub cleanup.
+
+### Merge
+
+Clicking Merge opens a preview modal that consolidates the selected tickets into a single ticket. The merge requires at least 2 selected tickets.
+
+**Base ticket selection**: The ticket with the lowest ID among the selection is the base ticket. Its identity (ID, key, history) is preserved; all other selected tickets are hard-deleted as part of the merge.
+
+**Pre-filled content**:
+- **Title**: pre-filled with the base ticket's title and editable (1–100 characters)
+- **Description**: pre-filled by concatenating the base ticket's description followed by separator-delimited sections for each additional ticket in the format `---` separator, then `## From {TICKET_KEY}: {title}`, then that ticket's description
+  - Tickets with empty descriptions have their section omitted (their ticket header is still listed elsewhere in the preview so users know the ticket was included)
+  - A live character counter shows remaining characters; the submit button is disabled while the description exceeds 10,000 characters
+- **Attachments**: combined from all selected tickets; if the total exceeds 5, the modal shows checkboxes so the user can pick which attachments to keep (maximum 5) before the merge can proceed
+
+**Warnings**: The modal explicitly states that job history, comments, and notifications from non-base tickets are permanently lost on merge.
+
+**Blocking conditions** (all-or-nothing — the entire merge is rejected if any selected ticket fails one of these checks):
+- A selected ticket has a PENDING or RUNNING job
+- The merged description exceeds 10,000 characters
+- More than 5 attachments selected
+- A selected ticket has left INBOX or been concurrently deleted
+
+On success, the base ticket is updated with the new title, description, and attachments (version bumped); source tickets and all their related records are deleted; the board refreshes and the selection is cleared.
+
+### Bulk Change Agent
+
+Selecting an agent from the Change agent dropdown applies that agent to every selected INBOX ticket immediately (no confirmation modal). Tickets that were concurrently modified are skipped with a "Concurrent modification" reason; remaining tickets are updated successfully. The board reflects the change immediately and a summary toast reports successes vs. skips.
+
+### Bulk Change Model
+
+Selecting a model from the Change model dropdown sets all five stage-level model overrides (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on every selected INBOX ticket to the chosen model. Per-stage selection is not exposed in bulk — the model applies uniformly across all stages. Concurrent-modification handling matches bulk change agent.
+
+### Performance Targets
+
+- Selecting and deleting 10 INBOX tickets: under 15 seconds end-to-end
+- Merging 3 duplicate tickets into a consolidated ticket: under 30 seconds
+- Changing agent or model on 10 selected tickets: under 10 seconds
+
 ## Data Persistence
 
 ### Automatic Saving
