@@ -83,21 +83,21 @@ model Job {
 }
 
 model JobLog {
-  id            Int           @id @default(autoincrement())
-  jobId         Int           @unique
-  job           Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  captureStatus CaptureStatus
-  preview       String        @db.VarChar(320)
-  schemaVersion Int           @default(1)
-  eventCount    Int           @default(0)
-  errorCount    Int           @default(0)
-  artifactKey   String?       @db.VarChar(300)
-  artifactSize  Int?
-  rawArtifactKey  String?     @db.VarChar(300)
+  id              Int           @id @default(autoincrement())
+  jobId           Int           @unique
+  job             Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  captureStatus   CaptureStatus
+  preview         String        @db.VarChar(320)
+  schemaVersion   Int           @default(1)
+  eventCount      Int           @default(0)
+  errorCount      Int           @default(0)
+  artifactKey     String?       @db.VarChar(300)
+  artifactSize    Int?
+  rawArtifactKey  String?       @db.VarChar(300)
   rawArtifactSize Int?
-  capturedAt    DateTime      @default(now())
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  capturedAt      DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@index([captureStatus, createdAt])
   @@index([createdAt])
@@ -173,40 +173,43 @@ model Session {
 }
 
 model Ticket {
-  id                     Int                       @id @default(autoincrement())
-  title                  String                    @db.VarChar(100)
-  description            String                    @db.VarChar(10000)
-  stage                  Stage                     @default(INBOX)
-  version                Int                       @default(1)
-  projectId              Int
-  ticketNumber           Int
-  ticketKey              String                    @unique @db.VarChar(20)
-  branch                 String?                   @db.VarChar(200)
-  previewUrl             String?                   @db.VarChar(500)
-  autoMode               Boolean                   @default(false)
-  workflowType           WorkflowType              @default(FULL)
-  attachments            Json?                     @default("[]")
-  createdAt              DateTime                  @default(now())
-  updatedAt              DateTime                  @default(now()) @updatedAt
-  clarificationPolicy    ClarificationPolicy?
-  agent                  Agent?
-  specifyModel           String?                   @db.VarChar(50)
-  planModel              String?                   @db.VarChar(50)
-  implementModel         String?                   @db.VarChar(50)
-  quickImplModel         String?                   @db.VarChar(50)
-  verifyModel            String?                   @db.VarChar(50)
-  closedAt               DateTime?
-  comments               Comment[]
-  jobs                   Job[]
-  notifications          Notification[]
-  outcome                TicketOutcome?
-  analyses               TicketAnalysis[]
-  calibration            AnalysisCalibration?
-  project                Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  sourceComparisons      ComparisonRecord[]        @relation("ComparisonSourceTicket")
-  winnerComparisons      ComparisonRecord[]        @relation("ComparisonWinnerTicket")
-  comparisonParticipants ComparisonParticipant[]
-  decisionVerdicts       DecisionPointEvaluation[] @relation("DecisionVerdictTicket")
+  id                      Int                       @id @default(autoincrement())
+  title                   String                    @db.VarChar(100)
+  description             String                    @db.VarChar(10000)
+  stage                   Stage                     @default(INBOX)
+  version                 Int                       @default(1)
+  projectId               Int
+  ticketNumber            Int
+  ticketKey               String                    @unique @db.VarChar(20)
+  branch                  String?                   @db.VarChar(200)
+  previewUrl              String?                   @db.VarChar(500)
+  autoMode                Boolean                   @default(false)
+  workflowType            WorkflowType              @default(FULL)
+  attachments             Json?                     @default("[]")
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @default(now()) @updatedAt
+  clarificationPolicy     ClarificationPolicy?
+  agent                   Agent?
+  specifyModel            String?                   @db.VarChar(50)
+  planModel               String?                   @db.VarChar(50)
+  implementModel          String?                   @db.VarChar(50)
+  quickImplModel          String?                   @db.VarChar(50)
+  verifyModel             String?                   @db.VarChar(50)
+  closedAt                DateTime?
+  creatorId               String?                   @db.VarChar(255)
+  creator                 User?                     @relation("TicketCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  comments                Comment[]
+  jobs                    Job[]
+  notifications           Notification[]            @relation("NotificationTicket")
+  mergedIntoNotifications Notification[]            @relation("NotificationMergedInto")
+  outcome                 TicketOutcome?
+  analyses                TicketAnalysis[]
+  calibration             AnalysisCalibration?
+  project                 Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceComparisons       ComparisonRecord[]        @relation("ComparisonSourceTicket")
+  winnerComparisons       ComparisonRecord[]        @relation("ComparisonWinnerTicket")
+  comparisonParticipants  ComparisonParticipant[]
+  decisionVerdicts        DecisionPointEvaluation[] @relation("DecisionVerdictTicket")
 
   @@unique([projectId, ticketNumber])
   @@index([projectId])
@@ -214,6 +217,7 @@ model Ticket {
   @@index([updatedAt])
   @@index([projectId, workflowType])
   @@index([ticketKey])
+  @@index([creatorId])
 }
 
 model User {
@@ -232,6 +236,7 @@ model User {
   memberships           ProjectMember[]
   notificationsReceived Notification[]        @relation("NotificationRecipient")
   notificationsCreated  Notification[]        @relation("NotificationActor")
+  ticketsCreated        Ticket[]              @relation("TicketCreator")
   pushSubscriptions     PushSubscription[]
   personalAccessTokens  PersonalAccessToken[]
   credentials           UserCredential[]
@@ -257,28 +262,38 @@ model Comment {
   @@index([userId])
 }
 
-// Notification model for @mention notifications
+// Notification model for @mention + bulk-action notifications (AIB-821)
 // Retention policy: Soft delete after 30 days (deletedAt field)
 // Future: Implement cleanup job to set deletedAt for old notifications
 model Notification {
-  id          Int       @id @default(autoincrement())
-  recipientId String // User receiving the notification
-  actorId     String // User who created the mention
-  commentId   Int // Source comment
-  ticketId    Int // Source ticket (for navigation)
-  read        Boolean   @default(false)
-  readAt      DateTime?
-  createdAt   DateTime  @default(now())
-  deletedAt   DateTime? // Soft delete for 30-day retention policy
+  id                 Int              @id @default(autoincrement())
+  recipientId        String // User receiving the notification
+  actorId            String // User who created the event
+  commentId          Int? // Source comment (null for non-MENTION types)
+  ticketId           Int? // Source ticket (null after source-ticket cascade)
+  type               NotificationType @default(MENTION)
+  mergedIntoTicketId Int? // Surviving base ticket id when type = TICKET_MERGED
+  ticketKeySnapshot  String?          @db.VarChar(20) // Human-readable key captured at notification time
+  read               Boolean          @default(false)
+  readAt             DateTime?
+  createdAt          DateTime         @default(now())
+  deletedAt          DateTime? // Soft delete for 30-day retention policy
 
-  recipient User    @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  actor     User    @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
-  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  ticket    Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  recipient        User     @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor            User     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  comment          Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  ticket           Ticket?  @relation("NotificationTicket", fields: [ticketId], references: [id], onDelete: SetNull)
+  mergedIntoTicket Ticket?  @relation("NotificationMergedInto", fields: [mergedIntoTicketId], references: [id], onDelete: SetNull)
 
   @@index([recipientId, createdAt]) // List notifications for user
   @@index([recipientId, read]) // Count unread notifications
   @@index([createdAt]) // Cleanup job (30-day retention)
+}
+
+enum NotificationType {
+  MENTION
+  TICKET_DELETED
+  TICKET_MERGED
 }
 
 model VerificationToken {

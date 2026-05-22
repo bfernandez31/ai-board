@@ -6,12 +6,19 @@ import { useDroppable } from '@dnd-kit/core';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Stage } from '@/lib/stage-transitions';
-import { TicketCard } from './ticket-card';
+import { TicketCard, type TicketCardSelection } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
 import { MobileScrollButton } from './mobile-scroll-button';
 import { TicketWithVersion } from '@/lib/types';
 import { Ban, Inbox, Loader2, ChevronDown } from 'lucide-react';
 import type { DualJobState } from '@/lib/types/job-types';
+
+export interface BulkSelectionContext {
+  selectedIds: Set<number>;
+  isSelectMode: boolean;
+  toggle: (id: number) => void;
+  rangeSelectTo: (id: number, allInboxIdsSorted: number[]) => void;
+}
 
 interface StageColumnProps {
   stage: Stage;
@@ -27,6 +34,8 @@ interface StageColumnProps {
   totalCount?: number; // Total tickets for this stage (for pagination)
   onLoadMore?: () => void; // Callback to load more tickets
   isLoadingMore?: boolean; // Whether more tickets are being loaded
+  /** Bulk-selection context, only honored when stage === 'INBOX' (AIB-821) */
+  bulkSelection?: BulkSelectionContext;
 }
 
 // Stage configuration matching original design
@@ -149,6 +158,7 @@ export const StageColumn = React.memo(
     totalCount,
     onLoadMore,
     isLoadingMore = false,
+    bulkSelection,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
@@ -259,23 +269,43 @@ export const StageColumn = React.memo(
             {/* Ticket Cards */}
             {tickets.length > 0 ? (
               <>
-                {tickets.map((ticket) => {
-                  const dualJobs = getTicketJobs?.(ticket.id);
-                  return (
-                    <TicketCard
-                      key={ticket.id}
-                      ticket={ticket}
-                      workflowJob={dualJobs?.workflow || null}
-                      aiBoardJob={dualJobs?.aiBoard || null}
-                      deployJob={dualJobs?.deployJob || null}
-                      qualityScore={ticket.qualityScore}
-                      isDraggable={isDraggable}
-                      activePreviewTicket={activePreviewTicket || null}
-                      activeDeploymentTicket={activeDeploymentTicket || null}
-                      {...(onTicketClick && { onTicketClick })}
-                    />
-                  );
-                })}
+                {(() => {
+                  const isInbox = stage === Stage.INBOX;
+                  const inboxIdsSorted =
+                    isInbox && bulkSelection
+                      ? [...tickets]
+                          .sort((a, b) => a.ticketNumber - b.ticketNumber)
+                          .map((t) => t.id)
+                      : [];
+                  return tickets.map((ticket) => {
+                    const dualJobs = getTicketJobs?.(ticket.id);
+                    const selection: TicketCardSelection | undefined =
+                      isInbox && bulkSelection
+                        ? {
+                            isSelected: bulkSelection.selectedIds.has(ticket.id),
+                            isSelectMode: bulkSelection.isSelectMode,
+                            onToggle: () => bulkSelection.toggle(ticket.id),
+                            onRangeSelect: () =>
+                              bulkSelection.rangeSelectTo(ticket.id, inboxIdsSorted),
+                          }
+                        : undefined;
+                    return (
+                      <TicketCard
+                        key={ticket.id}
+                        ticket={ticket}
+                        workflowJob={dualJobs?.workflow || null}
+                        aiBoardJob={dualJobs?.aiBoard || null}
+                        deployJob={dualJobs?.deployJob || null}
+                        qualityScore={ticket.qualityScore}
+                        isDraggable={isDraggable}
+                        activePreviewTicket={activePreviewTicket || null}
+                        activeDeploymentTicket={activeDeploymentTicket || null}
+                        {...(onTicketClick && { onTicketClick })}
+                        {...(selection && { selection })}
+                      />
+                    );
+                  });
+                })()}
 
                 {/* Load More button for paginated stages */}
                 {onLoadMore && (

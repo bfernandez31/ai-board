@@ -1,11 +1,14 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
-import { Job } from '@prisma/client';
+import { useCallback, useMemo, useState } from 'react';
+import { Agent, Job } from '@prisma/client';
 import { OfflineIndicator } from './offline-indicator';
 import { BoardModals } from './board-modals';
 import { BoardGrid } from './board-grid';
 import { RetroSpecSection } from './retro-spec-section';
+import { BulkActionBar } from './bulk-action-bar';
+import { BulkDeleteConfirmationModal } from './bulk-delete-confirmation-modal';
+import { BulkMergePreviewModal } from './bulk-merge-preview-modal';
 import { Stage } from '@/lib/stage-transitions';
 import { TicketWithVersion } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +22,11 @@ import { useDropZoneStyle } from './hooks/use-drop-zone-style';
 import { useBoardCacheSeeding } from './hooks/use-board-cache-seeding';
 import { useBoardKeyboardShortcuts } from './hooks/use-board-keyboard-shortcuts';
 import { useZoneStates } from './hooks/use-zone-states';
+import { useBulkSelection } from './hooks/use-bulk-selection';
+import { useBulkDeleteTickets } from '@/lib/hooks/mutations/useBulkDeleteTickets';
+import { useBulkMergeTickets } from '@/lib/hooks/mutations/useBulkMergeTickets';
+import { useBulkUpdateTicketField } from '@/lib/hooks/mutations/useBulkUpdateTicketField';
+import type { ClaudeModelId } from '@/lib/models/claude-models';
 
 interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
@@ -51,6 +59,123 @@ export function Board({
   const handleLoadMoreShip = useCallback(() => loadMoreShip(shipTicketCount), [loadMoreShip, shipTicketCount]);
 
   const allTickets = useMemo(() => Object.values(ticketsByStage).flat(), [ticketsByStage]);
+
+  // AIB-821: Bulk-selection state (INBOX only).
+  const inboxTickets = ticketsByStage[Stage.INBOX] ?? [];
+  const inboxIds = useMemo(() => inboxTickets.map((t) => t.id), [inboxTickets]);
+  const bulkSelection = useBulkSelection(inboxIds);
+  const selectedIds = useMemo(() => Array.from(bulkSelection.selectedIds), [bulkSelection.selectedIds]);
+  const selectedTickets = useMemo(
+    () => inboxTickets.filter((t) => bulkSelection.selectedIds.has(t.id)),
+    [inboxTickets, bulkSelection.selectedIds]
+  );
+  const expectedVersions = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const t of selectedTickets) map[String(t.id)] = t.version;
+    return map;
+  }, [selectedTickets]);
+
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [isBulkMergeOpen, setIsBulkMergeOpen] = useState(false);
+  const [bulkMergeError, setBulkMergeError] = useState<string | null>(null);
+  const bulkDeleteMutation = useBulkDeleteTickets(projectId);
+  const bulkMergeMutation = useBulkMergeTickets(projectId);
+  const bulkUpdateMutation = useBulkUpdateTicketField(projectId);
+
+  const handleBulkDeleteConfirm = useCallback(() => {
+    bulkDeleteMutation.mutate(
+      { ticketIds: selectedIds, expectedVersions },
+      {
+        onSuccess: () => {
+          setIsBulkDeleteOpen(false);
+          bulkSelection.clear();
+          toast({ title: 'Tickets deleted', description: `Deleted ${selectedIds.length} tickets.` });
+        },
+        onError: (error) => {
+          toast({
+            variant: 'destructive',
+            title: 'Bulk delete failed',
+            description: error.message,
+          });
+        },
+      }
+    );
+  }, [bulkDeleteMutation, bulkSelection, expectedVersions, selectedIds, toast]);
+
+  const handleBulkMergeSubmit = useCallback(
+    (input: { baseTicketId: number; sourceTicketIds: number[]; title: string; description: string }) => {
+      setBulkMergeError(null);
+      const versions: Record<string, number> = {};
+      const idsInPayload = [input.baseTicketId, ...input.sourceTicketIds];
+      for (const id of idsInPayload) {
+        const ticket = inboxTickets.find((t) => t.id === id);
+        if (ticket) versions[String(id)] = ticket.version;
+      }
+      bulkMergeMutation.mutate(
+        { ...input, expectedVersions: versions },
+        {
+          onSuccess: () => {
+            setIsBulkMergeOpen(false);
+            bulkSelection.clear();
+            toast({
+              title: 'Tickets merged',
+              description: `Merged ${input.sourceTicketIds.length + 1} tickets.`,
+            });
+          },
+          onError: (error) => {
+            setBulkMergeError(error.message);
+          },
+        }
+      );
+    },
+    [bulkMergeMutation, bulkSelection, inboxTickets, toast]
+  );
+
+  const handleBulkAgentChange = useCallback(
+    (agent: Agent | null) => {
+      if (selectedIds.length === 0) return;
+      bulkUpdateMutation.mutate(
+        { kind: 'agent', ticketIds: selectedIds, value: agent },
+        {
+          onSuccess: () => {
+            toast({
+              title: 'Agent updated',
+              description: agent
+                ? `Set agent to ${agent} on ${selectedIds.length} tickets.`
+                : `Cleared agent on ${selectedIds.length} tickets.`,
+            });
+          },
+          onError: (error) => {
+            toast({ variant: 'destructive', title: 'Bulk agent update failed', description: error.message });
+          },
+        }
+      );
+    },
+    [bulkUpdateMutation, selectedIds, toast]
+  );
+
+  const handleBulkModelChange = useCallback(
+    (model: ClaudeModelId | null) => {
+      if (selectedIds.length === 0) return;
+      bulkUpdateMutation.mutate(
+        { kind: 'model', ticketIds: selectedIds, value: model },
+        {
+          onSuccess: () => {
+            toast({
+              title: 'Model updated',
+              description: model
+                ? `Applied ${model} to ${selectedIds.length} tickets.`
+                : `Cleared model override on ${selectedIds.length} tickets.`,
+            });
+          },
+          onError: (error) => {
+            toast({ variant: 'destructive', title: 'Bulk model update failed', description: error.message });
+          },
+        }
+      );
+    },
+    [bulkUpdateMutation, selectedIds, toast]
+  );
 
   const retroSpec = useRetroSpecState({ projectId, hasSpecs });
   const urlModal = useUrlTicketModal({ projectId, allTickets });
@@ -171,7 +296,11 @@ export function Board({
       urlModal.isModalOpen ||
       transitions.deleteModalOpen ||
       isAnyTransitionPending ||
-      retroSpec.isRetroSpecModalOpen,
+      retroSpec.isRetroSpecModalOpen ||
+      isBulkDeleteOpen ||
+      isBulkMergeOpen,
+    onEscape: bulkSelection.clear,
+    isEscapeActive: bulkSelection.isSelectMode,
   });
 
   return (
@@ -214,6 +343,48 @@ export function Board({
         onDragCancel={drag.handleDragCancel}
         trashZone={trashZone}
         closeZone={closeZone}
+        bulkSelection={{
+          selectedIds: bulkSelection.selectedIds,
+          isSelectMode: bulkSelection.isSelectMode,
+          toggle: bulkSelection.toggle,
+          rangeSelectTo: bulkSelection.rangeSelectTo,
+        }}
+      />
+
+      <BulkActionBar
+        count={bulkSelection.selectedIds.size}
+        onCancel={bulkSelection.cancel}
+        onMerge={() => {
+          setBulkMergeError(null);
+          setIsBulkMergeOpen(true);
+        }}
+        onDelete={() => setIsBulkDeleteOpen(true)}
+        onAgentChange={handleBulkAgentChange}
+        onModelChange={handleBulkModelChange}
+        agentPending={bulkUpdateMutation.isPending}
+        modelPending={bulkUpdateMutation.isPending}
+        mergePending={bulkMergeMutation.isPending}
+        deletePending={bulkDeleteMutation.isPending}
+      />
+
+      <BulkDeleteConfirmationModal
+        open={isBulkDeleteOpen}
+        count={selectedIds.length}
+        isDeleting={bulkDeleteMutation.isPending}
+        onOpenChange={setIsBulkDeleteOpen}
+        onConfirm={handleBulkDeleteConfirm}
+      />
+
+      <BulkMergePreviewModal
+        open={isBulkMergeOpen}
+        tickets={selectedTickets}
+        isSubmitting={bulkMergeMutation.isPending}
+        errorMessage={bulkMergeError}
+        onOpenChange={(open) => {
+          setIsBulkMergeOpen(open);
+          if (!open) setBulkMergeError(null);
+        }}
+        onSubmit={handleBulkMergeSubmit}
       />
 
       <BoardModals

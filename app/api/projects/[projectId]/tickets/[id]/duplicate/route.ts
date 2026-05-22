@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { duplicateTicket, fullCloneTicket } from '@/lib/db/tickets';
 import { ProjectIdSchema } from '@/lib/validations/ticket';
+import { requireAuth } from '@/lib/db/users';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { createGitHubClient } from '@/app/lib/github/client';
@@ -72,12 +73,13 @@ export async function POST(
     const mode = bodyResult.data.mode;
 
     // Verify project access (owner OR member)
-    await verifyProjectAccess(projectId);
+    await verifyProjectAccess(projectId, request);
+    const actorUserId = await requireAuth(request);
 
     if (mode === 'full') {
-      return await handleFullClone(projectId, ticketId);
+      return await handleFullClone(projectId, ticketId, actorUserId);
     }
-    return await handleSimpleCopy(projectId, ticketId);
+    return await handleSimpleCopy(projectId, ticketId, actorUserId);
   } catch (error) {
     const knownErrors: Record<string, { code: string; status: number }> = {
       'Unauthorized': { code: 'AUTH_ERROR', status: 401 },
@@ -121,8 +123,8 @@ function serializeTicket(ticket: Ticket) {
   };
 }
 
-async function handleSimpleCopy(projectId: number, ticketId: number): Promise<NextResponse> {
-  const newTicket = await duplicateTicket(projectId, ticketId);
+async function handleSimpleCopy(projectId: number, ticketId: number, actorUserId: string): Promise<NextResponse> {
+  const newTicket = await duplicateTicket(projectId, ticketId, { creatorId: actorUserId });
   revalidatePath(`/projects/${projectId}/board`);
   return NextResponse.json(serializeTicket(newTicket), { status: 201 });
 }
@@ -131,7 +133,7 @@ async function handleSimpleCopy(projectId: number, ticketId: number): Promise<Ne
  * Handle full clone
  * Preserves stage, copies all jobs with telemetry, creates new branch from source
  */
-async function handleFullClone(projectId: number, ticketId: number): Promise<NextResponse> {
+async function handleFullClone(projectId: number, ticketId: number, actorUserId: string): Promise<NextResponse> {
   // Fetch source ticket with project info
   const sourceTicket = await prisma.ticket.findFirst({
     where: {
@@ -219,7 +221,7 @@ async function handleFullClone(projectId: number, ticketId: number): Promise<Nex
   }
 
   // Clone the ticket with jobs, passing the ticket number to avoid double increment
-  const newTicket = await fullCloneTicket(projectId, ticketId, newBranchName, nextTicketNumber);
+  const newTicket = await fullCloneTicket(projectId, ticketId, newBranchName, nextTicketNumber, { creatorId: actorUserId });
 
   revalidatePath(`/projects/${projectId}/board`);
 

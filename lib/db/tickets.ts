@@ -474,7 +474,8 @@ export async function patchTicketInline(
  */
 export async function createTicket(
   projectId: number,
-  input: CreateTicketInput
+  input: CreateTicketInput,
+  options: { creatorId?: string | null } = {}
 ) {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -512,6 +513,7 @@ export async function createTicket(
     ...(input.attachments !== undefined && {
       attachments: input.attachments as unknown as import('@prisma/client').Prisma.InputJsonValue,
     }),
+    ...(options.creatorId != null && { creatorId: options.creatorId }),
   };
 
   return await prisma.ticket.create({
@@ -601,7 +603,8 @@ function latestVerifyQualityScore(
  */
 export async function duplicateTicket(
   projectId: number,
-  sourceTicketId: number
+  sourceTicketId: number,
+  options: { creatorId?: string | null } = {}
 ): Promise<Ticket> {
   // Fetch source ticket with project key for generating new ticketKey
   const sourceTicket = await prisma.ticket.findFirst({
@@ -649,6 +652,7 @@ export async function duplicateTicket(
     attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
     clarificationPolicy: sourceTicket.clarificationPolicy,
     agent: sourceTicket.agent,
+    ...(options.creatorId != null && { creatorId: options.creatorId }),
   };
 
   return await prisma.ticket.create({
@@ -663,7 +667,8 @@ export async function fullCloneTicket(
   projectId: number,
   sourceTicketId: number,
   newBranch: string,
-  ticketNumber: number
+  ticketNumber: number,
+  options: { creatorId?: string | null } = {}
 ): Promise<Ticket & { jobs: Job[] }> {
   // Fetch source ticket with jobs and project key for generating new ticketKey
   const sourceTicket = await prisma.ticket.findFirst({
@@ -714,6 +719,7 @@ export async function fullCloneTicket(
         attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
         clarificationPolicy: sourceTicket.clarificationPolicy,
         agent: sourceTicket.agent,
+        ...(options.creatorId != null && { creatorId: options.creatorId }),
       },
     });
 

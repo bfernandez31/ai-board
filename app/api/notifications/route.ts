@@ -24,12 +24,16 @@ export async function GET(_request: NextRequest) {
       id: n.id,
       actorName: n.actor.name || n.actor.email,
       actorImage: n.actor.image,
-      ticketKey: n.ticket.ticketKey,
-      commentPreview: n.comment.content.substring(0, 80) + (n.comment.content.length > 80 ? '...' : ''),
+      ticketKey: n.ticket?.ticketKey ?? n.ticketKeySnapshot ?? null,
+      commentPreview: n.comment
+        ? n.comment.content.substring(0, 80) + (n.comment.content.length > 80 ? '...' : '')
+        : null,
       createdAt: n.createdAt.toISOString(),
       read: n.read,
       commentId: n.commentId,
-      projectId: n.ticket.projectId,
+      projectId: n.ticket?.projectId ?? null,
+      type: n.type,
+      mergedIntoTicketId: n.mergedIntoTicketId,
     }));
 
     return NextResponse.json({
