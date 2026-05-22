@@ -236,7 +236,9 @@ export function Board({
       urlModal.isModalOpen ||
       transitions.deleteModalOpen ||
       isAnyTransitionPending ||
-      retroSpec.isRetroSpecModalOpen,
+      retroSpec.isRetroSpecModalOpen ||
+      bulkDeleteModalOpen ||
+      bulkMergeModalOpen,
     isSelectMode: selection.isSelectMode,
     onClearSelection: selection.clearSelection,
   });

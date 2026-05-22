@@ -336,7 +336,12 @@ describe('POST /api/projects/:projectId/tickets/bulk', () => {
       }
     });
 
-    it('should skip concurrently modified tickets', async () => {
+    it('should update model regardless of starting version value', async () => {
+      // Bumping the version directly in the DB simulates a ticket that has
+      // already gone through prior edits. The server reads the current
+      // version inside its findMany→updateMany cycle and the update should
+      // still succeed for a single-client request (no concurrent writer is
+      // racing this transaction).
       const t1 = await createInboxTicket('[e2e] model-concurrent');
       await prisma.ticket.update({
         where: { id: t1.id },

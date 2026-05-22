@@ -55,6 +55,26 @@ export function useBulkDeleteTickets(projectId: number) {
       return { previousTickets: previousTickets ?? [] };
     },
 
+    onSuccess: (data, _vars, context) => {
+      // The optimistic onMutate removed every selected ticket from the cache,
+      // but the server may have skipped some (active jobs, not-in-INBOX, etc.).
+      // Re-insert the skipped ones from the snapshot so the user doesn't see
+      // them vanish and then reappear when onSettled refetches.
+      const skippedIds = new Set(data.results.skipped.map((s) => s.ticketId));
+      if (skippedIds.size === 0 || !context) return;
+      const toRestore = context.previousTickets.filter((t) => skippedIds.has(t.id));
+      if (toRestore.length === 0) return;
+      queryClient.setQueryData<Ticket[]>(
+        queryKeys.projects.tickets(projectId),
+        (current) => {
+          if (!current || !Array.isArray(current)) return current;
+          const existing = new Set(current.map((t) => t.id));
+          const additions = toRestore.filter((t) => !existing.has(t.id));
+          return additions.length > 0 ? [...current, ...additions] : current;
+        }
+      );
+    },
+
     onError: (_error, _vars, context) => {
       if (context) {
         queryClient.setQueryData(queryKeys.projects.tickets(projectId), context.previousTickets);

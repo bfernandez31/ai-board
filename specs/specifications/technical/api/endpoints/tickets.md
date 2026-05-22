@@ -896,22 +896,23 @@ Consolidate 2+ INBOX tickets into the base ticket (lowest ID). Atomic — the en
   "ticketIds": [10, 15, 20],
   "mergedTitle": "Consolidated ticket title",
   "mergedDescription": "Combined description text...",
-  "selectedAttachments": ["att-uuid-1", "att-uuid-2"]
+  "selectedAttachments": ["https://res.cloudinary.com/.../a.png", "https://res.cloudinary.com/.../b.png"]
 }
 ```
 
 **Validation**:
-- `ticketIds`: array of positive integers, minimum length 2
+- `ticketIds`: array of positive integers, minimum length 2, maximum length 100
 - `mergedTitle`: 1–100 characters
 - `mergedDescription`: max 10,000 characters (empty allowed)
-- `selectedAttachments`: array of strings, max length 5 (defaults to `[]`)
+- `selectedAttachments`: array of attachment URLs (strings), max length 5 (defaults to `[]`). Each URL must match the `url` field of an attachment on one of the source tickets; unmatched URLs are silently dropped.
 
 **Behavior**:
 1. Fetch all selected tickets in INBOX stage ordered by `id` ascending; reject with 400 if fewer than 2 are returned
 2. Reject with 404 if any requested ticket ID is missing from the result set
 3. Reject with 400 if any selected ticket has a `PENDING` or `RUNNING` job; error message lists the offending ticket keys
-4. Inside a Prisma interactive transaction:
-   - Update the base ticket (lowest ID) with `mergedTitle`, `mergedDescription`, `selectedAttachments` and increment `version`
+4. Build the combined attachment list from the source tickets' structured `TicketAttachment` objects (deduplicated by `url`). If `selectedAttachments` is non-empty, filter the combined list by URL. If it is empty and the combined list exceeds 5, reject with 400. Otherwise keep the combined list as-is.
+5. Inside a Prisma interactive transaction:
+   - Update the base ticket (lowest ID) with `mergedTitle`, `mergedDescription`, the resolved `TicketAttachment[]` and increment `version`
    - `deleteMany` on the source ticket IDs (cascade removes jobs, comments, notifications, analyses, outcomes, comparison records)
 
 **Response** (200 OK):
@@ -923,7 +924,9 @@ Consolidate 2+ INBOX tickets into the base ticket (lowest ID). Atomic — the en
     "ticketKey": "AIB-10",
     "title": "Consolidated ticket title",
     "description": "Combined description text...",
-    "attachments": ["att-uuid-1", "att-uuid-2"],
+    "attachments": [
+      { "type": "uploaded", "url": "https://res.cloudinary.com/.../a.png", "filename": "a.png", "mimeType": "image/png", "sizeBytes": 1234, "uploadedAt": "2026-05-22T10:00:00.000Z" }
+    ],
     "version": 2
   },
   "deletedTickets": [

@@ -36,16 +36,22 @@ export async function bulkDeleteInboxTickets(
     },
     select: { ticketId: true, status: true },
   });
-  const activeJobTicketIds = new Set(activeJobs.map((j) => j.ticketId));
+  const activeJobByTicketId = new Map<number, JobStatus>();
+  for (const job of activeJobs) {
+    if (job.ticketId == null) continue;
+    if (!activeJobByTicketId.has(job.ticketId)) {
+      activeJobByTicketId.set(job.ticketId, job.status);
+    }
+  }
 
   const deletable: Array<{ ticketId: number; ticketKey: string }> = [];
   for (const ticket of tickets) {
-    if (activeJobTicketIds.has(ticket.id)) {
-      const job = activeJobs.find((j) => j.ticketId === ticket.id);
+    const status = activeJobByTicketId.get(ticket.id);
+    if (status) {
       skipped.push({
         ticketId: ticket.id,
         ticketKey: ticket.ticketKey,
-        reason: `Ticket has an active job (${job?.status})`,
+        reason: `Ticket has an active job (${status})`,
       });
     } else {
       deletable.push({ ticketId: ticket.id, ticketKey: ticket.ticketKey });
@@ -53,8 +59,16 @@ export async function bulkDeleteInboxTickets(
   }
 
   if (deletable.length > 0) {
+    // Constrain by projectId + stage so a ticket that leaves INBOX (or the
+    // project) between the findMany above and this delete is no longer
+    // eligible — protects against races where a concurrent transition would
+    // otherwise still see its row deleted.
     await prisma.ticket.deleteMany({
-      where: { id: { in: deletable.map((d) => d.ticketId) } },
+      where: {
+        id: { in: deletable.map((d) => d.ticketId) },
+        projectId,
+        stage: Stage.INBOX,
+      },
     });
   }
 

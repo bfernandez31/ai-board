@@ -50,10 +50,19 @@ export function useBoardKeyboardShortcuts({ isAnyModalOpen, isSelectMode, onClea
   useEffect(() => {
     if (!isSelectMode || !onClearSelection) return;
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClearSelection!();
+      if (event.key !== 'Escape') return;
+      // Don't hijack Escape when the user is typing in a form control
+      // (e.g., the merge title/description fields) — they expect Escape
+      // to blur the field or close the parent dialog.
+      const target = event.target;
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
+          return;
+        }
       }
+      event.preventDefault();
+      onClearSelection!();
     }
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);

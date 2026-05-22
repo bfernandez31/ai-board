@@ -154,7 +154,8 @@ Discriminated union that validates the body of `POST /api/projects/:projectId/ti
 
 ```typescript
 // lib/validations/bulk-actions.ts
-const ticketIdsSchema = z.array(z.number().int().positive()).min(1);
+export const MAX_BULK_TICKETS = 100;
+const ticketIdsSchema = z.array(z.number().int().positive()).min(1).max(MAX_BULK_TICKETS);
 
 export const bulkDeleteSchema = z.object({
   action: z.literal('delete'),
@@ -163,9 +164,11 @@ export const bulkDeleteSchema = z.object({
 
 export const bulkMergeSchema = z.object({
   action: z.literal('merge'),
-  ticketIds: z.array(z.number().int().positive()).min(2),
+  ticketIds: z.array(z.number().int().positive()).min(2).max(MAX_BULK_TICKETS),
   mergedTitle: z.string().min(1).max(100),
   mergedDescription: z.string().max(10000),
+  // URLs of attachments to keep on the merged base ticket; server resolves
+  // each URL to the matching TicketAttachment object from the source tickets.
   selectedAttachments: z.array(z.string()).max(5).default([]),
 });
 
@@ -193,10 +196,10 @@ export type BulkAction = z.infer<typeof bulkActionSchema>;
 
 **Validation Rules**:
 - **action**: discriminator — one of `delete | merge | update-agent | update-model`
-- **ticketIds**: positive integers; minimum 1 for delete/update-agent/update-model, minimum 2 for merge
+- **ticketIds**: positive integers; minimum 1 for delete/update-agent/update-model, minimum 2 for merge, maximum 100 for all actions
 - **mergedTitle**: 1–100 characters
 - **mergedDescription**: max 10,000 characters (empty allowed)
-- **selectedAttachments**: max 5 entries; defaults to `[]`
+- **selectedAttachments**: array of attachment URLs (strings); max 5 entries; defaults to `[]`. Server resolves each URL against the source tickets' structured attachments and persists the matching `TicketAttachment[]` (not the raw strings) on the base ticket
 - **agent**: enum value
 - **model**: non-empty string (downstream resolution validates the model ID)
 

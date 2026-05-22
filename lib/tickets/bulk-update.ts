@@ -30,15 +30,43 @@ async function bulkUpdateInboxTickets(
     }
   }
 
-  for (const ticket of tickets) {
-    try {
-      const updated = await prisma.ticket.update({
-        where: { id: ticket.id },
-        data: { ...data, version: { increment: 1 } },
-        select: { id: true, ticketKey: true, version: true },
+  // Issue per-ticket conditional updates in parallel. The version constraint
+  // gives us optimistic concurrency: if a concurrent writer bumped the row's
+  // version (or moved it out of INBOX, or to another project) between the
+  // findMany above and the update here, `updateMany` returns count: 0 and we
+  // record a skip instead of silently overwriting the conflicting change.
+  const updateResults = await Promise.all(
+    tickets.map((ticket) =>
+      prisma.ticket
+        .updateMany({
+          where: {
+            id: ticket.id,
+            projectId,
+            stage: Stage.INBOX,
+            version: ticket.version,
+          },
+          data: { ...data, version: { increment: 1 } },
+        })
+        .then(
+          (r) => ({ ticket, count: r.count, error: null as Error | null }),
+          (error: Error) => ({ ticket, count: 0, error })
+        )
+    )
+  );
+
+  for (const { ticket, count, error } of updateResults) {
+    if (error) {
+      // Surface unexpected DB errors instead of treating every failure as a
+      // concurrency skip — those would mask real bugs.
+      throw error;
+    }
+    if (count > 0) {
+      succeeded.push({
+        ticketId: ticket.id,
+        ticketKey: ticket.ticketKey,
+        version: ticket.version + 1,
       });
-      succeeded.push({ ticketId: updated.id, ticketKey: updated.ticketKey, version: updated.version });
-    } catch {
+    } else {
       skipped.push({
         ticketId: ticket.id,
         ticketKey: ticket.ticketKey,

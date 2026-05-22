@@ -21,7 +21,7 @@ import { BulkDeleteConfirmationModal } from './bulk-delete-confirmation-modal';
 import { MergePreviewModal } from './merge-preview-modal';
 import { useBulkDeleteTickets, useMergeTickets } from '@/lib/hooks/mutations/useBulkTicketActions';
 import { useToast } from '@/hooks/use-toast';
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect, useState } from 'react';
 
 interface BoardModalsProps {
   projectId: number;
@@ -142,10 +142,23 @@ export function BoardModals(props: BoardModalsProps) {
   const bulkDeleteMutation = useBulkDeleteTickets(projectId);
   const mergeMutation = useMergeTickets(projectId);
 
-  const selectedTicketsForDelete = useMemo(() => {
+  const currentSelected = useMemo(() => {
     if (!props.selectedIds || !props.inboxTickets) return [];
     return props.inboxTickets.filter((t) => props.selectedIds!.has(t.id));
   }, [props.selectedIds, props.inboxTickets]);
+
+  // Snapshot tickets when bulk modals open so the rendered list stays stable
+  // even when optimistic mutations remove them from the upstream cache.
+  const [deleteSnapshot, setDeleteSnapshot] = useState<TWV[]>([]);
+  const [mergeSnapshot, setMergeSnapshot] = useState<TWV[]>([]);
+
+  useEffect(() => {
+    if (props.bulkDeleteModalOpen) setDeleteSnapshot(currentSelected);
+  }, [props.bulkDeleteModalOpen, currentSelected]);
+
+  useEffect(() => {
+    if (props.bulkMergeModalOpen) setMergeSnapshot(currentSelected);
+  }, [props.bulkMergeModalOpen, currentSelected]);
 
   const handleBulkDeleteConfirm = useCallback(() => {
     if (!props.selectedIds || props.selectedIds.size === 0) return;
@@ -153,11 +166,17 @@ export function BoardModals(props: BoardModalsProps) {
       { ticketIds: Array.from(props.selectedIds) },
       {
         onSuccess: (data) => {
-          const { summary } = data;
+          const { summary, results } = data;
           if (summary.skipped > 0) {
+            const uniqueReasons = Array.from(new Set(results.skipped.map((s) => s.reason)));
+            const noun = `ticket${summary.skipped !== 1 ? 's' : ''}`;
+            const description =
+              uniqueReasons.length === 1
+                ? `${summary.skipped} ${noun} skipped: ${uniqueReasons[0]}`
+                : `${summary.skipped} ${noun} skipped`;
             toast({
               title: `Deleted ${summary.succeeded} ticket${summary.succeeded !== 1 ? 's' : ''}`,
-              description: `${summary.skipped} ticket${summary.skipped !== 1 ? 's' : ''} skipped (active jobs)`,
+              description,
             });
           } else {
             toast({
@@ -284,7 +303,7 @@ export function BoardModals(props: BoardModalsProps) {
 
       {/* Bulk Delete Confirmation Modal */}
       <BulkDeleteConfirmationModal
-        tickets={selectedTicketsForDelete}
+        tickets={deleteSnapshot}
         open={props.bulkDeleteModalOpen ?? false}
         onOpenChange={(open) => props.setBulkDeleteModalOpen?.(open)}
         onConfirm={handleBulkDeleteConfirm}
@@ -293,7 +312,7 @@ export function BoardModals(props: BoardModalsProps) {
 
       {/* Merge Preview Modal */}
       <MergePreviewModal
-        tickets={selectedTicketsForDelete}
+        tickets={mergeSnapshot}
         open={props.bulkMergeModalOpen ?? false}
         onOpenChange={(open) => props.setBulkMergeModalOpen?.(open)}
         onConfirm={handleMergeConfirm}
