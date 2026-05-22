@@ -3,7 +3,7 @@ import { ProjectIdSchema } from '@/lib/validations/ticket';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { bulkActionSchema } from '@/lib/validations/bulk-actions';
 import { bulkDeleteInboxTickets } from '@/lib/tickets/deletion';
-import { mergeInboxTickets } from '@/lib/tickets/merge';
+import { mergeInboxTickets, ResponseError } from '@/lib/tickets/merge';
 import { bulkUpdateAgent, bulkUpdateModel } from '@/lib/tickets/bulk-update';
 
 export async function POST(
@@ -41,25 +41,14 @@ export async function POST(
       }
 
       case 'merge': {
-        try {
-          const result = await mergeInboxTickets(
-            projectId,
-            action.ticketIds,
-            action.mergedTitle,
-            action.mergedDescription,
-            action.selectedAttachments
-          );
-          return NextResponse.json({ action: 'merge', ...result });
-        } catch (mergeError: unknown) {
-          if (mergeError instanceof Error && 'status' in mergeError) {
-            const status = (mergeError as { status: number }).status;
-            return NextResponse.json(
-              { error: mergeError.message, code: 'MERGE_ERROR' },
-              { status }
-            );
-          }
-          throw mergeError;
-        }
+        const result = await mergeInboxTickets(
+          projectId,
+          action.ticketIds,
+          action.mergedTitle,
+          action.mergedDescription,
+          action.selectedAttachments
+        );
+        return NextResponse.json({ action: 'merge', ...result });
       }
 
       case 'update-agent': {
@@ -71,20 +60,21 @@ export async function POST(
         const result = await bulkUpdateModel(projectId, action.ticketIds, action.model);
         return NextResponse.json({ action: 'update-model', ...result });
       }
-
-      default:
-        return NextResponse.json(
-          { error: 'Unknown action', code: 'UNKNOWN_ACTION' },
-          { status: 400 }
-        );
     }
   } catch (error: unknown) {
-    if (error instanceof Response) {
-      const body = await error.json().catch(() => ({}));
+    if (error instanceof ResponseError) {
       return NextResponse.json(
-        body as Record<string, unknown>,
+        { error: error.message, code: 'MERGE_ERROR' },
         { status: error.status }
       );
+    }
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json({ error: 'Unauthorized', code: 'AUTH_ERROR' }, { status: 401 });
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json({ error: 'Project not found', code: 'NOT_FOUND' }, { status: 404 });
+      }
     }
     console.error('Bulk operation failed:', error);
     return NextResponse.json(

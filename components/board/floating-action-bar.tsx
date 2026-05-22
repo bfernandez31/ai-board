@@ -11,7 +11,7 @@ import { Trash2, GitMerge, X, Bot, Cpu } from 'lucide-react';
 import { Agent } from '@prisma/client';
 import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { AgentIcon } from '@/components/ui/agent-icon';
-import { CLAUDE_MODEL_IDS, CLAUDE_MODEL_LABELS, type ClaudeModelId } from '@/lib/models/claude-models';
+import { CLAUDE_MODEL_IDS, CLAUDE_MODEL_LABELS } from '@/lib/models/claude-models';
 
 const AGENTS: Agent[] = ['CLAUDE', 'CODEX', 'MISTRAL', 'GEMINI'];
 
@@ -98,7 +98,7 @@ export function FloatingActionBar({
           <DropdownMenuContent align="center">
             {CLAUDE_MODEL_IDS.map((modelId) => (
               <DropdownMenuItem key={modelId} onClick={() => onChangeModel(modelId)}>
-                {CLAUDE_MODEL_LABELS[modelId as ClaudeModelId]}
+                {CLAUDE_MODEL_LABELS[modelId]}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>

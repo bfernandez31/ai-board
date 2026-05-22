@@ -5,6 +5,24 @@ import type { BulkDeleteResult } from '@/lib/tickets/deletion';
 import type { MergeResult } from '@/lib/tickets/merge';
 import type { BulkUpdateResult } from '@/lib/tickets/bulk-update';
 
+async function postBulkAction<T>(
+  projectId: number,
+  body: Record<string, unknown>,
+  fallbackError: string
+): Promise<T> {
+  const response = await fetch(`/api/projects/${projectId}/tickets/bulk`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || fallbackError);
+  }
+  return response.json();
+}
+
 interface BulkDeleteParams {
   ticketIds: number[];
 }
@@ -18,19 +36,8 @@ export function useBulkDeleteTickets(projectId: number) {
     BulkDeleteParams,
     { previousTickets: Ticket[] }
   >({
-    mutationFn: async ({ ticketIds }) => {
-      const response = await fetch(`/api/projects/${projectId}/tickets/bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'delete', ticketIds }),
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to delete tickets');
-      }
-      return response.json();
-    },
+    mutationFn: ({ ticketIds }) =>
+      postBulkAction(projectId, { action: 'delete', ticketIds }, 'Failed to delete tickets'),
 
     onMutate: async ({ ticketIds }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.projects.tickets(projectId) });
@@ -78,19 +85,8 @@ export function useMergeTickets(projectId: number) {
     MergeParams,
     { previousTickets: Ticket[] }
   >({
-    mutationFn: async (params) => {
-      const response = await fetch(`/api/projects/${projectId}/tickets/bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'merge', ...params }),
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to merge tickets');
-      }
-      return response.json();
-    },
+    mutationFn: (params) =>
+      postBulkAction(projectId, { action: 'merge', ...params }, 'Failed to merge tickets'),
 
     onMutate: async ({ ticketIds }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.projects.tickets(projectId) });
@@ -138,19 +134,12 @@ export function useBulkUpdateAgent(projectId: number) {
     BulkUpdateAgentParams,
     { previousTickets: Ticket[] }
   >({
-    mutationFn: async ({ ticketIds, agent }) => {
-      const response = await fetch(`/api/projects/${projectId}/tickets/bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'update-agent', ticketIds, agent }),
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to update agent');
-      }
-      return response.json();
-    },
+    mutationFn: ({ ticketIds, agent }) =>
+      postBulkAction(
+        projectId,
+        { action: 'update-agent', ticketIds, agent },
+        'Failed to update agent'
+      ),
 
     onMutate: async ({ ticketIds, agent }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.projects.tickets(projectId) });
@@ -196,19 +185,12 @@ export function useBulkUpdateModel(projectId: number) {
     BulkUpdateModelParams,
     { previousTickets: Ticket[] }
   >({
-    mutationFn: async ({ ticketIds, model }) => {
-      const response = await fetch(`/api/projects/${projectId}/tickets/bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'update-model', ticketIds, model }),
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to update model');
-      }
-      return response.json();
-    },
+    mutationFn: ({ ticketIds, model }) =>
+      postBulkAction(
+        projectId,
+        { action: 'update-model', ticketIds, model },
+        'Failed to update model'
+      ),
 
     onMutate: async ({ ticketIds, model }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.projects.tickets(projectId) });

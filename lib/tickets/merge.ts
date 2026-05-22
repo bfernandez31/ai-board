@@ -1,6 +1,14 @@
 import { Stage, JobStatus } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 
+export class ResponseError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
 export interface MergeResult {
   baseTicket: {
     id: number;
@@ -78,12 +86,4 @@ export async function mergeInboxTickets(
     deletedTickets: sourceTickets.map((t) => ({ ticketId: t.id, ticketKey: t.ticketKey })),
     summary: { merged: tickets.length, deleted: sourceTickets.length },
   };
-}
-
-class ResponseError extends Error {
-  status: number;
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
 }
