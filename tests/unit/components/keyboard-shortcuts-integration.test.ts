@@ -112,4 +112,37 @@ describe('Keyboard Shortcuts Integration', () => {
       document.removeEventListener('keydown', handler);
     });
   });
+
+  describe('Escape in bulk-select mode clears selection (AIB-821)', () => {
+    it('Escape keydown fires on document and can be intercepted by board listener', () => {
+      const handler = vi.fn();
+      document.addEventListener('keydown', handler);
+
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      );
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ key: 'Escape' })
+      );
+
+      document.removeEventListener('keydown', handler);
+    });
+
+    it('Escape with metaKey is ignored by bulk-selection listener', () => {
+      // Simulates the guard in use-board-keyboard-shortcuts.ts: Escape with
+      // modifier keys does NOT trigger bulk selection clear.
+      const handler = vi.fn();
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || event.metaKey || event.ctrlKey || event.altKey) return;
+        handler();
+      });
+
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', metaKey: true, bubbles: true })
+      );
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
 });

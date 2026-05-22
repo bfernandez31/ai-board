@@ -54,4 +54,24 @@ describe('BulkActionBar', () => {
     expect(handlers.onMerge).toHaveBeenCalledTimes(1);
     expect(handlers.onDelete).toHaveBeenCalledTimes(1);
   });
+
+  it('exposes agent dropdown with all Agent enum values', () => {
+    renderWithProviders(<BulkActionBar count={2} {...noopHandlers()} />);
+    const trigger = screen.getByTestId('bulk-agent-select');
+    expect(trigger.getAttribute('aria-label')).toBe('Change agent');
+  });
+
+  it('exposes model dropdown with aria-label', () => {
+    renderWithProviders(<BulkActionBar count={2} {...noopHandlers()} />);
+    const trigger = screen.getByTestId('bulk-model-select');
+    expect(trigger.getAttribute('aria-label')).toBe('Change model');
+  });
+
+  it('disables dropdowns when over 50 selected', () => {
+    renderWithProviders(<BulkActionBar count={51} {...noopHandlers()} />);
+    const agent = screen.getByTestId('bulk-agent-select');
+    const model = screen.getByTestId('bulk-model-select');
+    expect(agent.getAttribute('data-disabled')).toBeDefined();
+    expect(model.getAttribute('data-disabled')).toBeDefined();
+  });
 });

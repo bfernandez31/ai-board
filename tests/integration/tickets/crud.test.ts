@@ -756,4 +756,71 @@ describe('Tickets CRUD', () => {
       expect(response.data.code).toBe('BULK_CONFLICT_VERSION');
     });
   });
+
+  describe('POST /api/projects/:projectId/tickets/bulk/agent', () => {
+    it('writes only the agent field across selected tickets', async () => {
+      const t1 = await ctx.createTicket({ title: '[e2e] bulk agent 1' });
+      const t2 = await ctx.createTicket({ title: '[e2e] bulk agent 2' });
+
+      const response = await ctx.api.post<{ success: true; updated: { count: number; agent: string | null } }>(
+        `/api/projects/${ctx.projectId}/tickets/bulk/agent`,
+        { ticketIds: [t1.id, t2.id], agent: Agent.CODEX }
+      );
+      expect(response.status).toBe(200);
+      expect(response.data.updated.count).toBe(2);
+      expect(response.data.updated.agent).toBe(Agent.CODEX);
+
+      const rows = await prisma.ticket.findMany({ where: { id: { in: [t1.id, t2.id] } } });
+      for (const r of rows) {
+        expect(r.agent).toBe(Agent.CODEX);
+        // Other fields preserved
+        expect(r.specifyModel).toBeNull();
+        expect(r.implementModel).toBeNull();
+      }
+    });
+
+    it('clears agent when null is supplied', async () => {
+      const t = await ctx.createTicket({ title: '[e2e] bulk agent clear' });
+      await prisma.ticket.update({ where: { id: t.id }, data: { agent: Agent.CODEX } });
+
+      const response = await ctx.api.post<{ updated: { agent: string | null } }>(
+        `/api/projects/${ctx.projectId}/tickets/bulk/agent`,
+        { ticketIds: [t.id], agent: null }
+      );
+      expect(response.status).toBe(200);
+      expect(response.data.updated.agent).toBeNull();
+    });
+
+    it('returns 400 VALIDATION_ERROR for invalid agent enum', async () => {
+      const t = await ctx.createTicket({ title: '[e2e] bulk agent invalid' });
+      const response = await ctx.api.post<{ code: string }>(
+        `/api/projects/${ctx.projectId}/tickets/bulk/agent`,
+        { ticketIds: [t.id], agent: 'NOT_A_REAL_AGENT' }
+      );
+      expect(response.status).toBe(400);
+      expect(response.data.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 409 BULK_CONFLICT_STAGE_DRIFT when a ticket drifted out of INBOX', async () => {
+      const t = await ctx.createTicket({ title: '[e2e] bulk agent drift' });
+      await prisma.ticket.update({ where: { id: t.id }, data: { stage: 'SPECIFY' } });
+      const response = await ctx.api.post<{ code: string }>(
+        `/api/projects/${ctx.projectId}/tickets/bulk/agent`,
+        { ticketIds: [t.id], agent: Agent.CODEX }
+      );
+      expect(response.status).toBe(409);
+      expect(response.data.code).toBe('BULK_CONFLICT_STAGE_DRIFT');
+    });
+
+    it('creates no notification rows for bulk agent update', async () => {
+      const t = await ctx.createTicket({ title: '[e2e] bulk agent no notify' });
+      const beforeCount = await prisma.notification.count();
+      await ctx.api.post(
+        `/api/projects/${ctx.projectId}/tickets/bulk/agent`,
+        { ticketIds: [t.id], agent: Agent.GEMINI }
+      );
+      const afterCount = await prisma.notification.count();
+      expect(afterCount).toBe(beforeCount);
+    });
+  });
 });

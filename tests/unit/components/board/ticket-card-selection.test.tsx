@@ -122,4 +122,19 @@ describe('TicketCard bulk selection', () => {
     expect(onTicketClick).toHaveBeenCalledTimes(1);
     expect(selection.onToggle).not.toHaveBeenCalled();
   });
+
+  it('Cmd/Ctrl+click in select mode still does NOT open detail panel (FR-006)', () => {
+    const onTicketClick = vi.fn();
+    const selection = selectionFixture({ isSelectMode: true, isSelected: true });
+    renderWithProviders(
+      <TicketCard
+        ticket={makeTicket()}
+        onTicketClick={onTicketClick}
+        selection={selection}
+      />
+    );
+    fireEvent.click(screen.getByTestId('ticket-card'), { metaKey: true });
+    expect(selection.onToggle).toHaveBeenCalledTimes(1);
+    expect(onTicketClick).not.toHaveBeenCalled();
+  });
 });

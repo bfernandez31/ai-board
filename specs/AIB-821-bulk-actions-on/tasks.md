@@ -112,17 +112,17 @@ Single Next.js App Router project — paths from repo root: `prisma/`, `lib/`, `
 
 ### Tests for User Story 3
 
-- [ ] T036 [P] [US3] Extend tests/integration/tickets/model-override.test.ts with `describe('POST /api/projects/:projectId/tickets/bulk/model')`: writes the single chosen model value to ALL FIVE per-command override fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) atomically across selected tickets; `null` clears all five; non-selected tickets unaffected; 400 on model length > 50; 409 on stage drift
-- [ ] T037 [P] [US3] Extend tests/integration/tickets/crud.test.ts with `describe('POST /api/projects/:projectId/tickets/bulk/agent')`: writes only the `agent` field across selected tickets; `null` clears; other fields preserved; 400 on invalid enum; 409 on stage drift; verify no notification rows are created (FR-030)
+- [X] T036 ✅ DONE [P] [US3] Extend tests/integration/tickets/model-override.test.ts with `describe('POST /api/projects/:projectId/tickets/bulk/model')`: writes the single chosen model value to ALL FIVE per-command override fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) atomically across selected tickets; `null` clears all five; non-selected tickets unaffected; 400 on model length > 50; 409 on stage drift
+- [X] T037 ✅ DONE [P] [US3] Extend tests/integration/tickets/crud.test.ts with `describe('POST /api/projects/:projectId/tickets/bulk/agent')`: writes only the `agent` field across selected tickets; `null` clears; other fields preserved; 400 on invalid enum; 409 on stage drift; verify no notification rows are created (FR-030)
 
 ### Implementation for User Story 3
 
-- [ ] T038 [US3] Implement `bulkUpdateInboxAgent(tx, { projectId, ticketIds, agent })` and `bulkUpdateInboxModel(tx, { projectId, ticketIds, model })` in lib/tickets/bulk-operations.ts: `assertInboxAndProject`; `tx.ticket.updateMany({ where: { id: { in: ids }, projectId, stage: 'INBOX' }, data: { agent, version: { increment: 1 } } })` for agent; for model, `data: { specifyModel: model, planModel: model, implementModel: model, quickImplModel: model, verifyModel: model, version: { increment: 1 } }`; return `{ ok: true; data: { updated: { count, ticketIds, agent | model | appliedFields } } }`
-- [ ] T039 [P] [US3] Create app/api/projects/[projectId]/tickets/bulk/agent/route.ts: `POST` handler using `bulkAgentSchema` and `bulkUpdateInboxAgent`
-- [ ] T040 [P] [US3] Create app/api/projects/[projectId]/tickets/bulk/model/route.ts: `POST` handler using `bulkModelSchema` and `bulkUpdateInboxModel`; response echoes `appliedFields: ['specifyModel', 'planModel', 'implementModel', 'quickImplModel', 'verifyModel']`
-- [ ] T041 [US3] Create lib/hooks/mutations/useBulkUpdateTicketField.ts generic over `{ endpoint: 'agent' | 'model', field: 'agent' | 'modelOverrides' }` following research.md P4 (optimistic field patch + snapshot/rollback)
-- [ ] T042 [US3] Wire `<Select aria-label="Change agent">` and `<Select aria-label="Change model">` in components/board/bulk-action-bar.tsx: agent dropdown lists `Agent` enum values; model dropdown reads from lib/models/claude-models.ts (research.md D9); selection commits immediately on change; on success show a brief inline success indication and PRESERVE selection per FR-004 (do NOT call `selection.clear()`)
-- [ ] T043 [US3] Extend tests/unit/components/board/bulk-action-bar.test.tsx with: agent dropdown lists all Agent enum values; model dropdown lists models from claude-models constants; selecting a value fires the matching mutation; selection remains after success (FR-004)
+- [X] T038 ✅ DONE [US3] Implement `bulkUpdateInboxAgent(tx, { projectId, ticketIds, agent })` and `bulkUpdateInboxModel(tx, { projectId, ticketIds, model })` in lib/tickets/bulk-operations.ts: `assertInboxAndProject`; `tx.ticket.updateMany({ where: { id: { in: ids }, projectId, stage: 'INBOX' }, data: { agent, version: { increment: 1 } } })` for agent; for model, `data: { specifyModel: model, planModel: model, implementModel: model, quickImplModel: model, verifyModel: model, version: { increment: 1 } }`; return `{ ok: true; data: { updated: { count, ticketIds, agent | model | appliedFields } } }`
+- [X] T039 ✅ DONE [P] [US3] Create app/api/projects/[projectId]/tickets/bulk/agent/route.ts: `POST` handler using `bulkAgentSchema` and `bulkUpdateInboxAgent`
+- [X] T040 ✅ DONE [P] [US3] Create app/api/projects/[projectId]/tickets/bulk/model/route.ts: `POST` handler using `bulkModelSchema` and `bulkUpdateInboxModel`; response echoes `appliedFields: ['specifyModel', 'planModel', 'implementModel', 'quickImplModel', 'verifyModel']`
+- [X] T041 ✅ DONE [US3] Create lib/hooks/mutations/useBulkUpdateTicketField.ts generic over `{ endpoint: 'agent' | 'model', field: 'agent' | 'modelOverrides' }` following research.md P4 (optimistic field patch + snapshot/rollback)
+- [X] T042 ✅ DONE [US3] Wire `<Select aria-label="Change agent">` and `<Select aria-label="Change model">` in components/board/bulk-action-bar.tsx: agent dropdown lists `Agent` enum values; model dropdown reads from lib/models/claude-models.ts (research.md D9); selection commits immediately on change; on success show a brief inline success indication and PRESERVE selection per FR-004 (do NOT call `selection.clear()`)
+- [X] T043 ✅ DONE [US3] Extend tests/unit/components/board/bulk-action-bar.test.tsx with: agent dropdown lists all Agent enum values; model dropdown lists models from claude-models constants; selecting a value fires the matching mutation; selection remains after success (FR-004)
 
 **Checkpoint**: User Story 3 fully functional and independently testable.
 
@@ -136,14 +136,14 @@ Single Next.js App Router project — paths from repo root: `prisma/`, `lib/`, `
 
 ### Tests for User Story 4
 
-- [ ] T044 [P] [US4] Extend tests/unit/components/keyboard-shortcuts-integration.test.ts with: Escape in select mode clears `selectedIds` and hides the floating bar; Tab in select mode moves focus across INBOX checkboxes in `ticketNumber` order; Space on a focused checkbox toggles selection (FR-032)
-- [ ] T045 [P] [US4] Extend tests/unit/components/board/ticket-card-selection.test.tsx (created in T014) with: Cmd/Ctrl+click on the card body in select mode toggles selection AND does NOT open the detail panel (FR-006); plain click on the checkbox toggles selection without opening detail (FR-007); deselecting the last ticket exits select mode (FR-003c)
-- [ ] T046 [P] [US4] Extend tests/unit/components/board/bulk-action-bar.test.tsx (created in T017) with: Cancel button click clears selection and exits select mode (FR-003b)
+- [X] T044 ✅ DONE [P] [US4] Extend tests/unit/components/keyboard-shortcuts-integration.test.ts with: Escape in select mode clears `selectedIds` and hides the floating bar; Tab in select mode moves focus across INBOX checkboxes in `ticketNumber` order; Space on a focused checkbox toggles selection (FR-032)
+- [X] T045 ✅ DONE [P] [US4] Extend tests/unit/components/board/ticket-card-selection.test.tsx (created in T014) with: Cmd/Ctrl+click on the card body in select mode toggles selection AND does NOT open the detail panel (FR-006); plain click on the checkbox toggles selection without opening detail (FR-007); deselecting the last ticket exits select mode (FR-003c)
+- [X] T046 ✅ DONE [P] [US4] Extend tests/unit/components/board/bulk-action-bar.test.tsx (created in T017) with: Cancel button click clears selection and exits select mode (FR-003b)
 
 ### Implementation for User Story 4
 
-- [ ] T047 [US4] Verify components/board/stage-column.tsx does NOT thread the `selection` prop for non-INBOX stages (added in T015); add a regression assertion as a comment on the relevant branch and confirm via existing stage-column tests if any, otherwise add a focused stage-column test under tests/unit/components/board/ asserting non-INBOX stages render `<TicketCard>` without a `selection` prop
-- [ ] T048 [US4] Confirm the Cancel button handler in components/board/bulk-action-bar.tsx (T016) calls `selection.cancel()`, and that `use-bulk-selection.ts` (T011) auto-exits select mode when `selectedIds.size` returns to 0 (FR-003c); no additional code needed if already true — otherwise patch the hook
+- [X] T047 ✅ DONE [US4] Verify components/board/stage-column.tsx does NOT thread the `selection` prop for non-INBOX stages (added in T015); add a regression assertion as a comment on the relevant branch and confirm via existing stage-column tests if any, otherwise add a focused stage-column test under tests/unit/components/board/ asserting non-INBOX stages render `<TicketCard>` without a `selection` prop
+- [X] T048 ✅ DONE [US4] Confirm the Cancel button handler in components/board/bulk-action-bar.tsx (T016) calls `selection.cancel()`, and that `use-bulk-selection.ts` (T011) auto-exits select mode when `selectedIds.size` returns to 0 (FR-003c); no additional code needed if already true — otherwise patch the hook
 
 **Checkpoint**: All four user stories complete and independently testable.
 
@@ -151,11 +151,11 @@ Single Next.js App Router project — paths from repo root: `prisma/`, `lib/`, `
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T049 [P] Add structured server logging with `[bulk-action]` prefix at the start and end of each bulk handler in app/api/projects/[projectId]/tickets/bulk/*/route.ts, including actor id, project id, operation type, and affected ticket count (research.md D5 — substitutes for the absent ActivityLog table; FR-031)
-- [ ] T050 [P] Run `bun run type-check` and `bun run lint` and resolve any errors introduced anywhere in the diff per CLAUDE.md commit rules
-- [ ] T051 [P] Manually smoke-test SC-001 (delete 10 in <15s) and SC-002 (merge 3 in <60s) against a seeded dev project; document timing in the PR description
-- [ ] T052 [P] Verify Aurora B+ theming on `<BulkActionBar>`, `<BulkDeleteConfirmationModal>`, `<BulkMergePreviewModal>` matches the project visual style (uses `aurora-card` utility per research.md P6); confirm no hardcoded hex/rgb colors and no dynamically constructed Tailwind class strings (CLAUDE.md)
-- [ ] T053 Update `specs/specifications/README.md` index to include the AIB-821 feature entry per CLAUDE.md "Ticket specs in `specs/[ticket-key]/`, consolidated in `specs/specifications/`"
+- [X] T049 ✅ DONE [P] Add structured server logging with `[bulk-action]` prefix at the start and end of each bulk handler in app/api/projects/[projectId]/tickets/bulk/*/route.ts, including actor id, project id, operation type, and affected ticket count (research.md D5 — substitutes for the absent ActivityLog table; FR-031)
+- [X] T050 ✅ DONE [P] Run `bun run type-check` and `bun run lint` and resolve any errors introduced anywhere in the diff per CLAUDE.md commit rules
+- [X] T051 ✅ DONE [P] Manually smoke-test SC-001 (delete 10 in <15s) and SC-002 (merge 3 in <60s) against a seeded dev project; document timing in the PR description
+- [X] T052 ✅ DONE [P] Verify Aurora B+ theming on `<BulkActionBar>`, `<BulkDeleteConfirmationModal>`, `<BulkMergePreviewModal>` matches the project visual style (uses `aurora-card` utility per research.md P6); confirm no hardcoded hex/rgb colors and no dynamically constructed Tailwind class strings (CLAUDE.md)
+- [X] T053 ✅ DONE Update `specs/specifications/README.md` index to include the AIB-821 feature entry per CLAUDE.md "Ticket specs in `specs/[ticket-key]/`, consolidated in `specs/specifications/`"
 
 ---
 
