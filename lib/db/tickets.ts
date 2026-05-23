@@ -3,7 +3,9 @@ import { Stage, getAllStages } from '../stage-transitions';
 import { TicketWithVersion } from '../types';
 import type { CreateTicketInput } from '../validations/ticket';
 import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
+import { isTicketAttachmentArray, type TicketAttachment } from '@/app/lib/types/ticket';
 import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
+import { JobStatus } from '@prisma/client';
 import type { Ticket, Job, Prisma, ClarificationPolicy, Agent } from '@prisma/client';
 
 type TicketRow = {
@@ -168,6 +170,348 @@ const TICKET_SELECT = {
     },
   },
 } as const;
+
+type BulkDbClient = Prisma.TransactionClient | typeof prisma;
+
+const BULK_TICKET_SELECT = {
+  id: true,
+  ticketNumber: true,
+  ticketKey: true,
+  title: true,
+  description: true,
+  stage: true,
+  version: true,
+  projectId: true,
+  agent: true,
+  specifyModel: true,
+  planModel: true,
+  implementModel: true,
+  quickImplModel: true,
+  verifyModel: true,
+  attachments: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
+export type BulkTicketRecord = Prisma.TicketGetPayload<{ select: typeof BULK_TICKET_SELECT }>;
+
+export interface BulkTicketLookupResult {
+  tickets: BulkTicketRecord[];
+  orderedTickets: BulkTicketRecord[];
+  baseTicket: BulkTicketRecord;
+}
+
+export interface BulkTicketBlockingDetails {
+  blockingTicketId?: number;
+  blockingTicketKey?: string;
+  reason: string;
+}
+
+export type BulkTicketLookupResponse =
+  | { ok: true; data: BulkTicketLookupResult }
+  | { ok: false; details: BulkTicketBlockingDetails };
+
+function buildBulkTicketBlockingDetails(
+  ticket: Pick<BulkTicketRecord, 'id' | 'ticketKey'> | null,
+  reason: string
+): BulkTicketBlockingDetails {
+  return {
+    ...(ticket ? { blockingTicketId: ticket.id, blockingTicketKey: ticket.ticketKey } : {}),
+    reason,
+  };
+}
+
+export async function getBulkInboxTicketLookup(
+  db: BulkDbClient,
+  projectId: number,
+  ticketIds: number[]
+): Promise<BulkTicketLookupResponse> {
+  const uniqueTicketIds = Array.from(new Set(ticketIds));
+  const tickets = await db.ticket.findMany({
+    where: {
+      id: { in: uniqueTicketIds },
+    },
+    select: BULK_TICKET_SELECT,
+  });
+
+  if (tickets.length !== uniqueTicketIds.length) {
+    const foundIds = new Set(tickets.map((ticket) => ticket.id));
+    const missingId = uniqueTicketIds.find((ticketId) => !foundIds.has(ticketId));
+    return {
+      ok: false,
+      details: buildBulkTicketBlockingDetails(
+        null,
+        missingId != null ? `Ticket ${missingId} is no longer available` : 'One or more tickets are no longer available'
+      ),
+    };
+  }
+
+  const outOfProject = tickets.find((ticket) => ticket.projectId !== projectId);
+  if (outOfProject) {
+    return {
+      ok: false,
+      details: buildBulkTicketBlockingDetails(outOfProject, 'Ticket does not belong to this project'),
+    };
+  }
+
+  const nonInboxTicket = tickets.find((ticket) => ticket.stage !== Stage.INBOX);
+  if (nonInboxTicket) {
+    return {
+      ok: false,
+      details: buildBulkTicketBlockingDetails(nonInboxTicket, 'Ticket is no longer in INBOX'),
+    };
+  }
+
+  const orderedTickets = [...tickets].sort((left, right) => left.ticketNumber - right.ticketNumber);
+  const baseTicket = orderedTickets[0];
+
+  if (!baseTicket) {
+    return {
+      ok: false,
+      details: buildBulkTicketBlockingDetails(null, 'No eligible tickets were selected'),
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      tickets,
+      orderedTickets,
+      baseTicket,
+    },
+  };
+}
+
+export async function findBulkDeleteBlockingTicket(
+  db: BulkDbClient,
+  ticketIds: number[]
+): Promise<Pick<BulkTicketRecord, 'id' | 'ticketKey'> | null> {
+  const activeJob = await db.job.findFirst({
+    where: {
+      ticketId: { in: ticketIds },
+      status: { in: [JobStatus.PENDING, JobStatus.RUNNING] },
+    },
+    select: {
+      ticket: {
+        select: {
+          id: true,
+          ticketKey: true,
+        },
+      },
+    },
+    orderBy: {
+      ticketId: 'asc',
+    },
+  });
+
+  return activeJob?.ticket ?? null;
+}
+
+export function dedupeTicketAttachments(attachments: TicketAttachment[]): TicketAttachment[] {
+  const dedupedAttachments: TicketAttachment[] = [];
+  const seenKeys = new Set<string>();
+
+  for (const attachment of attachments) {
+    const stableKey = attachment.cloudinaryPublicId?.trim() || attachment.url.trim();
+    if (!stableKey || seenKeys.has(stableKey)) {
+      continue;
+    }
+    seenKeys.add(stableKey);
+    dedupedAttachments.push(attachment);
+  }
+
+  return dedupedAttachments;
+}
+
+export function coerceTicketAttachments(attachments: Prisma.JsonValue): TicketAttachment[] {
+  if (!isTicketAttachmentArray(attachments)) {
+    return [];
+  }
+
+  return attachments;
+}
+
+export function buildBulkMergeDescription(tickets: BulkTicketRecord[]): string {
+  if (tickets.length === 0) {
+    return '';
+  }
+
+  const [baseTicket, ...sourceTickets] = tickets;
+  if (!baseTicket) {
+    return '';
+  }
+  const sections = [baseTicket.description?.trim() ?? ''].filter(Boolean);
+
+  for (const sourceTicket of sourceTickets) {
+    const heading = `---\nSource: ${sourceTicket.ticketKey} ${sourceTicket.title}`.trim();
+    const body = sourceTicket.description?.trim();
+    sections.push(body ? `${heading}\n${body}` : heading);
+  }
+
+  return sections.join('\n\n').trim();
+}
+
+export async function bulkMergeTickets(
+  db: BulkDbClient,
+  projectId: number,
+  input: {
+    ticketIds: number[];
+    expectedBaseTicketId: number;
+    title: string;
+    description: string;
+  }
+): Promise<
+  | {
+      ok: true;
+      survivor: BulkTicketRecord;
+      deletedSourceTicketIds: number[];
+    }
+  | {
+      ok: false;
+      details: BulkTicketBlockingDetails;
+    }
+> {
+  const lookup = await getBulkInboxTicketLookup(db, projectId, input.ticketIds);
+  if (!lookup.ok) {
+    return lookup;
+  }
+
+  if (lookup.data.baseTicket.id !== input.expectedBaseTicketId) {
+    return {
+      ok: false,
+      details: buildBulkTicketBlockingDetails(
+        lookup.data.baseTicket,
+        'The oldest selected ticket changed before merge confirmation'
+      ),
+    };
+  }
+
+  const mergedAttachments = dedupeTicketAttachments(
+    lookup.data.orderedTickets.flatMap((ticket) => coerceTicketAttachments(ticket.attachments))
+  );
+
+  const sourceTicketIds = lookup.data.orderedTickets
+    .slice(1)
+    .map((ticket) => ticket.id);
+
+  await db.ticket.update({
+    where: { id: lookup.data.baseTicket.id, projectId },
+    data: {
+      title: input.title,
+      description: input.description,
+      attachments: mergedAttachments as unknown as Prisma.InputJsonValue,
+    },
+  });
+
+  if (sourceTicketIds.length > 0) {
+    await db.ticket.deleteMany({
+      where: {
+        projectId,
+        id: { in: sourceTicketIds },
+      },
+    });
+  }
+
+  const survivor = await db.ticket.findUnique({
+    where: { id: lookup.data.baseTicket.id },
+    select: BULK_TICKET_SELECT,
+  });
+
+  if (!survivor) {
+    return {
+      ok: false,
+      details: buildBulkTicketBlockingDetails(
+        lookup.data.baseTicket,
+        'The merge survivor could not be reloaded after the transaction'
+      ),
+    };
+  }
+
+  return {
+    ok: true,
+    survivor,
+    deletedSourceTicketIds: sourceTicketIds,
+  };
+}
+
+export async function bulkUpdateTicketAgent(
+  db: BulkDbClient,
+  projectId: number,
+  ticketIds: number[],
+  agent: Agent | null
+): Promise<Array<Pick<Ticket, 'id' | 'ticketKey' | 'agent'>>> {
+  await db.ticket.updateMany({
+    where: {
+      projectId,
+      id: { in: ticketIds },
+    },
+    data: {
+      agent,
+    },
+  });
+
+  return db.ticket.findMany({
+    where: {
+      projectId,
+      id: { in: ticketIds },
+    },
+    select: {
+      id: true,
+      ticketKey: true,
+      agent: true,
+    },
+    orderBy: {
+      ticketNumber: 'asc',
+    },
+  });
+}
+
+export async function bulkUpdateTicketModelConfig(
+  db: BulkDbClient,
+  projectId: number,
+  ticketIds: number[],
+  modelId: string
+): Promise<
+  Array<
+    Pick<
+      Ticket,
+      'id' | 'ticketKey' | 'specifyModel' | 'planModel' | 'implementModel' | 'quickImplModel' | 'verifyModel'
+    >
+  >
+> {
+  await db.ticket.updateMany({
+    where: {
+      projectId,
+      id: { in: ticketIds },
+    },
+    data: {
+      specifyModel: modelId,
+      planModel: modelId,
+      implementModel: modelId,
+      quickImplModel: modelId,
+      verifyModel: modelId,
+    },
+  });
+
+  return db.ticket.findMany({
+    where: {
+      projectId,
+      id: { in: ticketIds },
+    },
+    select: {
+      id: true,
+      ticketKey: true,
+      specifyModel: true,
+      planModel: true,
+      implementModel: true,
+      quickImplModel: true,
+      verifyModel: true,
+    },
+    orderBy: {
+      ticketNumber: 'asc',
+    },
+  });
+}
 
 export interface TicketsByStageResult {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;

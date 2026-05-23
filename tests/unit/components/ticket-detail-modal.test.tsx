@@ -10,14 +10,17 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent } from '@testing-library/react';
 import { renderWithProviders, screen, waitFor } from '@/tests/utils/component-test-utils';
 import { TicketDetailModal } from '@/components/board/ticket-detail-modal';
+import { TicketCard } from '@/components/board/ticket-card';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import type { TicketJob } from '@/components/board/ticket-detail-modal';
 
 import userEvent from '@testing-library/user-event';
 import { queryKeys } from '@/app/lib/query-keys';
 import type { TicketWithVersion } from '@/app/lib/types/query-types';
+import { Agent } from '@prisma/client';
 
 // Mock useRouter
 vi.mock('next/navigation', () => ({
@@ -32,6 +35,76 @@ vi.mock('next/navigation', () => ({
 const mockToast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: mockToast }),
+}));
+
+vi.mock('@dnd-kit/core', () => ({
+  useDraggable: () => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: vi.fn(),
+    transform: null,
+    isDragging: false,
+  }),
+}));
+
+vi.mock('@/app/lib/hooks/mutations/useDeployPreview', () => ({
+  useDeployPreview: () => ({ mutate: vi.fn() }),
+}));
+
+vi.mock('@/lib/hooks/mutations/useCancelJob', () => ({
+  useCancelJob: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock('@/app/lib/hooks/mutations/useAutoMode', () => ({
+  useAutoMode: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock('@/lib/hooks/use-has-mounted', () => ({
+  useHasMounted: () => true,
+}));
+
+vi.mock('@/app/lib/utils/deploy-preview-eligibility', () => ({
+  isTicketDeployable: () => false,
+}));
+
+vi.mock('@/app/lib/tickets/auto-mode-eligibility', () => ({
+  isAutoModeEligible: () => false,
+}));
+
+vi.mock('@/components/board/job-status-indicator', () => ({
+  JobStatusIndicator: () => null,
+}));
+
+vi.mock('@/components/board/ticket-card-deploy-icon', () => ({
+  TicketCardDeployIcon: () => null,
+}));
+
+vi.mock('@/components/board/ticket-card-preview-icon', () => ({
+  TicketCardPreviewIcon: () => null,
+}));
+
+vi.mock('@/components/board/deploy-confirmation-modal', () => ({
+  DeployConfirmationModal: () => null,
+}));
+
+vi.mock('@/components/board/cancel-confirmation-modal', () => ({
+  CancelConfirmationModal: () => null,
+}));
+
+vi.mock('@/components/board/auto-mode-icon', () => ({
+  AutoModeIcon: () => null,
+}));
+
+vi.mock('@/components/board/auto-mode-confirmation-modal', () => ({
+  AutoModeConfirmationModal: () => null,
+}));
+
+vi.mock('@/components/ticket/quality-score-badge', () => ({
+  QualityScoreBadge: () => null,
+}));
+
+vi.mock('@/lib/utils/job-type-classifier', () => ({
+  classifyJobType: () => 'WORKFLOW',
 }));
 
 /**
@@ -63,6 +136,37 @@ function createMockTicket(overrides: Record<string, unknown> = {}) {
       githubRepo: 'test-repo',
       clarificationPolicy: 'AUTO',
     },
+    ...overrides,
+  };
+}
+
+function createInboxCardTicket(overrides: Partial<TicketWithVersion> = {}): TicketWithVersion {
+  return {
+    id: 101,
+    ticketNumber: 101,
+    ticketKey: 'AIB-101',
+    title: 'Inbox card',
+    description: 'Card description',
+    stage: 'INBOX',
+    version: 1,
+    projectId: 1,
+    branch: null,
+    previewUrl: null,
+    autoMode: false,
+    clarificationPolicy: null,
+    agent: Agent.CLAUDE,
+    specifyModel: null,
+    planModel: null,
+    implementModel: null,
+    quickImplModel: null,
+    verifyModel: null,
+    workflowType: 'FULL',
+    attachments: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    project: { clarificationPolicy: 'AUTO', defaultAgent: Agent.CLAUDE },
+    jobs: [],
+    qualityScore: null,
     ...overrides,
   };
 }
@@ -231,6 +335,45 @@ describe('TicketDetailModal', () => {
 
       // Branch should now be visible
       expect(screen.getByText('feature/new-branch')).toBeInTheDocument();
+    });
+  });
+
+  describe('bulk selection regression coverage', () => {
+    it('does not open a ticket from selection gestures and leaves the existing modal content intact', async () => {
+      const user = userEvent.setup();
+      const onTicketClick = vi.fn();
+      const modalTicket = createMockTicket({ title: 'Modal ticket' });
+
+      renderWithProviders(
+        <>
+          <TicketDetailModal
+            ticket={modalTicket}
+            open={true}
+            onOpenChange={vi.fn()}
+            onUpdate={vi.fn()}
+            projectId={1}
+            jobs={[]}
+            fullJobs={[]}
+          />
+          <TicketCard
+            ticket={createInboxCardTicket()}
+            showSelectionCheckbox={true}
+            isSelectionMode={true}
+            isSelected={false}
+            onSelectionChange={vi.fn()}
+            onTicketClick={onTicketClick}
+          />
+        </>
+      );
+
+      fireEvent.click(document.querySelector('button[aria-label="Select AIB-101"]') as HTMLElement);
+      fireEvent.click(screen.getByText('Inbox card').closest('[data-ticket-id="101"]') as HTMLElement, {
+        ctrlKey: true,
+      });
+
+      expect(onTicketClick).not.toHaveBeenCalled();
+      expect(screen.getByText('Modal ticket')).toBeInTheDocument();
+      expect(screen.getByText('Test description')).toBeInTheDocument();
     });
   });
 

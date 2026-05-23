@@ -674,4 +674,116 @@ describe('Tickets CRUD', () => {
       expect(response.status).toBe(400);
     });
   });
+
+  describe('bulk ticket actions', () => {
+    it('deletes multiple INBOX tickets atomically', async () => {
+      const first = await ctx.createTicket({ title: '[e2e] Bulk delete one' });
+      const second = await ctx.createTicket({ title: '[e2e] Bulk delete two' });
+
+      const response = await ctx.api.post<{
+        success: boolean;
+        deletedTicketIds: number[];
+        deletedTicketKeys: string[];
+      }>(`/api/projects/${ctx.projectId}/tickets/bulk/delete`, {
+        ticketIds: [first.id, second.id],
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.data.success).toBe(true);
+      expect(response.data.deletedTicketIds).toEqual([first.id, second.id]);
+      expect(response.data.deletedTicketKeys).toHaveLength(2);
+
+      const remaining = await prisma.ticket.findMany({
+        where: { id: { in: [first.id, second.id] } },
+      });
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('blocks bulk delete when one selected ticket is no longer in INBOX', async () => {
+      const inboxTicket = await ctx.createTicket({ title: '[e2e] Bulk delete keep' });
+      const specifyTicket = await ctx.createTicket({
+        title: '[e2e] Bulk delete blocked',
+        stage: 'SPECIFY',
+      });
+
+      const response = await ctx.api.post<{
+        error: string;
+        code: string;
+        details: { blockingTicketId?: number; blockingTicketKey?: string; reason: string };
+      }>(`/api/projects/${ctx.projectId}/tickets/bulk/delete`, {
+        ticketIds: [inboxTicket.id, specifyTicket.id],
+      });
+
+      expect(response.status).toBe(409);
+      expect(response.data.code).toBe('BULK_ACTION_BLOCKED');
+      expect(response.data.details.blockingTicketId).toBe(specifyTicket.id);
+
+      const remaining = await prisma.ticket.findMany({
+        where: { id: { in: [inboxTicket.id, specifyTicket.id] } },
+      });
+      expect(remaining).toHaveLength(2);
+    });
+
+    it('allows project members to bulk update agent and rejects outsiders', async () => {
+      const first = await ctx.createTicket({ title: '[e2e] Bulk agent one' });
+      const second = await ctx.createTicket({ title: '[e2e] Bulk agent two' });
+      const member = await ctx.createUser(`member-${Date.now()}@project${ctx.projectId}.e2e.test`);
+      const outsider = await ctx.createUser(`outsider-${Date.now()}@e2e.local`);
+
+      await prisma.projectMember.create({
+        data: {
+          projectId: ctx.projectId,
+          userId: member.id,
+          role: 'member',
+        },
+      });
+
+      const memberResponse = await ctx.api.patch<{
+        success: boolean;
+        updatedTickets: Array<{ id: number; ticketKey: string; agent: string | null }>;
+      }>(
+        `/api/projects/${ctx.projectId}/tickets/bulk/agent`,
+        { ticketIds: [first.id, second.id], agent: 'CODEX' },
+        { headers: { 'x-test-user-id': member.id } }
+      );
+
+      expect(memberResponse.status).toBe(200);
+      expect(memberResponse.data.updatedTickets.map((ticket) => ticket.agent)).toEqual(['CODEX', 'CODEX']);
+
+      const outsiderResponse = await ctx.api.patch<{ error: string }>(
+        `/api/projects/${ctx.projectId}/tickets/bulk/agent`,
+        { ticketIds: [first.id], agent: 'CLAUDE' },
+        { headers: { 'x-test-user-id': outsider.id } }
+      );
+
+      expect(outsiderResponse.status).toBe(404);
+    });
+
+    it('blocks bulk agent updates when one selected ticket is no longer in INBOX', async () => {
+      const inboxTicket = await ctx.createTicket({ title: '[e2e] Bulk agent keep' });
+      const buildTicket = await ctx.createTicket({
+        title: '[e2e] Bulk agent blocked',
+        stage: 'BUILD',
+      });
+
+      const response = await ctx.api.patch<{
+        error: string;
+        code: string;
+        details: { blockingTicketId?: number; reason: string };
+      }>(`/api/projects/${ctx.projectId}/tickets/bulk/agent`, {
+        ticketIds: [inboxTicket.id, buildTicket.id],
+        agent: 'CLAUDE',
+      });
+
+      expect(response.status).toBe(409);
+      expect(response.data.code).toBe('BULK_ACTION_BLOCKED');
+      expect(response.data.details.blockingTicketId).toBe(buildTicket.id);
+
+      const persisted = await prisma.ticket.findMany({
+        where: { id: { in: [inboxTicket.id, buildTicket.id] } },
+        orderBy: { id: 'asc' },
+      });
+      expect(persisted.map((ticket) => ticket.agent)).toEqual([null, null]);
+    });
+  });
 });

@@ -27,6 +27,14 @@ interface StageColumnProps {
   totalCount?: number; // Total tickets for this stage (for pagination)
   onLoadMore?: () => void; // Callback to load more tickets
   isLoadingMore?: boolean; // Whether more tickets are being loaded
+  isSelectionMode?: boolean;
+  selectedTicketIds?: Set<number>;
+  selectionAnchorId?: number | null;
+  onSelectionChange?: (
+    ticket: TicketWithVersion,
+    selected: boolean,
+    gesture: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }
+  ) => void;
 }
 
 // Stage configuration matching original design
@@ -149,6 +157,10 @@ export const StageColumn = React.memo(
     totalCount,
     onLoadMore,
     isLoadingMore = false,
+    isSelectionMode = false,
+    selectedTicketIds,
+    selectionAnchorId,
+    onSelectionChange,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
@@ -272,6 +284,11 @@ export const StageColumn = React.memo(
                       isDraggable={isDraggable}
                       activePreviewTicket={activePreviewTicket || null}
                       activeDeploymentTicket={activeDeploymentTicket || null}
+                      showSelectionCheckbox={stage === Stage.INBOX}
+                      isSelectionMode={isSelectionMode}
+                      isSelected={selectedTicketIds?.has(ticket.id) ?? false}
+                      {...(selectionAnchorId !== undefined ? { selectionAnchorId } : {})}
+                      {...(onSelectionChange ? { onSelectionChange } : {})}
                       {...(onTicketClick && { onTicketClick })}
                     />
                   );

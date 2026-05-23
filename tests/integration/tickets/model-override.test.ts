@@ -164,4 +164,66 @@ describe('PATCH /api/projects/:projectId/tickets/:id/model-config (AIB-678)', ()
     expect(response.data.implementModel).toBe('claude-sonnet-4-6');
     expect(response.data.specifyModel).toBe('claude-opus-4-7');
   });
+
+  it('applies one model choice across all selected ticket model fields', async () => {
+    const first = await ctx.createTicket({ title: '[e2e] Bulk model one' });
+    const second = await ctx.createTicket({ title: '[e2e] Bulk model two' });
+
+    const response = await ctx.api.patch<{
+      success: boolean;
+      appliedModelId: string;
+      updatedTickets: Array<{
+        id: number;
+        specifyModel: string | null;
+        planModel: string | null;
+        implementModel: string | null;
+        quickImplModel: string | null;
+        verifyModel: string | null;
+      }>;
+    }>(`/api/projects/${ctx.projectId}/tickets/bulk/model-config`, {
+      ticketIds: [first.id, second.id],
+      modelId: 'claude-sonnet-4-6',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.data.appliedModelId).toBe('claude-sonnet-4-6');
+    expect(response.data.updatedTickets).toHaveLength(2);
+    for (const ticket of response.data.updatedTickets) {
+      expect(ticket.specifyModel).toBe('claude-sonnet-4-6');
+      expect(ticket.planModel).toBe('claude-sonnet-4-6');
+      expect(ticket.implementModel).toBe('claude-sonnet-4-6');
+      expect(ticket.quickImplModel).toBe('claude-sonnet-4-6');
+      expect(ticket.verifyModel).toBe('claude-sonnet-4-6');
+    }
+  });
+
+  it('rejects outsiders and blocks non-INBOX tickets for bulk model updates', async () => {
+    const inboxTicket = await ctx.createTicket({ title: '[e2e] Bulk model inbox' });
+    const verifyTicket = await ctx.createTicket({
+      title: '[e2e] Bulk model blocked',
+      stage: 'VERIFY',
+    });
+    const outsider = await ctx.createUser(`outsider-${Date.now()}@e2e.local`);
+
+    const blockedResponse = await ctx.api.patch<{
+      error: string;
+      code: string;
+      details: { blockingTicketId?: number; reason: string };
+    }>(`/api/projects/${ctx.projectId}/tickets/bulk/model-config`, {
+      ticketIds: [inboxTicket.id, verifyTicket.id],
+      modelId: 'claude-opus-4-7',
+    });
+
+    expect(blockedResponse.status).toBe(409);
+    expect(blockedResponse.data.code).toBe('BULK_ACTION_BLOCKED');
+    expect(blockedResponse.data.details.blockingTicketId).toBe(verifyTicket.id);
+
+    const outsiderResponse = await ctx.api.patch<{ error: string }>(
+      `/api/projects/${ctx.projectId}/tickets/bulk/model-config`,
+      { ticketIds: [inboxTicket.id], modelId: 'claude-opus-4-7' },
+      { headers: { 'x-test-user-id': outsider.id } }
+    );
+
+    expect(outsiderResponse.status).toBe(404);
+  });
 });

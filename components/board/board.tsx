@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Job } from '@prisma/client';
 import { OfflineIndicator } from './offline-indicator';
 import { BoardModals } from './board-modals';
 import { BoardGrid } from './board-grid';
+import { BulkActionBar } from './bulk-action-bar';
 import { RetroSpecSection } from './retro-spec-section';
 import { Stage } from '@/lib/stage-transitions';
 import { TicketWithVersion } from '@/lib/types';
@@ -19,6 +20,16 @@ import { useDropZoneStyle } from './hooks/use-drop-zone-style';
 import { useBoardCacheSeeding } from './hooks/use-board-cache-seeding';
 import { useBoardKeyboardShortcuts } from './hooks/use-board-keyboard-shortcuts';
 import { useZoneStates } from './hooks/use-zone-states';
+import { useBulkDeleteTickets, BulkActionErrorResponse } from '@/lib/hooks/mutations/useBulkDeleteTickets';
+import { useBulkUpdateTicketAgent } from '@/lib/hooks/mutations/useBulkUpdateTicketAgent';
+import { useBulkUpdateTicketModelConfig } from '@/lib/hooks/mutations/useBulkUpdateTicketModelConfig';
+import { useBulkMergeTickets } from '@/lib/hooks/mutations/useBulkMergeTickets';
+
+interface BulkSelectionGesture {
+  shiftKey: boolean;
+  metaKey: boolean;
+  ctrlKey: boolean;
+}
 
 interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
@@ -49,8 +60,89 @@ export function Board({
   const shipTicketCount = ticketsByStage[Stage.SHIP]?.length ?? 0;
   const hasMoreShipTickets = shipTicketCount < shipTotal;
   const handleLoadMoreShip = useCallback(() => loadMoreShip(shipTicketCount), [loadMoreShip, shipTicketCount]);
+  const inboxVisibleOrder = useMemo(
+    () => (ticketsByStage[Stage.INBOX] ?? []).map((ticket) => ticket.id),
+    [ticketsByStage]
+  );
+  const [selectedInboxTicketIds, setSelectedInboxTicketIds] = useState<number[]>([]);
+  const [selectionAnchorId, setSelectionAnchorId] = useState<number | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkChangeAgentOpen, setBulkChangeAgentOpen] = useState(false);
+  const [bulkChangeModelOpen, setBulkChangeModelOpen] = useState(false);
+  const [bulkMergeOpen, setBulkMergeOpen] = useState(false);
 
   const allTickets = useMemo(() => Object.values(ticketsByStage).flat(), [ticketsByStage]);
+  const isSelectionMode = selectedInboxTicketIds.length > 0;
+  const selectedInboxTicketIdSet = useMemo(
+    () => new Set(selectedInboxTicketIds),
+    [selectedInboxTicketIds]
+  );
+  const selectedInboxTickets = useMemo(
+    () => (ticketsByStage[Stage.INBOX] ?? []).filter((ticket) => selectedInboxTicketIdSet.has(ticket.id)),
+    [selectedInboxTicketIdSet, ticketsByStage]
+  );
+  const bulkDeleteTickets = useBulkDeleteTickets(projectId);
+  const bulkUpdateTicketAgent = useBulkUpdateTicketAgent(projectId);
+  const bulkUpdateTicketModelConfig = useBulkUpdateTicketModelConfig(projectId);
+  const bulkMergeTickets = useBulkMergeTickets(projectId);
+
+  const clearBulkSelection = useCallback(() => {
+    setSelectedInboxTicketIds([]);
+    setSelectionAnchorId(null);
+    setBulkDeleteOpen(false);
+    setBulkChangeAgentOpen(false);
+    setBulkChangeModelOpen(false);
+    setBulkMergeOpen(false);
+  }, []);
+
+  const formatBulkError = useCallback((error: unknown) => {
+    if (error instanceof BulkActionErrorResponse && error.details?.blockingTicketKey) {
+      return `${error.details.blockingTicketKey}: ${error.details.reason ?? error.message}`;
+    }
+    if (error instanceof Error) {
+      return error.message;
+    }
+    return 'Bulk action failed';
+  }, []);
+
+  const handleSelectionChange = useCallback((
+    ticket: TicketWithVersion,
+    selected: boolean,
+    gesture: BulkSelectionGesture
+  ) => {
+    setSelectedInboxTicketIds((current) => {
+      const currentSet = new Set(current);
+      const anchorId = selectionAnchorId ?? ticket.id;
+
+      if (gesture.shiftKey && current.length > 0) {
+        const anchorIndex = inboxVisibleOrder.indexOf(anchorId);
+        const targetIndex = inboxVisibleOrder.indexOf(ticket.id);
+        if (anchorIndex >= 0 && targetIndex >= 0) {
+          const [start, end] = anchorIndex < targetIndex
+            ? [anchorIndex, targetIndex]
+            : [targetIndex, anchorIndex];
+          for (const rangedTicketId of inboxVisibleOrder.slice(start, end + 1)) {
+            currentSet.add(rangedTicketId);
+          }
+          return inboxVisibleOrder.filter((ticketId) => currentSet.has(ticketId));
+        }
+      }
+
+      if (selected) {
+        currentSet.add(ticket.id);
+      } else {
+        currentSet.delete(ticket.id);
+      }
+
+      return inboxVisibleOrder.filter((ticketId) => currentSet.has(ticketId));
+    });
+    setSelectionAnchorId(ticket.id);
+  }, [inboxVisibleOrder, selectionAnchorId]);
+
+  useEffect(() => {
+    setSelectedInboxTicketIds((current) => current.filter((ticketId) => inboxVisibleOrder.includes(ticketId)));
+    setSelectionAnchorId((current) => (current != null && inboxVisibleOrder.includes(current) ? current : null));
+  }, [inboxVisibleOrder]);
 
   const retroSpec = useRetroSpecState({ projectId, hasSpecs });
   const urlModal = useUrlTicketModal({ projectId, allTickets });
@@ -174,6 +266,100 @@ export function Board({
       retroSpec.isRetroSpecModalOpen,
   });
 
+  useEffect(() => {
+    if (!isSelectionMode) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        clearBulkSelection();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [clearBulkSelection, isSelectionMode]);
+
+  const handleBulkDeleteConfirm = useCallback(async () => {
+    try {
+      await bulkDeleteTickets.mutateAsync(selectedInboxTicketIds);
+      toast({
+        title: 'Tickets deleted',
+        description: `${selectedInboxTicketIds.length} INBOX tickets were deleted.`,
+      });
+      clearBulkSelection();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Bulk delete failed',
+        description: formatBulkError(error),
+      });
+    }
+  }, [bulkDeleteTickets, clearBulkSelection, formatBulkError, selectedInboxTicketIds, toast]);
+
+  const handleBulkAgentSave = useCallback(async (agent: import('@prisma/client').Agent | null) => {
+    try {
+      await bulkUpdateTicketAgent.mutateAsync({ ticketIds: selectedInboxTicketIds, agent });
+      toast({
+        title: 'Agent updated',
+        description: `${selectedInboxTicketIds.length} INBOX tickets were updated.`,
+      });
+      clearBulkSelection();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Bulk agent update failed',
+        description: formatBulkError(error),
+      });
+      throw error;
+    }
+  }, [bulkUpdateTicketAgent, clearBulkSelection, formatBulkError, selectedInboxTicketIds, toast]);
+
+  const handleBulkModelSave = useCallback(async (modelId: string) => {
+    try {
+      await bulkUpdateTicketModelConfig.mutateAsync({ ticketIds: selectedInboxTicketIds, modelId });
+      toast({
+        title: 'Model updated',
+        description: `${selectedInboxTicketIds.length} INBOX tickets were updated.`,
+      });
+      clearBulkSelection();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Bulk model update failed',
+        description: formatBulkError(error),
+      });
+      throw error;
+    }
+  }, [bulkUpdateTicketModelConfig, clearBulkSelection, formatBulkError, selectedInboxTicketIds, toast]);
+
+  const handleBulkMergeSave = useCallback(async (input: {
+    ticketIds: number[];
+    expectedBaseTicketId: number;
+    title: string;
+    description: string;
+  }) => {
+    try {
+      await bulkMergeTickets.mutateAsync(input);
+      if (selectedTicket && input.ticketIds.includes(selectedTicket.id)) {
+        urlModal.handleModalClose(false);
+      }
+      toast({
+        title: 'Tickets merged',
+        description: `${input.ticketIds.length} INBOX tickets were merged.`,
+      });
+      clearBulkSelection();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Bulk merge failed',
+        description: formatBulkError(error),
+      });
+      throw error;
+    }
+  }, [bulkMergeTickets, clearBulkSelection, formatBulkError, selectedTicket, toast, urlModal]);
+
   return (
     <div className="w-full h-full bg-background">
       <OfflineIndicator />
@@ -214,6 +400,27 @@ export function Board({
         onDragCancel={drag.handleDragCancel}
         trashZone={trashZone}
         closeZone={closeZone}
+        isSelectionMode={isSelectionMode}
+        selectedInboxTicketIds={selectedInboxTicketIdSet}
+        selectionAnchorId={selectionAnchorId}
+        onSelectionChange={handleSelectionChange}
+      />
+
+      <BulkActionBar
+        isVisible={isSelectionMode}
+        selectedCount={selectedInboxTicketIds.length}
+        onCancel={clearBulkSelection}
+        canMerge={selectedInboxTicketIds.length >= 2}
+        onDelete={() => setBulkDeleteOpen(true)}
+        onChangeAgent={() => setBulkChangeAgentOpen(true)}
+        onChangeModel={() => setBulkChangeModelOpen(true)}
+        onMerge={() => setBulkMergeOpen(true)}
+        isBusy={
+          bulkDeleteTickets.isPending ||
+          bulkUpdateTicketAgent.isPending ||
+          bulkUpdateTicketModelConfig.isPending ||
+          bulkMergeTickets.isPending
+        }
       />
 
       <BoardModals
@@ -256,6 +463,21 @@ export function Board({
         isRetroSpecModalOpen={retroSpec.isRetroSpecModalOpen}
         setIsRetroSpecModalOpen={retroSpec.setIsRetroSpecModalOpen}
         handleRetroSpecSuccess={retroSpec.handleRetroSpecSuccess}
+        bulkDeleteOpen={bulkDeleteOpen}
+        setBulkDeleteOpen={setBulkDeleteOpen}
+        onBulkDeleteConfirm={handleBulkDeleteConfirm}
+        isBulkDeleting={bulkDeleteTickets.isPending}
+        bulkChangeAgentOpen={bulkChangeAgentOpen}
+        setBulkChangeAgentOpen={setBulkChangeAgentOpen}
+        onBulkAgentSave={handleBulkAgentSave}
+        bulkChangeModelOpen={bulkChangeModelOpen}
+        setBulkChangeModelOpen={setBulkChangeModelOpen}
+        onBulkModelSave={handleBulkModelSave}
+        bulkSelectionCount={selectedInboxTickets.length}
+        bulkMergeOpen={bulkMergeOpen}
+        setBulkMergeOpen={setBulkMergeOpen}
+        selectedBulkTickets={selectedInboxTickets}
+        onBulkMergeSave={handleBulkMergeSave}
       />
     </div>
   );

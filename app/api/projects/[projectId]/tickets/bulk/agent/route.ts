@@ -1,0 +1,66 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { ZodError } from 'zod';
+import { prisma } from '@/lib/db/client';
+import { verifyProjectAccess } from '@/lib/db/auth-helpers';
+import { bulkUpdateTicketAgent, getBulkInboxTicketLookup } from '@/lib/db/tickets';
+import { ProjectIdSchema, bulkAgentUpdateSchema } from '@/lib/validations/ticket';
+
+function bulkRouteError(error: unknown) {
+  if (error instanceof ZodError) {
+    return NextResponse.json(
+      { error: 'Validation failed', code: 'VALIDATION_ERROR', issues: error.issues },
+      { status: 400 }
+    );
+  }
+
+  if (error instanceof Error && error.message === 'Unauthorized') {
+    return NextResponse.json({ error: 'Unauthorized', code: 'AUTH_ERROR' }, { status: 401 });
+  }
+
+  if (error instanceof Error && error.message === 'Project not found') {
+    return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  }
+
+  console.error('Bulk ticket agent route error:', error);
+  return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ projectId: string }> }
+): Promise<NextResponse> {
+  try {
+    const { projectId: projectIdParam } = await context.params;
+    const projectIdResult = ProjectIdSchema.parse(projectIdParam);
+    const projectId = parseInt(projectIdResult, 10);
+
+    await verifyProjectAccess(projectId, request);
+    const { ticketIds, agent } = bulkAgentUpdateSchema.parse(await request.json());
+
+    const result = await prisma.$transaction(async (tx) => {
+      const lookup = await getBulkInboxTicketLookup(tx, projectId, ticketIds);
+      if (!lookup.ok) {
+        return NextResponse.json(
+          { error: 'Bulk action blocked', code: 'BULK_ACTION_BLOCKED', details: lookup.details },
+          { status: 409 }
+        );
+      }
+
+      const updatedTickets = await bulkUpdateTicketAgent(
+        tx,
+        projectId,
+        lookup.data.orderedTickets.map((ticket) => ticket.id),
+        agent
+      );
+
+      return NextResponse.json({
+        success: true,
+        updatedTickets,
+      });
+    });
+
+    return result;
+  } catch (error) {
+    return bulkRouteError(error);
+  }
+}

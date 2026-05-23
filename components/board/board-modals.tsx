@@ -12,6 +12,12 @@ import { NewTicketModal } from './new-ticket-modal';
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog';
 import { ShortcutsHelpButton } from './shortcuts-help-button';
 import { RetroSpecModal } from './retro-spec-modal';
+import { BulkChangeAgentDialog } from './bulk-change-agent-dialog';
+import { BulkChangeModelDialog } from './bulk-change-model-dialog';
+import { BulkMergeDialog } from './bulk-merge-dialog';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import type { Agent } from '@prisma/client';
 import type { JobStatusDto } from '@/app/lib/schemas/job-polling';
 import type { useTicketJobs } from '@/app/lib/hooks/queries/useTicketJobs';
 import type { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
@@ -73,6 +79,26 @@ interface BoardModalsProps {
   isRetroSpecModalOpen: boolean;
   setIsRetroSpecModalOpen: (open: boolean) => void;
   handleRetroSpecSuccess: () => void;
+  bulkDeleteOpen: boolean;
+  setBulkDeleteOpen: (open: boolean) => void;
+  onBulkDeleteConfirm: () => Promise<void>;
+  isBulkDeleting: boolean;
+  bulkChangeAgentOpen: boolean;
+  setBulkChangeAgentOpen: (open: boolean) => void;
+  onBulkAgentSave: (agent: Agent | null) => Promise<void>;
+  bulkChangeModelOpen: boolean;
+  setBulkChangeModelOpen: (open: boolean) => void;
+  onBulkModelSave: (modelId: string) => Promise<void>;
+  bulkSelectionCount: number;
+  bulkMergeOpen: boolean;
+  setBulkMergeOpen: (open: boolean) => void;
+  selectedBulkTickets: TicketWithVersion[];
+  onBulkMergeSave: (input: {
+    ticketIds: number[];
+    expectedBaseTicketId: number;
+    title: string;
+    description: string;
+  }) => Promise<void>;
 }
 
 /**
@@ -121,6 +147,21 @@ export function BoardModals(props: BoardModalsProps) {
     isRetroSpecModalOpen,
     setIsRetroSpecModalOpen,
     handleRetroSpecSuccess,
+    bulkDeleteOpen,
+    setBulkDeleteOpen,
+    onBulkDeleteConfirm,
+    isBulkDeleting,
+    bulkChangeAgentOpen,
+    setBulkChangeAgentOpen,
+    onBulkAgentSave,
+    bulkChangeModelOpen,
+    setBulkChangeModelOpen,
+    onBulkModelSave,
+    bulkSelectionCount,
+    bulkMergeOpen,
+    setBulkMergeOpen,
+    selectedBulkTickets,
+    onBulkMergeSave,
   } = props;
 
   const rollbackKey = pendingRollback
@@ -215,7 +256,47 @@ export function BoardModals(props: BoardModalsProps) {
           />
         </>
       )}
+
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle>Delete {bulkSelectionCount} tickets?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes the selected INBOX tickets. There is no undo.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setBulkDeleteOpen(false)} disabled={isBulkDeleting}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={() => void onBulkDeleteConfirm()} disabled={isBulkDeleting}>
+              {isBulkDeleting ? 'Deleting...' : 'Delete tickets'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <BulkChangeAgentDialog
+        open={bulkChangeAgentOpen}
+        onOpenChange={setBulkChangeAgentOpen}
+        selectedCount={bulkSelectionCount}
+        projectDefaultAgent={defaultAgent}
+        onSave={onBulkAgentSave}
+      />
+
+      <BulkChangeModelDialog
+        open={bulkChangeModelOpen}
+        onOpenChange={setBulkChangeModelOpen}
+        selectedCount={bulkSelectionCount}
+        onSave={onBulkModelSave}
+      />
+
+      <BulkMergeDialog
+        open={bulkMergeOpen}
+        onOpenChange={setBulkMergeOpen}
+        selectedTickets={selectedBulkTickets}
+        onSave={onBulkMergeSave}
+      />
     </>
   );
 }
-

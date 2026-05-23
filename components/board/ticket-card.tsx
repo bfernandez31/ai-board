@@ -40,6 +40,15 @@ interface DraggableTicketCardProps {
   activePreviewTicket?: { ticketKey: string } | null;
   /** Ticket ID with active deployment (PENDING/RUNNING deploy job) */
   activeDeploymentTicket?: number | null;
+  showSelectionCheckbox?: boolean;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  selectionAnchorId?: number | null;
+  onSelectionChange?: (
+    ticket: TicketWithVersion,
+    selected: boolean,
+    gesture: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }
+  ) => void;
 }
 
 /**
@@ -55,7 +64,12 @@ export const TicketCard = React.memo(
     isDraggable = true,
     onTicketClick,
     activePreviewTicket,
-    activeDeploymentTicket
+    activeDeploymentTicket,
+    showSelectionCheckbox = false,
+    isSelectionMode = false,
+    isSelected = false,
+    selectionAnchorId,
+    onSelectionChange,
   }: DraggableTicketCardProps) => {
     const isMounted = useHasMounted();
     const [showDeployModal, setShowDeployModal] = useState(false);
@@ -144,7 +158,24 @@ export const TicketCard = React.memo(
     // Cancel button: visible when ticket has PENDING or RUNNING workflow job
     const isCancellableJob = workflowJob && (workflowJob.status === 'PENDING' || workflowJob.status === 'RUNNING');
 
-    const handleClick = () => {
+    const handleSelectionToggle = React.useCallback((
+      event: React.MouseEvent<HTMLButtonElement | HTMLDivElement>,
+      selected: boolean
+    ) => {
+      event.stopPropagation();
+      onSelectionChange?.(ticket, selected, {
+        shiftKey: event.shiftKey,
+        metaKey: event.metaKey,
+        ctrlKey: event.ctrlKey,
+      });
+    }, [onSelectionChange, ticket]);
+
+    const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
+      if (showSelectionCheckbox && (event.metaKey || event.ctrlKey)) {
+        handleSelectionToggle(event, !isSelected);
+        return;
+      }
+
       // Prevent click during drag
       if (!isDragging && onTicketClick) {
         onTicketClick(ticket);
@@ -168,27 +199,47 @@ export const TicketCard = React.memo(
         {...(isMounted ? listeners : {})}
       >
         <Card
-          className="group aurora-glass aurora-glass-hover border p-4 transition-all hover:-translate-y-0.5 overflow-hidden"
+          className={`group aurora-glass aurora-glass-hover border p-4 transition-all hover:-translate-y-0.5 overflow-hidden ${
+            isSelected ? 'border-primary ring-2 ring-primary/40 bg-primary/5' : ''
+          }`}
           role="article"
           aria-label={`Ticket ${ticket.ticketKey}: ${ticket.title}`}
+          data-selection-mode={isSelectionMode ? 'true' : 'false'}
+          data-selected={isSelected ? 'true' : 'false'}
+          data-selection-anchor={selectionAnchorId === ticket.id ? 'true' : 'false'}
         >
           {/* Header: Ticket Key and Badges */}
           <div className="flex items-start justify-between mb-3">
-            {(() => {
-              const dashIdx = ticket.ticketKey.indexOf('-');
-              const keyPrefix = dashIdx >= 0 ? ticket.ticketKey.slice(0, dashIdx + 1) : ticket.ticketKey;
-              const keyNumber = dashIdx >= 0 ? ticket.ticketKey.slice(dashIdx + 1) : '';
-              return (
-                <span
-                  className="font-mono text-[12px] tracking-[0.08em] leading-none"
-                  data-testid="ticket-key"
+            <div className="flex items-start gap-2">
+              {showSelectionCheckbox && (
+                <button
+                  type="button"
+                  aria-label={isSelected ? `Deselect ${ticket.ticketKey}` : `Select ${ticket.ticketKey}`}
+                  aria-pressed={isSelected}
+                  className={`mt-0.5 h-4 w-4 shrink-0 rounded border transition-opacity ${
+                    isSelectionMode ? 'opacity-100 border-primary bg-primary/15' : 'opacity-0 group-hover:opacity-100 border-border bg-background/80'
+                  }`}
+                  onClick={(event) => handleSelectionToggle(event, !isSelected)}
                 >
-                  <span className="font-bold text-ctp-mauve">#</span>
-                  <span className="font-normal text-ctp-overlay0">{keyPrefix}</span>
-                  <span className="font-semibold text-ctp-mauve">{keyNumber}</span>
-                </span>
-              );
-            })()}
+                  <span className="sr-only">{isSelected ? 'Selected' : 'Not selected'}</span>
+                </button>
+              )}
+              {(() => {
+                const dashIdx = ticket.ticketKey.indexOf('-');
+                const keyPrefix = dashIdx >= 0 ? ticket.ticketKey.slice(0, dashIdx + 1) : ticket.ticketKey;
+                const keyNumber = dashIdx >= 0 ? ticket.ticketKey.slice(dashIdx + 1) : '';
+                return (
+                  <span
+                    className="font-mono text-[12px] tracking-[0.08em] leading-none"
+                    data-testid="ticket-key"
+                  >
+                    <span className="font-bold text-ctp-mauve">#</span>
+                    <span className="font-normal text-ctp-overlay0">{keyPrefix}</span>
+                    <span className="font-semibold text-ctp-mauve">{keyNumber}</span>
+                  </span>
+                );
+              })()}
+            </div>
             <div className="flex items-center gap-2">
               <QualityScoreBadge score={qualityScore ?? null} compact />
               {ticket.workflowType === 'QUICK' && (

@@ -46,6 +46,14 @@ interface BoardGridProps {
   // Zones
   trashZone: ZoneState;
   closeZone: ZoneState;
+  isSelectionMode: boolean;
+  selectedInboxTicketIds: Set<number>;
+  selectionAnchorId: number | null;
+  onSelectionChange: (
+    ticket: TicketWithVersion,
+    selected: boolean,
+    gesture: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }
+  ) => void;
 }
 
 /**
@@ -77,6 +85,10 @@ export function BoardGrid({
   onDragCancel,
   trashZone,
   closeZone,
+  isSelectionMode,
+  selectedInboxTicketIds,
+  selectionAnchorId,
+  onSelectionChange,
 }: BoardGridProps) {
   // AIB-148: Filter out CLOSED stage from board display — CLOSED tickets are not shown on the board
   const stages = getAllStages().filter((s) => s !== Stage.CLOSED);
@@ -128,6 +140,14 @@ export function BoardGrid({
                 isBlockedByJob={isBlocked}
                 activePreviewTicket={activePreviewTicket}
                 activeDeploymentTicket={activeDeploymentTicket}
+                isSelectionMode={stage === Stage.INBOX ? isSelectionMode : false}
+                {...(stage === Stage.INBOX
+                  ? {
+                      selectedTicketIds: selectedInboxTicketIds,
+                      selectionAnchorId,
+                      onSelectionChange,
+                    }
+                  : {})}
                 {...(stage === Stage.SHIP && hasMoreShipTickets && {
                   totalCount: shipTotal,
                   onLoadMore: onLoadMoreShip,

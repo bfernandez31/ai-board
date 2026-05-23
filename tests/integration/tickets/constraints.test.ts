@@ -12,6 +12,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { createTestProject, createTestTicket } from '@/tests/helpers/db-setup';
+import type { TicketAttachment } from '@/app/lib/types/ticket';
 
 // Short unique suffix for test data (fits within ticketKey max 11 chars)
 const shortId = () => Math.random().toString(36).slice(2, 6);
@@ -282,6 +283,106 @@ describe('Database Constraints', () => {
       } catch (error) {
         expect(error).toBeDefined();
       }
+    });
+  });
+
+  describe('bulk merge constraints', () => {
+    it('merges INBOX tickets atomically and preserves deduped attachments', async () => {
+      const sharedAttachment: TicketAttachment = {
+        type: 'uploaded',
+        url: 'https://example.com/shared.png',
+        filename: 'shared.png',
+        mimeType: 'image/png',
+        sizeBytes: 1234,
+        uploadedAt: new Date().toISOString(),
+        cloudinaryPublicId: 'shared-public-id',
+      };
+
+      const first = await ctx.createTicket({ title: '[e2e] Merge base', description: 'Base description' });
+      const second = await ctx.createTicket({ title: '[e2e] Merge source', description: 'Source description' });
+
+      await prisma.ticket.update({
+        where: { id: first.id },
+        data: { attachments: [sharedAttachment] },
+      });
+      await prisma.ticket.update({
+        where: { id: second.id },
+        data: { attachments: [sharedAttachment] },
+      });
+
+      const response = await ctx.api.post<{
+        success: boolean;
+        survivor: { id: number; title: string; description: string; attachments: TicketAttachment[] };
+        deletedSourceTicketIds: number[];
+      }>(`/api/projects/${ctx.projectId}/tickets/bulk/merge`, {
+        ticketIds: [first.id, second.id],
+        expectedBaseTicketId: first.id,
+        title: '[e2e] Merged title',
+        description: 'Base description\n\n---\nSource: AIB-2 Merge source\nSource description',
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.data.survivor.id).toBe(first.id);
+      expect(response.data.deletedSourceTicketIds).toEqual([second.id]);
+      expect(response.data.survivor.attachments).toHaveLength(1);
+
+      const tickets = await prisma.ticket.findMany({
+        where: { id: { in: [first.id, second.id] } },
+        orderBy: { id: 'asc' },
+      });
+      expect(tickets).toHaveLength(1);
+      expect(tickets[0]?.id).toBe(first.id);
+    });
+
+    it('blocks merge when a selected ticket is no longer in INBOX and leaves all tickets unchanged', async () => {
+      const first = await ctx.createTicket({ title: '[e2e] Merge inbox', description: 'Keep me' });
+      const second = await ctx.createTicket({
+        title: '[e2e] Merge blocked',
+        description: 'Do not merge',
+        stage: 'VERIFY',
+      });
+
+      const response = await ctx.api.post<{
+        error: string;
+        code: string;
+        details: { blockingTicketId?: number; reason: string };
+      }>(`/api/projects/${ctx.projectId}/tickets/bulk/merge`, {
+        ticketIds: [first.id, second.id],
+        expectedBaseTicketId: first.id,
+        title: '[e2e] Should fail',
+        description: 'Should fail',
+      });
+
+      expect(response.status).toBe(409);
+      expect(response.data.code).toBe('BULK_ACTION_BLOCKED');
+      expect(response.data.details.blockingTicketId).toBe(second.id);
+
+      const tickets = await prisma.ticket.findMany({
+        where: { id: { in: [first.id, second.id] } },
+        orderBy: { id: 'asc' },
+      });
+      expect(tickets).toHaveLength(2);
+      expect(tickets.map((ticket) => ticket.stage)).toEqual(['INBOX', 'VERIFY']);
+    });
+
+    it('blocks stale expectedBaseTicketId conflicts', async () => {
+      const first = await ctx.createTicket({ title: '[e2e] Oldest', description: 'Oldest description' });
+      const second = await ctx.createTicket({ title: '[e2e] Newer', description: 'Newer description' });
+
+      const response = await ctx.api.post<{
+        error: string;
+        code: string;
+        details: { blockingTicketId?: number; reason: string };
+      }>(`/api/projects/${ctx.projectId}/tickets/bulk/merge`, {
+        ticketIds: [first.id, second.id],
+        expectedBaseTicketId: second.id,
+        title: '[e2e] Wrong base',
+        description: 'Wrong base merge',
+      });
+
+      expect(response.status).toBe(409);
+      expect(response.data.code).toBe('BULK_ACTION_BLOCKED');
+      expect(response.data.details.blockingTicketId).toBe(first.id);
     });
   });
 });

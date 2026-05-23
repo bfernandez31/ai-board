@@ -210,12 +210,14 @@ export function TicketDetailModal({
     }
     setLocalTicket((current) => {
       // Only update if different ticket, newer version, or branch changed
-      // Branch comparison is needed because branch updates don't bump version
+      // Branch comparison is needed because branch updates don't bump version.
+      // updatedAt keeps modal-local state aligned after bulk merge survivor refreshes.
       if (
         !current ||
         current.id !== ticket.id ||
         current.version !== ticket.version ||
-        current.branch !== ticket.branch
+        current.branch !== ticket.branch ||
+        current.updatedAt !== ticket.updatedAt
       ) {
         return ticket;
       }

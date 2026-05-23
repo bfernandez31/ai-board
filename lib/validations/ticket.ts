@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ClarificationPolicy, Agent } from '@prisma/client';
 import { TicketAttachment } from '@/app/lib/types/ticket';
+import { claudeModelIdSchema } from '@/app/lib/schemas/model-config';
 
 /**
  * Project ID validation schema
@@ -139,6 +140,42 @@ export const updateBranchSchema = z.object({
   branch: z.string().max(200).nullable(),
 });
 
+const bulkTicketIdsBaseSchema = z
+  .array(z.number().int().positive('Ticket IDs must be positive integers'))
+  .refine((ticketIds) => new Set(ticketIds).size === ticketIds.length, {
+    message: 'Duplicate ticket IDs are not allowed',
+    path: ['ticketIds'],
+  });
+
+export const bulkTicketIdsSchema = z.object({
+  ticketIds: bulkTicketIdsBaseSchema.min(1, 'Select at least one ticket'),
+});
+
+export const bulkAgentUpdateSchema = bulkTicketIdsSchema.extend({
+  agent: z.nativeEnum(Agent).nullable(),
+});
+
+export const bulkModelUpdateSchema = bulkTicketIdsSchema.extend({
+  modelId: claudeModelIdSchema,
+});
+
+export const bulkActionBlockingDetailsSchema = z.object({
+  blockingTicketId: z.number().int().positive().optional(),
+  blockingTicketKey: z.string().regex(/^[A-Z0-9]{3,6}-\d+$/).optional(),
+  reason: z.string().min(1),
+});
+
+export const bulkMergeDraftSchema = z.object({
+  ticketIds: bulkTicketIdsBaseSchema.min(2, 'Select at least two tickets to merge'),
+  expectedBaseTicketId: z.number().int().positive(),
+  title: titleSchema,
+  description: descriptionSchema,
+  previewOrder: z.array(z.number().int().positive()).optional(),
+}).refine((data) => data.ticketIds.includes(data.expectedBaseTicketId), {
+  message: 'Expected base ticket must be one of the selected tickets',
+  path: ['expectedBaseTicketId'],
+});
+
 /**
  * Validation schema for transition API requests
  * Validates targetStage is a valid Stage enum value
@@ -178,3 +215,8 @@ export type PatchTicketInput = z.infer<typeof patchTicketSchema>;
 export type UpdateBranchInput = z.infer<typeof updateBranchSchema>;
 export type TransitionRequest = z.infer<typeof TransitionRequestSchema>;
 export type TicketResponse = z.infer<typeof ticketResponseSchema>;
+export type BulkTicketIdsInput = z.infer<typeof bulkTicketIdsSchema>;
+export type BulkAgentUpdateInput = z.infer<typeof bulkAgentUpdateSchema>;
+export type BulkModelUpdateInput = z.infer<typeof bulkModelUpdateSchema>;
+export type BulkActionBlockingDetails = z.infer<typeof bulkActionBlockingDetailsSchema>;
+export type BulkMergeDraftInput = z.infer<typeof bulkMergeDraftSchema>;
