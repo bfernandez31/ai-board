@@ -312,7 +312,7 @@ export function dedupeTicketAttachments(attachments: TicketAttachment[]): Ticket
   const seenKeys = new Set<string>();
 
   for (const attachment of attachments) {
-    const stableKey = attachment.cloudinaryPublicId?.trim() || attachment.url.trim();
+    const stableKey = getTicketAttachmentStableKey(attachment);
     if (!stableKey || seenKeys.has(stableKey)) {
       continue;
     }
@@ -321,6 +321,10 @@ export function dedupeTicketAttachments(attachments: TicketAttachment[]): Ticket
   }
 
   return dedupedAttachments;
+}
+
+function getTicketAttachmentStableKey(attachment: TicketAttachment): string {
+  return attachment.cloudinaryPublicId?.trim() || attachment.url.trim();
 }
 
 export function coerceTicketAttachments(attachments: Prisma.JsonValue): TicketAttachment[] {
@@ -332,14 +336,12 @@ export function coerceTicketAttachments(attachments: Prisma.JsonValue): TicketAt
 }
 
 export function buildBulkMergeDescription(tickets: BulkTicketRecord[]): string {
-  if (tickets.length === 0) {
-    return '';
-  }
-
-  const [baseTicket, ...sourceTickets] = tickets;
+  const baseTicket = tickets[0];
   if (!baseTicket) {
     return '';
   }
+
+  const sourceTickets = tickets.slice(1);
   const sections = [baseTicket.description?.trim() ?? ''].filter(Boolean);
 
   for (const sourceTicket of sourceTickets) {

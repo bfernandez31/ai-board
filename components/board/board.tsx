@@ -73,6 +73,7 @@ export function Board({
 
   const allTickets = useMemo(() => Object.values(ticketsByStage).flat(), [ticketsByStage]);
   const isSelectionMode = selectedInboxTicketIds.length > 0;
+  const selectedInboxTicketCount = selectedInboxTicketIds.length;
   const selectedInboxTicketIdSet = useMemo(
     () => new Set(selectedInboxTicketIds),
     [selectedInboxTicketIds]
@@ -104,6 +105,21 @@ export function Board({
     }
     return 'Bulk action failed';
   }, []);
+
+  const showBulkSuccessToast = useCallback((title: string, count: number, action: string) => {
+    toast({
+      title,
+      description: `${count} INBOX tickets were ${action}.`,
+    });
+  }, [toast]);
+
+  const showBulkFailureToast = useCallback((title: string, error: unknown) => {
+    toast({
+      variant: 'destructive',
+      title,
+      description: formatBulkError(error),
+    });
+  }, [formatBulkError, toast]);
 
   const handleSelectionChange = useCallback((
     ticket: TicketWithVersion,
@@ -284,55 +300,34 @@ export function Board({
   const handleBulkDeleteConfirm = useCallback(async () => {
     try {
       await bulkDeleteTickets.mutateAsync(selectedInboxTicketIds);
-      toast({
-        title: 'Tickets deleted',
-        description: `${selectedInboxTicketIds.length} INBOX tickets were deleted.`,
-      });
+      showBulkSuccessToast('Tickets deleted', selectedInboxTicketCount, 'deleted');
       clearBulkSelection();
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Bulk delete failed',
-        description: formatBulkError(error),
-      });
+      showBulkFailureToast('Bulk delete failed', error);
     }
-  }, [bulkDeleteTickets, clearBulkSelection, formatBulkError, selectedInboxTicketIds, toast]);
+  }, [bulkDeleteTickets, clearBulkSelection, selectedInboxTicketCount, selectedInboxTicketIds, showBulkFailureToast, showBulkSuccessToast]);
 
   const handleBulkAgentSave = useCallback(async (agent: import('@prisma/client').Agent | null) => {
     try {
       await bulkUpdateTicketAgent.mutateAsync({ ticketIds: selectedInboxTicketIds, agent });
-      toast({
-        title: 'Agent updated',
-        description: `${selectedInboxTicketIds.length} INBOX tickets were updated.`,
-      });
+      showBulkSuccessToast('Agent updated', selectedInboxTicketCount, 'updated');
       clearBulkSelection();
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Bulk agent update failed',
-        description: formatBulkError(error),
-      });
+      showBulkFailureToast('Bulk agent update failed', error);
       throw error;
     }
-  }, [bulkUpdateTicketAgent, clearBulkSelection, formatBulkError, selectedInboxTicketIds, toast]);
+  }, [bulkUpdateTicketAgent, clearBulkSelection, selectedInboxTicketCount, selectedInboxTicketIds, showBulkFailureToast, showBulkSuccessToast]);
 
   const handleBulkModelSave = useCallback(async (modelId: string) => {
     try {
       await bulkUpdateTicketModelConfig.mutateAsync({ ticketIds: selectedInboxTicketIds, modelId });
-      toast({
-        title: 'Model updated',
-        description: `${selectedInboxTicketIds.length} INBOX tickets were updated.`,
-      });
+      showBulkSuccessToast('Model updated', selectedInboxTicketCount, 'updated');
       clearBulkSelection();
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Bulk model update failed',
-        description: formatBulkError(error),
-      });
+      showBulkFailureToast('Bulk model update failed', error);
       throw error;
     }
-  }, [bulkUpdateTicketModelConfig, clearBulkSelection, formatBulkError, selectedInboxTicketIds, toast]);
+  }, [bulkUpdateTicketModelConfig, clearBulkSelection, selectedInboxTicketCount, selectedInboxTicketIds, showBulkFailureToast, showBulkSuccessToast]);
 
   const handleBulkMergeSave = useCallback(async (input: {
     ticketIds: number[];
@@ -345,20 +340,13 @@ export function Board({
       if (selectedTicket && input.ticketIds.includes(selectedTicket.id)) {
         urlModal.handleModalClose(false);
       }
-      toast({
-        title: 'Tickets merged',
-        description: `${input.ticketIds.length} INBOX tickets were merged.`,
-      });
+      showBulkSuccessToast('Tickets merged', input.ticketIds.length, 'merged');
       clearBulkSelection();
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Bulk merge failed',
-        description: formatBulkError(error),
-      });
+      showBulkFailureToast('Bulk merge failed', error);
       throw error;
     }
-  }, [bulkMergeTickets, clearBulkSelection, formatBulkError, selectedTicket, toast, urlModal]);
+  }, [bulkMergeTickets, clearBulkSelection, selectedTicket, showBulkFailureToast, showBulkSuccessToast, urlModal]);
 
   return (
     <div className="w-full h-full bg-background">
@@ -408,9 +396,9 @@ export function Board({
 
       <BulkActionBar
         isVisible={isSelectionMode}
-        selectedCount={selectedInboxTicketIds.length}
+        selectedCount={selectedInboxTicketCount}
         onCancel={clearBulkSelection}
-        canMerge={selectedInboxTicketIds.length >= 2}
+        canMerge={selectedInboxTicketCount >= 2}
         onDelete={() => setBulkDeleteOpen(true)}
         onChangeAgent={() => setBulkChangeAgentOpen(true)}
         onChangeModel={() => setBulkChangeModelOpen(true)}
