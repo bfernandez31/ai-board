@@ -274,6 +274,7 @@ model Notification {
   type               NotificationType @default(MENTION)
   mergedIntoTicketId Int? // Surviving base ticket id when type = TICKET_MERGED
   ticketKeySnapshot  String?          @db.VarChar(20) // Human-readable key captured at notification time
+  projectIdSnapshot  Int? // Project id captured at notification time (survives SetNull cascade so nav URLs stay valid)
   read               Boolean          @default(false)
   readAt             DateTime?
   createdAt          DateTime         @default(now())

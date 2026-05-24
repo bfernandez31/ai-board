@@ -23,8 +23,8 @@ export async function GET(_request: NextRequest) {
     const notificationsDisplay = notifications.map((n: Awaited<ReturnType<typeof getNotificationsForUser>>[number]) => {
       const isMerged = n.type === 'TICKET_MERGED';
       const projectId = isMerged
-        ? n.mergedIntoTicket?.projectId ?? n.ticket?.projectId ?? null
-        : n.ticket?.projectId ?? null;
+        ? n.mergedIntoTicket?.projectId ?? n.ticket?.projectId ?? n.projectIdSnapshot ?? null
+        : n.ticket?.projectId ?? n.projectIdSnapshot ?? null;
       const ticketKey = isMerged
         ? n.mergedIntoTicket?.ticketKey ?? n.ticket?.ticketKey ?? n.ticketKeySnapshot ?? null
         : n.ticket?.ticketKey ?? n.ticketKeySnapshot ?? null;

@@ -158,6 +158,7 @@ export async function bulkDeleteInbox(
       commentId: null,
       type: 'TICKET_DELETED' as const,
       ticketKeySnapshot: t.ticketKey,
+      projectIdSnapshot: t.projectId,
     }));
 
   if (notificationRecipients.length > 0) {
@@ -269,7 +270,7 @@ export async function bulkMergeInbox(
     ...sourcesAsc.flatMap((s) => readAttachments(s.attachments)),
   ];
 
-  const sourceNotifications = sourcesAsc
+  const notificationRecipients = sourcesAsc
     .filter((t) => t.creatorId && t.creatorId !== actorId)
     .map((t) => ({
       recipientId: t.creatorId as string,
@@ -279,24 +280,8 @@ export async function bulkMergeInbox(
       type: 'TICKET_MERGED' as const,
       mergedIntoTicketId: baseTicketId,
       ticketKeySnapshot: t.ticketKey,
+      projectIdSnapshot: base.projectId,
     }));
-
-  const baseNotification =
-    base.creatorId && base.creatorId !== actorId
-      ? [
-          {
-            recipientId: base.creatorId,
-            actorId,
-            ticketId: base.id,
-            commentId: null,
-            type: 'TICKET_MERGED' as const,
-            mergedIntoTicketId: baseTicketId,
-            ticketKeySnapshot: base.ticketKey,
-          },
-        ]
-      : [];
-
-  const notificationRecipients = [...baseNotification, ...sourceNotifications];
 
   if (notificationRecipients.length > 0) {
     await tx.notification.createMany({ data: notificationRecipients });

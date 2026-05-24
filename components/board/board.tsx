@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Agent, Job } from '@prisma/client';
 import { OfflineIndicator } from './offline-indicator';
 import { BoardModals } from './board-modals';
@@ -78,6 +78,15 @@ export function Board({
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [isBulkMergeOpen, setIsBulkMergeOpen] = useState(false);
   const [bulkMergeError, setBulkMergeError] = useState<string | null>(null);
+  const [bulkAgentSuccessTick, setBulkAgentSuccessTick] = useState(0);
+  const [bulkModelSuccessTick, setBulkModelSuccessTick] = useState(0);
+
+  useEffect(() => {
+    if (isBulkDeleteOpen && selectedIds.length === 0) {
+      setIsBulkDeleteOpen(false);
+    }
+  }, [isBulkDeleteOpen, selectedIds.length]);
+
   const bulkDeleteMutation = useBulkDeleteTickets(projectId);
   const bulkMergeMutation = useBulkMergeTickets(projectId);
   const bulkUpdateMutation = useBulkUpdateTicketField(projectId);
@@ -138,6 +147,7 @@ export function Board({
         { kind: 'agent', ticketIds: selectedIds, value: agent },
         {
           onSuccess: () => {
+            setBulkAgentSuccessTick((t) => t + 1);
             toast({
               title: 'Agent updated',
               description: agent
@@ -161,6 +171,7 @@ export function Board({
         { kind: 'model', ticketIds: selectedIds, value: model },
         {
           onSuccess: () => {
+            setBulkModelSuccessTick((t) => t + 1);
             toast({
               title: 'Model updated',
               description: model
@@ -361,10 +372,12 @@ export function Board({
         onDelete={() => setIsBulkDeleteOpen(true)}
         onAgentChange={handleBulkAgentChange}
         onModelChange={handleBulkModelChange}
-        agentPending={bulkUpdateMutation.isPending}
-        modelPending={bulkUpdateMutation.isPending}
+        agentPending={bulkUpdateMutation.isPending && bulkUpdateMutation.variables?.kind === 'agent'}
+        modelPending={bulkUpdateMutation.isPending && bulkUpdateMutation.variables?.kind === 'model'}
         mergePending={bulkMergeMutation.isPending}
         deletePending={bulkDeleteMutation.isPending}
+        agentSuccessTick={bulkAgentSuccessTick}
+        modelSuccessTick={bulkModelSuccessTick}
       />
 
       <BulkDeleteConfirmationModal
