@@ -164,4 +164,84 @@ describe('PATCH /api/projects/:projectId/tickets/:id/model-config (AIB-678)', ()
     expect(response.data.implementModel).toBe('claude-sonnet-4-6');
     expect(response.data.specifyModel).toBe('claude-opus-4-7');
   });
+
+  describe('POST /api/projects/:projectId/tickets/bulk/model', () => {
+    it('writes the chosen model to all 5 per-command override fields atomically', async () => {
+      const t1 = await ctx.createTicket({ title: '[e2e] bulk model 1' });
+      const t2 = await ctx.createTicket({ title: '[e2e] bulk model 2' });
+
+      const response = await ctx.api.post<{
+        success: true;
+        updated: { appliedFields: readonly string[]; count: number };
+      }>(`/api/projects/${ctx.projectId}/tickets/bulk/model`, {
+        ticketIds: [t1.id, t2.id],
+        model: 'claude-opus-4-7',
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.data.updated.count).toBe(2);
+      expect(response.data.updated.appliedFields).toEqual([
+        'specifyModel',
+        'planModel',
+        'implementModel',
+        'quickImplModel',
+        'verifyModel',
+      ]);
+
+      const rows = await prisma.ticket.findMany({ where: { id: { in: [t1.id, t2.id] } } });
+      for (const r of rows) {
+        expect(r.specifyModel).toBe('claude-opus-4-7');
+        expect(r.planModel).toBe('claude-opus-4-7');
+        expect(r.implementModel).toBe('claude-opus-4-7');
+        expect(r.quickImplModel).toBe('claude-opus-4-7');
+        expect(r.verifyModel).toBe('claude-opus-4-7');
+      }
+    });
+
+    it('clears all 5 fields when model is null', async () => {
+      const t = await ctx.createTicket({ title: '[e2e] bulk model clear' });
+      await prisma.ticket.update({
+        where: { id: t.id },
+        data: {
+          specifyModel: 'claude-opus-4-7',
+          planModel: 'claude-opus-4-7',
+          implementModel: 'claude-opus-4-7',
+          quickImplModel: 'claude-opus-4-7',
+          verifyModel: 'claude-opus-4-7',
+        },
+      });
+      const response = await ctx.api.post<{ success: true }>(
+        `/api/projects/${ctx.projectId}/tickets/bulk/model`,
+        { ticketIds: [t.id], model: null }
+      );
+      expect(response.status).toBe(200);
+      const row = await prisma.ticket.findUnique({ where: { id: t.id } });
+      expect(row!.specifyModel).toBeNull();
+      expect(row!.planModel).toBeNull();
+      expect(row!.implementModel).toBeNull();
+      expect(row!.quickImplModel).toBeNull();
+      expect(row!.verifyModel).toBeNull();
+    });
+
+    it('returns 400 VALIDATION_ERROR when model exceeds 50 chars', async () => {
+      const t = await ctx.createTicket({ title: '[e2e] bulk model too long' });
+      const response = await ctx.api.post<{ code: string }>(
+        `/api/projects/${ctx.projectId}/tickets/bulk/model`,
+        { ticketIds: [t.id], model: 'm'.repeat(51) }
+      );
+      expect(response.status).toBe(400);
+      expect(response.data.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 409 BULK_CONFLICT_STAGE_DRIFT when a ticket drifted out of INBOX', async () => {
+      const t = await ctx.createTicket({ title: '[e2e] bulk model drift' });
+      await prisma.ticket.update({ where: { id: t.id }, data: { stage: 'SPECIFY' } });
+      const response = await ctx.api.post<{ code: string }>(
+        `/api/projects/${ctx.projectId}/tickets/bulk/model`,
+        { ticketIds: [t.id], model: 'claude-opus-4-7' }
+      );
+      expect(response.status).toBe(409);
+      expect(response.data.code).toBe('BULK_CONFLICT_STAGE_DRIFT');
+    });
+  });
 });

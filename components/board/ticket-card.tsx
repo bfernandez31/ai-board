@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Sparkles } from 'lucide-react';
 import { TicketWithVersion } from '@/lib/types';
 import { getAgentLabel } from '@/app/lib/utils/agent-icons';
@@ -28,6 +29,13 @@ import { isAutoModeEligible } from '@/app/lib/tickets/auto-mode-eligibility';
 import { X } from 'lucide-react';
 import { STAGE_MODEL_KEYS, STAGE_MODEL_LABELS } from '@/lib/models/claude-models';
 
+export interface TicketCardSelection {
+  isSelected: boolean;
+  isSelectMode: boolean;
+  onToggle: () => void;
+  onRangeSelect: () => void;
+}
+
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
   workflowJob?: Job | null; // User Story 1: Workflow job display
@@ -40,6 +48,8 @@ interface DraggableTicketCardProps {
   activePreviewTicket?: { ticketKey: string } | null;
   /** Ticket ID with active deployment (PENDING/RUNNING deploy job) */
   activeDeploymentTicket?: number | null;
+  /** Bulk-selection wiring (INBOX only) — AIB-821 */
+  selection?: TicketCardSelection;
 }
 
 /**
@@ -55,7 +65,8 @@ export const TicketCard = React.memo(
     isDraggable = true,
     onTicketClick,
     activePreviewTicket,
-    activeDeploymentTicket
+    activeDeploymentTicket,
+    selection,
   }: DraggableTicketCardProps) => {
     const isMounted = useHasMounted();
     const [showDeployModal, setShowDeployModal] = useState(false);
@@ -144,9 +155,23 @@ export const TicketCard = React.memo(
     // Cancel button: visible when ticket has PENDING or RUNNING workflow job
     const isCancellableJob = workflowJob && (workflowJob.status === 'PENDING' || workflowJob.status === 'RUNNING');
 
-    const handleClick = () => {
-      // Prevent click during drag
-      if (!isDragging && onTicketClick) {
+    const handleClick = (event: React.MouseEvent) => {
+      if (isDragging) return;
+      if (selection) {
+        if (event.shiftKey) {
+          event.preventDefault();
+          event.stopPropagation();
+          selection.onRangeSelect();
+          return;
+        }
+        if (event.metaKey || event.ctrlKey) {
+          event.preventDefault();
+          event.stopPropagation();
+          selection.onToggle();
+          return;
+        }
+      }
+      if (onTicketClick) {
         onTicketClick(ticket);
       }
     };
@@ -168,10 +193,37 @@ export const TicketCard = React.memo(
         {...(isMounted ? listeners : {})}
       >
         <Card
-          className="group aurora-glass aurora-glass-hover border p-4 transition-all hover:-translate-y-0.5 overflow-hidden"
+          className="group aurora-glass aurora-glass-hover border p-4 transition-all hover:-translate-y-0.5 overflow-hidden relative"
           role="article"
           aria-label={`Ticket ${ticket.ticketKey}: ${ticket.title}`}
+          data-selected={selection?.isSelected ? 'true' : 'false'}
         >
+          {selection && (
+            <div
+              className={`absolute top-2 right-2 z-10 ${
+                selection.isSelectMode || selection.isSelected
+                  ? 'opacity-100'
+                  : 'opacity-0 group-hover:opacity-100'
+              } transition-opacity`}
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <Checkbox
+                aria-label={`Select ticket ${ticket.ticketKey}`}
+                data-testid="bulk-select-checkbox"
+                checked={selection.isSelected}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (event.shiftKey) {
+                    event.preventDefault();
+                    selection.onRangeSelect();
+                  }
+                }}
+                onCheckedChange={() => selection.onToggle()}
+              />
+            </div>
+          )}
           {/* Header: Ticket Key and Badges */}
           <div className="flex items-start justify-between mb-3">
             {(() => {

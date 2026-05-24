@@ -259,6 +259,53 @@ describe('Database Constraints', () => {
       await expect(createPromise).rejects.toThrow();
     });
 
+    it('bulk merge accepts title at 100 chars and rejects 101', async () => {
+      const base = await ctx.createTicket({ title: '[e2e] bulk title boundary base' });
+      const src = await ctx.createTicket({ title: '[e2e] bulk title boundary src' });
+      const baseRow = await prisma.ticket.findUniqueOrThrow({ where: { id: base.id } });
+      const srcRow = await prisma.ticket.findUniqueOrThrow({ where: { id: src.id } });
+      const expectedVersions = {
+        [String(baseRow.id)]: baseRow.version,
+        [String(srcRow.id)]: srcRow.version,
+      };
+
+      const title100 = 'A'.repeat(100);
+      const okResponse = await ctx.api.post<{ success: true }>(
+        `/api/projects/${ctx.projectId}/tickets/bulk/merge`,
+        {
+          baseTicketId: baseRow.id,
+          sourceTicketIds: [srcRow.id],
+          title: title100,
+          description: 'merged desc',
+          expectedVersions,
+        }
+      );
+      expect(okResponse.status).toBe(200);
+
+      // Re-prepare for boundary fail case
+      const base2 = await ctx.createTicket({ title: '[e2e] bulk title boundary base2' });
+      const src2 = await ctx.createTicket({ title: '[e2e] bulk title boundary src2' });
+      const base2Row = await prisma.ticket.findUniqueOrThrow({ where: { id: base2.id } });
+      const src2Row = await prisma.ticket.findUniqueOrThrow({ where: { id: src2.id } });
+      const expectedVersions2 = {
+        [String(base2Row.id)]: base2Row.version,
+        [String(src2Row.id)]: src2Row.version,
+      };
+
+      const failResponse = await ctx.api.post<{ code: string }>(
+        `/api/projects/${ctx.projectId}/tickets/bulk/merge`,
+        {
+          baseTicketId: base2Row.id,
+          sourceTicketIds: [src2Row.id],
+          title: 'A'.repeat(101),
+          description: 'merged desc',
+          expectedVersions: expectedVersions2,
+        }
+      );
+      expect(failResponse.status).toBe(400);
+      expect(failResponse.data.code).toBe('VALIDATION_ERROR');
+    });
+
     it('should enforce unique github owner/repo combination', async () => {
       const id = shortId();
 

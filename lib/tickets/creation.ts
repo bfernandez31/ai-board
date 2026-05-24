@@ -45,7 +45,8 @@ async function cleanupFiles(files: formidable.File[]): Promise<void> {
 export async function createTicketWithAttachments(
   projectId: number,
   input: CreateTicketInput,
-  uploadedFiles: formidable.File[]
+  uploadedFiles: formidable.File[],
+  options: { creatorId?: string | null } = {}
 ): Promise<CreateTicketResult> {
   const externalImages = extractImageUrls(input.description);
 
@@ -102,10 +103,14 @@ export async function createTicketWithAttachments(
   // try/finally guarantees temp upload files are cleaned up on every post-validation
   // path — including when DB writes throw, which the previous scattered cleanups missed.
   try {
-    const ticket = await createTicket(projectId, {
-      ...input,
-      attachments: undefined,
-    });
+    const ticket = await createTicket(
+      projectId,
+      {
+        ...input,
+        attachments: undefined,
+      },
+      options.creatorId != null ? { creatorId: options.creatorId } : {}
+    );
 
     const attachments: TicketAttachment[] = [];
 

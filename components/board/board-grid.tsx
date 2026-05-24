@@ -11,7 +11,7 @@ import {
 import { Stage, getAllStages } from '@/lib/stage-transitions';
 import { TicketWithVersion } from '@/lib/types';
 import type { DualJobState } from '@/lib/types/job-types';
-import { StageColumn } from './stage-column';
+import { StageColumn, type BulkSelectionContext } from './stage-column';
 import { DragOverlay } from './drag-overlay';
 import { TrashZone } from './trash-zone';
 import { CloseZone } from './close-zone';
@@ -46,6 +46,9 @@ interface BoardGridProps {
   // Zones
   trashZone: ZoneState;
   closeZone: ZoneState;
+
+  // Bulk-selection wiring (INBOX only) — AIB-821
+  bulkSelection?: BulkSelectionContext;
 }
 
 /**
@@ -77,6 +80,7 @@ export function BoardGrid({
   onDragCancel,
   trashZone,
   closeZone,
+  bulkSelection,
 }: BoardGridProps) {
   // AIB-148: Filter out CLOSED stage from board display — CLOSED tickets are not shown on the board
   const stages = getAllStages().filter((s) => s !== Stage.CLOSED);
@@ -115,12 +119,14 @@ export function BoardGrid({
               !isRollbackToPlan &&
               !isNewRollbackTarget;
 
+            const isInboxInSelectMode =
+              stage === Stage.INBOX && bulkSelection?.isSelectMode === true;
             return (
               <StageColumn
                 key={stage}
                 stage={stage}
                 tickets={ticketsByStage[stage] || []}
-                isDraggable={isOnline}
+                isDraggable={isOnline && !isInboxInSelectMode}
                 onTicketClick={onTicketClick}
                 projectId={projectId}
                 getTicketJobs={getTicketJobs}
@@ -128,6 +134,7 @@ export function BoardGrid({
                 isBlockedByJob={isBlocked}
                 activePreviewTicket={activePreviewTicket}
                 activeDeploymentTicket={activeDeploymentTicket}
+                {...(stage === Stage.INBOX && bulkSelection && { bulkSelection })}
                 {...(stage === Stage.SHIP && hasMoreShipTickets && {
                   totalCount: shipTotal,
                   onLoadMore: onLoadMoreShip,

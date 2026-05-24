@@ -23,6 +23,7 @@ model User {
   memberships           ProjectMember[]
   notificationsReceived Notification[]        @relation("NotificationRecipient")
   notificationsCreated  Notification[]        @relation("NotificationActor")
+  ticketsCreated        Ticket[]              @relation("TicketCreator")
   pushSubscriptions     PushSubscription[]
   personalAccessTokens  PersonalAccessToken[]
   subscription          Subscription?
@@ -44,7 +45,7 @@ model User {
 - `updatedAt`: Last modification timestamp
 
 **Relationships**:
-- One-to-many: Projects, Comments, Accounts, Sessions, ProjectMembers (as memberships), Notifications (as recipient and actor), PushSubscriptions, PersonalAccessTokens
+- One-to-many: Projects, Comments, Accounts, Sessions, ProjectMembers (as memberships), Notifications (as recipient and actor), Tickets (as creator), PushSubscriptions, PersonalAccessTokens
 
 **Constraints**:
 - Unique email address
@@ -170,39 +171,42 @@ Tickets track work items through six workflow stages.
 
 ```prisma
 model Ticket {
-  id                     Int                       @id @default(autoincrement())
-  title                  String                    @db.VarChar(100)
-  description            String                    @db.VarChar(10000)
-  stage                  Stage                     @default(INBOX)
-  version                Int                       @default(1)
-  projectId              Int
-  ticketNumber           Int
-  ticketKey              String                    @unique @db.VarChar(20)
-  branch                 String?                   @db.VarChar(200)
-  previewUrl             String?                   @db.VarChar(500)
-  autoMode               Boolean                   @default(false)
-  workflowType           WorkflowType              @default(FULL)
-  attachments            Json?                     @default("[]")
-  createdAt              DateTime                  @default(now())
-  updatedAt              DateTime                  @default(now()) @updatedAt
-  clarificationPolicy    ClarificationPolicy?
-  agent                  Agent?
-  closedAt               DateTime?
-  specifyModel           String?                   @db.VarChar(50)
-  planModel              String?                   @db.VarChar(50)
-  implementModel         String?                   @db.VarChar(50)
-  quickImplModel         String?                   @db.VarChar(50)
-  verifyModel            String?                   @db.VarChar(50)
-  comments               Comment[]
-  jobs                   Job[]
-  notifications          Notification[]
-  project                Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  sourceComparisons      ComparisonRecord[]        @relation("ComparisonSourceTicket")
-  winnerComparisons      ComparisonRecord[]        @relation("ComparisonWinnerTicket")
-  comparisonParticipants ComparisonParticipant[]
-  decisionVerdicts       DecisionPointEvaluation[] @relation("DecisionVerdictTicket")
-  outcome                TicketOutcome?
-  analyses               TicketAnalysis[]
+  id                      Int                       @id @default(autoincrement())
+  title                   String                    @db.VarChar(100)
+  description             String                    @db.VarChar(10000)
+  stage                   Stage                     @default(INBOX)
+  version                 Int                       @default(1)
+  projectId               Int
+  ticketNumber            Int
+  ticketKey               String                    @unique @db.VarChar(20)
+  branch                  String?                   @db.VarChar(200)
+  previewUrl              String?                   @db.VarChar(500)
+  autoMode                Boolean                   @default(false)
+  workflowType            WorkflowType              @default(FULL)
+  attachments             Json?                     @default("[]")
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @default(now()) @updatedAt
+  clarificationPolicy     ClarificationPolicy?
+  agent                   Agent?
+  closedAt                DateTime?
+  specifyModel            String?                   @db.VarChar(50)
+  planModel               String?                   @db.VarChar(50)
+  implementModel          String?                   @db.VarChar(50)
+  quickImplModel          String?                   @db.VarChar(50)
+  verifyModel             String?                   @db.VarChar(50)
+  creatorId               String?                   @db.VarChar(255)
+  creator                 User?                     @relation("TicketCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  comments                Comment[]
+  jobs                    Job[]
+  notifications           Notification[]            @relation("NotificationTicket")
+  mergedIntoNotifications Notification[]            @relation("NotificationMergedInto")
+  project                 Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceComparisons       ComparisonRecord[]        @relation("ComparisonSourceTicket")
+  winnerComparisons       ComparisonRecord[]        @relation("ComparisonWinnerTicket")
+  comparisonParticipants  ComparisonParticipant[]
+  decisionVerdicts        DecisionPointEvaluation[] @relation("DecisionVerdictTicket")
+  outcome                 TicketOutcome?
+  analyses                TicketAnalysis[]
 
   @@unique([projectId, ticketNumber])
   @@index([projectId])
@@ -210,6 +214,7 @@ model Ticket {
   @@index([updatedAt])
   @@index([projectId, workflowType])
   @@index([ticketKey])
+  @@index([creatorId])
 }
 ```
 
@@ -240,6 +245,7 @@ model Ticket {
 - `implementModel`: Optional Claude model override for IMPLEMENT jobs (max 50 chars, nullable)
 - `quickImplModel`: Optional Claude model override for QUICK-IMPL jobs (max 50 chars, nullable)
 - `verifyModel`: Optional Claude model override for VERIFY jobs (max 50 chars, nullable)
+- `creatorId`: User who created the ticket (nullable foreign key to `User.id`, max 255 chars). Nullable because legacy rows have no recorded creator. Populated by every ticket-creation code path (manual create, duplicate, full clone, MCP `create_ticket`, inbox-analysis spawner). `onDelete: SetNull` so user deletion leaves the ticket intact while clearing attribution
 - `attachments`: Image attachments (JSON array of TicketAttachment objects, default: empty array)
 - `previewUrl`: Vercel preview deployment URL (max 500 chars, nullable, HTTPS-only, Vercel domain pattern)
   - Set when manual deployment triggered from VERIFY stage
@@ -254,7 +260,8 @@ model Ticket {
 
 **Relationships**:
 - Belongs to Project (required, cascade delete)
-- One-to-many: Jobs, Comments, Notifications, ComparisonParticipants, DecisionPointEvaluations (as verdict ticket)
+- Belongs to User as `creator` (optional, set-null on delete)
+- One-to-many: Jobs, Comments, Notifications (as source ticket, set-null on delete), Notifications (as merged-into ticket, set-null on delete), ComparisonParticipants, DecisionPointEvaluations (as verdict ticket)
 - Referenced by: ComparisonRecord (as sourceTicket or winnerTicket)
 
 **Constraints**:
@@ -265,6 +272,7 @@ model Ticket {
 - Index on updatedAt for sorting
 - Composite index (projectId, workflowType) for filtering
 - Index on ticketKey for lookup by key
+- Index on creatorId for resolving creator-addressed notifications during bulk delete/merge
 
 **Validation Rules**:
 - Title: 1-100 characters, alphanumeric + basic punctuation, no emojis
@@ -285,6 +293,7 @@ model Ticket {
 - Clarification policy overrides project default when set
 - Agent overrides project default when set; null means inherit from project `defaultAgent`
 - Effective agent resolved at dispatch time via `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`
+- `creatorId` is populated at every creation path (manual create, duplicate, full-clone, MCP, inbox-analysis spawner) by forwarding the actor's `userId` from the API auth layer. Bulk merge preserves the base's `creatorId`; source tickets' creators receive a `TICKET_MERGED` notification before their tickets are hard-deleted
 - Per-stage model overrides (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) are nullable; null means inherit the project's value for that stage, which itself falls back to the global fallback `claude-opus-4-7`
 - Stored per-stage overrides are preserved (not cleared) when the ticket's agent is switched to a non-Claude provider; they become active again if the agent is switched back to Claude
 - Resolution at dispatch: `ticket.{stageModel}` → `project.{stageModel}` → `claude-opus-4-7` (only when effective agent is Claude)
@@ -303,6 +312,14 @@ model Ticket {
   - Sets closedAt timestamp automatically
   - CLOSED tickets excluded from board display but included in search results
   - CLOSED is terminal state (no outbound transitions)
+- **Bulk operations (INBOX only)**:
+  - Bulk delete, bulk merge, bulk change-agent, and bulk change-model accept 1–50 ticket ids per request (merge requires ≥ 2)
+  - Every bulk operation runs in a single `prisma.$transaction` with a `WHERE stage = 'INBOX' AND projectId = ?` guard; partial mutations are impossible
+  - Bulk delete and bulk merge enforce optimistic concurrency via an `expectedVersions` map keyed on ticket id; mismatches return 409 with `conflictingIds` and `currentVersions`
+  - Bulk merge designates the smallest-id selected ticket as the surviving base, increments its `version` by 1, overwrites its `title`/`description`/`attachments` (attachments concatenated `[...base, ...sortedSources]`), and hard-deletes every source ticket; `agent`, all five model overrides, `autoMode`, `clarificationPolicy`, `workflowType`, `stage`, `branch`, `previewUrl`, `creatorId`, `ticketKey`, and `ticketNumber` on the base are preserved
+  - Bulk change-model writes the chosen value to all five per-stage override fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on every targeted ticket
+  - Bulk delete and bulk merge create `TICKET_DELETED` / `TICKET_MERGED` `Notification` rows for every non-actor `creatorId` inside the same transaction, BEFORE the source ticket is removed; the `Notification.ticketId → SetNull` FK preserves the row after the cascade and `ticketKeySnapshot` keeps the human-readable identifier readable in the recipient's feed
+  - Bulk change-agent and bulk change-model are silent — no notifications, no other field mutations
 
 ### Job
 
@@ -669,24 +686,28 @@ model Comment {
 
 ### Notification
 
-Notifications track @mentions in comments for real-time collaboration alerts.
+Notifications track @mentions in comments and bulk-action events (delete, merge) so the original creator of an affected ticket is informed when another project member acts on it.
 
 ```prisma
 model Notification {
-  id          Int       @id @default(autoincrement())
-  recipientId String    // User receiving the notification
-  actorId     String    // User who created the mention
-  commentId   Int       // Source comment
-  ticketId    Int       // Source ticket (for navigation)
-  read        Boolean   @default(false)
-  readAt      DateTime?
-  createdAt   DateTime  @default(now())
-  deletedAt   DateTime? // Soft delete for 30-day retention policy
+  id                 Int              @id @default(autoincrement())
+  recipientId        String           // User receiving the notification
+  actorId            String           // User who created the event
+  commentId          Int?             // Source comment (null for non-MENTION types)
+  ticketId           Int?             // Source ticket (null after source-ticket cascade)
+  type               NotificationType @default(MENTION)
+  mergedIntoTicketId Int?             // Surviving base ticket id when type = TICKET_MERGED
+  ticketKeySnapshot  String?          @db.VarChar(20) // Human-readable key captured at notification time
+  read               Boolean          @default(false)
+  readAt             DateTime?
+  createdAt          DateTime         @default(now())
+  deletedAt          DateTime?        // Soft delete for 30-day retention policy
 
-  recipient User    @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  actor     User    @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
-  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  ticket    Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  recipient        User     @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor            User     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  comment          Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  ticket           Ticket?  @relation("NotificationTicket", fields: [ticketId], references: [id], onDelete: SetNull)
+  mergedIntoTicket Ticket?  @relation("NotificationMergedInto", fields: [mergedIntoTicketId], references: [id], onDelete: SetNull)
 
   @@index([recipientId, createdAt])
   @@index([recipientId, read])
@@ -694,14 +715,17 @@ model Notification {
 }
 ```
 
-**Purpose**: Real-time mention notifications for collaboration
+**Purpose**: Real-time alerts for collaboration events — mentions in comments and bulk-action events that affect tickets owned by another user.
 
 **Fields**:
 - `id`: Auto-incrementing unique identifier
-- `recipientId`: User who was mentioned (required foreign key)
-- `actorId`: User who posted the comment with mention (required foreign key)
-- `commentId`: Source comment containing the mention (required foreign key)
-- `ticketId`: Parent ticket for navigation (required foreign key)
+- `recipientId`: User who receives the notification (required foreign key)
+- `actorId`: User who performed the action (required foreign key)
+- `commentId`: Source comment for `MENTION`; null for `TICKET_DELETED` and `TICKET_MERGED`
+- `ticketId`: Source ticket id at notification creation; switches to NULL when the source ticket is hard-deleted (bulk delete / bulk merge source). `onDelete: SetNull` preserves the notification row after the cascade
+- `type`: Discriminator — `MENTION | TICKET_DELETED | TICKET_MERGED`; defaults to `MENTION` so legacy mention rows are backward-compatible
+- `mergedIntoTicketId`: For `TICKET_MERGED`, the id of the surviving base ticket; the recipient clicks the notification and lands on the base. `onDelete: SetNull` so a later delete of the base does not orphan the row
+- `ticketKeySnapshot`: Human-readable ticket key captured at notification creation; populated for `TICKET_DELETED` and `TICKET_MERGED` so the recipient still sees "ABC-12 was deleted by Alice" after the FK becomes NULL
 - `read`: Boolean indicating if notification has been viewed (default: false)
 - `readAt`: Timestamp when notification was marked as read (nullable)
 - `createdAt`: Notification creation timestamp
@@ -710,8 +734,9 @@ model Notification {
 **Relationships**:
 - Belongs to User (recipient, required, cascade delete)
 - References User (actor, required, cascade delete)
-- Belongs to Comment (required, cascade delete)
-- Belongs to Ticket (required, cascade delete)
+- Belongs to Comment (optional, cascade delete) — null for non-mention types
+- Belongs to Ticket as `ticket` (optional, set-null on delete) — survives bulk delete/merge cascades
+- Belongs to Ticket as `mergedIntoTicket` (optional, set-null on delete) — populated only for `TICKET_MERGED`
 
 **Constraints**:
 - Composite index (recipientId, createdAt) for listing notifications for user
@@ -719,20 +744,23 @@ model Notification {
 - Index on createdAt for cleanup job (30-day retention)
 
 **Features**:
-- Automatic creation when @mentions detected in comments
+- Automatic creation in three flows: @mention in a comment (`MENTION`), bulk delete of an INBOX ticket (`TICKET_DELETED`), bulk merge source-ticket absorption (`TICKET_MERGED`)
 - Soft delete with 30-day retention (deletedAt field)
 - Read status tracking with timestamp
 - Polling-based updates (15-second interval)
 - Optimistic UI updates for mark-as-read actions
 
 **Business Rules**:
-- Created when comment contains @mention of project member
-- No notification created for self-mentions (including AI-BOARD self-mentions)
-- No notification created for non-project members
+- `MENTION` rows are created when a comment contains an `@mention` of a project member; self-mentions and non-members never receive a row
+- `TICKET_DELETED` and `TICKET_MERGED` rows are created inside the same `prisma.$transaction` as the bulk delete or merge, BEFORE the source ticket is removed; the `Notification.ticketId → SetNull` FK preserves the row after the cascade
+- Bulk-action notifications are addressed to `Ticket.creatorId` when it is non-null AND differs from `actorId` (the actor); rows with `creatorId = null` generate no notification
+- `TICKET_MERGED` rows always carry a populated `mergedIntoTicketId` pointing at the surviving base
+- `ticketKeySnapshot` is captured at row creation and never updated — it is the durable human-readable identifier after the source ticket is gone
+- Bulk change-agent and bulk change-model operations never generate notifications
 - AI-BOARD comments create notifications for mentioned users (AI-BOARD as actor)
-- Notification creation is non-blocking (errors logged but don't fail operations)
+- Notification creation is non-blocking for the `MENTION` path (errors logged but don't fail comment creation); for `TICKET_DELETED` / `TICKET_MERGED` it runs inside the bulk-action transaction and a failure rolls the bulk operation back
 - Notifications retained for 30 days before deletion
-- Deleted comments cascade delete notifications
+- Deleted comments cascade delete `MENTION` notifications; bulk-action rows are unaffected (`commentId` is null)
 - Deleted users cascade delete their received and created notifications
 - Unread notifications count towards bell badge
 - Read notifications remain visible in dropdown until deleted

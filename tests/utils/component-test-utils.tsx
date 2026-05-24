@@ -5,7 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { createTestQueryClient } from '@/tests/helpers/test-query-client';
 
 // Re-export RTL utilities
-export { screen, within, waitFor } from '@testing-library/react';
+export { screen, within, waitFor, fireEvent, act } from '@testing-library/react';
 export { default as userEvent } from '@testing-library/user-event';
 
 // Re-export createTestQueryClient for direct usage

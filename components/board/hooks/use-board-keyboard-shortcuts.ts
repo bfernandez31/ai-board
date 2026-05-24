@@ -5,6 +5,8 @@ import { STAGE_BY_NUMBER } from '../utils';
 
 interface UseBoardKeyboardShortcutsArgs {
   isAnyModalOpen: boolean;
+  onEscape?: () => void;
+  isEscapeActive?: boolean;
 }
 
 /**
@@ -12,7 +14,11 @@ interface UseBoardKeyboardShortcutsArgs {
  * (persisted via localStorage), the new-ticket trigger state, and the listener
  * that lets `?` close the help dialog even while modals are open.
  */
-export function useBoardKeyboardShortcuts({ isAnyModalOpen }: UseBoardKeyboardShortcutsArgs) {
+export function useBoardKeyboardShortcuts({
+  isAnyModalOpen,
+  onEscape,
+  isEscapeActive = false,
+}: UseBoardKeyboardShortcutsArgs) {
   const hasHover = useHoverCapability();
 
   const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
@@ -58,6 +64,18 @@ export function useBoardKeyboardShortcuts({ isAnyModalOpen }: UseBoardKeyboardSh
     document.addEventListener('keydown', handleHelpClose);
     return () => document.removeEventListener('keydown', handleHelpClose);
   }, [isShortcutsHelpOpen, handleShortcutsHelpChange]);
+
+  // Bulk-selection Escape handler (AIB-821)
+  useEffect(() => {
+    if (!isEscapeActive || !onEscape || isAnyModalOpen) return;
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== 'Escape' || event.metaKey || event.ctrlKey || event.altKey) return;
+      event.preventDefault();
+      onEscape?.();
+    }
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isEscapeActive, isAnyModalOpen, onEscape]);
 
   return {
     isNewTicketModalOpen,

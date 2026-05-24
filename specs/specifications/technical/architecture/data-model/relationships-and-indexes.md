@@ -10,7 +10,9 @@ User
 │   │   │   └── log (one-to-one, optional) → JobLog
 │   │   ├── comments (one-to-many) → Comment
 │   │   │   └── notifications (one-to-many) → Notification
-│   │   ├── notifications (one-to-many) → Notification
+│   │   ├── notifications (one-to-many) → Notification (as source ticket, set-null on delete)
+│   │   ├── mergedIntoNotifications (one-to-many) → Notification (as merge target, set-null on delete)
+│   │   ├── creator (many-to-one, optional) → User (set-null on delete)
 │   │   ├── comparisonParticipants (one-to-many) → ComparisonParticipant
 │   │   ├── outcome (one-to-one, optional) → TicketOutcome
 │   │   ├── analyses (one-to-many) → TicketAnalysis
@@ -29,6 +31,7 @@ User
 ├── projectMembers (one-to-many) → ProjectMember
 ├── receivedNotifications (one-to-many) → Notification (as recipient)
 ├── createdNotifications (one-to-many) → Notification (as actor)
+├── ticketsCreated (one-to-many) → Ticket (as creator)
 ├── subscription (one-to-one) → Subscription
 ├── credentials (one-to-many) → UserCredential
 │   └── unique on (userId, provider)
@@ -48,6 +51,7 @@ User
 - `Ticket(projectId)` - Project's tickets
 - `Ticket(projectId, stage)` - Board view filtering
 - `Ticket(projectId, workflowType)` - Workflow type filtering
+- `Ticket(creatorId)` - Resolve creator-addressed bulk-action notifications
 
 **Job Queries**:
 - `Job(ticketId, status, startedAt)` - Job completion validation

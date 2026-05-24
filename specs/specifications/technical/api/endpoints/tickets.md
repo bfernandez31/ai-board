@@ -293,6 +293,213 @@ Update ticket fields with optimistic concurrency control.
 - `404`: Ticket or project not found
 - `409`: Version conflict (concurrent update detected)
 
+### POST /api/projects/:projectId/tickets/bulk/delete
+
+Hard-delete 1–50 INBOX tickets in a single transaction.
+
+**Authentication**: Required (session) OR Bearer PAT
+**Authorization**: `verifyProjectAccess` — owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "ticketIds": [42, 43, 44],
+  "expectedVersions": { "42": 3, "43": 1, "44": 2 }
+}
+```
+
+**Validation** (Zod `bulkDeleteSchema`):
+- `ticketIds`: 1..50 unique positive integers
+- `expectedVersions`: object keyed by stringified ticket id; must contain an entry for every id in `ticketIds`
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "deleted": {
+    "count": 3,
+    "ticketKeys": ["ABC-42", "ABC-43", "ABC-44"]
+  },
+  "notifiedCreatorIds": ["usr_xyz"]
+}
+```
+
+**Errors**:
+
+| Status | `code` | When |
+|---|---|---|
+| 400 | `BULK_LIMIT_EXCEEDED` | More than 50 `ticketIds` submitted |
+| 400 | `VALIDATION_ERROR` | Zod failure (duplicates, missing expectedVersions key) |
+| 401 | `AUTH_ERROR` | Unauthenticated |
+| 403 | `FORBIDDEN_PROJECT` | Actor lacks project access |
+| 403 | `FORBIDDEN_CROSS_PROJECT` | One or more `ticketIds` resolved to a different project |
+| 409 | `BULK_CONFLICT_STAGE_DRIFT` | `details: { conflictingIds: number[] }` — id missing or not INBOX |
+| 409 | `BULK_CONFLICT_VERSION` | `details: { conflictingIds: number[], currentVersions: Record<number, number> }` |
+| 500 | `DATABASE_ERROR` | Transaction failure (rolled back) |
+
+**Behavior**:
+- Single `prisma.$transaction` reloads tickets `WHERE id IN (...) AND projectId = ? AND stage = 'INBOX'`, validates count + versions, then hard-deletes
+- Skips GitHub cleanup — INBOX tickets never have a `branch`
+- Cascades: `Comment`, `Job`, `TicketAnalysis`, `TicketOutcome` are cascade-deleted; `Notification.ticketId` switches to NULL (preserving `ticketKeySnapshot` for the recipient's feed)
+- Emits a `TICKET_DELETED` notification (with `ticketKeySnapshot`) to each non-actor creator inside the same transaction
+
+### POST /api/projects/:projectId/tickets/bulk/merge
+
+Squash 2–50 INBOX tickets into a single surviving base ticket.
+
+**Authentication**: Required (session) OR Bearer PAT
+**Authorization**: `verifyProjectAccess` — owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "baseTicketId": 42,
+  "sourceTicketIds": [43, 44],
+  "title": "Add export-to-CSV button",
+  "description": "Combined description body...",
+  "expectedVersions": { "42": 3, "43": 1, "44": 2 }
+}
+```
+
+**Validation** (Zod `bulkMergeSchema`):
+- `baseTicketId`: positive integer; MUST be smaller than every id in `sourceTicketIds` (FR-016) and MUST NOT appear in `sourceTicketIds`
+- `sourceTicketIds`: 1..49 unique positive integers
+- `title`: shared `titleSchema` (1..100 chars, project punctuation rules)
+- `description`: shared `descriptionSchema` (1..10000 chars)
+- `expectedVersions`: object with an entry for the base id AND every source id
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "base": {
+    "id": 42,
+    "ticketKey": "ABC-42",
+    "title": "Add export-to-CSV button",
+    "description": "Combined description body...",
+    "version": 4,
+    "attachmentCount": 5,
+    "updatedAt": "2026-05-22T10:30:00.000Z"
+  },
+  "deleted": {
+    "count": 2,
+    "ticketKeys": ["ABC-43", "ABC-44"]
+  },
+  "notifiedCreatorIds": ["usr_xyz"]
+}
+```
+
+**Errors**:
+
+| Status | `code` | When |
+|---|---|---|
+| 400 | `BULK_LIMIT_EXCEEDED` | More than 49 `sourceTicketIds` submitted (cap is 50 total including base) |
+| 400 | `VALIDATION_ERROR` | Zod failure (base-not-smallest, duplicates, missing expectedVersions key) |
+| 400 | `BULK_MERGE_REQUIRES_TWO` | Reached only if Zod bypass — `sourceTicketIds` empty |
+| 401 | `AUTH_ERROR` | Unauthenticated |
+| 403 | `FORBIDDEN_PROJECT` | Actor lacks project access |
+| 403 | `FORBIDDEN_CROSS_PROJECT` | Base or any source not in this project |
+| 409 | `BULK_CONFLICT_STAGE_DRIFT` | Base or any source missing or not INBOX (`details.conflictingIds`) |
+| 409 | `BULK_CONFLICT_VERSION` | Version mismatch on base or any source |
+| 500 | `DATABASE_ERROR` | Unexpected DB failure |
+
+**Behavior**:
+- Single transaction: validates preconditions, increments `version` on the base, overwrites the base's `title` and `description`, concatenates attachments as `[...base.attachments, ...sortedSources.flatMap(s => s.attachments)]` (no deduplication), creates `TICKET_MERGED` notifications for the non-actor base creator and every non-actor source creator with `mergedIntoTicketId` pointing at the base, then hard-deletes every source ticket
+- Notifications are inserted BEFORE source deletes; the `Notification.ticketId → SetNull` FK preserves the row after the source ticket is removed, so the recipient still sees `ticketKeySnapshot` for the deleted ticket plus a working link to the surviving base
+- Preserved on the base: `id`, `ticketKey`, `ticketNumber`, `agent`, all five model overrides, `autoMode`, `clarificationPolicy`, `workflowType`, `stage`, `branch`, `previewUrl`, `creatorId`
+
+### POST /api/projects/:projectId/tickets/bulk/agent
+
+Update only the `agent` field on 1–50 INBOX tickets in one atomic write.
+
+**Authentication**: Required (session) OR Bearer PAT
+**Authorization**: `verifyProjectAccess` — owner or member
+
+**Request Body**:
+```json
+{
+  "ticketIds": [42, 43, 44],
+  "agent": "CODEX"
+}
+```
+
+**Validation** (Zod `bulkAgentSchema`):
+- `ticketIds`: 1..50 unique positive integers
+- `agent`: one of `Agent` enum values (`CLAUDE | CODEX | MISTRAL | GEMINI`) or `null` to clear
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "updated": {
+    "count": 3,
+    "ticketIds": [42, 43, 44],
+    "agent": "CODEX"
+  }
+}
+```
+
+**Errors**:
+
+| Status | `code` | When |
+|---|---|---|
+| 400 | `BULK_LIMIT_EXCEEDED` | More than 50 `ticketIds` submitted |
+| 400 | `VALIDATION_ERROR` | Zod failure (invalid agent enum, duplicates) |
+| 401 | `AUTH_ERROR` | Unauthenticated |
+| 403 | `FORBIDDEN_PROJECT` | Actor lacks project access |
+| 403 | `FORBIDDEN_CROSS_PROJECT` | Id resolves to a different project |
+| 409 | `BULK_CONFLICT_STAGE_DRIFT` | `details.conflictingIds` |
+| 500 | `DATABASE_ERROR` | Unexpected DB failure |
+
+**Behavior**:
+- Single transaction: reloads tickets `WHERE id IN (...) AND projectId = ? AND stage = 'INBOX'`, validates count, then `updateMany` to set `agent` and bump `version`
+- No notifications emitted; no other fields modified
+- No `expectedVersions` requirement — the INBOX stage filter is sufficient guard
+
+### POST /api/projects/:projectId/tickets/bulk/model
+
+Write a single Claude model value to all five per-stage overrides on 1–50 INBOX tickets.
+
+**Authentication**: Required (session) OR Bearer PAT
+**Authorization**: `verifyProjectAccess` — owner or member
+
+**Request Body**:
+```json
+{
+  "ticketIds": [42, 43, 44],
+  "model": "claude-sonnet-4-6"
+}
+```
+
+**Validation** (Zod `bulkModelSchema`):
+- `ticketIds`: 1..50 unique positive integers
+- `model`: 1..50-char string (matches `Ticket.specifyModel @db.VarChar(50)`) or `null` to clear all five fields
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "updated": {
+    "count": 3,
+    "ticketIds": [42, 43, 44],
+    "model": "claude-sonnet-4-6",
+    "appliedFields": ["specifyModel", "planModel", "implementModel", "quickImplModel", "verifyModel"]
+  }
+}
+```
+
+**Errors**: Same shape as bulk agent. Specific to model: `400 VALIDATION_ERROR` on length > 50.
+
+**Behavior**:
+- Writes the single `model` value to all five per-command override fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on every targeted ticket; `appliedFields` echoes the list for client logging and tests
+- No notifications emitted; no other fields modified
+
 ### POST /api/projects/:projectId/tickets/:id/duplicate
 
 Create a duplicate of an existing ticket using simple copy or full clone mode.

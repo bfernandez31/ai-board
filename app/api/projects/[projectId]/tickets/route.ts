@@ -176,14 +176,16 @@ export async function POST(
     const workflowAuth = validateWorkflowAuth(request);
     const isWorkflowRequest = workflowAuth.isValid;
 
+    let actorUserId: string | null = null;
+
     if (!isWorkflowRequest) {
       await verifyProjectAccess(projectId, request);
 
       // Check plan limits for ticket creation (skip for workflow-created tickets)
-      const userId = await requireAuth(request);
-      const subscription = await getUserSubscription(userId);
+      actorUserId = await requireAuth(request);
+      const subscription = await getUserSubscription(actorUserId);
       if (subscription.limits.maxTicketsPerMonth !== null) {
-        const ticketCount = await countTicketsThisMonthForUser(userId);
+        const ticketCount = await countTicketsThisMonthForUser(actorUserId);
         if (ticketCount >= subscription.limits.maxTicketsPerMonth) {
           return NextResponse.json(
             { error: `Monthly ticket limit reached. Your ${subscription.plan} plan allows ${subscription.limits.maxTicketsPerMonth} tickets per month. Upgrade for unlimited tickets.`, code: 'PLAN_LIMIT' },
@@ -293,7 +295,12 @@ export async function POST(
       );
     }
 
-    const creation = await createTicketWithAttachments(projectId, result.data, uploadedFiles);
+    const creation = await createTicketWithAttachments(
+      projectId,
+      result.data,
+      uploadedFiles,
+      actorUserId ? { creatorId: actorUserId } : {}
+    );
 
     if (!creation.ok) {
       return NextResponse.json(creation.error, { status: creation.status });

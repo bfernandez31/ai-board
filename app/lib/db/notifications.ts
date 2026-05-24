@@ -55,6 +55,13 @@ export async function getNotificationsForUser(userId: string, limit = 5) {
           projectId: true,
         },
       },
+      mergedIntoTicket: {
+        select: {
+          id: true,
+          ticketKey: true,
+          projectId: true,
+        },
+      },
     },
     orderBy: {
       createdAt: 'desc',

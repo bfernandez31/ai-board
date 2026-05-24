@@ -372,6 +372,26 @@ enum CriticalCron {
 
 The TypeScript-side registry in `lib/admin/cron/registry.ts` mirrors this enum with `{ key, label, thresholdHours }` so the UI can render human-readable names without depending on the raw enum string.
 
+### NotificationType
+
+Discriminator on `Notification` rows. Determines which sibling fields are populated and how the client renders the row.
+
+```prisma
+enum NotificationType {
+  MENTION
+  TICKET_DELETED
+  TICKET_MERGED
+}
+```
+
+| Value | Trigger | Required fields | Optional fields |
+|-------|---------|-----------------|-----------------|
+| `MENTION` | `@user` syntax in a comment | `commentId`, `ticketId` | — |
+| `TICKET_DELETED` | Bulk delete of an INBOX ticket the actor did not create | `ticketKeySnapshot` (durable identifier) | `ticketId` (cleared to NULL after source-ticket delete) |
+| `TICKET_MERGED` | Bulk merge source-ticket absorption (actor ≠ source creator) | `ticketKeySnapshot`, `mergedIntoTicketId` (surviving base) | `ticketId` (cleared to NULL after source-ticket delete) |
+
+`MENTION` is the schema default so existing notification rows are unaffected by the introduction of new types.
+
 ### TicketAnalysisStatus
 
 Lifecycle of an inbox ticket analysis run.
