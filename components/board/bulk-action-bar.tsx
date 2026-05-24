@@ -109,7 +109,7 @@ export function BulkActionBar({
       data-testid="bulk-action-bar"
       role="toolbar"
       aria-label="Bulk actions"
-      className="aurora-card fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-lg border px-4 py-2 shadow-lg"
+      className="aurora-glass fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-lg border px-4 py-2 shadow-lg"
     >
       <span aria-live="polite" data-testid="bulk-count" className="text-sm font-medium text-foreground">
         {count} selected
