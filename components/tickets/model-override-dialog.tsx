@@ -27,6 +27,11 @@ import {
   type StageModelKey,
   type ClaudeModelId,
 } from '@/lib/models/claude-models';
+import {
+  CODEX_MODEL_IDS,
+  CODEX_MODEL_LABELS,
+  type CodexModelId,
+} from '@/lib/models/codex-models';
 import { Loader2 } from 'lucide-react';
 
 const PROJECT_DEFAULT_SENTINEL = 'project-default';
@@ -86,13 +91,16 @@ export function ModelOverrideDialog({
   }, [open]);
 
   const isClaude = effectiveAgent === Agent.CLAUDE;
+  const isCodex = effectiveAgent === Agent.CODEX;
+  const isConfigurable = isClaude || isCodex;
 
   const hasChanges = React.useMemo(() => {
     return STAGE_MODEL_KEYS.some((key) => selection[key] !== (current[key] ?? null));
   }, [selection, current]);
 
   const handleStageChange = (stage: StageModelKey, value: string) => {
-    const mapped = value === PROJECT_DEFAULT_SENTINEL ? null : (value as ClaudeModelId);
+    const mapped =
+      value === PROJECT_DEFAULT_SENTINEL ? null : (value as ClaudeModelId | CodexModelId);
     setSelection((prev) => ({ ...prev, [stage]: mapped }));
   };
 
@@ -124,23 +132,27 @@ export function ModelOverrideDialog({
         <DialogHeader>
           <DialogTitle>Per-stage model overrides</DialogTitle>
           <DialogDescription>
-            Pick a Claude model per stage or inherit the project default.
+            Pick a model per stage or inherit the project default.
           </DialogDescription>
         </DialogHeader>
 
-        {!isClaude ? (
+        {!isConfigurable ? (
           <div
             className="rounded-md bg-muted p-3 text-sm text-muted-foreground"
             data-testid="model-override-inactive"
           >
             This ticket&apos;s effective agent is <strong>{effectiveAgent}</strong>. Per-stage model
-            overrides are only used when the effective agent is Claude. Any values stored here are
-            preserved but inactive until the agent is switched back to Claude.
+            overrides are only used when the effective agent is Claude or Codex. Any values stored
+            here are preserved but inactive until the agent is switched.
           </div>
         ) : (
           <div className="space-y-3 py-2">
             {STAGE_MODEL_KEYS.map((stage) => {
               const value = selection[stage] ?? PROJECT_DEFAULT_SENTINEL;
+              const modelIds = isCodex ? CODEX_MODEL_IDS : CLAUDE_MODEL_IDS;
+              const modelLabels = isCodex
+                ? (CODEX_MODEL_LABELS as Record<string, string>)
+                : (CLAUDE_MODEL_LABELS as Record<string, string>);
               return (
                 <div key={stage} className="flex items-center gap-3" data-testid={`row-${stage}`}>
                   <Label htmlFor={`${stage}-select`} className="w-28 text-sm">
@@ -162,9 +174,9 @@ export function ModelOverrideDialog({
                       <SelectItem value={PROJECT_DEFAULT_SENTINEL}>
                         Inherit from project default
                       </SelectItem>
-                      {CLAUDE_MODEL_IDS.map((modelId) => (
+                      {modelIds.map((modelId) => (
                         <SelectItem key={modelId} value={modelId}>
-                          {CLAUDE_MODEL_LABELS[modelId]}
+                          {modelLabels[modelId]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -206,7 +218,7 @@ export function ModelOverrideDialog({
           <Button
             type="button"
             onClick={handleSave}
-            disabled={!hasChanges || isSaving || !isClaude}
+            disabled={!hasChanges || isSaving || !isConfigurable}
             className="flex items-center gap-2"
             data-testid="save-model-overrides"
           >

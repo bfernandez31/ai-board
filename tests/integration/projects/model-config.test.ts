@@ -5,9 +5,11 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { Agent } from '@prisma/client';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { SMART_DEFAULTS } from '@/lib/models/claude-models';
+import { CODEX_SMART_DEFAULTS } from '@/lib/models/codex-models';
 
 describe('POST /api/projects/:projectId/model-config/apply-smart-defaults', () => {
   let ctx: TestContext;
@@ -89,5 +91,27 @@ describe('POST /api/projects/:projectId/model-config/apply-smart-defaults', () =
     );
 
     expect(response.status).toBe(404);
+  });
+
+  it('applies Codex smart defaults when the project defaultAgent is CODEX', async () => {
+    await prisma.project.update({
+      where: { id: ctx.projectId },
+      data: { defaultAgent: Agent.CODEX },
+    });
+
+    const response = await ctx.api.post<{
+      specifyModel: string | null;
+      planModel: string | null;
+      implementModel: string | null;
+      quickImplModel: string | null;
+      verifyModel: string | null;
+    }>(`/api/projects/${ctx.projectId}/model-config/apply-smart-defaults`, {});
+
+    expect(response.status).toBe(200);
+    expect(response.data).toEqual(CODEX_SMART_DEFAULTS);
+
+    const db = await prisma.project.findUnique({ where: { id: ctx.projectId } });
+    expect(db?.specifyModel).toBe(CODEX_SMART_DEFAULTS.specifyModel);
+    expect(db?.implementModel).toBe(CODEX_SMART_DEFAULTS.implementModel);
   });
 });

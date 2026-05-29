@@ -14,6 +14,13 @@ import {
   type StageModelKey,
   type ClaudeModelId,
 } from '@/lib/models/claude-models';
+import {
+  CODEX_MODEL_IDS,
+  CODEX_MODEL_LABELS,
+  CODEX_SMART_DEFAULTS,
+  CODEX_GLOBAL_FALLBACK_MODEL,
+  type CodexModelId,
+} from '@/lib/models/codex-models';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { getAgentLabel } from '@/app/lib/utils/agent-icons';
@@ -51,6 +58,8 @@ export function AIModelsCard({ project }: AIModelsCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
 
   const isClaude = project.defaultAgent === Agent.CLAUDE;
+  const isCodex = project.defaultAgent === Agent.CODEX;
+  const isConfigurable = isClaude || isCodex;
 
   async function handleStageChange(stage: StageModelKey, nextValue: string | null) {
     const previous = state[stage];
@@ -81,7 +90,7 @@ export function AIModelsCard({ project }: AIModelsCardProps) {
 
   async function handleApplySmartDefaults() {
     const previous = state;
-    setState({ ...SMART_DEFAULTS });
+    setState(isCodex ? { ...CODEX_SMART_DEFAULTS } : { ...SMART_DEFAULTS });
     setIsUpdating(true);
     try {
       const response = await fetch(
@@ -105,18 +114,26 @@ export function AIModelsCard({ project }: AIModelsCardProps) {
     }
   }
 
+  const modelIds = isCodex ? CODEX_MODEL_IDS : CLAUDE_MODEL_IDS;
+  const modelLabels = isCodex
+    ? (CODEX_MODEL_LABELS as Record<string, string>)
+    : (CLAUDE_MODEL_LABELS as Record<string, string>);
+  const fallbackLabel = isCodex
+    ? `Use global fallback (${CODEX_MODEL_LABELS[CODEX_GLOBAL_FALLBACK_MODEL]})`
+    : 'Use global fallback (Claude Opus 4.7)';
+
   return (
     <Card className="aurora-bg-subtle" data-testid="ai-models-card">
       <CardHeader>
         <CardTitle>AI Models</CardTitle>
         <CardDescription>
-          Per-stage Claude model used by workflows. Applies when the effective agent is Claude.
+          Per-stage model used by workflows. Applies when the effective agent is Claude or Codex.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!isClaude ? (
+        {!isConfigurable ? (
           <p className="text-sm text-muted-foreground" data-testid="ai-models-card-inactive">
-            {`Using ${getAgentLabel(project.defaultAgent)}'s latest default model. Per-stage selection is only available for Claude today.`}
+            {`Using ${getAgentLabel(project.defaultAgent)}'s latest default model. Per-stage selection is only available for Claude and Codex.`}
           </p>
         ) : (
           <>
@@ -136,7 +153,10 @@ export function AIModelsCard({ project }: AIModelsCardProps) {
                     <Select
                       value={selectValue}
                       onValueChange={(value) => {
-                        const mapped = value === FALLBACK_SENTINEL ? null : (value as ClaudeModelId);
+                        const mapped =
+                          value === FALLBACK_SENTINEL
+                            ? null
+                            : (value as ClaudeModelId | CodexModelId);
                         void handleStageChange(stage, mapped);
                       }}
                       disabled={isUpdating}
@@ -149,12 +169,10 @@ export function AIModelsCard({ project }: AIModelsCardProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={FALLBACK_SENTINEL}>
-                          Use global fallback (Claude Opus 4.7)
-                        </SelectItem>
-                        {CLAUDE_MODEL_IDS.map((modelId) => (
+                        <SelectItem value={FALLBACK_SENTINEL}>{fallbackLabel}</SelectItem>
+                        {modelIds.map((modelId) => (
                           <SelectItem key={modelId} value={modelId}>
-                            {CLAUDE_MODEL_LABELS[modelId]}
+                            {modelLabels[modelId]}
                           </SelectItem>
                         ))}
                       </SelectContent>

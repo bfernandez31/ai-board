@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Agent } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { SMART_DEFAULTS } from '@/lib/models/claude-models';
+import { CODEX_SMART_DEFAULTS } from '@/lib/models/codex-models';
 
 export async function POST(
   request: NextRequest,
@@ -17,9 +19,20 @@ export async function POST(
 
     await verifyProjectAccess(parsedProjectId, request);
 
+    const project = await prisma.project.findUnique({
+      where: { id: parsedProjectId },
+      select: { defaultAgent: true },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    const defaults = project.defaultAgent === Agent.CODEX ? CODEX_SMART_DEFAULTS : SMART_DEFAULTS;
+
     const updated = await prisma.project.update({
       where: { id: parsedProjectId },
-      data: { ...SMART_DEFAULTS },
+      data: { ...defaults },
       select: {
         specifyModel: true,
         planModel: true,

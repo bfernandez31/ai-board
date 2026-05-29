@@ -1,17 +1,25 @@
 import { z } from 'zod';
 import { CLAUDE_MODEL_IDS, isClaudeModelId } from '@/lib/models/claude-models';
+import { CODEX_MODEL_IDS, isCodexModelId } from '@/lib/models/codex-models';
 
 export const claudeModelIdSchema = z.string().refine(isClaudeModelId, {
   message: `Unknown model ID. Allowed: ${CLAUDE_MODEL_IDS.join(', ')}`,
 });
 
+export const anyModelIdSchema = z.string().refine(
+  (v) => isClaudeModelId(v) || isCodexModelId(v),
+  {
+    message: `Unknown model ID. Allowed Claude: ${CLAUDE_MODEL_IDS.join(', ')}. Allowed Codex: ${CODEX_MODEL_IDS.join(', ')}`,
+  }
+);
+
 export const ticketModelOverrideSchema = z
   .object({
-    specifyModel: claudeModelIdSchema.nullable().optional(),
-    planModel: claudeModelIdSchema.nullable().optional(),
-    implementModel: claudeModelIdSchema.nullable().optional(),
-    quickImplModel: claudeModelIdSchema.nullable().optional(),
-    verifyModel: claudeModelIdSchema.nullable().optional(),
+    specifyModel: anyModelIdSchema.nullable().optional(),
+    planModel: anyModelIdSchema.nullable().optional(),
+    implementModel: anyModelIdSchema.nullable().optional(),
+    quickImplModel: anyModelIdSchema.nullable().optional(),
+    verifyModel: anyModelIdSchema.nullable().optional(),
     resetAll: z.boolean().optional(),
   })
   .refine(

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Agent } from '@prisma/client';
 import { resolveStageModel, type TicketLikeForResolution } from '@/lib/workflows/model-resolution';
 import { CLAUDE_GLOBAL_FALLBACK_MODEL } from '@/lib/models/claude-models';
+import { CODEX_GLOBAL_FALLBACK_MODEL } from '@/lib/models/codex-models';
 
 const EMPTY: TicketLikeForResolution = {
   specifyModel: null,
@@ -67,7 +68,7 @@ describe('resolveStageModel', () => {
     }
   );
 
-  it.each([Agent.CODEX, Agent.MISTRAL, Agent.GEMINI])(
+  it.each([Agent.MISTRAL, Agent.GEMINI])(
     'returns null when effective agent is %s, even if columns are set',
     (agent) => {
       const ticket: TicketLikeForResolution = {
@@ -78,6 +79,56 @@ describe('resolveStageModel', () => {
       expect(resolveStageModel(ticket, 'implement', agent)).toBeNull();
     }
   );
+
+  describe('Codex agent', () => {
+    it.each(commands.map((cmd, i) => [cmd, stageKeys[i]] as const))(
+      'returns the Codex ticket override for command %s',
+      (cmd, key) => {
+        const ticket: TicketLikeForResolution = {
+          ...EMPTY,
+          [key]: 'gpt-5.5',
+          project: { ...EMPTY.project, [key]: 'gpt-5.4' },
+        };
+        expect(resolveStageModel(ticket, cmd, Agent.CODEX)).toBe('gpt-5.5');
+      }
+    );
+
+    it.each(commands.map((cmd, i) => [cmd, stageKeys[i]] as const))(
+      'falls back to Codex project default for command %s when ticket override is null',
+      (cmd, key) => {
+        const ticket: TicketLikeForResolution = {
+          ...EMPTY,
+          project: { ...EMPTY.project, [key]: 'gpt-5' },
+        };
+        expect(resolveStageModel(ticket, cmd, Agent.CODEX)).toBe('gpt-5');
+      }
+    );
+
+    it.each(commands)(
+      'falls back to Codex global fallback when neither layer is set for command %s',
+      (cmd) => {
+        expect(resolveStageModel(EMPTY, cmd, Agent.CODEX)).toBe(CODEX_GLOBAL_FALLBACK_MODEL);
+      }
+    );
+
+    it('treats a stale Codex ticket value as "not set" and falls through to project default', () => {
+      const ticket: TicketLikeForResolution = {
+        ...EMPTY,
+        implementModel: 'gpt-4-old-deprecated',
+        project: { ...EMPTY.project, implementModel: 'gpt-5.4' },
+      };
+      expect(resolveStageModel(ticket, 'implement', Agent.CODEX)).toBe('gpt-5.4');
+    });
+
+    it('ignores Claude model IDs stored in columns for a Codex agent', () => {
+      const ticket: TicketLikeForResolution = {
+        ...EMPTY,
+        implementModel: 'claude-opus-4-7',
+        project: { ...EMPTY.project, implementModel: 'claude-sonnet-4-6' },
+      };
+      expect(resolveStageModel(ticket, 'implement', Agent.CODEX)).toBe(CODEX_GLOBAL_FALLBACK_MODEL);
+    });
+  });
 
   it('treats a stale ticket value as "not set" and falls through to project', () => {
     const ticket: TicketLikeForResolution = {
