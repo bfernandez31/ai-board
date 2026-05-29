@@ -46,11 +46,22 @@ describe('ModelOverrideDialog', () => {
     expect(screen.getByTestId('row-verifyModel')).toBeInTheDocument();
   });
 
-  it('shows inactive message when effective agent is not Claude', () => {
+  it('shows inactive message when effective agent is not configurable (e.g. Gemini)', () => {
     renderDialog({ effectiveAgent: Agent.GEMINI });
 
     expect(screen.getByTestId('model-override-inactive')).toBeInTheDocument();
     expect(screen.queryByTestId('row-specifyModel')).not.toBeInTheDocument();
+  });
+
+  it('renders the 5 stage rows for a Codex ticket', () => {
+    renderDialog({ effectiveAgent: Agent.CODEX });
+
+    expect(screen.queryByTestId('model-override-inactive')).not.toBeInTheDocument();
+    expect(screen.getByTestId('row-specifyModel')).toBeInTheDocument();
+    expect(screen.getByTestId('row-planModel')).toBeInTheDocument();
+    expect(screen.getByTestId('row-implementModel')).toBeInTheDocument();
+    expect(screen.getByTestId('row-quickImplModel')).toBeInTheDocument();
+    expect(screen.getByTestId('row-verifyModel')).toBeInTheDocument();
   });
 
   it('disables save when there are no changes', () => {

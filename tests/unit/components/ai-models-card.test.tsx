@@ -62,12 +62,38 @@ describe('AIModelsCard', () => {
     expect(screen.getByTestId('apply-smart-defaults')).toBeInTheDocument();
   });
 
-  it('renders informational message when defaultAgent is not CLAUDE', () => {
+  it('renders informational message when defaultAgent is not configurable (Gemini)', () => {
     renderWithProviders(<AIModelsCard project={geminiProject} />);
 
     expect(screen.getByTestId('ai-models-card-inactive')).toBeInTheDocument();
     expect(screen.queryByTestId('model-row-specifyModel')).not.toBeInTheDocument();
     expect(screen.queryByTestId('apply-smart-defaults')).not.toBeInTheDocument();
+  });
+
+  it('renders a row for every stage when defaultAgent is CODEX', () => {
+    const codexProject = { ...claudeProject, defaultAgent: Agent.CODEX };
+    renderWithProviders(<AIModelsCard project={codexProject} />);
+
+    expect(screen.queryByTestId('ai-models-card-inactive')).not.toBeInTheDocument();
+    expect(screen.getByTestId('model-row-specifyModel')).toBeInTheDocument();
+    expect(screen.getByTestId('model-row-planModel')).toBeInTheDocument();
+    expect(screen.getByTestId('model-row-implementModel')).toBeInTheDocument();
+    expect(screen.getByTestId('model-row-quickImplModel')).toBeInTheDocument();
+    expect(screen.getByTestId('model-row-verifyModel')).toBeInTheDocument();
+    expect(screen.getByTestId('apply-smart-defaults')).toBeInTheDocument();
+  });
+
+  it('renders stored Codex per-stage value labels when defaultAgent is CODEX', () => {
+    const seededProject = {
+      ...claudeProject,
+      defaultAgent: Agent.CODEX,
+      specifyModel: 'gpt-5.5',
+      implementModel: 'gpt-5.4-codex',
+    };
+    renderWithProviders(<AIModelsCard project={seededProject} />);
+
+    expect(screen.getByText('GPT-5.5')).toBeInTheDocument();
+    expect(screen.getByText('GPT-5.4 Codex')).toBeInTheDocument();
   });
 
   it('renders stored per-stage values in the trigger labels', () => {

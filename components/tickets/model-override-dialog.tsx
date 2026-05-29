@@ -20,13 +20,12 @@ import {
 } from '@/components/ui/select';
 import { Agent } from '@prisma/client';
 import {
-  CLAUDE_MODEL_IDS,
-  CLAUDE_MODEL_LABELS,
   STAGE_MODEL_KEYS,
   STAGE_MODEL_LABELS,
   type StageModelKey,
-  type ClaudeModelId,
 } from '@/lib/models/claude-models';
+import { getAgentModelMetadata } from '@/lib/models/agent-models';
+import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { Loader2 } from 'lucide-react';
 
 const PROJECT_DEFAULT_SENTINEL = 'project-default';
@@ -85,14 +84,15 @@ export function ModelOverrideDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const isClaude = effectiveAgent === Agent.CLAUDE;
+  const metadata = getAgentModelMetadata(effectiveAgent);
+  const isConfigurable = metadata != null;
 
   const hasChanges = React.useMemo(() => {
     return STAGE_MODEL_KEYS.some((key) => selection[key] !== (current[key] ?? null));
   }, [selection, current]);
 
   const handleStageChange = (stage: StageModelKey, value: string) => {
-    const mapped = value === PROJECT_DEFAULT_SENTINEL ? null : (value as ClaudeModelId);
+    const mapped = value === PROJECT_DEFAULT_SENTINEL ? null : value;
     setSelection((prev) => ({ ...prev, [stage]: mapped }));
   };
 
@@ -124,18 +124,20 @@ export function ModelOverrideDialog({
         <DialogHeader>
           <DialogTitle>Per-stage model overrides</DialogTitle>
           <DialogDescription>
-            Pick a Claude model per stage or inherit the project default.
+            {isConfigurable
+              ? `Pick a ${getAgentLabel(effectiveAgent)} model per stage or inherit the project default.`
+              : 'Pick a model per stage or inherit the project default.'}
           </DialogDescription>
         </DialogHeader>
 
-        {!isClaude ? (
+        {!isConfigurable ? (
           <div
             className="rounded-md bg-muted p-3 text-sm text-muted-foreground"
             data-testid="model-override-inactive"
           >
             This ticket&apos;s effective agent is <strong>{effectiveAgent}</strong>. Per-stage model
-            overrides are only used when the effective agent is Claude. Any values stored here are
-            preserved but inactive until the agent is switched back to Claude.
+            overrides are only available for Claude and Codex today. Any values stored here are
+            preserved but inactive until the agent is switched to a supported one.
           </div>
         ) : (
           <div className="space-y-3 py-2">
@@ -162,9 +164,9 @@ export function ModelOverrideDialog({
                       <SelectItem value={PROJECT_DEFAULT_SENTINEL}>
                         Inherit from project default
                       </SelectItem>
-                      {CLAUDE_MODEL_IDS.map((modelId) => (
+                      {metadata.modelIds.map((modelId) => (
                         <SelectItem key={modelId} value={modelId}>
-                          {CLAUDE_MODEL_LABELS[modelId]}
+                          {metadata.labels[modelId]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -206,7 +208,7 @@ export function ModelOverrideDialog({
           <Button
             type="button"
             onClick={handleSave}
-            disabled={!hasChanges || isSaving || !isClaude}
+            disabled={!hasChanges || isSaving || !isConfigurable}
             className="flex items-center gap-2"
             data-testid="save-model-overrides"
           >
