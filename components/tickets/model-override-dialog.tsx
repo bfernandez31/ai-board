@@ -94,6 +94,11 @@ export function ModelOverrideDialog({
   const isCodex = effectiveAgent === Agent.CODEX;
   const isConfigurable = isClaude || isCodex;
 
+  const modelIds = isCodex ? CODEX_MODEL_IDS : CLAUDE_MODEL_IDS;
+  const modelLabels = isCodex
+    ? (CODEX_MODEL_LABELS as Record<string, string>)
+    : (CLAUDE_MODEL_LABELS as Record<string, string>);
+
   const hasChanges = React.useMemo(() => {
     return STAGE_MODEL_KEYS.some((key) => selection[key] !== (current[key] ?? null));
   }, [selection, current]);
@@ -149,10 +154,6 @@ export function ModelOverrideDialog({
           <div className="space-y-3 py-2">
             {STAGE_MODEL_KEYS.map((stage) => {
               const value = selection[stage] ?? PROJECT_DEFAULT_SENTINEL;
-              const modelIds = isCodex ? CODEX_MODEL_IDS : CLAUDE_MODEL_IDS;
-              const modelLabels = isCodex
-                ? (CODEX_MODEL_LABELS as Record<string, string>)
-                : (CLAUDE_MODEL_LABELS as Record<string, string>);
               return (
                 <div key={stage} className="flex items-center gap-3" data-testid={`row-${stage}`}>
                   <Label htmlFor={`${stage}-select`} className="w-28 text-sm">

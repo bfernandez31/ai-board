@@ -24,6 +24,16 @@ export interface TicketLikeForResolution extends StageModelSource {
   project: StageModelSource;
 }
 
+interface AgentModelConfig {
+  isValidModelId: (value: unknown) => value is ClaudeModelId | CodexModelId;
+  fallbackModel: ClaudeModelId | CodexModelId;
+}
+
+const AGENT_MODEL_CONFIG: Partial<Record<Agent, AgentModelConfig>> = {
+  [Agent.CLAUDE]: { isValidModelId: isClaudeModelId, fallbackModel: CLAUDE_GLOBAL_FALLBACK_MODEL },
+  [Agent.CODEX]: { isValidModelId: isCodexModelId, fallbackModel: CODEX_GLOBAL_FALLBACK_MODEL },
+};
+
 /**
  * Resolve the model for a stage transition.
  *
@@ -49,29 +59,18 @@ export function resolveStageModel(
     return null;
   }
 
-  if (effectiveAgent === Agent.CLAUDE) {
-    const ticketValue = ticket[stageKey];
-    if (ticketValue != null && isClaudeModelId(ticketValue)) {
-      return ticketValue;
-    }
-    const projectValue = ticket.project[stageKey];
-    if (projectValue != null && isClaudeModelId(projectValue)) {
-      return projectValue;
-    }
-    return CLAUDE_GLOBAL_FALLBACK_MODEL;
+  const config = AGENT_MODEL_CONFIG[effectiveAgent];
+  if (!config) {
+    return null;
   }
 
-  if (effectiveAgent === Agent.CODEX) {
-    const ticketValue = ticket[stageKey];
-    if (ticketValue != null && isCodexModelId(ticketValue)) {
-      return ticketValue;
-    }
-    const projectValue = ticket.project[stageKey];
-    if (projectValue != null && isCodexModelId(projectValue)) {
-      return projectValue;
-    }
-    return CODEX_GLOBAL_FALLBACK_MODEL;
+  const ticketValue = ticket[stageKey];
+  if (ticketValue != null && config.isValidModelId(ticketValue)) {
+    return ticketValue;
   }
-
-  return null;
+  const projectValue = ticket.project[stageKey];
+  if (projectValue != null && config.isValidModelId(projectValue)) {
+    return projectValue;
+  }
+  return config.fallbackModel;
 }
