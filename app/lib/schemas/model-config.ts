@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CLAUDE_MODEL_IDS, isClaudeModelId } from '@/lib/models/claude-models';
+import { CLAUDE_MODEL_IDS, STAGE_MODEL_KEYS, isClaudeModelId } from '@/lib/models/claude-models';
 import { CODEX_MODEL_IDS } from '@/lib/models/codex-models';
 import { isKnownModelId } from '@/lib/models/agent-models';
 
@@ -26,23 +26,11 @@ export const ticketModelOverrideSchema = z
     resetAll: z.boolean().optional(),
   })
   .refine(
-    (d) =>
-      d.resetAll === true ||
-      d.specifyModel !== undefined ||
-      d.planModel !== undefined ||
-      d.implementModel !== undefined ||
-      d.quickImplModel !== undefined ||
-      d.verifyModel !== undefined,
+    (d) => d.resetAll === true || STAGE_MODEL_KEYS.some((key) => d[key] !== undefined),
     { message: 'At least one field must be provided' }
   )
   .refine(
-    (d) =>
-      d.resetAll !== true ||
-      (d.specifyModel === undefined &&
-        d.planModel === undefined &&
-        d.implementModel === undefined &&
-        d.quickImplModel === undefined &&
-        d.verifyModel === undefined),
+    (d) => d.resetAll !== true || STAGE_MODEL_KEYS.every((key) => d[key] === undefined),
     { message: 'resetAll cannot be combined with individual stage fields' }
   );
 
