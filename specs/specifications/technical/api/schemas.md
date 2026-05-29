@@ -264,35 +264,46 @@ export type CloseTicketParams = z.infer<typeof closeTicketParamsSchema>;
 
 ## Model Config Schemas
 
-### ClaudeModelIdSchema
+### ClaudeModelIdSchema and AnyModelIdSchema
 
 ```typescript
 // app/lib/schemas/model-config.ts
-import { CLAUDE_MODEL_IDS } from '@/lib/models/claude-models';
+import { CLAUDE_MODEL_IDS, isClaudeModelId } from '@/lib/models/claude-models';
+import { CODEX_MODEL_IDS, isCodexModelId } from '@/lib/models/codex-models';
 import { z } from 'zod';
 
-export const claudeModelIdSchema = z
-  .string()
-  .refine((v) => (CLAUDE_MODEL_IDS as readonly string[]).includes(v), {
-    message: `Model must be one of: ${CLAUDE_MODEL_IDS.join(', ')}`,
-  });
+export const claudeModelIdSchema = z.string().refine(isClaudeModelId, {
+  message: `Unknown model ID. Allowed: ${CLAUDE_MODEL_IDS.join(', ')}`,
+});
+
+export const anyModelIdSchema = z.string().refine(
+  (v) => isClaudeModelId(v) || isCodexModelId(v),
+  {
+    message: `Unknown model ID. Allowed Claude: ${CLAUDE_MODEL_IDS.join(', ')}. Allowed Codex: ${CODEX_MODEL_IDS.join(', ')}`,
+  }
+);
 ```
 
 **Whitelisted model IDs**:
-| ID | Display Name |
-|----|-------------|
-| `claude-opus-4-7` | Claude Opus 4.7 |
-| `claude-opus-4-6` | Claude Opus 4.6 |
-| `claude-sonnet-4-6` | Claude Sonnet 4.6 |
-| `claude-haiku-4-5-20251001` | Claude Haiku 4.5 |
 
-Any value not in this list is rejected with `INVALID_MODEL_ID` at every write boundary (project PATCH, ticket model-config PATCH, project creation).
+| ID | Display Name | Agent |
+|----|-------------|-------|
+| `claude-opus-4-7` | Claude Opus 4.7 | Claude |
+| `claude-opus-4-6` | Claude Opus 4.6 | Claude |
+| `claude-sonnet-4-6` | Claude Sonnet 4.6 | Claude |
+| `claude-haiku-4-5-20251001` | Claude Haiku 4.5 | Claude |
+| `gpt-5-codex` | GPT-5 Codex | Codex |
+| `gpt-5` | GPT-5 | Codex |
+| `gpt-5.4` | GPT-5.4 | Codex |
+| `gpt-5.5` | GPT-5.5 | Codex |
 
-### TicketModelOverrideSchema
+Any value outside the combined whitelist is rejected with `INVALID_MODEL_ID` at every write boundary (project PATCH, ticket model-config PATCH, project creation). Values that are in the combined whitelist but do not match the row's effective agent are stored but ignored at dispatch.
+
+### TicketModelOverrideSchema and ProjectUpdateSchema
 
 ```typescript
 // app/lib/schemas/model-config.ts
-const nullableModelId = claudeModelIdSchema.nullable().optional();
+const nullableModelId = anyModelIdSchema.nullable().optional();
 
 export const ticketModelOverrideSchema = z
   .object({
@@ -311,8 +322,10 @@ export const ticketModelOverrideSchema = z
 export type TicketModelOverrideInput = z.infer<typeof ticketModelOverrideSchema>;
 ```
 
+The project update schema (`app/lib/schemas/clarification-policy.ts`) uses the same `anyModelIdSchema` for its five per-stage model fields.
+
 **Usage**:
-- Validates the request body for `PATCH /api/projects/:projectId/tickets/:id/model-config`
+- Validates the request body for `PATCH /api/projects/:projectId/tickets/:id/model-config` and the model fields of `PATCH /api/projects/:projectId`
 - `resetAll: true` nulls all 5 stage fields atomically; individual fields update only the specified stages
 - Empty body (no recognized keys) returns `400`
 

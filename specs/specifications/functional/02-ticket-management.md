@@ -961,7 +961,7 @@ Tickets in INBOX support four bulk operations — delete, merge, change agent, c
 
 **Bulk change model**:
 
-- Writes a single chosen Claude model value to all five per-stage override fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on every selected ticket — or null to clear all five
+- Writes a single chosen model value (Claude or Codex) to all five per-stage override fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on every selected ticket — or null to clear all five
 - No notifications are emitted; no other ticket fields change
 
 **Atomicity, conflicts, and authorization**:
@@ -1056,15 +1056,16 @@ Timestamps display in user-friendly formats:
   - Effective agent resolved at workflow dispatch time
   - Follows the same inheritance and editability rules as `clarificationPolicy`
 
-- **Per-Stage Claude Models**: Optional per-ticket Claude model overrides for each of the 5 configurable job types
+- **Per-Stage Models**: Optional per-ticket model overrides for each of the 5 configurable job types
   - 5 nullable fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`)
-  - `null` means inherit from the project's per-stage model default (which itself falls back to `claude-opus-4-7`)
+  - Accept either Claude or Codex model IDs; only values matching the ticket's effective agent are applied at dispatch
+  - `null` means inherit from the project's per-stage model default (which itself falls back to `claude-opus-4-7` for Claude or `gpt-5.4` for Codex)
   - Editable via the per-stage model override dialog accessible from the ticket detail modal
-  - Stored overrides are preserved when the ticket's agent is switched to a non-Claude provider; they become active again if the agent is switched back to Claude
+  - Stored overrides are preserved when the ticket's agent is switched to a non-matching provider; they become active again if the agent is switched back
 
 ### Per-Stage Model Override Dialog
 
-Users can open a per-stage model override dialog from the ticket detail modal to set or clear Claude model overrides for each of the 5 workflow stages independently.
+Users can open a per-stage model override dialog from the ticket detail modal to set or clear model overrides for each of the 5 workflow stages independently. The selector lists the whitelist matching the ticket's effective agent (Claude models for Claude tickets, Codex models for Codex tickets).
 
 **Access**:
 - Available to project owners and members
@@ -1072,15 +1073,15 @@ Users can open a per-stage model override dialog from the ticket detail modal to
 
 **UI States**:
 
-**Claude agent (active)**:
+**Claude or Codex agent (active)**:
 - Displays 5 rows (SPECIFY, PLAN, IMPLEMENT, QUICK-IMPL, VERIFY)
-- Each row has a selector with "Inherit from project default" as the first option, followed by the 4 whitelisted models
+- Each row has a selector with "Inherit from project default" as the first option, followed by the whitelist for the effective agent (4 models for Claude, 4 for Codex)
 - "Reset all to project defaults" button clears all 5 overrides atomically
 - Save button disabled when no changes have been made
 - On save failure, the dialog stays open and surfaces an error (no silent swallow)
 
-**Non-Claude agent**:
-- Shows an informational message (e.g., "Using Codex's latest default model. Per-stage selection is only available for Claude today.")
+**Other agents (Mistral, Gemini)**:
+- Shows an informational message ("Per-stage model overrides are only used when the effective agent is Claude or Codex. Any values stored here are preserved but inactive until the agent is switched.")
 - No selectors rendered
 
 ### Custom Models Indicator

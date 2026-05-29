@@ -464,7 +464,7 @@ Update only the `agent` field on 1–50 INBOX tickets in one atomic write.
 
 ### POST /api/projects/:projectId/tickets/bulk/model
 
-Write a single Claude model value to all five per-stage overrides on 1–50 INBOX tickets.
+Write a single model value (Claude or Codex) to all five per-stage overrides on 1–50 INBOX tickets.
 
 **Authentication**: Required (session) OR Bearer PAT
 **Authorization**: `verifyProjectAccess` — owner or member
@@ -880,7 +880,7 @@ Update ticket preview URL (workflow-only endpoint).
 
 ### PATCH /api/projects/:projectId/tickets/:id/model-config
 
-Set or clear per-stage Claude model overrides on a ticket.
+Set or clear per-stage model overrides on a ticket (Claude or Codex model IDs).
 
 **Authentication**: Required (session)
 **Authorization**: Must be project owner or member (`verifyTicketAccess`)
@@ -905,7 +905,7 @@ Set or clear per-stage Claude model overrides on a ticket.
 ```
 
 **Validation**:
-- Each model field is optional, nullable — accepted values are the whitelisted Claude model IDs or `null` to clear that stage
+- Each model field is optional, nullable — accepted values are the whitelisted model IDs for either supported agent (Claude or Codex) or `null` to clear that stage; values that do not match the ticket's effective agent are accepted and stored but ignored at dispatch
 - `resetAll: true` sets all 5 stage fields to `null` in a single atomic operation; cannot be combined with individual field values
 - Empty body returns `400`
 - Unknown model ID returns `400` with `INVALID_MODEL_ID` error code

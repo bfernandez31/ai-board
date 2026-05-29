@@ -124,11 +124,11 @@ model Project {
 - `config`: Parsed `.ai-board/config.yml` content stored as JSON (nullable — null means no config synced)
 - `configSyncedAt`: Timestamp of the last successful config fetch from GitHub (nullable)
 - `defaultBranch`: The repository's default branch name (default: `"main"`), auto-updated during config sync
-- `specifyModel`: Claude model ID for SPECIFY jobs (max 50 chars, nullable — null resolves to global fallback `claude-opus-4-7`)
-- `planModel`: Claude model ID for PLAN jobs (max 50 chars, nullable)
-- `implementModel`: Claude model ID for IMPLEMENT jobs (max 50 chars, nullable)
-- `quickImplModel`: Claude model ID for QUICK-IMPL jobs (max 50 chars, nullable)
-- `verifyModel`: Claude model ID for VERIFY jobs (max 50 chars, nullable)
+- `specifyModel`: Model ID (Claude or Codex) for SPECIFY jobs (max 50 chars, nullable — null resolves to the effective agent's global fallback: `claude-opus-4-7` for Claude, `gpt-5.4` for Codex)
+- `planModel`: Model ID (Claude or Codex) for PLAN jobs (max 50 chars, nullable)
+- `implementModel`: Model ID (Claude or Codex) for IMPLEMENT jobs (max 50 chars, nullable)
+- `quickImplModel`: Model ID (Claude or Codex) for QUICK-IMPL jobs (max 50 chars, nullable)
+- `verifyModel`: Model ID (Claude or Codex) for VERIFY jobs (max 50 chars, nullable)
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
 
@@ -159,11 +159,11 @@ model Project {
 - `config` stores the parsed config without the `env` section (secrets excluded from DB)
 - `configSyncedAt` drives staleness checks: config older than 1 hour is auto-refreshed before workflow dispatch
 - Config sync fails explicitly rather than silently using stale data — dispatch is blocked if auto-refresh fails
-- Per-stage model fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) are nullable; null means the stage resolves to the global fallback (`claude-opus-4-7`)
-- New projects are seeded with smart defaults: SPECIFY=`claude-opus-4-7`, PLAN=`claude-opus-4-7`, IMPLEMENT=`claude-sonnet-4-6`, QUICK-IMPL=`claude-sonnet-4-6`, VERIFY=`claude-sonnet-4-6` (set inside the project creation transaction)
-- Pre-existing projects (null values) resolve to `claude-opus-4-7` on every stage — identical behavior to before the feature shipped
-- Only values from the closed whitelist (`claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`) are accepted on write; invalid values are rejected with `INVALID_MODEL_ID`
-- Per-stage model configuration is only active when the effective agent is Claude; non-Claude dispatches ignore these fields entirely
+- Per-stage model fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) are nullable; null means the stage resolves to the effective agent's global fallback (`claude-opus-4-7` for Claude, `gpt-5.4` for Codex)
+- New projects are seeded with smart defaults sized for the project's `defaultAgent`. Claude defaults: SPECIFY=`claude-opus-4-7`, PLAN=`claude-opus-4-7`, IMPLEMENT=`claude-sonnet-4-6`, QUICK-IMPL=`claude-sonnet-4-6`, VERIFY=`claude-sonnet-4-6`. Codex defaults: SPECIFY=`gpt-5.5`, PLAN=`gpt-5.5`, IMPLEMENT=`gpt-5.4`, QUICK-IMPL=`gpt-5.4`, VERIFY=`gpt-5.4`. Defaults are set inside the project creation transaction
+- Pre-existing projects (null values) resolve to the effective agent's global fallback on every stage — identical behavior to before the feature shipped
+- Only values from the combined Claude+Codex whitelist are accepted on write; invalid values are rejected with `INVALID_MODEL_ID`. Stored values that do not match the project's `defaultAgent` are preserved but ignored at dispatch (treated as "not set" by the resolution chain)
+- Per-stage model configuration is only active when the effective agent is Claude or Codex; dispatches under other agents (Mistral, Gemini) ignore these fields entirely
 
 ### Ticket
 
@@ -240,11 +240,11 @@ model Ticket {
 - `workflowType`: Workflow path used (enum: FULL, QUICK, CLEAN; default: FULL). CLEAN is historical only -- creation path removed; retained for existing tickets.
 - `clarificationPolicy`: Optional policy override (nullable, inherits from project when null)
 - `agent`: Optional AI agent override (nullable, inherits from project `defaultAgent` when null)
-- `specifyModel`: Optional Claude model override for SPECIFY jobs (max 50 chars, nullable — null means inherit project default)
-- `planModel`: Optional Claude model override for PLAN jobs (max 50 chars, nullable)
-- `implementModel`: Optional Claude model override for IMPLEMENT jobs (max 50 chars, nullable)
-- `quickImplModel`: Optional Claude model override for QUICK-IMPL jobs (max 50 chars, nullable)
-- `verifyModel`: Optional Claude model override for VERIFY jobs (max 50 chars, nullable)
+- `specifyModel`: Optional model override (Claude or Codex) for SPECIFY jobs (max 50 chars, nullable — null means inherit project default)
+- `planModel`: Optional model override (Claude or Codex) for PLAN jobs (max 50 chars, nullable)
+- `implementModel`: Optional model override (Claude or Codex) for IMPLEMENT jobs (max 50 chars, nullable)
+- `quickImplModel`: Optional model override (Claude or Codex) for QUICK-IMPL jobs (max 50 chars, nullable)
+- `verifyModel`: Optional model override (Claude or Codex) for VERIFY jobs (max 50 chars, nullable)
 - `creatorId`: User who created the ticket (nullable foreign key to `User.id`, max 255 chars). Nullable because legacy rows have no recorded creator. Populated by every ticket-creation code path (manual create, duplicate, full clone, MCP `create_ticket`, inbox-analysis spawner). `onDelete: SetNull` so user deletion leaves the ticket intact while clearing attribution
 - `attachments`: Image attachments (JSON array of TicketAttachment objects, default: empty array)
 - `previewUrl`: Vercel preview deployment URL (max 500 chars, nullable, HTTPS-only, Vercel domain pattern)
@@ -294,9 +294,9 @@ model Ticket {
 - Agent overrides project default when set; null means inherit from project `defaultAgent`
 - Effective agent resolved at dispatch time via `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`
 - `creatorId` is populated at every creation path (manual create, duplicate, full-clone, MCP, inbox-analysis spawner) by forwarding the actor's `userId` from the API auth layer. Bulk merge preserves the base's `creatorId`; source tickets' creators receive a `TICKET_MERGED` notification before their tickets are hard-deleted
-- Per-stage model overrides (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) are nullable; null means inherit the project's value for that stage, which itself falls back to the global fallback `claude-opus-4-7`
-- Stored per-stage overrides are preserved (not cleared) when the ticket's agent is switched to a non-Claude provider; they become active again if the agent is switched back to Claude
-- Resolution at dispatch: `ticket.{stageModel}` → `project.{stageModel}` → `claude-opus-4-7` (only when effective agent is Claude)
+- Per-stage model overrides (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) are nullable; null means inherit the project's value for that stage, which itself falls back to the effective agent's global fallback (`claude-opus-4-7` for Claude, `gpt-5.4` for Codex)
+- Stored per-stage overrides are preserved (not cleared) when the ticket's agent is switched to another provider; values are only applied when they match the effective agent's whitelist, otherwise the resolution chain falls through
+- Resolution at dispatch: `ticket.{stageModel}` → `project.{stageModel}` → agent global fallback (`claude-opus-4-7` for Claude, `gpt-5.4` for Codex; only when effective agent is Claude or Codex)
 - Ticket lookup supports both internal ID (backward compatibility) and ticket key (user-facing)
 - **Deletion**:
   - Tickets can be deleted from INBOX, SPECIFY, PLAN, BUILD, VERIFY stages (not SHIP or CLOSED)
@@ -398,7 +398,7 @@ model Job {
 - `cacheCreationTokens`: Total cache creation tokens (nullable)
 - `costUsd`: Total cost in USD for Claude API calls (nullable, float)
 - `durationMs`: Total duration of Claude API calls in milliseconds (nullable)
-- `model`: Primary Claude model used (max 50 chars, nullable)
+- `model`: Primary model used (Claude or Codex model ID; max 50 chars, nullable)
 - `toolsUsed`: Array of Claude tools used during execution (default: empty array)
 - `peakContextTokens`: Maximum per-turn context size observed during the job (nullable). Derived as `input_tokens + cache_read_tokens + cache_creation_tokens` for Claude turns, `input_token_count` for Codex turns, and the max cumulative snapshot for Gemini. Null for agents with no per-turn telemetry (Mistral) and for jobs that predate per-turn ingestion.
 - `avgContextTokens`: Arithmetic mean of per-turn context size across parsed turns, rounded to integer (nullable). Null under the same conditions as `peakContextTokens`, plus null for Gemini (cumulative snapshots are not per-turn deltas).

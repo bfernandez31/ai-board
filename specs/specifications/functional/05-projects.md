@@ -340,45 +340,49 @@ Each project reads its runtime and service configuration from `.ai-board/config.
 
 ### AI Models Configuration
 
-Projects have a configurable Claude model for each of the 5 automated job types. This allows cost-conscious tuning without affecting non-Claude agents.
+Projects have a configurable model for each of the 5 automated job types when the default agent is Claude or Codex. This allows cost-conscious tuning per agent.
 
 **Purpose**:
-- Assign a specific Claude model per workflow stage to balance cost and capability
+- Assign a specific model per workflow stage to balance cost and capability
 - New projects are pre-populated with smart defaults optimized for cost
 - Existing project owners can opt in to smart defaults with a single action
 
-**Available Models** (closed whitelist):
+**Available Models** (closed whitelist per agent):
 
-| ID | Display Name |
-|----|-------------|
-| `claude-opus-4-7` | Claude Opus 4.7 |
-| `claude-opus-4-6` | Claude Opus 4.6 |
-| `claude-sonnet-4-6` | Claude Sonnet 4.6 |
-| `claude-haiku-4-5-20251001` | Claude Haiku 4.5 |
+| ID | Display Name | Agent |
+|----|-------------|-------|
+| `claude-opus-4-7` | Claude Opus 4.7 | Claude |
+| `claude-opus-4-6` | Claude Opus 4.6 | Claude |
+| `claude-sonnet-4-6` | Claude Sonnet 4.6 | Claude |
+| `claude-haiku-4-5-20251001` | Claude Haiku 4.5 | Claude |
+| `gpt-5-codex` | GPT-5 Codex | Codex |
+| `gpt-5` | GPT-5 | Codex |
+| `gpt-5.4` | GPT-5.4 | Codex |
+| `gpt-5.5` | GPT-5.5 | Codex |
 
-**Configurable Stages**:
+**Configurable Stages and Smart Defaults**:
 
-| Stage | Default (new projects) |
-|-------|------------------------|
-| SPECIFY | Claude Opus 4.7 |
-| PLAN | Claude Opus 4.7 |
-| IMPLEMENT | Claude Sonnet 4.6 |
-| QUICK-IMPL | Claude Sonnet 4.6 |
-| VERIFY | Claude Sonnet 4.6 |
+| Stage | Claude default | Codex default |
+|-------|----------------|---------------|
+| SPECIFY | Claude Opus 4.7 | GPT-5.5 |
+| PLAN | Claude Opus 4.7 | GPT-5.5 |
+| IMPLEMENT | Claude Sonnet 4.6 | GPT-5.4 |
+| QUICK-IMPL | Claude Sonnet 4.6 | GPT-5.4 |
+| VERIFY | Claude Sonnet 4.6 | GPT-5.4 |
 
 **Configuration UI**:
 - Accessible from project Settings page as an "AI Models" card
-- Renders a 5-row table (one per stage) with a model selector when the project's default agent is Claude
+- Renders a 5-row table (one per stage) with a model selector when the project's default agent is Claude or Codex; the selector lists the whitelist matching the project's default agent
 - Each selector change is persisted immediately with an optimistic update; on failure the previous value is restored and a non-blocking error is shown
-- "Apply Smart Defaults" action overwrites all 5 stages atomically with the cost-conscious set
+- "Apply Smart Defaults" action overwrites all 5 stages atomically with the cost-conscious set for the project's default agent
 
-**Non-Claude projects**:
-- When the project's default agent is not Claude, the AI Models card shows an informational message and no selectors are rendered
-- Stored configuration is preserved for when the agent is switched back to Claude
+**Projects on other agents (Mistral, Gemini)**:
+- When the project's default agent is not Claude or Codex, the AI Models card shows an informational message and no selectors are rendered
+- Stored configuration is preserved for when the agent is switched back to a supported agent
 
 **Resolution at dispatch**:
-- When a Claude workflow job is dispatched, the effective model resolves as: ticket override → project default → global fallback `claude-opus-4-7`
-- Only the 5 configurable stages are affected; other job types (`iterate`, `comment-*`, `health-scan`, etc.) always use the global fallback
+- When a Claude or Codex workflow job is dispatched, the effective model resolves as: ticket override → project default → agent global fallback (`claude-opus-4-7` for Claude, `gpt-5.4` for Codex)
+- Only the 5 configurable stages are affected; other job types (`iterate`, `comment-*`, `health-scan`, etc.) always use the agent's global fallback
 
 **Authorization**:
 - Project owners and members can read and update the AI Models configuration

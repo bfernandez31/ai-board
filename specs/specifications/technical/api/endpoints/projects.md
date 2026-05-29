@@ -132,7 +132,7 @@ Fetch project details including clarification policy.
 }
 ```
 
-`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync. Per-stage model fields are `null` for pre-existing projects without explicit configuration (resolves to `claude-opus-4-7` at dispatch time).
+`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync. Per-stage model fields are `null` for pre-existing projects without explicit configuration (resolves to the agent's global fallback at dispatch time — `claude-opus-4-7` for Claude, `gpt-5.4` for Codex).
 
 **Errors**:
 - `401`: Not authenticated
@@ -207,7 +207,7 @@ Update project details including clarification policy.
 - `description`: Optional, string or null
 - `deploymentUrl`: Optional, string or null (valid URL format)
 - `clarificationPolicy`: Optional, enum (AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE)
-- `specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`: Optional, nullable — must be one of the whitelisted Claude model IDs (`claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise
+- `specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`: Optional, nullable — must be one of the whitelisted model IDs for either supported agent (Claude: `claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`; Codex: `gpt-5-codex`, `gpt-5`, `gpt-5.4`, `gpt-5.5`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise. Stored values that do not match the project's `defaultAgent` are preserved but ignored at dispatch (treated as "not set" by the resolution chain)
 
 **Response** (200 OK):
 ```json
@@ -231,7 +231,7 @@ Update project details including clarification policy.
 
 ### POST /api/projects/:projectId/model-config/apply-smart-defaults
 
-Apply the cost-conscious smart default model set to all 5 per-stage model fields atomically.
+Apply the cost-conscious smart default model set to all 5 per-stage model fields atomically. The defaults applied depend on the project's `defaultAgent`.
 
 **Authentication**: Required (session)
 **Authorization**: Must be project owner or member (`verifyProjectAccess`)
@@ -241,14 +241,17 @@ Apply the cost-conscious smart default model set to all 5 per-stage model fields
 
 **Request Body**: None
 
-**Smart defaults applied**:
-| Stage | Model |
-|-------|-------|
-| SPECIFY | `claude-opus-4-7` |
-| PLAN | `claude-opus-4-7` |
-| IMPLEMENT | `claude-sonnet-4-6` |
-| QUICK-IMPL | `claude-sonnet-4-6` |
-| VERIFY | `claude-sonnet-4-6` |
+**Smart defaults applied** (selected by `project.defaultAgent`):
+
+| Stage | Claude default | Codex default |
+|-------|----------------|---------------|
+| SPECIFY | `claude-opus-4-7` | `gpt-5.5` |
+| PLAN | `claude-opus-4-7` | `gpt-5.5` |
+| IMPLEMENT | `claude-sonnet-4-6` | `gpt-5.4` |
+| QUICK-IMPL | `claude-sonnet-4-6` | `gpt-5.4` |
+| VERIFY | `claude-sonnet-4-6` | `gpt-5.4` |
+
+Projects whose `defaultAgent` is neither Claude nor Codex still receive the Claude defaults (preserved on disk; ignored at dispatch).
 
 **Response** (200 OK):
 ```json

@@ -209,7 +209,7 @@ A floating bar pinned to the bottom of the viewport appears whenever at least on
 2. A **Merge** button — disabled when fewer than 2 tickets are selected, or when more than 50 are
 3. A **Delete** button (destructive variant) — disabled above 50 tickets
 4. A **Change agent** dropdown — lists the agents supported by the project's configuration; selection commits immediately
-5. A **Change model** dropdown — lists the project's whitelisted Claude models; selection commits immediately
+5. A **Change model** dropdown — lists the whitelisted models for the project's default agent (Claude or Codex); selection commits immediately
 6. A **Cancel** button — clears the selection and exits select mode
 
 All buttons are reachable via Tab with a visible focus ring; disabled buttons carry tooltips explaining the disable reason.
@@ -235,7 +235,7 @@ On submit, the base ticket atomically receives the edited title, the edited desc
 Picking a value from either dropdown commits immediately (no confirmation modal):
 
 - **Change agent** updates only the `agent` field on every selected ticket
-- **Change model** writes the chosen Claude model to all five per-command overrides (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on every selected ticket
+- **Change model** writes the chosen model (Claude or Codex) to all five per-command overrides (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on every selected ticket
 
 After a non-destructive action succeeds, the floating bar shows a brief success indication and select mode stays open with the same tickets selected, so the user can chain another action.
 
