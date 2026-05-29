@@ -1,30 +1,41 @@
 # Agent Selection
 
 
-### Claude Model Selection
+### Per-Stage Model Selection
 
-For workflows dispatched to the Claude agent, the system resolves a specific Claude model ID per stage using a priority chain.
+For workflows dispatched to a model-configurable agent (Claude or Codex), the system resolves a specific model ID per stage using a priority chain.
 
 **Model Resolution**:
 1. **Ticket override** — `ticket.{stageModel}` (set individually per stage in the override dialog)
 2. **Project default** — `project.{stageModel}` (configured in the AI Models card in project settings)
-3. **Global fallback** — `claude-opus-4-7` (hard-coded; ensures pre-existing projects are byte-for-byte identical to before this feature)
+3. **Agent global fallback** — `claude-opus-4-7` for Claude, `gpt-5.4` for Codex (hard-coded; ensures pre-existing projects are byte-for-byte identical to before this feature)
 
 **Configurable stages**: SPECIFY, PLAN, IMPLEMENT, QUICK-IMPL, VERIFY.
 
-**Non-configurable stages** (`iterate`, `comment-*`, `health-scan`, `retro-spec`, `onboard`): always use the global fallback regardless of project or ticket settings.
+**Non-configurable stages** (`iterate`, `comment-*`, `health-scan`, `retro-spec`, `onboard`): always use the agent global fallback regardless of project or ticket settings.
 
-**Non-Claude agents**: when the effective agent is not Claude, per-stage model configuration is ignored entirely; the agent uses its own current default.
+**Non-configurable agents**: when the effective agent is neither Claude nor Codex (e.g. Mistral, Gemini), per-stage model configuration is ignored entirely; the agent uses its own current default.
+
+**Agent-scoped values**: model IDs are validated against the effective agent's whitelist at dispatch time. A Claude ID stored on a ticket whose effective agent is Codex (or vice versa) is treated as "not set" and falls through to the next resolution layer — overrides are preserved on the row and become active again when the agent is switched back.
 
 The resolved model ID is:
-- Passed to the workflow as the `model` dispatch input
+- Passed to the workflow as the `model` dispatch input, then routed by the workflow into `ANTHROPIC_MODEL` (Claude) or `CODEX_MODEL` (Codex)
 - Written to `Job.model` at job creation for per-stage cost analytics
 
-**Model Whitelist** (closed set; unknown values on read fall through to the next resolution layer):
-- `claude-opus-4-7` — Claude Opus 4.7 (global fallback)
+**Claude Model Whitelist** (closed set; unknown values on read fall through to the next resolution layer):
+- `claude-opus-4-8` — Claude Opus 4.8
+- `claude-opus-4-7` — Claude Opus 4.7 (Claude global fallback)
 - `claude-opus-4-6` — Claude Opus 4.6
 - `claude-sonnet-4-6` — Claude Sonnet 4.6
 - `claude-haiku-4-5-20251001` — Claude Haiku 4.5
+
+**Codex Model Whitelist** (closed set):
+- `gpt-5.5` — GPT-5.5
+- `gpt-5.5-mini` — GPT-5.5 Mini
+- `gpt-5.5-codex` — GPT-5.5 Codex
+- `gpt-5.4` — GPT-5.4 (Codex global fallback)
+- `gpt-5.4-mini` — GPT-5.4 Mini
+- `gpt-5.4-codex` — GPT-5.4 Codex
 
 ### Per-Workflow Agent Routing
 

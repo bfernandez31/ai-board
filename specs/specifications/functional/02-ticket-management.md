@@ -961,7 +961,7 @@ Tickets in INBOX support four bulk operations — delete, merge, change agent, c
 
 **Bulk change model**:
 
-- Writes a single chosen Claude model value to all five per-stage override fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on every selected ticket — or null to clear all five
+- Writes a single chosen model value to all five per-stage override fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on every selected ticket — or null to clear all five. Accepts any Claude or Codex whitelisted model ID; values that don't match a ticket's effective agent remain stored but dormant
 - No notifications are emitted; no other ticket fields change
 
 **Atomicity, conflicts, and authorization**:
@@ -1056,15 +1056,15 @@ Timestamps display in user-friendly formats:
   - Effective agent resolved at workflow dispatch time
   - Follows the same inheritance and editability rules as `clarificationPolicy`
 
-- **Per-Stage Claude Models**: Optional per-ticket Claude model overrides for each of the 5 configurable job types
+- **Per-Stage Models**: Optional per-ticket model overrides for each of the 5 configurable job types
   - 5 nullable fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`)
-  - `null` means inherit from the project's per-stage model default (which itself falls back to `claude-opus-4-7`)
+  - `null` means inherit from the project's per-stage model default (which itself falls back to the effective agent's global fallback: `claude-opus-4-7` for Claude, `gpt-5.4` for Codex)
   - Editable via the per-stage model override dialog accessible from the ticket detail modal
-  - Stored overrides are preserved when the ticket's agent is switched to a non-Claude provider; they become active again if the agent is switched back to Claude
+  - Stored overrides are preserved when the ticket's agent is switched; values from a different agent's whitelist are dormant and become active again when the matching agent is selected
 
 ### Per-Stage Model Override Dialog
 
-Users can open a per-stage model override dialog from the ticket detail modal to set or clear Claude model overrides for each of the 5 workflow stages independently.
+Users can open a per-stage model override dialog from the ticket detail modal to set or clear model overrides for each of the 5 workflow stages independently. Available for tickets whose effective agent is Claude or Codex.
 
 **Access**:
 - Available to project owners and members
@@ -1072,16 +1072,16 @@ Users can open a per-stage model override dialog from the ticket detail modal to
 
 **UI States**:
 
-**Claude agent (active)**:
+**Claude or Codex agent (active)**:
 - Displays 5 rows (SPECIFY, PLAN, IMPLEMENT, QUICK-IMPL, VERIFY)
-- Each row has a selector with "Inherit from project default" as the first option, followed by the 4 whitelisted models
+- Each row has a selector with "Inherit from project default" as the first option, followed by the whitelisted models for the effective agent (5 Claude models or 6 Codex models)
 - "Reset all to project defaults" button clears all 5 overrides atomically
 - Save button disabled when no changes have been made
 - On save failure, the dialog stays open and surfaces an error (no silent swallow)
 
-**Non-Claude agent**:
-- Shows an informational message (e.g., "Using Codex's latest default model. Per-stage selection is only available for Claude today.")
-- No selectors rendered
+**Other agents (Mistral, Gemini, …)**:
+- Shows an informational message indicating per-stage selection is only available for Claude and Codex today
+- No selectors rendered; any stored values are preserved but dormant until the agent is switched to a supported one
 
 ### Custom Models Indicator
 
@@ -1091,7 +1091,7 @@ When any of the 5 stage fields on a ticket has a non-`null` value, the ticket ca
 - **Visible** when at least one stage has a stored model override, regardless of the effective agent
 - **Visual treatment**: an indigo ring with a soft glow wraps the agent icon — no separate badge element, the icon itself becomes the indicator
 - **Tooltip** (on hover of the agent icon) shows the agent label and a secondary line enumerating the overridden stages by human-readable name (e.g., "Custom models: VERIFY, IMPLEMENT")
-- **Dormant state**: when the ticket's effective agent is not Claude but overrides exist, the ring switches to a muted gray (no glow) and the tooltip notes that overrides are currently dormant — so users are not misled into thinking the overrides will be applied
+- **Dormant state**: when the stored override values don't belong to the effective agent's whitelist (e.g. Claude IDs on a Codex ticket, or any override on a Mistral/Gemini ticket), the ring switches to a muted gray (no glow) and the tooltip notes that overrides are currently dormant — so users are not misled into thinking the overrides will be applied
 
 - **Preview URL**: Vercel deployment URL for testing
   - Set when manual deployment is triggered from VERIFY stage

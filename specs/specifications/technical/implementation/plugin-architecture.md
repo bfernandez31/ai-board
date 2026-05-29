@@ -248,7 +248,8 @@ The `run-agent.sh` script abstracts CLI differences:
 |--------|-------------|-----------|------------------|------------|
 | **Command invocation** | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Reads command markdown, injects structured invocation context, executes via `codex exec` | Reads command markdown, injects structured invocation context, executes via `vibe --prompt ... --agent auto-approve` | Reads command markdown, injects structured invocation context, executes via `gemini --prompt=... --approval-mode=yolo` |
 | **Project context** | Reads `CLAUDE.md` natively | Reads `AGENTS.md` at project root via auto-discovery | Reads `AGENTS.md` at project root | Reads `AGENTS.md` at project root |
-| **Model** | `ANTHROPIC_MODEL` env var | `CODEX_MODEL` env var (default: `gpt-5.4`) | CLI default / configured by vibe | CLI default / configured by Gemini runtime |
+| **Model** | `ANTHROPIC_MODEL` env var (default: `claude-opus-4-7`) | `CODEX_MODEL` env var (default: `gpt-5.4`) | CLI default / configured by vibe | CLI default / configured by Gemini runtime |
+| **Per-stage selection** | Resolved from ticket/project per-stage config and routed to `ANTHROPIC_MODEL` when `inputs.agent == 'CLAUDE'` | Resolved from ticket/project per-stage config and routed to `CODEX_MODEL` when `inputs.agent == 'CODEX'` | N/A | N/A |
 | **Reasoning** | N/A (built-in) | `CODEX_REASONING` env var (default: `high`) | N/A | N/A |
 | **Auth** | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` | `MISTRAL_API_KEY` | `GEMINI_API_KEY` or `GEMINI_OAUTH_JSON` |
 

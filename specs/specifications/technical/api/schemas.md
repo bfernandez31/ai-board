@@ -264,35 +264,57 @@ export type CloseTicketParams = z.infer<typeof closeTicketParamsSchema>;
 
 ## Model Config Schemas
 
-### ClaudeModelIdSchema
+### Per-Stage Model Configuration
+
+Two whitelists power per-stage model selection — one per model-configurable agent. Write boundaries (project PATCH, ticket model-config PATCH, project creation) accept any ID from either whitelist; runtime resolution ignores values that don't belong to the effective agent's whitelist.
 
 ```typescript
 // app/lib/schemas/model-config.ts
-import { CLAUDE_MODEL_IDS } from '@/lib/models/claude-models';
+import { CLAUDE_MODEL_IDS, isClaudeModelId } from '@/lib/models/claude-models';
+import { CODEX_MODEL_IDS } from '@/lib/models/codex-models';
+import { isKnownModelId } from '@/lib/models/agent-models';
 import { z } from 'zod';
 
-export const claudeModelIdSchema = z
-  .string()
-  .refine((v) => (CLAUDE_MODEL_IDS as readonly string[]).includes(v), {
-    message: `Model must be one of: ${CLAUDE_MODEL_IDS.join(', ')}`,
-  });
+// Claude-only validation, kept for backward compatibility with consumers that
+// must reject Codex IDs (e.g. legacy callers targeting Claude-specific routes).
+export const claudeModelIdSchema = z.string().refine(isClaudeModelId, {
+  message: `Unknown model ID. Allowed: ${CLAUDE_MODEL_IDS.join(', ')}`,
+});
+
+// Accepts any model ID supported by a configurable agent (Claude or Codex).
+// Stored values from the non-active agent are preserved verbatim but inactive
+// until the matching agent is selected.
+export const agentModelIdSchema = z.string().refine(isKnownModelId, {
+  message: `Unknown model ID. Allowed: ${[...CLAUDE_MODEL_IDS, ...CODEX_MODEL_IDS].join(', ')}`,
+});
 ```
 
-**Whitelisted model IDs**:
+**Whitelisted Claude model IDs**:
 | ID | Display Name |
 |----|-------------|
+| `claude-opus-4-8` | Claude Opus 4.8 |
 | `claude-opus-4-7` | Claude Opus 4.7 |
 | `claude-opus-4-6` | Claude Opus 4.6 |
 | `claude-sonnet-4-6` | Claude Sonnet 4.6 |
 | `claude-haiku-4-5-20251001` | Claude Haiku 4.5 |
 
-Any value not in this list is rejected with `INVALID_MODEL_ID` at every write boundary (project PATCH, ticket model-config PATCH, project creation).
+**Whitelisted Codex model IDs**:
+| ID | Display Name |
+|----|-------------|
+| `gpt-5.5` | GPT-5.5 |
+| `gpt-5.5-mini` | GPT-5.5 Mini |
+| `gpt-5.5-codex` | GPT-5.5 Codex |
+| `gpt-5.4` | GPT-5.4 |
+| `gpt-5.4-mini` | GPT-5.4 Mini |
+| `gpt-5.4-codex` | GPT-5.4 Codex |
+
+Any value outside both lists is rejected with `INVALID_MODEL_ID` at every write boundary.
 
 ### TicketModelOverrideSchema
 
 ```typescript
 // app/lib/schemas/model-config.ts
-const nullableModelId = claudeModelIdSchema.nullable().optional();
+const nullableModelId = agentModelIdSchema.nullable().optional();
 
 export const ticketModelOverrideSchema = z
   .object({

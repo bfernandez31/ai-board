@@ -340,45 +340,59 @@ Each project reads its runtime and service configuration from `.ai-board/config.
 
 ### AI Models Configuration
 
-Projects have a configurable Claude model for each of the 5 automated job types. This allows cost-conscious tuning without affecting non-Claude agents.
+Projects have a configurable model for each of the 5 automated job types when the project's default agent is Claude or Codex. This allows cost-conscious tuning without affecting agents that don't expose per-stage selection.
 
 **Purpose**:
-- Assign a specific Claude model per workflow stage to balance cost and capability
+- Assign a specific model per workflow stage to balance cost and capability
 - New projects are pre-populated with smart defaults optimized for cost
 - Existing project owners can opt in to smart defaults with a single action
 
-**Available Models** (closed whitelist):
+**Available Claude Models** (closed whitelist):
 
 | ID | Display Name |
 |----|-------------|
+| `claude-opus-4-8` | Claude Opus 4.8 |
 | `claude-opus-4-7` | Claude Opus 4.7 |
 | `claude-opus-4-6` | Claude Opus 4.6 |
 | `claude-sonnet-4-6` | Claude Sonnet 4.6 |
 | `claude-haiku-4-5-20251001` | Claude Haiku 4.5 |
 
+**Available Codex Models** (closed whitelist):
+
+| ID | Display Name |
+|----|-------------|
+| `gpt-5.5` | GPT-5.5 |
+| `gpt-5.5-mini` | GPT-5.5 Mini |
+| `gpt-5.5-codex` | GPT-5.5 Codex |
+| `gpt-5.4` | GPT-5.4 |
+| `gpt-5.4-mini` | GPT-5.4 Mini |
+| `gpt-5.4-codex` | GPT-5.4 Codex |
+
 **Configurable Stages**:
 
-| Stage | Default (new projects) |
-|-------|------------------------|
-| SPECIFY | Claude Opus 4.7 |
-| PLAN | Claude Opus 4.7 |
-| IMPLEMENT | Claude Sonnet 4.6 |
-| QUICK-IMPL | Claude Sonnet 4.6 |
-| VERIFY | Claude Sonnet 4.6 |
+| Stage | Claude smart default | Codex smart default |
+|-------|----------------------|---------------------|
+| SPECIFY | Claude Opus 4.7 | GPT-5.5 |
+| PLAN | Claude Opus 4.7 | GPT-5.5 |
+| IMPLEMENT | Claude Sonnet 4.6 | GPT-5.5 Codex |
+| QUICK-IMPL | Claude Sonnet 4.6 | GPT-5.5 Codex |
+| VERIFY | Claude Sonnet 4.6 | GPT-5.5 Codex |
 
 **Configuration UI**:
 - Accessible from project Settings page as an "AI Models" card
-- Renders a 5-row table (one per stage) with a model selector when the project's default agent is Claude
+- Renders a 5-row table (one per stage) with a model selector when the project's default agent is Claude or Codex; each selector lists the models from that agent's whitelist
+- The "Use global fallback" option in each selector names the active agent's fallback model (Claude Opus 4.7 for Claude, GPT-5.4 for Codex)
 - Each selector change is persisted immediately with an optimistic update; on failure the previous value is restored and a non-blocking error is shown
-- "Apply Smart Defaults" action overwrites all 5 stages atomically with the cost-conscious set
+- "Apply Smart Defaults" action overwrites all 5 stages atomically with the cost-conscious set for the project's current default agent
 
-**Non-Claude projects**:
-- When the project's default agent is not Claude, the AI Models card shows an informational message and no selectors are rendered
-- Stored configuration is preserved for when the agent is switched back to Claude
+**Non-configurable agents (Mistral, Gemini, …)**:
+- The AI Models card shows an informational message and no selectors are rendered
+- Stored configuration is preserved; values become active again when the agent is switched to Claude or Codex
 
 **Resolution at dispatch**:
-- When a Claude workflow job is dispatched, the effective model resolves as: ticket override → project default → global fallback `claude-opus-4-7`
-- Only the 5 configurable stages are affected; other job types (`iterate`, `comment-*`, `health-scan`, etc.) always use the global fallback
+- When a Claude or Codex workflow job is dispatched, the effective model resolves as: ticket override → project default → agent global fallback (`claude-opus-4-7` for Claude, `gpt-5.4` for Codex)
+- Stored values that don't belong to the effective agent's whitelist (e.g. a Claude ID while Codex is dispatched) are ignored at this layer and fall through to the next
+- Only the 5 configurable stages are affected; other job types (`iterate`, `comment-*`, `health-scan`, etc.) always use the agent global fallback
 
 **Authorization**:
 - Project owners and members can read and update the AI Models configuration
