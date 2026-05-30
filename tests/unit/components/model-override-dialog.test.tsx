@@ -46,11 +46,12 @@ describe('ModelOverrideDialog', () => {
     expect(screen.getByTestId('row-verifyModel')).toBeInTheDocument();
   });
 
-  it('shows inactive message when effective agent is not Claude', () => {
+  it('shows inactive message when effective agent is neither Claude nor Codex', () => {
     renderDialog({ effectiveAgent: Agent.GEMINI });
 
     expect(screen.getByTestId('model-override-inactive')).toBeInTheDocument();
     expect(screen.queryByTestId('row-specifyModel')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('row-codexSpecifyModel')).not.toBeInTheDocument();
   });
 
   it('disables save when there are no changes', () => {
@@ -133,5 +134,54 @@ describe('ModelOverrideDialog', () => {
     expect(onSave).toHaveBeenCalled();
     expect(await screen.findByText('API exploded')).toBeInTheDocument();
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
+  });
+});
+
+describe('ModelOverrideDialog — Codex', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders 5 Codex stage rows when effective agent is CODEX', () => {
+    renderDialog({ effectiveAgent: Agent.CODEX });
+
+    expect(screen.getByTestId('row-codexSpecifyModel')).toBeInTheDocument();
+    expect(screen.getByTestId('row-codexPlanModel')).toBeInTheDocument();
+    expect(screen.getByTestId('row-codexImplementModel')).toBeInTheDocument();
+    expect(screen.getByTestId('row-codexQuickImplModel')).toBeInTheDocument();
+    expect(screen.getByTestId('row-codexVerifyModel')).toBeInTheDocument();
+    expect(screen.queryByTestId('row-specifyModel')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('model-override-inactive')).not.toBeInTheDocument();
+  });
+
+  it('does NOT show inactive banner when effective agent is CODEX', () => {
+    renderDialog({ effectiveAgent: Agent.CODEX });
+
+    expect(screen.queryByTestId('model-override-inactive')).not.toBeInTheDocument();
+  });
+
+  it('calls onSave with codex-keyed payload (resetAll) when reset is clicked', async () => {
+    const user = userEvent.setup();
+    const { onSave } = renderDialog({
+      effectiveAgent: Agent.CODEX,
+      current: { ...baseCurrent, codexVerifyModel: 'gpt-5.5' },
+    });
+
+    await user.click(screen.getByTestId('reset-all-overrides'));
+
+    const saveButton = screen.getByTestId('save-model-overrides');
+    expect(saveButton).not.toBeDisabled();
+    await user.click(saveButton);
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith({ resetAll: true });
+  });
+
+  it('renders Codex model labels in dropdown content (GPT-5.5)', () => {
+    renderDialog({
+      effectiveAgent: Agent.CODEX,
+      current: { ...baseCurrent, codexSpecifyModel: 'gpt-5.5' },
+    });
+    expect(screen.getByText('GPT-5.5')).toBeInTheDocument();
   });
 });

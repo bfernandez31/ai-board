@@ -245,3 +245,133 @@ describe('PATCH /api/projects/:projectId/tickets/:id/model-config (AIB-678)', ()
     });
   });
 });
+
+describe('PATCH /tickets/:id/model-config — Codex (AIB-830)', () => {
+  let ctx: TestContext;
+  const prisma = getPrismaClient();
+
+  beforeEach(async () => {
+    ctx = await getTestContext();
+    await ctx.cleanup();
+  });
+
+  it('sets a single Codex stage column and returns the row', async () => {
+    const ticket = await ctx.createTicket();
+
+    const response = await ctx.api.patch<{
+      ticketId: number;
+      codexImplementModel: string | null;
+      codexSpecifyModel: string | null;
+      hasAnyOverride: boolean;
+      overriddenStages: string[];
+    }>(`/api/projects/${ctx.projectId}/tickets/${ticket.id}/model-config`, {
+      codexImplementModel: 'gpt-5.5',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.data.codexImplementModel).toBe('gpt-5.5');
+    expect(response.data.codexSpecifyModel).toBeNull();
+    expect(response.data.hasAnyOverride).toBe(true);
+    expect(response.data.overriddenStages).toEqual(['IMPLEMENT']);
+
+    const db = await prisma.ticket.findUnique({ where: { id: ticket.id } });
+    expect(db?.codexImplementModel).toBe('gpt-5.5');
+    expect(db?.codexSpecifyModel).toBeNull();
+    expect(db?.implementModel).toBeNull();
+  });
+
+  it('clears ALL 10 columns when resetAll is true (both agent sets)', async () => {
+    const ticket = await ctx.createTicket();
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        specifyModel: 'claude-opus-4-7',
+        implementModel: 'claude-sonnet-4-6',
+        codexSpecifyModel: 'gpt-5.5',
+        codexImplementModel: 'gpt-5.4',
+      },
+    });
+
+    const response = await ctx.api.patch<{
+      specifyModel: string | null;
+      planModel: string | null;
+      implementModel: string | null;
+      quickImplModel: string | null;
+      verifyModel: string | null;
+      codexSpecifyModel: string | null;
+      codexPlanModel: string | null;
+      codexImplementModel: string | null;
+      codexQuickImplModel: string | null;
+      codexVerifyModel: string | null;
+      hasAnyOverride: boolean;
+    }>(`/api/projects/${ctx.projectId}/tickets/${ticket.id}/model-config`, {
+      resetAll: true,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.data.specifyModel).toBeNull();
+    expect(response.data.implementModel).toBeNull();
+    expect(response.data.codexSpecifyModel).toBeNull();
+    expect(response.data.codexImplementModel).toBeNull();
+    expect(response.data.hasAnyOverride).toBe(false);
+  });
+
+  it('returns 400 INVALID_MODEL_ID for an unknown Codex model identifier', async () => {
+    const ticket = await ctx.createTicket();
+
+    const response = await ctx.api.patch<{ error: string; code?: string }>(
+      `/api/projects/${ctx.projectId}/tickets/${ticket.id}/model-config`,
+      { codexImplementModel: 'gpt-mystery-1' }
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.data.code).toBe('INVALID_MODEL_ID');
+  });
+
+  it('returns 400 MIXED_AGENT_PAYLOAD when body has both Claude and Codex keys', async () => {
+    const ticket = await ctx.createTicket();
+
+    const response = await ctx.api.patch<{ error: string; code?: string }>(
+      `/api/projects/${ctx.projectId}/tickets/${ticket.id}/model-config`,
+      { implementModel: 'claude-sonnet-4-6', codexImplementModel: 'gpt-5.5' }
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.data.code).toBe('MIXED_AGENT_PAYLOAD');
+  });
+
+  it('allows a project member (non-owner) to write Codex overrides', async () => {
+    const ticket = await ctx.createTicket();
+    const member = await ctx.createUser(`codex-member-${Date.now()}@project${ctx.projectId}.e2e.test`);
+
+    await prisma.projectMember.create({
+      data: {
+        projectId: ctx.projectId,
+        userId: member.id,
+        role: 'member',
+      },
+    });
+
+    const response = await ctx.api.patch<{ codexPlanModel: string | null }>(
+      `/api/projects/${ctx.projectId}/tickets/${ticket.id}/model-config`,
+      { codexPlanModel: 'gpt-5.4' },
+      { headers: { 'x-test-user-id': member.id } }
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.data.codexPlanModel).toBe('gpt-5.4');
+  });
+
+  it('returns 404 when requester is not a member of the project (Codex payload)', async () => {
+    const ticket = await ctx.createTicket();
+    const outsider = await ctx.createUser(`codex-outsider-${Date.now()}@e2e.local`);
+
+    const response = await ctx.api.patch<{ error: string }>(
+      `/api/projects/${ctx.projectId}/tickets/${ticket.id}/model-config`,
+      { codexPlanModel: 'gpt-5.4' },
+      { headers: { 'x-test-user-id': outsider.id } }
+    );
+
+    expect(response.status).toBe(404);
+  });
+});

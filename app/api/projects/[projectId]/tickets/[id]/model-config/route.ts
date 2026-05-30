@@ -2,8 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { verifyTicketAccess } from '@/lib/db/auth-helpers';
-import { ticketModelOverrideSchema } from '@/app/lib/schemas/model-config';
+import {
+  ticketModelOverrideSchema,
+  ticketCodexModelOverrideSchema,
+} from '@/app/lib/schemas/model-config';
 import { STAGE_MODEL_KEYS, STAGE_MODEL_LABELS } from '@/lib/models/claude-models';
+import { CODEX_STAGE_MODEL_KEYS, CODEX_STAGE_MODEL_LABELS } from '@/lib/models/codex-models';
+
+const ALL_MODEL_FIELD_NAMES: readonly string[] = [
+  ...STAGE_MODEL_KEYS,
+  ...CODEX_STAGE_MODEL_KEYS,
+];
 
 export async function PATCH(
   request: NextRequest,
@@ -24,14 +33,47 @@ export async function PATCH(
     await verifyTicketAccess(ticketId, request);
 
     const body = await request.json();
-    const validated = ticketModelOverrideSchema.parse(body);
+
+    const hasClaudeKey =
+      body && typeof body === 'object' && STAGE_MODEL_KEYS.some((key) => key in body);
+    const hasCodexKey =
+      body && typeof body === 'object' && CODEX_STAGE_MODEL_KEYS.some((key) => key in body);
+
+    if (hasClaudeKey && hasCodexKey) {
+      return NextResponse.json(
+        {
+          error: 'Request mixes Claude and Codex model fields. Submit one agent\'s overrides at a time.',
+          code: 'MIXED_AGENT_PAYLOAD',
+        },
+        { status: 400 }
+      );
+    }
 
     const updateData: Record<string, string | null> = {};
-    for (const key of STAGE_MODEL_KEYS) {
+
+    if (hasCodexKey) {
+      const validated = ticketCodexModelOverrideSchema.parse(body);
       if (validated.resetAll) {
-        updateData[key] = null;
-      } else if (validated[key] !== undefined) {
-        updateData[key] = validated[key] ?? null;
+        for (const key of STAGE_MODEL_KEYS) updateData[key] = null;
+        for (const key of CODEX_STAGE_MODEL_KEYS) updateData[key] = null;
+      } else {
+        for (const key of CODEX_STAGE_MODEL_KEYS) {
+          if (validated[key] !== undefined) {
+            updateData[key] = validated[key] ?? null;
+          }
+        }
+      }
+    } else {
+      const validated = ticketModelOverrideSchema.parse(body);
+      if (validated.resetAll) {
+        for (const key of STAGE_MODEL_KEYS) updateData[key] = null;
+        for (const key of CODEX_STAGE_MODEL_KEYS) updateData[key] = null;
+      } else {
+        for (const key of STAGE_MODEL_KEYS) {
+          if (validated[key] !== undefined) {
+            updateData[key] = validated[key] ?? null;
+          }
+        }
       }
     }
 
@@ -52,12 +94,24 @@ export async function PATCH(
         implementModel: true,
         quickImplModel: true,
         verifyModel: true,
+        codexSpecifyModel: true,
+        codexPlanModel: true,
+        codexImplementModel: true,
+        codexQuickImplModel: true,
+        codexVerifyModel: true,
       },
     });
 
-    const overriddenStages = STAGE_MODEL_KEYS
-      .filter((key) => updated[key] != null)
-      .map((key) => STAGE_MODEL_LABELS[key]);
+    const overriddenStages: string[] = [];
+    for (const key of STAGE_MODEL_KEYS) {
+      if (updated[key] != null) overriddenStages.push(STAGE_MODEL_LABELS[key]);
+    }
+    for (const key of CODEX_STAGE_MODEL_KEYS) {
+      if (updated[key] != null) {
+        const label = CODEX_STAGE_MODEL_LABELS[key];
+        if (!overriddenStages.includes(label)) overriddenStages.push(label);
+      }
+    }
 
     const { id: updatedId, ...models } = updated;
     return NextResponse.json({
@@ -70,9 +124,7 @@ export async function PATCH(
     if (error instanceof ZodError) {
       const modelFieldIssue = error.issues.find((issue) =>
         typeof issue.path[0] === 'string' &&
-        ['specifyModel', 'planModel', 'implementModel', 'quickImplModel', 'verifyModel'].includes(
-          issue.path[0] as string
-        )
+        ALL_MODEL_FIELD_NAMES.includes(issue.path[0] as string)
       );
       if (modelFieldIssue) {
         return NextResponse.json(

@@ -27,19 +27,38 @@ import {
   type StageModelKey,
   type ClaudeModelId,
 } from '@/lib/models/claude-models';
+import {
+  CODEX_MODEL_IDS,
+  CODEX_MODEL_LABELS,
+  CODEX_STAGE_MODEL_KEYS,
+  CODEX_STAGE_MODEL_LABELS,
+  type CodexStageModelKey,
+  type CodexModelId,
+} from '@/lib/models/codex-models';
 import { Loader2 } from 'lucide-react';
 
 const PROJECT_DEFAULT_SENTINEL = 'project-default';
 
-type StageSelection = Record<StageModelKey, string | null>;
+type ClaudeStageSelection = Record<StageModelKey, string | null>;
+type CodexStageSelection = Record<CodexStageModelKey, string | null>;
 
-function toSelection(overrides: Partial<StageSelection>): StageSelection {
+function toClaudeSelection(overrides: Partial<ClaudeStageSelection>): ClaudeStageSelection {
   return {
     specifyModel: overrides.specifyModel ?? null,
     planModel: overrides.planModel ?? null,
     implementModel: overrides.implementModel ?? null,
     quickImplModel: overrides.quickImplModel ?? null,
     verifyModel: overrides.verifyModel ?? null,
+  };
+}
+
+function toCodexSelection(overrides: Partial<CodexStageSelection>): CodexStageSelection {
+  return {
+    codexSpecifyModel: overrides.codexSpecifyModel ?? null,
+    codexPlanModel: overrides.codexPlanModel ?? null,
+    codexImplementModel: overrides.codexImplementModel ?? null,
+    codexQuickImplModel: overrides.codexQuickImplModel ?? null,
+    codexVerifyModel: overrides.codexVerifyModel ?? null,
   };
 }
 
@@ -53,6 +72,11 @@ interface ModelOverrideDialogProps {
     implementModel: string | null;
     quickImplModel: string | null;
     verifyModel: string | null;
+    codexSpecifyModel?: string | null;
+    codexPlanModel?: string | null;
+    codexImplementModel?: string | null;
+    codexQuickImplModel?: string | null;
+    codexVerifyModel?: string | null;
   };
   onSave: (input: {
     specifyModel?: string | null;
@@ -60,6 +84,11 @@ interface ModelOverrideDialogProps {
     implementModel?: string | null;
     quickImplModel?: string | null;
     verifyModel?: string | null;
+    codexSpecifyModel?: string | null;
+    codexPlanModel?: string | null;
+    codexImplementModel?: string | null;
+    codexQuickImplModel?: string | null;
+    codexVerifyModel?: string | null;
     resetAll?: boolean;
   }) => Promise<void>;
 }
@@ -71,13 +100,19 @@ export function ModelOverrideDialog({
   current,
   onSave,
 }: ModelOverrideDialogProps) {
-  const [selection, setSelection] = React.useState<StageSelection>(() => toSelection(current));
+  const [claudeSelection, setClaudeSelection] = React.useState<ClaudeStageSelection>(() =>
+    toClaudeSelection(current)
+  );
+  const [codexSelection, setCodexSelection] = React.useState<CodexStageSelection>(() =>
+    toCodexSelection(current)
+  );
   const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (open) {
-      setSelection(toSelection(current));
+      setClaudeSelection(toClaudeSelection(current));
+      setCodexSelection(toCodexSelection(current));
       setError(null);
     }
     // `current` is a fresh object literal on every parent render; including it
@@ -86,29 +121,54 @@ export function ModelOverrideDialog({
   }, [open]);
 
   const isClaude = effectiveAgent === Agent.CLAUDE;
+  const isCodex = effectiveAgent === Agent.CODEX;
+  const isConfigurable = isClaude || isCodex;
 
   const hasChanges = React.useMemo(() => {
-    return STAGE_MODEL_KEYS.some((key) => selection[key] !== (current[key] ?? null));
-  }, [selection, current]);
+    if (isClaude) {
+      return STAGE_MODEL_KEYS.some((key) => claudeSelection[key] !== (current[key] ?? null));
+    }
+    if (isCodex) {
+      return CODEX_STAGE_MODEL_KEYS.some(
+        (key) => codexSelection[key] !== (current[key] ?? null)
+      );
+    }
+    return false;
+  }, [isClaude, isCodex, claudeSelection, codexSelection, current]);
 
-  const handleStageChange = (stage: StageModelKey, value: string) => {
+  const handleClaudeStageChange = (stage: StageModelKey, value: string) => {
     const mapped = value === PROJECT_DEFAULT_SENTINEL ? null : (value as ClaudeModelId);
-    setSelection((prev) => ({ ...prev, [stage]: mapped }));
+    setClaudeSelection((prev) => ({ ...prev, [stage]: mapped }));
+  };
+
+  const handleCodexStageChange = (stage: CodexStageModelKey, value: string) => {
+    const mapped = value === PROJECT_DEFAULT_SENTINEL ? null : (value as CodexModelId);
+    setCodexSelection((prev) => ({ ...prev, [stage]: mapped }));
   };
 
   const handleResetAll = () => {
-    setSelection(toSelection({}));
+    setClaudeSelection(toClaudeSelection({}));
+    setCodexSelection(toCodexSelection({}));
   };
 
   const handleSave = async () => {
     setIsSaving(true);
     setError(null);
     try {
-      const allNull = STAGE_MODEL_KEYS.every((key) => selection[key] == null);
-      if (allNull) {
-        await onSave({ resetAll: true });
-      } else {
-        await onSave(selection);
+      if (isClaude) {
+        const allNull = STAGE_MODEL_KEYS.every((key) => claudeSelection[key] == null);
+        if (allNull) {
+          await onSave({ resetAll: true });
+        } else {
+          await onSave(claudeSelection);
+        }
+      } else if (isCodex) {
+        const allNull = CODEX_STAGE_MODEL_KEYS.every((key) => codexSelection[key] == null);
+        if (allNull) {
+          await onSave({ resetAll: true });
+        } else {
+          await onSave(codexSelection);
+        }
       }
       onOpenChange(false);
     } catch (err) {
@@ -124,23 +184,25 @@ export function ModelOverrideDialog({
         <DialogHeader>
           <DialogTitle>Per-stage model overrides</DialogTitle>
           <DialogDescription>
-            Pick a Claude model per stage or inherit the project default.
+            {isCodex
+              ? 'Pick a Codex model per stage or inherit the project default.'
+              : 'Pick a Claude model per stage or inherit the project default.'}
           </DialogDescription>
         </DialogHeader>
 
-        {!isClaude ? (
+        {!isConfigurable ? (
           <div
             className="rounded-md bg-muted p-3 text-sm text-muted-foreground"
             data-testid="model-override-inactive"
           >
             This ticket&apos;s effective agent is <strong>{effectiveAgent}</strong>. Per-stage model
-            overrides are only used when the effective agent is Claude. Any values stored here are
-            preserved but inactive until the agent is switched back to Claude.
+            overrides are only used when the effective agent is Claude or Codex. Any values stored
+            here are preserved but inactive until the agent is switched back.
           </div>
-        ) : (
+        ) : isClaude ? (
           <div className="space-y-3 py-2">
             {STAGE_MODEL_KEYS.map((stage) => {
-              const value = selection[stage] ?? PROJECT_DEFAULT_SENTINEL;
+              const value = claudeSelection[stage] ?? PROJECT_DEFAULT_SENTINEL;
               return (
                 <div key={stage} className="flex items-center gap-3" data-testid={`row-${stage}`}>
                   <Label htmlFor={`${stage}-select`} className="w-28 text-sm">
@@ -148,7 +210,7 @@ export function ModelOverrideDialog({
                   </Label>
                   <Select
                     value={value}
-                    onValueChange={(v) => handleStageChange(stage, v)}
+                    onValueChange={(v) => handleClaudeStageChange(stage, v)}
                     disabled={isSaving}
                   >
                     <SelectTrigger
@@ -192,6 +254,61 @@ export function ModelOverrideDialog({
               </div>
             )}
           </div>
+        ) : (
+          <div className="space-y-3 py-2">
+            {CODEX_STAGE_MODEL_KEYS.map((stage) => {
+              const value = codexSelection[stage] ?? PROJECT_DEFAULT_SENTINEL;
+              return (
+                <div key={stage} className="flex items-center gap-3" data-testid={`row-${stage}`}>
+                  <Label htmlFor={`${stage}-select`} className="w-28 text-sm">
+                    {CODEX_STAGE_MODEL_LABELS[stage]}
+                  </Label>
+                  <Select
+                    value={value}
+                    onValueChange={(v) => handleCodexStageChange(stage, v)}
+                    disabled={isSaving}
+                  >
+                    <SelectTrigger
+                      id={`${stage}-select`}
+                      className="flex-1"
+                      data-testid={`${stage}-override-trigger`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={PROJECT_DEFAULT_SENTINEL}>
+                        Inherit from project default
+                      </SelectItem>
+                      {CODEX_MODEL_IDS.map((modelId) => (
+                        <SelectItem key={modelId} value={modelId}>
+                          {CODEX_MODEL_LABELS[modelId]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })}
+
+            <div className="flex justify-start pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleResetAll}
+                disabled={isSaving}
+                data-testid="reset-all-overrides"
+              >
+                Reset all to project defaults
+              </Button>
+            </div>
+
+            {error && (
+              <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-3">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
+          </div>
         )}
 
         <DialogFooter>
@@ -206,7 +323,7 @@ export function ModelOverrideDialog({
           <Button
             type="button"
             onClick={handleSave}
-            disabled={!hasChanges || isSaving || !isClaude}
+            disabled={!hasChanges || isSaving || !isConfigurable}
             className="flex items-center gap-2"
             data-testid="save-model-overrides"
           >
