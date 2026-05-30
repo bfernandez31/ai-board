@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Agent } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { SMART_DEFAULTS } from '@/lib/models/claude-models';
+import { CODEX_SMART_DEFAULTS } from '@/lib/models/codex-models';
 
 export async function POST(
   request: NextRequest,
@@ -17,19 +19,52 @@ export async function POST(
 
     await verifyProjectAccess(parsedProjectId, request);
 
-    const updated = await prisma.project.update({
+    const project = await prisma.project.findUnique({
       where: { id: parsedProjectId },
-      data: { ...SMART_DEFAULTS },
-      select: {
-        specifyModel: true,
-        planModel: true,
-        implementModel: true,
-        quickImplModel: true,
-        verifyModel: true,
-      },
+      select: { defaultAgent: true },
     });
 
-    return NextResponse.json(updated);
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    if (project.defaultAgent === Agent.CLAUDE) {
+      const updated = await prisma.project.update({
+        where: { id: parsedProjectId },
+        data: { ...SMART_DEFAULTS },
+        select: {
+          specifyModel: true,
+          planModel: true,
+          implementModel: true,
+          quickImplModel: true,
+          verifyModel: true,
+        },
+      });
+      return NextResponse.json(updated);
+    }
+
+    if (project.defaultAgent === Agent.CODEX) {
+      const updated = await prisma.project.update({
+        where: { id: parsedProjectId },
+        data: { ...CODEX_SMART_DEFAULTS },
+        select: {
+          codexSpecifyModel: true,
+          codexPlanModel: true,
+          codexImplementModel: true,
+          codexQuickImplModel: true,
+          codexVerifyModel: true,
+        },
+      });
+      return NextResponse.json(updated);
+    }
+
+    return NextResponse.json(
+      {
+        error: `Smart defaults are not supported for the ${project.defaultAgent} agent.`,
+        code: 'UNSUPPORTED_AGENT_FOR_SMART_DEFAULTS',
+      },
+      { status: 400 }
+    );
   } catch (error) {
     if (error instanceof Error && error.message === 'Project not found') {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });

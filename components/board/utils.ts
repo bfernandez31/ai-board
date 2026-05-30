@@ -125,6 +125,11 @@ export type UpdatedModalTicket = {
   implementModel?: string | null;
   quickImplModel?: string | null;
   verifyModel?: string | null;
+  codexSpecifyModel?: string | null;
+  codexPlanModel?: string | null;
+  codexImplementModel?: string | null;
+  codexQuickImplModel?: string | null;
+  codexVerifyModel?: string | null;
   workflowType: 'FULL' | 'QUICK' | 'CLEAN';
   attachments?: import('@/app/lib/types/ticket').TicketAttachment[] | null;
   createdAt: string | Date;
@@ -169,6 +174,26 @@ export function normalizeUpdatedTicket(
       updatedTicket.verifyModel !== undefined
         ? updatedTicket.verifyModel
         : existingTicket?.verifyModel ?? null,
+    codexSpecifyModel:
+      updatedTicket.codexSpecifyModel !== undefined
+        ? updatedTicket.codexSpecifyModel
+        : existingTicket?.codexSpecifyModel ?? null,
+    codexPlanModel:
+      updatedTicket.codexPlanModel !== undefined
+        ? updatedTicket.codexPlanModel
+        : existingTicket?.codexPlanModel ?? null,
+    codexImplementModel:
+      updatedTicket.codexImplementModel !== undefined
+        ? updatedTicket.codexImplementModel
+        : existingTicket?.codexImplementModel ?? null,
+    codexQuickImplModel:
+      updatedTicket.codexQuickImplModel !== undefined
+        ? updatedTicket.codexQuickImplModel
+        : existingTicket?.codexQuickImplModel ?? null,
+    codexVerifyModel:
+      updatedTicket.codexVerifyModel !== undefined
+        ? updatedTicket.codexVerifyModel
+        : existingTicket?.codexVerifyModel ?? null,
     workflowType: updatedTicket.workflowType || existingTicket?.workflowType || 'FULL',
     attachments: (updatedTicket.attachments ?? existingTicket?.attachments ?? []) as import('@prisma/client').Prisma.JsonValue,
     qualityScore: existingTicket?.qualityScore ?? null,

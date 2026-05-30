@@ -25,6 +25,11 @@ type TicketRow = {
   implementModel: string | null;
   quickImplModel: string | null;
   verifyModel: string | null;
+  codexSpecifyModel: string | null;
+  codexPlanModel: string | null;
+  codexImplementModel: string | null;
+  codexQuickImplModel: string | null;
+  codexVerifyModel: string | null;
   workflowType: import('@prisma/client').WorkflowType;
   attachments: import('@prisma/client').Prisma.JsonValue;
   createdAt: Date;
@@ -57,6 +62,11 @@ function toTicketWithVersion(ticket: TicketRow): TicketWithVersion {
     implementModel: ticket.implementModel,
     quickImplModel: ticket.quickImplModel,
     verifyModel: ticket.verifyModel,
+    codexSpecifyModel: ticket.codexSpecifyModel,
+    codexPlanModel: ticket.codexPlanModel,
+    codexImplementModel: ticket.codexImplementModel,
+    codexQuickImplModel: ticket.codexQuickImplModel,
+    codexVerifyModel: ticket.codexVerifyModel,
     workflowType: ticket.workflowType,
     attachments: ticket.attachments,
     qualityScore: null,
@@ -155,6 +165,11 @@ const TICKET_SELECT = {
   implementModel: true,
   quickImplModel: true,
   verifyModel: true,
+  codexSpecifyModel: true,
+  codexPlanModel: true,
+  codexImplementModel: true,
+  codexQuickImplModel: true,
+  codexVerifyModel: true,
   workflowType: true,
   attachments: true,
   createdAt: true,

@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 import { requireAuth } from './users';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
 import { SMART_DEFAULTS } from '@/lib/models/claude-models';
+import { CODEX_SMART_DEFAULTS } from '@/lib/models/codex-models';
 import { computeLastActivityAt, sortProjectsByActivity } from './projects-activity';
 
 /**
@@ -171,6 +172,7 @@ export async function createProject(data: {
       data: {
         ...data,
         ...SMART_DEFAULTS,
+        ...CODEX_SMART_DEFAULTS,
         userId, // ← CRITICAL: inject userId
         updatedAt: new Date(), // Required field
       },
@@ -212,6 +214,11 @@ export async function updateProject(
     implementModel?: string | null | undefined;
     quickImplModel?: string | null | undefined;
     verifyModel?: string | null | undefined;
+    codexSpecifyModel?: string | null | undefined;
+    codexPlanModel?: string | null | undefined;
+    codexImplementModel?: string | null | undefined;
+    codexQuickImplModel?: string | null | undefined;
+    codexVerifyModel?: string | null | undefined;
   }
 ) {
   const userId = await requireAuth();
@@ -245,6 +252,11 @@ export async function updateProject(
   if (data.implementModel !== undefined) updateData.implementModel = data.implementModel;
   if (data.quickImplModel !== undefined) updateData.quickImplModel = data.quickImplModel;
   if (data.verifyModel !== undefined) updateData.verifyModel = data.verifyModel;
+  if (data.codexSpecifyModel !== undefined) updateData.codexSpecifyModel = data.codexSpecifyModel;
+  if (data.codexPlanModel !== undefined) updateData.codexPlanModel = data.codexPlanModel;
+  if (data.codexImplementModel !== undefined) updateData.codexImplementModel = data.codexImplementModel;
+  if (data.codexQuickImplModel !== undefined) updateData.codexQuickImplModel = data.codexQuickImplModel;
+  if (data.codexVerifyModel !== undefined) updateData.codexVerifyModel = data.codexVerifyModel;
 
   return prisma.project.update({
     where: { id: projectId },

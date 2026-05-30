@@ -28,6 +28,7 @@ import { QualityScoreBadge } from '@/components/ticket/quality-score-badge';
 import { isAutoModeEligible } from '@/app/lib/tickets/auto-mode-eligibility';
 import { X } from 'lucide-react';
 import { STAGE_MODEL_KEYS, STAGE_MODEL_LABELS } from '@/lib/models/claude-models';
+import { CODEX_STAGE_MODEL_KEYS, CODEX_STAGE_MODEL_LABELS } from '@/lib/models/codex-models';
 
 export interface TicketCardSelection {
   isSelected: boolean;
@@ -141,13 +142,30 @@ export const TicketCard = React.memo(
     const effectiveAgent = ticket.agent ?? ticket.project?.defaultAgent;
     const isAgentInherited = ticket.agent == null;
 
-    const overriddenStageLabels = React.useMemo(() => {
+    const claudeOverriddenStageLabels = React.useMemo(() => {
       return STAGE_MODEL_KEYS
         .filter((key) => ticket[key] != null)
         .map((key) => STAGE_MODEL_LABELS[key]);
     }, [ticket]);
-    const hasModelOverride = overriddenStageLabels.length > 0;
-    const isModelOverrideDormant = hasModelOverride && effectiveAgent != null && effectiveAgent !== Agent.CLAUDE;
+    const codexOverriddenStageLabels = React.useMemo(() => {
+      return CODEX_STAGE_MODEL_KEYS
+        .filter((key) => (ticket as unknown as Record<string, string | null | undefined>)[key] != null)
+        .map((key) => CODEX_STAGE_MODEL_LABELS[key]);
+    }, [ticket]);
+    const hasClaudeOverride = claudeOverriddenStageLabels.length > 0;
+    const hasCodexOverride = codexOverriddenStageLabels.length > 0;
+    const hasModelOverride = hasClaudeOverride || hasCodexOverride;
+    const isModelOverrideDormant =
+      hasModelOverride &&
+      (
+        (effectiveAgent !== Agent.CLAUDE && effectiveAgent !== Agent.CODEX) ||
+        (effectiveAgent === Agent.CLAUDE && !hasClaudeOverride) ||
+        (effectiveAgent === Agent.CODEX && !hasCodexOverride)
+      );
+    const overriddenStageLabels =
+      effectiveAgent === Agent.CODEX
+        ? (hasCodexOverride ? codexOverriddenStageLabels : claudeOverriddenStageLabels)
+        : (hasClaudeOverride ? claudeOverriddenStageLabels : codexOverriddenStageLabels);
 
     const isDeployJobActive = deployJob != null && (deployJob.status === 'PENDING' || deployJob.status === 'RUNNING');
     const showDeployButton = (!deployJob && isDeployable) || (deployJob != null && !isDeployJobActive && ticket.stage === 'VERIFY');

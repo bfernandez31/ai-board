@@ -78,6 +78,11 @@ interface TicketData {
   implementModel?: string | null;
   quickImplModel?: string | null;
   verifyModel?: string | null;
+  codexSpecifyModel?: string | null;
+  codexPlanModel?: string | null;
+  codexImplementModel?: string | null;
+  codexQuickImplModel?: string | null;
+  codexVerifyModel?: string | null;
   workflowType: 'FULL' | 'QUICK' | 'CLEAN';
   attachments?: TicketAttachment[] | null;
   createdAt: Date | string;
@@ -314,6 +319,11 @@ export function TicketDetailModal({
       implementModel: localTicket.implementModel ?? null,
       quickImplModel: localTicket.quickImplModel ?? null,
       verifyModel: localTicket.verifyModel ?? null,
+      codexSpecifyModel: localTicket.codexSpecifyModel ?? null,
+      codexPlanModel: localTicket.codexPlanModel ?? null,
+      codexImplementModel: localTicket.codexImplementModel ?? null,
+      codexQuickImplModel: localTicket.codexQuickImplModel ?? null,
+      codexVerifyModel: localTicket.codexVerifyModel ?? null,
       attachments: (localTicket.attachments || []) as unknown as TicketWithVersion['attachments'],
       qualityScore: null,
     };
@@ -684,6 +694,11 @@ export function TicketDetailModal({
     implementModel?: string | null;
     quickImplModel?: string | null;
     verifyModel?: string | null;
+    codexSpecifyModel?: string | null;
+    codexPlanModel?: string | null;
+    codexImplementModel?: string | null;
+    codexQuickImplModel?: string | null;
+    codexVerifyModel?: string | null;
     resetAll?: boolean;
   }): Promise<void> => {
     if (!localTicket) return;
@@ -698,6 +713,11 @@ export function TicketDetailModal({
           implementModel: null,
           quickImplModel: null,
           verifyModel: null,
+          codexSpecifyModel: null,
+          codexPlanModel: null,
+          codexImplementModel: null,
+          codexQuickImplModel: null,
+          codexVerifyModel: null,
         }
       : {
           ...localTicket,
@@ -715,6 +735,26 @@ export function TicketDetailModal({
               : localTicket.quickImplModel ?? null,
           verifyModel:
             input.verifyModel !== undefined ? input.verifyModel : localTicket.verifyModel ?? null,
+          codexSpecifyModel:
+            input.codexSpecifyModel !== undefined
+              ? input.codexSpecifyModel
+              : localTicket.codexSpecifyModel ?? null,
+          codexPlanModel:
+            input.codexPlanModel !== undefined
+              ? input.codexPlanModel
+              : localTicket.codexPlanModel ?? null,
+          codexImplementModel:
+            input.codexImplementModel !== undefined
+              ? input.codexImplementModel
+              : localTicket.codexImplementModel ?? null,
+          codexQuickImplModel:
+            input.codexQuickImplModel !== undefined
+              ? input.codexQuickImplModel
+              : localTicket.codexQuickImplModel ?? null,
+          codexVerifyModel:
+            input.codexVerifyModel !== undefined
+              ? input.codexVerifyModel
+              : localTicket.codexVerifyModel ?? null,
         };
 
     setLocalTicket(optimistic);
@@ -748,6 +788,11 @@ export function TicketDetailModal({
         implementModel: updated.implementModel ?? null,
         quickImplModel: updated.quickImplModel ?? null,
         verifyModel: updated.verifyModel ?? null,
+        codexSpecifyModel: updated.codexSpecifyModel ?? null,
+        codexPlanModel: updated.codexPlanModel ?? null,
+        codexImplementModel: updated.codexImplementModel ?? null,
+        codexQuickImplModel: updated.codexQuickImplModel ?? null,
+        codexVerifyModel: updated.codexVerifyModel ?? null,
       };
       setLocalTicket(normalizedTicket);
 
@@ -1429,6 +1474,11 @@ export function TicketDetailModal({
             implementModel: localTicket.implementModel ?? null,
             quickImplModel: localTicket.quickImplModel ?? null,
             verifyModel: localTicket.verifyModel ?? null,
+            codexSpecifyModel: localTicket.codexSpecifyModel ?? null,
+            codexPlanModel: localTicket.codexPlanModel ?? null,
+            codexImplementModel: localTicket.codexImplementModel ?? null,
+            codexQuickImplModel: localTicket.codexQuickImplModel ?? null,
+            codexVerifyModel: localTicket.codexVerifyModel ?? null,
           }}
           onSave={handleSaveModelOverrides}
         />

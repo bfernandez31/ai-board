@@ -313,7 +313,7 @@ Workflows execute on GitHub Actions infrastructure:
 - Branch name (empty for new branches)
 - WorkflowType (FULL or QUICK) - controls verify.yml test execution
 - Agent selection - resolved from ticket override or project default (see Agent Selection below)
-- Claude model ID - resolved from ticket/project per-stage config or global fallback (see Claude Model Selection above); omitted for non-Claude agents
+- Model ID - resolved from the ticket/project per-stage config for the effective agent (Claude or Codex) or that agent's global fallback (see [Agent Selection → Per-Stage Model Selection](./agents.md)); omitted for Mistral/Gemini and for non-configurable commands
 - User information (for AI-BOARD mentions)
 - Comment content (for AI-BOARD requests)
 

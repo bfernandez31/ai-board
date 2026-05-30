@@ -88,6 +88,11 @@ export default async function ProjectSettingsPage({
               implementModel: project.implementModel,
               quickImplModel: project.quickImplModel,
               verifyModel: project.verifyModel,
+              codexSpecifyModel: project.codexSpecifyModel,
+              codexPlanModel: project.codexPlanModel,
+              codexImplementModel: project.codexImplementModel,
+              codexQuickImplModel: project.codexQuickImplModel,
+              codexVerifyModel: project.codexVerifyModel,
             }}
           />
 

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ClarificationPolicy, Agent } from '@prisma/client';
-import { claudeModelIdSchema } from '@/app/lib/schemas/model-config';
+import { claudeModelIdSchema, codexModelIdSchema } from '@/app/lib/schemas/model-config';
 
 export const projectClarificationPolicySchema = z.nativeEnum(ClarificationPolicy);
 
@@ -13,6 +13,11 @@ export const projectUpdateSchema = z.object({
   implementModel: claudeModelIdSchema.nullable().optional(),
   quickImplModel: claudeModelIdSchema.nullable().optional(),
   verifyModel: claudeModelIdSchema.nullable().optional(),
+  codexSpecifyModel: codexModelIdSchema.nullable().optional(),
+  codexPlanModel: codexModelIdSchema.nullable().optional(),
+  codexImplementModel: codexModelIdSchema.nullable().optional(),
+  codexQuickImplModel: codexModelIdSchema.nullable().optional(),
+  codexVerifyModel: codexModelIdSchema.nullable().optional(),
 });
 
 export const ticketClarificationPolicySchema = z.nativeEnum(ClarificationPolicy).nullable();

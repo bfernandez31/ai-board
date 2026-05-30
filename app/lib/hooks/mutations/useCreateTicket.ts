@@ -78,6 +78,11 @@ export function useCreateTicket() {
         implementModel: null,
         quickImplModel: null,
         verifyModel: null,
+        codexSpecifyModel: null,
+        codexPlanModel: null,
+        codexImplementModel: null,
+        codexQuickImplModel: null,
+        codexVerifyModel: null,
         attachments: [],
         qualityScore: null,
       };

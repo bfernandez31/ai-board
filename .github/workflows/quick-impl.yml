@@ -169,6 +169,9 @@ jobs:
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       # Claude model: per-stage override from dispatch input, fallback to Opus 4.7
       ANTHROPIC_MODEL: ${{ inputs.model != '' && inputs.model || 'claude-opus-4-7' }}
+      # Codex model: per-stage override from dispatch input, fallback to GPT-5.4.
+      # Set for every dispatch — only consumed when the selected agent is Codex.
+      CODEX_MODEL: ${{ inputs.model != '' && inputs.model || 'gpt-5.4' }}
       # DATABASE_URL provided by .ai-board/config.yml env section via setup-environment.sh
       # Claude Code telemetry - send to OTLP endpoint
       CLAUDE_CODE_ENABLE_TELEMETRY: "1"
