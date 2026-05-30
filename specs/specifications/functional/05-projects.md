@@ -340,14 +340,16 @@ Each project reads its runtime and service configuration from `.ai-board/config.
 
 ### AI Models Configuration
 
-Projects have a configurable Claude model for each of the 5 automated job types. This allows cost-conscious tuning without affecting non-Claude agents.
+Projects have a configurable per-stage model for each of the 5 automated job types, available independently for the Claude and Codex agents. This allows cost-conscious tuning without affecting other agents.
 
 **Purpose**:
-- Assign a specific Claude model per workflow stage to balance cost and capability
+- Assign a specific model per workflow stage to balance cost and capability
 - New projects are pre-populated with smart defaults optimized for cost
 - Existing project owners can opt in to smart defaults with a single action
 
-**Available Models** (closed whitelist):
+**Available Models** (closed whitelists):
+
+Claude:
 
 | ID | Display Name |
 |----|-------------|
@@ -356,29 +358,46 @@ Projects have a configurable Claude model for each of the 5 automated job types.
 | `claude-sonnet-4-6` | Claude Sonnet 4.6 |
 | `claude-haiku-4-5-20251001` | Claude Haiku 4.5 |
 
-**Configurable Stages**:
+Codex:
 
-| Stage | Default (new projects) |
-|-------|------------------------|
-| SPECIFY | Claude Opus 4.7 |
-| PLAN | Claude Opus 4.7 |
-| IMPLEMENT | Claude Sonnet 4.6 |
-| QUICK-IMPL | Claude Sonnet 4.6 |
-| VERIFY | Claude Sonnet 4.6 |
+| ID | Display Name |
+|----|-------------|
+| `gpt-5.5` | GPT-5.5 |
+| `gpt-5.4` | GPT-5.4 |
+| `gpt-5.4-mini` | GPT-5.4 mini |
+| `gpt-5.3-codex` | GPT-5.3 Codex |
+| `gpt-5.2` | GPT-5.2 |
+
+**Configurable Stages** (smart defaults applied to new projects of either agent):
+
+| Stage | Claude default | Codex default |
+|-------|----------------|---------------|
+| SPECIFY | Claude Opus 4.7 | GPT-5.5 |
+| PLAN | Claude Opus 4.7 | GPT-5.5 |
+| IMPLEMENT | Claude Sonnet 4.6 | GPT-5.4 |
+| QUICK-IMPL | Claude Sonnet 4.6 | GPT-5.4 mini |
+| VERIFY | Claude Sonnet 4.6 | GPT-5.4 mini |
 
 **Configuration UI**:
 - Accessible from project Settings page as an "AI Models" card
-- Renders a 5-row table (one per stage) with a model selector when the project's default agent is Claude
+- Renders a 5-row table (one per stage) with a model selector when the project's default agent is Claude or Codex
+- The dropdown for each stage is sourced from the active agent's whitelist; the inactive agent's stored values stay in the database but are not rendered
 - Each selector change is persisted immediately with an optimistic update; on failure the previous value is restored and a non-blocking error is shown
-- "Apply Smart Defaults" action overwrites all 5 stages atomically with the cost-conscious set
+- "Apply Smart Defaults" action overwrites all 5 stages of the active agent atomically with that agent's cost-conscious set
 
-**Non-Claude projects**:
-- When the project's default agent is not Claude, the AI Models card shows an informational message and no selectors are rendered
-- Stored configuration is preserved for when the agent is switched back to Claude
+**Mistral / Gemini projects**:
+- When the project's default agent is Mistral or Gemini, the AI Models card shows an informational message and no selectors are rendered
+- Stored Claude and Codex configuration is preserved for when the agent is switched back
+
+**Agent switching (dormancy)**:
+- Claude and Codex per-stage selections are stored in independent column sets; switching `defaultAgent` between the two never overwrites either set
+- Switching back restores the originally-configured selections for that agent
 
 **Resolution at dispatch**:
-- When a Claude workflow job is dispatched, the effective model resolves as: ticket override → project default → global fallback `claude-opus-4-7`
-- Only the 5 configurable stages are affected; other job types (`iterate`, `comment-*`, `health-scan`, etc.) always use the global fallback
+- When the effective agent for a workflow job is Claude, the model resolves as: ticket override → project default → global fallback `claude-opus-4-7`
+- When the effective agent is Codex, the model resolves as: ticket override → project default → global fallback `gpt-5.5`
+- A stored model identifier that is no longer in the active agent's whitelist (e.g., deprecated by the provider) is treated as "not set" and falls through to the next resolver layer
+- Only the 5 configurable stages are affected; other job types (`iterate`, `comment-*`, `health-scan`, etc.) always use the active agent's CLI default
 
 **Authorization**:
 - Project owners and members can read and update the AI Models configuration

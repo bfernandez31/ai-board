@@ -228,7 +228,7 @@ Triggered from the floating bar when 2–50 tickets are selected. A preview moda
 - A description textarea prefilled with the base description followed, for each non-base ticket in ascending id order, by `\n\n---\n\n## From <ticketKey>: <title>\n<description>` blocks (editable, up to 10,000 chars, live character counter that turns red and disables submit when the limit is exceeded)
 - A line showing "Combined attachments: {n}" derived from the base + all sources
 
-On submit, the base ticket atomically receives the edited title, the edited description, and the concatenated attachment list from every source, while the source tickets are hard-deleted. The base's id, ticketKey, agent, per-stage model overrides, workflowType, autoMode, clarificationPolicy, branch, previewUrl, and stage are all preserved — merge is content-level squash, never a settings merge.
+On submit, the base ticket atomically receives the edited title, the edited description, and the concatenated attachment list from every source, while the source tickets are hard-deleted. The base's id, ticketKey, agent, per-stage model overrides (both Claude and Codex columns), workflowType, autoMode, clarificationPolicy, branch, previewUrl, and stage are all preserved — merge is content-level squash, never a settings merge.
 
 **Bulk change agent / change model**:
 

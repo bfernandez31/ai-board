@@ -1,30 +1,39 @@
 # Agent Selection
 
 
-### Claude Model Selection
+### Per-Stage Model Selection
 
-For workflows dispatched to the Claude agent, the system resolves a specific Claude model ID per stage using a priority chain.
+For workflows dispatched to the Claude or Codex agent, the system resolves a specific model ID per stage using a priority chain. Claude and Codex configurations are stored independently so neither set is overwritten when the project owner toggles `defaultAgent`.
 
-**Model Resolution**:
-1. **Ticket override** — `ticket.{stageModel}` (set individually per stage in the override dialog)
-2. **Project default** — `project.{stageModel}` (configured in the AI Models card in project settings)
-3. **Global fallback** — `claude-opus-4-7` (hard-coded; ensures pre-existing projects are byte-for-byte identical to before this feature)
+**Model Resolution** (per agent):
+1. **Ticket override** — `ticket.{stageModel}` for Claude, `ticket.codex{StageModel}` for Codex (set individually per stage in the override dialog)
+2. **Project default** — `project.{stageModel}` / `project.codex{StageModel}` (configured in the AI Models card in project settings)
+3. **Global fallback** — `claude-opus-4-7` for Claude, `gpt-5.5` for Codex (hard-coded)
+
+A stored value that is no longer in the active agent's whitelist (e.g., deprecated by the provider) is treated as "not set" and falls through to the next layer.
 
 **Configurable stages**: SPECIFY, PLAN, IMPLEMENT, QUICK-IMPL, VERIFY.
 
-**Non-configurable stages** (`iterate`, `comment-*`, `health-scan`, `retro-spec`, `onboard`): always use the global fallback regardless of project or ticket settings.
+**Non-configurable stages** (`iterate`, `comment-*`, `health-scan`, `retro-spec`, `onboard`): no `model` input is emitted; the agent's CLI uses its own default.
 
-**Non-Claude agents**: when the effective agent is not Claude, per-stage model configuration is ignored entirely; the agent uses its own current default.
+**Mistral / Gemini**: per-stage model configuration is not exposed; the CLI uses its own current default.
 
 The resolved model ID is:
 - Passed to the workflow as the `model` dispatch input
 - Written to `Job.model` at job creation for per-stage cost analytics
 
-**Model Whitelist** (closed set; unknown values on read fall through to the next resolution layer):
+**Claude model whitelist** (closed set; unknown values fall through to the next resolution layer):
 - `claude-opus-4-7` — Claude Opus 4.7 (global fallback)
 - `claude-opus-4-6` — Claude Opus 4.6
 - `claude-sonnet-4-6` — Claude Sonnet 4.6
 - `claude-haiku-4-5-20251001` — Claude Haiku 4.5
+
+**Codex model whitelist** (closed set; unknown values fall through to the next resolution layer):
+- `gpt-5.5` — GPT-5.5 (global fallback)
+- `gpt-5.4` — GPT-5.4
+- `gpt-5.4-mini` — GPT-5.4 mini
+- `gpt-5.3-codex` — GPT-5.3 Codex
+- `gpt-5.2` — GPT-5.2
 
 ### Per-Workflow Agent Routing
 

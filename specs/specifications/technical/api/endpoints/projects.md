@@ -128,11 +128,16 @@ Fetch project details including clarification policy.
   "planModel": "claude-opus-4-7",
   "implementModel": "claude-sonnet-4-6",
   "quickImplModel": "claude-sonnet-4-6",
-  "verifyModel": "claude-sonnet-4-6"
+  "verifyModel": "claude-sonnet-4-6",
+  "codexSpecifyModel": "gpt-5.5",
+  "codexPlanModel": "gpt-5.5",
+  "codexImplementModel": "gpt-5.4",
+  "codexQuickImplModel": "gpt-5.4-mini",
+  "codexVerifyModel": "gpt-5.4-mini"
 }
 ```
 
-`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync. Per-stage model fields are `null` for pre-existing projects without explicit configuration (resolves to `claude-opus-4-7` at dispatch time).
+`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync. Per-stage model fields are `null` for pre-existing projects without explicit configuration (Claude fields resolve to `claude-opus-4-7` and Codex fields resolve to `gpt-5.5` at dispatch time). Both column sets are always returned regardless of `defaultAgent` — the inactive agent's stored values stay durable for later switching.
 
 **Errors**:
 - `401`: Not authenticated
@@ -197,7 +202,12 @@ Update project details including clarification policy.
   "planModel": "claude-opus-4-7",
   "implementModel": "claude-sonnet-4-6",
   "quickImplModel": "claude-sonnet-4-6",
-  "verifyModel": "claude-sonnet-4-6"
+  "verifyModel": "claude-sonnet-4-6",
+  "codexSpecifyModel": "gpt-5.5",
+  "codexPlanModel": "gpt-5.5",
+  "codexImplementModel": "gpt-5.4",
+  "codexQuickImplModel": "gpt-5.4-mini",
+  "codexVerifyModel": "gpt-5.4-mini"
 }
 ```
 
@@ -208,6 +218,8 @@ Update project details including clarification policy.
 - `deploymentUrl`: Optional, string or null (valid URL format)
 - `clarificationPolicy`: Optional, enum (AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE)
 - `specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`: Optional, nullable — must be one of the whitelisted Claude model IDs (`claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise
+- `codexSpecifyModel`, `codexPlanModel`, `codexImplementModel`, `codexQuickImplModel`, `codexVerifyModel`: Optional, nullable — must be one of the whitelisted Codex model IDs (`gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex`, `gpt-5.2`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise
+- Claude and Codex column sets are independent: writing one never touches the other
 
 **Response** (200 OK):
 ```json
@@ -231,7 +243,7 @@ Update project details including clarification policy.
 
 ### POST /api/projects/:projectId/model-config/apply-smart-defaults
 
-Apply the cost-conscious smart default model set to all 5 per-stage model fields atomically.
+Apply the cost-conscious smart default model set for the project's active agent (Claude or Codex) to all 5 per-stage model fields atomically. The endpoint reads `project.defaultAgent` first to decide which column set to write; the dormant agent's columns are untouched.
 
 **Authentication**: Required (session)
 **Authorization**: Must be project owner or member (`verifyProjectAccess`)
@@ -241,16 +253,17 @@ Apply the cost-conscious smart default model set to all 5 per-stage model fields
 
 **Request Body**: None
 
-**Smart defaults applied**:
-| Stage | Model |
-|-------|-------|
-| SPECIFY | `claude-opus-4-7` |
-| PLAN | `claude-opus-4-7` |
-| IMPLEMENT | `claude-sonnet-4-6` |
-| QUICK-IMPL | `claude-sonnet-4-6` |
-| VERIFY | `claude-sonnet-4-6` |
+**Smart defaults applied** (per active agent):
 
-**Response** (200 OK):
+| Stage | Claude | Codex |
+|-------|--------|-------|
+| SPECIFY | `claude-opus-4-7` | `gpt-5.5` |
+| PLAN | `claude-opus-4-7` | `gpt-5.5` |
+| IMPLEMENT | `claude-sonnet-4-6` | `gpt-5.4` |
+| QUICK-IMPL | `claude-sonnet-4-6` | `gpt-5.4-mini` |
+| VERIFY | `claude-sonnet-4-6` | `gpt-5.4-mini` |
+
+**Response** (200 OK) — Claude project:
 ```json
 {
   "specifyModel": "claude-opus-4-7",
@@ -261,9 +274,21 @@ Apply the cost-conscious smart default model set to all 5 per-stage model fields
 }
 ```
 
-Operation is idempotent — calling it twice produces the same result.
+**Response** (200 OK) — Codex project:
+```json
+{
+  "codexSpecifyModel": "gpt-5.5",
+  "codexPlanModel": "gpt-5.5",
+  "codexImplementModel": "gpt-5.4",
+  "codexQuickImplModel": "gpt-5.4-mini",
+  "codexVerifyModel": "gpt-5.4-mini"
+}
+```
+
+The response includes only the columns of the active agent. Operation is idempotent — calling it twice with the same `defaultAgent` produces the same result.
 
 **Errors**:
+- `400`: `UNSUPPORTED_AGENT_FOR_SMART_DEFAULTS` — `defaultAgent` is Mistral or Gemini (smart defaults exist only for Claude and Codex)
 - `401`: Not authenticated
 - `404`: Project not found or no access
 

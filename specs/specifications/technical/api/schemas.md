@@ -278,7 +278,7 @@ export const claudeModelIdSchema = z
   });
 ```
 
-**Whitelisted model IDs**:
+**Whitelisted Claude model IDs**:
 | ID | Display Name |
 |----|-------------|
 | `claude-opus-4-7` | Claude Opus 4.7 |
@@ -286,7 +286,27 @@ export const claudeModelIdSchema = z
 | `claude-sonnet-4-6` | Claude Sonnet 4.6 |
 | `claude-haiku-4-5-20251001` | Claude Haiku 4.5 |
 
-Any value not in this list is rejected with `INVALID_MODEL_ID` at every write boundary (project PATCH, ticket model-config PATCH, project creation).
+### CodexModelIdSchema
+
+```typescript
+// app/lib/schemas/model-config.ts
+import { CODEX_MODEL_IDS, isCodexModelId } from '@/lib/models/codex-models';
+
+export const codexModelIdSchema = z.string().refine(isCodexModelId, {
+  message: `Unknown model ID. Allowed: ${CODEX_MODEL_IDS.join(', ')}`,
+});
+```
+
+**Whitelisted Codex model IDs**:
+| ID | Display Name |
+|----|-------------|
+| `gpt-5.5` | GPT-5.5 |
+| `gpt-5.4` | GPT-5.4 |
+| `gpt-5.4-mini` | GPT-5.4 mini |
+| `gpt-5.3-codex` | GPT-5.3 Codex |
+| `gpt-5.2` | GPT-5.2 |
+
+Any value not in the corresponding whitelist is rejected with `INVALID_MODEL_ID` at every write boundary (project PATCH, ticket model-config PATCH, project creation).
 
 ### TicketModelOverrideSchema
 
@@ -311,10 +331,33 @@ export const ticketModelOverrideSchema = z
 export type TicketModelOverrideInput = z.infer<typeof ticketModelOverrideSchema>;
 ```
 
+### TicketCodexModelOverrideSchema
+
+```typescript
+// app/lib/schemas/model-config.ts
+const nullableCodexModelId = codexModelIdSchema.nullable().optional();
+
+export const ticketCodexModelOverrideSchema = z
+  .object({
+    codexSpecifyModel: nullableCodexModelId,
+    codexPlanModel: nullableCodexModelId,
+    codexImplementModel: nullableCodexModelId,
+    codexQuickImplModel: nullableCodexModelId,
+    codexVerifyModel: nullableCodexModelId,
+    resetAll: z.boolean().optional(),
+  })
+  .refine(/* at least one field or resetAll */)
+  .refine(/* resetAll cannot be combined with stage fields */);
+```
+
 **Usage**:
-- Validates the request body for `PATCH /api/projects/:projectId/tickets/:id/model-config`
-- `resetAll: true` nulls all 5 stage fields atomically; individual fields update only the specified stages
-- Empty body (no recognized keys) returns `400`
+- Both schemas validate `PATCH /api/projects/:projectId/tickets/:id/model-config`. The route handler detects which agent's keys are present in the raw body, runs the matching schema, and rejects payloads that mix Claude and Codex keys with `400 MIXED_AGENT_PAYLOAD`.
+- `resetAll: true` is agent-agnostic and nulls all 10 stage fields (5 Claude + 5 Codex) atomically.
+- Empty body (no recognized keys) returns `400`.
+
+### ProjectUpdateSchema (model fields)
+
+`projectUpdateSchema` in `app/lib/schemas/clarification-policy.ts` accepts all 10 model columns as optional nullable fields — 5 Claude fields validated by `claudeModelIdSchema` and 5 Codex fields validated by `codexModelIdSchema`. The PATCH route emits `INVALID_MODEL_ID` (status 400) for Zod failures on any of the 10 column names.
 
 ## AI-BOARD Command Schemas
 

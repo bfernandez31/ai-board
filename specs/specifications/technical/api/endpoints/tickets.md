@@ -880,7 +880,7 @@ Update ticket preview URL (workflow-only endpoint).
 
 ### PATCH /api/projects/:projectId/tickets/:id/model-config
 
-Set or clear per-stage Claude model overrides on a ticket.
+Set or clear per-stage model overrides on a ticket, for either the Claude or the Codex column set. A single request targets one agent's columns at a time.
 
 **Authentication**: Required (session)
 **Authorization**: Must be project owner or member (`verifyTicketAccess`)
@@ -889,7 +889,9 @@ Set or clear per-stage Claude model overrides on a ticket.
 - `projectId` (number, required): Project ID
 - `id` (number, required): Ticket ID
 
-**Request Body** (set individual overrides):
+**Request Body** — one of three shapes:
+
+Set Claude overrides:
 ```json
 {
   "specifyModel": "claude-opus-4-7",
@@ -897,7 +899,15 @@ Set or clear per-stage Claude model overrides on a ticket.
 }
 ```
 
-**Request Body** (clear all overrides):
+Set Codex overrides:
+```json
+{
+  "codexSpecifyModel": "gpt-5.5",
+  "codexImplementModel": "gpt-5.4-mini"
+}
+```
+
+Clear all overrides (agent-agnostic — nulls every column in both sets):
 ```json
 {
   "resetAll": true
@@ -905,8 +915,10 @@ Set or clear per-stage Claude model overrides on a ticket.
 ```
 
 **Validation**:
-- Each model field is optional, nullable — accepted values are the whitelisted Claude model IDs or `null` to clear that stage
-- `resetAll: true` sets all 5 stage fields to `null` in a single atomic operation; cannot be combined with individual field values
+- Each Claude field is optional, nullable — accepted values are the whitelisted Claude model IDs or `null` to clear that stage
+- Each Codex field is optional, nullable — accepted values are the whitelisted Codex model IDs (`gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex`, `gpt-5.2`) or `null` to clear that stage
+- A single payload cannot mix Claude and Codex field names — returns `400` with `MIXED_AGENT_PAYLOAD`
+- `resetAll: true` sets all 10 stage fields (both Claude and Codex) to `null` in a single atomic operation; cannot be combined with individual field values
 - Empty body returns `400`
 - Unknown model ID returns `400` with `INVALID_MODEL_ID` error code
 
@@ -917,14 +929,21 @@ Set or clear per-stage Claude model overrides on a ticket.
   "planModel": null,
   "implementModel": null,
   "quickImplModel": null,
-  "verifyModel": "claude-haiku-4-5-20251001"
+  "verifyModel": "claude-haiku-4-5-20251001",
+  "codexSpecifyModel": null,
+  "codexPlanModel": null,
+  "codexImplementModel": null,
+  "codexQuickImplModel": null,
+  "codexVerifyModel": null,
+  "hasAnyOverride": true,
+  "overriddenStages": ["SPECIFY", "VERIFY"]
 }
 ```
 
-All 5 fields are always returned; `null` means "inherit from project default" at dispatch time.
+All 10 fields are always returned; `null` means "inherit from project default" at dispatch time. `hasAnyOverride` is `true` when at least one column across both sets is non-null. `overriddenStages` lists the human-readable stage labels (SPECIFY, PLAN, IMPLEMENT, QUICK-IMPL, VERIFY) of every populated column from either set, each label appearing at most once.
 
 **Errors**:
-- `400`: Empty body, `INVALID_MODEL_ID`, or `resetAll` combined with field values
+- `400`: Empty body, `INVALID_MODEL_ID`, `MIXED_AGENT_PAYLOAD`, or `resetAll` combined with field values
 - `401`: Not authenticated
 - `404`: Ticket or project not found, or no access
 
