@@ -6,6 +6,13 @@ import {
   type ClaudeModelId,
   type StageModelKey,
 } from '@/lib/models/claude-models';
+import {
+  CODEX_GLOBAL_FALLBACK_MODEL,
+  commandToCodexStageModelKey,
+  isCodexModelId,
+  type CodexModelId,
+  type CodexStageModelKey,
+} from '@/lib/models/codex-models';
 
 export interface StageModelSource {
   specifyModel?: string | null;
@@ -13,6 +20,11 @@ export interface StageModelSource {
   implementModel?: string | null;
   quickImplModel?: string | null;
   verifyModel?: string | null;
+  codexSpecifyModel?: string | null;
+  codexPlanModel?: string | null;
+  codexImplementModel?: string | null;
+  codexQuickImplModel?: string | null;
+  codexVerifyModel?: string | null;
 }
 
 export interface TicketLikeForResolution extends StageModelSource {
@@ -20,16 +32,16 @@ export interface TicketLikeForResolution extends StageModelSource {
 }
 
 /**
- * Resolve the Claude model for a stage transition.
+ * Resolve the per-stage model for a workflow dispatch.
  *
  * Returns `null` when:
  *   - command is not one of the 5 configurable stages
- *   - effectiveAgent is not Claude
+ *   - effectiveAgent is neither Claude nor Codex
  *
- * Otherwise returns (in priority order):
+ * Otherwise returns (in priority order, scoped to the active agent's columns):
  *   1. ticket's stored override (if valid whitelist value)
  *   2. project's stored default (if valid whitelist value)
- *   3. CLAUDE_GLOBAL_FALLBACK_MODEL
+ *   3. the agent's global fallback model
  *
  * Stale stored values (not in whitelist) are treated as "not set" and fall
  * through to the next layer.
@@ -38,24 +50,44 @@ export function resolveStageModel(
   ticket: TicketLikeForResolution,
   command: string,
   effectiveAgent: Agent
-): ClaudeModelId | null {
-  const stageKey: StageModelKey | null = commandToStageModelKey(command);
-  if (!stageKey) {
-    return null;
-  }
-  if (effectiveAgent !== Agent.CLAUDE) {
-    return null;
+): ClaudeModelId | CodexModelId | null {
+  if (effectiveAgent === Agent.CLAUDE) {
+    const stageKey: StageModelKey | null = commandToStageModelKey(command);
+    if (!stageKey) {
+      return null;
+    }
+
+    const ticketValue = ticket[stageKey];
+    if (ticketValue != null && isClaudeModelId(ticketValue)) {
+      return ticketValue;
+    }
+
+    const projectValue = ticket.project[stageKey];
+    if (projectValue != null && isClaudeModelId(projectValue)) {
+      return projectValue;
+    }
+
+    return CLAUDE_GLOBAL_FALLBACK_MODEL;
   }
 
-  const ticketValue = ticket[stageKey];
-  if (ticketValue != null && isClaudeModelId(ticketValue)) {
-    return ticketValue;
+  if (effectiveAgent === Agent.CODEX) {
+    const stageKey: CodexStageModelKey | null = commandToCodexStageModelKey(command);
+    if (!stageKey) {
+      return null;
+    }
+
+    const ticketValue = ticket[stageKey];
+    if (ticketValue != null && isCodexModelId(ticketValue)) {
+      return ticketValue;
+    }
+
+    const projectValue = ticket.project[stageKey];
+    if (projectValue != null && isCodexModelId(projectValue)) {
+      return projectValue;
+    }
+
+    return CODEX_GLOBAL_FALLBACK_MODEL;
   }
 
-  const projectValue = ticket.project[stageKey];
-  if (projectValue != null && isClaudeModelId(projectValue)) {
-    return projectValue;
-  }
-
-  return CLAUDE_GLOBAL_FALLBACK_MODEL;
+  return null;
 }

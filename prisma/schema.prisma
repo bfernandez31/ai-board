@@ -130,6 +130,11 @@ model Project {
   implementModel      String?               @db.VarChar(50)
   quickImplModel      String?               @db.VarChar(50)
   verifyModel         String?               @db.VarChar(50)
+  codexSpecifyModel   String?               @db.VarChar(50)
+  codexPlanModel      String?               @db.VarChar(50)
+  codexImplementModel String?               @db.VarChar(50)
+  codexQuickImplModel String?               @db.VarChar(50)
+  codexVerifyModel    String?               @db.VarChar(50)
   hasSpecs            Boolean               @default(false)
   user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
@@ -195,6 +200,11 @@ model Ticket {
   implementModel          String?                   @db.VarChar(50)
   quickImplModel          String?                   @db.VarChar(50)
   verifyModel             String?                   @db.VarChar(50)
+  codexSpecifyModel       String?                   @db.VarChar(50)
+  codexPlanModel          String?                   @db.VarChar(50)
+  codexImplementModel     String?                   @db.VarChar(50)
+  codexQuickImplModel     String?                   @db.VarChar(50)
+  codexVerifyModel        String?                   @db.VarChar(50)
   closedAt                DateTime?
   creatorId               String?                   @db.VarChar(255)
   creator                 User?                     @relation("TicketCreator", fields: [creatorId], references: [id], onDelete: SetNull)
