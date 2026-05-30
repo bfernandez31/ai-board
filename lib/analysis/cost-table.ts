@@ -28,7 +28,10 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
   // OpenAI / Codex
   'gpt-5-codex':               { inputUsdPerM: 1.25, outputUsdPerM: 10 },
   'gpt-5':                     { inputUsdPerM: 2,    outputUsdPerM: 8 },
+  'gpt-5.2':                   { inputUsdPerM: 1.5,  outputUsdPerM: 9 },
+  'gpt-5.3-codex':             { inputUsdPerM: 1.5,  outputUsdPerM: 10 },
   'gpt-5.4':                   { inputUsdPerM: 2.5,  outputUsdPerM: 15 },
+  'gpt-5.4-mini':              { inputUsdPerM: 0.6,  outputUsdPerM: 3 },
   'gpt-5.5':                   { inputUsdPerM: 5,    outputUsdPerM: 30 },
   // Mistral
   'mistral-large-latest':      { inputUsdPerM: 2,    outputUsdPerM: 6 },

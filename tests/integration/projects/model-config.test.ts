@@ -207,3 +207,79 @@ describe('POST /apply-smart-defaults — Codex', () => {
     expect(response.data?.code).toBe('UNSUPPORTED_AGENT_FOR_SMART_DEFAULTS');
   });
 });
+
+describe('agent-switch dormancy (AIB-830 US3)', () => {
+  let ctx: TestContext;
+  const prisma = getPrismaClient();
+
+  beforeEach(async () => {
+    ctx = await getTestContext();
+    await ctx.cleanup();
+    // Start with explicit Claude per-stage models set, defaultAgent CLAUDE,
+    // and Codex columns null.
+    await prisma.project.update({
+      where: { id: ctx.projectId },
+      data: {
+        defaultAgent: Agent.CLAUDE,
+        specifyModel: 'claude-opus-4-7',
+        planModel: 'claude-opus-4-7',
+        implementModel: 'claude-sonnet-4-6',
+        quickImplModel: 'claude-sonnet-4-6',
+        verifyModel: 'claude-sonnet-4-6',
+        codexSpecifyModel: null,
+        codexPlanModel: null,
+        codexImplementModel: null,
+        codexQuickImplModel: null,
+        codexVerifyModel: null,
+      },
+    });
+  });
+
+  it('switching CLAUDE→CODEX, applying Codex smart defaults, switching back preserves Claude columns', async () => {
+    // Step 1: Switch defaultAgent to CODEX (no Codex fields in same body).
+    const switchToCodex = await ctx.api.patch<{ defaultAgent: string }>(
+      `/api/projects/${ctx.projectId}`,
+      { defaultAgent: 'CODEX' }
+    );
+    expect(switchToCodex.status).toBe(200);
+
+    // Claude columns intact after switch.
+    let db = await prisma.project.findUnique({ where: { id: ctx.projectId } });
+    expect(db?.specifyModel).toBe('claude-opus-4-7');
+    expect(db?.planModel).toBe('claude-opus-4-7');
+    expect(db?.implementModel).toBe('claude-sonnet-4-6');
+    expect(db?.quickImplModel).toBe('claude-sonnet-4-6');
+    expect(db?.verifyModel).toBe('claude-sonnet-4-6');
+
+    // Step 2: Apply smart defaults under CODEX.
+    const applyCodex = await ctx.api.post<Record<string, string>>(
+      `/api/projects/${ctx.projectId}/model-config/apply-smart-defaults`,
+      {}
+    );
+    expect(applyCodex.status).toBe(200);
+    expect(applyCodex.data).toEqual(CODEX_SMART_DEFAULTS);
+
+    db = await prisma.project.findUnique({ where: { id: ctx.projectId } });
+    // Codex columns populated.
+    expect(db?.codexSpecifyModel).toBe(CODEX_SMART_DEFAULTS.codexSpecifyModel);
+    expect(db?.codexImplementModel).toBe(CODEX_SMART_DEFAULTS.codexImplementModel);
+    // Claude columns still intact.
+    expect(db?.specifyModel).toBe('claude-opus-4-7');
+    expect(db?.implementModel).toBe('claude-sonnet-4-6');
+
+    // Step 3: Switch back to CLAUDE.
+    const switchBack = await ctx.api.patch<{ defaultAgent: string }>(
+      `/api/projects/${ctx.projectId}`,
+      { defaultAgent: 'CLAUDE' }
+    );
+    expect(switchBack.status).toBe(200);
+
+    db = await prisma.project.findUnique({ where: { id: ctx.projectId } });
+    // Claude still intact.
+    expect(db?.specifyModel).toBe('claude-opus-4-7');
+    expect(db?.implementModel).toBe('claude-sonnet-4-6');
+    // Codex columns still populated (dormant but retained).
+    expect(db?.codexSpecifyModel).toBe(CODEX_SMART_DEFAULTS.codexSpecifyModel);
+    expect(db?.codexImplementModel).toBe(CODEX_SMART_DEFAULTS.codexImplementModel);
+  });
+});

@@ -374,4 +374,32 @@ describe('PATCH /tickets/:id/model-config — Codex (AIB-830)', () => {
 
     expect(response.status).toBe(404);
   });
+
+  it('preserves Claude column when Codex column is set on the same ticket (cross-agent isolation)', async () => {
+    const ticket = await ctx.createTicket();
+
+    // Set a Claude override first.
+    const claudeRes = await ctx.api.patch<{ specifyModel: string | null }>(
+      `/api/projects/${ctx.projectId}/tickets/${ticket.id}/model-config`,
+      { specifyModel: 'claude-opus-4-7' }
+    );
+    expect(claudeRes.status).toBe(200);
+    expect(claudeRes.data.specifyModel).toBe('claude-opus-4-7');
+
+    // Now set a Codex override for the same stage on the same ticket.
+    const codexRes = await ctx.api.patch<{
+      specifyModel: string | null;
+      codexSpecifyModel: string | null;
+    }>(`/api/projects/${ctx.projectId}/tickets/${ticket.id}/model-config`, {
+      codexSpecifyModel: 'gpt-5.5',
+    });
+    expect(codexRes.status).toBe(200);
+    expect(codexRes.data.codexSpecifyModel).toBe('gpt-5.5');
+    // Claude column intact.
+    expect(codexRes.data.specifyModel).toBe('claude-opus-4-7');
+
+    const db = await prisma.ticket.findUnique({ where: { id: ticket.id } });
+    expect(db?.specifyModel).toBe('claude-opus-4-7');
+    expect(db?.codexSpecifyModel).toBe('gpt-5.5');
+  });
 });
