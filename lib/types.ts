@@ -33,6 +33,11 @@ export interface TicketWithVersion {
   implementModel: string | null;
   quickImplModel: string | null;
   verifyModel: string | null;
+  codexSpecifyModel: string | null;
+  codexPlanModel: string | null;
+  codexImplementModel: string | null;
+  codexQuickImplModel: string | null;
+  codexVerifyModel: string | null;
   workflowType: WorkflowType;
   attachments: Prisma.JsonValue;
   qualityScore: number | null;

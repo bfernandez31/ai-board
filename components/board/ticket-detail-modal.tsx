@@ -319,6 +319,11 @@ export function TicketDetailModal({
       implementModel: localTicket.implementModel ?? null,
       quickImplModel: localTicket.quickImplModel ?? null,
       verifyModel: localTicket.verifyModel ?? null,
+      codexSpecifyModel: localTicket.codexSpecifyModel ?? null,
+      codexPlanModel: localTicket.codexPlanModel ?? null,
+      codexImplementModel: localTicket.codexImplementModel ?? null,
+      codexQuickImplModel: localTicket.codexQuickImplModel ?? null,
+      codexVerifyModel: localTicket.codexVerifyModel ?? null,
       attachments: (localTicket.attachments || []) as unknown as TicketWithVersion['attachments'],
       qualityScore: null,
     };
