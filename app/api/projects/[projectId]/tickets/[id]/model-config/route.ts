@@ -54,8 +54,7 @@ export async function PATCH(
     if (hasCodexKey) {
       const validated = ticketCodexModelOverrideSchema.parse(body);
       if (validated.resetAll) {
-        for (const key of STAGE_MODEL_KEYS) updateData[key] = null;
-        for (const key of CODEX_STAGE_MODEL_KEYS) updateData[key] = null;
+        for (const key of ALL_MODEL_FIELD_NAMES) updateData[key] = null;
       } else {
         for (const key of CODEX_STAGE_MODEL_KEYS) {
           if (validated[key] !== undefined) {
@@ -66,8 +65,7 @@ export async function PATCH(
     } else {
       const validated = ticketModelOverrideSchema.parse(body);
       if (validated.resetAll) {
-        for (const key of STAGE_MODEL_KEYS) updateData[key] = null;
-        for (const key of CODEX_STAGE_MODEL_KEYS) updateData[key] = null;
+        for (const key of ALL_MODEL_FIELD_NAMES) updateData[key] = null;
       } else {
         for (const key of STAGE_MODEL_KEYS) {
           if (validated[key] !== undefined) {
