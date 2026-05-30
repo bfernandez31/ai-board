@@ -83,9 +83,18 @@ export async function PATCH(
     if (error instanceof ZodError) {
       const modelFieldIssue = error.issues.find((issue) =>
         typeof issue.path[0] === 'string' &&
-        ['specifyModel', 'planModel', 'implementModel', 'quickImplModel', 'verifyModel'].includes(
-          issue.path[0] as string
-        )
+        [
+          'specifyModel',
+          'planModel',
+          'implementModel',
+          'quickImplModel',
+          'verifyModel',
+          'codexSpecifyModel',
+          'codexPlanModel',
+          'codexImplementModel',
+          'codexQuickImplModel',
+          'codexVerifyModel',
+        ].includes(issue.path[0] as string)
       );
       if (modelFieldIssue) {
         return NextResponse.json(

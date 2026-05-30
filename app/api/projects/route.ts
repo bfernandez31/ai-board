@@ -10,6 +10,7 @@ import { prisma } from '@/lib/db/client';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
 import { syncProjectConfig } from '@/lib/config-sync';
 import { SMART_DEFAULTS } from '@/lib/models/claude-models';
+import { CODEX_SMART_DEFAULTS } from '@/lib/models/codex-models';
 
 // Validation schema for project creation
 const createProjectSchema = z.object({
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
               key: projectKey,
               userId,
               ...SMART_DEFAULTS,
+              ...CODEX_SMART_DEFAULTS,
               updatedAt: new Date(),
             },
           });

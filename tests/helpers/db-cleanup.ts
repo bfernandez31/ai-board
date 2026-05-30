@@ -458,6 +458,11 @@ export async function ensureProjectExists(projectId: number): Promise<void> {
       implementModel: null,
       quickImplModel: null,
       verifyModel: null,
+      codexSpecifyModel: null,
+      codexPlanModel: null,
+      codexImplementModel: null,
+      codexQuickImplModel: null,
+      codexVerifyModel: null,
     },
     create: {
       id: projectId,
