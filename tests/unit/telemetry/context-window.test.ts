@@ -8,6 +8,7 @@ import {
 
 describe('MODEL_CONTEXT_WINDOWS', () => {
   it('seeds Claude 4.x family at 200k', () => {
+    expect(MODEL_CONTEXT_WINDOWS['claude-opus-4-8']).toBe(200_000);
     expect(MODEL_CONTEXT_WINDOWS['claude-opus-4-7']).toBe(200_000);
     expect(MODEL_CONTEXT_WINDOWS['claude-opus-4-6']).toBe(200_000);
     expect(MODEL_CONTEXT_WINDOWS['claude-sonnet-4-6']).toBe(200_000);
@@ -34,6 +35,7 @@ describe('MODEL_CONTEXT_WINDOWS', () => {
 
 describe('getContextWindow', () => {
   it('returns 200k for an exact Claude match', () => {
+    expect(getContextWindow('claude-opus-4-8')).toBe(200_000);
     expect(getContextWindow('claude-opus-4-7')).toBe(200_000);
     expect(getContextWindow('claude-haiku-4-5-20251001')).toBe(200_000);
   });
@@ -64,7 +66,7 @@ describe('getContextWindow', () => {
 });
 
 describe('getPeakContextThresholdState', () => {
-  const claude = 'claude-opus-4-7'; // 200_000
+  const claude = 'claude-opus-4-8'; // 200_000
 
   it('returns healthy for ratios under the warning threshold', () => {
     // 59.9% of 200k = 119_800

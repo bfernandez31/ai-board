@@ -24,6 +24,7 @@ const GEMINI_CONTEXT_WINDOW = 1_048_576;
  */
 export const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   // Anthropic Claude 4.x family
+  'claude-opus-4-8': CLAUDE_CONTEXT_WINDOW,
   'claude-opus-4-7': CLAUDE_CONTEXT_WINDOW,
   'claude-opus-4-6': CLAUDE_CONTEXT_WINDOW,
   'claude-sonnet-4-6': CLAUDE_CONTEXT_WINDOW,

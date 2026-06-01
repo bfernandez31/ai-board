@@ -28,17 +28,17 @@ describe('PATCH /api/projects/:projectId/tickets/:id/model-config (AIB-678)', ()
       hasAnyOverride: boolean;
       overriddenStages: string[];
     }>(`/api/projects/${ctx.projectId}/tickets/${ticket.id}/model-config`, {
-      verifyModel: 'claude-opus-4-7',
+      verifyModel: 'claude-opus-4-8',
     });
 
     expect(response.status).toBe(200);
-    expect(response.data.verifyModel).toBe('claude-opus-4-7');
+    expect(response.data.verifyModel).toBe('claude-opus-4-8');
     expect(response.data.specifyModel).toBeNull();
     expect(response.data.hasAnyOverride).toBe(true);
     expect(response.data.overriddenStages).toEqual(['VERIFY']);
 
     const db = await prisma.ticket.findUnique({ where: { id: ticket.id } });
-    expect(db?.verifyModel).toBe('claude-opus-4-7');
+    expect(db?.verifyModel).toBe('claude-opus-4-8');
     expect(db?.specifyModel).toBeNull();
     expect(db?.planModel).toBeNull();
     expect(db?.implementModel).toBeNull();

@@ -46,6 +46,12 @@ describe('ModelOverrideDialog', () => {
     expect(screen.getByTestId('row-verifyModel')).toBeInTheDocument();
   });
 
+  it('renders Claude Opus 4.8 when it is the current override', () => {
+    renderDialog({ current: { ...baseCurrent, specifyModel: 'claude-opus-4-8' } });
+
+    expect(screen.getByText('Claude Opus 4.8')).toBeInTheDocument();
+  });
+
   it('shows inactive message when effective agent is neither Claude nor Codex', () => {
     renderDialog({ effectiveAgent: Agent.GEMINI });
 

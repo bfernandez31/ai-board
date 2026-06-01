@@ -98,12 +98,12 @@ describe('AIModelsCard', () => {
   it('renders stored per-stage values in the trigger labels', () => {
     const seededProject = {
       ...claudeProject,
-      specifyModel: 'claude-opus-4-7',
+      specifyModel: 'claude-opus-4-8',
       implementModel: 'claude-sonnet-4-6',
     };
     renderWithProviders(<AIModelsCard project={seededProject} />);
 
-    expect(screen.getByText('Claude Opus 4.7')).toBeInTheDocument();
+    expect(screen.getByText('Claude Opus 4.8')).toBeInTheDocument();
     expect(screen.getByText('Claude Sonnet 4.6')).toBeInTheDocument();
   });
 });

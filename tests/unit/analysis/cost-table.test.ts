@@ -3,9 +3,16 @@ import { estimateAnalysisCostUsd } from '@/lib/analysis/cost-table';
 
 describe('estimateAnalysisCostUsd', () => {
   it('returns the entry for a known (cli, model)', () => {
-    const r = estimateAnalysisCostUsd('CLAUDE', 'claude-opus-4-7');
+    const r = estimateAnalysisCostUsd('CLAUDE', 'claude-opus-4-8');
     expect(r.lowerUsd).toBeGreaterThan(0);
     expect(r.upperUsd).toBeGreaterThanOrEqual(r.lowerUsd);
+  });
+
+  it('prices Claude Opus 4.8 like the existing Opus family', () => {
+    const opus48 = estimateAnalysisCostUsd('CLAUDE', 'claude-opus-4-8');
+    const opus47 = estimateAnalysisCostUsd('CLAUDE', 'claude-opus-4-7');
+
+    expect(opus48).toEqual(opus47);
   });
 
   it('falls back to default model when model is null', () => {

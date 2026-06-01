@@ -208,7 +208,7 @@ export function AIModelsCard({ project }: AIModelsCardProps) {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={FALLBACK_SENTINEL}>
-                          Use global fallback (Claude Opus 4.7)
+                          Use global fallback (Claude Opus 4.8)
                         </SelectItem>
                         {CLAUDE_MODEL_IDS.map((modelId) => (
                           <SelectItem key={modelId} value={modelId}>

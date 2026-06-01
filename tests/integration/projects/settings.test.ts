@@ -287,14 +287,14 @@ describe('Project Settings - clarificationPolicy', () => {
     it.each(STAGES)('should update %s to a whitelisted Claude model', async (stage) => {
       const response = await ctx.api.patch<Record<string, string | null>>(
         `/api/projects/${ctx.projectId}`,
-        { [stage]: 'claude-sonnet-4-6' }
+        { [stage]: 'claude-opus-4-8' }
       );
 
       expect(response.status).toBe(200);
-      expect(response.data[stage]).toBe('claude-sonnet-4-6');
+      expect(response.data[stage]).toBe('claude-opus-4-8');
 
       const dbProject = await prisma.project.findUnique({ where: { id: ctx.projectId } });
-      expect(dbProject?.[stage]).toBe('claude-sonnet-4-6');
+      expect(dbProject?.[stage]).toBe('claude-opus-4-8');
     });
 
     it('should leave other stage columns unchanged when only one is updated', async () => {
