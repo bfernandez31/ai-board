@@ -165,8 +165,12 @@ jobs:
       SKIP_TESTS: ${{ inputs.workflowType == 'QUICK' || true}}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
-      # Claude model: per-stage override from dispatch input, fallback to Opus 4.8
-      ANTHROPIC_MODEL: ${{ inputs.model != '' && inputs.model || 'claude-opus-4-8' }}
+      # Claude model: per-stage override from dispatch input, but ONLY when the
+      # selected agent is Claude. For Codex/Mistral/Gemini tickets inputs.model is
+      # a non-Claude model id (e.g. gpt-5.5), and the code-review step always runs
+      # on Claude — so fall back to the Claude default to avoid leaking that id
+      # into the Claude CLI ("selected model gpt-5.5 ... may not exist").
+      ANTHROPIC_MODEL: ${{ (inputs.agent == 'CLAUDE' && inputs.model != '') && inputs.model || 'claude-opus-4-8' }}
       # Codex model: per-stage override from dispatch input, fallback to GPT-5.4.
       # Set for every dispatch — only consumed when the selected agent is Codex.
       CODEX_MODEL: ${{ inputs.model != '' && inputs.model || 'gpt-5.4' }}
