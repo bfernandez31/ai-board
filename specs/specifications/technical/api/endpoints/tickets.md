@@ -1372,7 +1372,7 @@ Returns the latest persisted analysis for the ticket plus pre-click eligibility 
       "testingFramework": "vitest",
       "e2e": true,
       "e2eFramework": "playwright",
-      "agent": { "cli": "claude-code", "model": "claude-opus-4-7" }
+      "agent": { "cli": "claude-code", "model": "claude-opus-4-8" }
     },
     "telemetry": {
       "costUsd": 0.046,
@@ -1633,7 +1633,7 @@ Workflow-only endpoint that bundles the row's input snapshot, stack snapshot, an
     "testingFramework": "vitest",
     "e2e": true,
     "e2eFramework": "playwright",
-    "agent": { "cli": "claude-code", "model": "claude-opus-4-7" }
+    "agent": { "cli": "claude-code", "model": "claude-opus-4-8" }
   },
   "candidates": [
     {

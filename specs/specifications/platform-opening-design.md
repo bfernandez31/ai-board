@@ -99,7 +99,7 @@ env:                                 # Env vars injected into runner
 
 agent:
   cli: claude-code                   # claude-code | codex
-  model: claude-opus-4-7             # Model used by the agent
+  model: claude-opus-4-8             # Model used by the agent
 ```
 
 ### Rules
@@ -346,7 +346,7 @@ env:
 
 agent:
   cli: claude-code
-  model: claude-opus-4-7
+  model: claude-opus-4-8
 ```
 
 ### Migration Plan
