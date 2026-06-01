@@ -6,6 +6,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Button } from '@/components/ui/button';
 import { Agent } from '@prisma/client';
 import {
+  CLAUDE_GLOBAL_FALLBACK_MODEL,
   CLAUDE_MODEL_IDS,
   CLAUDE_MODEL_LABELS,
   STAGE_MODEL_KEYS,
@@ -208,7 +209,7 @@ export function AIModelsCard({ project }: AIModelsCardProps) {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={FALLBACK_SENTINEL}>
-                          Use global fallback (Claude Opus 4.7)
+                          Use global fallback ({CLAUDE_MODEL_LABELS[CLAUDE_GLOBAL_FALLBACK_MODEL]})
                         </SelectItem>
                         {CLAUDE_MODEL_IDS.map((modelId) => (
                           <SelectItem key={modelId} value={modelId}>

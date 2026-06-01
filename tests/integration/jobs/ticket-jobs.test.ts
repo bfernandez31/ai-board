@@ -120,7 +120,7 @@ describe('Ticket Jobs API', () => {
       expect(job!.costUsd).toBeNull();
       expect(job!.durationMs).toBeNull();
       // model is resolved and stored at job creation (not a telemetry field), so it is non-null
-      expect(job!.model).toBe('claude-opus-4-7');
+      expect(job!.model).toBe('claude-opus-4-8');
     });
 
     it('should return 404 for non-existent ticket', async () => {
