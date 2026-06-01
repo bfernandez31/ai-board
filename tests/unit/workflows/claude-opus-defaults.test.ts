@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { CLAUDE_GLOBAL_FALLBACK_MODEL } from '@/lib/models/claude-models';
 
-const OPUS_48 = 'claude-opus-4-8';
 const OLD_OPUS_DEFAULT = 'claude-opus-4-7';
 
-const runtimeDefaultFiles = [
+const RUNTIME_DEFAULT_FILES = [
   '.github/workflows/ai-board-assist.yml',
   '.github/workflows/health-scan.yml',
   '.github/workflows/inbox-analysis.yml',
@@ -19,10 +19,13 @@ const runtimeDefaultFiles = [
 ] as const;
 
 describe('Claude workflow defaults', () => {
-  it.each(runtimeDefaultFiles)('%s uses Claude Opus 4.8 instead of the previous Opus default', (path) => {
-    const content = readFileSync(resolve(process.cwd(), path), 'utf8');
+  it.each(RUNTIME_DEFAULT_FILES)(
+    '%s uses the configured global Claude fallback instead of the previous Opus default',
+    (path) => {
+      const content = readFileSync(resolve(process.cwd(), path), 'utf-8');
 
-    expect(content).toContain(OPUS_48);
-    expect(content).not.toContain(OLD_OPUS_DEFAULT);
-  });
+      expect(content).toContain(CLAUDE_GLOBAL_FALLBACK_MODEL);
+      expect(content).not.toContain(OLD_OPUS_DEFAULT);
+    }
+  );
 });

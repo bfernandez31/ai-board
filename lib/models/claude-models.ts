@@ -42,15 +42,18 @@ export const STAGE_MODEL_LABELS: Record<StageModelKey, string> = {
 };
 
 export const SMART_DEFAULTS: Record<StageModelKey, ClaudeModelId> = {
-  specifyModel: 'claude-opus-4-8',
-  planModel: 'claude-opus-4-8',
+  specifyModel: CLAUDE_GLOBAL_FALLBACK_MODEL,
+  planModel: CLAUDE_GLOBAL_FALLBACK_MODEL,
   implementModel: 'claude-sonnet-4-6',
   quickImplModel: 'claude-sonnet-4-6',
   verifyModel: 'claude-sonnet-4-6',
 };
 
 export function isClaudeModelId(value: unknown): value is ClaudeModelId {
-  return typeof value === 'string' && (CLAUDE_MODEL_IDS as readonly string[]).includes(value);
+  return (
+    typeof value === 'string' &&
+    (CLAUDE_MODEL_IDS as readonly string[]).includes(value)
+  );
 }
 
 const COMMAND_TO_STAGE_KEY: Record<string, StageModelKey> = {

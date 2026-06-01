@@ -1,11 +1,24 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { useState, type ReactElement } from 'react';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from '@/components/ui/card';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Agent } from '@prisma/client';
 import {
+  CLAUDE_GLOBAL_FALLBACK_MODEL,
   CLAUDE_MODEL_IDS,
   CLAUDE_MODEL_LABELS,
   STAGE_MODEL_KEYS,
@@ -15,6 +28,7 @@ import {
   type ClaudeModelId,
 } from '@/lib/models/claude-models';
 import {
+  CODEX_GLOBAL_FALLBACK_MODEL,
   CODEX_MODEL_IDS,
   CODEX_MODEL_LABELS,
   CODEX_STAGE_MODEL_KEYS,
@@ -49,7 +63,9 @@ interface AIModelsCardProps {
 type ClaudeModelConfigState = Record<StageModelKey, string | null>;
 type CodexModelConfigState = Record<CodexStageModelKey, string | null>;
 
-function initialClaudeState(project: AIModelsCardProps['project']): ClaudeModelConfigState {
+function initialClaudeState(
+  project: AIModelsCardProps['project']
+): ClaudeModelConfigState {
   return {
     specifyModel: project.specifyModel,
     planModel: project.planModel,
@@ -59,7 +75,9 @@ function initialClaudeState(project: AIModelsCardProps['project']): ClaudeModelC
   };
 }
 
-function initialCodexState(project: AIModelsCardProps['project']): CodexModelConfigState {
+function initialCodexState(
+  project: AIModelsCardProps['project']
+): CodexModelConfigState {
   return {
     codexSpecifyModel: project.codexSpecifyModel,
     codexPlanModel: project.codexPlanModel,
@@ -69,17 +87,26 @@ function initialCodexState(project: AIModelsCardProps['project']): CodexModelCon
   };
 }
 
-export function AIModelsCard({ project }: AIModelsCardProps) {
+export function AIModelsCard({ project }: AIModelsCardProps): ReactElement {
   const router = useRouter();
   const { toast } = useToast();
-  const [claudeState, setClaudeState] = useState<ClaudeModelConfigState>(() => initialClaudeState(project));
-  const [codexState, setCodexState] = useState<CodexModelConfigState>(() => initialCodexState(project));
+  const [claudeState, setClaudeState] = useState<ClaudeModelConfigState>(() =>
+    initialClaudeState(project)
+  );
+  const [codexState, setCodexState] = useState<CodexModelConfigState>(() =>
+    initialCodexState(project)
+  );
   const [isUpdating, setIsUpdating] = useState(false);
 
   const isClaude = project.defaultAgent === Agent.CLAUDE;
   const isCodex = project.defaultAgent === Agent.CODEX;
+  const claudeFallbackLabel = CLAUDE_MODEL_LABELS[CLAUDE_GLOBAL_FALLBACK_MODEL];
+  const codexFallbackLabel = CODEX_MODEL_LABELS[CODEX_GLOBAL_FALLBACK_MODEL];
 
-  async function handleClaudeStageChange(stage: StageModelKey, nextValue: string | null) {
+  async function handleClaudeStageChange(
+    stage: StageModelKey,
+    nextValue: string | null
+  ) {
     const previous = claudeState[stage];
     setClaudeState((prev) => ({ ...prev, [stage]: nextValue }));
     setIsUpdating(true);
@@ -106,7 +133,10 @@ export function AIModelsCard({ project }: AIModelsCardProps) {
     }
   }
 
-  async function handleCodexStageChange(stage: CodexStageModelKey, nextValue: string | null) {
+  async function handleCodexStageChange(
+    stage: CodexStageModelKey,
+    nextValue: string | null
+  ) {
     const previous = codexState[stage];
     setCodexState((prev) => ({ ...prev, [stage]: nextValue }));
     setIsUpdating(true);
@@ -165,6 +195,142 @@ export function AIModelsCard({ project }: AIModelsCardProps) {
     }
   }
 
+  const applyDefaultsButton = (
+    <div className="flex justify-end">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => void handleApplySmartDefaults()}
+        disabled={isUpdating}
+        data-testid="apply-smart-defaults"
+      >
+        Apply smart defaults
+      </Button>
+    </div>
+  );
+
+  let modelContent: ReactElement;
+  if (isClaude) {
+    modelContent = (
+      <>
+        <div className="space-y-3">
+          {STAGE_MODEL_KEYS.map((stage) => {
+            const current = claudeState[stage];
+            const selectValue = current ?? FALLBACK_SENTINEL;
+            return (
+              <div
+                key={stage}
+                className="flex items-center justify-between gap-4"
+                data-testid={`model-row-${stage}`}
+              >
+                <label
+                  className="text-sm font-medium w-32"
+                  htmlFor={`${stage}-select`}
+                >
+                  {STAGE_MODEL_LABELS[stage]}
+                </label>
+                <Select
+                  value={selectValue}
+                  onValueChange={(value) => {
+                    const mapped =
+                      value === FALLBACK_SENTINEL
+                        ? null
+                        : (value as ClaudeModelId);
+                    void handleClaudeStageChange(stage, mapped);
+                  }}
+                  disabled={isUpdating}
+                >
+                  <SelectTrigger
+                    id={`${stage}-select`}
+                    className="flex-1"
+                    data-testid={`${stage}-trigger`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={FALLBACK_SENTINEL}>
+                      Use global fallback ({claudeFallbackLabel})
+                    </SelectItem>
+                    {CLAUDE_MODEL_IDS.map((modelId) => (
+                      <SelectItem key={modelId} value={modelId}>
+                        {CLAUDE_MODEL_LABELS[modelId]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })}
+        </div>
+        {applyDefaultsButton}
+      </>
+    );
+  } else if (isCodex) {
+    modelContent = (
+      <>
+        <div className="space-y-3">
+          {CODEX_STAGE_MODEL_KEYS.map((stage) => {
+            const current = codexState[stage];
+            const selectValue = current ?? FALLBACK_SENTINEL;
+            return (
+              <div
+                key={stage}
+                className="flex items-center justify-between gap-4"
+                data-testid={`model-row-${stage}`}
+              >
+                <label
+                  className="text-sm font-medium w-32"
+                  htmlFor={`${stage}-select`}
+                >
+                  {CODEX_STAGE_MODEL_LABELS[stage]}
+                </label>
+                <Select
+                  value={selectValue}
+                  onValueChange={(value) => {
+                    const mapped =
+                      value === FALLBACK_SENTINEL
+                        ? null
+                        : (value as CodexModelId);
+                    void handleCodexStageChange(stage, mapped);
+                  }}
+                  disabled={isUpdating}
+                >
+                  <SelectTrigger
+                    id={`${stage}-select`}
+                    className="flex-1"
+                    data-testid={`${stage}-trigger`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={FALLBACK_SENTINEL}>
+                      Use global fallback ({codexFallbackLabel})
+                    </SelectItem>
+                    {CODEX_MODEL_IDS.map((modelId) => (
+                      <SelectItem key={modelId} value={modelId}>
+                        {CODEX_MODEL_LABELS[modelId]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })}
+        </div>
+        {applyDefaultsButton}
+      </>
+    );
+  } else {
+    modelContent = (
+      <p
+        className="text-sm text-muted-foreground"
+        data-testid="ai-models-card-inactive"
+      >
+        {`Using ${getAgentLabel(project.defaultAgent)}'s latest default model. Per-stage selection is only available for Claude and Codex today.`}
+      </p>
+    );
+  }
+
   return (
     <Card className="aurora-bg-subtle" data-testid="ai-models-card">
       <CardHeader>
@@ -175,127 +341,7 @@ export function AIModelsCard({ project }: AIModelsCardProps) {
             : 'Per-stage Claude model used by workflows. Applies when the effective agent is Claude.'}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {isClaude ? (
-          <>
-            <div className="space-y-3">
-              {STAGE_MODEL_KEYS.map((stage) => {
-                const current = claudeState[stage];
-                const selectValue = current ?? FALLBACK_SENTINEL;
-                return (
-                  <div
-                    key={stage}
-                    className="flex items-center justify-between gap-4"
-                    data-testid={`model-row-${stage}`}
-                  >
-                    <label className="text-sm font-medium w-32" htmlFor={`${stage}-select`}>
-                      {STAGE_MODEL_LABELS[stage]}
-                    </label>
-                    <Select
-                      value={selectValue}
-                      onValueChange={(value) => {
-                        const mapped = value === FALLBACK_SENTINEL ? null : (value as ClaudeModelId);
-                        void handleClaudeStageChange(stage, mapped);
-                      }}
-                      disabled={isUpdating}
-                    >
-                      <SelectTrigger
-                        id={`${stage}-select`}
-                        className="flex-1"
-                        data-testid={`${stage}-trigger`}
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={FALLBACK_SENTINEL}>
-                          Use global fallback (Claude Opus 4.8)
-                        </SelectItem>
-                        {CLAUDE_MODEL_IDS.map((modelId) => (
-                          <SelectItem key={modelId} value={modelId}>
-                            {CLAUDE_MODEL_LABELS[modelId]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void handleApplySmartDefaults()}
-                disabled={isUpdating}
-                data-testid="apply-smart-defaults"
-              >
-                Apply smart defaults
-              </Button>
-            </div>
-          </>
-        ) : isCodex ? (
-          <>
-            <div className="space-y-3">
-              {CODEX_STAGE_MODEL_KEYS.map((stage) => {
-                const current = codexState[stage];
-                const selectValue = current ?? FALLBACK_SENTINEL;
-                return (
-                  <div
-                    key={stage}
-                    className="flex items-center justify-between gap-4"
-                    data-testid={`model-row-${stage}`}
-                  >
-                    <label className="text-sm font-medium w-32" htmlFor={`${stage}-select`}>
-                      {CODEX_STAGE_MODEL_LABELS[stage]}
-                    </label>
-                    <Select
-                      value={selectValue}
-                      onValueChange={(value) => {
-                        const mapped = value === FALLBACK_SENTINEL ? null : (value as CodexModelId);
-                        void handleCodexStageChange(stage, mapped);
-                      }}
-                      disabled={isUpdating}
-                    >
-                      <SelectTrigger
-                        id={`${stage}-select`}
-                        className="flex-1"
-                        data-testid={`${stage}-trigger`}
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={FALLBACK_SENTINEL}>
-                          Use global fallback (GPT-5.5)
-                        </SelectItem>
-                        {CODEX_MODEL_IDS.map((modelId) => (
-                          <SelectItem key={modelId} value={modelId}>
-                            {CODEX_MODEL_LABELS[modelId]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void handleApplySmartDefaults()}
-                disabled={isUpdating}
-                data-testid="apply-smart-defaults"
-              >
-                Apply smart defaults
-              </Button>
-            </div>
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground" data-testid="ai-models-card-inactive">
-            {`Using ${getAgentLabel(project.defaultAgent)}'s latest default model. Per-stage selection is only available for Claude and Codex today.`}
-          </p>
-        )}
-      </CardContent>
+      <CardContent className="space-y-4">{modelContent}</CardContent>
     </Card>
   );
 }
