@@ -21,6 +21,7 @@ interface ModelPricing {
 // lib/telemetry/otlp-processor.ts (single source maintained for telemetry cost).
 const MODEL_PRICING: Record<string, ModelPricing> = {
   // Anthropic (public pricing)
+  'claude-opus-4-8':           { inputUsdPerM: 15,   outputUsdPerM: 75 },
   'claude-opus-4-7':           { inputUsdPerM: 15,   outputUsdPerM: 75 },
   'claude-opus-4-6':           { inputUsdPerM: 15,   outputUsdPerM: 75 },
   'claude-sonnet-4-6':         { inputUsdPerM: 3,    outputUsdPerM: 15 },

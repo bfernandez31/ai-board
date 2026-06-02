@@ -129,7 +129,7 @@ model Project {
 - `config`: Parsed `.ai-board/config.yml` content stored as JSON (nullable — null means no config synced)
 - `configSyncedAt`: Timestamp of the last successful config fetch from GitHub (nullable)
 - `defaultBranch`: The repository's default branch name (default: `"main"`), auto-updated during config sync
-- `specifyModel`: Claude model ID for SPECIFY jobs (max 50 chars, nullable — null resolves to global fallback `claude-opus-4-7`)
+- `specifyModel`: Claude model ID for SPECIFY jobs (max 50 chars, nullable — null resolves to global fallback `claude-opus-4-8`)
 - `planModel`: Claude model ID for PLAN jobs (max 50 chars, nullable)
 - `implementModel`: Claude model ID for IMPLEMENT jobs (max 50 chars, nullable)
 - `quickImplModel`: Claude model ID for QUICK-IMPL jobs (max 50 chars, nullable)
@@ -169,12 +169,12 @@ model Project {
 - `config` stores the parsed config without the `env` section (secrets excluded from DB)
 - `configSyncedAt` drives staleness checks: config older than 1 hour is auto-refreshed before workflow dispatch
 - Config sync fails explicitly rather than silently using stale data — dispatch is blocked if auto-refresh fails
-- Per-stage Claude model fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) are nullable; null resolves to the Claude global fallback `claude-opus-4-7`
+- Per-stage Claude model fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) are nullable; null resolves to the Claude global fallback `claude-opus-4-8`
 - Per-stage Codex model fields (`codexSpecifyModel`, `codexPlanModel`, `codexImplementModel`, `codexQuickImplModel`, `codexVerifyModel`) are nullable; null resolves to the Codex global fallback `gpt-5.5`
 - Claude and Codex column sets are independent: switching `defaultAgent` between Claude and Codex never reads from or writes to the other agent's columns (dormancy contract)
-- New projects are seeded inside the creation transaction with both agents' smart defaults regardless of `defaultAgent`: Claude SPECIFY=`claude-opus-4-7`, PLAN=`claude-opus-4-7`, IMPLEMENT=`claude-sonnet-4-6`, QUICK-IMPL=`claude-sonnet-4-6`, VERIFY=`claude-sonnet-4-6`; Codex SPECIFY=`gpt-5.5`, PLAN=`gpt-5.5`, IMPLEMENT=`gpt-5.4`, QUICK-IMPL=`gpt-5.4-mini`, VERIFY=`gpt-5.4-mini`
+- New projects are seeded inside the creation transaction with both agents' smart defaults regardless of `defaultAgent`: Claude SPECIFY=`claude-opus-4-8`, PLAN=`claude-opus-4-8`, IMPLEMENT=`claude-sonnet-4-6`, QUICK-IMPL=`claude-sonnet-4-6`, VERIFY=`claude-sonnet-4-6`; Codex SPECIFY=`gpt-5.5`, PLAN=`gpt-5.5`, IMPLEMENT=`gpt-5.4`, QUICK-IMPL=`gpt-5.4-mini`, VERIFY=`gpt-5.4-mini`
 - Pre-existing projects (null values) resolve to the active agent's global fallback on every stage
-- Claude values must come from the whitelist (`claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`); Codex values must come from the whitelist (`gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex`, `gpt-5.2`); other values rejected with `INVALID_MODEL_ID`
+- Claude values must come from the whitelist (`claude-opus-4-8`, `claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`); Codex values must come from the whitelist (`gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex`, `gpt-5.2`); other values rejected with `INVALID_MODEL_ID`
 - A stored value not present in its agent's current whitelist (e.g., deprecated by the provider) is treated as `null` by the resolver and falls through to the next layer — never throws
 - Per-stage model configuration is only active when the effective agent matches the column set (Claude columns for Claude dispatches, Codex columns for Codex dispatches); Mistral/Gemini dispatches ignore both sets and the CLI uses its own default
 
@@ -317,10 +317,10 @@ model Ticket {
 - Agent overrides project default when set; null means inherit from project `defaultAgent`
 - Effective agent resolved at dispatch time via `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`
 - `creatorId` is populated at every creation path (manual create, duplicate, full-clone, MCP, inbox-analysis spawner) by forwarding the actor's `userId` from the API auth layer. Bulk merge preserves the base's `creatorId`; source tickets' creators receive a `TICKET_MERGED` notification before their tickets are hard-deleted
-- Per-stage Claude model overrides (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) are nullable; null means inherit the project's Claude value for that stage, which itself falls back to `claude-opus-4-7`
+- Per-stage Claude model overrides (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) are nullable; null means inherit the project's Claude value for that stage, which itself falls back to `claude-opus-4-8`
 - Per-stage Codex model overrides (`codexSpecifyModel`, `codexPlanModel`, `codexImplementModel`, `codexQuickImplModel`, `codexVerifyModel`) are nullable; null means inherit the project's Codex value for that stage, which itself falls back to `gpt-5.5`
 - Both column sets are preserved (not cleared) when the ticket's agent is switched; each set becomes active only when its matching agent is the effective agent
-- Resolution at dispatch (per active agent): `ticket.{stageModel}` → `project.{stageModel}` → agent's global fallback (`claude-opus-4-7` for Claude, `gpt-5.5` for Codex); Mistral/Gemini dispatches do not emit a `model` input
+- Resolution at dispatch (per active agent): `ticket.{stageModel}` → `project.{stageModel}` → agent's global fallback (`claude-opus-4-8` for Claude, `gpt-5.5` for Codex); Mistral/Gemini dispatches do not emit a `model` input
 - Ticket lookup supports both internal ID (backward compatibility) and ticket key (user-facing)
 - **Deletion**:
   - Tickets can be deleted from INBOX, SPECIFY, PLAN, BUILD, VERIFY stages (not SHIP or CLOSED)

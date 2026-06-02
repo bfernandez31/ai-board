@@ -8,7 +8,7 @@ For workflows dispatched to the Claude or Codex agent, the system resolves a spe
 **Model Resolution** (per agent):
 1. **Ticket override** — `ticket.{stageModel}` for Claude, `ticket.codex{StageModel}` for Codex (set individually per stage in the override dialog)
 2. **Project default** — `project.{stageModel}` / `project.codex{StageModel}` (configured in the AI Models card in project settings)
-3. **Global fallback** — `claude-opus-4-7` for Claude, `gpt-5.5` for Codex (hard-coded)
+3. **Global fallback** — `claude-opus-4-8` for Claude, `gpt-5.5` for Codex (hard-coded)
 
 A stored value that is no longer in the active agent's whitelist (e.g., deprecated by the provider) is treated as "not set" and falls through to the next layer.
 
@@ -23,7 +23,8 @@ The resolved model ID is:
 - Written to `Job.model` at job creation for per-stage cost analytics
 
 **Claude model whitelist** (closed set; unknown values fall through to the next resolution layer):
-- `claude-opus-4-7` — Claude Opus 4.7 (global fallback)
+- `claude-opus-4-8` — Claude Opus 4.8 (global fallback)
+- `claude-opus-4-7` — Claude Opus 4.7
 - `claude-opus-4-6` — Claude Opus 4.6
 - `claude-sonnet-4-6` — Claude Sonnet 4.6
 - `claude-haiku-4-5-20251001` — Claude Haiku 4.5

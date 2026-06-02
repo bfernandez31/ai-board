@@ -1059,7 +1059,7 @@ Timestamps display in user-friendly formats:
 - **Per-Stage Model Overrides**: Optional per-ticket model overrides for each of the 5 configurable job types, available independently for the Claude and Codex agents
   - 5 nullable Claude fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`)
   - 5 nullable Codex fields (`codexSpecifyModel`, `codexPlanModel`, `codexImplementModel`, `codexQuickImplModel`, `codexVerifyModel`)
-  - `null` means inherit from the project's per-stage default for that agent (which itself falls back to `claude-opus-4-7` or `gpt-5.5`)
+  - `null` means inherit from the project's per-stage default for that agent (which itself falls back to `claude-opus-4-8` or `gpt-5.5`)
   - Editable via the per-stage model override dialog accessible from the ticket detail modal
   - Both column sets are preserved independently: switching the ticket's agent never overwrites the other agent's stored overrides
 
