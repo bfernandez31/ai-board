@@ -46,7 +46,6 @@ export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 
 **Allowed Characters (description)**:
 - All UTF-8: emoji, Chinese (中文), Arabic (العربية), Japanese (日本語), etc.
-- Feature added in ticket #048
 
 ### UpdateTicketSchema
 
@@ -69,6 +68,8 @@ export const updateTicketSchema = z.object({
 
   agent: z.nativeEnum(Agent).nullable().optional(),
 
+  tokenSavingOverride: z.nativeEnum(TokenSavingOverride).nullable().optional(),
+
   version: z.number().int().positive(),
 });
 
@@ -79,6 +80,7 @@ export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 - **description**: Editable ONLY in INBOX stage (API enforced)
 - **clarificationPolicy**: Editable ONLY in INBOX stage (API enforced)
 - **agent**: Editable ONLY in INBOX stage (API enforced; follows same rules as clarificationPolicy)
+- **tokenSavingOverride**: Editable ONLY in INBOX stage (API enforced; `FORCE_ON`, `FORCE_OFF`, or `null` to inherit project default)
 - **version**: Always required for optimistic concurrency control
 
 ### TransitionRequestSchema
@@ -502,6 +504,8 @@ export const updateProjectSchema = z.object({
   clarificationPolicy: z.enum(['AUTO', 'CONSERVATIVE', 'PRAGMATIC', 'INTERACTIVE']).optional(),
 
   defaultAgent: z.nativeEnum(Agent).optional(),
+
+  tokenSavingEnabled: z.boolean().optional(),
 });
 
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
@@ -510,6 +514,7 @@ export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 **Validation**:
 - **clarificationPolicy**: NOT NULL at database level, default: AUTO
 - **defaultAgent**: NOT NULL at database level, default: CLAUDE; must be a valid `Agent` enum value when provided
+- **tokenSavingEnabled**: NOT NULL at database level, default: false; project default for future inherited ticket runs
 - Updates are partial (all fields optional)
 
 ## Image Attachment Schemas
@@ -579,6 +584,34 @@ export const ticketAgentSchema = z.nativeEnum(Agent).nullable();
 **Usage**:
 - `projectAgentSchema` used in `UpdateProjectSchema` for `defaultAgent` field
 - `ticketAgentSchema` used in `CreateTicketSchema` and `UpdateTicketSchema` for `agent` field
+
+## Token Saving Schemas
+
+### TokenSavingOverrideSchema
+
+```typescript
+import { TokenSavingOverride } from '@prisma/client';
+
+export const ticketTokenSavingOverrideSchema =
+  z.nativeEnum(TokenSavingOverride).nullable();
+```
+
+**Validation Rules**:
+- `FORCE_ON`: Ticket forces token saving on for future eligible runs
+- `FORCE_OFF`: Ticket forces token saving off for future runs
+- `null`: Ticket inherits `Project.tokenSavingEnabled`
+- Only editable in INBOX through the ticket update route
+
+### TokenSavingEnabledSchema
+
+```typescript
+export const projectTokenSavingEnabledSchema = z.boolean();
+```
+
+**Validation Rules**:
+- Optional in `UpdateProjectSchema`
+- Owner-only at the route layer
+- Defaults to `false` on new and existing projects
 
 ## Clarification Policy Schemas
 

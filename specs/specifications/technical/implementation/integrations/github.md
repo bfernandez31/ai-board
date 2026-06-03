@@ -90,35 +90,38 @@ export async function dispatchWorkflow(params: {
 - **Trigger**: `workflow_dispatch` (manual dispatch only)
 - **Inputs**:
   - `ticket_id`, `ticketTitle`, `ticketDescription`, `branch`, `command`, `job_id`, `project_id`
-  - `githubOwner`, `githubRepo` (required) - Target repository for checkout
+  - `githubRepository` (required) - Target repository in format owner/repo
   - `agent` (discrete input) - Resolved agent value for PLAN/BUILD commands
   - `specifyPayload` - JSON payload for SPECIFY command (includes `agent` field)
+  - `token_saving` - Run-captured token-saving setting (`"true"` or `"false"`)
 - **Repository Checkout**: Checks out external project repository. For the `specify` command, queries `gh api repos/<owner>/<repo>` to detect the repository's default branch and checks out that branch. For other commands, uses `inputs.branch`.
 - **Environment**: ubuntu-latest, Node.js 22.20.0, Python 3.11, PostgreSQL 14
 - **Commands**: specify, plan, task, implement, clarify
 - **Services**: PostgreSQL for implement command
 - **Dependencies**: Playwright with browser binaries (cached)
 - **Timeout**: 120 minutes maximum
-- **Note**: At the 10-input GitHub Actions limit. Agent is embedded in `specifyPayload` JSON for the SPECIFY command and passed as a discrete `agent` input for PLAN/BUILD commands.
+- **Note**: Agent is embedded in `specifyPayload` JSON for the SPECIFY command and passed as a discrete `agent` input for PLAN/BUILD commands. Token saving is always passed as the run-captured `token_saving` input so later setting changes do not affect the running job.
 
 **Quick-Impl Workflow** (`.github/workflows/quick-impl.yml`):
 - **Trigger**: `workflow_dispatch`
 - **Inputs**:
   - `ticket_id`, `quickImplPayload`, `attachments`, `job_id`, `project_id`
   - `githubRepository` (required) - Target repository in format owner/repo
+  - `agent`, `model`, `token_saving`
 - **Repository Checkout**: Queries `gh api repos/<owner>/<repo>` to detect the repository's default branch, then checks out that branch with full history (`fetch-depth: 0`)
 - **Environment**: Same as speckit.yml (ubuntu-latest, Node.js, Python, PostgreSQL 14, Playwright)
 - **Command**: Executes `/ai-board.quick-impl` with JSON payload
 - **Timeout**: 120 minutes maximum (matches full spec-kit workflow)
 - **Differences**: Skips full spec generation, creates minimal spec.md
 - **Same**: Test execution, branch management, job status updates
-- **Note**: Agent is embedded in `quickImplPayload` JSON (e.g., `{ ticketKey, title, description, agent }`).
+- **Note**: Agent is embedded in `quickImplPayload` JSON (e.g., `{ ticketKey, title, description, agent }`) and also available as the discrete runner input. Token saving is passed as `token_saving` for the run-captured setting.
 
 **Verify Workflow** (`.github/workflows/verify.yml`):
 - **Trigger**: `workflow_dispatch`
 - **Inputs**:
   - `ticket_id`, `job_id`, `project_id`, `branch`, `workflowType`, `agent`
-  - `githubOwner`, `githubRepo` (required) - Target repository for checkout
+  - `githubRepository` (required) - Target repository in format owner/repo
+  - `token_saving` - Run-captured token-saving setting (`"true"` or `"false"`)
 - **Repository Checkout**: Checks out external project repository at specified branch
 - **Actions**: Runs tests and creates pull request
 - **Test Execution**: Conditional based on workflowType (FULL or QUICK)
@@ -274,7 +277,19 @@ export function resolveEffectiveAgent(ticket: TicketWithProject): Agent {
 | `ai-board-assist.yml` | Discrete `agent` input |
 | `iterate.yml` | Discrete `agent` input |
 
-The mixed strategy (embed in JSON payloads vs. discrete input) respects the GitHub Actions 10-input limit — `speckit.yml` remains at 10 inputs and `ai-board-assist.yml` is at exactly 10 inputs.
+The mixed strategy (embed in JSON payloads vs. discrete input) keeps large command payloads in JSON while still passing resolved execution controls such as `agent`, `model`, and `token_saving` as explicit workflow inputs.
+
+### Token Saving Resolution
+
+Stage-transition dispatch resolves token saving before the workflow is started:
+
+1. `Ticket.tokenSavingOverride` is resolved against `Project.tokenSavingEnabled`
+2. The job stores `tokenSavingRequested` and an initial `tokenSavingStatus`
+3. Core workflows receive `token_saving` from the persisted job value
+4. `run-agent.sh` attempts RTK activation only when `AI_BOARD_TOKEN_SAVING=true`, `AGENT_TYPE=CLAUDE`, and the command is `ai-board.specify`, `ai-board.plan`, `ai-board.implement`, `ai-board.quick-impl`, or `ai-board.verify`
+5. The runner PATCHes `/api/jobs/:id/status` with `ACTIVE`, `FALLBACK`, or `NOT_APPLICABLE` on a best-effort RUNNING callback
+
+RTK failures are fail-open. The workflow continues with normal command output and records `FALLBACK` plus a bounded reason when setup, initialization, or hook verification fails.
 
 ### Credential Resolution
 
@@ -492,10 +507,24 @@ await fetch(`${APP_URL}/api/jobs/${job_id}/status`, {
 sequenceDiagram
     participant WF as Workflow Step
     participant RS as run-agent.sh
+    participant RTK as RTK
     participant CLI as Agent CLI
+    participant API as AI-Board API
 
     WF->>RS: run-agent.sh AGENT_TYPE COMMAND [ARGS]
     RS->>RS: validate_auth (check secret present)
+    opt Token saving requested
+        alt Claude core command
+            RS->>RTK: install/init RTK
+            alt RTK ready
+                RS->>API: PATCH status ACTIVE
+            else RTK failed
+                RS->>API: PATCH status FALLBACK
+            end
+        else Out of scope
+            RS->>API: PATCH status NOT_APPLICABLE
+        end
+    end
     alt AGENT_TYPE = CLAUDE
         RS->>CLI: bun add -g @anthropic-ai/claude-code
         RS->>RS: ensure_claude_commands() — symlink .claude/commands if missing
@@ -516,7 +545,7 @@ sequenceDiagram
         RS->>RS: write ~/.vibe/config.toml (model config)
         RS->>CLI: vibe --prompt "..." --agent auto-approve
         RS->>RS: collect_mistral_telemetry() — scrape session logs
-        RS->>EP: POST /api/telemetry/v1/logs (batch JSON)
+        RS->>API: POST telemetry logs
     else AGENT_TYPE = GEMINI
         RS->>CLI: npm install -g @google/gemini-cli
         RS->>RS: restore ~/.gemini/oauth.json or use GEMINI_API_KEY
@@ -539,6 +568,7 @@ sequenceDiagram
 | Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section | Post-execution batch JSON via `collect_mistral_telemetry()`; datalake disabled | Native OTLP logs configured via standard `OTEL_*` env vars |
 | Project context | `CLAUDE.md` (native) | `AGENTS.md` at project root, read automatically by Codex | `AGENTS.md` at project root, read via native filesystem walk | `AGENTS.md` at project root, read via native filesystem walk |
 | Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` / `CODEX_REASONING` env vars | Determined by vibe CLI defaults | Determined by Gemini CLI defaults or credential/runtime |
+| Token saving | RTK activation for requested core commands | Not applicable | Not applicable | Not applicable |
 
 **Repository Instructions** (non-Claude agents):
 - Target repositories are expected to provide `AGENTS.md` at the project root
@@ -587,6 +617,8 @@ sequenceDiagram
 - `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex and Gemini native telemetry when set; used by Mistral `collect_mistral_telemetry()` for batch POST target
 - `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config, Gemini native OTLP export, and Mistral batch POST auth
 - `OTEL_RESOURCE_ATTRIBUTES`: Optional; when present, `run-agent.sh` passes `job_id=<id>` so Gemini OTLP events can be correlated to the active workflow job
+- `AI_BOARD_TOKEN_SAVING`: Optional `"true"`/`"false"` flag passed by core workflows from the run-captured job setting
+- `AI_BOARD_TOKEN_SAVING_JOB_ID`: Optional job id used for best-effort token-saving status callbacks; falls back to `JOB_ID`
 
 **Usage in Workflows**:
 
@@ -898,4 +930,3 @@ try {
   }
 }
 ```
-

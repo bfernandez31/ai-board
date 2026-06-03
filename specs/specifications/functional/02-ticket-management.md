@@ -331,7 +331,13 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
   - Turn count — shown only when the job recorded per-turn telemetry; row is hidden entirely otherwise
   - Plugin version — the AI-Board plugin version active when the job ran, rendered in compact monospace styling. A discreet `—` placeholder is shown when the value is absent (jobs predating capture or runs where capture failed). The row is always present whenever the details panel is expanded
   - Agent CLI version — the underlying agent CLI version (claude, codex, vibe, gemini) active when the job ran, with the same styling and placeholder rules as the plugin version
+  - Token saving status — run-captured state shown as Active, Inactive, Fallback, Not applicable, or Not recorded. Fallback jobs include the recorded non-blocking reason when available
 - The presence of either runtime version is enough to make the details panel expandable, even when no token telemetry was captured
+
+**Token Saving Comparison**:
+- Existing job telemetry remains the source for savings assessment; no estimated-savings metric is shown
+- Users compare cloned or similar tickets by reading each job's token-saving status alongside input tokens, cache tokens, context size, duration, model, and cost
+- Historic jobs that predate token-saving capture show "Not recorded" instead of being inferred as active or inactive
 
 **Tools Usage**:
 - Aggregated count of all tools used across jobs
@@ -609,7 +615,7 @@ Users can create a copy of existing tickets using two duplication modes:
 
 **Button Location**:
 - Appears in the ticket detail modal header overflow menu (··· button)
-- Located alongside Edit Policy and Edit Agent actions
+- Located alongside Run settings and any eligible clone action
 - Visible for tickets in all stages (INBOX through SHIP)
 
 **Duplication Modes**:
@@ -644,6 +650,7 @@ Users can create a copy of existing tickets using two duplication modes:
    - Title: "Copy of [original title]" (truncated if needed to stay within 100 chars)
    - Description: Exact copy of original description
    - Clarification Policy: Same as original (or null if using project default)
+   - Agent and token-saving overrides: Same as original (or null if inheriting project defaults)
    - Image Attachments: References to same images (uploaded and external URLs)
    - No branch, no jobs
 5. Success toast displays: "Copied to {NEW_TICKET_KEY}"
@@ -660,7 +667,7 @@ Users can create a copy of existing tickets using two duplication modes:
    - Description: Exact copy of original description
    - Copies all jobs with complete telemetry (tokens, cost, duration, model, tools)
    - Creates new Git branch from source branch commit (format: {TICKET_NUMBER}-{slug})
-   - Copies clarification policy and attachments
+   - Copies clarification policy, agent override, token-saving override, and attachments
 5. Success toast displays: "Cloned to {NEW_TICKET_KEY}"
 6. Modal closes automatically
 7. New ticket appears in same column as source ticket
@@ -697,6 +704,7 @@ Users can create a copy of existing tickets using two duplication modes:
   - Telemetry (inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens)
   - Cost and performance metrics (costUsd, durationMs)
   - Model identifier and tools used
+  - Token-saving request, status, and fallback reason
 - Jobs reference new ticket ID
 - Job history provides point-in-time snapshot for comparison
 
@@ -1056,34 +1064,59 @@ Timestamps display in user-friendly formats:
   - Effective agent resolved at workflow dispatch time
   - Follows the same inheritance and editability rules as `clarificationPolicy`
 
+- **Token Saving Override**: Whether future eligible Claude runs inherit, force token saving on, or force token saving off
+  - Nullable field — `null` means inherit from the project's Token saving default
+  - `FORCE_ON` enables token saving for this ticket even when the project default is off
+  - `FORCE_OFF` disables token saving for this ticket even when the project default is on
+  - Editable only while the ticket is in INBOX, matching agent and clarification-policy overrides
+  - The effective ON state appears as a compact Token saving badge in the ticket header
+  - Job records capture the effective state at run start; later project or ticket changes affect future jobs only
+
 - **Per-Stage Model Overrides**: Optional per-ticket model overrides for each of the 5 configurable job types, available independently for the Claude and Codex agents
   - 5 nullable Claude fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`)
   - 5 nullable Codex fields (`codexSpecifyModel`, `codexPlanModel`, `codexImplementModel`, `codexQuickImplModel`, `codexVerifyModel`)
   - `null` means inherit from the project's per-stage default for that agent (which itself falls back to `claude-opus-4-8` or `gpt-5.5`)
-  - Editable via the per-stage model override dialog accessible from the ticket detail modal
+  - Editable via the Run settings dialog accessible from the ticket detail modal
   - Both column sets are preserved independently: switching the ticket's agent never overwrites the other agent's stored overrides
 
-### Per-Stage Model Override Dialog
+### Run Settings Dialog
 
-Users can open a per-stage model override dialog from the ticket detail modal to set or clear model overrides for each of the 5 workflow stages independently. The dialog renders selectors for the ticket's currently effective agent.
+Users can open a unified Run settings dialog from the ticket detail modal to view and edit execution settings for the ticket. The ticket detail overflow menu exposes one Run settings action for execution configuration.
 
 **Access**:
 - Available to project owners and members
-- Opens from an edit action in the ticket detail view (modeled on the agent edit dialog)
+- Opens from the ticket detail overflow menu
+- Simple copy and Full clone remain available in the same menu according to their existing eligibility rules
+
+**Sections**:
+- **Agent**: Selects a per-ticket agent override or inherits the project default
+- **Clarification policy**: Selects a per-ticket policy override or inherits the project default
+- **Token saving**: Shows the project default, effective ON/OFF state, and override selector (`Inherit project default`, `Force on`, `Force off`)
+- **Models**: Shows per-stage model selectors for the ticket's currently effective Claude or Codex agent
 
 **UI States**:
+
+**Editable INBOX tickets**:
+- All run-setting controls are enabled for project owners and members
+- Save is disabled until at least one section changes
+- Saving agent, clarification policy, or token-saving changes uses the ticket PATCH route with optimistic version checking
+- Saving model changes uses the model-config route and preserves the existing model validation semantics
+
+**Read-only tickets**:
+- Tickets outside INBOX show the current settings but disable run-setting changes
+- Token saving remains visible so users can understand the effective state before comparing job telemetry
 
 **Claude agent (active)**:
 - Displays 5 rows (SPECIFY, PLAN, IMPLEMENT, QUICK-IMPL, VERIFY)
 - Each row has a selector with "Inherit from project default" as the first option, followed by the 4 whitelisted Claude models
-- "Reset all to project defaults" button clears all per-stage overrides atomically (both Claude and Codex column sets, since the action is agent-agnostic)
+- Saving all rows as "Inherit from project default" clears the stored model overrides atomically
 - Save button disabled when no changes have been made
 - On save failure, the dialog stays open and surfaces an error (no silent swallow)
 
 **Codex agent (active)**:
 - Displays 5 rows (SPECIFY, PLAN, IMPLEMENT, QUICK-IMPL, VERIFY)
 - Each row has a selector with "Inherit from project default" as the first option, followed by the 5 whitelisted Codex models (`gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex`, `gpt-5.2`)
-- "Reset all to project defaults" button clears all per-stage overrides atomically (both Claude and Codex column sets)
+- Saving all rows as "Inherit from project default" clears the stored model overrides atomically
 - A single save submits only the Codex columns; Claude overrides on the ticket are untouched
 
 **Mistral / Gemini agent**:

@@ -150,6 +150,7 @@ Update job status (workflow-only endpoint).
   "workflowRunId": 12345678901,
   "pluginVersion": "0.4.2",
   "agentCliVersion": "1.2.3",
+  "tokenSavingStatus": "ACTIVE",
   "qualityScore": 83,
   "qualityScoreDetails": "{\"dimensions\":{\"bugDetection\":{\"score\":90,\"weight\":0.30},\"compliance\":{\"score\":80,\"weight\":0.40},\"codeComments\":{\"score\":70,\"weight\":0.20},\"historicalContext\":{\"score\":85,\"weight\":0.10},\"specSync\":{\"score\":95,\"weight\":0.00}},\"finalScore\":83}"
 }
@@ -160,6 +161,8 @@ Update job status (workflow-only endpoint).
 - `workflowRunId`: Optional BigInt, positive integer; only accepted when `status = "RUNNING"`; written once (first-write-wins — ignored if `workflowRunId` already populated)
 - `pluginVersion`: Optional string, trimmed, length 1–50; only accepted when `status = "RUNNING"`; written once (first-write-wins — ignored if already populated). Accepted both on the initial RUNNING transition and on idempotent same-status PATCH calls so the runner can backfill after CLI installation.
 - `agentCliVersion`: Optional string, trimmed, length 1–100; same rules as `pluginVersion`.
+- `tokenSavingStatus`: Optional enum (`ACTIVE`|`INACTIVE`|`FALLBACK`|`NOT_APPLICABLE`|`NOT_RECORDED`); only accepted when `status = "RUNNING"` and written once while the stored job value is `NOT_RECORDED`
+- `tokenSavingFallbackReason`: Optional string, max 1000 characters; stored only when `tokenSavingStatus = "FALLBACK"`, otherwise cleared
 - `qualityScore`: Optional, integer 0-100 inclusive; only accepted when `status = "COMPLETED"` for verify jobs; ignored otherwise
 - `qualityScoreDetails`: Optional, JSON string with dimension sub-scores; stored alongside `qualityScore`
 - State machine transitions enforced
@@ -729,6 +732,9 @@ The ticket jobs listing includes a `log` object on each row so the timeline can 
       "turnCount": 17,
       "pluginVersion": "0.4.2",
       "agentCliVersion": "1.2.3",
+      "tokenSavingRequested": true,
+      "tokenSavingStatus": "FALLBACK",
+      "tokenSavingFallbackReason": "rtk init failed",
       "log": {
         "captureStatus": "CAPTURED",
         "preview": "Build failed: Prisma migration 20260422 not applied to target DB"
@@ -738,7 +744,7 @@ The ticket jobs listing includes a `log` object on each row so the timeline can 
 }
 ```
 
-`log` is `null` when no log record exists yet (e.g., a still-RUNNING job or capture in flight). `pluginVersion` and `agentCliVersion` are `null` for jobs predating runtime version capture and for runs where the runner could not resolve either value.
+`log` is `null` when no log record exists yet (e.g., a still-RUNNING job or capture in flight). `pluginVersion` and `agentCliVersion` are `null` for jobs predating runtime version capture and for runs where the runner could not resolve either value. `tokenSavingRequested` is the run-captured effective ticket setting. `tokenSavingStatus` is one of `ACTIVE`, `INACTIVE`, `FALLBACK`, `NOT_APPLICABLE`, or `NOT_RECORDED`; legacy jobs and jobs with no callback keep `NOT_RECORDED`. `tokenSavingFallbackReason` is populated only for fallback runs.
 
 **Per-turn context fields** (`peakContextTokens`, `avgContextTokens`, `turnCount`):
 - All three are `null` for jobs run with agents that expose no per-turn telemetry (Mistral today), for jobs whose OTLP stream produced zero successfully-parsed per-turn events, and for jobs that predate per-turn ingestion (no backfill).
@@ -772,4 +778,3 @@ sequenceDiagram
     DB-->>LOG: Row
     LOG-->>CAP: 200 JobLogReadable (rawNativeUrl when raw present)
 ```
-

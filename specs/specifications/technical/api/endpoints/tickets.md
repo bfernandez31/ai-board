@@ -42,6 +42,17 @@ All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tic
       "branch": "042-add-login-feature",
       "workflowType": "FULL",
       "clarificationPolicy": null,
+      "agent": null,
+      "tokenSavingOverride": null,
+      "runSettings": {
+        "tokenSaving": {
+          "projectDefault": false,
+          "override": null,
+          "effectiveEnabled": false,
+          "source": "project",
+          "editable": false
+        }
+      },
       "attachments": [],
       "version": 3,
       "closedAt": null,
@@ -131,6 +142,8 @@ Create a new ticket.
   "branch": null,
   "workflowType": "FULL",
   "clarificationPolicy": null,
+  "agent": null,
+  "tokenSavingOverride": null,
   "attachments": [],
   "version": 1,
   "createdAt": "2025-01-20T09:00:00.000Z",
@@ -217,6 +230,8 @@ Fetch single ticket with nested project data.
   "branch": "042-add-login-feature",
   "workflowType": "FULL",
   "clarificationPolicy": null,
+  "agent": null,
+  "tokenSavingOverride": null,
   "attachments": [
     {
       "type": "uploaded",
@@ -232,8 +247,20 @@ Fetch single ticket with nested project data.
   "project": {
     "id": 1,
     "name": "AI Board Development",
-    "key": "ABC",
-    "clarificationPolicy": "AUTO"
+    "clarificationPolicy": "AUTO",
+    "defaultAgent": "CLAUDE",
+    "tokenSavingEnabled": false,
+    "githubOwner": "bfernandez31",
+    "githubRepo": "ai-board"
+  },
+  "runSettings": {
+    "tokenSaving": {
+      "projectDefault": false,
+      "override": null,
+      "effectiveEnabled": false,
+      "source": "project",
+      "editable": false
+    }
   },
   "createdAt": "2025-01-10T14:00:00.000Z",
   "updatedAt": "2025-01-15T10:30:00.000Z"
@@ -244,6 +271,15 @@ Fetch single ticket with nested project data.
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 - `404`: Ticket or project not found
+
+**Run Settings Fields**:
+- `tokenSavingOverride`: Stored ticket override; `null` means inherit the project default
+- `project.tokenSavingEnabled`: Project default used for inherited token-saving resolution
+- `runSettings.tokenSaving.projectDefault`: Current project default
+- `runSettings.tokenSaving.override`: Stored ticket override (`FORCE_ON`, `FORCE_OFF`, or `null`)
+- `runSettings.tokenSaving.effectiveEnabled`: Effective setting for future jobs on this ticket
+- `runSettings.tokenSaving.source`: `ticket` when an override is set, otherwise `project`
+- `runSettings.tokenSaving.editable`: Whether the override can be changed in the ticket's current stage
 
 ### PATCH /api/projects/:projectId/tickets/:id
 
@@ -262,6 +298,8 @@ Update ticket fields with optimistic concurrency control.
   "title": "Updated title",
   "description": "Updated description",
   "clarificationPolicy": "CONSERVATIVE",
+  "agent": "CLAUDE",
+  "tokenSavingOverride": "FORCE_ON",
   "version": 3
 }
 ```
@@ -270,6 +308,8 @@ Update ticket fields with optimistic concurrency control.
 - `title`: Optional, 1-100 characters, alphanumeric + basic punctuation
 - `description`: Optional, 1-10000 characters (editable only in INBOX stage)
 - `clarificationPolicy`: Optional, enum or null (editable only in INBOX stage)
+- `agent`: Optional, enum or null (editable only in INBOX stage)
+- `tokenSavingOverride`: Optional, `FORCE_ON`, `FORCE_OFF`, or `null` (editable only in INBOX stage)
 - `version`: Required for concurrency control
 
 **Response** (200 OK):
@@ -281,6 +321,17 @@ Update ticket fields with optimistic concurrency control.
   "title": "Updated title",
   "description": "Updated description",
   "clarificationPolicy": "CONSERVATIVE",
+  "agent": "CLAUDE",
+  "tokenSavingOverride": "FORCE_ON",
+  "runSettings": {
+    "tokenSaving": {
+      "projectDefault": false,
+      "override": "FORCE_ON",
+      "effectiveEnabled": true,
+      "source": "ticket",
+      "editable": true
+    }
+  },
   "version": 4,
   ...
 }
@@ -598,6 +649,8 @@ sequenceDiagram
     }
   ],
   "clarificationPolicy": "PRAGMATIC",
+  "agent": "CLAUDE",
+  "tokenSavingOverride": "FORCE_ON",
   "createdAt": "2025-01-20T14:22:00.000Z",
   "updatedAt": "2025-01-20T14:22:00.000Z"
 }
@@ -630,6 +683,8 @@ sequenceDiagram
     }
   ],
   "clarificationPolicy": "PRAGMATIC",
+  "agent": "CLAUDE",
+  "tokenSavingOverride": "FORCE_ON",
   "createdAt": "2025-01-20T14:22:00.000Z",
   "updatedAt": "2025-01-20T14:22:00.000Z",
   "jobs": [
@@ -648,7 +703,10 @@ sequenceDiagram
       "costUsd": 0.025,
       "durationMs": 300000,
       "model": "claude-sonnet-4-5-20250929",
-      "toolsUsed": ["Read", "Edit", "Write"]
+      "toolsUsed": ["Read", "Edit", "Write"],
+      "tokenSavingRequested": true,
+      "tokenSavingStatus": "ACTIVE",
+      "tokenSavingFallbackReason": null
     },
     {
       "id": 457,
@@ -665,7 +723,10 @@ sequenceDiagram
       "costUsd": 0.045,
       "durationMs": 480000,
       "model": "claude-sonnet-4-5-20250929",
-      "toolsUsed": ["Read", "Glob", "Write"]
+      "toolsUsed": ["Read", "Glob", "Write"],
+      "tokenSavingRequested": true,
+      "tokenSavingStatus": "FALLBACK",
+      "tokenSavingFallbackReason": "rtk init failed"
     }
   ]
 }
@@ -676,6 +737,8 @@ sequenceDiagram
 - **Title**: Prefixed with "Copy of " (truncated to 100 chars if needed)
 - **Description**: Exact copy from source ticket
 - **Clarification Policy**: Copied from source (or null if source uses project default)
+- **Agent**: Copied from source (or null if source uses project default)
+- **Token Saving Override**: Copied from source (or null if source uses project default)
 - **Attachments**: All image attachments copied by reference (same URLs)
   - Uploaded images (Cloudinary) safely reference same URL
   - External URLs copied as-is
@@ -692,6 +755,8 @@ sequenceDiagram
 - **Description**: Exact copy from source ticket
 - **Stage**: Preserved from source ticket (SPECIFY, PLAN, BUILD, or VERIFY)
 - **Clarification Policy**: Copied from source
+- **Agent**: Copied from source
+- **Token Saving Override**: Copied from source
 - **Attachments**: Copied by reference (same as simple copy)
 - **Branch**: New Git branch created from source branch
   - Format: `{TICKET_NUMBER}-{slug}` (e.g., "219-add-login-button")
@@ -703,6 +768,7 @@ sequenceDiagram
   - Token metrics (input, output, cache read, cache creation)
   - Cost and performance (costUsd, durationMs)
   - Model identifier and tools used
+  - Token-saving request, run status, and fallback reason
   - Jobs reference new ticket ID
 - **Workflow Type**: Copied from source
 - **Version**: Always 1 (new ticket version)
@@ -1850,4 +1916,3 @@ Fetch all VERIFY-stage tickets for a project (workflow-only endpoint).
 - `404`: Project not found
 
 ---
-

@@ -24,6 +24,7 @@
 - **Push Notifications**: web-push ^3.6.x (VAPID), Web Push API, Service Worker (/public/sw.js)
 - **Billing**: stripe (server-side only), Stripe Checkout + Customer Portal, webhook handler at `/api/webhooks/stripe`
 - **Agent log capture**: `@vercel/blob` ^2.3.x — gzipped JSONL transcripts of agent runs. Two artifacts per Claude job (one for non-Claude): the normalized event stream at `logs/<projectId>/<ticketId>/<jobId>.jsonl.gz` (every agent) and the redacted native Claude Code session JSONL at `raw-logs/<projectId>/<ticketId>/<jobId>.jsonl.gz` (Claude only, non-blocking). Runner never holds Blob credentials; uploads stream through `PUT /api/jobs/:id/logs/artifact` and `PUT /api/jobs/:id/logs/raw-artifact`, reads stream through `GET …/logs/raw` and `GET …/logs/raw-native`. Env vars: `BLOB_READ_WRITE_TOKEN` (Vercel only), `LOG_RETENTION_DAYS` (default 30). Both artifacts age out together via `nightly-log-prune.yml`.
+- **Token saving**: RTK CLI (`rtk-ai/rtk`) is installed opportunistically by `.github/scripts/run-agent.sh` for eligible Claude core stage-transition runs when the run-captured token-saving setting is true. Activation failures are non-blocking and report fallback through `PATCH /api/jobs/:id/status`.
 
 **Forbidden**: No UI libs besides shadcn/ui + Radix. No ORMs besides Prisma. No state libs (Redux, Zustand, etc.) — use React hooks + TanStack Query.
 
@@ -59,6 +60,7 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 - `workflowType`: FULL|QUICK — set once, never changes (CLEAN retained in DB enum for historical data)
 - `defaultBranch`: Repository default branch (auto-updated during config sync, defaults to `"main"`)
 - `previewUrl`: Single per project (auto-replaces on deploy)
+- Token saving: `Project.tokenSavingEnabled` defaults false; `Ticket.tokenSavingOverride` supports inherit/`FORCE_ON`/`FORCE_OFF`; `Job.tokenSavingRequested`, `Job.tokenSavingStatus`, and `Job.tokenSavingFallbackReason` capture each run at job start
 - Job commands: `specify`, `plan`, `implement`, `verify`, `ship`, `quick-impl`, `deploy-preview`, `rollback-reset`, `iterate`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`, `comment-ship`, `health-scan`, `insights-analyze`
 - Notifications: 15s polling, soft delete with 30-day retention
 - PushSubscriptions: Multiple per user, auto-cleanup on 410/404

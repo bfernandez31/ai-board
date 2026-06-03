@@ -381,6 +381,13 @@
   - `/ai-board.implement`: Execute implementation
   - `/ai-board.quick-impl`: Fast-track simple changes
 
+### RTK CLI
+- **Version**: Latest available from `rtk-ai/rtk`
+- **Installation**: Workflow runner installs with the official install script when available, falling back to `cargo install --git https://github.com/rtk-ai/rtk rtk`
+- **Purpose**: Token-saving command-output compression for eligible Claude core stage-transition runs
+- **Scope**: Activated only by `run-agent.sh` when the run-captured token-saving setting is true, the agent is Claude, and the command is specify, plan, implement, quick-impl, or verify
+- **Failure Mode**: Setup and activation failures are non-blocking; the job records fallback and continues with normal command output
+
 ## Deployment
 
 ### Vercel Platform

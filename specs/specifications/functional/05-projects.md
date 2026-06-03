@@ -25,6 +25,7 @@ Each project contains:
   - Workflows execute on external project repositories
 - **Default Clarification Policy**: How AI resolves ambiguities during specification
 - **Default Agent**: Which AI agent executes workflow automation (CLAUDE or CODEX; default: CLAUDE)
+- **Token Saving Default**: Whether future inherited Claude core workflow runs should attempt token-saving output compression (boolean, default: false)
 - **Has Specs**: Whether project specifications have been generated (boolean, default: false; set to true when a RETRO_SPEC job completes)
 - **Creation Timestamp**: When project was created
 - **Last Updated**: Most recent activity across all tickets
@@ -300,6 +301,33 @@ Projects have a configurable default AI agent that determines which AI executes 
 - New tickets inherit the project's `defaultAgent` when no ticket-level override is set
 - Ticket `agent` field is `null` by default (means: use project default)
 - Effective agent resolved at workflow dispatch time via `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`
+
+### Token Saving Configuration
+
+Projects have a token-saving default that controls whether inherited ticket runs attempt command-output compression for Claude core stage-transition workflows.
+
+**Purpose**:
+- Reduces command-output token usage for eligible Claude runs without changing how users trigger stage transitions
+- Gives owners a project-wide default while allowing individual INBOX tickets to opt in or out
+- Records run-level status beside normal job telemetry so users can compare real runs instead of relying on estimated savings
+
+**Configuration**:
+- Accessible from the project settings page in the Token saving card
+- Defaults to OFF for new and existing projects
+- Only project owners can modify the setting
+- Project members can view the current default but see a read-only state
+- Changes apply to future jobs only; running and completed jobs keep their captured run state
+
+**Scope**:
+- Applies only when a ticket inherits the project default or does not force token saving off
+- Affects Claude core stage-transition commands: specify, plan, implement, quick-impl, and verify
+- Does not affect non-Claude agents, assistant/comment workflows, health scans, deploy previews, rollback workflows, or log pruning
+- If token-saving setup or activation fails, the workflow continues normally and the job records a fallback state
+
+**Visibility**:
+- Ticket Run settings shows the project default, the ticket override, the effective state, and whether the field is editable
+- Ticket headers show a compact Token saving indicator only when the ticket's current effective state is ON
+- Job details show whether each run was active, inactive, fallback, not applicable, or not recorded
 
 ### Project Configuration
 

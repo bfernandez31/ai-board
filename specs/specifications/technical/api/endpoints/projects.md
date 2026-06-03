@@ -23,6 +23,7 @@ Fetch all projects for the authenticated user with shipping status, ordered by m
       "githubRepo": "ai-board",
       "userId": "user-abc123",
       "clarificationPolicy": "AUTO",
+      "defaultAgent": "CLAUDE",
       "createdAt": "2025-01-01T00:00:00.000Z",
       "updatedAt": "2025-01-15T10:30:00.000Z",
       "lastActivityAt": "2025-01-15T14:05:00.000Z",
@@ -53,6 +54,7 @@ Fetch all projects for the authenticated user with shipping status, ordered by m
       "githubRepo": "mobile-app",
       "userId": "user-abc123",
       "clarificationPolicy": "CONSERVATIVE",
+      "defaultAgent": "CLAUDE",
       "createdAt": "2025-01-05T00:00:00.000Z",
       "updatedAt": "2025-01-10T08:15:00.000Z",
       "lastActivityAt": "2025-01-10T08:15:00.000Z",
@@ -66,6 +68,7 @@ Fetch all projects for the authenticated user with shipping status, ordered by m
 
 **Fields**:
 - `lastActivityAt`: ISO 8601 timestamp of the project's most recent activity, computed as `MAX(project.updatedAt, latest ticket.updatedAt, latest job.startedAt)`. Falls back to `project.updatedAt` when the project has no tickets or jobs.
+- `defaultAgent`: Project-level default agent used by tickets with no agent override
 - `ticketCount`: Total number of tickets across all stages
 - `lastShippedTicket`: Most recent ticket in SHIP stage (null if no shipped tickets)
   - `id`: Ticket ID
@@ -92,7 +95,7 @@ Fetch all projects for the authenticated user with shipping status, ordered by m
 
 ### GET /api/projects/:projectId
 
-Fetch project details including clarification policy.
+Fetch project details including project-level run settings.
 
 **Authentication**: Required (session)
 **Authorization**: Must be project owner or member
@@ -112,6 +115,8 @@ Fetch project details including clarification policy.
   "githubRepo": "ai-board",
   "userId": "user-abc123",
   "clarificationPolicy": "AUTO",
+  "defaultAgent": "CLAUDE",
+  "tokenSavingEnabled": false,
   "createdAt": "2025-01-01T00:00:00.000Z",
   "updatedAt": "2025-01-15T10:30:00.000Z",
   "config": {
@@ -137,12 +142,11 @@ Fetch project details including clarification policy.
 }
 ```
 
-`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync. Per-stage model fields are `null` for pre-existing projects without explicit configuration (Claude fields resolve to `claude-opus-4-8` and Codex fields resolve to `gpt-5.5` at dispatch time). Both column sets are always returned regardless of `defaultAgent` — the inactive agent's stored values stay durable for later switching.
+`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync. `tokenSavingEnabled` defaults to `false` and applies only to future ticket runs that inherit the project default. Per-stage model fields are `null` for pre-existing projects without explicit configuration (Claude fields resolve to `claude-opus-4-8` and Codex fields resolve to `gpt-5.5` at dispatch time). Both column sets are always returned regardless of `defaultAgent` — the inactive agent's stored values stay durable for later switching.
 
 **Errors**:
 - `401`: Not authenticated
-- `403`: User is neither project owner nor member
-- `404`: Project not found
+- `404`: Project not found or not accessible
 
 ### POST /api/projects/:projectId/config/sync
 
@@ -182,10 +186,10 @@ Unknown fields cause a `400` validation error — the config is rejected and not
 
 ### PATCH /api/projects/:projectId
 
-Update project details including clarification policy.
+Update project details including clarification policy, model defaults, and token-saving default.
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner (owner-only action)
+**Authorization**: Must be project owner or member for most settings. Updating `tokenSavingEnabled` is owner-only.
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -198,6 +202,7 @@ Update project details including clarification policy.
   "description": "Updated description",
   "deploymentUrl": "https://my-app.vercel.app",
   "clarificationPolicy": "CONSERVATIVE",
+  "tokenSavingEnabled": true,
   "specifyModel": "claude-opus-4-8",
   "planModel": "claude-opus-4-8",
   "implementModel": "claude-sonnet-4-6",
@@ -217,6 +222,7 @@ Update project details including clarification policy.
 - `description`: Optional, string or null
 - `deploymentUrl`: Optional, string or null (valid URL format)
 - `clarificationPolicy`: Optional, enum (AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE)
+- `tokenSavingEnabled`: Optional boolean; owner-only; controls the project default for future inherited ticket runs
 - `specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`: Optional, nullable — must be one of the whitelisted Claude model IDs (`claude-opus-4-8`, `claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise
 - `codexSpecifyModel`, `codexPlanModel`, `codexImplementModel`, `codexQuickImplModel`, `codexVerifyModel`: Optional, nullable — must be one of the whitelisted Codex model IDs (`gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex`, `gpt-5.2`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise
 - Claude and Codex column sets are independent: writing one never touches the other
@@ -229,6 +235,7 @@ Update project details including clarification policy.
   "key": "ABC",
   "deploymentUrl": "https://my-app.vercel.app",
   "clarificationPolicy": "CONSERVATIVE",
+  "tokenSavingEnabled": true,
   ...
 }
 ```
@@ -238,8 +245,7 @@ Update project details including clarification policy.
 **Errors**:
 - `400`: Invalid request body, URL format, clarification policy enum, or `INVALID_MODEL_ID` (unknown model ID supplied for a model field)
 - `401`: Not authenticated
-- `403`: User is not project owner (members cannot update project settings)
-- `404`: Project not found
+- `404`: Project not found or not accessible for the requested update, including member attempts to update owner-only `tokenSavingEnabled`
 
 ### POST /api/projects/:projectId/model-config/apply-smart-defaults
 
@@ -863,4 +869,3 @@ Fetch project members for mentions autocomplete.
 - `401`: Not authenticated
 - `403`: Not project owner or member
 - `404`: Project not found
-

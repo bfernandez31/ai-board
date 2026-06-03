@@ -148,6 +148,34 @@ Specifications can be generated using different resolution strategies:
 - Project-level default applies when ticket has no override
 - System default (AUTO) applies if neither is set
 
+## Token Saving on Claude Core Runs
+
+Token saving can be enabled as a project default or forced on/off per ticket before workflow automation starts. The setting is resolved when a job is created and is captured on that job so later project or ticket changes affect only future runs.
+
+**Resolution**:
+- Ticket `FORCE_ON` enables token saving for the ticket regardless of the project default
+- Ticket `FORCE_OFF` disables token saving for the ticket regardless of the project default
+- A null ticket override inherits the project Token saving default
+- The ticket override is editable only in INBOX, matching agent and clarification-policy overrides
+
+**Eligible Runs**:
+- Token saving is attempted only when the effective agent is Claude and the command is a core stage-transition command: specify, plan, implement, quick-impl, or verify
+- Non-Claude agents are unaffected even when the effective setting is ON
+- Auxiliary workflows such as comments, assistant mentions, deploy previews, rollbacks, health scans, and log pruning do not activate token saving
+
+**Run Behavior**:
+1. The transition creates a job and stores `tokenSavingRequested` from the effective ticket setting
+2. The workflow receives the captured `token_saving` input
+3. The runner prepares RTK before invoking Claude for eligible core commands
+4. If RTK activates, the job records `ACTIVE`
+5. If RTK setup or activation fails, the run continues normally and the job records `FALLBACK` with a reason
+6. If the request is off, the job records `INACTIVE`; if the request is on but the agent or command is outside scope, the job records `NOT_APPLICABLE`
+
+**User Visibility**:
+- The ticket header shows a compact Token saving indicator only when the ticket's current effective state is ON
+- Job details show the run-captured status as Active, Inactive, Fallback, Not applicable, or Not recorded
+- Existing job telemetry remains the only source for savings comparisons; no estimated-savings calculation is introduced
+
 ## Planning Generation
 
 ### Automatic Trigger
@@ -519,4 +547,3 @@ After outcome capture completes for a shipped ticket, the system pairs the lates
 - Re-pairing on outcome change is never performed — outcomes are immutable and calibration inherits that immutability; an existing calibration row is treated as a duplicate by subsequent pair attempts and is never modified
 - No bounded-retry loop is implemented; transient failures result in no row, and SHIP and outcome capture continue unaffected
 - The pairing has no GitHub workflow, no event emitter, and no LLM call — it runs in-process as a chained DB join
-

@@ -270,6 +270,44 @@ enum ClarificationPolicy {
 - Project policy overrides system default (AUTO)
 - Null ticket policy means inherit from project
 
+### TokenSavingOverride
+
+Ticket-level token-saving override.
+
+```prisma
+enum TokenSavingOverride {
+  FORCE_ON
+  FORCE_OFF
+}
+```
+
+**Hierarchy**:
+- `FORCE_ON` enables token saving for future eligible runs on the ticket
+- `FORCE_OFF` disables token saving for future runs on the ticket
+- Null ticket override means inherit from `Project.tokenSavingEnabled`
+
+### TokenSavingRunStatus
+
+Run-level token-saving activation status captured on each job.
+
+```prisma
+enum TokenSavingRunStatus {
+  ACTIVE
+  INACTIVE
+  FALLBACK
+  NOT_APPLICABLE
+  NOT_RECORDED
+}
+```
+
+| Value | Description |
+|-------|-------------|
+| `ACTIVE` | Token saving was requested and RTK activation succeeded before agent execution |
+| `INACTIVE` | Token saving was not requested for the run |
+| `FALLBACK` | Token saving was requested but setup or activation failed; the run continued normally |
+| `NOT_APPLICABLE` | Token saving was requested, but the agent or command is outside the Claude core-command scope |
+| `NOT_RECORDED` | No token-saving callback was recorded, including legacy jobs |
+
 ### Agent
 
 AI agent that executes workflow automation for a ticket or project.
@@ -413,4 +451,3 @@ enum TicketAnalysisStatus {
 | `failed` | Scoping or grounded LLM call failed, dispatch failed, credential missing, model output invalid, or workflow timed out; telemetry NULL (the rate-limit query relies on this signal so failures do not consume budget) | Yes | — |
 
 Terminal rows are immutable. The single allowed transition is enforced by the PATCH handler with `WHERE id = ? AND status = 'running'`; PATCH on a row already terminal is idempotent (200, no DB write).
-

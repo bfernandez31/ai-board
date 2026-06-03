@@ -76,6 +76,7 @@ model Project {
   userId               String
   clarificationPolicy  ClarificationPolicy  @default(AUTO)
   defaultAgent         Agent                @default(CLAUDE)
+  tokenSavingEnabled   Boolean              @default(false)
   config               Json?
   configSyncedAt       DateTime?
   defaultBranch        String               @default("main")
@@ -126,6 +127,7 @@ model Project {
 - `userId`: Owner of the project (required foreign key)
 - `clarificationPolicy`: Default policy for spec generation (enum, default: AUTO)
 - `defaultAgent`: Default AI agent for all tickets in the project (enum, default: CLAUDE)
+- `tokenSavingEnabled`: Project default for future inherited ticket runs (boolean, default: false)
 - `config`: Parsed `.ai-board/config.yml` content stored as JSON (nullable — null means no config synced)
 - `configSyncedAt`: Timestamp of the last successful config fetch from GitHub (nullable)
 - `defaultBranch`: The repository's default branch name (default: `"main"`), auto-updated during config sync
@@ -162,6 +164,7 @@ model Project {
 - User can only access their own projects
 - Default clarification policy AUTO (context-aware)
 - Default agent CLAUDE (backward-compatible; existing projects automatically get CLAUDE)
+- Token saving defaults to false; owner changes apply only to future jobs for tickets that inherit the project default
 - Deployment URL displayed on project cards when configured (hidden when null)
 - Project description stored but not displayed on list view cards
 - Project key generation: derived from first 3 characters of name (uppercase), padded/disambiguated if needed
@@ -201,6 +204,7 @@ model Ticket {
   updatedAt               DateTime                  @default(now()) @updatedAt
   clarificationPolicy     ClarificationPolicy?
   agent                   Agent?
+  tokenSavingOverride     TokenSavingOverride?
   closedAt                DateTime?
   specifyModel            String?                   @db.VarChar(50)
   planModel               String?                   @db.VarChar(50)
@@ -258,6 +262,7 @@ model Ticket {
 - `workflowType`: Workflow path used (enum: FULL, QUICK, CLEAN; default: FULL). CLEAN is historical only -- creation path removed; retained for existing tickets.
 - `clarificationPolicy`: Optional policy override (nullable, inherits from project when null)
 - `agent`: Optional AI agent override (nullable, inherits from project `defaultAgent` when null)
+- `tokenSavingOverride`: Optional token-saving override (nullable, inherits from project `tokenSavingEnabled` when null)
 - `specifyModel`: Optional Claude model override for SPECIFY jobs (max 50 chars, nullable — null means inherit project default)
 - `planModel`: Optional Claude model override for PLAN jobs (max 50 chars, nullable)
 - `implementModel`: Optional Claude model override for IMPLEMENT jobs (max 50 chars, nullable)
@@ -316,6 +321,8 @@ model Ticket {
 - Clarification policy overrides project default when set
 - Agent overrides project default when set; null means inherit from project `defaultAgent`
 - Effective agent resolved at dispatch time via `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`
+- Token saving override resolves as `FORCE_ON` → enabled, `FORCE_OFF` → disabled, null → project `tokenSavingEnabled`
+- Token saving overrides are editable only in INBOX, matching description, clarification-policy, and agent editability
 - `creatorId` is populated at every creation path (manual create, duplicate, full-clone, MCP, inbox-analysis spawner) by forwarding the actor's `userId` from the API auth layer. Bulk merge preserves the base's `creatorId`; source tickets' creators receive a `TICKET_MERGED` notification before their tickets are hard-deleted
 - Per-stage Claude model overrides (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) are nullable; null means inherit the project's Claude value for that stage, which itself falls back to `claude-opus-4-8`
 - Per-stage Codex model overrides (`codexSpecifyModel`, `codexPlanModel`, `codexImplementModel`, `codexQuickImplModel`, `codexVerifyModel`) are nullable; null means inherit the project's Codex value for that stage, which itself falls back to `gpt-5.5`
@@ -340,7 +347,7 @@ model Ticket {
   - Bulk delete, bulk merge, bulk change-agent, and bulk change-model accept 1–50 ticket ids per request (merge requires ≥ 2)
   - Every bulk operation runs in a single `prisma.$transaction` with a `WHERE stage = 'INBOX' AND projectId = ?` guard; partial mutations are impossible
   - Bulk delete and bulk merge enforce optimistic concurrency via an `expectedVersions` map keyed on ticket id; mismatches return 409 with `conflictingIds` and `currentVersions`
-  - Bulk merge designates the smallest-id selected ticket as the surviving base, increments its `version` by 1, overwrites its `title`/`description`/`attachments` (attachments concatenated `[...base, ...sortedSources]`), and hard-deletes every source ticket; `agent`, all ten per-stage model overrides (5 Claude + 5 Codex), `autoMode`, `clarificationPolicy`, `workflowType`, `stage`, `branch`, `previewUrl`, `creatorId`, `ticketKey`, and `ticketNumber` on the base are preserved
+  - Bulk merge designates the smallest-id selected ticket as the surviving base, increments its `version` by 1, overwrites its `title`/`description`/`attachments` (attachments concatenated `[...base, ...sortedSources]`), and hard-deletes every source ticket; `agent`, `tokenSavingOverride`, all ten per-stage model overrides (5 Claude + 5 Codex), `autoMode`, `clarificationPolicy`, `workflowType`, `stage`, `branch`, `previewUrl`, `creatorId`, `ticketKey`, and `ticketNumber` on the base are preserved
   - Bulk change-model writes the chosen Claude model value to all five Claude per-stage override fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) on every targeted ticket; Codex columns are untouched by this bulk action
   - Bulk delete and bulk merge create `TICKET_DELETED` / `TICKET_MERGED` `Notification` rows for every non-actor `creatorId` inside the same transaction, BEFORE the source ticket is removed; the `Notification.ticketId → SetNull` FK preserves the row after the cascade and `ticketKeySnapshot` keeps the human-readable identifier readable in the recipient's feed
   - Bulk change-agent and bulk change-model are silent — no notifications, no other field mutations
@@ -388,6 +395,11 @@ model Job {
   pluginVersion       String?   @db.VarChar(50)   // ai-board plugin version (.claude-plugin/plugin.json)
   agentCliVersion     String?   @db.VarChar(100)  // Agent CLI version (claude/codex/vibe/gemini --version)
 
+  // Token-saving status captured for this run
+  tokenSavingRequested      Boolean              @default(false)
+  tokenSavingStatus         TokenSavingRunStatus @default(NOT_RECORDED)
+  tokenSavingFallbackReason String?              @db.VarChar(1000)
+
   ticket      Ticket?   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   log         JobLog?
@@ -432,6 +444,9 @@ model Job {
 - `qualityScoreDetails`: JSON string containing all five dimension sub-scores, weights, and computed final score (nullable, populated alongside `qualityScore`)
 - `pluginVersion`: ai-board plugin version active at job start (max 50 chars, nullable). Sourced from `.claude-plugin/plugin.json`. Null for jobs predating runtime version capture or runs where the runner could not resolve the file.
 - `agentCliVersion`: Underlying agent CLI version active at job start (max 100 chars, nullable). Captured by parsing the first line of `<cli> --version` (claude/codex/vibe/gemini); leading binary name and `v` prefix are stripped. Null for jobs predating runtime version capture or runs where the CLI did not report a version.
+- `tokenSavingRequested`: Effective token-saving setting captured when the job was created. Project and ticket setting changes after job creation do not modify this value.
+- `tokenSavingStatus`: Run status for token-saving activation (`ACTIVE`, `INACTIVE`, `FALLBACK`, `NOT_APPLICABLE`, `NOT_RECORDED`)
+- `tokenSavingFallbackReason`: Optional reason recorded when requested token saving falls back to normal command output (max 1000 chars)
 
 **Relationships**:
 - Belongs to Ticket (optional, cascade delete) — null for `insights-analyze` jobs
@@ -465,6 +480,8 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - AI-BOARD jobs (command like 'comment-%') don't block transitions or count toward rollback validation
 - `workflowRunId` is set once (first-write-wins) when the workflow sends its first RUNNING callback; subsequent RUNNING callbacks with a run ID are ignored if already populated
 - `pluginVersion` and `agentCliVersion` are first-write-wins on RUNNING. The runner reports them once after CLI installation, which can land on the initial RUNNING PATCH or on a follow-up idempotent same-status PATCH; later transitions never overwrite a populated value
+- `tokenSavingStatus` is first-write-wins on RUNNING while the stored value is `NOT_RECORDED`; terminal callbacks never erase an active or fallback status
+- `tokenSavingStatus` starts as `INACTIVE` when token saving is not requested, `NOT_APPLICABLE` when requested for a non-Claude or out-of-scope command, and `NOT_RECORDED` when an eligible Claude run is waiting for the runner callback
 - When a PENDING job is cancelled before `workflowRunId` is set, any subsequent RUNNING callback for that job receives a 409 response, signalling the workflow to self-abort
 - Users can cancel RUNNING or PENDING jobs via `POST /api/jobs/:id/cancel` (session auth); cancellation calls the GitHub Actions API for RUNNING jobs or marks CANCELLED directly for PENDING jobs
 
@@ -1520,4 +1537,3 @@ model AnalysisCalibration {
 - When the paired outcome is `partial = true`, the row is still created: cells whose computation requires fields the outcome was unable to capture are recorded as `'n_a'` with the `partialReason` snapshot; cells that can be computed from available telemetry populate normally
 - Pairing failures (Zod superRefine, Prisma errors, missing analysis output) are logged with the `[calibration]` prefix and never propagate to SHIP or capture
 - No backfill for historical shipped+analyzed tickets — the dashboard's "30 of N" caption naturally reflects the post-launch dataset
-
