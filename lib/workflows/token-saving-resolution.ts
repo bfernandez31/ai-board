@@ -41,30 +41,31 @@ const CORE_TOKEN_SAVING_COMMANDS = new Set([
 export function resolveTokenSavingRunSetting(
   ticket: TokenSavingTicketLike
 ): TokenSavingRunSetting {
-  if (ticket.tokenSavingOverride === TokenSavingOverride.FORCE_ON) {
-    return {
-      projectDefault: ticket.project.tokenSavingEnabled,
-      override: ticket.tokenSavingOverride,
-      effectiveEnabled: true,
-      source: 'ticket',
-    };
-  }
+  const projectDefault = ticket.project.tokenSavingEnabled;
 
-  if (ticket.tokenSavingOverride === TokenSavingOverride.FORCE_OFF) {
-    return {
-      projectDefault: ticket.project.tokenSavingEnabled,
-      override: ticket.tokenSavingOverride,
-      effectiveEnabled: false,
-      source: 'ticket',
-    };
+  switch (ticket.tokenSavingOverride) {
+    case TokenSavingOverride.FORCE_ON:
+      return {
+        projectDefault,
+        override: TokenSavingOverride.FORCE_ON,
+        effectiveEnabled: true,
+        source: 'ticket',
+      };
+    case TokenSavingOverride.FORCE_OFF:
+      return {
+        projectDefault,
+        override: TokenSavingOverride.FORCE_OFF,
+        effectiveEnabled: false,
+        source: 'ticket',
+      };
+    default:
+      return {
+        projectDefault,
+        override: null,
+        effectiveEnabled: projectDefault,
+        source: 'project',
+      };
   }
-
-  return {
-    projectDefault: ticket.project.tokenSavingEnabled,
-    override: null,
-    effectiveEnabled: ticket.project.tokenSavingEnabled,
-    source: 'project',
-  };
 }
 
 export function canEditTokenSavingOverride(stage: Stage): boolean {

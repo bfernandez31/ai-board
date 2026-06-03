@@ -105,6 +105,39 @@ function toCodexSelection(current: RunSettingsModelState): CodexStageSelection {
   };
 }
 
+function hasSelectedModelChanges(
+  effectiveAgent: Agent,
+  claudeSelection: ClaudeStageSelection,
+  codexSelection: CodexStageSelection,
+  currentModels: RunSettingsModelState
+): boolean {
+  if (effectiveAgent === Agent.CLAUDE) {
+    return STAGE_MODEL_KEYS.some(
+      (key) => claudeSelection[key] !== (currentModels[key] ?? null)
+    );
+  }
+
+  if (effectiveAgent === Agent.CODEX) {
+    return CODEX_STAGE_MODEL_KEYS.some(
+      (key) => codexSelection[key] !== (currentModels[key] ?? null)
+    );
+  }
+
+  return false;
+}
+
+function selectedAgentValue(value: string): Agent | null {
+  return value === INHERIT ? null : (value as Agent);
+}
+
+function selectedPolicyValue(value: string): ClarificationPolicy | null {
+  return value === INHERIT ? null : (value as ClarificationPolicy);
+}
+
+function selectedTokenSavingValue(value: string): TokenSavingOverride | null {
+  return value === INHERIT ? null : (value as TokenSavingOverride);
+}
+
 export function RunSettingsDialog({
   open,
   onOpenChange,
@@ -120,7 +153,7 @@ export function RunSettingsDialog({
   currentModels,
   onSaveRunSettings,
   onSaveModelOverrides,
-}: RunSettingsDialogProps) {
+}: RunSettingsDialogProps): React.ReactElement {
   const [selectedAgent, setSelectedAgent] = React.useState(currentAgent ?? INHERIT);
   const [selectedPolicy, setSelectedPolicy] = React.useState(currentPolicy ?? INHERIT);
   const [selectedTokenSaving, setSelectedTokenSaving] = React.useState(tokenSavingOverride ?? INHERIT);
@@ -154,11 +187,12 @@ export function RunSettingsDialog({
     selectedPolicy !== (currentPolicy ?? INHERIT) ||
     selectedTokenSaving !== (tokenSavingOverride ?? INHERIT);
 
-  const hasModelChanges = isClaude
-    ? STAGE_MODEL_KEYS.some((key) => claudeSelection[key] !== (currentModels[key] ?? null))
-    : isCodex
-      ? CODEX_STAGE_MODEL_KEYS.some((key) => codexSelection[key] !== (currentModels[key] ?? null))
-      : false;
+  const hasModelChanges = hasSelectedModelChanges(
+    effectiveAgent,
+    claudeSelection,
+    codexSelection,
+    currentModels
+  );
 
   const hasChanges = hasRunSettingsChanges || hasModelChanges;
 
@@ -171,17 +205,13 @@ export function RunSettingsDialog({
       if (hasRunSettingsChanges) {
         await onSaveRunSettings({
           ...(selectedAgent !== (currentAgent ?? INHERIT) && {
-            agent: selectedAgent === INHERIT ? null : (selectedAgent as Agent),
+            agent: selectedAgentValue(selectedAgent),
           }),
           ...(selectedPolicy !== (currentPolicy ?? INHERIT) && {
-            clarificationPolicy:
-              selectedPolicy === INHERIT ? null : (selectedPolicy as ClarificationPolicy),
+            clarificationPolicy: selectedPolicyValue(selectedPolicy),
           }),
           ...(selectedTokenSaving !== (tokenSavingOverride ?? INHERIT) && {
-            tokenSavingOverride:
-              selectedTokenSaving === INHERIT
-                ? null
-                : (selectedTokenSaving as TokenSavingOverride),
+            tokenSavingOverride: selectedTokenSavingValue(selectedTokenSaving),
           }),
         });
       }
@@ -202,6 +232,71 @@ export function RunSettingsDialog({
     } finally {
       setIsSaving(false);
     }
+  }
+
+  let modelControls: React.ReactNode;
+  if (!isClaude && !isCodex) {
+    modelControls = (
+      <p className="text-sm text-muted-foreground">
+        Model overrides are inactive for {effectiveAgent}.
+      </p>
+    );
+  } else if (isClaude) {
+    modelControls = STAGE_MODEL_KEYS.map((stage) => (
+      <div key={stage} className="grid gap-2 sm:grid-cols-[120px_1fr] sm:items-center">
+        <Label htmlFor={`run-settings-${stage}`}>{STAGE_MODEL_LABELS[stage]}</Label>
+        <Select
+          value={claudeSelection[stage] ?? INHERIT}
+          onValueChange={(value) =>
+            setClaudeSelection((current) => ({
+              ...current,
+              [stage]: value === INHERIT ? null : (value as ClaudeModelId),
+            }))
+          }
+          disabled={!modelsEditable || isSaving}
+        >
+          <SelectTrigger id={`run-settings-${stage}`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={INHERIT}>Inherit from project default</SelectItem>
+            {CLAUDE_MODEL_IDS.map((model) => (
+              <SelectItem key={model} value={model}>
+                {CLAUDE_MODEL_LABELS[model]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    ));
+  } else {
+    modelControls = CODEX_STAGE_MODEL_KEYS.map((stage) => (
+      <div key={stage} className="grid gap-2 sm:grid-cols-[120px_1fr] sm:items-center">
+        <Label htmlFor={`run-settings-${stage}`}>{CODEX_STAGE_MODEL_LABELS[stage]}</Label>
+        <Select
+          value={codexSelection[stage] ?? INHERIT}
+          onValueChange={(value) =>
+            setCodexSelection((current) => ({
+              ...current,
+              [stage]: value === INHERIT ? null : (value as CodexModelId),
+            }))
+          }
+          disabled={!modelsEditable || isSaving}
+        >
+          <SelectTrigger id={`run-settings-${stage}`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={INHERIT}>Inherit from project default</SelectItem>
+            {CODEX_MODEL_IDS.map((model) => (
+              <SelectItem key={model} value={model}>
+                {CODEX_MODEL_LABELS[model]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    ));
   }
 
   return (
@@ -293,67 +388,7 @@ export function RunSettingsDialog({
 
           <section className="rounded-md border border-border p-4 space-y-3">
             <h3 className="text-sm font-semibold text-foreground">Models</h3>
-            {!isClaude && !isCodex ? (
-              <p className="text-sm text-muted-foreground">
-                Model overrides are inactive for {effectiveAgent}.
-              </p>
-            ) : isClaude ? (
-              STAGE_MODEL_KEYS.map((stage) => (
-                <div key={stage} className="grid gap-2 sm:grid-cols-[120px_1fr] sm:items-center">
-                  <Label htmlFor={`run-settings-${stage}`}>{STAGE_MODEL_LABELS[stage]}</Label>
-                  <Select
-                    value={claudeSelection[stage] ?? INHERIT}
-                    onValueChange={(value) =>
-                      setClaudeSelection((current) => ({
-                        ...current,
-                        [stage]: value === INHERIT ? null : (value as ClaudeModelId),
-                      }))
-                    }
-                    disabled={!modelsEditable || isSaving}
-                  >
-                    <SelectTrigger id={`run-settings-${stage}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={INHERIT}>Inherit from project default</SelectItem>
-                      {CLAUDE_MODEL_IDS.map((model) => (
-                        <SelectItem key={model} value={model}>
-                          {CLAUDE_MODEL_LABELS[model]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))
-            ) : (
-              CODEX_STAGE_MODEL_KEYS.map((stage) => (
-                <div key={stage} className="grid gap-2 sm:grid-cols-[120px_1fr] sm:items-center">
-                  <Label htmlFor={`run-settings-${stage}`}>{CODEX_STAGE_MODEL_LABELS[stage]}</Label>
-                  <Select
-                    value={codexSelection[stage] ?? INHERIT}
-                    onValueChange={(value) =>
-                      setCodexSelection((current) => ({
-                        ...current,
-                        [stage]: value === INHERIT ? null : (value as CodexModelId),
-                      }))
-                    }
-                    disabled={!modelsEditable || isSaving}
-                  >
-                    <SelectTrigger id={`run-settings-${stage}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={INHERIT}>Inherit from project default</SelectItem>
-                      {CODEX_MODEL_IDS.map((model) => (
-                        <SelectItem key={model} value={model}>
-                          {CODEX_MODEL_LABELS[model]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))
-            )}
+            {modelControls}
           </section>
 
           {error && (

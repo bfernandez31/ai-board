@@ -1,3 +1,5 @@
+import type { Job, TokenSavingRunStatus } from '@prisma/client';
+
 /**
  * JobType Enum
  *
@@ -26,8 +28,6 @@ export interface JobTypeConfig {
   bgColor: string; // TailwindCSS class
   ariaLabel: string; // Accessibility label template
 }
-
-import type { Job, TokenSavingRunStatus } from '@prisma/client';
 
 /**
  * DualJobState Interface

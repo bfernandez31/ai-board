@@ -33,6 +33,17 @@ function buildVersionPatch(
   return patch;
 }
 
+function tokenSavingFallbackReason(
+  status: TokenSavingRunStatus,
+  fallbackReason: string | undefined
+): string | null {
+  if (status !== TokenSavingRunStatus.FALLBACK) {
+    return null;
+  }
+
+  return fallbackReason ?? null;
+}
+
 function buildTokenSavingPatch(
   requestedStatus: JobStatus,
   data: JobStatusUpdate,
@@ -41,12 +52,12 @@ function buildTokenSavingPatch(
   if (requestedStatus !== 'RUNNING' || !data.tokenSavingStatus) return {};
   if (job.tokenSavingStatus !== TokenSavingRunStatus.NOT_RECORDED) return {};
 
+  const tokenSavingStatus = data.tokenSavingStatus as TokenSavingRunStatus;
+
   return {
-    tokenSavingStatus: data.tokenSavingStatus as TokenSavingRunStatus,
+    tokenSavingStatus,
     tokenSavingFallbackReason:
-      data.tokenSavingStatus === TokenSavingRunStatus.FALLBACK
-        ? data.tokenSavingFallbackReason ?? null
-        : null,
+      tokenSavingFallbackReason(tokenSavingStatus, data.tokenSavingFallbackReason),
   };
 }
 
@@ -208,16 +219,11 @@ export async function PATCH(
             data: { agentCliVersion },
           });
         }
-        if (validationResult.data.tokenSavingStatus) {
+        const tokenSavingPatch = buildTokenSavingPatch(requestedStatus, validationResult.data, job);
+        if (tokenSavingPatch.tokenSavingStatus) {
           await prisma.job.updateMany({
             where: { id: jobId, tokenSavingStatus: TokenSavingRunStatus.NOT_RECORDED },
-            data: {
-              tokenSavingStatus: validationResult.data.tokenSavingStatus as TokenSavingRunStatus,
-              tokenSavingFallbackReason:
-                validationResult.data.tokenSavingStatus === TokenSavingRunStatus.FALLBACK
-                  ? validationResult.data.tokenSavingFallbackReason ?? null
-                  : null,
-            },
+            data: tokenSavingPatch,
           });
         }
       }

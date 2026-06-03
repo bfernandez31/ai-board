@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,19 @@ async function readErrorMessage(response: Response): Promise<string> {
   }
 }
 
-export function TokenSavingCard({ project, canEdit }: TokenSavingCardProps) {
+function tokenSavingSwitchLabel(canEdit: boolean, enabled: boolean): string {
+  if (!canEdit) {
+    return 'Token saving is managed by project owners';
+  }
+
+  if (enabled) {
+    return 'Disable token saving';
+  }
+
+  return 'Enable token saving';
+}
+
+export function TokenSavingCard({ project, canEdit }: TokenSavingCardProps): ReactElement {
   const router = useRouter();
   const [enabled, setEnabled] = useState(project.tokenSavingEnabled);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -57,11 +69,7 @@ export function TokenSavingCard({ project, canEdit }: TokenSavingCardProps) {
     }
   }
 
-  const switchLabel = canEdit
-    ? enabled
-      ? 'Disable token saving'
-      : 'Enable token saving'
-    : 'Token saving is managed by project owners';
+  const switchLabel = tokenSavingSwitchLabel(canEdit, enabled);
 
   return (
     <Card className="aurora-bg-subtle">
