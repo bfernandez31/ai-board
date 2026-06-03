@@ -220,12 +220,8 @@ jobs:
         with:
           node-version: '22.20.0'
 
-      # ── Step 6b: Create plugin symlinks ─────────────────────────────
-      - name: Create plugin symlinks
-        working-directory: target-repo
-        run: |
-          mkdir -p .claude
-          ln -sf ../../ai-board/.claude-plugin/commands .claude/commands
+      # Plugin command discovery is handled inside run-agent.sh
+      # (ensure_claude_commands) — no inline symlink step needed.
 
       # ── Step 7: Execute retro-spec agent command ────────────────────
       - name: Generate specifications

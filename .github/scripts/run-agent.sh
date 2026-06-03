@@ -473,6 +473,28 @@ install_claude() {
   log_info "Claude Code CLI installed successfully"
 }
 
+ensure_claude_commands() {
+  # Claude Code resolves /ai-board.* slash commands from .claude/commands in
+  # the cwd. Workflows that clone a target repo get that symlink from
+  # setup-environment.sh (or an inline ln -sf in onboard/retro-spec); workflows
+  # without a target clone (e.g. inbox-analysis) run from the workspace root
+  # where no link exists — the CLI then reports the command as an unknown
+  # skill. Idempotent: no-op when commands are already discoverable.
+  if [[ -e .claude/commands ]]; then
+    return 0
+  fi
+  # The plugin always lives relative to this script in the ai-board checkout
+  # (same resolution as resolve_plugin_version), regardless of cwd.
+  local plugin_commands="${SCRIPT_DIR}/../../.claude-plugin/commands"
+  if [[ -d "$plugin_commands" ]]; then
+    mkdir -p .claude
+    ln -sf "$(cd "$plugin_commands" && pwd)" .claude/commands
+    log_info "Linked Claude commands → .claude/commands"
+  else
+    log_info "Plugin commands dir not found at ${plugin_commands} — relying on native discovery"
+  fi
+}
+
 invoke_claude() {
   log_info "Invoking Claude: /$COMMAND $ORIGINAL_ARGS_STRING"
   claude --dangerously-skip-permissions "/$COMMAND $ORIGINAL_ARGS_STRING"
@@ -855,6 +877,7 @@ dispatch_agent() {
     CLAUDE)
       validate_auth
       install_claude
+      ensure_claude_commands
       report_runtime_versions claude
       invoke_claude
       ;;

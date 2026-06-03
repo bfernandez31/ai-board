@@ -196,6 +196,7 @@ sequenceDiagram
         GH->>CLI: run-agent.sh AGENT_TYPE COMMAND [ARGS]
         CLI->>CLI: Validate auth (CLAUDE_CODE_OAUTH_TOKEN or OPENAI_API_KEY)
         CLI->>CLI: Install CLI (claude or codex)
+        CLI->>CLI: ensure_claude_commands (CLAUDE only — create .claude/commands symlink if missing)
         CLI->>TGT: cd target/ (working directory)
         CLI->>CLI: Execute command (reads .claude/commands/COMMAND.md via symlink)
         CLI->>TGT: Read/write files in target repo
@@ -207,6 +208,15 @@ sequenceDiagram
         GH->>API: PATCH job status → COMPLETED/FAILED
     end
 ```
+
+### Command Discoverability Guarantee
+
+The Claude CLI resolves `/ai-board.*` slash commands from `.claude/commands/` in its working directory. Two layers create that symlink:
+
+1. **`setup-environment.sh`** creates `target/.claude/commands → ../../ai-board/.claude-plugin/commands` during environment setup (also consumed outside agent runs, e.g. by unit tests reading command markdown).
+2. **`run-agent.sh` → `ensure_claude_commands()`** (CLAUDE dispatch only) guarantees the link as a fallback: a no-op when `.claude/commands` already exists, otherwise it resolves the plugin relative to the script's own location (`SCRIPT_DIR/../../.claude-plugin/commands`) and links it into the cwd. This covers workflows that invoke an agent **without a target repo clone** (e.g. `inbox-analysis.yml`, which runs from the workspace root).
+
+Without the link, recent Claude CLI versions report the command as an unrecognized skill and the agent run produces no output (strict skill resolution — the model no longer improvises on unknown `/commands`). `run-agent.sh` is the single owner of this guarantee for agent runs; workflows must not add their own inline `ln -sf` steps.
 
 ### Why Commands Come From Main Branch
 
