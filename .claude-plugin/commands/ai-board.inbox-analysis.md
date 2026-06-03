@@ -23,6 +23,7 @@ Arguments are positional flags:
    }
    ```
    `predictedDomains` must be drawn from the runtime vocabulary (union of candidate domains plus `app, lib, tests, docs`).
+   `scopeWarnings[].category` MUST be one of exactly: `ambiguity_core_requirement`, `multi_feature_bundling`, `missing_acceptance_criteria`, `missing_scope_boundary`, `other` — never invent other values; anything that doesn't fit is `other`. `message` must stay under 250 characters.
 
 3. **Phase C — Anchor retrieval (deterministic)**: Re-rank `candidates` by `(domainOverlap with predictedDomains DESC, tagOverlap with semanticTagHints DESC, shippedAt DESC)` and take the top 5. If fewer than 3 anchors have `domainOverlap >= 1`, **emit cold_start** result with the Phase B `scopeWarnings`.
 
@@ -31,16 +32,20 @@ Arguments are positional flags:
    {
      "frictionRisk": "low|medium|high",
      "qualityGateRange": { "lower": 0..100, "upper": 0..100 },
-     "recommendation": { "choice": "QUICK|FULL", "confidence": "low|medium|high", "justification": "≤1000 chars" },
+     "recommendation": { "choice": "QUICK|FULL", "confidence": "low|medium|high", "justification": "string" },
      "costRange": {
        "baselineLowerUsd": 0, "baselineUpperUsd": 0,
        "marginalFrictionLowerUsd": 0, "marginalFrictionUpperUsd": 0
      },
      "scopeWarnings": [...≤5],
-     "anchors": [{ "ticketId", "ticketKey", "frictionFree", "qualityScore"|null, "overlapStrength" }]
+     "anchors": [{ "ticketId": int, "ticketKey": "ABC-123", "frictionFree": bool, "qualityScore": int|null, "overlapStrength": int }]
    }
    ```
-   `anchors[*].ticketId` MUST be a subset of the candidate set returned by Phase A.
+   Field constraints (validated server-side — violations fail the whole analysis):
+   - `justification`: aim for **under 900 characters** (hard limit 1000 — LLMs systematically undercount, so keep margin).
+   - `scopeWarnings[].category`: same closed enum as Phase B (`ambiguity_core_requirement`, `multi_feature_bundling`, `missing_acceptance_criteria`, `missing_scope_boundary`, `other`); `message` under 250 characters.
+   - `overlapStrength`: an **integer ≥ 1** — the count of overlapping domains with the analyzed ticket (NOT a label like "high").
+   - `anchors[*].ticketId` MUST be a subset of the candidate set returned by Phase A.
 
 ## Output
 

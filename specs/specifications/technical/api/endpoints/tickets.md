@@ -1552,7 +1552,7 @@ Failure:
 - On `success`, `output.anchors[*].ticketId` must be a subset of the row's `anchorIdsAttempted` (custom refinement)
 - `output.scopeWarnings.length <= 5`, `output.anchors.length <= 5`
 - Range refinements: `qualityGateRange.lower <= upper`; both cost ranges have `lower <= upper`
-- Recommendation justification: 1–1000 chars
+- Recommendation justification: 1–1000 chars — **over-length values are truncated server-side, not rejected** (LLM leniency); same for `scopeWarnings[].message` (280). Unknown warning categories normalize to `other`; `overlapStrength` labels `low|medium|high` coerce to `1|2|3`
 - `errorReason` must be one of: `scoping_pass_failed`, `grounded_pass_failed`, `dispatch_failed`, `timeout`, `invalid_model_output`, `credential_missing`, `other`
 - `coldStartReason` must be `insufficient_comparable_history`
 

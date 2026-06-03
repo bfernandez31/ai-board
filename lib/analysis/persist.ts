@@ -40,3 +40,26 @@ export async function insertRunningAnalysis(
 
   return prisma.ticketAnalysis.create({ data });
 }
+
+// The inbox-analysis workflow caps the agent step at 5 minutes
+// (timeout-minutes in inbox-analysis.yml); a row still `running` after this
+// window means the terminal status PATCH never landed (workflow crash,
+// rejected payload, network failure). Without reclaim such rows block new
+// analyses (POST returns 409) and keep the UI polling forever — there is no
+// background janitor, so GET/POST reclaim lazily.
+export const STALE_RUNNING_ANALYSIS_MS = 10 * 60 * 1000;
+
+export async function reclaimStaleRunningAnalyses(ticketId: number): Promise<number> {
+  const cutoff = new Date(Date.now() - STALE_RUNNING_ANALYSIS_MS);
+  const { count } = await prisma.ticketAnalysis.updateMany({
+    where: { ticketId, status: 'running', startedAt: { lt: cutoff } },
+    data: {
+      status: 'failed',
+      errorReason: 'timeout',
+      errorMessage:
+        'Analysis exceeded the maximum runtime without reporting a result and was reclaimed.',
+      endedAt: new Date(),
+    },
+  });
+  return count;
+}

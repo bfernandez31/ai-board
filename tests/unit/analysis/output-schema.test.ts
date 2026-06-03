@@ -101,10 +101,11 @@ describe('AnalysisOutputSchema (success shape)', () => {
     expect(() => AnalysisOutputSchema.parse(bad)).toThrow();
   });
 
-  it('rejects invalid scopeWarnings[].category enum', () => {
-    const bad = validSuccess();
-    (bad.scopeWarnings[0] as { category: string }).category = 'unknown_category';
-    expect(() => AnalysisOutputSchema.parse(bad)).toThrow();
+  it("normalizes unknown scopeWarnings[].category to 'other' (LLM leniency)", () => {
+    const payload = validSuccess();
+    (payload.scopeWarnings[0] as { category: string }).category = 'external_dependency';
+    const parsed = AnalysisOutputSchema.parse(payload);
+    expect(parsed.scopeWarnings[0].category).toBe('other');
   });
 
   it('accepts qualityScore=null on anchor', () => {
@@ -117,6 +118,84 @@ describe('AnalysisOutputSchema (success shape)', () => {
     const bad = validSuccess();
     bad.anchors[0].ticketKey = 'lowercase-1';
     expect(() => AnalysisOutputSchema.parse(bad)).toThrow();
+  });
+});
+
+describe('LLM output leniency (AIB-848 incident — normalize instead of reject)', () => {
+  // freshSuccess() shares the module-level `validAnchor` object, which earlier
+  // tests mutate (e.g. ticketKey) — deep-clone to isolate this suite.
+  const freshSuccess = (): AnalysisOutput => {
+    const base = structuredClone(validSuccess());
+    base.anchors = [
+      { ticketId: 100, ticketKey: 'AIB-100', frictionFree: true, qualityScore: 88, overlapStrength: 2 },
+    ];
+    return base;
+  };
+
+  it('truncates recommendation.justification beyond 1000 chars instead of rejecting', () => {
+    const payload = freshSuccess();
+    payload.recommendation.justification = 'x'.repeat(1057);
+    const parsed = AnalysisOutputSchema.parse(payload);
+    expect(parsed.recommendation.justification.length).toBe(1000);
+    expect(parsed.recommendation.justification.endsWith('…')).toBe(true);
+  });
+
+  it('keeps justification at exactly 1000 chars untouched', () => {
+    const payload = freshSuccess();
+    payload.recommendation.justification = 'x'.repeat(1000);
+    const parsed = AnalysisOutputSchema.parse(payload);
+    expect(parsed.recommendation.justification).toBe('x'.repeat(1000));
+  });
+
+  it('still rejects empty justification', () => {
+    const payload = freshSuccess();
+    payload.recommendation.justification = '';
+    expect(() => AnalysisOutputSchema.parse(payload)).toThrow();
+  });
+
+  it('truncates scopeWarnings[].message beyond 280 chars instead of rejecting', () => {
+    const payload = freshSuccess();
+    payload.scopeWarnings[0].message = 'y'.repeat(400);
+    const parsed = AnalysisOutputSchema.parse(payload);
+    expect(parsed.scopeWarnings[0].message.length).toBe(280);
+    expect(parsed.scopeWarnings[0].message.endsWith('…')).toBe(true);
+  });
+
+  it("coerces overlapStrength 'low'|'medium'|'high' to 1|2|3", () => {
+    const payload = freshSuccess();
+    (payload.anchors[0] as { overlapStrength: unknown }).overlapStrength = 'high';
+    expect(AnalysisOutputSchema.parse(payload).anchors[0].overlapStrength).toBe(3);
+    (payload.anchors[0] as { overlapStrength: unknown }).overlapStrength = 'medium';
+    expect(AnalysisOutputSchema.parse(payload).anchors[0].overlapStrength).toBe(2);
+    (payload.anchors[0] as { overlapStrength: unknown }).overlapStrength = 'low';
+    expect(AnalysisOutputSchema.parse(payload).anchors[0].overlapStrength).toBe(1);
+  });
+
+  it('still accepts integer overlapStrength and rejects other strings', () => {
+    const payload = freshSuccess();
+    (payload.anchors[0] as { overlapStrength: unknown }).overlapStrength = 4;
+    expect(AnalysisOutputSchema.parse(payload).anchors[0].overlapStrength).toBe(4);
+    (payload.anchors[0] as { overlapStrength: unknown }).overlapStrength = 'massive';
+    expect(() => AnalysisOutputSchema.parse(payload)).toThrow();
+  });
+
+  it('accepts the real rejected payload shape from the AIB-848 analysis run', () => {
+    const payload = freshSuccess();
+    payload.recommendation.justification = 'z'.repeat(1057);
+    payload.scopeWarnings = [
+      { category: 'external_dependency' as never, message: 'RTK is an external binary.' },
+      { category: 'ambiguity_core_requirement', message: 'Two features bundled.' },
+      { category: 'schema_migration' as never, message: 'New columns required.' },
+    ];
+    (payload.anchors[0] as { overlapStrength: unknown }).overlapStrength = 'high';
+    const parsed = AnalysisOutputSchema.parse(payload);
+    expect(parsed.recommendation.justification.length).toBe(1000);
+    expect(parsed.scopeWarnings.map((w) => w.category)).toEqual([
+      'other',
+      'ambiguity_core_requirement',
+      'other',
+    ]);
+    expect(parsed.anchors[0].overlapStrength).toBe(3);
   });
 });
 
@@ -158,10 +237,9 @@ describe('Sub-schemas', () => {
     ).toThrow();
   });
 
-  it('ScopeWarningSchema rejects message > 280 chars', () => {
-    expect(() =>
-      ScopeWarningSchema.parse({ category: 'other', message: 'x'.repeat(281) })
-    ).toThrow();
+  it('ScopeWarningSchema truncates message > 280 chars', () => {
+    const parsed = ScopeWarningSchema.parse({ category: 'other', message: 'x'.repeat(281) });
+    expect(parsed.message.length).toBe(280);
   });
 
   it('AnchorCitationSchema rejects overlapStrength < 1', () => {

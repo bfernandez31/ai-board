@@ -17,13 +17,31 @@ export const ScopeWarningCategoryEnum = z.enum([
   'other',
 ]);
 
+// LLM leniency: the analysis payload is produced by a model in CI. Models
+// routinely overshoot character limits and invent plausible enum values;
+// rejecting the whole (otherwise valid) result strands the TicketAnalysis row
+// in `running`. Free-text fields are truncated and unknown categories are
+// normalized to 'other' instead of failing validation (AIB-848 incident).
+const truncated = (max: number) =>
+  z
+    .string()
+    .min(1)
+    .transform((s) => (s.length > max ? `${s.slice(0, max - 1)}…` : s));
+
 export const ScopeWarningSchema = z
   .object({
-    category: ScopeWarningCategoryEnum,
-    message: z.string().min(1).max(280),
+    category: ScopeWarningCategoryEnum.catch('other'),
+    message: truncated(280),
   })
   .strict();
 export type ScopeWarning = z.infer<typeof ScopeWarningSchema>;
+
+// Models sometimes emit overlapStrength as a qualitative label instead of the
+// documented integer — coerce the three known labels, reject anything else.
+const overlapStrengthSchema = z.union([
+  z.number().int().min(1),
+  z.enum(['low', 'medium', 'high']).transform((m) => ({ low: 1, medium: 2, high: 3 })[m]),
+]);
 
 export const AnchorCitationSchema = z
   .object({
@@ -31,7 +49,7 @@ export const AnchorCitationSchema = z
     ticketKey: z.string().regex(/^[A-Z][A-Z0-9]{1,5}-\d+$/),
     frictionFree: z.boolean(),
     qualityScore: z.number().int().min(0).max(100).nullable(),
-    overlapStrength: z.number().int().min(1),
+    overlapStrength: overlapStrengthSchema,
   })
   .strict();
 export type AnchorCitation = z.infer<typeof AnchorCitationSchema>;
@@ -63,7 +81,7 @@ export const RecommendationSchema = z
   .object({
     choice: RecommendationEnum,
     confidence: ConfidenceEnum,
-    justification: z.string().min(1).max(1000),
+    justification: truncated(1000),
   })
   .strict();
 

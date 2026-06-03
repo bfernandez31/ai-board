@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { beforeEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Stage } from '@prisma/client';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
-import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import { getPrismaClient, getTestUserId } from '@/tests/helpers/db-cleanup';
 
 beforeAll(() => {
   process.env.TEST_MODE = 'true';
@@ -174,6 +174,39 @@ describe('POST /api/projects/:projectId/tickets/:id/analysis', () => {
     const row = await prisma.ticketAnalysis.findUnique({ where: { id: body.analysis.id } });
     expect(row?.status).toBe('running');
   });
+
+  it('returns 409 when a fresh analysis is already running', async () => {
+    const ticket = await createInboxTicket(808);
+    const first = await postRequest(ctx.projectId, ticket.id);
+    expect(first.status).toBe(202);
+    const second = await postRequest(ctx.projectId, ticket.id);
+    expect(second.status).toBe(409);
+    const body = (await second.json()) as { code: string };
+    expect(body.code).toBe('ANALYSIS_IN_PROGRESS');
+  });
+
+  it('reclaims a stale running analysis (>10 min) and accepts a new one', async () => {
+    const ticket = await createInboxTicket(809);
+    const first = await postRequest(ctx.projectId, ticket.id);
+    expect(first.status).toBe(202);
+    const firstBody = (await first.json()) as { analysis: { id: number } };
+
+    // Simulate a run whose terminal PATCH never landed (e.g. rejected payload)
+    await prisma.ticketAnalysis.update({
+      where: { id: firstBody.analysis.id },
+      data: { startedAt: new Date(Date.now() - 11 * 60 * 1000) },
+    });
+
+    const second = await postRequest(ctx.projectId, ticket.id);
+    expect(second.status).toBe(202);
+
+    const reclaimed = await prisma.ticketAnalysis.findUnique({
+      where: { id: firstBody.analysis.id },
+    });
+    expect(reclaimed?.status).toBe('failed');
+    expect(reclaimed?.errorReason).toBe('timeout');
+    expect(reclaimed?.endedAt).not.toBeNull();
+  });
 });
 
 describe('GET /api/projects/:projectId/tickets/:id/analysis (eligibility)', () => {
@@ -218,5 +251,45 @@ describe('GET /api/projects/:projectId/tickets/:id/analysis (eligibility)', () =
     expect(body.eligibility.estimatedCostUsd.upper).toBeGreaterThanOrEqual(
       body.eligibility.estimatedCostUsd.lower
     );
+  });
+
+  it('lazily reclaims a stale running analysis so the UI stops polling forever', async () => {
+    const prisma = getPrismaClient();
+    const ticket = await ctx.createTicket({
+      title: '[e2e] stale running reclaim',
+      description: 'x',
+      stage: Stage.INBOX,
+    });
+    const userId = await getTestUserId();
+    const row = await prisma.ticketAnalysis.create({
+      data: {
+        ticketId: ticket.id,
+        projectId: ctx.projectId,
+        userId,
+        agent: 'CLAUDE',
+        titleSnapshot: '[e2e] stale running reclaim',
+        descriptionSnapshot: 'x',
+        stackSnapshot: {},
+        ruleSetVersion: 1,
+        status: 'running',
+        startedAt: new Date(Date.now() - 11 * 60 * 1000),
+      },
+    });
+    const res = await GET(
+      new NextRequest(
+        `http://localhost/api/projects/${ctx.projectId}/tickets/${ticket.id}/analysis`,
+        { headers: ctx.api.getHeaders() }
+      ),
+      {
+        params: Promise.resolve({
+          projectId: String(ctx.projectId),
+          id: String(ticket.id),
+        }),
+      }
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { latest: { id: number; status: string } | null };
+    expect(body.latest?.id).toBe(row.id);
+    expect(body.latest?.status).toBe('failed');
   });
 });

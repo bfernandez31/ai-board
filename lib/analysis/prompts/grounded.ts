@@ -52,9 +52,9 @@ Emit JSON exactly conforming to AnalysisOutputSchema:
 {
   "frictionRisk": "low"|"medium"|"high",
   "qualityGateRange": { "lower": int 0..100, "upper": int 0..100, lower<=upper },
-  "recommendation": { "choice": "QUICK"|"FULL", "confidence": "low"|"medium"|"high", "justification": string ≤1000 chars },
+  "recommendation": { "choice": "QUICK"|"FULL", "confidence": "low"|"medium"|"high", "justification": string, aim <900 chars (hard limit 1000) },
   "costRange": { "baselineLowerUsd", "baselineUpperUsd", "marginalFrictionLowerUsd", "marginalFrictionUpperUsd" },
-  "scopeWarnings": [{ "category": ..., "message": ≤280 chars }] (≤5),
+  "scopeWarnings": [{ "category": "ambiguity_core_requirement"|"multi_feature_bundling"|"missing_acceptance_criteria"|"missing_scope_boundary"|"other", "message": ≤250 chars }] (≤5),
   "anchors": [{ "ticketId", "ticketKey", "frictionFree", "qualityScore"|null, "overlapStrength" int≥1 }] (≤5)
 }
 

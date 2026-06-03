@@ -1355,6 +1355,13 @@ model TicketAnalysis {
 - `scopeWarnings`: `ScopeWarning[]` (max 5), each `{ category, message: 1..280 chars }` with category in `{ambiguity_core_requirement, multi_feature_bundling, missing_acceptance_criteria, missing_scope_boundary, other}`
 - `anchors`: `AnchorCitation[]` (max 5), each `{ ticketId, ticketKey: /^[A-Z]{2,6}-\d+$/, frictionFree, qualityScore: 0..100 | null, overlapStrength: int >= 1 }`
 
+**LLM output leniency** (normalize instead of reject — the payload is produced by a model in CI, and rejecting an otherwise-valid analysis strands the row in `running`):
+- `justification` and `scopeWarnings[].message` beyond their max length are truncated server-side (ellipsis-terminated), not rejected
+- Unknown `scopeWarnings[].category` values are normalized to `other`
+- `overlapStrength` accepts the labels `low|medium|high` and coerces them to `1|2|3`; other non-integer values are rejected
+
+**Stale-running reclaim** (lazy janitor): a row still `running` after 10 minutes (`STALE_RUNNING_ANALYSIS_MS`) means the workflow's terminal PATCH never landed. GET and POST on the analysis endpoint reclaim such rows (`status=failed`, `errorReason=timeout`, `endedAt=now`) before serving — POST would otherwise 409-block the ticket forever and the panel would poll indefinitely.
+
 **Relationships**:
 - Belongs to Ticket (required, cascade delete)
 - Belongs to Project (required, cascade delete) — denormalized for query convenience

@@ -5,7 +5,7 @@ import { verifyTicketAccess, verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { requireAuth } from '@/lib/db/users';
 import { extractStackContext } from '@/lib/analysis/stack-extract';
 import { selectAnchors } from '@/lib/analysis/anchor-retrieval';
-import { insertRunningAnalysis } from '@/lib/analysis/persist';
+import { insertRunningAnalysis, reclaimStaleRunningAnalyses } from '@/lib/analysis/persist';
 import { dispatchInboxAnalysisWorkflow } from '@/lib/analysis/dispatch-analysis';
 import { serializeAnalysisRow } from '@/lib/analysis/serialize';
 import { estimateAnalysisCostUsd } from '@/lib/analysis/cost-table';
@@ -78,6 +78,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
     const userId = await requireAuth(request);
 
+    // Lazy janitor: free rows stuck in `running` (terminal PATCH never landed)
+    // so the panel stops polling and the user can re-trigger.
+    await reclaimStaleRunningAnalyses(ids.ticketId);
+
     const latest = await prisma.ticketAnalysis.findFirst({
       where: { ticketId: ids.ticketId },
       orderBy: { createdAt: 'desc' },
@@ -132,6 +136,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 422 }
       );
     }
+
+    // Reclaim zombie rows first — otherwise a run whose terminal PATCH was
+    // rejected would 409-block this ticket's analyses forever.
+    await reclaimStaleRunningAnalyses(ids.ticketId);
 
     const existingRunning = await prisma.ticketAnalysis.findFirst({
       where: { ticketId: ids.ticketId, status: 'running' },
