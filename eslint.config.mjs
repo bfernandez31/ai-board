@@ -15,6 +15,7 @@ const eslintConfig = [
       "test-results/",
       "playwright-report/",
       "blob-report/",
+      "*.min.js",
       "*.tsbuildinfo",
       "next-env.d.ts",
       "mcp-server/",

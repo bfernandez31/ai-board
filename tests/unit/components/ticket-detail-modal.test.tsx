@@ -50,6 +50,8 @@ function createMockTicket(overrides: Record<string, unknown> = {}) {
     branch: null,
     autoMode: false,
     clarificationPolicy: null,
+    agent: null,
+    tokenSavingOverride: null,
     workflowType: 'FULL' as const,
     attachments: null,
     createdAt: new Date().toISOString(),
@@ -62,6 +64,17 @@ function createMockTicket(overrides: Record<string, unknown> = {}) {
       githubOwner: 'test-owner',
       githubRepo: 'test-repo',
       clarificationPolicy: 'AUTO',
+      defaultAgent: 'CLAUDE',
+      tokenSavingEnabled: false,
+    },
+    runSettings: {
+      tokenSaving: {
+        projectDefault: false,
+        override: null,
+        effectiveEnabled: false,
+        source: 'project',
+        editable: false,
+      },
     },
     ...overrides,
   };
@@ -95,6 +108,9 @@ function createMockJob(
     turnCount: null,
     pluginVersion: null,
     agentCliVersion: null,
+    tokenSavingRequested: false,
+    tokenSavingStatus: 'INACTIVE',
+    tokenSavingFallbackReason: null,
     log: null,
     ...overrides,
   };
@@ -409,6 +425,85 @@ describe('TicketDetailModal', () => {
     });
   });
 
+  describe('Run settings menu consolidation', () => {
+    it('shows one Run settings action and removes separate policy, agent, and model actions', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ stage: 'INBOX' });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      await user.click(screen.getByTestId('ticket-actions-menu'));
+
+      expect(await screen.findByText('Run settings')).toBeInTheDocument();
+      expect(screen.queryByText('Edit Policy')).not.toBeInTheDocument();
+      expect(screen.queryByText('Edit Agent')).not.toBeInTheDocument();
+      expect(screen.queryByText('Edit Models')).not.toBeInTheDocument();
+      expect(screen.getByText('Simple copy')).toBeInTheDocument();
+    });
+
+    it('preserves Full clone eligibility in the actions menu', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ stage: 'BUILD', branch: 'feature/test' });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      await user.click(screen.getByTestId('ticket-actions-menu'));
+
+      expect(await screen.findByText('Run settings')).toBeInTheDocument();
+      expect(screen.getByText('Simple copy')).toBeInTheDocument();
+      expect(screen.getByText('Full clone')).toBeInTheDocument();
+    });
+
+    it('shows the effective token-saving header indicator when enabled', () => {
+      const ticket = createMockTicket({
+        runSettings: {
+          tokenSaving: {
+            projectDefault: false,
+            override: 'FORCE_ON',
+            effectiveEnabled: true,
+            source: 'ticket',
+            editable: true,
+          },
+        },
+        tokenSavingOverride: 'FORCE_ON',
+      });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      expect(screen.getByTestId('token-saving-indicator')).toHaveTextContent('Token saving');
+    });
+  });
+
   describe('Duplicate functionality', () => {
     it('should add duplicated ticket to cache immediately', async () => {
       const user = userEvent.setup();
@@ -489,6 +584,8 @@ describe('TicketDetailModal', () => {
         autoMode: false,
         workflowType: 'FULL',
         clarificationPolicy: null,
+        agent: null,
+        tokenSavingOverride: null,
         attachments: [],
       }];
       queryClient.setQueryData(queryKey, initialTickets);
@@ -578,6 +675,8 @@ describe('TicketDetailModal', () => {
         autoMode: false,
         workflowType: 'FULL',
         clarificationPolicy: null,
+        agent: null,
+        tokenSavingOverride: null,
         attachments: [],
       }];
       queryClient.setQueryData(queryKey, initialTickets);
@@ -660,6 +759,8 @@ describe('TicketDetailModal', () => {
         autoMode: false,
         workflowType: 'FULL',
         clarificationPolicy: null,
+        agent: null,
+        tokenSavingOverride: null,
         attachments: [],
       }];
       queryClient.setQueryData(queryKey, initialTickets);

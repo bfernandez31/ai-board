@@ -9,12 +9,17 @@ import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { sendJobCompletionNotification } from '@/app/lib/push/send-notification';
 import { handleJobCompletionAutoTransition } from '@/app/lib/tickets/auto-mode';
+import { TokenSavingRunStatus } from '@prisma/client';
 
 // AIB-779: runtime versions are first-write-wins on RUNNING. The runner posts
 // them once the CLI is installed, which can be on the initial RUNNING PATCH or
 // on a follow-up idempotent same-status PATCH — so this helper is reused by
 // both paths.
 type VersionPatch = { pluginVersion?: string; agentCliVersion?: string };
+type TokenSavingPatch = {
+  tokenSavingStatus?: TokenSavingRunStatus;
+  tokenSavingFallbackReason?: string | null;
+};
 
 function buildVersionPatch(
   requestedStatus: JobStatus,
@@ -26,6 +31,23 @@ function buildVersionPatch(
   if (data.pluginVersion && !job.pluginVersion) patch.pluginVersion = data.pluginVersion;
   if (data.agentCliVersion && !job.agentCliVersion) patch.agentCliVersion = data.agentCliVersion;
   return patch;
+}
+
+function buildTokenSavingPatch(
+  requestedStatus: JobStatus,
+  data: JobStatusUpdate,
+  job: { tokenSavingStatus: TokenSavingRunStatus }
+): TokenSavingPatch {
+  if (requestedStatus !== 'RUNNING' || !data.tokenSavingStatus) return {};
+  if (job.tokenSavingStatus !== TokenSavingRunStatus.NOT_RECORDED) return {};
+
+  return {
+    tokenSavingStatus: data.tokenSavingStatus as TokenSavingRunStatus,
+    tokenSavingFallbackReason:
+      data.tokenSavingStatus === TokenSavingRunStatus.FALLBACK
+        ? data.tokenSavingFallbackReason ?? null
+        : null,
+  };
 }
 
 /**
@@ -140,6 +162,7 @@ export async function PATCH(
         workflowRunId: true,
         pluginVersion: true,
         agentCliVersion: true,
+        tokenSavingStatus: true,
       },
     });
 
@@ -183,6 +206,18 @@ export async function PATCH(
           await prisma.job.updateMany({
             where: { id: jobId, agentCliVersion: null },
             data: { agentCliVersion },
+          });
+        }
+        if (validationResult.data.tokenSavingStatus) {
+          await prisma.job.updateMany({
+            where: { id: jobId, tokenSavingStatus: TokenSavingRunStatus.NOT_RECORDED },
+            data: {
+              tokenSavingStatus: validationResult.data.tokenSavingStatus as TokenSavingRunStatus,
+              tokenSavingFallbackReason:
+                validationResult.data.tokenSavingStatus === TokenSavingRunStatus.FALLBACK
+                  ? validationResult.data.tokenSavingFallbackReason ?? null
+                  : null,
+            },
           });
         }
       }
@@ -236,6 +271,8 @@ export async function PATCH(
       workflowRunId?: bigint;
       pluginVersion?: string;
       agentCliVersion?: string;
+      tokenSavingStatus?: TokenSavingRunStatus;
+      tokenSavingFallbackReason?: string | null;
     } = {
       status: requestedStatus,
     };
@@ -252,6 +289,7 @@ export async function PATCH(
     // AIB-779: capture runtime versions on RUNNING (first-write-wins).
     // Runner posts these once at startup; later transitions don't overwrite.
     Object.assign(updateData, buildVersionPatch(requestedStatus, validationResult.data, job));
+    Object.assign(updateData, buildTokenSavingPatch(requestedStatus, validationResult.data, job));
 
     if (isTerminalState) {
       updateData.completedAt = new Date();

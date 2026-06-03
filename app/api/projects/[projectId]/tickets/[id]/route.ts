@@ -5,6 +5,7 @@ import {
   findTicketForView,
   resolveTicketIdByKey,
   patchTicketInline,
+  buildTicketRunSettings,
 } from '@/lib/db/tickets';
 import { deleteTicketWithCleanup } from '@/lib/tickets/deletion';
 import { deleteTicketParamsSchema } from '@/lib/schemas/ticket-delete';
@@ -61,6 +62,8 @@ export async function GET(
       autoMode: ticket.autoMode,
       clarificationPolicy: ticket.clarificationPolicy,
       agent: ticket.agent,
+      tokenSavingOverride: ticket.tokenSavingOverride,
+      runSettings: buildTicketRunSettings(ticket),
       workflowType: ticket.workflowType,
       attachments: ticket.attachments,
       qualityScore: ticket.jobs[0]?.qualityScore ?? null,
@@ -71,6 +74,7 @@ export async function GET(
         name: ticket.project.name,
         clarificationPolicy: ticket.project.clarificationPolicy,
         defaultAgent: ticket.project.defaultAgent,
+        tokenSavingEnabled: ticket.project.tokenSavingEnabled,
         githubOwner: ticket.project.githubOwner,
         githubRepo: ticket.project.githubRepo,
       },
@@ -121,7 +125,14 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const isInlineEdit = 'title' in body || 'description' in body || 'branch' in body || 'autoMode' in body || 'clarificationPolicy' in body || 'agent' in body;
+    const isInlineEdit =
+      'title' in body ||
+      'description' in body ||
+      'branch' in body ||
+      'autoMode' in body ||
+      'clarificationPolicy' in body ||
+      'agent' in body ||
+      'tokenSavingOverride' in body;
 
     if (isInlineEdit) {
       const parseResult = patchTicketSchema.safeParse(body);
@@ -143,6 +154,7 @@ export async function PATCH(
         autoMode,
         clarificationPolicy,
         agent,
+        tokenSavingOverride,
         version: requestVersion,
       } = parseResult.data;
 
@@ -153,13 +165,18 @@ export async function PATCH(
         ...(autoMode !== undefined && { autoMode }),
         ...(clarificationPolicy !== undefined && { clarificationPolicy }),
         ...(agent !== undefined && { agent }),
+        ...(tokenSavingOverride !== undefined && { tokenSavingOverride }),
       });
 
       if (!result.ok) {
         return NextResponse.json(result.body, { status: result.status });
       }
 
-      const updatedTicket = result.ticket;
+      const updatedTicket = await findTicketForView(projectId, String(result.ticket.id));
+      if (!updatedTicket) {
+        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
+      }
+
       return NextResponse.json(
         {
           id: updatedTicket.id,
@@ -174,7 +191,18 @@ export async function PATCH(
           autoMode: updatedTicket.autoMode,
           clarificationPolicy: updatedTicket.clarificationPolicy,
           agent: updatedTicket.agent,
+          tokenSavingOverride: updatedTicket.tokenSavingOverride,
+          runSettings: buildTicketRunSettings(updatedTicket),
           workflowType: updatedTicket.workflowType,
+          project: {
+            id: updatedTicket.project.id,
+            name: updatedTicket.project.name,
+            clarificationPolicy: updatedTicket.project.clarificationPolicy,
+            defaultAgent: updatedTicket.project.defaultAgent,
+            tokenSavingEnabled: updatedTicket.project.tokenSavingEnabled,
+            githubOwner: updatedTicket.project.githubOwner,
+            githubRepo: updatedTicket.project.githubRepo,
+          },
           createdAt: updatedTicket.createdAt.toISOString(),
           updatedAt: updatedTicket.updatedAt.toISOString(),
         },
@@ -194,7 +222,7 @@ export async function PATCH(
     return NextResponse.json(
       {
         error: 'Invalid request',
-        message: 'Must provide fields to update (title, description, branch, autoMode, clarificationPolicy, or agent)',
+        message: 'Must provide fields to update (title, description, branch, autoMode, clarificationPolicy, agent, or tokenSavingOverride)',
       },
       { status: 400 }
     );

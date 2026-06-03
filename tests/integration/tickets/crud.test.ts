@@ -492,6 +492,116 @@ describe('Tickets CRUD', () => {
 
       expect(response.status).toBe(404);
     });
+
+    it.each(['FORCE_ON', 'FORCE_OFF'] as const)('should update tokenSavingOverride to %s', async (override) => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Token saving override',
+          description: 'Ticket override coverage',
+        }
+      );
+
+      const response = await ctx.api.patch<{
+        tokenSavingOverride: string;
+        runSettings: { tokenSaving: { effectiveEnabled: boolean; source: string } };
+      }>(`/api/projects/${ctx.projectId}/tickets/${createResponse.data.id}`, {
+        tokenSavingOverride: override,
+        version: createResponse.data.version,
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.data.tokenSavingOverride).toBe(override);
+      expect(response.data.runSettings.tokenSaving.source).toBe('ticket');
+      expect(response.data.runSettings.tokenSaving.effectiveEnabled).toBe(override === 'FORCE_ON');
+    });
+
+    it('should reset tokenSavingOverride to inherit with null', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Token saving inherit',
+          description: 'Reset override coverage',
+        }
+      );
+      await prisma.ticket.update({
+        where: { id: createResponse.data.id },
+        data: { tokenSavingOverride: 'FORCE_ON' },
+      });
+
+      const response = await ctx.api.patch<{
+        tokenSavingOverride: string | null;
+        runSettings: { tokenSaving: { source: string } };
+      }>(`/api/projects/${ctx.projectId}/tickets/${createResponse.data.id}`, {
+        tokenSavingOverride: null,
+        version: createResponse.data.version,
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.data.tokenSavingOverride).toBeNull();
+      expect(response.data.runSettings.tokenSaving.source).toBe('project');
+    });
+
+    it('should return 400 for invalid tokenSavingOverride', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Invalid token override',
+          description: 'Invalid override coverage',
+        }
+      );
+
+      const response = await ctx.api.patch<{ error: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${createResponse.data.id}`,
+        { tokenSavingOverride: 'ALWAYS', version: createResponse.data.version }
+      );
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should use optimistic version handling for tokenSavingOverride', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Token override conflict',
+          description: 'Conflict coverage',
+        }
+      );
+      await prisma.ticket.update({
+        where: { id: createResponse.data.id },
+        data: { version: { increment: 1 } },
+      });
+
+      const response = await ctx.api.patch<{ currentVersion: number }>(
+        `/api/projects/${ctx.projectId}/tickets/${createResponse.data.id}`,
+        { tokenSavingOverride: 'FORCE_ON', version: createResponse.data.version }
+      );
+
+      expect(response.status).toBe(409);
+      expect(response.data.currentVersion).toBe(createResponse.data.version + 1);
+    });
+
+    it('should reject tokenSavingOverride updates outside INBOX', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Token override stage',
+          description: 'Stage restriction coverage',
+        }
+      );
+      await prisma.ticket.update({
+        where: { id: createResponse.data.id },
+        data: { stage: 'SPECIFY' },
+      });
+
+      const response = await ctx.api.patch<{ code: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${createResponse.data.id}`,
+        { tokenSavingOverride: 'FORCE_ON', version: createResponse.data.version }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.code).toBe('INVALID_STAGE_FOR_EDIT');
+    });
   });
 
   describe('POST /api/projects/:projectId/tickets - agent field', () => {

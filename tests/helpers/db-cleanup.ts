@@ -101,6 +101,7 @@ export async function ensureTestFixtures(): Promise<string> {
         update: {
           userId: testUser.id,
           clarificationPolicy: 'AUTO', // Reset to default for test isolation
+          tokenSavingEnabled: false,
           configSyncedAt: new Date(), // Mark as configured so board page doesn't redirect to setup
         },
         create: {
@@ -112,6 +113,7 @@ export async function ensureTestFixtures(): Promise<string> {
           githubRepo: project.repo,
           userId: testUser.id,
           clarificationPolicy: 'AUTO',
+          tokenSavingEnabled: false,
           configSyncedAt: new Date(), // Mark as configured so board page doesn't redirect to setup
           updatedAt: new Date(),
         },
@@ -390,6 +392,7 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
           },
       data: {
         clarificationPolicy: 'AUTO',
+        tokenSavingEnabled: false,
       },
     });
 
@@ -449,6 +452,7 @@ export async function ensureProjectExists(projectId: number): Promise<void> {
     update: {
       userId: testUser.id,
       clarificationPolicy: 'AUTO',
+      tokenSavingEnabled: false,
       githubOwner: github.owner,
       githubRepo: github.repo,
       configSyncedAt: new Date(), // Mark as configured so board page doesn't redirect to setup
@@ -473,6 +477,7 @@ export async function ensureProjectExists(projectId: number): Promise<void> {
       githubRepo: github.repo,
       userId: testUser.id,
       clarificationPolicy: 'AUTO',
+      tokenSavingEnabled: false,
       configSyncedAt: new Date(), // Mark as configured so board page doesn't redirect to setup
       updatedAt: new Date(),
     },

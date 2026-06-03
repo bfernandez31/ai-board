@@ -10,6 +10,10 @@ import { ensureFreshConfig } from '@/lib/config-sync';
 import { prisma } from '@/lib/db/client';
 import { supportsWorkflowCommand } from '@/app/lib/utils/agent-resolution';
 import { resolveStageModel } from '@/lib/workflows/model-resolution';
+import {
+  resolveInitialTokenSavingStatus,
+  resolveTokenSavingRunSetting,
+} from '@/lib/workflows/token-saving-resolution';
 
 /** Stage-to-command mapping (null = manual/no workflow) */
 export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
@@ -180,6 +184,14 @@ export async function handleTicketTransition(
 
     const effectiveAgent = resolveEffectiveAgent(ticket);
     const resolvedModel = resolveStageModel(ticket, command, effectiveAgent);
+    const tokenSavingSetting = resolveTokenSavingRunSetting(ticket);
+    const tokenSavingRequested = tokenSavingSetting.effectiveEnabled;
+    const tokenSavingStatus = resolveInitialTokenSavingStatus({
+      tokenSavingRequested,
+      effectiveAgent,
+      command,
+    });
+
     if (!supportsWorkflowCommand(effectiveAgent, command)) {
       return {
         success: false,
@@ -221,6 +233,8 @@ export async function handleTicketTransition(
             command,
             status: JobStatus.PENDING,
             model: resolvedModel,
+            tokenSavingRequested,
+            tokenSavingStatus,
             startedAt: new Date(),
             updatedAt: new Date(),
           },
@@ -239,6 +253,8 @@ export async function handleTicketTransition(
           command,
           status: JobStatus.PENDING,
           model: resolvedModel,
+          tokenSavingRequested,
+          tokenSavingStatus,
           startedAt: new Date(),
           updatedAt: new Date(),
         },
@@ -282,6 +298,7 @@ export async function handleTicketTransition(
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            token_saving: job.tokenSavingRequested ? 'true' : 'false',
             ...(resolvedModel && { model: resolvedModel }),
             ...getProjectServiceInputs(ticket.project),
           };
@@ -300,6 +317,7 @@ export async function handleTicketTransition(
             workflowType: ticket.workflowType,
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            token_saving: job.tokenSavingRequested ? 'true' : 'false',
             ...(resolvedModel && { model: resolvedModel }),
             ...getProjectServiceInputs(ticket.project),
           };
@@ -314,6 +332,7 @@ export async function handleTicketTransition(
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            token_saving: job.tokenSavingRequested ? 'true' : 'false',
             ...(resolvedModel && { model: resolvedModel }),
             ...(command === 'implement' && getProjectServiceInputs(ticket.project)),
           };

@@ -118,6 +118,8 @@ function serializeTicket(ticket: Ticket) {
     workflowType: ticket.workflowType,
     attachments: ticket.attachments,
     clarificationPolicy: ticket.clarificationPolicy,
+    agent: ticket.agent,
+    tokenSavingOverride: ticket.tokenSavingOverride,
     createdAt: ticket.createdAt.toISOString(),
     updatedAt: ticket.updatedAt.toISOString(),
   };
@@ -244,6 +246,9 @@ async function handleFullClone(projectId: number, ticketId: number, actorUserId:
         durationMs: job.durationMs,
         model: job.model,
         toolsUsed: job.toolsUsed,
+        tokenSavingRequested: job.tokenSavingRequested,
+        tokenSavingStatus: job.tokenSavingStatus,
+        tokenSavingFallbackReason: job.tokenSavingFallbackReason,
       })),
     },
     { status: 201 }

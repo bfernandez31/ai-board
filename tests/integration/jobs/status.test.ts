@@ -57,6 +57,13 @@ describe('Jobs Status', () => {
 
     // Get the job ID
     jobId = await waitForLatestJobId(prisma, ticketId);
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        tokenSavingStatus: 'NOT_RECORDED',
+        tokenSavingFallbackReason: null,
+      },
+    });
   });
 
   describe('GET /api/projects/:projectId/jobs/status', () => {
@@ -136,6 +143,102 @@ describe('Jobs Status', () => {
       const job = await prisma.job.findUnique({ where: { id: jobId } });
       expect(job?.status).toBe('RUNNING');
       expect(job?.startedAt).not.toBeNull();
+    });
+
+    it('records ACTIVE token-saving metadata on a RUNNING callback', async () => {
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'RUNNING', tokenSavingStatus: 'ACTIVE' }
+      );
+
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.tokenSavingStatus).toBe('ACTIVE');
+      expect(job?.tokenSavingFallbackReason).toBeNull();
+    });
+
+    it('records FALLBACK token-saving metadata with a bounded reason', async () => {
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        {
+          status: 'RUNNING',
+          tokenSavingStatus: 'FALLBACK',
+          tokenSavingFallbackReason: 'rtk init failed',
+        }
+      );
+
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.tokenSavingStatus).toBe('FALLBACK');
+      expect(job?.tokenSavingFallbackReason).toBe('rtk init failed');
+    });
+
+    it('keeps the first token-saving RUNNING metadata write authoritative', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, {
+        status: 'RUNNING',
+        tokenSavingStatus: 'ACTIVE',
+      });
+
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        {
+          status: 'RUNNING',
+          tokenSavingStatus: 'FALLBACK',
+          tokenSavingFallbackReason: 'late fallback must not clobber active',
+        }
+      );
+
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.tokenSavingStatus).toBe('ACTIVE');
+      expect(job?.tokenSavingFallbackReason).toBeNull();
+    });
+
+    it('does not erase token-saving metadata on terminal callbacks', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, {
+        status: 'RUNNING',
+        tokenSavingStatus: 'FALLBACK',
+        tokenSavingFallbackReason: 'rtk unavailable',
+      });
+
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'COMPLETED', tokenSavingStatus: 'ACTIVE' }
+      );
+
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.status).toBe('COMPLETED');
+      expect(job?.tokenSavingStatus).toBe('FALLBACK');
+      expect(job?.tokenSavingFallbackReason).toBe('rtk unavailable');
+    });
+
+    it('rejects invalid token-saving statuses', async () => {
+      const response = await workflowApi.patch<{ error: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'RUNNING', tokenSavingStatus: 'BROKEN' }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data).toHaveProperty('error');
+    });
+
+    it('rejects fallback reasons longer than 1000 characters', async () => {
+      const response = await workflowApi.patch<{ error: string }>(
+        `/api/jobs/${jobId}/status`,
+        {
+          status: 'RUNNING',
+          tokenSavingStatus: 'FALLBACK',
+          tokenSavingFallbackReason: 'x'.repeat(1001),
+        }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data).toHaveProperty('error');
     });
 
     it('should update job status to COMPLETED', async () => {

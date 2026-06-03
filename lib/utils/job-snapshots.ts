@@ -46,6 +46,9 @@ export function createSnapshotJob(polledJob: JobStatusDto, projectId: number): J
     turnCount: null,
     pluginVersion: null,
     agentCliVersion: null,
+    tokenSavingRequested: false,
+    tokenSavingStatus: 'NOT_RECORDED',
+    tokenSavingFallbackReason: null,
   };
 }
 

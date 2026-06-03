@@ -52,6 +52,24 @@ function disabledLogsReason(log: TicketJobLogSummary | null): string | null {
   return null;
 }
 
+function tokenSavingStatusLabel(
+  status: TicketJobWithTelemetry['tokenSavingStatus'] | null | undefined
+): string {
+  switch (status ?? 'NOT_RECORDED') {
+    case 'ACTIVE':
+      return 'Active';
+    case 'INACTIVE':
+      return 'Inactive';
+    case 'FALLBACK':
+      return 'Fallback';
+    case 'NOT_APPLICABLE':
+      return 'Not applicable';
+    case 'NOT_RECORDED':
+    default:
+      return 'Not recorded';
+  }
+}
+
 /**
  * Status configuration type
  */
@@ -116,6 +134,7 @@ function JobRow({
   const previewToneClass = previewTone(job.status, log);
   const viewerDisabledReason = disabledLogsReason(log);
   const canExpand = showDetails || showPreview;
+  const tokenSavingStatus = job.tokenSavingStatus ?? 'NOT_RECORDED';
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -262,6 +281,17 @@ function JobRow({
                     <span className="ml-2 text-foreground font-medium font-mono text-xs">
                       {job.agentCliVersion ?? '—'}
                     </span>
+                  </div>
+                  <div className="col-span-2" data-testid={`job-token-saving-status-${job.id}`}>
+                    <span className="text-ctp-overlay0">Token saving:</span>
+                    <span className="ml-2 text-foreground font-medium">
+                      {tokenSavingStatusLabel(tokenSavingStatus)}
+                    </span>
+                    {tokenSavingStatus === 'FALLBACK' && job.tokenSavingFallbackReason && (
+                      <span className="ml-2 text-muted-foreground">
+                        {job.tokenSavingFallbackReason}
+                      </span>
+                    )}
                   </div>
                 </div>
 

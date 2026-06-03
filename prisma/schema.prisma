@@ -70,6 +70,12 @@ model Job {
   pluginVersion   String? @db.VarChar(50) // ai-board plugin version (.claude-plugin/plugin.json)
   agentCliVersion String? @db.VarChar(100) // Underlying agent CLI version (claude/codex/vibe/gemini --version)
 
+  // Token-saving status captured for this run. Project/ticket setting changes
+  // affect future jobs only; historic jobs keep these point-in-time values.
+  tokenSavingRequested      Boolean              @default(false)
+  tokenSavingStatus         TokenSavingRunStatus @default(NOT_RECORDED)
+  tokenSavingFallbackReason String?              @db.VarChar(1000)
+
   log JobLog?
 
   insightsReport InsightsReport?
@@ -122,6 +128,7 @@ model Project {
   updatedAt           DateTime
   clarificationPolicy ClarificationPolicy   @default(AUTO)
   defaultAgent        Agent                 @default(CLAUDE)
+  tokenSavingEnabled  Boolean               @default(false)
   config              Json?
   configSyncedAt      DateTime?
   defaultBranch       String                @default("main") @db.VarChar(100)
@@ -195,6 +202,7 @@ model Ticket {
   updatedAt               DateTime                  @default(now()) @updatedAt
   clarificationPolicy     ClarificationPolicy?
   agent                   Agent?
+  tokenSavingOverride     TokenSavingOverride?
   specifyModel            String?                   @db.VarChar(50)
   planModel               String?                   @db.VarChar(50)
   implementModel          String?                   @db.VarChar(50)
@@ -361,6 +369,19 @@ enum ClarificationPolicy {
   CONSERVATIVE
   PRAGMATIC
   INTERACTIVE
+}
+
+enum TokenSavingOverride {
+  FORCE_ON
+  FORCE_OFF
+}
+
+enum TokenSavingRunStatus {
+  ACTIVE
+  INACTIVE
+  FALLBACK
+  NOT_APPLICABLE
+  NOT_RECORDED
 }
 
 enum JobStatus {

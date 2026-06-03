@@ -4,7 +4,12 @@ import { TicketWithVersion } from '../types';
 import type { CreateTicketInput } from '../validations/ticket';
 import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
 import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
-import type { Ticket, Job, Prisma, ClarificationPolicy, Agent } from '@prisma/client';
+import {
+  canEditTokenSavingOverride,
+  resolveTokenSavingRunSetting,
+} from '@/lib/workflows/token-saving-resolution';
+import type { Ticket, Job, Prisma, ClarificationPolicy, Agent, TokenSavingOverride } from '@prisma/client';
+import { Stage as PrismaStage } from '@prisma/client';
 
 type TicketRow = {
   id: number;
@@ -20,6 +25,7 @@ type TicketRow = {
   autoMode: boolean;
   clarificationPolicy: import('@prisma/client').ClarificationPolicy | null;
   agent: import('@prisma/client').Agent | null;
+  tokenSavingOverride: import('@prisma/client').TokenSavingOverride | null;
   specifyModel: string | null;
   planModel: string | null;
   implementModel: string | null;
@@ -37,6 +43,7 @@ type TicketRow = {
   project: {
     clarificationPolicy: import('@prisma/client').ClarificationPolicy;
     defaultAgent: import('@prisma/client').Agent;
+    tokenSavingEnabled: boolean;
     githubOwner: string | null;
     githubRepo: string | null;
   };
@@ -57,6 +64,7 @@ function toTicketWithVersion(ticket: TicketRow): TicketWithVersion {
     autoMode: ticket.autoMode,
     clarificationPolicy: ticket.clarificationPolicy,
     agent: ticket.agent,
+    tokenSavingOverride: ticket.tokenSavingOverride,
     specifyModel: ticket.specifyModel,
     planModel: ticket.planModel,
     implementModel: ticket.implementModel,
@@ -75,8 +83,24 @@ function toTicketWithVersion(ticket: TicketRow): TicketWithVersion {
     project: {
       clarificationPolicy: ticket.project.clarificationPolicy,
       ...(ticket.project.defaultAgent != null && { defaultAgent: ticket.project.defaultAgent }),
+      tokenSavingEnabled: ticket.project.tokenSavingEnabled,
       ...(ticket.project.githubOwner != null && { githubOwner: ticket.project.githubOwner }),
       ...(ticket.project.githubRepo != null && { githubRepo: ticket.project.githubRepo }),
+    },
+    runSettings: buildTicketRunSettings(ticket),
+  };
+}
+
+export function buildTicketRunSettings(ticket: {
+  stage: string;
+  tokenSavingOverride: TokenSavingOverride | null;
+  project: { tokenSavingEnabled: boolean };
+}) {
+  const setting = resolveTokenSavingRunSetting(ticket);
+  return {
+    tokenSaving: {
+      ...setting,
+      editable: canEditTokenSavingOverride(ticket.stage as PrismaStage),
     },
   };
 }
@@ -160,6 +184,7 @@ const TICKET_SELECT = {
   autoMode: true,
   clarificationPolicy: true,
   agent: true,
+  tokenSavingOverride: true,
   specifyModel: true,
   planModel: true,
   implementModel: true,
@@ -178,6 +203,7 @@ const TICKET_SELECT = {
     select: {
       clarificationPolicy: true,
       defaultAgent: true,
+      tokenSavingEnabled: true,
       githubOwner: true,
       githubRepo: true,
     },
@@ -325,6 +351,7 @@ const VIEW_PROJECT_SELECT = {
   name: true,
   clarificationPolicy: true,
   defaultAgent: true,
+  tokenSavingEnabled: true,
   githubOwner: true,
   githubRepo: true,
 } as const;
@@ -385,6 +412,7 @@ export interface TicketInlinePatch {
   autoMode?: boolean;
   clarificationPolicy?: ClarificationPolicy | null;
   agent?: Agent | null;
+  tokenSavingOverride?: TokenSavingOverride | null;
 }
 
 /** Discriminated result for inline PATCH. */
@@ -432,10 +460,15 @@ export async function patchTicketInline(
     };
   }
 
-  const { title, description, branch, autoMode, clarificationPolicy, agent } = patch;
+  const { title, description, branch, autoMode, clarificationPolicy, agent, tokenSavingOverride } = patch;
 
   if (
-    (description !== undefined || clarificationPolicy !== undefined || agent !== undefined) &&
+    (
+      description !== undefined ||
+      clarificationPolicy !== undefined ||
+      agent !== undefined ||
+      tokenSavingOverride !== undefined
+    ) &&
     !canEditDescriptionAndPolicy(currentTicket.stage)
   ) {
     return {
@@ -443,7 +476,7 @@ export async function patchTicketInline(
       status: 400,
       body: {
         error:
-          'Description, clarification policy, and agent can only be updated in INBOX stage',
+          'Description, clarification policy, agent, and token saving can only be updated in INBOX stage',
         code: 'INVALID_STAGE_FOR_EDIT',
       },
     };
@@ -459,6 +492,7 @@ export async function patchTicketInline(
         ...(autoMode !== undefined && { autoMode }),
         ...(clarificationPolicy !== undefined && { clarificationPolicy }),
         ...(agent !== undefined && { agent }),
+        ...(tokenSavingOverride !== undefined && { tokenSavingOverride }),
         version: { increment: 1 },
         updatedAt: new Date(),
       },
@@ -667,6 +701,7 @@ export async function duplicateTicket(
     attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
     clarificationPolicy: sourceTicket.clarificationPolicy,
     agent: sourceTicket.agent,
+    tokenSavingOverride: sourceTicket.tokenSavingOverride,
     ...(options.creatorId != null && { creatorId: options.creatorId }),
   };
 
@@ -734,6 +769,7 @@ export async function fullCloneTicket(
         attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
         clarificationPolicy: sourceTicket.clarificationPolicy,
         agent: sourceTicket.agent,
+        tokenSavingOverride: sourceTicket.tokenSavingOverride,
         ...(options.creatorId != null && { creatorId: options.creatorId }),
       },
     });
@@ -761,6 +797,9 @@ export async function fullCloneTicket(
           durationMs: job.durationMs,
           model: job.model,
           toolsUsed: job.toolsUsed,
+          tokenSavingRequested: job.tokenSavingRequested,
+          tokenSavingStatus: job.tokenSavingStatus,
+          tokenSavingFallbackReason: job.tokenSavingFallbackReason,
         })),
       });
     }

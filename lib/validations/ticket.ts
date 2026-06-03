@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ClarificationPolicy, Agent } from '@prisma/client';
+import { Agent, ClarificationPolicy, TokenSavingOverride } from '@prisma/client';
 import { TicketAttachment } from '@/app/lib/types/ticket';
 
 /**
@@ -121,6 +121,7 @@ export const patchTicketSchema = z
     autoMode: z.boolean().optional(),
     clarificationPolicy: z.nativeEnum(ClarificationPolicy).nullable().optional(),
     agent: z.nativeEnum(Agent).nullable().optional(),
+    tokenSavingOverride: z.nativeEnum(TokenSavingOverride).nullable().optional(),
     version: versionSchema,
   })
   .refine(
@@ -131,7 +132,8 @@ export const patchTicketSchema = z
       data.branch !== undefined ||
       data.autoMode !== undefined ||
       data.clarificationPolicy !== undefined ||
-      data.agent !== undefined,
+      data.agent !== undefined ||
+      data.tokenSavingOverride !== undefined,
     { message: 'At least one field must be provided' }
   );
 
@@ -159,6 +161,7 @@ export const ticketResponseSchema = z.object({
   branch: z.string().max(200).nullable(),
   autoMode: z.boolean(),
   clarificationPolicy: z.nativeEnum(ClarificationPolicy).nullable(),
+  tokenSavingOverride: z.nativeEnum(TokenSavingOverride).nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   project: z.object({
@@ -166,6 +169,7 @@ export const ticketResponseSchema = z.object({
     name: z.string(),
     key: z.string().regex(/^[A-Z0-9]{3,6}$/, 'Invalid project key format'),
     clarificationPolicy: z.nativeEnum(ClarificationPolicy),
+    tokenSavingEnabled: z.boolean(),
   }).optional(),
 });
 

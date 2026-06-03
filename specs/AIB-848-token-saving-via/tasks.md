@@ -25,9 +25,9 @@
 
 **Purpose**: Confirm feature scope and implementation boundaries before editing shared schema, API, UI, or workflow files.
 
-- [ ] T001 Review the implementation scope in `specs/AIB-848-token-saving-via/plan.md` and validated file inventory in `specs/AIB-848-token-saving-via/research.md`
-- [ ] T002 [P] Review API response and request additions in `specs/AIB-848-token-saving-via/contracts/run-settings-api.md`
-- [ ] T003 [P] Review RTK activation scope and workflow input requirements in `specs/AIB-848-token-saving-via/workflows/claude-token-saving-activation.md`
+- [X] T001 Review the implementation scope in `specs/AIB-848-token-saving-via/plan.md` and validated file inventory in `specs/AIB-848-token-saving-via/research.md`
+- [X] T002 [P] Review API response and request additions in `specs/AIB-848-token-saving-via/contracts/run-settings-api.md`
+- [X] T003 [P] Review RTK activation scope and workflow input requirements in `specs/AIB-848-token-saving-via/workflows/claude-token-saving-activation.md`
 
 ---
 
@@ -39,15 +39,15 @@
 
 ### Tests for Foundational Work
 
-- [ ] T004 [P] Create resolver tests in `tests/unit/workflows/token-saving-resolution.test.ts` for project default precedence, `FORCE_ON`, `FORCE_OFF`, source labels, editability, Claude core command applicability, non-Claude not-applicable behavior, and auxiliary command exclusion
+- [X] T004 [P] Create resolver tests in `tests/unit/workflows/token-saving-resolution.test.ts` for project default precedence, `FORCE_ON`, `FORCE_OFF`, source labels, editability, Claude core command applicability, non-Claude not-applicable behavior, and auxiliary command exclusion
 
 ### Implementation for Foundational Work
 
-- [ ] T005 Add `TokenSavingOverride`, `TokenSavingRunStatus`, `Project.tokenSavingEnabled`, `Ticket.tokenSavingOverride`, `Job.tokenSavingRequested`, `Job.tokenSavingStatus`, and `Job.tokenSavingFallbackReason` to `prisma/schema.prisma`, then generate the migration under `prisma/migrations/`
-- [ ] T006 Run `bunx prisma generate` after the schema migration so generated Prisma client types reflect `prisma/schema.prisma`
-- [ ] T007 Create `lib/workflows/token-saving-resolution.ts` with helpers for ticket/project effective state, display source, stage editability, workflow command applicability, and initial job run status
-- [ ] T008 Extend validation and shared API schemas for token-saving fields in `app/lib/schemas/clarification-policy.ts`, `app/lib/schemas/ticket.ts`, and `lib/validations/ticket.ts`
-- [ ] T009 Extend shared job telemetry types with token-saving fields in `lib/types/job-types.ts`
+- [X] T005 Add `TokenSavingOverride`, `TokenSavingRunStatus`, `Project.tokenSavingEnabled`, `Ticket.tokenSavingOverride`, `Job.tokenSavingRequested`, `Job.tokenSavingStatus`, and `Job.tokenSavingFallbackReason` to `prisma/schema.prisma`, then generate the migration under `prisma/migrations/`
+- [X] T006 Run `bunx prisma generate` after the schema migration so generated Prisma client types reflect `prisma/schema.prisma`
+- [X] T007 Create `lib/workflows/token-saving-resolution.ts` with helpers for ticket/project effective state, display source, stage editability, workflow command applicability, and initial job run status
+- [X] T008 Extend validation and shared API schemas for token-saving fields in `app/lib/schemas/clarification-policy.ts`, `app/lib/schemas/ticket.ts`, and `lib/validations/ticket.ts`
+- [X] T009 Extend shared job telemetry types with token-saving fields in `lib/types/job-types.ts`
 
 **Checkpoint**: Prisma types, validation schemas, and the resolver are ready for user-story work.
 
@@ -63,28 +63,28 @@
 
 **NOTE**: Write these tests first and confirm they fail before implementation.
 
-- [ ] T010 [P] [US1] Extend project settings API tests in `tests/integration/projects/settings.test.ts` for default OFF, owner update, member rejection, boolean validation, unchanged unrelated settings, and GET/PATCH response shape
-- [ ] T011 [P] [US1] Extend transition tests in `tests/integration/tickets/transitions.test.ts` for inherited project default ON/OFF capture on Claude core commands and dispatching the run-captured workflow input
-- [ ] T012 [P] [US1] Extend job status callback tests in `tests/integration/jobs/status.test.ts` for `ACTIVE`, `FALLBACK`, first-write-wins RUNNING metadata, terminal preservation, invalid status rejection, and fallback reason length rejection
-- [ ] T013 [P] [US1] Extend ticket jobs API tests in `tests/integration/jobs/ticket-jobs.test.ts` for `tokenSavingRequested`, `tokenSavingStatus`, and `tokenSavingFallbackReason` response fields
-- [ ] T014 [P] [US1] Extend job update validator tests in `tests/unit/job-update-validator.test.ts` for accepted token-saving statuses, `FALLBACK` reason validation, invalid status rejection, and 1000-character reason boundaries
-- [ ] T015 [P] [US1] Create project card tests in `tests/unit/components/token-saving-card.test.tsx` for OFF initial state, owner toggle save, disabled/member read-only behavior, validation error display, and `router.refresh()` after save
-- [ ] T016 [P] [US1] Extend job timeline component tests in `tests/unit/components/jobs-timeline.test.tsx` for active, inactive, fallback with reason, not applicable, and not recorded token-saving rows
+- [X] T010 [P] [US1] Extend project settings API tests in `tests/integration/projects/settings.test.ts` for default OFF, owner update, member rejection, boolean validation, unchanged unrelated settings, and GET/PATCH response shape
+- [X] T011 [P] [US1] Extend transition tests in `tests/integration/tickets/transitions.test.ts` for inherited project default ON/OFF capture on Claude core commands and dispatching the run-captured workflow input
+- [X] T012 [P] [US1] Extend job status callback tests in `tests/integration/jobs/status.test.ts` for `ACTIVE`, `FALLBACK`, first-write-wins RUNNING metadata, terminal preservation, invalid status rejection, and fallback reason length rejection
+- [X] T013 [P] [US1] Extend ticket jobs API tests in `tests/integration/jobs/ticket-jobs.test.ts` for `tokenSavingRequested`, `tokenSavingStatus`, and `tokenSavingFallbackReason` response fields
+- [X] T014 [P] [US1] Extend job update validator tests in `tests/unit/job-update-validator.test.ts` for accepted token-saving statuses, `FALLBACK` reason validation, invalid status rejection, and 1000-character reason boundaries
+- [X] T015 [P] [US1] Create project card tests in `tests/unit/components/token-saving-card.test.tsx` for OFF initial state, owner toggle save, disabled/member read-only behavior, validation error display, and `router.refresh()` after save
+- [X] T016 [P] [US1] Extend job timeline component tests in `tests/unit/components/jobs-timeline.test.tsx` for active, inactive, fallback with reason, not applicable, and not recorded token-saving rows
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Extend project retrieval and update filtering in `lib/db/projects.ts` to include `tokenSavingEnabled` while preserving existing member behavior for unrelated settings
-- [ ] T018 [US1] Extend `GET` and `PATCH` project settings behavior in `app/api/projects/[projectId]/route.ts` so `tokenSavingEnabled` is returned, validated, and guarded by `verifyProjectOwnership` for updates
-- [ ] T019 [US1] Create `components/settings/token-saving-card.tsx` using existing settings-card patterns, semantic Tailwind tokens, owner-aware save state, and a non-estimator explanation of active/fallback reporting
-- [ ] T020 [US1] Add `TokenSavingCard` to the project settings page in `app/projects/[projectId]/settings/page.tsx` next to default agent, policy, and model settings
-- [ ] T021 [US1] Extend job creation and workflow dispatch in `lib/workflows/transition.ts` to persist `tokenSavingRequested`, initialize `tokenSavingStatus`, and pass the persisted token-saving input to core workflows only
-- [ ] T022 [US1] Extend fresh ticket re-read and transition sequencing in `lib/tickets/transition.ts` so token-saving resolution uses the latest ticket/project snapshot and dispatch failure cleanup remains unchanged
-- [ ] T023 [US1] Add the `token_saving` workflow input and core-agent environment wiring to `.github/workflows/speckit.yml`, `.github/workflows/quick-impl.yml`, and `.github/workflows/verify.yml`
-- [ ] T024 [US1] Implement Claude/core-command RTK activation, fail-open fallback, and authenticated status reporting in `.github/scripts/run-agent.sh`
-- [ ] T025 [US1] Extend status PATCH validation in `app/lib/job-update-validator.ts` for `tokenSavingStatus` and bounded `tokenSavingFallbackReason`
-- [ ] T026 [US1] Extend workflow status persistence in `app/api/jobs/[id]/status/route.ts` so RUNNING callbacks can record `ACTIVE` or `FALLBACK` with first-write-wins behavior and terminal callbacks do not erase prior token-saving metadata
-- [ ] T027 [US1] Include token-saving job telemetry fields in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`
-- [ ] T028 [US1] Render token-saving run status rows in `components/ticket/jobs-timeline.tsx` without adding any estimated-savings UI
+- [X] T017 [US1] Extend project retrieval and update filtering in `lib/db/projects.ts` to include `tokenSavingEnabled` while preserving existing member behavior for unrelated settings
+- [X] T018 [US1] Extend `GET` and `PATCH` project settings behavior in `app/api/projects/[projectId]/route.ts` so `tokenSavingEnabled` is returned, validated, and guarded by `verifyProjectOwnership` for updates
+- [X] T019 [US1] Create `components/settings/token-saving-card.tsx` using existing settings-card patterns, semantic Tailwind tokens, owner-aware save state, and a non-estimator explanation of active/fallback reporting
+- [X] T020 [US1] Add `TokenSavingCard` to the project settings page in `app/projects/[projectId]/settings/page.tsx` next to default agent, policy, and model settings
+- [X] T021 [US1] Extend job creation and workflow dispatch in `lib/workflows/transition.ts` to persist `tokenSavingRequested`, initialize `tokenSavingStatus`, and pass the persisted token-saving input to core workflows only
+- [X] T022 [US1] Extend fresh ticket re-read and transition sequencing in `lib/tickets/transition.ts` so token-saving resolution uses the latest ticket/project snapshot and dispatch failure cleanup remains unchanged
+- [X] T023 [US1] Add the `token_saving` workflow input and core-agent environment wiring to `.github/workflows/speckit.yml`, `.github/workflows/quick-impl.yml`, and `.github/workflows/verify.yml`
+- [X] T024 [US1] Implement Claude/core-command RTK activation, fail-open fallback, and authenticated status reporting in `.github/scripts/run-agent.sh`
+- [X] T025 [US1] Extend status PATCH validation in `app/lib/job-update-validator.ts` for `tokenSavingStatus` and bounded `tokenSavingFallbackReason`
+- [X] T026 [US1] Extend workflow status persistence in `app/api/jobs/[id]/status/route.ts` so RUNNING callbacks can record `ACTIVE` or `FALLBACK` with first-write-wins behavior and terminal callbacks do not erase prior token-saving metadata
+- [X] T027 [US1] Include token-saving job telemetry fields in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`
+- [X] T028 [US1] Render token-saving run status rows in `components/ticket/jobs-timeline.tsx` without adding any estimated-savings UI
 
 **Checkpoint**: User Story 1 is independently functional and testable through project settings, transition dispatch, workflow reporting, and job details.
 
@@ -100,16 +100,16 @@
 
 **NOTE**: Write these tests first and confirm they fail before implementation.
 
-- [ ] T029 [P] [US2] Extend ticket PATCH tests in `tests/integration/tickets/crud.test.ts` for `tokenSavingOverride` set to `FORCE_ON`, `FORCE_OFF`, and `null`, invalid value rejection, optimistic version handling, and rejection outside the INBOX edit window
-- [ ] T030 [P] [US2] Extend transition tests in `tests/integration/tickets/transitions.test.ts` for project OFF plus ticket `FORCE_ON`, project ON plus ticket `FORCE_OFF`, non-Claude `NOT_APPLICABLE`, and auxiliary command exclusion
+- [X] T029 [P] [US2] Extend ticket PATCH tests in `tests/integration/tickets/crud.test.ts` for `tokenSavingOverride` set to `FORCE_ON`, `FORCE_OFF`, and `null`, invalid value rejection, optimistic version handling, and rejection outside the INBOX edit window
+- [X] T030 [P] [US2] Extend transition tests in `tests/integration/tickets/transitions.test.ts` for project OFF plus ticket `FORCE_ON`, project ON plus ticket `FORCE_OFF`, non-Claude `NOT_APPLICABLE`, and auxiliary command exclusion
 
 ### Implementation for User Story 2
 
-- [ ] T031 [US2] Extend ticket selects, mapping, inline update input, stage editability checks, and response shape in `lib/db/tickets.ts` for `tokenSavingOverride` and derived token-saving run settings
-- [ ] T032 [US2] Extend ticket `GET` and `PATCH` handling in `app/api/projects/[projectId]/tickets/[id]/route.ts` for `tokenSavingOverride`, derived `runSettings.tokenSaving`, project default visibility, validation errors, and optimistic version responses
-- [ ] T033 [US2] Extend ticket validation in `lib/validations/ticket.ts` so inline updates accept only `null`, `FORCE_ON`, or `FORCE_OFF` for `tokenSavingOverride`
-- [ ] T034 [US2] Extend ticket detail local ticket types and optimistic state in `components/board/ticket-detail-modal.tsx` so `tokenSavingOverride`, `runSettings.tokenSaving`, and `project.tokenSavingEnabled` survive polling and local updates
-- [ ] T035 [US2] Add the compact effective-token-saving ON indicator with tooltip in `components/board/ticket-detail-modal.tsx`, visible only when the current ticket effective state is enabled
+- [X] T031 [US2] Extend ticket selects, mapping, inline update input, stage editability checks, and response shape in `lib/db/tickets.ts` for `tokenSavingOverride` and derived token-saving run settings
+- [X] T032 [US2] Extend ticket `GET` and `PATCH` handling in `app/api/projects/[projectId]/tickets/[id]/route.ts` for `tokenSavingOverride`, derived `runSettings.tokenSaving`, project default visibility, validation errors, and optimistic version responses
+- [X] T033 [US2] Extend ticket validation in `lib/validations/ticket.ts` so inline updates accept only `null`, `FORCE_ON`, or `FORCE_OFF` for `tokenSavingOverride`
+- [X] T034 [US2] Extend ticket detail local ticket types and optimistic state in `components/board/ticket-detail-modal.tsx` so `tokenSavingOverride`, `runSettings.tokenSaving`, and `project.tokenSavingEnabled` survive polling and local updates
+- [X] T035 [US2] Add the compact effective-token-saving ON indicator with tooltip in `components/board/ticket-detail-modal.tsx`, visible only when the current ticket effective state is enabled
 
 **Checkpoint**: User Story 2 is independently testable through ticket API updates, stage restrictions, future job capture, and ticket effective-state display.
 
@@ -125,16 +125,16 @@
 
 **NOTE**: Write these tests first and confirm they fail before implementation.
 
-- [ ] T036 [P] [US3] Extend ticket detail modal tests in `tests/unit/components/ticket-detail-modal.test.tsx` for a single Run settings menu action, absence of separate Edit Policy/Edit Agent/Edit Models actions, preserved Simple copy and Full clone eligibility, and the effective token-saving header indicator
-- [ ] T037 [P] [US3] Create unified dialog tests in `tests/unit/components/run-settings-dialog.test.tsx` for Agent, Models, Clarification policy, and Token saving sections, inherited defaults, override labels, read-only state outside editable stages, save routing, reset behavior, and polling-safe dialog state
+- [X] T036 [P] [US3] Extend ticket detail modal tests in `tests/unit/components/ticket-detail-modal.test.tsx` for a single Run settings menu action, absence of separate Edit Policy/Edit Agent/Edit Models actions, preserved Simple copy and Full clone eligibility, and the effective token-saving header indicator
+- [X] T037 [P] [US3] Create unified dialog tests in `tests/unit/components/run-settings-dialog.test.tsx` for Agent, Models, Clarification policy, and Token saving sections, inherited defaults, override labels, read-only state outside editable stages, save routing, reset behavior, and polling-safe dialog state
 
 ### Implementation for User Story 3
 
-- [ ] T038 [US3] Create `components/tickets/run-settings-dialog.tsx` with separate Agent, Models, Clarification policy, and Token saving sections using shadcn/Radix controls and semantic Tailwind tokens
-- [ ] T039 [US3] Refactor reusable section logic only as needed from `components/tickets/agent-edit-dialog.tsx`, `components/tickets/policy-edit-dialog.tsx`, and `components/tickets/model-override-dialog.tsx` without changing their validation semantics
-- [ ] T040 [US3] Replace separate ticket menu actions and dialog state with a single Run settings action in `components/board/ticket-detail-modal.tsx` while preserving Simple copy and Full clone eligibility
-- [ ] T041 [US3] Wire Run settings saves in `components/board/ticket-detail-modal.tsx` and `components/tickets/run-settings-dialog.tsx` to the ticket PATCH route and existing `app/api/projects/[projectId]/tickets/[id]/model-config/route.ts`
-- [ ] T042 [US3] Preserve existing model override endpoint behavior for the unified Models section in `app/api/projects/[projectId]/tickets/[id]/model-config/route.ts`
+- [X] T038 [US3] Create `components/tickets/run-settings-dialog.tsx` with separate Agent, Models, Clarification policy, and Token saving sections using shadcn/Radix controls and semantic Tailwind tokens
+- [X] T039 [US3] Refactor reusable section logic only as needed from `components/tickets/agent-edit-dialog.tsx`, `components/tickets/policy-edit-dialog.tsx`, and `components/tickets/model-override-dialog.tsx` without changing their validation semantics
+- [X] T040 [US3] Replace separate ticket menu actions and dialog state with a single Run settings action in `components/board/ticket-detail-modal.tsx` while preserving Simple copy and Full clone eligibility
+- [X] T041 [US3] Wire Run settings saves in `components/board/ticket-detail-modal.tsx` and `components/tickets/run-settings-dialog.tsx` to the ticket PATCH route and existing `app/api/projects/[projectId]/tickets/[id]/model-config/route.ts`
+- [X] T042 [US3] Preserve existing model override endpoint behavior for the unified Models section in `app/api/projects/[projectId]/tickets/[id]/model-config/route.ts`
 
 **Checkpoint**: User Story 3 is independently functional through the unified dialog and no existing run-setting edit behavior is lost.
 
@@ -150,15 +150,15 @@
 
 **NOTE**: Write these tests first and confirm they fail before implementation.
 
-- [ ] T043 [P] [US4] Extend duplication tests in `tests/integration/tickets/duplicate.test.ts` so simple copy preserves `tokenSavingOverride` and full clone copies job `tokenSavingRequested`, `tokenSavingStatus`, and `tokenSavingFallbackReason` snapshots
-- [ ] T044 [P] [US4] Extend ticket stats component tests in `tests/unit/components/ticket-stats.test.tsx` so polling-merged job data preserves token-saving fields alongside existing telemetry
+- [X] T043 [P] [US4] Extend duplication tests in `tests/integration/tickets/duplicate.test.ts` so simple copy preserves `tokenSavingOverride` and full clone copies job `tokenSavingRequested`, `tokenSavingStatus`, and `tokenSavingFallbackReason` snapshots
+- [X] T044 [P] [US4] Extend ticket stats component tests in `tests/unit/components/ticket-stats.test.tsx` so polling-merged job data preserves token-saving fields alongside existing telemetry
 
 ### Implementation for User Story 4
 
-- [ ] T045 [US4] Extend simple-copy duplication in `lib/db/tickets.ts` so copied INBOX tickets preserve `tokenSavingOverride` consistently with agent and clarification-policy overrides
-- [ ] T046 [US4] Extend full-clone job snapshot copying in `lib/db/tickets.ts` so cloned historic jobs preserve token-saving run telemetry as point-in-time data
-- [ ] T047 [US4] Ensure ticket stats polling merge preserves token-saving fields in `components/ticket/ticket-stats.tsx`
-- [ ] T048 [US4] Verify job timeline copy for historic jobs in `components/ticket/jobs-timeline.tsx` shows `NOT_RECORDED` for missing legacy token-saving status rather than active or inactive
+- [X] T045 [US4] Extend simple-copy duplication in `lib/db/tickets.ts` so copied INBOX tickets preserve `tokenSavingOverride` consistently with agent and clarification-policy overrides
+- [X] T046 [US4] Extend full-clone job snapshot copying in `lib/db/tickets.ts` so cloned historic jobs preserve token-saving run telemetry as point-in-time data
+- [X] T047 [US4] Ensure ticket stats polling merge preserves token-saving fields in `components/ticket/ticket-stats.tsx`
+- [X] T048 [US4] Verify job timeline copy for historic jobs in `components/ticket/jobs-timeline.tsx` shows `NOT_RECORDED` for missing legacy token-saving status rather than active or inactive
 
 **Checkpoint**: User Story 4 is independently testable through simple copy, full clone, Stats merge behavior, and historic job display.
 
@@ -168,11 +168,11 @@
 
 **Purpose**: Validate the full feature, catch regressions, and ensure UI/code quality across stories.
 
-- [ ] T049 [P] Run focused unit tests for resolver, validator, and components with `bun run test:unit tests/unit/workflows/token-saving-resolution.test.ts tests/unit/job-update-validator.test.ts tests/unit/components/token-saving-card.test.tsx tests/unit/components/run-settings-dialog.test.tsx tests/unit/components/ticket-detail-modal.test.tsx tests/unit/components/jobs-timeline.test.tsx tests/unit/components/ticket-stats.test.tsx`
-- [ ] T050 Run focused integration tests with `bun run test:integration tests/integration/projects/settings.test.ts tests/integration/tickets/crud.test.ts tests/integration/tickets/transitions.test.ts tests/integration/jobs/status.test.ts tests/integration/jobs/ticket-jobs.test.ts tests/integration/tickets/duplicate.test.ts`
-- [ ] T051 Run repository checks with `bun run type-check` and `bun run lint` using `tsconfig.json` and `eslint.config.mjs`
-- [ ] T052 [P] Review UI changes for no hardcoded colors and no dynamic Tailwind classes in `components/settings/token-saving-card.tsx`, `components/tickets/run-settings-dialog.tsx`, and `components/board/ticket-detail-modal.tsx`
-- [ ] T053 [P] Review workflow changes for fail-open behavior and secret-free logging in `.github/scripts/run-agent.sh`, `.github/workflows/speckit.yml`, `.github/workflows/quick-impl.yml`, and `.github/workflows/verify.yml`
+- [X] T049 [P] Run focused unit tests for resolver, validator, and components with `bun run test:unit tests/unit/workflows/token-saving-resolution.test.ts tests/unit/job-update-validator.test.ts tests/unit/components/token-saving-card.test.tsx tests/unit/components/run-settings-dialog.test.tsx tests/unit/components/ticket-detail-modal.test.tsx tests/unit/components/jobs-timeline.test.tsx tests/unit/components/ticket-stats.test.tsx`
+- [X] T050 Run focused integration tests with `bun run test:integration tests/integration/projects/settings.test.ts tests/integration/tickets/crud.test.ts tests/integration/tickets/transitions.test.ts tests/integration/jobs/status.test.ts tests/integration/jobs/ticket-jobs.test.ts tests/integration/tickets/duplicate.test.ts`
+- [X] T051 Run repository checks with `bun run type-check` and `bun run lint` using `tsconfig.json` and `eslint.config.mjs`
+- [X] T052 [P] Review UI changes for no hardcoded colors and no dynamic Tailwind classes in `components/settings/token-saving-card.tsx`, `components/tickets/run-settings-dialog.tsx`, and `components/board/ticket-detail-modal.tsx`
+- [X] T053 [P] Review workflow changes for fail-open behavior and secret-free logging in `.github/scripts/run-agent.sh`, `.github/workflows/speckit.yml`, `.github/workflows/quick-impl.yml`, and `.github/workflows/verify.yml`
 
 ---
 

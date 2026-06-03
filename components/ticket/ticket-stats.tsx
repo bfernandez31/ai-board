@@ -164,6 +164,9 @@ export function TicketStats({ jobs, polledJobs, projectId, ticketId }: TicketSta
       return {
         ...job,
         status: polledJob?.status ?? job.status,
+        tokenSavingRequested: job.tokenSavingRequested,
+        tokenSavingStatus: job.tokenSavingStatus,
+        tokenSavingFallbackReason: job.tokenSavingFallbackReason,
         qualityScore: job.qualityScore ?? null,
         qualityScoreDetails: job.qualityScoreDetails ?? null,
       };

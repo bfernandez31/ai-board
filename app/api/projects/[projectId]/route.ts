@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { getProject, updateProject } from '@/lib/db/projects';
 import { projectUpdateSchema } from '@/app/lib/schemas/clarification-policy';
+import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 
 export async function GET(
   request: NextRequest,
@@ -75,6 +76,10 @@ export async function PATCH(
 
     const body = await request.json();
     const validated = projectUpdateSchema.parse(body);
+
+    if (validated.tokenSavingEnabled !== undefined) {
+      await verifyProjectOwnership(projectId, request);
+    }
 
     const updatedProject = await updateProject(projectId, validated);
 

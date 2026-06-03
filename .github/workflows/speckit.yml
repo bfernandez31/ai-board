@@ -73,6 +73,12 @@ on:
         type: string
         default: ''
 
+      token_saving:
+        description: 'Run-captured token-saving setting'
+        required: false
+        default: 'false'
+        type: string
+
       # Conditional service inputs
       needs_postgres:
         description: 'Provision PostgreSQL service container'
@@ -433,6 +439,9 @@ jobs:
       - name: Execute Spec-Kit Command
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         working-directory: target
+        env:
+          AI_BOARD_TOKEN_SAVING: ${{ inputs.token_saving }}
+          AI_BOARD_TOKEN_SAVING_JOB_ID: ${{ inputs.job_id }}
         run: |
           set -e
 

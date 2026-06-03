@@ -32,6 +32,14 @@ function createSnapshotJob(overrides: Partial<Job> = {}): Job {
     toolsUsed: [],
     qualityScore: null,
     qualityScoreDetails: null,
+    peakContextTokens: null,
+    avgContextTokens: null,
+    turnCount: null,
+    pluginVersion: null,
+    agentCliVersion: null,
+    tokenSavingRequested: false,
+    tokenSavingStatus: 'NOT_RECORDED',
+    tokenSavingFallbackReason: null,
     ...overrides,
   };
 }

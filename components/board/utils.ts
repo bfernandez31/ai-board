@@ -102,6 +102,9 @@ export function toBoardSnapshotJobs(
       turnCount: job.turnCount,
       pluginVersion: job.pluginVersion,
       agentCliVersion: job.agentCliVersion,
+      tokenSavingRequested: job.tokenSavingRequested,
+      tokenSavingStatus: job.tokenSavingStatus,
+      tokenSavingFallbackReason: job.tokenSavingFallbackReason,
     } satisfies Job;
   });
 }
@@ -120,6 +123,7 @@ export type UpdatedModalTicket = {
   autoMode: boolean;
   clarificationPolicy: ClarificationPolicy | null;
   agent?: import('@prisma/client').Agent | null;
+  tokenSavingOverride?: import('@prisma/client').TokenSavingOverride | null;
   specifyModel?: string | null;
   planModel?: string | null;
   implementModel?: string | null;
@@ -154,6 +158,10 @@ export function normalizeUpdatedTicket(
     autoMode: updatedTicket.autoMode,
     clarificationPolicy: updatedTicket.clarificationPolicy,
     agent: updatedTicket.agent ?? existingTicket?.agent ?? null,
+    tokenSavingOverride:
+      updatedTicket.tokenSavingOverride !== undefined
+        ? updatedTicket.tokenSavingOverride
+        : existingTicket?.tokenSavingOverride ?? null,
     specifyModel:
       updatedTicket.specifyModel !== undefined
         ? updatedTicket.specifyModel

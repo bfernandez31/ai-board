@@ -39,6 +39,9 @@ function createMockJob(
     turnCount: null,
     pluginVersion: null,
     agentCliVersion: null,
+    tokenSavingRequested: false,
+    tokenSavingStatus: 'INACTIVE',
+    tokenSavingFallbackReason: null,
     log: null,
     ...overrides,
   };
@@ -173,6 +176,31 @@ describe('TicketStats', () => {
 
       // Jobs timeline should be displayed
       expect(screen.getByTestId('jobs-timeline')).toBeInTheDocument();
+    });
+
+    it('should preserve token-saving fields when merging polled job status', async () => {
+      const jobs = [
+        createMockJob({
+          id: 1,
+          status: 'PENDING',
+          tokenSavingRequested: true,
+          tokenSavingStatus: 'FALLBACK',
+          tokenSavingFallbackReason: 'rtk init failed',
+        }),
+      ];
+      const polledJobs: TicketJob[] = [
+        createMockPolledJob({ id: 1, status: 'RUNNING' }),
+      ];
+
+      renderWithProviders(
+        <TicketStats jobs={jobs} polledJobs={polledJobs} />
+      );
+
+      await userEvent.click(screen.getByTestId('job-row-1'));
+
+      const tokenSavingRow = screen.getByTestId('job-token-saving-status-1');
+      expect(tokenSavingRow).toHaveTextContent('Token saving:Fallback');
+      expect(tokenSavingRow).toHaveTextContent('rtk init failed');
     });
   });
 

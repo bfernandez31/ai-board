@@ -80,6 +80,149 @@ describe('Ticket Transitions', () => {
       expect(ticket?.jobs[0]?.command).toBe('specify');
     });
 
+    it('captures inherited project token saving ON for Claude core commands', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { tokenSavingEnabled: true, defaultAgent: 'CLAUDE' },
+      });
+
+      const createResponse = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Token saving inherited on',
+          description: 'Project default enables token saving for future runs',
+        }
+      );
+
+      await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/${createResponse.data.id}/transition`, {
+        targetStage: 'SPECIFY',
+      });
+
+      const job = await prisma.job.findFirstOrThrow({
+        where: { ticketId: createResponse.data.id },
+        orderBy: { id: 'desc' },
+      });
+      expect(job.command).toBe('specify');
+      expect(job.tokenSavingRequested).toBe(true);
+      expect(job.tokenSavingStatus).toBe('NOT_RECORDED');
+    });
+
+    it('captures inherited project token saving OFF as inactive for Claude core commands', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { tokenSavingEnabled: false, defaultAgent: 'CLAUDE' },
+      });
+
+      const createResponse = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Token saving inherited off',
+          description: 'Project default disables token saving for future runs',
+        }
+      );
+
+      await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/${createResponse.data.id}/transition`, {
+        targetStage: 'BUILD',
+      });
+
+      const job = await prisma.job.findFirstOrThrow({
+        where: { ticketId: createResponse.data.id },
+        orderBy: { id: 'desc' },
+      });
+      expect(job.command).toBe('quick-impl');
+      expect(job.tokenSavingRequested).toBe(false);
+      expect(job.tokenSavingStatus).toBe('INACTIVE');
+    });
+
+    it('captures ticket FORCE_ON over a disabled project default', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { tokenSavingEnabled: false, defaultAgent: 'CLAUDE' },
+      });
+
+      const createResponse = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Token saving force on',
+          description: 'Ticket override enables token saving',
+        }
+      );
+      await prisma.ticket.update({
+        where: { id: createResponse.data.id },
+        data: { tokenSavingOverride: 'FORCE_ON' },
+      });
+
+      await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/${createResponse.data.id}/transition`, {
+        targetStage: 'SPECIFY',
+      });
+
+      const job = await prisma.job.findFirstOrThrow({
+        where: { ticketId: createResponse.data.id },
+        orderBy: { id: 'desc' },
+      });
+      expect(job.tokenSavingRequested).toBe(true);
+      expect(job.tokenSavingStatus).toBe('NOT_RECORDED');
+    });
+
+    it('captures ticket FORCE_OFF over an enabled project default', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { tokenSavingEnabled: true, defaultAgent: 'CLAUDE' },
+      });
+
+      const createResponse = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Token saving force off',
+          description: 'Ticket override disables token saving',
+        }
+      );
+      await prisma.ticket.update({
+        where: { id: createResponse.data.id },
+        data: { tokenSavingOverride: 'FORCE_OFF' },
+      });
+
+      await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/${createResponse.data.id}/transition`, {
+        targetStage: 'BUILD',
+      });
+
+      const job = await prisma.job.findFirstOrThrow({
+        where: { ticketId: createResponse.data.id },
+        orderBy: { id: 'desc' },
+      });
+      expect(job.command).toBe('quick-impl');
+      expect(job.tokenSavingRequested).toBe(false);
+      expect(job.tokenSavingStatus).toBe('INACTIVE');
+    });
+
+    it('marks requested non-Claude runs as NOT_APPLICABLE', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { tokenSavingEnabled: true, defaultAgent: 'CODEX' },
+      });
+
+      const createResponse = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Token saving non-Claude',
+          description: 'Non-Claude run should not activate RTK',
+        }
+      );
+
+      const response = await ctx.api.post(
+        `/api/projects/${ctx.projectId}/tickets/${createResponse.data.id}/transition`,
+        { targetStage: 'SPECIFY' }
+      );
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findFirstOrThrow({
+        where: { ticketId: createResponse.data.id },
+        orderBy: { id: 'desc' },
+      });
+      expect(job.tokenSavingRequested).toBe(true);
+      expect(job.tokenSavingStatus).toBe('NOT_APPLICABLE');
+    });
+
     it('should return 400 for invalid targetStage', async () => {
       const createResponse = await ctx.api.post<{ id: number }>(
         `/api/projects/${ctx.projectId}/tickets`,

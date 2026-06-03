@@ -3,6 +3,7 @@
  */
 
 import { z } from 'zod';
+import { TokenSavingOverride } from '@prisma/client';
 
 /**
  * Ticket key validation schema
@@ -43,6 +44,8 @@ export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
  * Maximum number of attachments per ticket
  */
 export const MAX_ATTACHMENTS_PER_TICKET = 5;
+
+export const TicketTokenSavingOverrideSchema = z.nativeEnum(TokenSavingOverride).nullable();
 
 /**
  * Zod schema for a single ticket attachment
@@ -89,3 +92,4 @@ export const TicketAttachmentsArraySchema = z
  * TypeScript type inferred from TicketAttachmentSchema
  */
 export type TicketAttachment = z.infer<typeof TicketAttachmentSchema>;
+export type TicketTokenSavingOverride = z.infer<typeof TicketTokenSavingOverrideSchema>;

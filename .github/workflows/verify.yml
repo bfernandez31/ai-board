@@ -45,6 +45,12 @@ on:
         type: string
         default: ''
 
+      token_saving:
+        description: 'Run-captured token-saving setting'
+        required: false
+        default: 'false'
+        type: string
+
       # Conditional service inputs
       needs_postgres:
         description: 'Provision PostgreSQL service container'
@@ -534,6 +540,9 @@ jobs:
       - name: Execute /ai-board.verify Command
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' && (env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true') }}
         working-directory: target
+        env:
+          AI_BOARD_TOKEN_SAVING: ${{ inputs.token_saving }}
+          AI_BOARD_TOKEN_SAVING_JOB_ID: ${{ inputs.job_id }}
         run: |
           echo "🤖 Executing /ai-board.verify command to fix test failures..."
           echo ""

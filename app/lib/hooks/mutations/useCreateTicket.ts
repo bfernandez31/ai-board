@@ -73,6 +73,7 @@ export function useCreateTicket() {
         workflowType: 'FULL',
         clarificationPolicy: variables.clarificationPolicy || null,
         agent: null,
+        tokenSavingOverride: null,
         specifyModel: null,
         planModel: null,
         implementModel: null,

@@ -38,6 +38,9 @@ function makeJob(overrides: Partial<TicketJobWithTelemetry> = {}): TicketJobWith
     turnCount: null,
     pluginVersion: null,
     agentCliVersion: null,
+    tokenSavingRequested: false,
+    tokenSavingStatus: 'INACTIVE',
+    tokenSavingFallbackReason: null,
     log: null,
     ...overrides,
   };
@@ -88,6 +91,49 @@ describe('JobsTimeline — expanded breakdown rows (US3)', () => {
     const details = screen.getByTestId(`job-details-${job.id}`);
     expect(details.textContent).not.toMatch(/Avg Context/i);
     expect(details.textContent).not.toMatch(/Turn Count/i);
+  });
+});
+
+describe('JobsTimeline — token saving run status', () => {
+  it.each([
+    ['ACTIVE', 'Active'],
+    ['INACTIVE', 'Inactive'],
+    ['NOT_APPLICABLE', 'Not applicable'],
+    ['NOT_RECORDED', 'Not recorded'],
+  ] as const)('renders %s as %s', async (tokenSavingStatus, label) => {
+    const job = makeJob({ tokenSavingStatus });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+    await userEvent.click(screen.getByTestId(`job-row-${job.id}`));
+
+    expect(screen.getByTestId(`job-token-saving-status-${job.id}`)).toHaveTextContent(
+      `Token saving:${label}`
+    );
+  });
+
+  it('renders fallback with the recorded reason', async () => {
+    const job = makeJob({
+      tokenSavingRequested: true,
+      tokenSavingStatus: 'FALLBACK',
+      tokenSavingFallbackReason: 'rtk init failed',
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+    await userEvent.click(screen.getByTestId(`job-row-${job.id}`));
+
+    const row = screen.getByTestId(`job-token-saving-status-${job.id}`);
+    expect(row).toHaveTextContent('Token saving:Fallback');
+    expect(row).toHaveTextContent('rtk init failed');
+  });
+
+  it('renders missing legacy token-saving status as not recorded', async () => {
+    const job = makeJob({
+      tokenSavingStatus: undefined as unknown as TicketJobWithTelemetry['tokenSavingStatus'],
+    });
+    renderWithProviders(<JobsTimeline jobs={[job]} />);
+    await userEvent.click(screen.getByTestId(`job-row-${job.id}`));
+
+    expect(screen.getByTestId(`job-token-saving-status-${job.id}`)).toHaveTextContent(
+      'Token saving:Not recorded'
+    );
   });
 });
 

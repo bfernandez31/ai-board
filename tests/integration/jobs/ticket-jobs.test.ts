@@ -74,6 +74,9 @@ describe('Ticket Jobs API', () => {
           durationMs: 300000,
           model: 'claude-3-opus',
           toolsUsed: ['read', 'write', 'bash'],
+          tokenSavingRequested: true,
+          tokenSavingStatus: 'FALLBACK',
+          tokenSavingFallbackReason: 'rtk init failed',
         },
       });
 
@@ -97,6 +100,9 @@ describe('Ticket Jobs API', () => {
       expect(job!.durationMs).toBe(300000);
       expect(job!.model).toBe('claude-3-opus');
       expect(job!.toolsUsed).toEqual(['read', 'write', 'bash']);
+      expect(job!.tokenSavingRequested).toBe(true);
+      expect(job!.tokenSavingStatus).toBe('FALLBACK');
+      expect(job!.tokenSavingFallbackReason).toBe('rtk init failed');
 
       // Verify timing fields
       expect(job!.startedAt).toBeDefined();
@@ -121,6 +127,9 @@ describe('Ticket Jobs API', () => {
       expect(job!.durationMs).toBeNull();
       // model is resolved and stored at job creation (not a telemetry field), so it is non-null
       expect(job!.model).toBe('claude-opus-4-8');
+      expect(job!.tokenSavingRequested).toBe(false);
+      expect(job!.tokenSavingStatus).toBe('INACTIVE');
+      expect(job!.tokenSavingFallbackReason).toBeNull();
     });
 
     it('should return 404 for non-existent ticket', async () => {

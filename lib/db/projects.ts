@@ -208,6 +208,7 @@ export async function updateProject(
     githubRepo?: string | undefined;
     clarificationPolicy?: ClarificationPolicy | undefined;
     defaultAgent?: Agent | undefined;
+    tokenSavingEnabled?: boolean | undefined;
     deploymentUrl?: string | null | undefined;
     specifyModel?: string | null | undefined;
     planModel?: string | null | undefined;
@@ -223,14 +224,20 @@ export async function updateProject(
 ) {
   const userId = await requireAuth();
 
-  // Owner OR member may update (FR-018)
+  const requiresOwner = data.tokenSavingEnabled !== undefined;
+
+  // Owner OR member may update most settings; token-saving default is owner-only.
   const project = await prisma.project.findFirst({
     where: {
       id: projectId,
-      OR: [
-        { userId },
-        { members: { some: { userId } } },
-      ],
+      ...(requiresOwner
+        ? { userId }
+        : {
+            OR: [
+              { userId },
+              { members: { some: { userId } } },
+            ],
+          }),
     },
   });
 
@@ -246,6 +253,7 @@ export async function updateProject(
   if (data.githubRepo !== undefined) updateData.githubRepo = data.githubRepo;
   if (data.clarificationPolicy !== undefined) updateData.clarificationPolicy = data.clarificationPolicy;
   if (data.defaultAgent !== undefined) updateData.defaultAgent = data.defaultAgent;
+  if (data.tokenSavingEnabled !== undefined) updateData.tokenSavingEnabled = data.tokenSavingEnabled;
   if (data.deploymentUrl !== undefined) updateData.deploymentUrl = data.deploymentUrl;
   if (data.specifyModel !== undefined) updateData.specifyModel = data.specifyModel;
   if (data.planModel !== undefined) updateData.planModel = data.planModel;

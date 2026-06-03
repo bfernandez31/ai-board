@@ -66,4 +66,45 @@ describe('jobStatusUpdateSchema', () => {
     expect(result.data.pluginVersion).toBe('1.0.1');
     expect(result.data.agentCliVersion).toBe('codex 0.4.0');
   });
+
+  it.each(['ACTIVE', 'INACTIVE', 'FALLBACK', 'NOT_APPLICABLE', 'NOT_RECORDED'])(
+    'accepts tokenSavingStatus %s',
+    (tokenSavingStatus) => {
+      const result = jobStatusUpdateSchema.safeParse({
+        status: 'RUNNING',
+        tokenSavingStatus,
+      });
+
+      expect(result.success).toBe(true);
+    }
+  );
+
+  it('accepts a 1000-character fallback reason', () => {
+    const result = jobStatusUpdateSchema.safeParse({
+      status: 'RUNNING',
+      tokenSavingStatus: 'FALLBACK',
+      tokenSavingFallbackReason: 'x'.repeat(1000),
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects invalid tokenSavingStatus values', () => {
+    const result = jobStatusUpdateSchema.safeParse({
+      status: 'RUNNING',
+      tokenSavingStatus: 'BROKEN',
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects fallback reasons longer than 1000 characters', () => {
+    const result = jobStatusUpdateSchema.safeParse({
+      status: 'RUNNING',
+      tokenSavingStatus: 'FALLBACK',
+      tokenSavingFallbackReason: 'x'.repeat(1001),
+    });
+
+    expect(result.success).toBe(false);
+  });
 });

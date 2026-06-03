@@ -26,6 +26,10 @@ export const jobStatusUpdateSchema = z.object({
   // Both fields are optional — failure to capture leaves the job unannotated.
   pluginVersion: z.string().trim().min(1).max(50).optional(),
   agentCliVersion: z.string().trim().min(1).max(100).optional(),
+  tokenSavingStatus: z
+    .enum(['ACTIVE', 'INACTIVE', 'FALLBACK', 'NOT_APPLICABLE', 'NOT_RECORDED'])
+    .optional(),
+  tokenSavingFallbackReason: z.string().trim().max(1000).optional(),
 });
 
 /**

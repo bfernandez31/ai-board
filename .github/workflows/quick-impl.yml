@@ -48,6 +48,12 @@ on:
         type: string
         default: ''
 
+      token_saving:
+        description: 'Run-captured token-saving setting'
+        required: false
+        default: 'false'
+        type: string
+
       # Conditional service inputs
       needs_postgres:
         description: 'Provision PostgreSQL service container'
@@ -390,6 +396,9 @@ jobs:
       - name: Execute Quick Implementation
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         working-directory: target
+        env:
+          AI_BOARD_TOKEN_SAVING: ${{ inputs.token_saving }}
+          AI_BOARD_TOKEN_SAVING_JOB_ID: ${{ inputs.job_id }}
         run: |
           # Execute /quick-impl command with JSON payload
           # Command will internally call create-new-feature.sh --mode=quick-impl

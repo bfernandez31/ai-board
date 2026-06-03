@@ -5,9 +5,11 @@ import { getProject } from '@/lib/db/projects';
 import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
 import { DefaultAgentCard } from '@/components/settings/default-agent-card';
 import { AIModelsCard } from '@/components/settings/ai-models-card';
+import { TokenSavingCard } from '@/components/settings/token-saving-card';
 import { Button } from '@/components/ui/button';
 import { ConstitutionCard } from '@/components/settings/constitution-card';
 import { ConfigCard } from '@/components/settings/config-card';
+import { requireAuth } from '@/lib/db/users';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -35,6 +37,8 @@ export default async function ProjectSettingsPage({
     notFound();
   }
 
+  const userId = await requireAuth();
+
   // Fetch project (with authentication check)
   const project = await getProject(projectId).catch((error) => {
     if (
@@ -45,6 +49,7 @@ export default async function ProjectSettingsPage({
     }
     throw error;
   });
+  const canEditProjectDefaults = project.userId === userId;
 
   return (
     <main className="container mx-auto py-10 max-w-4xl">
@@ -77,6 +82,14 @@ export default async function ProjectSettingsPage({
               id: project.id,
               defaultAgent: project.defaultAgent,
             }}
+          />
+
+          <TokenSavingCard
+            project={{
+              id: project.id,
+              tokenSavingEnabled: project.tokenSavingEnabled,
+            }}
+            canEdit={canEditProjectDefaults}
           />
 
           <AIModelsCard

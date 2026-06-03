@@ -422,6 +422,117 @@ report_runtime_versions() {
   return 0
 }
 
+token_saving_job_id() {
+  printf '%s' "${AI_BOARD_TOKEN_SAVING_JOB_ID:-${JOB_ID:-}}"
+}
+
+is_token_saving_requested() {
+  [[ "${AI_BOARD_TOKEN_SAVING:-false}" == "true" ]]
+}
+
+is_token_saving_core_command() {
+  case "$COMMAND" in
+    ai-board.specify|ai-board.plan|ai-board.implement|ai-board.quick-impl|ai-board.verify)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+report_token_saving_status() {
+  local status="$1"
+  local reason="${2:-}"
+  local job_id
+  job_id="$(token_saving_job_id)"
+
+  if [[ -z "$job_id" || -z "${APP_URL:-}" || -z "${WORKFLOW_API_TOKEN:-}" ]]; then
+    log_info "Token-saving status report skipped — job id, APP_URL, or workflow token unset"
+    return 0
+  fi
+
+  reason="${reason:0:1000}"
+
+  local payload
+  payload="$(jq -n \
+    --arg status "$status" \
+    --arg reason "$reason" \
+    '{status: "RUNNING", tokenSavingStatus: $status}
+      + (if $reason != "" then {tokenSavingFallbackReason: $reason} else {} end)')" || {
+    log_info "Token-saving status report skipped — failed to build payload"
+    return 0
+  }
+
+  local http_code
+  http_code="$(curl -X PATCH "${APP_URL}/api/jobs/${job_id}/status" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+    -d "$payload" \
+    -s -o /dev/null -w '%{http_code}' --max-time 10)" || {
+    log_info "Token-saving status PATCH failed: curl error (non-fatal)"
+    return 0
+  }
+
+  if [[ "$http_code" != 2* ]]; then
+    log_info "Token-saving status PATCH failed: HTTP ${http_code} (non-fatal)"
+  fi
+}
+
+install_rtk_if_needed() {
+  if command -v rtk &>/dev/null; then
+    return 0
+  fi
+
+  if command -v curl &>/dev/null; then
+    log_info "Installing RTK with official install script"
+    if curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh >&2; then
+      export PATH="${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}"
+    fi
+  fi
+
+  if command -v rtk &>/dev/null; then
+    return 0
+  fi
+
+  if command -v cargo &>/dev/null; then
+    log_info "Installing RTK with cargo"
+    cargo install --git https://github.com/rtk-ai/rtk rtk >&2 || return 1
+    export PATH="${HOME}/.cargo/bin:${PATH}"
+  fi
+
+  command -v rtk &>/dev/null
+}
+
+prepare_token_saving() {
+  if ! is_token_saving_requested; then
+    return 0
+  fi
+
+  if [[ "$AGENT_TYPE" != "CLAUDE" ]] || ! is_token_saving_core_command; then
+    report_token_saving_status "NOT_APPLICABLE"
+    return 0
+  fi
+
+  if ! install_rtk_if_needed; then
+    report_token_saving_status "FALLBACK" "rtk binary was unavailable"
+    return 0
+  fi
+
+  if ! rtk init -g --auto-patch >&2; then
+    report_token_saving_status "FALLBACK" "rtk init failed"
+    return 0
+  fi
+
+  if ! rtk init --show >&2; then
+    report_token_saving_status "FALLBACK" "rtk hook verification failed"
+    return 0
+  fi
+
+  report_token_saving_status "ACTIVE"
+  return 0
+}
+
 # --- Validation ---
 
 validate_auth() {
@@ -873,6 +984,8 @@ fi
 _capture_agent_end_kind="completed"
 
 dispatch_agent() {
+  prepare_token_saving
+
   case "$AGENT_TYPE" in
     CLAUDE)
       validate_auth

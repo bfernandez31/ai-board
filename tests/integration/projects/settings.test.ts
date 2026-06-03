@@ -267,6 +267,78 @@ describe('Project Settings - clarificationPolicy', () => {
     });
   });
 
+  describe('PATCH /api/projects/:id - tokenSavingEnabled updates', () => {
+    it('returns tokenSavingEnabled as OFF by default', async () => {
+      const response = await ctx.api.get<{ tokenSavingEnabled: boolean }>(
+        `/api/projects/${ctx.projectId}`
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.tokenSavingEnabled).toBe(false);
+    });
+
+    it('allows the project owner to update tokenSavingEnabled', async () => {
+      const response = await ctx.api.patch<{ tokenSavingEnabled: boolean }>(
+        `/api/projects/${ctx.projectId}`,
+        { tokenSavingEnabled: true }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.tokenSavingEnabled).toBe(true);
+
+      const dbProject = await prisma.project.findUnique({ where: { id: ctx.projectId } });
+      expect(dbProject?.tokenSavingEnabled).toBe(true);
+    });
+
+    it('rejects tokenSavingEnabled updates from project members', async () => {
+      const member = await ctx.createUser(`member-token-saving-${Date.now()}@e2e.local`);
+      await prisma.projectMember.create({
+        data: {
+          projectId: ctx.projectId,
+          userId: member.id,
+          role: 'member',
+        },
+      });
+
+      const response = await ctx.api.patch<{ error: string }>(
+        `/api/projects/${ctx.projectId}`,
+        { tokenSavingEnabled: true },
+        { headers: { 'x-test-user-id': member.id } }
+      );
+
+      expect(response.status).toBe(404);
+
+      const dbProject = await prisma.project.findUnique({ where: { id: ctx.projectId } });
+      expect(dbProject?.tokenSavingEnabled).toBe(false);
+    });
+
+    it('rejects non-boolean tokenSavingEnabled values', async () => {
+      const response = await ctx.api.patch<{ error: string }>(
+        `/api/projects/${ctx.projectId}`,
+        { tokenSavingEnabled: 'true' }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toBe('Validation failed');
+    });
+
+    it('does not change tokenSavingEnabled when unrelated settings update', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { tokenSavingEnabled: true },
+      });
+
+      const response = await ctx.api.patch<{
+        defaultAgent: string;
+        tokenSavingEnabled: boolean;
+      }>(`/api/projects/${ctx.projectId}`, { defaultAgent: 'CODEX' });
+
+      expect(response.status).toBe(200);
+      expect(response.data.defaultAgent).toBe('CODEX');
+      expect(response.data.tokenSavingEnabled).toBe(true);
+    });
+  });
+
   describe('PATCH /api/projects/:id - per-stage model updates (AIB-678)', () => {
     const STAGES = ['specifyModel', 'planModel', 'implementModel', 'quickImplModel', 'verifyModel'] as const;
 
@@ -383,6 +455,7 @@ describe('Project Settings - clarificationPolicy', () => {
         githubOwner: string;
         githubRepo: string;
         clarificationPolicy: string;
+        tokenSavingEnabled: boolean;
         createdAt: string;
         updatedAt: string;
       }>(`/api/projects/${ctx.projectId}`);
@@ -395,6 +468,7 @@ describe('Project Settings - clarificationPolicy', () => {
       expect(response.data).toHaveProperty('githubOwner');
       expect(response.data).toHaveProperty('githubRepo');
       expect(response.data).toHaveProperty('clarificationPolicy');
+      expect(response.data).toHaveProperty('tokenSavingEnabled');
       expect(response.data).toHaveProperty('createdAt');
       expect(response.data).toHaveProperty('updatedAt');
     });

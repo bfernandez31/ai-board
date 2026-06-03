@@ -9,6 +9,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import { fullCloneTicket } from '@/lib/db/tickets';
 
 describe('Ticket Duplication', () => {
   let ctx: TestContext;
@@ -120,6 +121,38 @@ describe('Ticket Duplication', () => {
       });
       expect(copiedJobs).toHaveLength(0);
     });
+
+    it('should preserve token-saving override with simple copy', async () => {
+      const prisma = getPrismaClient();
+      const sourceTicket = await prisma.ticket.create({
+        data: {
+          title: '[e2e] Token Override Copy',
+          description: 'Preserve token-saving override',
+          stage: 'PLAN',
+          projectId: ctx.projectId,
+          ticketNumber: ++ticketCounter,
+          ticketKey: `T-${ticketCounter}`,
+          workflowType: 'FULL',
+          tokenSavingOverride: 'FORCE_ON',
+        },
+      });
+
+      const response = await ctx.api.post<{
+        id: number;
+        stage: string;
+        tokenSavingOverride: 'FORCE_ON' | 'FORCE_OFF' | null;
+      }>(`/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/duplicate`, {});
+
+      expect(response.status).toBe(201);
+      expect(response.data.stage).toBe('INBOX');
+      expect(response.data.tokenSavingOverride).toBe('FORCE_ON');
+
+      const copiedTicket = await prisma.ticket.findUniqueOrThrow({
+        where: { id: response.data.id },
+        select: { tokenSavingOverride: true },
+      });
+      expect(copiedTicket.tokenSavingOverride).toBe('FORCE_ON');
+    });
   });
 
   describe('POST /api/projects/:projectId/tickets/:id/duplicate (Full Clone)', () => {
@@ -148,6 +181,55 @@ describe('Ticket Duplication', () => {
       expect(response.status).toBe(400);
       expect(response.data.code).toBe('MISSING_BRANCH');
       expect(response.data.error).toContain('branch');
+    });
+
+    it('should copy token-saving job telemetry snapshots with full clone', async () => {
+      const prisma = getPrismaClient();
+      const sourceTicket = await prisma.ticket.create({
+        data: {
+          title: '[e2e] Token Saving Full Clone',
+          description: 'Preserve token-saving job telemetry',
+          stage: 'VERIFY',
+          projectId: ctx.projectId,
+          ticketNumber: ++ticketCounter,
+          ticketKey: `T-${ticketCounter}`,
+          workflowType: 'FULL',
+          branch: 'source-token-saving-branch',
+          tokenSavingOverride: 'FORCE_OFF',
+        },
+      });
+
+      await prisma.job.create({
+        data: {
+          ticketId: sourceTicket.id,
+          projectId: ctx.projectId,
+          command: 'verify',
+          status: 'COMPLETED',
+          branch: sourceTicket.branch,
+          inputTokens: 1000,
+          outputTokens: 500,
+          tokenSavingRequested: true,
+          tokenSavingStatus: 'FALLBACK',
+          tokenSavingFallbackReason: 'rtk init failed',
+          updatedAt: new Date('2026-06-03T10:00:00.000Z'),
+        },
+      });
+
+      const clonedTicket = await fullCloneTicket(
+        ctx.projectId,
+        sourceTicket.id,
+        'clone-token-saving-branch',
+        ++ticketCounter
+      );
+
+      expect(clonedTicket.tokenSavingOverride).toBe('FORCE_OFF');
+      expect(clonedTicket.jobs).toHaveLength(1);
+      expect(clonedTicket.jobs[0]).toMatchObject({
+        branch: 'clone-token-saving-branch',
+        tokenSavingRequested: true,
+        tokenSavingStatus: 'FALLBACK',
+        tokenSavingFallbackReason: 'rtk init failed',
+      });
     });
   });
 

@@ -27,7 +27,7 @@ export interface JobTypeConfig {
   ariaLabel: string; // Accessibility label template
 }
 
-import type { Job } from '@prisma/client';
+import type { Job, TokenSavingRunStatus } from '@prisma/client';
 
 /**
  * DualJobState Interface
@@ -74,5 +74,8 @@ export interface TicketJobWithTelemetry {
   turnCount: number | null;
   pluginVersion: string | null;
   agentCliVersion: string | null;
+  tokenSavingRequested: boolean;
+  tokenSavingStatus: TokenSavingRunStatus;
+  tokenSavingFallbackReason: string | null;
   log: TicketJobLogSummary | null;
 }

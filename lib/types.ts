@@ -1,4 +1,12 @@
-import { Ticket as PrismaTicket, ClarificationPolicy, Agent, WorkflowType, Prisma, JobStatus } from '@prisma/client';
+import {
+  Ticket as PrismaTicket,
+  ClarificationPolicy,
+  Agent,
+  WorkflowType,
+  Prisma,
+  JobStatus,
+  TokenSavingOverride,
+} from '@prisma/client';
 import { Stage } from './stage-transitions';
 
 /**
@@ -28,6 +36,7 @@ export interface TicketWithVersion {
   autoMode: boolean;
   clarificationPolicy: ClarificationPolicy | null;
   agent: Agent | null;
+  tokenSavingOverride: TokenSavingOverride | null;
   specifyModel: string | null;
   planModel: string | null;
   implementModel: string | null;
@@ -48,6 +57,16 @@ export interface TicketWithVersion {
     defaultAgent?: Agent;
     githubOwner?: string;
     githubRepo?: string;
+    tokenSavingEnabled?: boolean;
+  };
+  runSettings?: {
+    tokenSaving: {
+      projectDefault: boolean;
+      override: TokenSavingOverride | null;
+      effectiveEnabled: boolean;
+      source: 'project' | 'ticket';
+      editable: boolean;
+    };
   };
   jobs?: Array<{
     status: JobStatus;
@@ -55,4 +74,3 @@ export interface TicketWithVersion {
     createdAt: Date;
   }>;
 }
-
