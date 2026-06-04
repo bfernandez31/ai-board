@@ -204,6 +204,10 @@ Clicking any ticket card opens a detail modal displaying:
   - Plain text without markdown renders normally
   - Uses prose styling optimized for dark theme
 - **Stage Badge**: Current workflow stage with visual indicator
+- **Header Status Strip**: Inline badges showing active per-ticket overrides:
+  - Policy badge (when clarification policy override is set)
+  - Agent badge (when agent override is set)
+  - Token saving badge (Zap icon, visible when token saving is effectively ON). Tooltip shows whether the setting is from a ticket override or inherited from the project default.
 - **Metadata**:
   - Creation date
   - Last updated date
@@ -321,6 +325,7 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
   - Duration (formatted time)
   - Cost (formatted USD)
   - Model used (e.g., "claude-sonnet-4-5")
+  - Token saving status indicator (Active = green badge, Inactive = muted, Fallback = amber with explanation tooltip, N/A = hidden). Shows whether RTK output compression was active for the run.
   - Peak context pill — compact badge showing the maximum per-turn context size observed during the run (formatted as an abbreviated token count). Hover reveals the absolute token count and the percentage of the model's context window. The pill uses neutral styling below 60% of the model's context window, warning styling between 60% and 80%, and danger styling at or above 80%. The pill is hidden entirely (no placeholder, no zero) for jobs run with agents that expose no per-turn telemetry (Mistral), for jobs whose model has no registered context window, and for jobs that predate per-turn ingestion
 - Jobs are expandable to reveal detailed token breakdown:
   - Input tokens
@@ -608,8 +613,8 @@ Three TanStack Query hooks manage data:
 Users can create a copy of existing tickets using two duplication modes:
 
 **Button Location**:
-- Appears in the ticket detail modal header overflow menu (··· button)
-- Located alongside Edit Policy and Edit Agent actions
+- Appears in the ticket detail modal kebab menu (··· button) as "Simple copy" and "Full clone" items
+- Located alongside the "Run settings" action
 - Visible for tickets in all stages (INBOX through SHIP)
 
 **Duplication Modes**:
@@ -644,6 +649,7 @@ Users can create a copy of existing tickets using two duplication modes:
    - Title: "Copy of [original title]" (truncated if needed to stay within 100 chars)
    - Description: Exact copy of original description
    - Clarification Policy: Same as original (or null if using project default)
+   - Token Saving: Same as original (or null if using project default)
    - Image Attachments: References to same images (uploaded and external URLs)
    - No branch, no jobs
 5. Success toast displays: "Copied to {NEW_TICKET_KEY}"
@@ -660,7 +666,7 @@ Users can create a copy of existing tickets using two duplication modes:
    - Description: Exact copy of original description
    - Copies all jobs with complete telemetry (tokens, cost, duration, model, tools)
    - Creates new Git branch from source branch commit (format: {TICKET_NUMBER}-{slug})
-   - Copies clarification policy and attachments
+   - Copies clarification policy, token saving override, and attachments
 5. Success toast displays: "Cloned to {NEW_TICKET_KEY}"
 6. Modal closes automatically
 7. New ticket appears in same column as source ticket
@@ -1049,6 +1055,14 @@ Timestamps display in user-friendly formats:
   - Can be overridden for specific tickets
   - Values: AUTO, CONSERVATIVE, PRAGMATIC, INTERACTIVE
 
+- **Token Saving**: Whether RTK output compression is active for Claude agent runs on this ticket
+  - Nullable field — `null` means inherit from the project's `tokenSaving` setting
+  - Three states: force ON, force OFF, or inherit from project default
+  - Editable at any stage (not locked like policy/agent)
+  - Setting only affects future runs, not in-progress ones
+  - Effective token saving resolved at dispatch time via `resolveEffectiveTokenSaving(ticket.tokenSaving, project.tokenSaving)`
+  - No effect on non-Claude agents (setting is preserved but functionally inert)
+
 - **Agent**: Which AI agent executes workflow automation for this ticket
   - Nullable field — `null` means inherit from the project's `defaultAgent`
   - Can be overridden per ticket during creation or while in INBOX stage
@@ -1063,13 +1077,34 @@ Timestamps display in user-friendly formats:
   - Editable via the per-stage model override dialog accessible from the ticket detail modal
   - Both column sets are preserved independently: switching the ticket's agent never overwrites the other agent's stored overrides
 
-### Per-Stage Model Override Dialog
+### Unified Run Settings Dialog
 
-Users can open a per-stage model override dialog from the ticket detail modal to set or clear model overrides for each of the 5 workflow stages independently. The dialog renders selectors for the ticket's currently effective agent.
+Users can open a unified "Run settings" dialog from the ticket detail modal to manage all per-ticket execution overrides in a single location. The dialog contains four sections: Agent, Models (per stage), Clarification Policy, and Token Saving.
 
 **Access**:
+- The ticket detail modal kebab menu (··· button) contains exactly three items:
+  - "Run settings" — opens the unified dialog
+  - "Simple copy" — creates a copy of the ticket
+  - "Full clone" — creates a full clone (visible only for stages with branches: SPECIFY, PLAN, BUILD, VERIFY)
 - Available to project owners and members
-- Opens from an edit action in the ticket detail view (modeled on the agent edit dialog)
+
+**Dialog Sections**:
+
+**Agent section**: Select which AI agent executes workflow automation. Editable only in INBOX stage; appears read-only (displaying the effective value) in later stages.
+
+**Models section**: Per-stage model override selectors for the ticket's currently effective agent. Editable at any stage.
+
+**Clarification Policy section**: Select the clarification policy for specification generation. Editable only in INBOX stage; appears read-only in later stages.
+
+**Token Saving section**: Select component with three options — "Use project default", "Force ON", "Force OFF". Shows the inherited project default value. Editable at any stage.
+
+**Override indicators**: Each section displays "(override)" when a ticket-level override is set, or "(project default)" when inheriting from the project.
+
+**Stage-aware editability**: Agent and Clarification Policy sections are read-only when the ticket is past INBOX stage. Models and Token Saving sections remain editable regardless of stage.
+
+### Per-Stage Model Override Dialog
+
+The Models section within the Run settings dialog allows users to set or clear model overrides for each of the 5 workflow stages independently. The section renders selectors for the ticket's currently effective agent.
 
 **UI States**:
 

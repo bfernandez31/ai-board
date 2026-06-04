@@ -79,6 +79,7 @@ export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 - **description**: Editable ONLY in INBOX stage (API enforced)
 - **clarificationPolicy**: Editable ONLY in INBOX stage (API enforced)
 - **agent**: Editable ONLY in INBOX stage (API enforced; follows same rules as clarificationPolicy)
+- **tokenSaving**: Editable at any stage (not locked like policy/agent). Nullable Boolean: `true` = force ON, `false` = force OFF, `null` = inherit project default
 - **version**: Always required for optimistic concurrency control
 
 ### TransitionRequestSchema
@@ -358,7 +359,7 @@ export const ticketCodexModelOverrideSchema = z
 
 ### ProjectUpdateSchema (model fields)
 
-`projectUpdateSchema` in `app/lib/schemas/clarification-policy.ts` accepts all 10 model columns as optional nullable fields — 5 Claude fields validated by `claudeModelIdSchema` and 5 Codex fields validated by `codexModelIdSchema`. The PATCH route emits `INVALID_MODEL_ID` (status 400) for Zod failures on any of the 10 column names.
+`projectUpdateSchema` in `app/lib/schemas/clarification-policy.ts` accepts all 10 model columns as optional nullable fields — 5 Claude fields validated by `claudeModelIdSchema` and 5 Codex fields validated by `codexModelIdSchema`. The PATCH route emits `INVALID_MODEL_ID` (status 400) for Zod failures on any of the 10 column names. The schema also accepts `tokenSaving: z.boolean().optional()` for the project-level token saving toggle.
 
 ## AI-BOARD Command Schemas
 

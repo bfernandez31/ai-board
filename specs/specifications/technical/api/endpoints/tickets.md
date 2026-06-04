@@ -270,6 +270,7 @@ Update ticket fields with optimistic concurrency control.
 - `title`: Optional, 1-100 characters, alphanumeric + basic punctuation
 - `description`: Optional, 1-10000 characters (editable only in INBOX stage)
 - `clarificationPolicy`: Optional, enum or null (editable only in INBOX stage)
+- `tokenSaving`: Optional, Boolean or null — per-ticket token saving override. `true` = force ON, `false` = force OFF, `null` = inherit project default. Editable at any stage.
 - `version`: Required for concurrency control
 
 **Response** (200 OK):
@@ -598,6 +599,7 @@ sequenceDiagram
     }
   ],
   "clarificationPolicy": "PRAGMATIC",
+  "tokenSaving": true,
   "createdAt": "2025-01-20T14:22:00.000Z",
   "updatedAt": "2025-01-20T14:22:00.000Z"
 }
@@ -630,6 +632,7 @@ sequenceDiagram
     }
   ],
   "clarificationPolicy": "PRAGMATIC",
+  "tokenSaving": true,
   "createdAt": "2025-01-20T14:22:00.000Z",
   "updatedAt": "2025-01-20T14:22:00.000Z",
   "jobs": [

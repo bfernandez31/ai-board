@@ -133,11 +133,12 @@ Fetch project details including clarification policy.
   "codexPlanModel": "gpt-5.5",
   "codexImplementModel": "gpt-5.4",
   "codexQuickImplModel": "gpt-5.4-mini",
-  "codexVerifyModel": "gpt-5.4-mini"
+  "codexVerifyModel": "gpt-5.4-mini",
+  "tokenSaving": false
 }
 ```
 
-`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync. Per-stage model fields are `null` for pre-existing projects without explicit configuration (Claude fields resolve to `claude-opus-4-8` and Codex fields resolve to `gpt-5.5` at dispatch time). Both column sets are always returned regardless of `defaultAgent` — the inactive agent's stored values stay durable for later switching.
+`config` and `configSyncedAt` are `null` when no config has been synced. `tokenSaving` is a Boolean (default `false`) indicating whether RTK output compression is enabled by default for Claude agent runs in the project. `defaultBranch` defaults to `"main"` and is auto-updated during config sync. Per-stage model fields are `null` for pre-existing projects without explicit configuration (Claude fields resolve to `claude-opus-4-8` and Codex fields resolve to `gpt-5.5` at dispatch time). Both column sets are always returned regardless of `defaultAgent` — the inactive agent's stored values stay durable for later switching.
 
 **Errors**:
 - `401`: Not authenticated
@@ -207,7 +208,8 @@ Update project details including clarification policy.
   "codexPlanModel": "gpt-5.5",
   "codexImplementModel": "gpt-5.4",
   "codexQuickImplModel": "gpt-5.4-mini",
-  "codexVerifyModel": "gpt-5.4-mini"
+  "codexVerifyModel": "gpt-5.4-mini",
+  "tokenSaving": true
 }
 ```
 
@@ -219,6 +221,7 @@ Update project details including clarification policy.
 - `clarificationPolicy`: Optional, enum (AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE)
 - `specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`: Optional, nullable — must be one of the whitelisted Claude model IDs (`claude-opus-4-8`, `claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise
 - `codexSpecifyModel`, `codexPlanModel`, `codexImplementModel`, `codexQuickImplModel`, `codexVerifyModel`: Optional, nullable — must be one of the whitelisted Codex model IDs (`gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex`, `gpt-5.2`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise
+- `tokenSaving`: Optional, Boolean — enables or disables RTK output compression for Claude agent runs in the project
 - Claude and Codex column sets are independent: writing one never touches the other
 
 **Response** (200 OK):

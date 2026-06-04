@@ -58,6 +58,44 @@ The effective agent is determined by a priority chain:
 - Some workflows remain explicitly agent-restricted even when ticket/project resolution returns a different default. For example, ai-board-assist code review remains Claude-only, and setup / retro-spec / health-scan may reject unsupported agents before dispatch.
 - Agent selection is read-only during dispatch — it flows from the database into workflow inputs without changing ticket state
 
+## Token Saving via RTK
+
+When the effective token saving setting is ON for a Claude agent run, the workflow runner installs and activates RTK (output compression tool) before invoking the agent. RTK operates as a Claude Code PreToolUse hook that semantically compresses large command outputs, reducing token consumption.
+
+### Token Saving Resolution
+
+The effective token saving setting for a ticket is resolved using a priority chain:
+1. **Ticket override** — `ticket.tokenSaving` (nullable Boolean, per-ticket setting)
+2. **Project default** — `project.tokenSaving` (Boolean, default: false)
+3. **System fallback** — `false` (token saving disabled)
+
+The resolved value is passed to the workflow as the `token_saving` dispatch input when `true`.
+
+### RTK Activation
+
+**Scope**: All Claude agent stages — SPECIFY, PLAN, BUILD, VERIFY (including iterate), and quick-impl. Non-Claude agents are unaffected.
+
+**Activation flow**:
+1. Check effective token saving setting — if OFF or agent is not Claude, skip entirely (zero overhead)
+2. Download and install RTK binary from official source
+3. Activate RTK as a Claude Code PreToolUse hook so command outputs are intercepted and compressed
+4. Record activation status on the job (`tokenSavingStatus` field)
+5. Proceed with normal agent invocation
+
+**Graceful fallback**: Any failure in RTK installation or activation triggers a fallback — the run continues without compression, and the job is marked with `tokenSavingStatus: "fallback"` including the reason for failure. The run is never failed or degraded due to token saving errors.
+
+### Token Saving Status
+
+Each completed job records its token saving status via the `tokenSavingStatus` field:
+- `"active"` — RTK was installed and activated successfully
+- `"inactive"` — Token saving was effectively OFF for this run
+- `"fallback"` — Token saving was ON but RTK installation or activation failed; run proceeded without compression
+- `"n/a"` — Agent is not Claude (RTK is not applicable)
+
+### Workflow Inputs
+
+All agent-invoking workflows (`speckit.yml`, `quick-impl.yml`, `verify.yml`, `iterate.yml`) accept a `token_saving` input (string, required: false, default: `'false'`). When `'true'`, the runner's `run-agent.sh` activates the RTK block before Claude invocation, guarded by `TOKEN_SAVING=true && AGENT=CLAUDE`.
+
 ## Runtime Version Capture
 
 For every job that invokes an AI agent (Claude, Codex, Mistral, Gemini), the runner records two pieces of execution metadata so a job's behavior can be traced back to the exact toolchain that produced it:

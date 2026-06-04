@@ -162,6 +162,7 @@ Update job status (workflow-only endpoint).
 - `agentCliVersion`: Optional string, trimmed, length 1–100; same rules as `pluginVersion`.
 - `qualityScore`: Optional, integer 0-100 inclusive; only accepted when `status = "COMPLETED"` for verify jobs; ignored otherwise
 - `qualityScoreDetails`: Optional, JSON string with dimension sub-scores; stored alongside `qualityScore`
+- `tokenSavingStatus`: Optional, enum (`"active"`, `"inactive"`, `"fallback"`, `"n/a"`); records whether RTK output compression was active for this run. Set by the workflow runner alongside status updates. Persisted on the Job record for telemetry display.
 - State machine transitions enforced
 
 **Response** (200 OK):

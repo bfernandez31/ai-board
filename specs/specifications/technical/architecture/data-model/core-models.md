@@ -89,6 +89,7 @@ model Project {
   codexImplementModel  String?              @db.VarChar(50)
   codexQuickImplModel  String?              @db.VarChar(50)
   codexVerifyModel     String?              @db.VarChar(50)
+  tokenSaving          Boolean              @default(false)
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
 
@@ -139,6 +140,7 @@ model Project {
 - `codexImplementModel`: Codex model ID for IMPLEMENT jobs (max 50 chars, nullable)
 - `codexQuickImplModel`: Codex model ID for QUICK-IMPL jobs (max 50 chars, nullable)
 - `codexVerifyModel`: Codex model ID for VERIFY jobs (max 50 chars, nullable)
+- `tokenSaving`: Whether token saving via RTK is enabled by default for Claude agent runs in this project (Boolean, default: false). Controlled by the project owner. When ON, Claude agent runs activate RTK output compression unless overridden at the ticket level.
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
 
@@ -212,6 +214,7 @@ model Ticket {
   codexImplementModel     String?                   @db.VarChar(50)
   codexQuickImplModel     String?                   @db.VarChar(50)
   codexVerifyModel        String?                   @db.VarChar(50)
+  tokenSaving             Boolean?
   creatorId               String?                   @db.VarChar(255)
   creator                 User?                     @relation("TicketCreator", fields: [creatorId], references: [id], onDelete: SetNull)
   comments                Comment[]
@@ -268,6 +271,7 @@ model Ticket {
 - `codexImplementModel`: Optional Codex model override for IMPLEMENT jobs (max 50 chars, nullable)
 - `codexQuickImplModel`: Optional Codex model override for QUICK-IMPL jobs (max 50 chars, nullable)
 - `codexVerifyModel`: Optional Codex model override for VERIFY jobs (max 50 chars, nullable)
+- `tokenSaving`: Optional per-ticket token saving override (nullable Boolean). Three states: `true` (force ON), `false` (force OFF), or `null` (inherit from project default). Editable at any stage. Follows the same nullable inheritance pattern as `clarificationPolicy` and `agent`. Effective token saving resolved at dispatch time via `resolveEffectiveTokenSaving(ticket.tokenSaving, project.tokenSaving)`.
 - `creatorId`: User who created the ticket (nullable foreign key to `User.id`, max 255 chars). Nullable because legacy rows have no recorded creator. Populated by every ticket-creation code path (manual create, duplicate, full clone, MCP `create_ticket`, inbox-analysis spawner). `onDelete: SetNull` so user deletion leaves the ticket intact while clearing attribution
 - `attachments`: Image attachments (JSON array of TicketAttachment objects, default: empty array)
 - `previewUrl`: Vercel preview deployment URL (max 500 chars, nullable, HTTPS-only, Vercel domain pattern)
@@ -321,6 +325,7 @@ model Ticket {
 - Per-stage Codex model overrides (`codexSpecifyModel`, `codexPlanModel`, `codexImplementModel`, `codexQuickImplModel`, `codexVerifyModel`) are nullable; null means inherit the project's Codex value for that stage, which itself falls back to `gpt-5.5`
 - Both column sets are preserved (not cleared) when the ticket's agent is switched; each set becomes active only when its matching agent is the effective agent
 - Resolution at dispatch (per active agent): `ticket.{stageModel}` → `project.{stageModel}` → agent's global fallback (`claude-opus-4-8` for Claude, `gpt-5.5` for Codex); Mistral/Gemini dispatches do not emit a `model` input
+- Token saving override (`tokenSaving`) is nullable; null means inherit the project's `tokenSaving` value. Effective token saving resolved at dispatch: `ticket.tokenSaving ?? project.tokenSaving ?? false`. Editable at any stage (not locked like policy/agent). Preserved when a ticket is copied (simple copy) or cloned (full clone).
 - Ticket lookup supports both internal ID (backward compatibility) and ticket key (user-facing)
 - **Deletion**:
   - Tickets can be deleted from INBOX, SPECIFY, PLAN, BUILD, VERIFY stages (not SHIP or CLOSED)
@@ -364,6 +369,9 @@ model Job {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime
   workflowRunId   BigInt?   // GitHub Actions workflow run ID (populated on first RUNNING callback)
+
+  // Token saving status
+  tokenSavingStatus   String?   @db.VarChar(20)  // active | inactive | fallback | n/a
 
   // Claude telemetry metrics (aggregated from all API calls in the job)
   inputTokens         Int?      // Total input tokens consumed
@@ -416,6 +424,7 @@ model Job {
 - `completedAt`: Execution completion timestamp (nullable, set on terminal state)
 - `createdAt`: Record creation timestamp
 - `updatedAt`: Last modification timestamp
+- `tokenSavingStatus`: Records whether token saving (RTK compression) was active for this run (max 20 chars, nullable). Values: `"active"` (RTK installed and running), `"inactive"` (token saving effectively OFF), `"fallback"` (token saving ON but RTK failed; run proceeded without compression), `"n/a"` (non-Claude agent). Set by the workflow runner via the job status PATCH endpoint.
 - `inputTokens`: Total input tokens consumed by Claude API calls (nullable)
 - `outputTokens`: Total output tokens generated by Claude (nullable)
 - `cacheReadTokens`: Total cache read tokens (nullable)

@@ -404,6 +404,28 @@ Codex:
 - Project owners and members can read and update the AI Models configuration
 - API enforces the same "owner or member" rule as the clarification policy
 
+### Token Saving Configuration
+
+Projects have a configurable token saving setting that controls whether Claude agent runs use RTK (output compression tool) to reduce token consumption:
+
+**Purpose**:
+- Enables project-wide token saving via RTK compression for Claude agent runs
+- Reduces token consumption by semantically compressing large command outputs
+- Individual tickets can override the project default
+
+**Configuration**:
+- Accessible from project settings page as a "Token Saving" card
+- Toggle switch (ON/OFF) with descriptive text explaining the feature
+- Default: OFF for all projects
+- Only owners can modify (`verifyProjectOwnership`)
+- Changes apply to future runs only (in-progress runs unaffected)
+
+**Inheritance**:
+- New tickets inherit the project's `tokenSaving` when no ticket-level override is set
+- Ticket `tokenSaving` field is `null` by default (means: use project default)
+- Effective token saving resolved at workflow dispatch time via `resolveEffectiveTokenSaving(ticket.tokenSaving, project.tokenSaving)`
+- Resolution chain: ticket override → project default → OFF (global fallback)
+
 ### Clarification Policy Configuration
 
 Projects have a configurable default clarification policy:
