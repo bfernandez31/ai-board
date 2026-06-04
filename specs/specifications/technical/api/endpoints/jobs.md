@@ -150,6 +150,7 @@ Update job status (workflow-only endpoint).
   "workflowRunId": 12345678901,
   "pluginVersion": "0.4.2",
   "agentCliVersion": "1.2.3",
+  "tokenSavingOutcome": "ACTIVE",
   "qualityScore": 83,
   "qualityScoreDetails": "{\"dimensions\":{\"bugDetection\":{\"score\":90,\"weight\":0.30},\"compliance\":{\"score\":80,\"weight\":0.40},\"codeComments\":{\"score\":70,\"weight\":0.20},\"historicalContext\":{\"score\":85,\"weight\":0.10},\"specSync\":{\"score\":95,\"weight\":0.00}},\"finalScore\":83}"
 }
@@ -160,6 +161,7 @@ Update job status (workflow-only endpoint).
 - `workflowRunId`: Optional BigInt, positive integer; only accepted when `status = "RUNNING"`; written once (first-write-wins — ignored if `workflowRunId` already populated)
 - `pluginVersion`: Optional string, trimmed, length 1–50; only accepted when `status = "RUNNING"`; written once (first-write-wins — ignored if already populated). Accepted both on the initial RUNNING transition and on idempotent same-status PATCH calls so the runner can backfill after CLI installation.
 - `agentCliVersion`: Optional string, trimmed, length 1–100; same rules as `pluginVersion`.
+- `tokenSavingOutcome`: Optional, enum (`ACTIVE|INACTIVE|FELL_BACK`); the per-job RTK output-compression outcome. Reported on the RUNNING status channel and persisted first-write-wins; later PATCH calls never overwrite an already-populated value.
 - `qualityScore`: Optional, integer 0-100 inclusive; only accepted when `status = "COMPLETED"` for verify jobs; ignored otherwise
 - `qualityScoreDetails`: Optional, JSON string with dimension sub-scores; stored alongside `qualityScore`
 - State machine transitions enforced

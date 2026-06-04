@@ -221,6 +221,29 @@ enum JobStatus {
 - RUNNING → COMPLETED | FAILED | CANCELLED
 - Terminal states: COMPLETED, FAILED, CANCELLED
 
+### TokenSavingOutcome
+
+Per-job record of whether RTK output compression was active during a run.
+
+```prisma
+enum TokenSavingOutcome {
+  ACTIVE     // Effective value ON for a Claude run; RTK installed + PreToolUse hook activated successfully
+  INACTIVE   // Effective value OFF, or agent non-Claude (no install attempted)
+  FELL_BACK  // Effective value ON but install/activation failed; run continued without RTK
+}
+```
+
+| Value | Description |
+|-------|-------------|
+| `ACTIVE` | Token saving on and working — command outputs are being compressed before entering context |
+| `INACTIVE` | Token saving off, or the run used a non-Claude agent that ignores the setting |
+| `FELL_BACK` | Token saving was requested but the tool could not install or activate; the run proceeded uncompressed |
+
+**Usage**:
+- Stored on `Job.tokenSavingOutcome` (nullable; `null` for legacy/PENDING jobs that never reported)
+- Reported by the runner on the RUNNING status PATCH, first-write-wins; never changes afterward
+- Surfaced in job details so two runs can be compared without guessing whether the setting applied; `FELL_BACK` is rendered visually distinct from `INACTIVE`
+
 ### WorkflowType
 
 Workflow path tracking.

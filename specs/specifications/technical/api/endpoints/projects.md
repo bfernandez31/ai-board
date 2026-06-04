@@ -112,6 +112,7 @@ Fetch project details including clarification policy.
   "githubRepo": "ai-board",
   "userId": "user-abc123",
   "clarificationPolicy": "AUTO",
+  "tokenSaving": false,
   "createdAt": "2025-01-01T00:00:00.000Z",
   "updatedAt": "2025-01-15T10:30:00.000Z",
   "config": {
@@ -198,6 +199,7 @@ Update project details including clarification policy.
   "description": "Updated description",
   "deploymentUrl": "https://my-app.vercel.app",
   "clarificationPolicy": "CONSERVATIVE",
+  "tokenSaving": true,
   "specifyModel": "claude-opus-4-8",
   "planModel": "claude-opus-4-8",
   "implementModel": "claude-sonnet-4-6",
@@ -217,6 +219,7 @@ Update project details including clarification policy.
 - `description`: Optional, string or null
 - `deploymentUrl`: Optional, string or null (valid URL format)
 - `clarificationPolicy`: Optional, enum (AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE)
+- `tokenSaving`: Optional, boolean — the project's Token Saving default; applied only when present in the body (matches the other optional-field conditional pattern). Owner-only, like every other field on this route
 - `specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`: Optional, nullable — must be one of the whitelisted Claude model IDs (`claude-opus-4-8`, `claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise
 - `codexSpecifyModel`, `codexPlanModel`, `codexImplementModel`, `codexQuickImplModel`, `codexVerifyModel`: Optional, nullable — must be one of the whitelisted Codex model IDs (`gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex`, `gpt-5.2`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise
 - Claude and Codex column sets are independent: writing one never touches the other

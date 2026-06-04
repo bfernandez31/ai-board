@@ -92,6 +92,7 @@ export async function dispatchWorkflow(params: {
   - `ticket_id`, `ticketTitle`, `ticketDescription`, `branch`, `command`, `job_id`, `project_id`
   - `githubOwner`, `githubRepo` (required) - Target repository for checkout
   - `agent` (discrete input) - Resolved agent value for PLAN/BUILD commands
+  - `tokenSaving` (discrete boolean input) - Effective Token Saving value; threaded to the `TOKEN_SAVING` env var so the runner activates RTK output compression for Claude runs
   - `specifyPayload` - JSON payload for SPECIFY command (includes `agent` field)
 - **Repository Checkout**: Checks out external project repository. For the `specify` command, queries `gh api repos/<owner>/<repo>` to detect the repository's default branch and checks out that branch. For other commands, uses `inputs.branch`.
 - **Environment**: ubuntu-latest, Node.js 22.20.0, Python 3.11, PostgreSQL 14
@@ -104,7 +105,7 @@ export async function dispatchWorkflow(params: {
 **Quick-Impl Workflow** (`.github/workflows/quick-impl.yml`):
 - **Trigger**: `workflow_dispatch`
 - **Inputs**:
-  - `ticket_id`, `quickImplPayload`, `attachments`, `job_id`, `project_id`
+  - `ticket_id`, `quickImplPayload`, `attachments`, `job_id`, `project_id`, `agent`, `model`, `tokenSaving`
   - `githubRepository` (required) - Target repository in format owner/repo
 - **Repository Checkout**: Queries `gh api repos/<owner>/<repo>` to detect the repository's default branch, then checks out that branch with full history (`fetch-depth: 0`)
 - **Environment**: Same as speckit.yml (ubuntu-latest, Node.js, Python, PostgreSQL 14, Playwright)
@@ -117,7 +118,7 @@ export async function dispatchWorkflow(params: {
 **Verify Workflow** (`.github/workflows/verify.yml`):
 - **Trigger**: `workflow_dispatch`
 - **Inputs**:
-  - `ticket_id`, `job_id`, `project_id`, `branch`, `workflowType`, `agent`
+  - `ticket_id`, `job_id`, `project_id`, `branch`, `workflowType`, `agent`, `model`, `tokenSaving`
   - `githubOwner`, `githubRepo` (required) - Target repository for checkout
 - **Repository Checkout**: Checks out external project repository at specified branch
 - **Actions**: Runs tests and creates pull request
@@ -162,7 +163,7 @@ export async function dispatchWorkflow(params: {
 **Iterate Workflow** (`.github/workflows/iterate.yml`):
 - **Trigger**: `workflow_dispatch`
 - **Inputs**:
-  - `ticket_id`, `job_id`, `project_id`, `branch`, `issues_to_fix`, `agent`
+  - `ticket_id`, `job_id`, `project_id`, `branch`, `issues_to_fix`, `agent`, `tokenSaving`
   - `githubRepository` (required) - Target repository in format owner/repo
 - **Repository Checkout**: Checks out external project repository at specified branch
 - **Dispatch Source**: Triggered by ai-board-assist.yml for minor VERIFY fixes (<30% divergence)

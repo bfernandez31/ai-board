@@ -25,6 +25,7 @@ Each project contains:
   - Workflows execute on external project repositories
 - **Default Clarification Policy**: How AI resolves ambiguities during specification
 - **Default Agent**: Which AI agent executes workflow automation (CLAUDE or CODEX; default: CLAUDE)
+- **Token Saving**: Whether Claude runs compress large command outputs before they enter the agent's context (boolean, owner-controlled, default: OFF); tickets inherit this default unless they set their own override
 - **Has Specs**: Whether project specifications have been generated (boolean, default: false; set to true when a RETRO_SPEC job completes)
 - **Creation Timestamp**: When project was created
 - **Last Updated**: Most recent activity across all tickets
@@ -443,6 +444,28 @@ Projects have a configurable default clarification policy:
 - New projects default to AUTO policy
 - Provides reasonable defaults without configuration
 - Users can change at any time
+
+### Token Saving Configuration
+
+Projects have a configurable Token Saving default that reduces token consumption on Claude agent runs by compressing large command outputs before they enter the agent's context:
+
+**Purpose**:
+- Lower token usage (and cost) on command-heavy Claude stages, targeting a substantial reduction on command outputs
+- Applies to all tickets in the project unless an individual ticket overrides it
+- Has no effect on non-Claude agents — the setting is stored and shown but ignored at run time
+
+**Presentation**:
+- Surfaced as a dedicated "Token saving" card on the project settings page
+- Shows the current state (OFF by default) with a toggle
+
+**Configuration**:
+- Only the project owner can change the toggle (`verifyProjectOwnership`); members see it read-only/disabled, consistent with other owner-only settings
+- Changes apply to runs dispatched afterward — a run already executing is unaffected
+- Defaults to OFF for all new and existing projects (additive, no behavior change until enabled)
+
+**Inheritance**:
+- Tickets compute an effective token-saving value as the ticket override when set, otherwise the project default — mirroring the clarification-policy and agent inheritance model
+- A ticket with no override inherits the project default automatically
 
 ## User-Project Relationship
 

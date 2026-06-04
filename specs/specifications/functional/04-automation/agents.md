@@ -58,6 +58,34 @@ The effective agent is determined by a priority chain:
 - Some workflows remain explicitly agent-restricted even when ticket/project resolution returns a different default. For example, ai-board-assist code review remains Claude-only, and setup / retro-spec / health-scan may reject unsupported agents before dispatch.
 - Agent selection is read-only during dispatch — it flows from the database into workflow inputs without changing ticket state
 
+## Token Saving (RTK output compression)
+
+When a ticket's effective token-saving value is ON and the resolved agent is Claude, the runner activates output compression before invoking the agent so large command outputs are compressed before they enter Claude's context. This reduces token consumption on command-heavy stages without any new token-estimation machinery — savings are read from the existing per-job token telemetry (input, cache, peak context, average context).
+
+**Effective value**:
+- Resolved at workflow dispatch time as the ticket's token-saving override when set, otherwise the project's Token Saving default (Force OFF on the ticket wins over a project default of ON)
+- Threaded into the Claude dispatch inputs for the standard workflow stages (specify, plan, build, verify, ship) and quick-impl
+
+**Scope**:
+- Limited to the Claude agent. Codex, Mistral, and Gemini runs ignore the setting entirely and behave unchanged regardless of the effective value
+- When the effective value is OFF, the run behaves identically to before the feature existed — no install, no hook, no measurable overhead
+
+**Activation (Claude, effective ON)**:
+1. The runner installs the compression tool (RTK, "Rust Token Killer"), pinned to a known-good release rather than tracking "latest" so run behavior is reproducible
+2. It registers the tool as a Claude Code PreToolUse hook so qualifying command outputs are compressed before reaching the agent
+3. The agent runs as usual; when the tool cannot parse a command's output it passes the full output through unchanged, so the agent never loses information
+
+**Graceful fallback (never fails a run)**:
+- Token-saving activation is non-blocking: any network, install, or hook-activation failure is swallowed and the run continues without compression
+- A token-saving failure can NEVER cause a run to fail or degrade, and is not retried within the run
+
+**Per-job outcome**:
+- Each job records a token-saving outcome surfaced in job details and used to interpret token telemetry:
+  - **Active** — effective value ON for a Claude run and the tool installed + the hook activated successfully
+  - **Inactive** — effective value OFF, or the agent was non-Claude (no install attempted)
+  - **Fell back** — effective value ON but install/activation failed; the run continued without compression
+- The outcome is reported on the RUNNING status PATCH alongside the runtime-version capture and is first-write-wins; once set it never changes for that run
+
 ## Runtime Version Capture
 
 For every job that invokes an AI agent (Claude, Codex, Mistral, Gemini), the runner records two pieces of execution metadata so a job's behavior can be traced back to the exact toolchain that produced it:

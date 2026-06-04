@@ -676,6 +676,7 @@ sequenceDiagram
 - **Title**: Prefixed with "Copy of " (truncated to 100 chars if needed)
 - **Description**: Exact copy from source ticket
 - **Clarification Policy**: Copied from source (or null if source uses project default)
+- **Token Saving Override**: Copied from source (or null if inheriting the project default)
 - **Attachments**: All image attachments copied by reference (same URLs)
   - Uploaded images (Cloudinary) safely reference same URL
   - External URLs copied as-is
@@ -692,6 +693,7 @@ sequenceDiagram
 - **Description**: Exact copy from source ticket
 - **Stage**: Preserved from source ticket (SPECIFY, PLAN, BUILD, or VERIFY)
 - **Clarification Policy**: Copied from source
+- **Token Saving Override**: Copied from source (or null if inheriting the project default)
 - **Attachments**: Copied by reference (same as simple copy)
 - **Branch**: New Git branch created from source branch
   - Format: `{TICKET_NUMBER}-{slug}` (e.g., "219-add-login-button")
@@ -946,6 +948,49 @@ All 10 fields are always returned; `null` means "inherit from project default" a
 - `400`: Empty body, `INVALID_MODEL_ID`, `MIXED_AGENT_PAYLOAD`, or `resetAll` combined with field values
 - `401`: Not authenticated
 - `404`: Ticket or project not found, or no access
+
+### PATCH /api/projects/:projectId/tickets/:id/token-saving
+
+Set or clear the ticket's Token Saving override. Modeled on `model-config/route.ts` — deliberately **without** an INBOX stage gate, because the override governs every future run and is editable at any stage when no run is active.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (`verifyTicketAccess`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body**:
+```json
+{
+  "tokenSaving": true,
+  "version": 7
+}
+```
+
+**Validation**:
+- `tokenSaving`: Required, `true` (Force ON) | `false` (Force OFF) | `null` (Inherit project default)
+- `version`: Required — optimistic concurrency, matching the ticket PATCH contract
+
+**Response** (200 OK):
+```json
+{
+  "tokenSaving": true,
+  "version": 8
+}
+```
+
+**Behavior**:
+- Persists `Ticket.tokenSaving`; setting `null` clears the override so the ticket falls back to the project default
+- The change applies only to runs dispatched afterward — a run already executing is unaffected
+- Editable at any stage; there is no INBOX gate (unlike the agent / clarification-policy overrides)
+
+**Errors**:
+- `400`: Validation failure (`VALIDATION_ERROR`)
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket or project not found
+- `409`: `ACTIVE_RUN` — a RUNNING or PENDING job exists on the ticket (`{ "error": "Cannot change token saving while a run is in progress", "code": "ACTIVE_RUN" }`); or `VERSION_CONFLICT` — stale `version`
 
 ### GET /api/projects/:projectId/tickets/search
 
