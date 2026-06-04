@@ -52,6 +52,19 @@ function disabledLogsReason(log: TicketJobLogSummary | null): string | null {
   return null;
 }
 
+function tokenSavingStatusTone(status: string): string {
+  if (status === 'active') return 'text-green-500';
+  if (status === 'fallback') return 'text-amber-500';
+  return 'text-muted-foreground';
+}
+
+function tokenSavingStatusLabel(status: string): string {
+  if (status === 'active') return 'Active';
+  if (status === 'inactive') return 'Inactive';
+  if (status === 'fallback') return 'Fallback';
+  return status;
+}
+
 /**
  * Status configuration type
  */
@@ -266,15 +279,8 @@ function JobRow({
                   {job.tokenSavingStatus && job.tokenSavingStatus !== 'n/a' && (
                     <div data-testid={`job-token-saving-status-${job.id}`}>
                       <span className="text-ctp-overlay0">Token saving:</span>
-                      <span className={`ml-2 font-medium text-xs ${
-                        job.tokenSavingStatus === 'active' ? 'text-green-500' :
-                        job.tokenSavingStatus === 'fallback' ? 'text-amber-500' :
-                        'text-muted-foreground'
-                      }`}>
-                        {job.tokenSavingStatus === 'active' ? 'Active' :
-                         job.tokenSavingStatus === 'inactive' ? 'Inactive' :
-                         job.tokenSavingStatus === 'fallback' ? 'Fallback' :
-                         job.tokenSavingStatus}
+                      <span className={`ml-2 font-medium text-xs ${tokenSavingStatusTone(job.tokenSavingStatus)}`}>
+                        {tokenSavingStatusLabel(job.tokenSavingStatus)}
                       </span>
                     </div>
                   )}

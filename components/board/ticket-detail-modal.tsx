@@ -914,6 +914,11 @@ export function TicketDetailModal({
   const effectiveAgent = localTicket?.agent ?? localTicket?.project?.defaultAgent;
   const isAgentOverride = localTicket?.agent !== null && localTicket?.agent !== undefined;
 
+  const isTokenSavingOverride = localTicket?.tokenSaving !== null && localTicket?.tokenSaving !== undefined;
+  const showTokenSavingBadge =
+    localTicket?.tokenSaving === true ||
+    (localTicket?.tokenSaving == null && Boolean(localTicket?.project?.tokenSaving));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -1002,9 +1007,9 @@ export function TicketDetailModal({
                   {!isAgentOverride && <span className="opacity-70">(default)</span>}
                 </Badge>
               )}
-              {(localTicket?.tokenSaving === true || (localTicket?.tokenSaving == null && localTicket?.project?.tokenSaving)) && (
+              {showTokenSavingBadge && (
                 <TokenSavingBadge
-                  isOverride={localTicket?.tokenSaving !== null && localTicket?.tokenSaving !== undefined}
+                  isOverride={isTokenSavingOverride}
                   className="text-xs py-0.5 px-2 font-normal"
                 />
               )}

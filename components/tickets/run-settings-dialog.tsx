@@ -72,6 +72,16 @@ interface RunSettingsDialogProps {
 
 type TokenSavingSelection = 'project-default' | 'true' | 'false';
 
+function toTokenSavingSelection(value: boolean | null): TokenSavingSelection {
+  if (value === null) return 'project-default';
+  return value ? 'true' : 'false';
+}
+
+function fromTokenSavingSelection(selection: TokenSavingSelection): boolean | null {
+  if (selection === 'project-default') return null;
+  return selection === 'true';
+}
+
 export function RunSettingsDialog({
   open,
   onOpenChange,
@@ -94,33 +104,26 @@ export function RunSettingsDialog({
   const [modelSubOpen, setModelSubOpen] = React.useState(false);
 
   const [tokenSavingSelection, setTokenSavingSelection] = React.useState<TokenSavingSelection>(
-    currentTokenSaving === null ? 'project-default' : currentTokenSaving ? 'true' : 'false'
+    toTokenSavingSelection(currentTokenSaving)
   );
   const [isSavingTokenSaving, setIsSavingTokenSaving] = React.useState(false);
   const [tokenSavingError, setTokenSavingError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (open) {
-      setTokenSavingSelection(
-        currentTokenSaving === null ? 'project-default' : currentTokenSaving ? 'true' : 'false'
-      );
+      setTokenSavingSelection(toTokenSavingSelection(currentTokenSaving));
       setTokenSavingError(null);
     }
   }, [open, currentTokenSaving]);
 
-  const tokenSavingHasChanges = React.useMemo(() => {
-    const currentAsSelection: TokenSavingSelection =
-      currentTokenSaving === null ? 'project-default' : currentTokenSaving ? 'true' : 'false';
-    return tokenSavingSelection !== currentAsSelection;
-  }, [tokenSavingSelection, currentTokenSaving]);
+  const tokenSavingHasChanges =
+    tokenSavingSelection !== toTokenSavingSelection(currentTokenSaving);
 
   const handleSaveTokenSaving = async () => {
     setIsSavingTokenSaving(true);
     setTokenSavingError(null);
     try {
-      const value = tokenSavingSelection === 'project-default' ? null :
-        tokenSavingSelection === 'true';
-      await onSaveTokenSaving(value);
+      await onSaveTokenSaving(fromTokenSavingSelection(tokenSavingSelection));
       onOpenChange(false);
     } catch {
       setTokenSavingError('Failed to save token saving setting');

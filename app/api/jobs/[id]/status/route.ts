@@ -173,7 +173,7 @@ export async function PATCH(
       // PATCHes with different values cannot clobber each other based on a
       // stale read.
       if (requestedStatus === 'RUNNING') {
-        const { pluginVersion, agentCliVersion } = validationResult.data;
+        const { pluginVersion, agentCliVersion, tokenSavingStatus } = validationResult.data;
         if (pluginVersion) {
           await prisma.job.updateMany({
             where: { id: jobId, pluginVersion: null },
@@ -186,7 +186,6 @@ export async function PATCH(
             data: { agentCliVersion },
           });
         }
-        const { tokenSavingStatus } = validationResult.data;
         if (tokenSavingStatus) {
           await prisma.job.updateMany({
             where: { id: jobId, tokenSavingStatus: null },
