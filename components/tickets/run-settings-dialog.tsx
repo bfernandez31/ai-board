@@ -57,6 +57,18 @@ const TOKEN_SAVING_INHERIT = 'inherit';
 const TOKEN_SAVING_ON = 'on';
 const TOKEN_SAVING_OFF = 'off';
 
+/** Map a ticket override (`true`/`false`/`null`) to its Select value. */
+function tokenSavingToSelectValue(tokenSaving: boolean | null): string {
+  if (tokenSaving === null) return TOKEN_SAVING_INHERIT;
+  return tokenSaving ? TOKEN_SAVING_ON : TOKEN_SAVING_OFF;
+}
+
+/** Map a Select value back to a ticket override (`null` = inherit/clear). */
+function selectValueToTokenSaving(value: string): boolean | null {
+  if (value === TOKEN_SAVING_INHERIT) return null;
+  return value === TOKEN_SAVING_ON;
+}
+
 export interface RunSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -118,16 +130,10 @@ export function RunSettingsDialog({
   const isPolicyOverride = ticket.clarificationPolicy != null;
   const overriddenModelCount = STAGE_MODEL_FIELDS.filter((k) => ticket[k] != null).length;
 
-  const tokenSavingValue =
-    ticket.tokenSaving === null
-      ? TOKEN_SAVING_INHERIT
-      : ticket.tokenSaving
-        ? TOKEN_SAVING_ON
-        : TOKEN_SAVING_OFF;
+  const tokenSavingValue = tokenSavingToSelectValue(ticket.tokenSaving);
 
   async function handleTokenSavingChange(value: string) {
-    const next =
-      value === TOKEN_SAVING_INHERIT ? null : value === TOKEN_SAVING_ON ? true : false;
+    const next = selectValueToTokenSaving(value);
     setTokenSavingSaving(true);
     setTokenSavingError(null);
     try {
