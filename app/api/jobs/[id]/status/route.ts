@@ -140,6 +140,7 @@ export async function PATCH(
         workflowRunId: true,
         pluginVersion: true,
         agentCliVersion: true,
+        tokenSavingStatus: true,
       },
     });
 
@@ -183,6 +184,13 @@ export async function PATCH(
           await prisma.job.updateMany({
             where: { id: jobId, agentCliVersion: null },
             data: { agentCliVersion },
+          });
+        }
+        const { tokenSavingStatus } = validationResult.data;
+        if (tokenSavingStatus) {
+          await prisma.job.updateMany({
+            where: { id: jobId, tokenSavingStatus: null },
+            data: { tokenSavingStatus },
           });
         }
       }
@@ -236,6 +244,7 @@ export async function PATCH(
       workflowRunId?: bigint;
       pluginVersion?: string;
       agentCliVersion?: string;
+      tokenSavingStatus?: string;
     } = {
       status: requestedStatus,
     };
@@ -252,6 +261,10 @@ export async function PATCH(
     // AIB-779: capture runtime versions on RUNNING (first-write-wins).
     // Runner posts these once at startup; later transitions don't overwrite.
     Object.assign(updateData, buildVersionPatch(requestedStatus, validationResult.data, job));
+
+    if (requestedStatus === 'RUNNING' && validationResult.data.tokenSavingStatus && !job.tokenSavingStatus) {
+      updateData.tokenSavingStatus = validationResult.data.tokenSavingStatus;
+    }
 
     if (isTerminalState) {
       updateData.completedAt = new Date();

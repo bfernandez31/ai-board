@@ -31,10 +31,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T003 [P] Add `tokenSaving: z.boolean().optional()` to `projectUpdateSchema` in app/lib/schemas/clarification-policy.ts
-- [ ] T004 [P] Add `tokenSaving: z.boolean().nullable().optional()` to `patchTicketSchema` and `tokenSaving: z.boolean().nullable().optional()` to `ticketResponseSchema` in lib/validations/ticket.ts
-- [ ] T005 [P] Add `resolveEffectiveTokenSaving(ticket): boolean` function to lib/workflows/transition.ts following the `resolveEffectiveAgent` pattern (ticket.tokenSaving ?? project.tokenSaving ?? false)
-- [ ] T006 [P] Add `tokenSavingStatus: z.enum(["active", "inactive", "fallback", "n/a"]).optional()` to the job status PATCH validation in app/api/jobs/[id]/status/route.ts and persist the field on update
+- [x] T003 [P] Add `tokenSaving: z.boolean().optional()` to `projectUpdateSchema` in app/lib/schemas/clarification-policy.ts
+- [x] T004 [P] Add `tokenSaving: z.boolean().nullable().optional()` to `patchTicketSchema` and `tokenSaving: z.boolean().nullable().optional()` to `ticketResponseSchema` in lib/validations/ticket.ts
+- [x] T005 [P] Add `resolveEffectiveTokenSaving(ticket): boolean` function to lib/workflows/transition.ts following the `resolveEffectiveAgent` pattern (ticket.tokenSaving ?? project.tokenSaving ?? false)
+- [x] T006 [P] Add `tokenSavingStatus: z.enum(["active", "inactive", "fallback", "n/a"]).optional()` to the job status PATCH validation in app/api/jobs/[id]/status/route.ts and persist the field on update
 
 **Checkpoint**: All validation schemas accept token saving fields. Resolution function is available for dispatch logic.
 

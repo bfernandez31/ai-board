@@ -18,6 +18,7 @@ export const projectUpdateSchema = z.object({
   codexImplementModel: codexModelIdSchema.nullable().optional(),
   codexQuickImplModel: codexModelIdSchema.nullable().optional(),
   codexVerifyModel: codexModelIdSchema.nullable().optional(),
+  tokenSaving: z.boolean().optional(),
 });
 
 export const ticketClarificationPolicySchema = z.nativeEnum(ClarificationPolicy).nullable();

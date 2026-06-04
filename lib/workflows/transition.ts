@@ -60,6 +60,11 @@ export function resolveEffectiveAgent(ticket: TicketWithProject): Agent {
   return ticket.agent ?? ticket.project.defaultAgent ?? Agent.CLAUDE;
 }
 
+/** Resolve effective token saving: ticket override > project default > false */
+export function resolveEffectiveTokenSaving(ticket: TicketWithProject): boolean {
+  return ticket.tokenSaving ?? ticket.project.tokenSaving ?? false;
+}
+
 /** SPECIFY, PLAN, BUILD require validation; INBOX, VERIFY, SHIP do not */
 function shouldValidateJobCompletion(currentStage: Stage): boolean {
   const stagesRequiringValidation: Stage[] = [Stage.SPECIFY, Stage.PLAN, Stage.BUILD];
