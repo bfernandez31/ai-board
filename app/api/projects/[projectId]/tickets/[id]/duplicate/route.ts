@@ -118,6 +118,7 @@ function serializeTicket(ticket: Ticket) {
     workflowType: ticket.workflowType,
     attachments: ticket.attachments,
     clarificationPolicy: ticket.clarificationPolicy,
+    tokenSaving: ticket.tokenSaving,
     createdAt: ticket.createdAt.toISOString(),
     updatedAt: ticket.updatedAt.toISOString(),
   };

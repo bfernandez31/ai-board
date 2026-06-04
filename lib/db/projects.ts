@@ -219,6 +219,7 @@ export async function updateProject(
     codexImplementModel?: string | null | undefined;
     codexQuickImplModel?: string | null | undefined;
     codexVerifyModel?: string | null | undefined;
+    tokenSaving?: boolean | undefined;
   }
 ) {
   const userId = await requireAuth();
@@ -257,6 +258,7 @@ export async function updateProject(
   if (data.codexImplementModel !== undefined) updateData.codexImplementModel = data.codexImplementModel;
   if (data.codexQuickImplModel !== undefined) updateData.codexQuickImplModel = data.codexQuickImplModel;
   if (data.codexVerifyModel !== undefined) updateData.codexVerifyModel = data.codexVerifyModel;
+  if (data.tokenSaving !== undefined) updateData.tokenSaving = data.tokenSaving;
 
   return prisma.project.update({
     where: { id: projectId },

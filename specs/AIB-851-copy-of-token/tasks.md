@@ -48,14 +48,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Extend tests/integration/projects/settings.test.ts with token saving tests: PATCH project with `tokenSaving: true` persists and returns the value; non-owner cannot modify tokenSaving; default is false for new projects
-- [ ] T008 [P] [US1] Extend tests/unit/workflows/model-resolution.test.ts with `resolveEffectiveTokenSaving` tests: returns ticket override when set, falls back to project default when ticket is null, falls back to false when both are null
+- [x] T007 [P] [US1] Extend tests/integration/projects/settings.test.ts with token saving tests: PATCH project with `tokenSaving: true` persists and returns the value; non-owner cannot modify tokenSaving; default is false for new projects
+- [x] T008 [P] [US1] Extend tests/unit/workflows/model-resolution.test.ts with `resolveEffectiveTokenSaving` tests: returns ticket override when set, falls back to project default when ticket is null, falls back to false when both are null
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Extend PATCH handler in app/api/projects/[projectId]/route.ts to accept and persist the `tokenSaving` field from the validated body
-- [ ] T010 [US1] Create components/settings/token-saving-card.tsx — client component following ClarificationPolicyCard pattern: Switch toggle, description text, owner-only editability, saves via PATCH /api/projects/[projectId]
-- [ ] T011 [US1] Add TokenSavingCard to app/projects/[projectId]/settings/page.tsx after the existing settings cards
+- [x] T009 [US1] Extend PATCH handler in app/api/projects/[projectId]/route.ts to accept and persist the `tokenSaving` field from the validated body
+- [x] T010 [US1] Create components/settings/token-saving-card.tsx — client component following ClarificationPolicyCard pattern: Switch toggle, description text, owner-only editability, saves via PATCH /api/projects/[projectId]
+- [x] T011 [US1] Add TokenSavingCard to app/projects/[projectId]/settings/page.tsx after the existing settings cards
 
 **Checkpoint**: Project-level token saving toggle works end-to-end. Story 1 is independently testable.
 
@@ -69,13 +69,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T012 [P] [US2] Extend tests/integration/tickets/duplicate.test.ts with token saving preservation tests: simple copy preserves tokenSaving override; full clone preserves tokenSaving override; tokenSaving null (inherit) is preserved as null
+- [x] T012 [P] [US2] Extend tests/integration/tickets/duplicate.test.ts with token saving preservation tests: simple copy preserves tokenSaving override; full clone preserves tokenSaving override; tokenSaving null (inherit) is preserved as null
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] Extend GET and PATCH handlers in app/api/projects/[projectId]/tickets/[id]/route.ts to accept `tokenSaving` in PATCH and return `tokenSaving` plus `project.tokenSaving` in GET response
-- [ ] T014 [US2] Extend `duplicateTicket()` and `fullCloneTicket()` in lib/db/tickets.ts to copy `tokenSaving` field from source ticket
-- [ ] T015 [US2] Extend `serializeTicket()` in app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts to include the `tokenSaving` field in the response
+- [x] T013 [US2] Extend GET and PATCH handlers in app/api/projects/[projectId]/tickets/[id]/route.ts to accept `tokenSaving` in PATCH and return `tokenSaving` plus `project.tokenSaving` in GET response
+- [x] T014 [US2] Extend `duplicateTicket()` and `fullCloneTicket()` in lib/db/tickets.ts to copy `tokenSaving` field from source ticket
+- [x] T015 [US2] Extend `serializeTicket()` in app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts to include the `tokenSaving` field in the response
 
 **Checkpoint**: Ticket-level token saving override works via API. Clone/copy preserves the setting.
 

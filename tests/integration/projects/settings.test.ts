@@ -374,6 +374,60 @@ describe('Project Settings - clarificationPolicy', () => {
     });
   });
 
+  describe('PATCH /api/projects/:id - tokenSaving updates', () => {
+    it('should default tokenSaving to false', async () => {
+      const response = await ctx.api.get<{ tokenSaving: boolean }>(
+        `/api/projects/${ctx.projectId}`
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.tokenSaving).toBe(false);
+    });
+
+    it('should update tokenSaving to true', async () => {
+      const response = await ctx.api.patch<{ tokenSaving: boolean }>(
+        `/api/projects/${ctx.projectId}`,
+        { tokenSaving: true }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.tokenSaving).toBe(true);
+
+      const dbProject = await prisma.project.findUnique({ where: { id: ctx.projectId } });
+      expect(dbProject?.tokenSaving).toBe(true);
+    });
+
+    it('should update tokenSaving back to false', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { tokenSaving: true },
+      });
+
+      const response = await ctx.api.patch<{ tokenSaving: boolean }>(
+        `/api/projects/${ctx.projectId}`,
+        { tokenSaving: false }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.tokenSaving).toBe(false);
+    });
+
+    it('should not affect tokenSaving when updating other fields', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { tokenSaving: true },
+      });
+
+      const response = await ctx.api.patch<{ tokenSaving: boolean }>(
+        `/api/projects/${ctx.projectId}`,
+        { name: '[e2e] Updated Project Name' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.tokenSaving).toBe(true);
+    });
+  });
+
   describe('PATCH /api/projects/:id - Response Format', () => {
     it('should include all expected project fields in response', async () => {
       const response = await ctx.api.get<{

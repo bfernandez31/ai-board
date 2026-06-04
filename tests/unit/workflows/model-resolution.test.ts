@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { Agent } from '@prisma/client';
+import { Agent, type Project, type Ticket } from '@prisma/client';
 import { resolveStageModel, type TicketLikeForResolution } from '@/lib/workflows/model-resolution';
+import { resolveEffectiveTokenSaving, type TicketWithProject } from '@/lib/workflows/transition';
 import { CLAUDE_GLOBAL_FALLBACK_MODEL } from '@/lib/models/claude-models';
 import { CODEX_GLOBAL_FALLBACK_MODEL } from '@/lib/models/codex-models';
 
@@ -218,5 +219,35 @@ describe('resolveStageModel — Codex', () => {
     };
     // Codex columns are populated, but Claude columns are not -> Claude fallback
     expect(resolveStageModel(ticket, 'implement', Agent.CLAUDE)).toBe(CLAUDE_GLOBAL_FALLBACK_MODEL);
+  });
+});
+
+describe('resolveEffectiveTokenSaving', () => {
+  function makeTicket(ticketTokenSaving: boolean | null, projectTokenSaving: boolean): TicketWithProject {
+    return {
+      tokenSaving: ticketTokenSaving,
+      project: { tokenSaving: projectTokenSaving },
+    } as TicketWithProject;
+  }
+
+  it('returns ticket override when set to true', () => {
+    expect(resolveEffectiveTokenSaving(makeTicket(true, false))).toBe(true);
+  });
+
+  it('returns ticket override when set to false', () => {
+    expect(resolveEffectiveTokenSaving(makeTicket(false, true))).toBe(false);
+  });
+
+  it('falls back to project default when ticket is null', () => {
+    expect(resolveEffectiveTokenSaving(makeTicket(null, true))).toBe(true);
+  });
+
+  it('falls back to project default false when ticket is null', () => {
+    expect(resolveEffectiveTokenSaving(makeTicket(null, false))).toBe(false);
+  });
+
+  it('falls back to false when both are falsy', () => {
+    const ticket = { tokenSaving: null, project: {} } as unknown as TicketWithProject;
+    expect(resolveEffectiveTokenSaving(ticket)).toBe(false);
   });
 });

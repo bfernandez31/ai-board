@@ -8,6 +8,7 @@ import { AIModelsCard } from '@/components/settings/ai-models-card';
 import { Button } from '@/components/ui/button';
 import { ConstitutionCard } from '@/components/settings/constitution-card';
 import { ConfigCard } from '@/components/settings/config-card';
+import { TokenSavingCard } from '@/components/settings/token-saving-card';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -93,6 +94,13 @@ export default async function ProjectSettingsPage({
               codexImplementModel: project.codexImplementModel,
               codexQuickImplModel: project.codexQuickImplModel,
               codexVerifyModel: project.codexVerifyModel,
+            }}
+          />
+
+          <TokenSavingCard
+            project={{
+              id: project.id,
+              tokenSaving: project.tokenSaving,
             }}
           />
 

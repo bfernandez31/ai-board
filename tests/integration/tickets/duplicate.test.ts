@@ -122,6 +122,80 @@ describe('Ticket Duplication', () => {
     });
   });
 
+  describe('Token saving preservation during copy', () => {
+    it('should preserve tokenSaving override on simple copy', async () => {
+      const prisma = getPrismaClient();
+      const sourceTicket = await prisma.ticket.create({
+        data: {
+          title: '[e2e] Token Saving Copy',
+          description: 'Test token saving copy',
+          stage: 'SPECIFY',
+          projectId: ctx.projectId,
+          ticketNumber: ++ticketCounter,
+          ticketKey: `T-${ticketCounter}`,
+          workflowType: 'FULL',
+          tokenSaving: true,
+        },
+      });
+
+      const response = await ctx.api.post<{
+        id: number;
+        tokenSaving: boolean | null;
+      }>(`/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/duplicate`, {});
+
+      expect(response.status).toBe(201);
+      expect(response.data.tokenSaving).toBe(true);
+    });
+
+    it('should preserve tokenSaving null (inherit) on simple copy', async () => {
+      const prisma = getPrismaClient();
+      const sourceTicket = await prisma.ticket.create({
+        data: {
+          title: '[e2e] Token Saving Inherit Copy',
+          description: 'Test token saving inherit',
+          stage: 'INBOX',
+          projectId: ctx.projectId,
+          ticketNumber: ++ticketCounter,
+          ticketKey: `T-${ticketCounter}`,
+          workflowType: 'FULL',
+          tokenSaving: null,
+        },
+      });
+
+      const response = await ctx.api.post<{
+        id: number;
+        tokenSaving: boolean | null;
+      }>(`/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/duplicate`, {});
+
+      expect(response.status).toBe(201);
+      expect(response.data.tokenSaving).toBeNull();
+    });
+
+    it('should preserve tokenSaving false override on simple copy', async () => {
+      const prisma = getPrismaClient();
+      const sourceTicket = await prisma.ticket.create({
+        data: {
+          title: '[e2e] Token Saving Off Copy',
+          description: 'Test token saving off',
+          stage: 'BUILD',
+          projectId: ctx.projectId,
+          ticketNumber: ++ticketCounter,
+          ticketKey: `T-${ticketCounter}`,
+          workflowType: 'FULL',
+          tokenSaving: false,
+        },
+      });
+
+      const response = await ctx.api.post<{
+        id: number;
+        tokenSaving: boolean | null;
+      }>(`/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/duplicate`, {});
+
+      expect(response.status).toBe(201);
+      expect(response.data.tokenSaving).toBe(false);
+    });
+  });
+
   describe('POST /api/projects/:projectId/tickets/:id/duplicate (Full Clone)', () => {
     it('should return 400 when source ticket has no branch for full clone', async () => {
       const prisma = getPrismaClient();

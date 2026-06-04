@@ -325,6 +325,7 @@ const VIEW_PROJECT_SELECT = {
   name: true,
   clarificationPolicy: true,
   defaultAgent: true,
+  tokenSaving: true,
   githubOwner: true,
   githubRepo: true,
 } as const;
@@ -385,6 +386,7 @@ export interface TicketInlinePatch {
   autoMode?: boolean;
   clarificationPolicy?: ClarificationPolicy | null;
   agent?: Agent | null;
+  tokenSaving?: boolean | null;
 }
 
 /** Discriminated result for inline PATCH. */
@@ -667,6 +669,7 @@ export async function duplicateTicket(
     attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
     clarificationPolicy: sourceTicket.clarificationPolicy,
     agent: sourceTicket.agent,
+    tokenSaving: sourceTicket.tokenSaving,
     ...(options.creatorId != null && { creatorId: options.creatorId }),
   };
 
@@ -734,6 +737,7 @@ export async function fullCloneTicket(
         attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
         clarificationPolicy: sourceTicket.clarificationPolicy,
         agent: sourceTicket.agent,
+        tokenSaving: sourceTicket.tokenSaving,
         ...(options.creatorId != null && { creatorId: options.creatorId }),
       },
     });
