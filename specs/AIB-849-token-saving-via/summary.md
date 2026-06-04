@@ -1,6 +1,6 @@
 # Implementation Summary: Token saving via RTK + unified per-ticket Run settings
 
-**Branch**: `AIB-849-token-saving-via` | **Date**: 2026-06-03
+**Branch**: `AIB-849-token-saving-via` | **Date**: 2026-06-04
 **Spec**: [spec.md](spec.md)
 
 ## Changes Summary

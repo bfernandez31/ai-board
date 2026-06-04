@@ -115,6 +115,12 @@ export async function PATCH(
           { status: 401 }
         );
       }
+      if (error.message === 'Forbidden') {
+        return NextResponse.json(
+          { error: 'Only the project owner can change token saving', code: 'FORBIDDEN' },
+          { status: 403 }
+        );
+      }
       if (error.message === 'Project not found') {
         return NextResponse.json(
           { error: 'Project not found' },

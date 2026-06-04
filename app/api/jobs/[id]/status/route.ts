@@ -14,17 +14,29 @@ import { handleJobCompletionAutoTransition } from '@/app/lib/tickets/auto-mode';
 // them once the CLI is installed, which can be on the initial RUNNING PATCH or
 // on a follow-up idempotent same-status PATCH — so this helper is reused by
 // both paths.
-type VersionPatch = { pluginVersion?: string; agentCliVersion?: string };
+type TokenSavingOutcome = 'ACTIVE' | 'INACTIVE' | 'FELL_BACK';
+
+type VersionPatch = {
+  pluginVersion?: string;
+  agentCliVersion?: string;
+  // AIB-849: per-job token-saving outcome, reported on RUNNING (first-write-wins).
+  tokenSavingOutcome?: TokenSavingOutcome;
+};
 
 function buildVersionPatch(
   requestedStatus: JobStatus,
   data: JobStatusUpdate,
-  job: { pluginVersion: string | null; agentCliVersion: string | null }
+  job: {
+    pluginVersion: string | null;
+    agentCliVersion: string | null;
+    tokenSavingOutcome: TokenSavingOutcome | null;
+  }
 ): VersionPatch {
   if (requestedStatus !== 'RUNNING') return {};
   const patch: VersionPatch = {};
   if (data.pluginVersion && !job.pluginVersion) patch.pluginVersion = data.pluginVersion;
   if (data.agentCliVersion && !job.agentCliVersion) patch.agentCliVersion = data.agentCliVersion;
+  if (data.tokenSavingOutcome && !job.tokenSavingOutcome) patch.tokenSavingOutcome = data.tokenSavingOutcome;
   return patch;
 }
 
@@ -140,6 +152,7 @@ export async function PATCH(
         workflowRunId: true,
         pluginVersion: true,
         agentCliVersion: true,
+        tokenSavingOutcome: true,
       },
     });
 
@@ -183,6 +196,14 @@ export async function PATCH(
           await prisma.job.updateMany({
             where: { id: jobId, agentCliVersion: null },
             data: { agentCliVersion },
+          });
+        }
+        // AIB-849: backfill token-saving outcome (first-write-wins).
+        const { tokenSavingOutcome } = validationResult.data;
+        if (tokenSavingOutcome) {
+          await prisma.job.updateMany({
+            where: { id: jobId, tokenSavingOutcome: null },
+            data: { tokenSavingOutcome },
           });
         }
       }
@@ -236,6 +257,7 @@ export async function PATCH(
       workflowRunId?: bigint;
       pluginVersion?: string;
       agentCliVersion?: string;
+      tokenSavingOutcome?: TokenSavingOutcome;
     } = {
       status: requestedStatus,
     };

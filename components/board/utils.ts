@@ -102,6 +102,7 @@ export function toBoardSnapshotJobs(
       turnCount: job.turnCount,
       pluginVersion: job.pluginVersion,
       agentCliVersion: job.agentCliVersion,
+      tokenSavingOutcome: job.tokenSavingOutcome,
     } satisfies Job;
   });
 }

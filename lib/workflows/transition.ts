@@ -60,6 +60,15 @@ export function resolveEffectiveAgent(ticket: TicketWithProject): Agent {
   return ticket.agent ?? ticket.project.defaultAgent ?? Agent.CLAUDE;
 }
 
+/**
+ * Resolve the effective token-saving value: ticket override > project default.
+ * `??` falls through only on `null` (Inherit), so a `false` ticket override
+ * (Force OFF) correctly wins over a `true` project default (FR-003).
+ */
+export function resolveEffectiveTokenSaving(ticket: TicketWithProject): boolean {
+  return ticket.tokenSaving ?? ticket.project.tokenSaving;
+}
+
 /** SPECIFY, PLAN, BUILD require validation; INBOX, VERIFY, SHIP do not */
 function shouldValidateJobCompletion(currentStage: Stage): boolean {
   const stagesRequiringValidation: Stage[] = [Stage.SPECIFY, Stage.PLAN, Stage.BUILD];
@@ -180,6 +189,10 @@ export async function handleTicketTransition(
 
     const effectiveAgent = resolveEffectiveAgent(ticket);
     const resolvedModel = resolveStageModel(ticket, command, effectiveAgent);
+    // AIB-849: compute the effective token-saving value once, at dispatch time.
+    // Threaded into the Claude standard/quick/verify payloads; the runner never
+    // recomputes it. RTK activation is Claude-only (FR-007).
+    const effectiveTokenSaving = resolveEffectiveTokenSaving(ticket);
     if (!supportsWorkflowCommand(effectiveAgent, command)) {
       return {
         success: false,
@@ -282,6 +295,7 @@ export async function handleTicketTransition(
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            tokenSaving: String(effectiveTokenSaving),
             ...(resolvedModel && { model: resolvedModel }),
             ...getProjectServiceInputs(ticket.project),
           };
@@ -300,6 +314,7 @@ export async function handleTicketTransition(
             workflowType: ticket.workflowType,
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            tokenSaving: String(effectiveTokenSaving),
             ...(resolvedModel && { model: resolvedModel }),
             ...getProjectServiceInputs(ticket.project),
           };
@@ -314,6 +329,7 @@ export async function handleTicketTransition(
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
+            tokenSaving: String(effectiveTokenSaving),
             ...(resolvedModel && { model: resolvedModel }),
             ...(command === 'implement' && getProjectServiceInputs(ticket.project)),
           };

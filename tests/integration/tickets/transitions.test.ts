@@ -9,6 +9,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import {
+  resolveEffectiveTokenSaving,
+  type TicketWithProject,
+} from '@/lib/workflows/transition';
 
 describe('Ticket Transitions', () => {
   let ctx: TestContext;
@@ -605,6 +609,63 @@ describe('Ticket Transitions', () => {
           data: { defaultAgent: 'CLAUDE', implementModel: null },
         });
       }
+    });
+  });
+
+  // AIB-849 — effective token-saving resolution (T005) + dispatch threading (T013)
+  describe('resolveEffectiveTokenSaving (AIB-849)', () => {
+    function makeTicket(
+      ticketTokenSaving: boolean | null,
+      projectTokenSaving: boolean
+    ): TicketWithProject {
+      return {
+        tokenSaving: ticketTokenSaving,
+        project: { tokenSaving: projectTokenSaving },
+      } as unknown as TicketWithProject;
+    }
+
+    it('project ON + ticket inherit (null) → ON', () => {
+      expect(resolveEffectiveTokenSaving(makeTicket(null, true))).toBe(true);
+    });
+
+    it('project ON + ticket Force-OFF (false) → OFF (false override wins over true default)', () => {
+      expect(resolveEffectiveTokenSaving(makeTicket(false, true))).toBe(false);
+    });
+
+    it('project OFF + ticket Force-ON (true) → ON', () => {
+      expect(resolveEffectiveTokenSaving(makeTicket(true, false))).toBe(true);
+    });
+
+    it('project OFF + ticket inherit (null) → OFF', () => {
+      expect(resolveEffectiveTokenSaving(makeTicket(null, false))).toBe(false);
+    });
+  });
+
+  describe('token-saving dispatch threading (AIB-849, T013)', () => {
+    it('String(effectiveTokenSaving) is the workflow-input value for Claude stages', () => {
+      // Dispatch threads `tokenSaving: String(resolveEffectiveTokenSaving(ticket))`
+      // for Claude standard/quick/verify payloads (lib/workflows/transition.ts).
+      const onTicket = {
+        tokenSaving: null,
+        project: { tokenSaving: true },
+      } as unknown as TicketWithProject;
+      const offTicket = {
+        tokenSaving: false,
+        project: { tokenSaving: true },
+      } as unknown as TicketWithProject;
+      expect(String(resolveEffectiveTokenSaving(onTicket))).toBe('true');
+      expect(String(resolveEffectiveTokenSaving(offTicket))).toBe('false');
+    });
+
+    it('effective resolution is agent-independent; non-Claude dispatch simply omits the input', () => {
+      // The runner only activates RTK on the CLAUDE branch (FR-007); resolution
+      // itself does not depend on the agent, so the same value is computed but
+      // is only threaded into Claude dispatch payloads.
+      const ticket = {
+        tokenSaving: true,
+        project: { tokenSaving: false },
+      } as unknown as TicketWithProject;
+      expect(resolveEffectiveTokenSaving(ticket)).toBe(true);
     });
   });
 });

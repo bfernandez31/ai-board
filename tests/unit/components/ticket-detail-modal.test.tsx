@@ -1044,4 +1044,125 @@ describe('TicketDetailModal', () => {
       expect(screen.queryByText(/no analysis available/i)).not.toBeInTheDocument();
     });
   });
+
+  // AIB-849 — consolidated Run settings kebab (T022)
+  describe('AIB-849: kebab menu consolidation', () => {
+    it('shows exactly three items: Run settings, Simple copy, Full clone', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ stage: 'BUILD', branch: 'feature/x' });
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      await user.click(screen.getByTestId('ticket-actions-menu'));
+
+      expect(await screen.findByText('Run settings')).toBeInTheDocument();
+      expect(screen.getByText('Simple copy')).toBeInTheDocument();
+      expect(screen.getByText('Full clone')).toBeInTheDocument();
+
+      // No standalone policy/agent/models entries remain
+      expect(screen.queryByText('Edit Policy')).not.toBeInTheDocument();
+      expect(screen.queryByText('Edit Agent')).not.toBeInTheDocument();
+      expect(screen.queryByText('Edit Models')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('edit-policy-button')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('edit-agent-button')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('edit-models-button')).not.toBeInTheDocument();
+    });
+  });
+
+  // AIB-849 — token-saving badge visibility in the status strip (T030)
+  describe('AIB-849: token-saving badge', () => {
+    it('shows the badge when effective token saving is ON (project default)', () => {
+      const ticket = createMockTicket({
+        tokenSaving: null,
+        project: {
+          id: 1,
+          name: 'Test Project',
+          key: 'TST',
+          githubOwner: 'test-owner',
+          githubRepo: 'test-repo',
+          clarificationPolicy: 'AUTO',
+          defaultAgent: 'CLAUDE',
+          tokenSaving: true,
+        },
+      });
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+      expect(screen.getByTestId('token-saving-badge')).toBeInTheDocument();
+    });
+
+    it('hides the badge when effective token saving is OFF', () => {
+      const ticket = createMockTicket({
+        tokenSaving: null,
+        project: {
+          id: 1,
+          name: 'Test Project',
+          key: 'TST',
+          githubOwner: 'test-owner',
+          githubRepo: 'test-repo',
+          clarificationPolicy: 'AUTO',
+          defaultAgent: 'CLAUDE',
+          tokenSaving: false,
+        },
+      });
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+      expect(screen.queryByTestId('token-saving-badge')).not.toBeInTheDocument();
+    });
+
+    it('shows the badge with override indicator when ticket forces ON over an OFF project', () => {
+      const ticket = createMockTicket({
+        tokenSaving: true,
+        project: {
+          id: 1,
+          name: 'Test Project',
+          key: 'TST',
+          githubOwner: 'test-owner',
+          githubRepo: 'test-repo',
+          clarificationPolicy: 'AUTO',
+          defaultAgent: 'CLAUDE',
+          tokenSaving: false,
+        },
+      });
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+      expect(screen.getByTestId('token-saving-badge')).toBeInTheDocument();
+      expect(screen.getByTestId('token-saving-override-label')).toBeInTheDocument();
+    });
+  });
 });

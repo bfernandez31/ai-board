@@ -31,9 +31,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useTicketEdit } from '@/lib/hooks/use-ticket-edit';
 import { CharacterCounter } from '@/components/ui/character-counter';
 import { PolicyBadge } from '@/components/ui/policy-badge';
-import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
-import { AgentEditDialog } from '@/components/tickets/agent-edit-dialog';
-import { ModelOverrideDialog } from '@/components/tickets/model-override-dialog';
+import { RunSettingsDialog } from '@/components/tickets/run-settings-dialog';
+import { TokenSavingBadge } from '@/components/ui/token-saving-badge';
 import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { AgentIcon } from '@/components/ui/agent-icon';
 import DocumentationViewer from './documentation-viewer';
@@ -73,6 +72,7 @@ interface TicketData {
   autoMode: boolean;
   clarificationPolicy: ClarificationPolicy | null;
   agent?: Agent | null;
+  tokenSaving?: boolean | null;
   specifyModel?: string | null;
   planModel?: string | null;
   implementModel?: string | null;
@@ -90,6 +90,7 @@ interface TicketData {
   project?: {
     clarificationPolicy: ClarificationPolicy;
     defaultAgent?: Agent;
+    tokenSaving?: boolean;
     githubOwner?: string;
     githubRepo?: string;
   };
@@ -180,9 +181,7 @@ export function TicketDetailModal({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
-  const [policyEditOpen, setPolicyEditOpen] = useState(false);
-  const [agentEditOpen, setAgentEditOpen] = useState(false);
-  const [modelOverrideOpen, setModelOverrideOpen] = useState(false);
+  const [runSettingsOpen, setRunSettingsOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
@@ -232,7 +231,7 @@ export function TicketDetailModal({
   // This ensures the tab is correctly set even when navigating via URL params
   useEffect(() => {
     if (!open) {
-      setPolicyEditOpen(false);
+      setRunSettingsOpen(false);
     }
     // Always sync activeTab with initialTab when either changes
     setActiveTab(initialTab);
@@ -851,6 +850,12 @@ export function TicketDetailModal({
   const effectiveAgent = localTicket?.agent ?? localTicket?.project?.defaultAgent;
   const isAgentOverride = localTicket?.agent !== null && localTicket?.agent !== undefined;
 
+  // AIB-849: effective token saving (ticket override > project default).
+  const effectiveTokenSaving =
+    localTicket?.tokenSaving ?? localTicket?.project?.tokenSaving ?? false;
+  const isTokenSavingOverride =
+    localTicket?.tokenSaving !== null && localTicket?.tokenSaving !== undefined;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -939,6 +944,12 @@ export function TicketDetailModal({
                   {!isAgentOverride && <span className="opacity-70">(default)</span>}
                 </Badge>
               )}
+              {effectiveTokenSaving === true && (
+                <TokenSavingBadge
+                  isOverride={isTokenSavingOverride}
+                  className="text-xs py-0.5 px-2 font-normal"
+                />
+              )}
               {localTicket?.branch &&
                 localTicket.branch.length > 0 &&
                 localTicket.stage !== 'SHIP' &&
@@ -987,31 +998,13 @@ export function TicketDetailModal({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {localTicket?.project && isInboxStage && (
+                    {localTicket?.project && (
                       <DropdownMenuItem
-                        onClick={() => setPolicyEditOpen(true)}
-                        data-testid="edit-policy-button"
+                        onClick={() => setRunSettingsOpen(true)}
+                        data-testid="run-settings-button"
                       >
                         <Settings2 className="mr-2 h-4 w-4" />
-                        Edit Policy
-                      </DropdownMenuItem>
-                    )}
-                    {localTicket?.project?.defaultAgent && isInboxStage && (
-                      <DropdownMenuItem
-                        onClick={() => setAgentEditOpen(true)}
-                        data-testid="edit-agent-button"
-                      >
-                        <Settings2 className="mr-2 h-4 w-4" />
-                        Edit Agent
-                      </DropdownMenuItem>
-                    )}
-                    {localTicket?.project?.defaultAgent && (
-                      <DropdownMenuItem
-                        onClick={() => setModelOverrideOpen(true)}
-                        data-testid="edit-models-button"
-                      >
-                        <Settings2 className="mr-2 h-4 w-4" />
-                        Edit Models
+                        Run settings
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
@@ -1440,35 +1433,19 @@ export function TicketDetailModal({
         />
       )}
 
-      {/* PolicyEditDialog - only render when parent dialog is open */}
-      {localTicket?.project && open && (
-        <PolicyEditDialog
-          open={policyEditOpen}
-          onOpenChange={setPolicyEditOpen}
-          currentPolicy={localTicket.clarificationPolicy}
-          projectDefaultPolicy={localTicket.project.clarificationPolicy}
-          onSave={handleSavePolicy}
-        />
-      )}
-
-      {/* AgentEditDialog - only render when parent dialog is open */}
+      {/* RunSettingsDialog - consolidated per-ticket run overrides (AIB-849) */}
       {localTicket?.project?.defaultAgent && open && (
-        <AgentEditDialog
-          open={agentEditOpen}
-          onOpenChange={setAgentEditOpen}
-          currentAgent={localTicket.agent ?? null}
-          projectDefaultAgent={localTicket.project.defaultAgent}
-          onSave={handleSaveAgent}
-        />
-      )}
-
-      {/* ModelOverrideDialog - only render when parent dialog is open */}
-      {localTicket?.project?.defaultAgent && open && (
-        <ModelOverrideDialog
-          open={modelOverrideOpen}
-          onOpenChange={setModelOverrideOpen}
-          effectiveAgent={localTicket.agent ?? localTicket.project.defaultAgent}
-          current={{
+        <RunSettingsDialog
+          open={runSettingsOpen}
+          onOpenChange={setRunSettingsOpen}
+          projectId={projectId}
+          ticket={{
+            id: localTicket.id,
+            stage: localTicket.stage,
+            version: localTicket.version,
+            agent: localTicket.agent ?? null,
+            clarificationPolicy: localTicket.clarificationPolicy,
+            tokenSaving: localTicket.tokenSaving ?? null,
             specifyModel: localTicket.specifyModel ?? null,
             planModel: localTicket.planModel ?? null,
             implementModel: localTicket.implementModel ?? null,
@@ -1480,7 +1457,23 @@ export function TicketDetailModal({
             codexQuickImplModel: localTicket.codexQuickImplModel ?? null,
             codexVerifyModel: localTicket.codexVerifyModel ?? null,
           }}
-          onSave={handleSaveModelOverrides}
+          project={{
+            defaultAgent: localTicket.project.defaultAgent,
+            clarificationPolicy: localTicket.project.clarificationPolicy,
+            tokenSaving: localTicket.project.tokenSaving ?? false,
+          }}
+          isRunActive={jobs.some(
+            (j) => j.status === 'RUNNING' || j.status === 'PENDING'
+          )}
+          onSavePolicy={handleSavePolicy}
+          onSaveAgent={handleSaveAgent}
+          onSaveModels={handleSaveModelOverrides}
+          onTokenSavingSaved={(tokenSaving, version) => {
+            if (!localTicket) return;
+            const updated = { ...localTicket, tokenSaving, version };
+            setLocalTicket(updated);
+            if (onUpdate) onUpdate(updated);
+          }}
         />
       )}
 

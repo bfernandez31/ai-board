@@ -66,4 +66,30 @@ describe('jobStatusUpdateSchema', () => {
     expect(result.data.pluginVersion).toBe('1.0.1');
     expect(result.data.agentCliVersion).toBe('codex 0.4.0');
   });
+
+  // AIB-849: per-job token-saving outcome
+  it.each(['ACTIVE', 'INACTIVE', 'FELL_BACK'] as const)(
+    'accepts tokenSavingOutcome=%s',
+    (outcome) => {
+      const result = jobStatusUpdateSchema.safeParse({ status: 'RUNNING', tokenSavingOutcome: outcome });
+      expect(result.success).toBe(true);
+      assert(result.success);
+      expect(result.data.tokenSavingOutcome).toBe(outcome);
+    }
+  );
+
+  it('treats tokenSavingOutcome as optional', () => {
+    const result = jobStatusUpdateSchema.safeParse({ status: 'RUNNING' });
+    expect(result.success).toBe(true);
+    assert(result.success);
+    expect(result.data.tokenSavingOutcome).toBeUndefined();
+  });
+
+  it('rejects an invalid tokenSavingOutcome value', () => {
+    const result = jobStatusUpdateSchema.safeParse({
+      status: 'RUNNING',
+      tokenSavingOutcome: 'MAYBE',
+    });
+    expect(result.success).toBe(false);
+  });
 });

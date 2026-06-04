@@ -150,6 +150,7 @@ export async function GET(
         turnCount: true,
         pluginVersion: true,
         agentCliVersion: true,
+        tokenSavingOutcome: true,
         log: {
           select: {
             captureStatus: true,

@@ -28,6 +28,7 @@ import {
   formatDuration,
   formatAbbreviatedNumber,
 } from '@/lib/analytics/aggregations';
+import { getTokenSavingOutcomeDisplay } from '@/app/lib/utils/token-saving-icons';
 import { formatCommandName } from '@/lib/utils/format-command';
 import { CancelConfirmationModal } from '@/components/board/cancel-confirmation-modal';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
@@ -263,6 +264,24 @@ function JobRow({
                       {job.agentCliVersion ?? '—'}
                     </span>
                   </div>
+                  {/* AIB-849: per-job token-saving outcome (FELL_BACK distinct from INACTIVE) */}
+                  {job.tokenSavingOutcome != null && (
+                    <div data-testid={`job-token-saving-outcome-${job.id}`}>
+                      <span className="text-ctp-overlay0">Token Saving:</span>
+                      {(() => {
+                        const display = getTokenSavingOutcomeDisplay(job.tokenSavingOutcome!);
+                        return (
+                          <span
+                            className={`ml-2 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${display.className}`}
+                            title={display.description}
+                          >
+                            <span>{display.icon}</span>
+                            <span>{display.label}</span>
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </div>
 
                 <div className="text-xs text-ctp-overlay0 border-t border-border pt-3">

@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { prisma } from './client';
 import { Stage, getAllStages } from '../stage-transitions';
 import { TicketWithVersion } from '../types';
@@ -325,6 +326,7 @@ const VIEW_PROJECT_SELECT = {
   name: true,
   clarificationPolicy: true,
   defaultAgent: true,
+  tokenSaving: true,
   githubOwner: true,
   githubRepo: true,
 } as const;
@@ -477,6 +479,116 @@ export async function patchTicketInline(
         body: {
           error: 'Conflict: Ticket was modified by another user',
           currentVersion: latestTicket?.version || 0,
+        },
+      };
+    }
+    throw updateError;
+  }
+}
+
+/**
+ * Token-saving override (AIB-849).
+ * `tokenSaving`: true = Force ON, false = Force OFF, null = Inherit (clear override).
+ * `version`: optimistic concurrency, mirrors the ticket PATCH.
+ */
+export const tokenSavingOverrideSchema = z.object({
+  tokenSaving: z.boolean().nullable(),
+  version: z.number().int(),
+});
+
+export type TokenSavingOverrideInput = z.infer<typeof tokenSavingOverrideSchema>;
+
+/** Discriminated result for the token-saving override helper. */
+export type PatchTicketTokenSavingResult =
+  | { ok: true; ticket: { tokenSaving: boolean | null; version: number } }
+  | { ok: false; status: number; body: Record<string, unknown> };
+
+/**
+ * Update a ticket's token-saving override (AIB-849).
+ *
+ * Unlike agent/policy edits, this is NOT gated by the INBOX stage — it is
+ * editable at any stage (FR-013). It is instead rejected while a run is active
+ * (a RUNNING or PENDING job on the ticket) so an in-flight run is never mutated.
+ * Optimistic concurrency via `version`.
+ */
+export async function patchTicketTokenSaving(
+  ticketId: number,
+  projectId: number,
+  requestVersion: number,
+  tokenSaving: boolean | null
+): Promise<PatchTicketTokenSavingResult> {
+  const currentTicket = await prisma.ticket.findFirst({
+    where: { id: ticketId, projectId },
+    select: { id: true, version: true },
+  });
+
+  if (!currentTicket) {
+    const ticketExists = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { id: true },
+    });
+    if (!ticketExists) {
+      return { ok: false, status: 404, body: { error: 'Ticket not found' } };
+    }
+    return { ok: false, status: 403, body: { error: 'Forbidden' } };
+  }
+
+  if (currentTicket.version !== requestVersion) {
+    return {
+      ok: false,
+      status: 409,
+      body: {
+        error: 'Conflict: Ticket was modified by another user',
+        code: 'VERSION_CONFLICT',
+        currentVersion: currentTicket.version,
+      },
+    };
+  }
+
+  // Active-run guard (FR-013): no edits while a run is in progress.
+  const activeJob = await prisma.job.findFirst({
+    where: { ticketId, status: { in: ['RUNNING', 'PENDING'] } },
+    select: { id: true },
+  });
+  if (activeJob) {
+    return {
+      ok: false,
+      status: 409,
+      body: {
+        error: 'Cannot change token saving while a run is in progress',
+        code: 'ACTIVE_RUN',
+      },
+    };
+  }
+
+  try {
+    const updated = await prisma.ticket.update({
+      where: { id: ticketId, version: requestVersion },
+      data: {
+        tokenSaving,
+        version: { increment: 1 },
+        updatedAt: new Date(),
+      },
+      select: { tokenSaving: true, version: true },
+    });
+    return { ok: true, ticket: updated };
+  } catch (updateError) {
+    if (
+      updateError instanceof Error &&
+      'code' in updateError &&
+      (updateError as { code: string }).code === 'P2025'
+    ) {
+      const latestTicket = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        select: { version: true },
+      });
+      return {
+        ok: false,
+        status: 409,
+        body: {
+          error: 'Conflict: Ticket was modified by another user',
+          code: 'VERSION_CONFLICT',
+          currentVersion: latestTicket?.version ?? 0,
         },
       };
     }
@@ -667,6 +779,7 @@ export async function duplicateTicket(
     attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
     clarificationPolicy: sourceTicket.clarificationPolicy,
     agent: sourceTicket.agent,
+    tokenSaving: sourceTicket.tokenSaving,
     ...(options.creatorId != null && { creatorId: options.creatorId }),
   };
 
@@ -734,6 +847,7 @@ export async function fullCloneTicket(
         attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
         clarificationPolicy: sourceTicket.clarificationPolicy,
         agent: sourceTicket.agent,
+        tokenSaving: sourceTicket.tokenSaving,
         ...(options.creatorId != null && { creatorId: options.creatorId }),
       },
     });

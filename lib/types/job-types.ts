@@ -74,5 +74,6 @@ export interface TicketJobWithTelemetry {
   turnCount: number | null;
   pluginVersion: string | null;
   agentCliVersion: string | null;
+  tokenSavingOutcome: 'ACTIVE' | 'INACTIVE' | 'FELL_BACK' | null;
   log: TicketJobLogSummary | null;
 }
