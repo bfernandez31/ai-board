@@ -32,12 +32,14 @@ type TicketRow = {
   codexQuickImplModel: string | null;
   codexVerifyModel: string | null;
   workflowType: import('@prisma/client').WorkflowType;
+  tokenSaving: boolean | null;
   attachments: import('@prisma/client').Prisma.JsonValue;
   createdAt: Date;
   updatedAt: Date;
   project: {
     clarificationPolicy: import('@prisma/client').ClarificationPolicy;
     defaultAgent: import('@prisma/client').Agent;
+    tokenSaving: boolean;
     githubOwner: string | null;
     githubRepo: string | null;
   };
@@ -69,6 +71,7 @@ function toTicketWithVersion(ticket: TicketRow): TicketWithVersion {
     codexQuickImplModel: ticket.codexQuickImplModel,
     codexVerifyModel: ticket.codexVerifyModel,
     workflowType: ticket.workflowType,
+    tokenSaving: ticket.tokenSaving,
     attachments: ticket.attachments,
     qualityScore: null,
     createdAt: ticket.createdAt.toISOString(),
@@ -76,6 +79,7 @@ function toTicketWithVersion(ticket: TicketRow): TicketWithVersion {
     project: {
       clarificationPolicy: ticket.project.clarificationPolicy,
       ...(ticket.project.defaultAgent != null && { defaultAgent: ticket.project.defaultAgent }),
+      tokenSaving: ticket.project.tokenSaving,
       ...(ticket.project.githubOwner != null && { githubOwner: ticket.project.githubOwner }),
       ...(ticket.project.githubRepo != null && { githubRepo: ticket.project.githubRepo }),
     },
@@ -172,6 +176,7 @@ const TICKET_SELECT = {
   codexQuickImplModel: true,
   codexVerifyModel: true,
   workflowType: true,
+  tokenSaving: true,
   attachments: true,
   createdAt: true,
   updatedAt: true,
@@ -179,6 +184,7 @@ const TICKET_SELECT = {
     select: {
       clarificationPolicy: true,
       defaultAgent: true,
+      tokenSaving: true,
       githubOwner: true,
       githubRepo: true,
     },
@@ -522,15 +528,11 @@ export async function patchTicketTokenSaving(
     select: { id: true, version: true },
   });
 
+  // The route already authorizes via verifyTicketAccess, so a ticket that
+  // exists under a different project is "wrong project" — treat as not-found
+  // (matches model-config/route.ts) to avoid leaking cross-project existence.
   if (!currentTicket) {
-    const ticketExists = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-      select: { id: true },
-    });
-    if (!ticketExists) {
-      return { ok: false, status: 404, body: { error: 'Ticket not found' } };
-    }
-    return { ok: false, status: 403, body: { error: 'Forbidden' } };
+    return { ok: false, status: 404, body: { error: 'Ticket not found' } };
   }
 
   if (currentTicket.version !== requestVersion) {

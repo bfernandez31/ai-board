@@ -130,10 +130,21 @@ export function RunSettingsDialog({
   const isPolicyOverride = ticket.clarificationPolicy != null;
   const overriddenModelCount = STAGE_MODEL_FIELDS.filter((k) => ticket[k] != null).length;
 
-  const tokenSavingValue = tokenSavingToSelectValue(ticket.tokenSaving);
+  // Optimistic local select value: reflects the new choice immediately and
+  // reverts on failure (constitution: optimistic updates required for mutations).
+  const [tokenSavingValue, setTokenSavingValue] = React.useState(
+    tokenSavingToSelectValue(ticket.tokenSaving)
+  );
+
+  // Re-sync when the ticket override changes upstream (e.g. external refresh).
+  React.useEffect(() => {
+    setTokenSavingValue(tokenSavingToSelectValue(ticket.tokenSaving));
+  }, [ticket.tokenSaving]);
 
   async function handleTokenSavingChange(value: string) {
     const next = selectValueToTokenSaving(value);
+    const previousValue = tokenSavingValue;
+    setTokenSavingValue(value); // optimistic
     setTokenSavingSaving(true);
     setTokenSavingError(null);
     try {
@@ -147,6 +158,7 @@ export function RunSettingsDialog({
       );
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
+        setTokenSavingValue(previousValue); // revert
         setTokenSavingError(
           body?.code === 'ACTIVE_RUN'
             ? 'Cannot change token saving while a run is in progress'
@@ -157,6 +169,7 @@ export function RunSettingsDialog({
       const data = await response.json();
       onTokenSavingSaved(data.tokenSaving ?? null, data.version);
     } catch {
+      setTokenSavingValue(previousValue); // revert
       setTokenSavingError('Failed to update token saving');
     } finally {
       setTokenSavingSaving(false);

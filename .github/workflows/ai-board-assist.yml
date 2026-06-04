@@ -811,6 +811,15 @@ jobs:
             exit 1
           fi
 
+          # Resolve effective token saving (ticket override > project default) so
+          # @ai-board iterations honour the same setting as normal VERIFY runs (AIB-849).
+          # `//` is avoided because a Force-OFF override (false) must NOT fall through.
+          TICKET_URL="${API_BASE}/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}"
+          TICKET_JSON=$(curl -s -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" "$TICKET_URL")
+          TOKEN_SAVING=$(echo "$TICKET_JSON" | jq -r 'if .tokenSaving != null then .tokenSaving elif (.project.tokenSaving != null) then .project.tokenSaving else false end | tostring')
+          if [ "$TOKEN_SAVING" != "true" ]; then TOKEN_SAVING="false"; fi
+          echo "🔧 Effective token saving: $TOKEN_SAVING"
+
           # Dispatch iterate workflow
           # Note: GITHUB_TOKEN cannot trigger workflow_dispatch, must use GH_PAT
           echo "🚀 Dispatching iterate.yml workflow..."
@@ -827,7 +836,8 @@ jobs:
                 \"branch\": \"${BRANCH}\",
                 \"issues_to_fix\": $(echo "$ISSUES_JSON" | jq -c 'tojson'),
                 \"githubRepository\": \"${GITHUB_REPOSITORY_INPUT}\",
-                \"agent\": \"CLAUDE\"
+                \"agent\": \"CLAUDE\",
+                \"tokenSaving\": ${TOKEN_SAVING}
               }
             }")
 

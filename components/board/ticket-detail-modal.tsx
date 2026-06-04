@@ -311,6 +311,7 @@ export function TicketDetailModal({
       branch: mode === 'full' ? 'creating...' : null,
       autoMode: false,
       workflowType: localTicket.workflowType || 'FULL',
+      tokenSaving: localTicket.tokenSaving ?? null,
       clarificationPolicy: localTicket.clarificationPolicy || null,
       agent: localTicket.agent ?? null,
       specifyModel: localTicket.specifyModel ?? null,
@@ -1434,7 +1435,7 @@ export function TicketDetailModal({
       )}
 
       {/* RunSettingsDialog - consolidated per-ticket run overrides (AIB-849) */}
-      {localTicket?.project?.defaultAgent && open && (
+      {localTicket?.project && open && (
         <RunSettingsDialog
           open={runSettingsOpen}
           onOpenChange={setRunSettingsOpen}
@@ -1458,7 +1459,7 @@ export function TicketDetailModal({
             codexVerifyModel: localTicket.codexVerifyModel ?? null,
           }}
           project={{
-            defaultAgent: localTicket.project.defaultAgent,
+            defaultAgent: localTicket.project.defaultAgent ?? Agent.CLAUDE,
             clarificationPolicy: localTicket.project.clarificationPolicy,
             tokenSaving: localTicket.project.tokenSaving ?? false,
           }}

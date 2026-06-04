@@ -525,8 +525,17 @@ install_rtk() {
   fi
   log_info "Installing RTK v${RTK_VERSION}..."
   # Official installer, pinned to an exact release via RTK_VERSION (never 'latest').
-  curl -fsSL "https://raw.githubusercontent.com/rtk-ai/rtk/v${RTK_VERSION}/install.sh" \
-    | RTK_VERSION="${RTK_VERSION}" sh >&2
+  # Bound the network wait so a stalled fetch falls back fast instead of stalling
+  # the run (FR-006/SC-003) — connect within 10s, whole transfer within 60s.
+  local install_rc=0
+  curl -fsSL --connect-timeout 10 --max-time 60 \
+    "https://raw.githubusercontent.com/rtk-ai/rtk/v${RTK_VERSION}/install.sh" \
+    | RTK_VERSION="${RTK_VERSION}" sh >&2 || install_rc=$?
+  # The installer runs in a subshell (piped to `sh`), so any PATH change it makes
+  # does not reach this shell. Mirror the Mistral path and add the default install
+  # dir so `rtk init` / `rtk --version` resolve when RTK lands in ~/.local/bin.
+  export PATH="${HOME}/.local/bin:${PATH}"
+  return $install_rc
 }
 
 # Non-blocking activation. Sets TOKEN_SAVING_OUTCOME to ACTIVE / INACTIVE / FELL_BACK.

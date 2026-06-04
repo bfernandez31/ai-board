@@ -132,6 +132,7 @@ export type UpdatedModalTicket = {
   codexQuickImplModel?: string | null;
   codexVerifyModel?: string | null;
   workflowType: 'FULL' | 'QUICK' | 'CLEAN';
+  tokenSaving?: boolean | null;
   attachments?: import('@/app/lib/types/ticket').TicketAttachment[] | null;
   createdAt: string | Date;
   updatedAt: string | Date;
@@ -196,6 +197,10 @@ export function normalizeUpdatedTicket(
         ? updatedTicket.codexVerifyModel
         : existingTicket?.codexVerifyModel ?? null,
     workflowType: updatedTicket.workflowType || existingTicket?.workflowType || 'FULL',
+    tokenSaving:
+      updatedTicket.tokenSaving !== undefined
+        ? updatedTicket.tokenSaving
+        : existingTicket?.tokenSaving ?? null,
     attachments: (updatedTicket.attachments ?? existingTicket?.attachments ?? []) as import('@prisma/client').Prisma.JsonValue,
     qualityScore: existingTicket?.qualityScore ?? null,
     createdAt:
