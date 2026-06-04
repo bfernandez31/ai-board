@@ -18,8 +18,8 @@
 
 **Purpose**: Add token saving fields to the database and regenerate the Prisma client so all downstream code can reference the new columns.
 
-- [ ] T001 Add `tokenSaving` Boolean (default false) to Project, `tokenSaving` Boolean? to Ticket, and `tokenSavingStatus` String? @db.VarChar(20) to Job in prisma/schema.prisma
-- [ ] T002 Run `bunx prisma migrate dev` to create the migration, then run `bunx prisma generate` to regenerate the Prisma client
+- [x] T001 Add `tokenSaving` Boolean (default false) to Project, `tokenSaving` Boolean? to Ticket, and `tokenSavingStatus` String? @db.VarChar(20) to Job in prisma/schema.prisma
+- [x] T002 Run `bunx prisma migrate dev` to create the migration, then run `bunx prisma generate` to regenerate the Prisma client
 
 **Checkpoint**: `tokenSaving` and `tokenSavingStatus` columns exist in DB. Prisma client types are updated.
 

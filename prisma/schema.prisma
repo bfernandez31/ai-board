@@ -67,8 +67,9 @@ model Job {
   // Runtime versions captured by the runner at job start (AIB-779).
   // Both nullable: jobs predating this feature, or runs where capture failed,
   // remain unannotated.
-  pluginVersion   String? @db.VarChar(50) // ai-board plugin version (.claude-plugin/plugin.json)
-  agentCliVersion String? @db.VarChar(100) // Underlying agent CLI version (claude/codex/vibe/gemini --version)
+  pluginVersion      String? @db.VarChar(50) // ai-board plugin version (.claude-plugin/plugin.json)
+  agentCliVersion    String? @db.VarChar(100) // Underlying agent CLI version (claude/codex/vibe/gemini --version)
+  tokenSavingStatus  String? @db.VarChar(20)
 
   log JobLog?
 
@@ -136,6 +137,7 @@ model Project {
   codexQuickImplModel String?               @db.VarChar(50)
   codexVerifyModel    String?               @db.VarChar(50)
   hasSpecs            Boolean               @default(false)
+  tokenSaving         Boolean               @default(false)
   user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
   members             ProjectMember[]
@@ -205,6 +207,7 @@ model Ticket {
   codexImplementModel     String?                   @db.VarChar(50)
   codexQuickImplModel     String?                   @db.VarChar(50)
   codexVerifyModel        String?                   @db.VarChar(50)
+  tokenSaving             Boolean?
   closedAt                DateTime?
   creatorId               String?                   @db.VarChar(255)
   creator                 User?                     @relation("TicketCreator", fields: [creatorId], references: [id], onDelete: SetNull)
