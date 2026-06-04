@@ -89,12 +89,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T016 [US3] Extend tests/unit/components/ticket-detail-modal.test.tsx with: kebab menu has exactly 3 items ("Run settings", "Simple copy", "Full clone" conditional); RunSettingsDialog opens on "Run settings" click; dialog contains Agent, Models, Policy, and Token Saving sections; Agent/Policy sections are read-only for non-INBOX tickets
+- [x] T016 [US3] Extend tests/unit/components/ticket-detail-modal.test.tsx with: kebab menu has exactly 3 items ("Run settings", "Simple copy", "Full clone" conditional); RunSettingsDialog opens on "Run settings" click; dialog contains Agent, Models, Policy, and Token Saving sections; Agent/Policy sections are read-only for non-INBOX tickets
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Create components/tickets/run-settings-dialog.tsx — unified dialog with tabs for Agent, Models (per stage), Clarification Policy, and Token Saving sections. Each section composes logic from the existing dialog components (policy-edit-dialog.tsx, agent-edit-dialog.tsx, model-override-dialog.tsx). Stage-aware editability: Agent and Policy tabs are read-only when ticket is not INBOX. Token Saving section uses a Select with "Use project default" / "Force ON" / "Force OFF" options. Each section shows "(override)" or "(project default)" labels.
-- [ ] T018 [US3] Modify components/board/ticket-detail-modal.tsx: replace `policyEditOpen`, `agentEditOpen`, `modelOverrideOpen` states with single `runSettingsOpen` state; replace 3 DropdownMenuItem items with single "Run settings" item; remove rendering of 3 separate dialogs and render RunSettingsDialog instead; keep "Simple copy" and "Full clone" menu items
+- [x] T017 [US3] Create components/tickets/run-settings-dialog.tsx — unified dialog with tabs for Agent, Models (per stage), Clarification Policy, and Token Saving sections. Each section composes logic from the existing dialog components (policy-edit-dialog.tsx, agent-edit-dialog.tsx, model-override-dialog.tsx). Stage-aware editability: Agent and Policy tabs are read-only when ticket is not INBOX. Token Saving section uses a Select with "Use project default" / "Force ON" / "Force OFF" options. Each section shows "(override)" or "(project default)" labels.
+- [x] T018 [US3] Modify components/board/ticket-detail-modal.tsx: replace `policyEditOpen`, `agentEditOpen`, `modelOverrideOpen` states with single `runSettingsOpen` state; replace 3 DropdownMenuItem items with single "Run settings" item; remove rendering of 3 separate dialogs and render RunSettingsDialog instead; keep "Simple copy" and "Full clone" menu items
 
 **Checkpoint**: Kebab menu shows 3 items. Unified dialog works for all four override types. Existing override behavior unchanged.
 
@@ -108,16 +108,16 @@
 
 ### Tests for User Story 4
 
-- [ ] T019 [US4] Extend tests/unit/workflows/model-resolution.test.ts with dispatch input tests: verify `token_saving: 'true'` is included in workflow inputs when effective token saving is ON; verify `token_saving` is omitted when effective is OFF
+- [x] T019 [US4] Extend tests/unit/workflows/model-resolution.test.ts with dispatch input tests: verify `token_saving: 'true'` is included in workflow inputs when effective token saving is ON; verify `token_saving` is omitted when effective is OFF
 
 ### Implementation for User Story 4
 
-- [ ] T020 [US4] Extend dispatch logic in lib/workflows/transition.ts to pass `token_saving: 'true'` in workflow inputs when `resolveEffectiveTokenSaving()` returns true, using the existing conditional spread pattern
-- [ ] T021 [P] [US4] Add `token_saving` input (string, required: false, default: 'false') to .github/workflows/speckit.yml and map to `TOKEN_SAVING` env var passed to run-agent.sh
-- [ ] T022 [P] [US4] Add `token_saving` input to .github/workflows/quick-impl.yml and map to `TOKEN_SAVING` env var
-- [ ] T023 [P] [US4] Add `token_saving` input to .github/workflows/verify.yml and map to `TOKEN_SAVING` env var
-- [ ] T024 [P] [US4] Add `token_saving` input to .github/workflows/iterate.yml and map to `TOKEN_SAVING` env var
-- [ ] T025 [US4] Extend .github/scripts/run-agent.sh: add RTK installation and activation block before Claude invocation, guarded by `TOKEN_SAVING=true && AGENT=CLAUDE`. On success, report `tokenSavingStatus: "active"` via PATCH callback. On failure, log warning, set status to `"fallback"`, and proceed without RTK. For non-Claude agents, set `"n/a"`. When setting is OFF, set `"inactive"`.
+- [x] T020 [US4] Extend dispatch logic in lib/workflows/transition.ts to pass `token_saving: 'true'` in workflow inputs when `resolveEffectiveTokenSaving()` returns true, using the existing conditional spread pattern
+- [x] T021 [P] [US4] Add `token_saving` input (string, required: false, default: 'false') to .github/workflows/speckit.yml and map to `TOKEN_SAVING` env var passed to run-agent.sh
+- [x] T022 [P] [US4] Add `token_saving` input to .github/workflows/quick-impl.yml and map to `TOKEN_SAVING` env var
+- [x] T023 [P] [US4] Add `token_saving` input to .github/workflows/verify.yml and map to `TOKEN_SAVING` env var
+- [x] T024 [P] [US4] Add `token_saving` input to .github/workflows/iterate.yml and map to `TOKEN_SAVING` env var
+- [x] T025 [US4] Extend .github/scripts/run-agent.sh: add RTK installation and activation block before Claude invocation, guarded by `TOKEN_SAVING=true && AGENT=CLAUDE`. On success, report `tokenSavingStatus: "active"` via PATCH callback. On failure, log warning, set status to `"fallback"`, and proceed without RTK. For non-Claude agents, set `"n/a"`. When setting is OFF, set `"inactive"`.
 
 **Checkpoint**: Claude agent runs with token saving ON activate RTK. Fallback works on RTK failure. Job records correct tokenSavingStatus.
 
@@ -131,7 +131,7 @@
 
 ### Implementation for User Story 5
 
-- [ ] T026 [US5] Extend job detail/telemetry display in components/board/ticket-detail-modal.tsx to show `tokenSavingStatus` with appropriate label and styling (Active = green badge, Inactive = muted, Fallback = amber with explanation tooltip, N/A = hidden)
+- [x] T026 [US5] Extend job detail/telemetry display in components/board/ticket-detail-modal.tsx to show `tokenSavingStatus` with appropriate label and styling (Active = green badge, Inactive = muted, Fallback = amber with explanation tooltip, N/A = hidden)
 
 **Checkpoint**: Job details clearly show token saving status alongside existing telemetry metrics for side-by-side comparison.
 
@@ -145,12 +145,12 @@
 
 ### Tests for User Story 6
 
-- [ ] T027 [US6] Create tests/unit/components/token-saving-badge.test.tsx with tests: renders Zap icon when token saving is ON; does not render when OFF; tooltip shows "(override)" when ticket override is set; tooltip shows "(project default)" when inherited
+- [x] T027 [US6] Create tests/unit/components/token-saving-badge.test.tsx with tests: renders Zap icon when token saving is ON; does not render when OFF; tooltip shows "(override)" when ticket override is set; tooltip shows "(project default)" when inherited
 
 ### Implementation for User Story 6
 
-- [ ] T028 [US6] Create components/ui/token-saving-badge.tsx — small component following PolicyBadge pattern: Zap icon from lucide-react, tooltip showing source (override vs project default), only renders when effective token saving is ON
-- [ ] T029 [US6] Add TokenSavingBadge to ticket-detail-modal.tsx header status strip after the existing agent badge
+- [x] T028 [US6] Create components/ui/token-saving-badge.tsx — small component following PolicyBadge pattern: Zap icon from lucide-react, tooltip showing source (override vs project default), only renders when effective token saving is ON
+- [x] T029 [US6] Add TokenSavingBadge to ticket-detail-modal.tsx header status strip after the existing agent badge
 
 **Checkpoint**: Token saving badge visible in header strip with correct tooltip for all override/inherit states.
 
@@ -160,8 +160,8 @@
 
 **Purpose**: Final integration validation and cleanup across all stories.
 
-- [ ] T030 Run `bun run type-check` and `bun run lint` and fix any errors across all modified and new files
-- [ ] T031 Run `bun run test:unit` and `bun run test:integration` and fix any test failures
+- [x] T030 Run `bun run type-check` and `bun run lint` and fix any errors across all modified and new files
+- [x] T031 Run `bun run test:unit` and `bun run test:integration` and fix any test failures
 
 ---
 

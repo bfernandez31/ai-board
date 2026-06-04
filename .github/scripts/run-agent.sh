@@ -495,6 +495,37 @@ ensure_claude_commands() {
   fi
 }
 
+activate_token_saving() {
+  if [[ "${TOKEN_SAVING:-false}" != "true" ]]; then
+    report_token_saving_status "inactive"
+    return 0
+  fi
+  if [[ "$AGENT_TYPE" != "CLAUDE" ]]; then
+    report_token_saving_status "n/a"
+    return 0
+  fi
+  log_info "Token saving enabled — installing RTK..."
+  if npm install -g @anthropic-ai/rtk 2>/dev/null && command -v rtk &>/dev/null; then
+    export CLAUDE_CODE_PRETOOLS_HOOK="rtk compress"
+    log_info "RTK activated as PreToolUse hook"
+    report_token_saving_status "active"
+  else
+    log_warn "RTK installation failed — proceeding without token saving"
+    report_token_saving_status "fallback"
+  fi
+}
+
+report_token_saving_status() {
+  local status="$1"
+  if [[ -n "${JOB_ID:-}" && -n "${APP_URL:-}" && -n "${WORKFLOW_API_TOKEN:-}" ]]; then
+    curl -sS -X PATCH "${APP_URL}/api/jobs/${JOB_ID}/status" \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+      -d "{\"status\":\"RUNNING\",\"tokenSavingStatus\":\"${status}\"}" \
+      > /dev/null 2>&1 || true
+  fi
+}
+
 invoke_claude() {
   log_info "Invoking Claude: /$COMMAND $ORIGINAL_ARGS_STRING"
   claude --dangerously-skip-permissions "/$COMMAND $ORIGINAL_ARGS_STRING"
@@ -878,6 +909,7 @@ dispatch_agent() {
       validate_auth
       install_claude
       ensure_claude_commands
+      activate_token_saving
       report_runtime_versions claude
       invoke_claude
       ;;

@@ -31,9 +31,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useTicketEdit } from '@/lib/hooks/use-ticket-edit';
 import { CharacterCounter } from '@/components/ui/character-counter';
 import { PolicyBadge } from '@/components/ui/policy-badge';
-import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
-import { AgentEditDialog } from '@/components/tickets/agent-edit-dialog';
-import { ModelOverrideDialog } from '@/components/tickets/model-override-dialog';
+import { RunSettingsDialog } from '@/components/tickets/run-settings-dialog';
+import { TokenSavingBadge } from '@/components/ui/token-saving-badge';
 import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { AgentIcon } from '@/components/ui/agent-icon';
 import DocumentationViewer from './documentation-viewer';
@@ -83,6 +82,7 @@ interface TicketData {
   codexImplementModel?: string | null;
   codexQuickImplModel?: string | null;
   codexVerifyModel?: string | null;
+  tokenSaving?: boolean | null;
   workflowType: 'FULL' | 'QUICK' | 'CLEAN';
   attachments?: TicketAttachment[] | null;
   createdAt: Date | string;
@@ -90,6 +90,7 @@ interface TicketData {
   project?: {
     clarificationPolicy: ClarificationPolicy;
     defaultAgent?: Agent;
+    tokenSaving?: boolean;
     githubOwner?: string;
     githubRepo?: string;
   };
@@ -180,9 +181,7 @@ export function TicketDetailModal({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
-  const [policyEditOpen, setPolicyEditOpen] = useState(false);
-  const [agentEditOpen, setAgentEditOpen] = useState(false);
-  const [modelOverrideOpen, setModelOverrideOpen] = useState(false);
+  const [runSettingsOpen, setRunSettingsOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
@@ -232,9 +231,8 @@ export function TicketDetailModal({
   // This ensures the tab is correctly set even when navigating via URL params
   useEffect(() => {
     if (!open) {
-      setPolicyEditOpen(false);
+      setRunSettingsOpen(false);
     }
-    // Always sync activeTab with initialTab when either changes
     setActiveTab(initialTab);
   }, [open, initialTab]);
 
@@ -688,6 +686,71 @@ export function TicketDetailModal({
     }
   };
 
+  const handleSaveTokenSaving = async (
+    newTokenSaving: boolean | null
+  ): Promise<void> => {
+    if (!localTicket) return;
+
+    const originalTicket = { ...localTicket };
+
+    setLocalTicket({ ...localTicket, tokenSaving: newTokenSaving });
+
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${localTicket.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tokenSaving: newTokenSaving,
+            version: localTicket.version,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        if (response.status === 409) {
+          setLocalTicket(originalTicket);
+          toast({
+            variant: 'destructive',
+            title: 'Conflict',
+            description: error.message || 'Ticket was modified by another user.',
+          });
+          throw new Error('Conflict');
+        }
+        throw new Error(error.error || 'Failed to save');
+      }
+
+      const updatedTicket = await response.json();
+      const normalizedTicket: TicketData = {
+        ...localTicket,
+        tokenSaving: updatedTicket.tokenSaving ?? null,
+        version: updatedTicket.version,
+      };
+      setLocalTicket(normalizedTicket);
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.tickets(projectId) });
+
+      if (onUpdate) {
+        onUpdate(normalizedTicket);
+      }
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        !['Conflict', 'Update error'].includes(error.message)
+      ) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to save changes. Changes reverted.',
+        });
+        setLocalTicket(originalTicket);
+      }
+      throw error;
+    }
+  };
+
   const handleSaveModelOverrides = async (input: {
     specifyModel?: string | null;
     planModel?: string | null;
@@ -939,6 +1002,12 @@ export function TicketDetailModal({
                   {!isAgentOverride && <span className="opacity-70">(default)</span>}
                 </Badge>
               )}
+              {(localTicket?.tokenSaving === true || (localTicket?.tokenSaving == null && localTicket?.project?.tokenSaving)) && (
+                <TokenSavingBadge
+                  isOverride={localTicket?.tokenSaving !== null && localTicket?.tokenSaving !== undefined}
+                  className="text-xs py-0.5 px-2 font-normal"
+                />
+              )}
               {localTicket?.branch &&
                 localTicket.branch.length > 0 &&
                 localTicket.stage !== 'SHIP' &&
@@ -987,33 +1056,13 @@ export function TicketDetailModal({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {localTicket?.project && isInboxStage && (
-                      <DropdownMenuItem
-                        onClick={() => setPolicyEditOpen(true)}
-                        data-testid="edit-policy-button"
-                      >
-                        <Settings2 className="mr-2 h-4 w-4" />
-                        Edit Policy
-                      </DropdownMenuItem>
-                    )}
-                    {localTicket?.project?.defaultAgent && isInboxStage && (
-                      <DropdownMenuItem
-                        onClick={() => setAgentEditOpen(true)}
-                        data-testid="edit-agent-button"
-                      >
-                        <Settings2 className="mr-2 h-4 w-4" />
-                        Edit Agent
-                      </DropdownMenuItem>
-                    )}
-                    {localTicket?.project?.defaultAgent && (
-                      <DropdownMenuItem
-                        onClick={() => setModelOverrideOpen(true)}
-                        data-testid="edit-models-button"
-                      >
-                        <Settings2 className="mr-2 h-4 w-4" />
-                        Edit Models
-                      </DropdownMenuItem>
-                    )}
+                    <DropdownMenuItem
+                      onClick={() => setRunSettingsOpen(true)}
+                      data-testid="run-settings-button"
+                    >
+                      <Settings2 className="mr-2 h-4 w-4" />
+                      Run settings
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => handleDuplicate('simple')}
                       disabled={isDuplicating}
@@ -1440,35 +1489,20 @@ export function TicketDetailModal({
         />
       )}
 
-      {/* PolicyEditDialog - only render when parent dialog is open */}
+      {/* RunSettingsDialog - unified per-ticket override settings */}
       {localTicket?.project && open && (
-        <PolicyEditDialog
-          open={policyEditOpen}
-          onOpenChange={setPolicyEditOpen}
+        <RunSettingsDialog
+          open={runSettingsOpen}
+          onOpenChange={setRunSettingsOpen}
+          isInboxStage={isInboxStage}
           currentPolicy={localTicket.clarificationPolicy}
           projectDefaultPolicy={localTicket.project.clarificationPolicy}
-          onSave={handleSavePolicy}
-        />
-      )}
-
-      {/* AgentEditDialog - only render when parent dialog is open */}
-      {localTicket?.project?.defaultAgent && open && (
-        <AgentEditDialog
-          open={agentEditOpen}
-          onOpenChange={setAgentEditOpen}
+          onSavePolicy={handleSavePolicy}
           currentAgent={localTicket.agent ?? null}
-          projectDefaultAgent={localTicket.project.defaultAgent}
-          onSave={handleSaveAgent}
-        />
-      )}
-
-      {/* ModelOverrideDialog - only render when parent dialog is open */}
-      {localTicket?.project?.defaultAgent && open && (
-        <ModelOverrideDialog
-          open={modelOverrideOpen}
-          onOpenChange={setModelOverrideOpen}
-          effectiveAgent={localTicket.agent ?? localTicket.project.defaultAgent}
-          current={{
+          projectDefaultAgent={localTicket.project.defaultAgent ?? null}
+          onSaveAgent={handleSaveAgent}
+          effectiveAgent={localTicket.agent ?? localTicket.project.defaultAgent ?? Agent.CLAUDE}
+          currentModels={{
             specifyModel: localTicket.specifyModel ?? null,
             planModel: localTicket.planModel ?? null,
             implementModel: localTicket.implementModel ?? null,
@@ -1480,7 +1514,10 @@ export function TicketDetailModal({
             codexQuickImplModel: localTicket.codexQuickImplModel ?? null,
             codexVerifyModel: localTicket.codexVerifyModel ?? null,
           }}
-          onSave={handleSaveModelOverrides}
+          onSaveModels={handleSaveModelOverrides}
+          currentTokenSaving={localTicket.tokenSaving ?? null}
+          projectDefaultTokenSaving={localTicket.project.tokenSaving ?? false}
+          onSaveTokenSaving={handleSaveTokenSaving}
         />
       )}
 

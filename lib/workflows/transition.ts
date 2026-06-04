@@ -185,6 +185,7 @@ export async function handleTicketTransition(
 
     const effectiveAgent = resolveEffectiveAgent(ticket);
     const resolvedModel = resolveStageModel(ticket, command, effectiveAgent);
+    const effectiveTokenSaving = resolveEffectiveTokenSaving(ticket);
     if (!supportsWorkflowCommand(effectiveAgent, command)) {
       return {
         success: false,
@@ -288,6 +289,7 @@ export async function handleTicketTransition(
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
             ...(resolvedModel && { model: resolvedModel }),
+            ...(effectiveTokenSaving && { token_saving: 'true' }),
             ...getProjectServiceInputs(ticket.project),
           };
 
@@ -306,6 +308,7 @@ export async function handleTicketTransition(
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
             ...(resolvedModel && { model: resolvedModel }),
+            ...(effectiveTokenSaving && { token_saving: 'true' }),
             ...getProjectServiceInputs(ticket.project),
           };
 
@@ -320,6 +323,7 @@ export async function handleTicketTransition(
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
             agent: effectiveAgent,
             ...(resolvedModel && { model: resolvedModel }),
+            ...(effectiveTokenSaving && { token_saving: 'true' }),
             ...(command === 'implement' && getProjectServiceInputs(ticket.project)),
           };
 

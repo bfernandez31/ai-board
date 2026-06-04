@@ -39,6 +39,12 @@ on:
         required: true
         type: string
 
+      token_saving:
+        description: 'Enable RTK token saving compression'
+        required: false
+        type: string
+        default: 'false'
+
 jobs:
   iterate:
     runs-on: ubuntu-latest
@@ -54,6 +60,7 @@ jobs:
       SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
       # Use Opus model for Claude Code
       ANTHROPIC_MODEL: "claude-opus-4-8"
+      TOKEN_SAVING: ${{ inputs.token_saving }}
       # Claude Code telemetry - send to OTLP endpoint
       CLAUDE_CODE_ENABLE_TELEMETRY: "1"
       OTEL_LOGS_EXPORTER: "otlp"

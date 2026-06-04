@@ -250,4 +250,20 @@ describe('resolveEffectiveTokenSaving', () => {
     const ticket = { tokenSaving: null, project: {} } as unknown as TicketWithProject;
     expect(resolveEffectiveTokenSaving(ticket)).toBe(false);
   });
+
+  it('dispatch input includes token_saving when effective is ON', () => {
+    const effective = resolveEffectiveTokenSaving(makeTicket(true, false));
+    const inputs: Record<string, string> = {
+      ...(effective && { token_saving: 'true' }),
+    };
+    expect(inputs.token_saving).toBe('true');
+  });
+
+  it('dispatch input omits token_saving when effective is OFF', () => {
+    const effective = resolveEffectiveTokenSaving(makeTicket(null, false));
+    const inputs: Record<string, string> = {
+      ...(effective && { token_saving: 'true' }),
+    };
+    expect(inputs.token_saving).toBeUndefined();
+  });
 });

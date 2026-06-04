@@ -263,6 +263,21 @@ function JobRow({
                       {job.agentCliVersion ?? '—'}
                     </span>
                   </div>
+                  {job.tokenSavingStatus && job.tokenSavingStatus !== 'n/a' && (
+                    <div data-testid={`job-token-saving-status-${job.id}`}>
+                      <span className="text-ctp-overlay0">Token saving:</span>
+                      <span className={`ml-2 font-medium text-xs ${
+                        job.tokenSavingStatus === 'active' ? 'text-green-500' :
+                        job.tokenSavingStatus === 'fallback' ? 'text-amber-500' :
+                        'text-muted-foreground'
+                      }`}>
+                        {job.tokenSavingStatus === 'active' ? 'Active' :
+                         job.tokenSavingStatus === 'inactive' ? 'Inactive' :
+                         job.tokenSavingStatus === 'fallback' ? 'Fallback' :
+                         job.tokenSavingStatus}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="text-xs text-ctp-overlay0 border-t border-border pt-3">

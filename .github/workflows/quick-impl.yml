@@ -48,6 +48,12 @@ on:
         type: string
         default: ''
 
+      token_saving:
+        description: 'Enable RTK token saving compression'
+        required: false
+        type: string
+        default: 'false'
+
       # Conditional service inputs
       needs_postgres:
         description: 'Provision PostgreSQL service container'
@@ -172,6 +178,7 @@ jobs:
       # Codex model: per-stage override from dispatch input, fallback to GPT-5.4.
       # Set for every dispatch — only consumed when the selected agent is Codex.
       CODEX_MODEL: ${{ inputs.model != '' && inputs.model || 'gpt-5.4' }}
+      TOKEN_SAVING: ${{ inputs.token_saving }}
       # DATABASE_URL provided by .ai-board/config.yml env section via setup-environment.sh
       # Claude Code telemetry - send to OTLP endpoint
       CLAUDE_CODE_ENABLE_TELEMETRY: "1"
