@@ -3,32 +3,19 @@
 import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Sparkles } from 'lucide-react';
 import { TicketWithVersion } from '@/lib/types';
-import { getAgentLabel } from '@/app/lib/utils/agent-icons';
-import { AgentIcon } from '@/components/ui/agent-icon';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { JobStatusIndicator } from './job-status-indicator';
-import { Agent, Job } from '@prisma/client';
-import { classifyJobType } from '@/lib/utils/job-type-classifier';
-import { TicketCardDeployIcon } from './ticket-card-deploy-icon';
-import { TicketCardPreviewIcon } from './ticket-card-preview-icon';
+import { Job } from '@prisma/client';
 import { DeployConfirmationModal } from './deploy-confirmation-modal';
 import { CancelConfirmationModal } from './cancel-confirmation-modal';
-import { AutoModeIcon } from './auto-mode-icon';
 import { AutoModeConfirmationModal } from './auto-mode-confirmation-modal';
+import { TicketCardHeader } from './ticket-card-header';
+import { TicketCardJobStatus } from './ticket-card-job-status';
 import { isTicketDeployable } from '@/app/lib/utils/deploy-preview-eligibility';
 import { useDeployPreview } from '@/app/lib/hooks/mutations/useDeployPreview';
 import { useCancelJob } from '@/lib/hooks/mutations/useCancelJob';
 import { useAutoMode } from '@/app/lib/hooks/mutations/useAutoMode';
 import { useHasMounted } from '@/lib/hooks/use-has-mounted';
-import { QualityScoreBadge } from '@/components/ticket/quality-score-badge';
 import { isAutoModeEligible } from '@/app/lib/tickets/auto-mode-eligibility';
-import { X } from 'lucide-react';
-import { STAGE_MODEL_KEYS, STAGE_MODEL_LABELS } from '@/lib/models/claude-models';
-import { CODEX_STAGE_MODEL_KEYS, CODEX_STAGE_MODEL_LABELS } from '@/lib/models/codex-models';
 
 export interface TicketCardSelection {
   isSelected: boolean;
@@ -139,40 +126,6 @@ export const TicketCard = React.memo(
         }
       : undefined;
 
-    const effectiveAgent = ticket.agent ?? ticket.project?.defaultAgent;
-    const isAgentInherited = ticket.agent == null;
-
-    const claudeOverriddenStageLabels = React.useMemo(() => {
-      return STAGE_MODEL_KEYS
-        .filter((key) => ticket[key] != null)
-        .map((key) => STAGE_MODEL_LABELS[key]);
-    }, [ticket]);
-    const codexOverriddenStageLabels = React.useMemo(() => {
-      return CODEX_STAGE_MODEL_KEYS
-        .filter((key) => (ticket as unknown as Record<string, string | null | undefined>)[key] != null)
-        .map((key) => CODEX_STAGE_MODEL_LABELS[key]);
-    }, [ticket]);
-    const hasClaudeOverride = claudeOverriddenStageLabels.length > 0;
-    const hasCodexOverride = codexOverriddenStageLabels.length > 0;
-    const hasModelOverride = hasClaudeOverride || hasCodexOverride;
-    const isModelOverrideDormant =
-      hasModelOverride &&
-      (
-        (effectiveAgent !== Agent.CLAUDE && effectiveAgent !== Agent.CODEX) ||
-        (effectiveAgent === Agent.CLAUDE && !hasClaudeOverride) ||
-        (effectiveAgent === Agent.CODEX && !hasCodexOverride)
-      );
-    const overriddenStageLabels =
-      effectiveAgent === Agent.CODEX
-        ? (hasCodexOverride ? codexOverriddenStageLabels : claudeOverriddenStageLabels)
-        : (hasClaudeOverride ? claudeOverriddenStageLabels : codexOverriddenStageLabels);
-
-    const isDeployJobActive = deployJob != null && (deployJob.status === 'PENDING' || deployJob.status === 'RUNNING');
-    const showDeployButton = (!deployJob && isDeployable) || (deployJob != null && !isDeployJobActive && ticket.stage === 'VERIFY');
-
-    // Cancel button: visible when ticket has PENDING or RUNNING workflow job
-    const isCancellableJob = workflowJob && (workflowJob.status === 'PENDING' || workflowJob.status === 'RUNNING');
-
     const handleClick = (event: React.MouseEvent) => {
       if (isDragging) return;
       if (selection) {
@@ -217,107 +170,11 @@ export const TicketCard = React.memo(
           data-selected={selection?.isSelected ? 'true' : 'false'}
         >
           {/* Header: Ticket Key and Badges */}
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-2">
-              {selection && (
-                <span
-                  className={`inline-flex ${
-                    selection.isSelectMode || selection.isSelected
-                      ? 'opacity-100'
-                      : 'opacity-0 group-hover:opacity-100'
-                  } transition-opacity`}
-                  onClick={(e) => e.stopPropagation()}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
-                  <Checkbox
-                    aria-label={`Select ticket ${ticket.ticketKey}`}
-                    data-testid="bulk-select-checkbox"
-                    checked={selection.isSelected}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      if (event.shiftKey) {
-                        event.preventDefault();
-                        selection.onRangeSelect();
-                      }
-                    }}
-                    onCheckedChange={() => selection.onToggle()}
-                  />
-                </span>
-              )}
-              {(() => {
-                const dashIdx = ticket.ticketKey.indexOf('-');
-                const keyPrefix = dashIdx >= 0 ? ticket.ticketKey.slice(0, dashIdx + 1) : ticket.ticketKey;
-                const keyNumber = dashIdx >= 0 ? ticket.ticketKey.slice(dashIdx + 1) : '';
-                return (
-                  <span
-                    className="font-mono text-[12px] tracking-[0.08em] leading-none"
-                    data-testid="ticket-key"
-                  >
-                    <span className="font-bold text-ctp-mauve">#</span>
-                    <span className="font-normal text-ctp-overlay0">{keyPrefix}</span>
-                    <span className="font-semibold text-ctp-mauve">{keyNumber}</span>
-                  </span>
-                );
-              })()}
-            </div>
-            <div className="flex items-center gap-2">
-              <QualityScoreBadge score={qualityScore ?? null} compact />
-              {ticket.workflowType === 'QUICK' && (
-                <Badge
-                  variant="attribute-tc"
-                  kind="scope"
-                  scope="quick"
-                  className="shrink-0"
-                  data-testid="quick-badge"
-                >
-                  QUICK
-                </Badge>
-              )}
-              {ticket.workflowType === 'CLEAN' && (
-                <Badge variant="secondary" className="shrink-0 inline-flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  Clean
-                </Badge>
-              )}
-              {/* Agent Badge (with optional custom-models halo ring) */}
-              {effectiveAgent && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span data-testid="agent-badge" className="inline-flex shrink-0">
-                      {hasModelOverride ? (
-                        <span
-                          data-testid="custom-models-badge"
-                          data-dormant={isModelOverrideDormant ? 'true' : 'false'}
-                          aria-label="Custom models configured"
-                          className={`inline-flex items-center justify-center rounded-full p-0.5 ${
-                            isModelOverrideDormant
-                              ? 'ring-1 ring-muted-foreground/40'
-                              : 'ring-2 ring-indigo-500 dark:ring-indigo-400 shadow-[0_0_10px_theme(colors.indigo.500/0.5)]'
-                          }`}
-                        >
-                          <AgentIcon agent={effectiveAgent} size={16} />
-                        </span>
-                      ) : (
-                        <AgentIcon agent={effectiveAgent} size={16} />
-                      )}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="font-medium">
-                      {getAgentLabel(effectiveAgent)}{isAgentInherited ? ' (default)' : ''}
-                    </div>
-                    {hasModelOverride && (
-                      <div className="text-[11px] opacity-90 mt-0.5">
-                        {`Custom models: ${overriddenStageLabels.join(', ')}`}
-                        {isModelOverrideDormant ? ' (inactive — agent is not Claude)' : ''}
-                      </div>
-                    )}
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </div>
-          </div>
+          <TicketCardHeader
+            ticket={ticket}
+            qualityScore={qualityScore}
+            selection={selection}
+          />
 
           {/* Cancel Confirmation Modal */}
           {workflowJob && (
@@ -365,106 +222,21 @@ export const TicketCard = React.memo(
             {ticket.title}
           </h3>
 
-          {/* Auto-mode footer for eligible tickets with no other visible
-              content. Space is always reserved (no `hidden`) so the card
-              height stays stable; the off-state icon fades in on hover. No
-              separator line. */}
-          {!(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl || ticket.autoMode) && autoModeEligible && (
-            <div className="pt-3">
-              <AutoModeIcon
-                autoMode={ticket.autoMode}
-                onClick={handleAutoModeClick}
-                disabled={autoModeMutation.isPending}
-              />
-            </div>
-          )}
-
-          {/* Job Status Indicators (Single-line layout with right-aligned compact icons) */}
-          {(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl || ticket.autoMode) && (
-            <div className="pt-3">
-              <div className="flex items-center justify-between gap-3">
-                {/* Left: Workflow Job Indicator + Cancel Button + Auto-mode toggle */}
-                {(workflowJob || autoModeEligible) && (
-                  <div className="flex items-center gap-1.5">
-                    {workflowJob && (
-                      <JobStatusIndicator
-                        status={workflowJob.status}
-                        command={workflowJob.command}
-                        jobType={classifyJobType(workflowJob.command)}
-                        stage={ticket.stage}
-                        animated={true}
-                        completedAt={workflowJob.completedAt}
-                      />
-                    )}
-                    {isCancellableJob && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowCancelModal(true);
-                        }}
-                        disabled={cancelJobMutation.isPending}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
-                        aria-label="Cancel workflow"
-                        data-testid="cancel-job-button"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                    {autoModeEligible && (
-                      <AutoModeIcon
-                        autoMode={ticket.autoMode}
-                        onClick={handleAutoModeClick}
-                        disabled={autoModeMutation.isPending}
-                      />
-                    )}
-                  </div>
-                )}
-
-                {/* Right: Compact icon indicators (Preview + Deploy + AI-BOARD) */}
-                <div className="flex items-center gap-3">
-                  {/* Preview Icon: Show only when ticket has active preview URL */}
-                  {ticket.previewUrl && (
-                    <TicketCardPreviewIcon
-                      previewUrl={ticket.previewUrl}
-                      ticketKey={ticket.ticketKey}
-                    />
-                  )}
-
-                  {/* Deploy Icon: Show job status OR deploy button when deployable */}
-                  {isDeployJobActive && (
-                    <JobStatusIndicator
-                      status={deployJob.status}
-                      command={deployJob.command}
-                      jobType={classifyJobType(deployJob.command)}
-                      stage={ticket.stage}
-                      animated={true}
-                      completedAt={deployJob.completedAt}
-                    />
-                  )}
-                  {showDeployButton && (
-                    <TicketCardDeployIcon
-                      onDeploy={() => setShowDeployModal(true)}
-                      ticketKey={ticket.ticketKey}
-                      isDeploying={false}
-                      isDisabled={isDeployDisabled}
-                    />
-                  )}
-
-                  {/* AI-BOARD Job Indicator (compact icon-only) */}
-                  {aiBoardJob && (
-                    <JobStatusIndicator
-                      status={aiBoardJob.status}
-                      command={aiBoardJob.command}
-                      jobType={classifyJobType(aiBoardJob.command)}
-                      stage={ticket.stage}
-                      animated={true}
-                      completedAt={aiBoardJob.completedAt}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Footer: Job Status Indicators + Auto-mode toggle */}
+          <TicketCardJobStatus
+            ticket={ticket}
+            workflowJob={workflowJob}
+            aiBoardJob={aiBoardJob}
+            deployJob={deployJob}
+            isDeployable={isDeployable}
+            isDeployDisabled={isDeployDisabled}
+            autoModeEligible={autoModeEligible}
+            isAutoModePending={autoModeMutation.isPending}
+            isCancelPending={cancelJobMutation.isPending}
+            onAutoModeClick={handleAutoModeClick}
+            onCancelClick={() => setShowCancelModal(true)}
+            onDeployClick={() => setShowDeployModal(true)}
+          />
         </Card>
       </div>
     );
