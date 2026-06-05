@@ -39,6 +39,7 @@ export interface TicketWithVersion {
   codexQuickImplModel: string | null;
   codexVerifyModel: string | null;
   workflowType: WorkflowType;
+  tokenSaving: boolean | null;
   attachments: Prisma.JsonValue;
   qualityScore: number | null;
   createdAt: string;
@@ -46,6 +47,7 @@ export interface TicketWithVersion {
   project?: {
     clarificationPolicy: ClarificationPolicy;
     defaultAgent?: Agent;
+    tokenSaving?: boolean;
     githubOwner?: string;
     githubRepo?: string;
   };

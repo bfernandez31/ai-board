@@ -204,6 +204,7 @@ Clicking any ticket card opens a detail modal displaying:
   - Plain text without markdown renders normally
   - Uses prose styling optimized for dark theme
 - **Stage Badge**: Current workflow stage with visual indicator
+- **Token Saving Badge**: A compact icon badge with a tooltip appears in the header status strip when token saving is effectively ON for the ticket, consistent with how the clarification-policy and agent indicators behave. The tooltip explains the state and its source (inherited project default vs ticket override). Nothing is shown when token saving is effectively OFF.
 - **Metadata**:
   - Creation date
   - Last updated date
@@ -321,6 +322,7 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
   - Duration (formatted time)
   - Cost (formatted USD)
   - Model used (e.g., "claude-sonnet-4-5")
+  - Token-saving outcome indicator — shows whether token saving was Active, Inactive, or Fell back for the run. "Fell back" (token saving was requested but the compression tool failed to install or activate, so the run continued without it) is rendered visually distinct from "Inactive" (token saving off, or a non-Claude agent). Lets two runs be compared without guessing whether the setting applied. Absent (no indicator) for legacy jobs that never reported an outcome.
   - Peak context pill — compact badge showing the maximum per-turn context size observed during the run (formatted as an abbreviated token count). Hover reveals the absolute token count and the percentage of the model's context window. The pill uses neutral styling below 60% of the model's context window, warning styling between 60% and 80%, and danger styling at or above 80%. The pill is hidden entirely (no placeholder, no zero) for jobs run with agents that expose no per-turn telemetry (Mistral), for jobs whose model has no registered context window, and for jobs that predate per-turn ingestion
 - Jobs are expandable to reveal detailed token breakdown:
   - Input tokens
@@ -609,7 +611,8 @@ Users can create a copy of existing tickets using two duplication modes:
 
 **Button Location**:
 - Appears in the ticket detail modal header overflow menu (··· button)
-- Located alongside Edit Policy and Edit Agent actions
+- Located alongside the single **Run settings** action (which replaces the former standalone Edit Policy / Edit Agent / Edit Models items)
+- The overflow menu contains exactly three items: Run settings, Simple copy, Full clone
 - Visible for tickets in all stages (INBOX through SHIP)
 
 **Duplication Modes**:
@@ -644,6 +647,7 @@ Users can create a copy of existing tickets using two duplication modes:
    - Title: "Copy of [original title]" (truncated if needed to stay within 100 chars)
    - Description: Exact copy of original description
    - Clarification Policy: Same as original (or null if using project default)
+   - Token saving override: Same as original (or null if inheriting the project default), so ON-vs-OFF A/B copies are easy to set up
    - Image Attachments: References to same images (uploaded and external URLs)
    - No branch, no jobs
 5. Success toast displays: "Copied to {NEW_TICKET_KEY}"
@@ -660,7 +664,7 @@ Users can create a copy of existing tickets using two duplication modes:
    - Description: Exact copy of original description
    - Copies all jobs with complete telemetry (tokens, cost, duration, model, tools)
    - Creates new Git branch from source branch commit (format: {TICKET_NUMBER}-{slug})
-   - Copies clarification policy and attachments
+   - Copies clarification policy, token-saving override, and attachments
 5. Success toast displays: "Cloned to {NEW_TICKET_KEY}"
 6. Modal closes automatically
 7. New ticket appears in same column as source ticket
@@ -1062,6 +1066,30 @@ Timestamps display in user-friendly formats:
   - `null` means inherit from the project's per-stage default for that agent (which itself falls back to `claude-opus-4-8` or `gpt-5.5`)
   - Editable via the per-stage model override dialog accessible from the ticket detail modal
   - Both column sets are preserved independently: switching the ticket's agent never overwrites the other agent's stored overrides
+
+- **Token Saving Override**: Whether Claude runs compress large command outputs for this ticket
+  - Three states: Inherit (null, default), Force ON (true), Force OFF (false)
+  - `null` means inherit the project's Token Saving default; Force OFF wins over a project default of ON
+  - Effective value resolved at workflow dispatch time as the ticket override when set, otherwise the project default
+  - Unlike agent and clarification policy (INBOX-only), this override is editable at any stage — the control is disabled only while a run is actively executing on the ticket, and a change applies only to runs dispatched afterward
+  - Carried by Simple copy and Full clone so ON-vs-OFF A/B variants are easy to create
+  - Has effect only on Claude runs; stored and shown but ignored for non-Claude agents
+
+### Run Settings Dialog
+
+A single **Run settings** dialog, opened from the ticket detail modal's overflow menu, consolidates every per-ticket execution override into one place. It replaces the former standalone Edit Policy, Edit Agent, and Edit Models entries.
+
+**Sections** (each shows the inherited project default and whether a ticket override is active):
+
+1. **Agent** — which AI agent runs this ticket's workflows; read-only outside INBOX (INBOX-only rule preserved)
+2. **Models (per stage)** — the per-stage model overrides described above; editability follows the existing per-stage rules
+3. **Clarification policy** — how ambiguities are resolved; read-only outside INBOX
+4. **Token saving** — three-state control (Inherit / Force ON / Force OFF); editable at any stage unless a run is active
+
+**Behavior**:
+- Each section persists through its own endpoint with the same validation and permission checks as the previous standalone dialogs — this is a consolidation of entry points only, with no change to the semantics, validation, permissions, or apply-timing of agent, models, or clarification-policy overrides
+- Setting any override back to Inherit restores the project-default behavior for that setting
+- Available to project owners and members
 
 ### Per-Stage Model Override Dialog
 

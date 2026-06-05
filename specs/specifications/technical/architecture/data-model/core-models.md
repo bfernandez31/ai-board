@@ -76,6 +76,7 @@ model Project {
   userId               String
   clarificationPolicy  ClarificationPolicy  @default(AUTO)
   defaultAgent         Agent                @default(CLAUDE)
+  tokenSaving          Boolean              @default(false)
   config               Json?
   configSyncedAt       DateTime?
   defaultBranch        String               @default("main")
@@ -126,6 +127,7 @@ model Project {
 - `userId`: Owner of the project (required foreign key)
 - `clarificationPolicy`: Default policy for spec generation (enum, default: AUTO)
 - `defaultAgent`: Default AI agent for all tickets in the project (enum, default: CLAUDE)
+- `tokenSaving`: Project-level Token Saving default (boolean, default: false). Owner-editable; tickets inherit it unless they set their own override. When effectively ON for a Claude run, the runner activates RTK output compression. Non-nullable, mirroring `clarificationPolicy`/`defaultAgent` being non-nullable defaults
 - `config`: Parsed `.ai-board/config.yml` content stored as JSON (nullable — null means no config synced)
 - `configSyncedAt`: Timestamp of the last successful config fetch from GitHub (nullable)
 - `defaultBranch`: The repository's default branch name (default: `"main"`), auto-updated during config sync
@@ -162,6 +164,7 @@ model Project {
 - User can only access their own projects
 - Default clarification policy AUTO (context-aware)
 - Default agent CLAUDE (backward-compatible; existing projects automatically get CLAUDE)
+- Default `tokenSaving` false (additive, no behavior change until the owner enables it); only the project owner can change it (`verifyProjectOwnership`)
 - Deployment URL displayed on project cards when configured (hidden when null)
 - Project description stored but not displayed on list view cards
 - Project key generation: derived from first 3 characters of name (uppercase), padded/disambiguated if needed
@@ -201,6 +204,7 @@ model Ticket {
   updatedAt               DateTime                  @default(now()) @updatedAt
   clarificationPolicy     ClarificationPolicy?
   agent                   Agent?
+  tokenSaving             Boolean?
   closedAt                DateTime?
   specifyModel            String?                   @db.VarChar(50)
   planModel               String?                   @db.VarChar(50)
@@ -258,6 +262,7 @@ model Ticket {
 - `workflowType`: Workflow path used (enum: FULL, QUICK, CLEAN; default: FULL). CLEAN is historical only -- creation path removed; retained for existing tickets.
 - `clarificationPolicy`: Optional policy override (nullable, inherits from project when null)
 - `agent`: Optional AI agent override (nullable, inherits from project `defaultAgent` when null)
+- `tokenSaving`: Optional Token Saving override (nullable boolean). `null` = inherit the project default, `true` = Force ON, `false` = Force OFF. Mirrors the nullable `clarificationPolicy`/`agent` override pattern, but is editable at any stage (not INBOX-only) — see business rules
 - `specifyModel`: Optional Claude model override for SPECIFY jobs (max 50 chars, nullable — null means inherit project default)
 - `planModel`: Optional Claude model override for PLAN jobs (max 50 chars, nullable)
 - `implementModel`: Optional Claude model override for IMPLEMENT jobs (max 50 chars, nullable)
@@ -316,6 +321,8 @@ model Ticket {
 - Clarification policy overrides project default when set
 - Agent overrides project default when set; null means inherit from project `defaultAgent`
 - Effective agent resolved at dispatch time via `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`
+- `tokenSaving` override is resolved at dispatch time as `ticket.tokenSaving ?? project.tokenSaving` (`resolveEffectiveTokenSaving`) — `??` falls through only on `null`, so Force OFF (`false`) wins over a project default of `true`
+- Unlike `agent`/`clarificationPolicy` (INBOX-only), the `tokenSaving` override is editable at any stage when no RUNNING/PENDING job exists on the ticket; a change applies only to runs dispatched afterward. It is persisted through a dedicated endpoint (no INBOX gate, active-run + version guards) and is copied by both duplicate modes
 - `creatorId` is populated at every creation path (manual create, duplicate, full-clone, MCP, inbox-analysis spawner) by forwarding the actor's `userId` from the API auth layer. Bulk merge preserves the base's `creatorId`; source tickets' creators receive a `TICKET_MERGED` notification before their tickets are hard-deleted
 - Per-stage Claude model overrides (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`) are nullable; null means inherit the project's Claude value for that stage, which itself falls back to `claude-opus-4-8`
 - Per-stage Codex model overrides (`codexSpecifyModel`, `codexPlanModel`, `codexImplementModel`, `codexQuickImplModel`, `codexVerifyModel`) are nullable; null means inherit the project's Codex value for that stage, which itself falls back to `gpt-5.5`
@@ -388,6 +395,9 @@ model Job {
   pluginVersion       String?   @db.VarChar(50)   // ai-board plugin version (.claude-plugin/plugin.json)
   agentCliVersion     String?   @db.VarChar(100)  // Agent CLI version (claude/codex/vibe/gemini --version)
 
+  // Token saving (RTK output compression) outcome reported by the runner
+  tokenSavingOutcome  TokenSavingOutcome?  // ACTIVE / INACTIVE / FELL_BACK; null until reported
+
   ticket      Ticket?   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   log         JobLog?
@@ -432,6 +442,7 @@ model Job {
 - `qualityScoreDetails`: JSON string containing all five dimension sub-scores, weights, and computed final score (nullable, populated alongside `qualityScore`)
 - `pluginVersion`: ai-board plugin version active at job start (max 50 chars, nullable). Sourced from `.claude-plugin/plugin.json`. Null for jobs predating runtime version capture or runs where the runner could not resolve the file.
 - `agentCliVersion`: Underlying agent CLI version active at job start (max 100 chars, nullable). Captured by parsing the first line of `<cli> --version` (claude/codex/vibe/gemini); leading binary name and `v` prefix are stripped. Null for jobs predating runtime version capture or runs where the CLI did not report a version.
+- `tokenSavingOutcome`: Whether RTK output compression was active during the run (enum `TokenSavingOutcome`: ACTIVE/INACTIVE/FELL_BACK, nullable). Reported by the runner on the RUNNING status PATCH and used (alongside the existing token telemetry) to interpret token savings. Null for legacy/PENDING jobs that never reported.
 
 **Relationships**:
 - Belongs to Ticket (optional, cascade delete) — null for `insights-analyze` jobs
@@ -465,6 +476,7 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - AI-BOARD jobs (command like 'comment-%') don't block transitions or count toward rollback validation
 - `workflowRunId` is set once (first-write-wins) when the workflow sends its first RUNNING callback; subsequent RUNNING callbacks with a run ID are ignored if already populated
 - `pluginVersion` and `agentCliVersion` are first-write-wins on RUNNING. The runner reports them once after CLI installation, which can land on the initial RUNNING PATCH or on a follow-up idempotent same-status PATCH; later transitions never overwrite a populated value
+- `tokenSavingOutcome` is reported on the same RUNNING status channel, first-write-wins; once a concrete value is recorded it never changes for that run. Only Claude runs with an effective value of ON attempt RTK activation — every other run reports `INACTIVE`. Activation failures are swallowed and recorded as `FELL_BACK`; a token-saving failure never fails or degrades the run
 - When a PENDING job is cancelled before `workflowRunId` is set, any subsequent RUNNING callback for that job receives a 409 response, signalling the workflow to self-abort
 - Users can cancel RUNNING or PENDING jobs via `POST /api/jobs/:id/cancel` (session auth); cancellation calls the GitHub Actions API for RUNNING jobs or marks CANCELLED directly for PENDING jobs
 

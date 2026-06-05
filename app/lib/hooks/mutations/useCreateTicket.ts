@@ -71,6 +71,7 @@ export function useCreateTicket() {
         branch: null,
         autoMode: variables.autoMode || false,
         workflowType: 'FULL',
+        tokenSaving: null,
         clarificationPolicy: variables.clarificationPolicy || null,
         agent: null,
         specifyModel: null,

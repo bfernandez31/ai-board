@@ -26,6 +26,8 @@ export const jobStatusUpdateSchema = z.object({
   // Both fields are optional — failure to capture leaves the job unannotated.
   pluginVersion: z.string().trim().min(1).max(50).optional(),
   agentCliVersion: z.string().trim().min(1).max(100).optional(),
+  // AIB-849: per-job token-saving outcome reported by the runner at job start.
+  tokenSavingOutcome: z.enum(['ACTIVE', 'INACTIVE', 'FELL_BACK']).optional(),
 });
 
 /**

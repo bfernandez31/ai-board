@@ -47,6 +47,14 @@ done
 ARGS="${RAW_ARGS[*]}"
 ORIGINAL_ARGS_STRING="${ORIGINAL_ARGS[*]}"
 
+# AIB-849: token-saving (RTK) state.
+# RTK_VERSION is pinned to a known-good release (FR-017) — never "latest".
+# TOKEN_SAVING_OUTCOME is reported to the app on the RUNNING status PATCH
+# (report_runtime_versions). Defaults to INACTIVE; only the CLAUDE branch with
+# TOKEN_SAVING=true attempts activation. Activation NEVER fails the run (FR-006/SC-003).
+readonly RTK_VERSION="0.5.0"
+TOKEN_SAVING_OUTCOME="INACTIVE"
+
 # --- Logging helpers ---
 
 log_info() {
@@ -390,7 +398,11 @@ report_runtime_versions() {
   plugin_version="$(resolve_plugin_version 2>/dev/null || true)"
   cli_version="$(resolve_agent_cli_version "$cli" 2>/dev/null || true)"
 
-  if [[ -z "$plugin_version" && -z "$cli_version" ]]; then
+  # AIB-849: report the per-job token-saving outcome on the same RUNNING channel
+  # (first-write-wins). Only report a concrete value once activation has run.
+  local token_saving_outcome="${TOKEN_SAVING_OUTCOME:-}"
+
+  if [[ -z "$plugin_version" && -z "$cli_version" && -z "$token_saving_outcome" ]]; then
     log_info "Runtime version capture: nothing to report"
     return 0
   fi
@@ -399,14 +411,16 @@ report_runtime_versions() {
   payload="$(jq -n \
     --arg pv "$plugin_version" \
     --arg cv "$cli_version" \
+    --arg ts "$token_saving_outcome" \
     '{status: "RUNNING"}
       + (if $pv != "" then {pluginVersion: $pv} else {} end)
-      + (if $cv != "" then {agentCliVersion: $cv} else {} end)')" || {
+      + (if $cv != "" then {agentCliVersion: $cv} else {} end)
+      + (if $ts != "" then {tokenSavingOutcome: $ts} else {} end)')" || {
     log_info "Runtime version capture: failed to build payload"
     return 0
   }
 
-  log_info "Reporting runtime versions: plugin='${plugin_version}' cli='${cli_version}'"
+  log_info "Reporting runtime versions: plugin='${plugin_version}' cli='${cli_version}' tokenSaving='${token_saving_outcome}'"
   local http_code
   http_code="$(curl -X PATCH "${APP_URL}/api/jobs/${JOB_ID}/status" \
     -H "Content-Type: application/json" \
@@ -498,6 +512,60 @@ ensure_claude_commands() {
 invoke_claude() {
   log_info "Invoking Claude: /$COMMAND $ORIGINAL_ARGS_STRING"
   claude --dangerously-skip-permissions "/$COMMAND $ORIGINAL_ARGS_STRING"
+}
+
+# --- Token saving (RTK) — AIB-849 ---
+
+# Install the pinned RTK release (FR-017). Returns non-zero on any failure; the
+# caller (activate_token_saving) swallows it. Never call this outside that wrapper.
+install_rtk() {
+  if command -v rtk &>/dev/null; then
+    log_info "RTK already installed — skipping"
+    return 0
+  fi
+  log_info "Installing RTK v${RTK_VERSION}..."
+  # Official installer, pinned to an exact release via RTK_VERSION (never 'latest').
+  # Bound the network wait so a stalled fetch falls back fast instead of stalling
+  # the run (FR-006/SC-003) — connect within 10s, whole transfer within 60s.
+  local install_rc=0
+  curl -fsSL --connect-timeout 10 --max-time 60 \
+    "https://raw.githubusercontent.com/rtk-ai/rtk/v${RTK_VERSION}/install.sh" \
+    | RTK_VERSION="${RTK_VERSION}" sh >&2 || install_rc=$?
+  # The installer runs in a subshell (piped to `sh`), so any PATH change it makes
+  # does not reach this shell. Mirror the Mistral path and add the default install
+  # dir so `rtk init` / `rtk --version` resolve when RTK lands in ~/.local/bin.
+  export PATH="${HOME}/.local/bin:${PATH}"
+  return $install_rc
+}
+
+# Non-blocking activation. Sets TOKEN_SAVING_OUTCOME to ACTIVE / INACTIVE / FELL_BACK.
+# MUST always return 0 — a token-saving failure must NEVER abort the run (FR-006/SC-003).
+activate_token_saving() {
+  # Phase 1: skip entirely when OFF (non-Claude branches never call this).
+  if [[ "${TOKEN_SAVING:-false}" != "true" ]]; then
+    TOKEN_SAVING_OUTCOME="INACTIVE"
+    return 0
+  fi
+
+  # Phases 2-3: install pinned RTK + register the PreToolUse hook; swallow ALL failures.
+  local rc=0
+  set +e
+  install_rtk
+  rc=$?
+  if [[ $rc -eq 0 ]]; then
+    rtk init --global >&2
+    rc=$?
+  fi
+  set -e
+
+  if [[ $rc -eq 0 ]] && rtk --version &>/dev/null; then
+    TOKEN_SAVING_OUTCOME="ACTIVE"
+    log_info "Token saving active — RTK ${RTK_VERSION} compressing command output"
+  else
+    TOKEN_SAVING_OUTCOME="FELL_BACK"
+    log_info "RTK activation failed — continuing without token saving (fell back)"
+  fi
+  return 0
 }
 
 # --- Codex functions ---
@@ -878,6 +946,7 @@ dispatch_agent() {
       validate_auth
       install_claude
       ensure_claude_commands
+      activate_token_saving
       report_runtime_versions claude
       invoke_claude
       ;;

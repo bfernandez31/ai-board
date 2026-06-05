@@ -208,6 +208,7 @@ export async function updateProject(
     githubRepo?: string | undefined;
     clarificationPolicy?: ClarificationPolicy | undefined;
     defaultAgent?: Agent | undefined;
+    tokenSaving?: boolean | undefined;
     deploymentUrl?: string | null | undefined;
     specifyModel?: string | null | undefined;
     planModel?: string | null | undefined;
@@ -246,6 +247,13 @@ export async function updateProject(
   if (data.githubRepo !== undefined) updateData.githubRepo = data.githubRepo;
   if (data.clarificationPolicy !== undefined) updateData.clarificationPolicy = data.clarificationPolicy;
   if (data.defaultAgent !== undefined) updateData.defaultAgent = data.defaultAgent;
+  // Token-saving default is owner-only (FR-001); members may edit other fields (FR-018).
+  if (data.tokenSaving !== undefined) {
+    if (project.userId !== userId) {
+      throw new Error('Forbidden');
+    }
+    updateData.tokenSaving = data.tokenSaving;
+  }
   if (data.deploymentUrl !== undefined) updateData.deploymentUrl = data.deploymentUrl;
   if (data.specifyModel !== undefined) updateData.specifyModel = data.specifyModel;
   if (data.planModel !== undefined) updateData.planModel = data.planModel;

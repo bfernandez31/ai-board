@@ -70,6 +70,10 @@ model Job {
   pluginVersion   String? @db.VarChar(50) // ai-board plugin version (.claude-plugin/plugin.json)
   agentCliVersion String? @db.VarChar(100) // Underlying agent CLI version (claude/codex/vibe/gemini --version)
 
+  // Per-job token-saving outcome (AIB-849). Null = not yet reported (legacy/PENDING).
+  // ACTIVE = RTK installed + hook activated; INACTIVE = OFF or non-Claude; FELL_BACK = ON but activation failed.
+  tokenSavingOutcome TokenSavingOutcome?
+
   log JobLog?
 
   insightsReport InsightsReport?
@@ -122,6 +126,7 @@ model Project {
   updatedAt           DateTime
   clarificationPolicy ClarificationPolicy   @default(AUTO)
   defaultAgent        Agent                 @default(CLAUDE)
+  tokenSaving         Boolean               @default(false)
   config              Json?
   configSyncedAt      DateTime?
   defaultBranch       String                @default("main") @db.VarChar(100)
@@ -195,6 +200,7 @@ model Ticket {
   updatedAt               DateTime                  @default(now()) @updatedAt
   clarificationPolicy     ClarificationPolicy?
   agent                   Agent?
+  tokenSaving             Boolean?
   specifyModel            String?                   @db.VarChar(50)
   planModel               String?                   @db.VarChar(50)
   implementModel          String?                   @db.VarChar(50)
@@ -369,6 +375,12 @@ enum JobStatus {
   COMPLETED
   FAILED
   CANCELLED
+}
+
+enum TokenSavingOutcome {
+  ACTIVE // Effective value ON, RTK installed + hook activated successfully
+  INACTIVE // Effective value OFF, or agent non-Claude (no install attempted)
+  FELL_BACK // Effective value ON but install/activation failed; run continued without RTK
 }
 
 enum Stage {

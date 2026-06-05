@@ -2,8 +2,10 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getProject } from '@/lib/db/projects';
+import { auth } from '@/lib/auth';
 import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
 import { DefaultAgentCard } from '@/components/settings/default-agent-card';
+import { TokenSavingCard } from '@/components/settings/token-saving-card';
 import { AIModelsCard } from '@/components/settings/ai-models-card';
 import { Button } from '@/components/ui/button';
 import { ConstitutionCard } from '@/components/settings/constitution-card';
@@ -46,6 +48,9 @@ export default async function ProjectSettingsPage({
     throw error;
   });
 
+  const session = await auth();
+  const isOwner = session?.user?.id === project.userId;
+
   return (
     <main className="container mx-auto py-10 max-w-4xl">
       <div className="space-y-6">
@@ -77,6 +82,14 @@ export default async function ProjectSettingsPage({
               id: project.id,
               defaultAgent: project.defaultAgent,
             }}
+          />
+
+          <TokenSavingCard
+            project={{
+              id: project.id,
+              tokenSaving: project.tokenSaving,
+            }}
+            isOwner={isOwner}
           />
 
           <AIModelsCard

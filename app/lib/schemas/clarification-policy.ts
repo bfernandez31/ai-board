@@ -7,6 +7,7 @@ export const projectClarificationPolicySchema = z.nativeEnum(ClarificationPolicy
 export const projectUpdateSchema = z.object({
   clarificationPolicy: projectClarificationPolicySchema.optional(),
   defaultAgent: z.nativeEnum(Agent).optional(),
+  tokenSaving: z.boolean().optional(),
   deploymentUrl: z.string().url().max(500).nullable().optional(),
   specifyModel: claudeModelIdSchema.nullable().optional(),
   planModel: claudeModelIdSchema.nullable().optional(),
