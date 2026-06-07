@@ -81,6 +81,20 @@ function coverageGap(report: ReportListEntry): number {
   return Math.max(0, report.expectedSessionsCount - report.sessionsCount);
 }
 
+/**
+ * Partial-coverage badge (FR-011): rendered only when a COMPLETED run analyzed
+ * fewer sessions than it enumerated. Returns null when coverage is complete.
+ */
+function renderCoverageBadge(report: ReportListEntry): React.ReactNode {
+  const gap = coverageGap(report);
+  if (gap === 0) return null;
+  return (
+    <Badge variant="destructive" className="text-[10px]">
+      {gap} session{gap === 1 ? '' : 's'} unavailable
+    </Badge>
+  );
+}
+
 function statusBadgeVariant(
   status: ReportListEntry['status']
 ): 'default' | 'secondary' | 'destructive' | 'outline' {
@@ -261,12 +275,7 @@ export function InsightsReportView({
                     <p className="text-sm text-foreground">
                       {formatMetadataPhrasing(display)}
                     </p>
-                    {coverageGap(display) > 0 && (
-                      <Badge variant="destructive" className="text-[10px]">
-                        {coverageGap(display)} session
-                        {coverageGap(display) === 1 ? '' : 's'} unavailable
-                      </Badge>
-                    )}
+                    {renderCoverageBadge(display)}
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {SCOPE_NOTE}
