@@ -61,7 +61,7 @@ interface SessionRow {
  * back to `updatedAt` then `startedAt` for legacy terminal rows where
  * `completedAt` is null (D3). `startedAt` is always set.
  */
-function completionOf(job: {
+export function completionOf(job: {
   completedAt: Date | null;
   updatedAt: Date;
   startedAt: Date;

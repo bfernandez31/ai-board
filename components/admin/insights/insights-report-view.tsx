@@ -55,13 +55,8 @@ function formatMetadataPhrasing(report: ReportListEntry): string {
   // count is unknown (legacy COMPLETED rows predating this feature) fall back
   // to the analyzed count alone.
   const analyzed = report.sessionsCount;
-  const expected = report.expectedSessionsCount;
+  const expected = report.expectedSessionsCount ?? analyzed;
   const tickets = report.ticketsCount ?? 0;
-  if (expected === null || expected === analyzed) {
-    return `Analyzed ${analyzed} of ${
-      expected ?? analyzed
-    } Claude Code sessions across ${tickets} tickets between ${start} and ${end}`;
-  }
   return `Analyzed ${analyzed} of ${expected} Claude Code sessions across ${tickets} tickets between ${start} and ${end}`;
 }
 

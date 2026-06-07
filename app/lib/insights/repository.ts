@@ -5,7 +5,10 @@ import type {
 } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
-import { getEarliestClaudeSessionCompletion } from '@/app/lib/insights/predicate';
+import {
+  completionOf,
+  getEarliestClaudeSessionCompletion,
+} from '@/app/lib/insights/predicate';
 
 /**
  * Data-access helpers for `InsightsReport`. Status transitions ALWAYS go
@@ -65,7 +68,7 @@ export async function derivePeriodStart(now: Date = new Date()): Promise<Date> {
     for (const row of covered) {
       const job = row.job;
       if (!job) continue;
-      const completion = job.completedAt ?? job.updatedAt ?? job.startedAt;
+      const completion = completionOf(job);
       if (max === null || completion > max) max = completion;
     }
     if (max !== null) return max;
