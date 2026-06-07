@@ -49,7 +49,6 @@ export async function GET(
         select: {
           agent: true,
           project: { select: { defaultAgent: true } },
-          outcome: { select: { shippedAt: true } },
         },
       },
     },
@@ -58,7 +57,7 @@ export async function GET(
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 
-  // Apply the shared effective-agent predicate (D-6, P-4). Non-Claude
+  // Apply the shared effective-agent predicate (D-3, P-2). Non-Claude
   // returns 404 so the workflow's enumeration can't accidentally widen.
   const effective =
     job.ticket.agent ?? job.ticket.project.defaultAgent ?? 'CLAUDE';
@@ -66,14 +65,13 @@ export async function GET(
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 
-  // FR-010 / FR-025: the analyzer corpus is exclusively shipped Claude
-  // tickets. A workflow-token holder must not be able to read raw session
-  // artifacts for unshipped tickets through this endpoint just because the
-  // effective agent resolves to CLAUDE. Treat unshipped tickets as 404 so
-  // this route stays aligned with the enumeration predicate.
-  if (!job.ticket.outcome) {
-    return NextResponse.json({ error: 'Job not found' }, { status: 404 });
-  }
+  // AIB-856 (D-8, FR-007): the analyzer corpus now covers Claude sessions of
+  // **every** ticket regardless of outcome. The shipped-outcome gate was
+  // removed so the workflow can fetch non-shipped sessions that enumeration
+  // now lists — otherwise every non-shipped session would 404 and be falsely
+  // reported as a coverage gap. This stays inside the existing workflow-token
+  // trust boundary (see file header + research §Security); the effective-agent
+  // CLAUDE gate above is retained.
 
   // The DB row's rawArtifactKey is the authoritative blob key for this job —
   // it may carry either the current `.tar.gz` extension or the legacy

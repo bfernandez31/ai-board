@@ -7,8 +7,8 @@ import { prisma } from '@/lib/db/client';
 import { requireAdminOrNotFound } from '@/app/lib/auth/admin';
 import { reconcileOrphanedRunningReports } from '@/app/lib/insights/reconcile';
 import {
-  countShippedClaudeTicketsSince,
-  getEarliestClaudeJobTimestamp,
+  countEligibleUnanalyzedSessions,
+  getEarliestEligibleSessionTimestamp,
 } from '@/app/lib/insights/predicate';
 import {
   InsightsAlreadyRunningError,
@@ -47,7 +47,7 @@ interface TriggerSuccessBody {
   createdAt: string;
 }
 
-type RefusalCode = 'NO_CLAUDE_JOBS' | 'NO_NEW_SHIPPED' | 'ALREADY_RUNNING';
+type RefusalCode = 'NO_CLAUDE_SESSIONS' | 'NO_NEW_SESSIONS' | 'ALREADY_RUNNING';
 
 interface RefusalBody {
   refusalCode: RefusalCode;
@@ -66,12 +66,12 @@ function refusal(code: RefusalCode, message: string): NextResponse {
  * Flow (contracts/admin-api.md):
  *   1. requireAdminOrNotFound
  *   2. reconcileOrphanedRunningReports
- *   3. pre-flight: NO_CLAUDE_JOBS vs NO_NEW_SHIPPED
+ *   3. pre-flight (marker-based, D-7): NO_CLAUDE_SESSIONS vs NO_NEW_SESSIONS
  *   4. concurrency gate: ALREADY_RUNNING
- *   5. compute periodStart/periodEnd
+ *   5. compute display-only periodStart/periodEnd (earliest eligible → now)
  *   6. single-transaction insert of InsightsReport + Job
  *   7. workflow dispatch
- *   8. on dispatch failure: atomic transition to FAILED + delete Job (D-5)
+ *   8. on dispatch failure: atomic transition to FAILED + delete Job (P-5)
  */
 export async function POST(request: NextRequest): Promise<Response> {
   const auth = await requireAdminOrNotFound(request);
@@ -107,18 +107,18 @@ export async function POST(request: NextRequest): Promise<Response> {
   let prevEnd: Date | null = null;
   if (!isRetry) {
     prevEnd = await getLastCompletedRunEnd();
-    const shippedSince = await countShippedClaudeTicketsSince(prevEnd);
+    const eligibleSessions = await countEligibleUnanalyzedSessions();
 
-    if (shippedSince === 0) {
+    if (eligibleSessions === 0) {
       if (prevEnd === null) {
         return refusal(
-          'NO_CLAUDE_JOBS',
-          'No shipped Claude tickets to analyze yet'
+          'NO_CLAUDE_SESSIONS',
+          'No Claude sessions to analyze yet'
         );
       }
       return refusal(
-        'NO_NEW_SHIPPED',
-        `No new shipped tickets since last run on ${prevEnd.toISOString()}`
+        'NO_NEW_SESSIONS',
+        `No new sessions since last run on ${prevEnd.toISOString()}`
       );
     }
   }
@@ -138,7 +138,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     periodStart = new Date(parsed.data.periodStart!);
     periodEnd = new Date(parsed.data.periodEnd!);
   } else {
-    periodStart = prevEnd ?? (await getEarliestClaudeJobTimestamp()) ?? now;
+    // Display-only window (D-5): selection is marker-driven, not windowed.
+    // periodStart = earliest eligible-unanalyzed session; periodEnd = now.
+    periodStart = (await getEarliestEligibleSessionTimestamp()) ?? now;
     periodEnd = now;
   }
 

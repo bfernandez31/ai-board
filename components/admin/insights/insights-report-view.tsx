@@ -42,18 +42,43 @@ function compactPeriod(start: string, end: string): string {
   return `${formatDate(start)} → ${formatDate(end)}`;
 }
 
+// FR-008: Insights analyzes all Claude sessions across all projects,
+// regardless of ticket outcome. Surfaced as a static scope note so the
+// admin understands the corpus is no longer shipped-only.
+const SCOPE_NOTE =
+  'Covers all Claude sessions across all projects, regardless of ticket outcome.';
+
 function formatMetadataPhrasing(report: ReportListEntry): string {
-  const start = formatDate(report.periodStart);
-  const end = formatDate(report.periodEnd);
   if (report.status !== 'COMPLETED' || report.sessionsCount === null) {
     if (report.status === 'RUNNING') {
-      return `Analyzing Claude Code sessions for tickets shipped between ${start} and ${end}…`;
+      return 'Analyzing all Claude Code sessions across all projects…';
     }
-    return `Run window: ${start} to ${end} (counts unavailable)`;
+    return 'Counts unavailable for this run.';
   }
-  return `Analyzed ${report.sessionsCount} Claude Code sessions across ${
+  // FR-008/FR-010: "Analyzed X of Y Claude Code sessions across Z tickets".
+  // Y (expected) may be null for legacy rows — fall back to the analyzed
+  // count so the phrasing still reads sensibly.
+  const analyzed = report.sessionsCount;
+  const expected = report.expectedSessionsCount ?? analyzed;
+  return `Analyzed ${analyzed} of ${expected} Claude Code sessions across ${
     report.ticketsCount ?? 0
-  } tickets shipped between ${start} and ${end}`;
+  } tickets`;
+}
+
+/**
+ * FR-011: a run signals partial coverage when fewer sessions were analyzed
+ * than were enumerated (pruned/unreadable transcripts). Only meaningful for
+ * COMPLETED rows with a non-null `expectedSessionsCount` (legacy rows are null).
+ */
+function coverageGap(report: ReportListEntry): number {
+  if (
+    report.status !== 'COMPLETED' ||
+    report.sessionsCount === null ||
+    report.expectedSessionsCount === null
+  ) {
+    return 0;
+  }
+  return Math.max(0, report.expectedSessionsCount - report.sessionsCount);
 }
 
 function statusBadgeVariant(
@@ -130,16 +155,16 @@ export function InsightsReportView({
         message: `A run is already in progress (started ${formatDate(preflight.runningSince)}).`,
       };
     }
-    if (refusalCode === 'NO_NEW_SHIPPED' && preflight.previousRunEnd) {
+    if (refusalCode === 'NO_NEW_SESSIONS' && preflight.previousRunEnd) {
       return {
         refusalCode,
-        message: `No new shipped tickets since last run on ${formatDate(preflight.previousRunEnd)}.`,
+        message: `No new sessions since last run on ${formatDate(preflight.previousRunEnd)}.`,
       };
     }
     return preflight.refusal;
   }, [preflight.refusal, preflight.previousRunEnd, preflight.runningSince]);
 
-  // Retries bypass NO_CLAUDE_JOBS / NO_NEW_SHIPPED on the server (the
+  // Retries bypass NO_CLAUDE_SESSIONS / NO_NEW_SESSIONS on the server (the
   // original run already proved eligibility for that window). Only the
   // concurrency gate and the latestIsRunning short-circuit apply here, so
   // the retry button stays enabled even when the header is gated by
@@ -162,9 +187,9 @@ export function InsightsReportView({
     <div className="flex flex-col gap-4">
       <header className="flex items-start justify-between gap-4">
         <p className="text-sm text-muted-foreground">
-          Shipped Claude tickets since previous run:{' '}
+          Claude sessions awaiting analysis:{' '}
           <strong className="text-foreground">
-            {preflight.shippedSincePreviousRun}
+            {preflight.eligibleSessionsSincePreviousRun}
           </strong>
           {preflight.previousRunEnd
             ? ` (last analyzed up to ${formatDate(preflight.previousRunEnd)})`
@@ -232,8 +257,19 @@ export function InsightsReportView({
             <div className="flex flex-col gap-4">
               <Card className="aurora-bg-card-blue">
                 <CardContent className="p-5">
-                  <p className="text-sm text-foreground">
-                    {formatMetadataPhrasing(display)}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm text-foreground">
+                      {formatMetadataPhrasing(display)}
+                    </p>
+                    {coverageGap(display) > 0 && (
+                      <Badge variant="destructive" className="text-[10px]">
+                        {coverageGap(display)} session
+                        {coverageGap(display) === 1 ? '' : 's'} unavailable
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {SCOPE_NOTE}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Report #{display.id} — generated {formatDate(display.generatedAt)}

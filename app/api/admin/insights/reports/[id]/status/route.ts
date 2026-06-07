@@ -6,13 +6,21 @@ import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { streamInsightsReportArtifact } from '@/app/lib/blob/client';
 import { validateInsightsOutput } from '@/app/lib/insights/output-validation';
 import { buildInsightsReportKey } from '@/app/lib/insights/blob-keys';
+import { filterEligibleClaudeSessionIds } from '@/app/lib/insights/predicate';
 
 export const dynamic = 'force-dynamic';
 
 const StatusPatchSchema = z
   .object({
     status: z.enum(['COMPLETED', 'FAILED']),
+    // AIB-856: `sessionsCount` is no longer sent by the workflow — the API
+    // derives it from the marked (readable + eligible) set. Accepted but
+    // ignored for backward compatibility.
     sessionsCount: z.number().int().nonnegative().optional(),
+    // AIB-856: readable sessions actually fed to /insights (markers written).
+    analyzedJobIds: z.array(z.number().int().positive()).optional(),
+    // AIB-856: sessions enumerated at run start (the expected coverage).
+    expectedSessionsCount: z.number().int().nonnegative().optional(),
     ticketsCount: z.number().int().nonnegative().optional(),
     artifactKey: z
       .string()
@@ -24,11 +32,15 @@ const StatusPatchSchema = z
   .refine(
     (data) =>
       data.status !== 'COMPLETED' ||
-      (data.sessionsCount !== undefined &&
+      (data.analyzedJobIds !== undefined &&
+        data.expectedSessionsCount !== undefined &&
         data.ticketsCount !== undefined &&
         data.artifactKey !== undefined &&
         data.artifactSize !== undefined),
-    { message: 'COMPLETED transitions require all artifact fields' }
+    {
+      message:
+        'COMPLETED transitions require analyzedJobIds, expectedSessionsCount, ticketsCount, and artifact fields',
+    }
   )
   .refine(
     (data) => data.status !== 'FAILED' || data.errorReason !== undefined,
@@ -40,60 +52,128 @@ type TerminalTransitionData =
       status: 'COMPLETED';
       sessionsCount: number;
       ticketsCount: number;
+      expectedSessionsCount: number;
       artifactKey: string;
       artifactSize: number;
+      /** Pre-filtered, currently-eligible Claude session ids to mark (P-4). */
+      markedJobIds: number[];
     }
   | { status: 'FAILED'; errorReason: string };
 
 /**
- * Atomic conditional transition of a RUNNING row to COMPLETED or FAILED,
- * cascading to the linked Job and returning the canonical JSON shape. If
- * the row is already terminal, returns its current state (idempotent no-op,
- * SC-012). The Job is updated directly to suppress notification side effects
- * (FR-022).
+ * Idempotent no-op response for a late/duplicate terminal callback that found
+ * nothing to flip (`count===0`, SC-012): return the row's current state.
  */
-async function applyTerminalTransition(
+async function idempotentNoOp(id: number): Promise<Response> {
+  const current = await prisma.insightsReport.findUnique({ where: { id } });
+  return NextResponse.json(
+    {
+      id: current!.id,
+      status: current!.status,
+      completedAt: current!.completedAt?.toISOString() ?? null,
+    },
+    { status: 200 }
+  );
+}
+
+/**
+ * Cascade the terminal status to the linked Job row. The InsightsReport
+ * transition has already committed; if the cascade fails we log and continue
+ * so the workflow callback still gets a deterministic response (the orphan Job
+ * is picked up by reconciliation). Constitution §IV: surface the failure, do
+ * not silently swallow. The Job is updated directly (NOT via
+ * /api/jobs/:id/status) to suppress push-notification side effects (FR-022).
+ */
+async function cascadeJob(
   id: number,
-  data: TerminalTransitionData,
+  status: 'COMPLETED' | 'FAILED',
   now: Date
-): Promise<Response> {
-  const result = await prisma.insightsReport.updateMany({
-    where: { id, status: 'RUNNING' },
-    data: { ...data, completedAt: now },
-  });
-  if (result.count === 0) {
-    const current = await prisma.insightsReport.findUnique({ where: { id } });
-    return NextResponse.json(
-      {
-        id: current!.id,
-        status: current!.status,
-        completedAt: current!.completedAt?.toISOString() ?? null,
-      },
-      { status: 200 }
-    );
-  }
-  // Cascade to the linked Job row. The InsightsReport transition has
-  // already been committed; if the cascade fails we log and continue so the
-  // workflow callback still gets a deterministic response (and the orphan
-  // Job is picked up by reconciliation). Constitution §IV: surface the
-  // failure, do not silently swallow.
+): Promise<void> {
   try {
     await prisma.job.updateMany({
       where: {
         insightsReport: { id },
         status: { in: ['PENDING', 'RUNNING'] },
       },
-      data: { status: data.status, completedAt: now },
+      data: { status, completedAt: now },
     });
   } catch (error) {
     console.error(
       '[applyTerminalTransition] cascade job update failed',
-      { reportId: id, status: data.status },
+      { reportId: id, status },
       error
     );
   }
+}
+
+/**
+ * Atomic conditional transition of a RUNNING row to COMPLETED or FAILED.
+ *
+ * COMPLETED (AIB-856, P-1/P-3): the guarded `updateMany` + the per-session
+ * `InsightsAnalyzedSession.createMany({ skipDuplicates: true })` run in one
+ * `prisma.$transaction` so a crash can never leave a COMPLETED report with
+ * unmarked sessions (or markers without a completed report). `sessionsCount`
+ * is the size of the (pre-filtered, eligible) marked set. A late duplicate
+ * callback hits `count===0` → idempotent no-op, writing no markers. The
+ * `@unique(jobId)` index + `skipDuplicates` make a double-mark impossible
+ * even under a racing duplicate PATCH.
+ *
+ * FAILED: guarded `updateMany`, **no markers written** (FR-006).
+ *
+ * In both cases the linked Job is cascaded best-effort after commit.
+ */
+async function applyTerminalTransition(
+  id: number,
+  data: TerminalTransitionData,
+  now: Date
+): Promise<Response> {
+  if (data.status === 'COMPLETED') {
+    const { markedJobIds, ...reportFields } = data;
+    const flipped = await prisma.$transaction(async (tx) => {
+      const result = await tx.insightsReport.updateMany({
+        where: { id, status: 'RUNNING' },
+        data: {
+          status: 'COMPLETED',
+          sessionsCount: reportFields.sessionsCount,
+          ticketsCount: reportFields.ticketsCount,
+          expectedSessionsCount: reportFields.expectedSessionsCount,
+          artifactKey: reportFields.artifactKey,
+          artifactSize: reportFields.artifactSize,
+          completedAt: now,
+        },
+      });
+      if (result.count === 0) return false;
+      await tx.insightsAnalyzedSession.createMany({
+        data: markedJobIds.map((jobId) => ({
+          jobId,
+          reportId: id,
+          analyzedAt: now,
+        })),
+        skipDuplicates: true,
+      });
+      return true;
+    });
+    if (!flipped) return idempotentNoOp(id);
+    await cascadeJob(id, 'COMPLETED', now);
+    return NextResponse.json(
+      { id, status: 'COMPLETED', completedAt: now.toISOString() },
+      { status: 200 }
+    );
+  }
+
+  // FAILED branch — no markers written.
+  const result = await prisma.insightsReport.updateMany({
+    where: { id, status: 'RUNNING' },
+    data: {
+      status: 'FAILED',
+      errorReason: data.errorReason,
+      completedAt: now,
+    },
+  });
+  if (result.count === 0) return idempotentNoOp(id);
+  await cascadeJob(id, 'FAILED', now);
   return NextResponse.json(
-    { id, status: data.status, completedAt: now.toISOString() },
+    { id, status: 'FAILED', completedAt: now.toISOString() },
     { status: 200 }
   );
 }
@@ -208,15 +288,41 @@ export async function PATCH(
       );
     }
 
+    // Marker-poisoning defense (P-4): filter the caller-supplied analyzedJobIds
+    // down to sessions that are currently eligible Claude sessions before
+    // writing any marker. A buggy/compromised workflow must not be able to mark
+    // an arbitrary job as analyzed and thereby exclude it from all future runs.
+    // The refinement guarantees analyzedJobIds is present when COMPLETED.
+    const marked = await filterEligibleClaudeSessionIds(
+      parsed.data.analyzedJobIds!
+    );
+
+    // Every enumerated session was pruned/ineligible by terminal time → there
+    // is nothing to legitimately mark. Treat as FAILED so the sessions stay
+    // eligible for the next run rather than silently completing with no
+    // coverage (admin-api.md COMPLETED step 4, FR-006).
+    if (marked.length === 0) {
+      return applyTerminalTransition(
+        id,
+        {
+          status: 'FAILED',
+          errorReason: 'No readable Claude sessions available',
+        },
+        now
+      );
+    }
+
     // Refinement on the schema guarantees these are present when status===COMPLETED.
     return applyTerminalTransition(
       id,
       {
         status: 'COMPLETED',
-        sessionsCount: parsed.data.sessionsCount!,
+        sessionsCount: marked.length,
         ticketsCount: parsed.data.ticketsCount!,
+        expectedSessionsCount: parsed.data.expectedSessionsCount!,
         artifactKey: parsed.data.artifactKey!,
         artifactSize: parsed.data.artifactSize!,
+        markedJobIds: marked,
       },
       now
     );

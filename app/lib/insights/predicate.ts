@@ -1,21 +1,36 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 
 /**
- * Single source of truth for "is this Job a Claude session worth analyzing?"
- * (AIB-791, D-6, D-7, FR-010, FR-025).
+ * Single source of truth for "is this Job a Claude agent session worth
+ * analyzing?" (AIB-856, D-3/D-5/P-2).
+ *
+ * A session is **eligible** iff:
+ *   - `status = 'COMPLETED'`
+ *   - `ticketId != null`        — excludes the insights-analyze jobs themselves
+ *   - `log.rawArtifactKey != null` — the native transcript is fetchable (FR-009)
+ *   - effective agent resolves to `'CLAUDE'`
  *
  * The effective-agent rule mirrors the production predicate already used at
- * `app/api/jobs/[id]/logs/raw-artifact/route.ts:60-62`:
+ * `app/api/jobs/[id]/logs/raw-artifact/route.ts`:
  *     effectiveAgent = ticket.agent ?? ticket.project.defaultAgent ?? 'CLAUDE'
- * A job is "Claude" iff this resolves to 'CLAUDE'.
  *
- * Both exported functions (`countShippedClaudeTicketsSince` and
- * `listShippedClaudeJobsForWindow`) call the same private query so the
- * pre-flight count cannot drift from the workflow's enumeration — exactly
- * the AIB-787-class regression the spec forbids (FR-025, SC-006).
+ * Eligibility is **decoupled from `TicketOutcome` / shippedAt** entirely
+ * (D-3, FR-007): shipped, in-progress, failed, abandoned and rolled-back
+ * tickets all contribute their sessions. There is **no earliest-per-ticket
+ * dedup** (FR-002/FR-003) — every eligible session of every ticket across all
+ * projects is selected.
  *
- * "Shipped" is determined by `TicketOutcome.shippedAt`, the canonical
- * audit-row for ticket SHIP transitions.
+ * Coverage is tracked by the per-session marker `InsightsAnalyzedSession`
+ * (absence = not yet analyzed). The `unanalyzed` toggle adds the
+ * `insightsAnalyzedSession: null` anti-join so a session is only ever offered
+ * to one run (D-2, P-3).
+ *
+ * `countEligibleUnanalyzedSessions`, `listEligibleUnanalyzedSessions`, and
+ * `getEarliestEligibleSessionTimestamp` all derive from the same private
+ * `queryEligibleSessions` query so the pre-flight count cannot drift from the
+ * workflow's enumeration — the AIB-787-class regression the spec forbids
+ * (P-2, SC).
  */
 
 export interface JobRef {
@@ -31,44 +46,49 @@ interface RawJobRow {
   ticketId: number;
   ticketAgent: string | null;
   projectDefaultAgent: string | null;
-  shippedAt: Date;
   jobStartedAt: Date;
   rawArtifactKey: string;
 }
 
-/**
- * Inner query that loads every Job belonging to a Ticket whose SHIP outcome
- * falls inside the requested window, with the agent fields needed to apply
- * the effective-agent predicate.
- *
- * Window semantics:
- *   - `start === null` → no lower bound (used by first-ever pre-flight)
- *   - half-open: shippedAt >= start, shippedAt < end (or no upper bound when
- *     end === null — used by pre-flight's "since X" probe)
- *
- * Jobs without an uploaded raw-native artifact (`JobLog.rawArtifactKey IS
- * NULL`) are excluded — the analyzer corpus is the set of sessions the
- * workflow can actually fetch via `/api/admin/insights/jobs/:jobId/raw-native`.
- * Including unfetchable jobs would let pre-flight promise sessions the
- * download step cannot retrieve, killing the workflow on the first 404.
- */
-async function queryShippedJobs(
-  start: Date | null,
-  end: Date | null
-): Promise<RawJobRow[]> {
-  const shippedAtFilter: { gte?: Date; lt?: Date } = {};
-  if (start !== null) shippedAtFilter.gte = start;
-  if (end !== null) shippedAtFilter.lt = end;
+interface QueryEligibleOptions {
+  /** When true, exclude sessions that already have an `InsightsAnalyzedSession`
+   *  marker (eligible-unanalyzed). When false, return all eligible sessions
+   *  regardless of marker (used only for diagnostics/parity). */
+  unanalyzed?: boolean;
+  /** Restrict to this set of job ids (marker-poisoning defense, P-4). */
+  jobIds?: number[];
+}
 
-  const outcomes = await prisma.ticketOutcome.findMany({
-    where:
-      Object.keys(shippedAtFilter).length > 0
-        ? { shippedAt: shippedAtFilter }
-        : {},
+/**
+ * Inner query loading every eligible Claude session, in ascending
+ * `startedAt` order (deterministic enumeration). Applies the eligibility
+ * predicate at the database layer and resolves the effective-agent rule in
+ * memory from the included agent fields.
+ */
+async function queryEligibleSessions(
+  opts: QueryEligibleOptions = {}
+): Promise<RawJobRow[]> {
+  const where: Prisma.JobWhereInput = {
+    status: 'COMPLETED',
+    ticketId: { not: null },
+    log: { rawArtifactKey: { not: null } },
+  };
+  if (opts.unanalyzed) {
+    where.insightsAnalyzedSession = null;
+  }
+  if (opts.jobIds) {
+    where.id = { in: opts.jobIds };
+  }
+
+  const jobs = await prisma.job.findMany({
+    where,
+    orderBy: { startedAt: 'asc' },
     select: {
-      ticketId: true,
+      id: true,
       projectId: true,
-      shippedAt: true,
+      ticketId: true,
+      startedAt: true,
+      log: { select: { rawArtifactKey: true } },
       ticket: {
         select: {
           agent: true,
@@ -78,39 +98,16 @@ async function queryShippedJobs(
     },
   });
 
-  if (outcomes.length === 0) return [];
-
-  const ticketIds = outcomes.map((o) => o.ticketId);
-  const jobs = await prisma.job.findMany({
-    where: {
-      ticketId: { in: ticketIds },
-      status: 'COMPLETED',
-      log: { rawArtifactKey: { not: null } },
-    },
-    select: {
-      id: true,
-      projectId: true,
-      ticketId: true,
-      startedAt: true,
-      log: { select: { rawArtifactKey: true } },
-    },
-  });
-
-  const outcomeByTicket = new Map(outcomes.map((o) => [o.ticketId, o]));
-
   const result: RawJobRow[] = [];
   for (const job of jobs) {
-    if (job.ticketId === null) continue;
-    const outcome = outcomeByTicket.get(job.ticketId);
-    if (!outcome) continue;
+    if (job.ticketId === null || !job.ticket) continue;
     if (!job.log?.rawArtifactKey) continue;
     result.push({
       jobId: job.id,
       projectId: job.projectId,
       ticketId: job.ticketId,
-      ticketAgent: outcome.ticket.agent ?? null,
-      projectDefaultAgent: outcome.ticket.project.defaultAgent ?? null,
-      shippedAt: outcome.shippedAt,
+      ticketAgent: job.ticket.agent ?? null,
+      projectDefaultAgent: job.ticket.project.defaultAgent ?? null,
       jobStartedAt: job.startedAt,
       rawArtifactKey: job.log.rawArtifactKey,
     });
@@ -120,57 +117,29 @@ async function queryShippedJobs(
 }
 
 function isClaudeRow(row: RawJobRow): boolean {
-  const effective =
-    row.ticketAgent ?? row.projectDefaultAgent ?? 'CLAUDE';
+  const effective = row.ticketAgent ?? row.projectDefaultAgent ?? 'CLAUDE';
   return effective === 'CLAUDE';
 }
 
 /**
- * Distinct count of Claude-agent tickets shipped at or after `since`
- * (half-open lower bound: `shippedAt >= since` when `since` is non-null;
- * no lower bound otherwise). Used by the trigger endpoint's pre-flight
- * gate and the `/preflight` UI endpoint.
- *
- * The period semantic in `data-model.md` is "[prevEnd, now)" — passing the
- * previous run's `periodEnd` as `since` counts new ships at or after that
- * boundary.
+ * Count of eligible-unanalyzed Claude sessions across all tickets and all
+ * projects. Used by the trigger endpoint's pre-flight gate and the
+ * `/preflight` UI endpoint.
  */
-export async function countShippedClaudeTicketsSince(
-  since: Date | null
-): Promise<number> {
-  const rows = await queryShippedJobs(since, null);
-  const claudeTicketIds = new Set<number>();
-  for (const row of rows) {
-    if (isClaudeRow(row)) claudeTicketIds.add(row.ticketId);
-  }
-  return claudeTicketIds.size;
+export async function countEligibleUnanalyzedSessions(): Promise<number> {
+  const rows = await queryEligibleSessions({ unanalyzed: true });
+  return rows.filter(isClaudeRow).length;
 }
 
 /**
- * List of Claude Jobs whose Ticket shipped in [start, end). Used by the
- * insights workflow's enumeration step (T052) so the analyzer sees exactly
- * the same set of sessions the pre-flight counted.
- *
- * De-duplicated by `ticketId` so the workflow's session_count cannot
- * exceed the pre-flight's distinct-ticket count (FR-025). When a ticket has
- * multiple COMPLETED Claude jobs (e.g. an `implement` plus a later
- * `iterate`), we keep the earliest job by `startedAt` — the foundational
- * session that produced the shipped outcome.
+ * List of every eligible-unanalyzed Claude session across all tickets and all
+ * projects, in ascending `startedAt` order. Used by the insights workflow's
+ * enumeration step. **No earliest-per-ticket dedup** (FR-002/FR-003) — a
+ * ticket with five sessions contributes all five.
  */
-export async function listShippedClaudeJobsForWindow(
-  start: Date,
-  end: Date
-): Promise<JobRef[]> {
-  const rows = await queryShippedJobs(start, end);
-  const claudeRows = rows.filter(isClaudeRow);
-  const earliestByTicket = new Map<number, RawJobRow>();
-  for (const row of claudeRows) {
-    const prior = earliestByTicket.get(row.ticketId);
-    if (!prior || row.jobStartedAt < prior.jobStartedAt) {
-      earliestByTicket.set(row.ticketId, row);
-    }
-  }
-  return Array.from(earliestByTicket.values()).map((row) => ({
+export async function listEligibleUnanalyzedSessions(): Promise<JobRef[]> {
+  const rows = await queryEligibleSessions({ unanalyzed: true });
+  return rows.filter(isClaudeRow).map((row) => ({
     jobId: row.jobId,
     projectId: row.projectId,
     ticketId: row.ticketId,
@@ -179,21 +148,29 @@ export async function listShippedClaudeJobsForWindow(
 }
 
 /**
- * Earliest `Job.startedAt` across Claude jobs of shipped tickets — the
- * timestamp of the oldest available Claude Code session (FR-009 / US3 AC1).
- * Used by the trigger endpoint as the first-run `periodStart` floor.
- *
- * Returns the session/job timestamp (not `shippedAt`), so the first-run
- * window covers every session whose raw artifact exists in storage.
+ * Filter a caller-supplied set of job ids down to those that are **currently
+ * eligible Claude sessions** (COMPLETED + ticketId + rawArtifactKey +
+ * effective-agent CLAUDE). Marker-poisoning defense in depth (P-4): a
+ * buggy/compromised workflow must not be able to mark an arbitrary job as
+ * analyzed and thereby exclude it from all future runs. Returns the subset
+ * (deterministic ascending `startedAt` order).
  */
-export async function getEarliestClaudeJobTimestamp(): Promise<Date | null> {
-  const rows = await queryShippedJobs(null, null);
-  const claudeRows = rows.filter(isClaudeRow);
-  const first = claudeRows[0];
-  if (!first) return null;
-  let earliest = first.jobStartedAt;
-  for (const row of claudeRows) {
-    if (row.jobStartedAt < earliest) earliest = row.jobStartedAt;
-  }
-  return earliest;
+export async function filterEligibleClaudeSessionIds(
+  jobIds: number[]
+): Promise<number[]> {
+  if (jobIds.length === 0) return [];
+  const rows = await queryEligibleSessions({ jobIds });
+  return rows.filter(isClaudeRow).map((row) => row.jobId);
+}
+
+/**
+ * Earliest `Job.startedAt` across eligible-unanalyzed Claude sessions — the
+ * timestamp of the oldest available session. Used by the trigger endpoint as
+ * the display-only first-run `periodStart` (D-5). Rows are already sorted
+ * ascending, so the first Claude row is the earliest.
+ */
+export async function getEarliestEligibleSessionTimestamp(): Promise<Date | null> {
+  const rows = await queryEligibleSessions({ unanalyzed: true });
+  const first = rows.find(isClaudeRow);
+  return first?.jobStartedAt ?? null;
 }

@@ -1,22 +1,23 @@
 import type { InsightsReport, InsightsRunStatus } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
-import { getEarliestClaudeJobTimestamp } from '@/app/lib/insights/predicate';
+import { getEarliestEligibleSessionTimestamp } from '@/app/lib/insights/predicate';
 
 /**
  * Data-access helpers for `InsightsReport`. Status transitions ALWAYS go
  * through atomic `updateMany` with a `WHERE status='RUNNING'` guard (P-1) so
  * late workflow callbacks cannot flip a row backwards (FR-014, SC-012).
  *
- * `getLastCompletedRunEnd` and `getEarliestClaudeJobTimestamp` are the two
- * sources for the trigger endpoint's `periodStart` decision (D-13). The
- * earliest-Claude-timestamp source comes from the shared predicate file
- * (D-6) so its definition cannot drift from the workflow's enumeration.
+ * `getLastCompletedRunEnd` (display-only previous-run boundary) and
+ * `getEarliestEligibleSessionTimestamp` are the two sources for the trigger
+ * endpoint's display-only `periodStart` decision (D-5). The earliest-eligible
+ * source comes from the shared predicate file (P-2) so its definition cannot
+ * drift from the workflow's enumeration.
  */
 
 const LIST_DEFAULT_LIMIT = 200;
 
-export { getEarliestClaudeJobTimestamp };
+export { getEarliestEligibleSessionTimestamp };
 
 /**
  * Sentinel thrown by `createRunningReportAndJob` when the partial-unique
@@ -149,6 +150,7 @@ export interface ReportListEntry {
   periodStart: string;
   periodEnd: string;
   sessionsCount: number | null;
+  expectedSessionsCount: number | null;
   ticketsCount: number | null;
   artifactSize: number | null;
   errorReason: string | null;
@@ -184,6 +186,7 @@ export function toListEntry(
     periodStart: row.periodStart.toISOString(),
     periodEnd: row.periodEnd.toISOString(),
     sessionsCount: row.sessionsCount,
+    expectedSessionsCount: row.expectedSessionsCount,
     ticketsCount: row.ticketsCount,
     artifactSize: row.artifactSize,
     errorReason: row.errorReason,

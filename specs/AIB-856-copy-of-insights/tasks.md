@@ -26,7 +26,7 @@ description: "Task list for AIB-856 — Insights Analysis Covers All Agent Sessi
 
 **Purpose**: Confirm the brownfield baseline — no project initialization needed.
 
-- [ ] T001 Confirm brownfield baseline: no new npm dependencies are required; verify `bun`/`bunx prisma` tooling is available and review the insights files enumerated in `specs/AIB-856-copy-of-insights/plan.md` (Project Structure) and `research.md` (Existing Files) so subsequent edits target real paths
+- [X] T001 ✅ DONE Confirm brownfield baseline: no new npm dependencies are required; verify `bun`/`bunx prisma` tooling is available and review the insights files enumerated in `specs/AIB-856-copy-of-insights/plan.md` (Project Structure) and `research.md` (Existing Files) so subsequent edits target real paths
 
 ---
 
@@ -36,9 +36,9 @@ description: "Task list for AIB-856 — Insights Analysis Covers All Agent Sessi
 
 **⚠️ CRITICAL**: No user-story work can begin until this phase is complete — the marker anti-join (US1 predicate), marker writes (US2), and counts (US4) all require the generated Prisma client.
 
-- [ ] T002 Add `model InsightsAnalyzedSession` (`id Int @id @default(autoincrement())`, `jobId Int @unique` FK→`Job.id` `onDelete: Cascade`, `reportId Int` FK→`InsightsReport.id` `onDelete: Cascade`, `analyzedAt DateTime @default(now())`, `@@index([reportId])`); add `InsightsReport.expectedSessionsCount Int?`; add back-relations `Job.insightsAnalyzedSession InsightsAnalyzedSession?` and `InsightsReport.analyzedSessions InsightsAnalyzedSession[]` in `prisma/schema.prisma` (data-model.md)
-- [ ] T003 Create migration `prisma/migrations/<ts>_insights_analyzed_session/migration.sql`: `CREATE TABLE "InsightsAnalyzedSession"` with unique index on `jobId`, index on `reportId`, FKs `ON DELETE CASCADE`; `ALTER TABLE "InsightsReport" ADD COLUMN "expectedSessionsCount" INTEGER;` — NO backfill (D-6). Use `prisma/migrations/20260511130000_insights_single_running_index/migration.sql` as the DDL style reference (depends on T002)
-- [ ] T004 Run `bunx prisma generate` to regenerate the Prisma client with the new model, column, and relations (depends on T002, T003)
+- [X] T002 ✅ DONE Add `model InsightsAnalyzedSession` (`id Int @id @default(autoincrement())`, `jobId Int @unique` FK→`Job.id` `onDelete: Cascade`, `reportId Int` FK→`InsightsReport.id` `onDelete: Cascade`, `analyzedAt DateTime @default(now())`, `@@index([reportId])`); add `InsightsReport.expectedSessionsCount Int?`; add back-relations `Job.insightsAnalyzedSession InsightsAnalyzedSession?` and `InsightsReport.analyzedSessions InsightsAnalyzedSession[]` in `prisma/schema.prisma` (data-model.md)
+- [X] T003 ✅ DONE Create migration `prisma/migrations/<ts>_insights_analyzed_session/migration.sql`: `CREATE TABLE "InsightsAnalyzedSession"` with unique index on `jobId`, index on `reportId`, FKs `ON DELETE CASCADE`; `ALTER TABLE "InsightsReport" ADD COLUMN "expectedSessionsCount" INTEGER;` — NO backfill (D-6). Use `prisma/migrations/20260511130000_insights_single_running_index/migration.sql` as the DDL style reference (depends on T002)
+- [X] T004 ✅ DONE Run `bunx prisma generate` to regenerate the Prisma client with the new model, column, and relations (depends on T002, T003)
 
 **Checkpoint**: Schema + client ready — user stories can begin.
 
@@ -53,13 +53,13 @@ description: "Task list for AIB-856 — Insights Analysis Covers All Agent Sessi
 ### Tests for User Story 1
 **NOTE: Write/rewrite the test FIRST and ensure it FAILS before implementing T006.**
 
-- [ ] T005 [P] [US1] Rewrite `tests/unit/lib/insights/predicate.test.ts`: assert all sessions per ticket are returned (no earliest-per-ticket dedup), count/list parity over the eligible set, ascending `startedAt` order, `ticketId`-null excluded, `rawArtifactKey`-null excluded, effective-agent CLAUDE grid retained, and marker anti-join (analyzed sessions excluded when the `unanalyzed` toggle is on) — covers FR-002/003/007/009, US1, US3
+- [X] T005 ✅ DONE [P] [US1] Rewrite `tests/unit/lib/insights/predicate.test.ts`: assert all sessions per ticket are returned (no earliest-per-ticket dedup), count/list parity over the eligible set, ascending `startedAt` order, `ticketId`-null excluded, `rawArtifactKey`-null excluded, effective-agent CLAUDE grid retained, and marker anti-join (analyzed sessions excluded when the `unanalyzed` toggle is on) — covers FR-002/003/007/009, US1, US3
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Rewrite `app/lib/insights/predicate.ts`: one private `queryEligibleSessions(opts)` (status `COMPLETED` AND `ticketId != null` AND `log.rawArtifactKey != null` AND effective agent resolves to CLAUDE; **no** `TicketOutcome` join; `unanalyzed?` toggles the `insightsAnalyzedSession: null` filter); export `countEligibleUnanalyzedSessions()`, `listEligibleUnanalyzedSessions()` (all jobs, **no dedup**, ascending `startedAt`), `getEarliestEligibleSessionTimestamp()`; keep the `JobRef` shape; update the file-header doc (D-3/D-5/P-2) (depends on T004)
-- [ ] T007 [P] [US1] Update predicate importers to the renamed eligible-session functions so the build stays green: `app/lib/insights/repository.ts` (re-export), `app/lib/insights/preflight.ts`, `app/api/admin/insights/trigger/route.ts` (depends on T006)
-- [ ] T008 [P] [US1] Rewrite enumeration in `app/api/admin/insights/jobs/route.ts` to call `listEligibleUnanalyzedSessions()` and make `periodStart`/`periodEnd` query params optional and **ignored for selection** (D-5); response stays `{ jobs: JobRef[] }`, now all eligible-unanalyzed sessions across all outcomes/projects (depends on T006)
+- [X] T006 ✅ DONE [US1] Rewrite `app/lib/insights/predicate.ts`: one private `queryEligibleSessions(opts)` (status `COMPLETED` AND `ticketId != null` AND `log.rawArtifactKey != null` AND effective agent resolves to CLAUDE; **no** `TicketOutcome` join; `unanalyzed?` toggles the `insightsAnalyzedSession: null` filter); export `countEligibleUnanalyzedSessions()`, `listEligibleUnanalyzedSessions()` (all jobs, **no dedup**, ascending `startedAt`), `getEarliestEligibleSessionTimestamp()`; keep the `JobRef` shape; update the file-header doc (D-3/D-5/P-2) (depends on T004)
+- [X] T007 ✅ DONE [P] [US1] Update predicate importers to the renamed eligible-session functions so the build stays green: `app/lib/insights/repository.ts` (re-export), `app/lib/insights/preflight.ts`, `app/api/admin/insights/trigger/route.ts` (depends on T006)
+- [X] T008 ✅ DONE [P] [US1] Rewrite enumeration in `app/api/admin/insights/jobs/route.ts` to call `listEligibleUnanalyzedSessions()` and make `periodStart`/`periodEnd` query params optional and **ignored for selection** (D-5); response stays `{ jobs: JobRef[] }`, now all eligible-unanalyzed sessions across all outcomes/projects (depends on T006)
 
 **Checkpoint**: Enumeration returns every eligible session of every ticket — US1 independently testable.
 
@@ -80,10 +80,10 @@ description: "Task list for AIB-856 — Insights Analysis Covers All Agent Sessi
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Extend `StatusPatchSchema` in `app/api/admin/insights/reports/[id]/status/route.ts`: add `analyzedJobIds: z.array(z.number().int().positive())` and `expectedSessionsCount: z.number().int().nonnegative()`, make `sessionsCount` optional/ignored (server-derived), and extend the `.refine` so COMPLETED requires `analyzedJobIds` + `expectedSessionsCount` + `ticketsCount` + `artifactKey` + `artifactSize` (P-6, contracts/admin-api.md)
-- [ ] T013 [US2] In the COMPLETED branch of `applyTerminalTransition` in `app/api/admin/insights/reports/[id]/status/route.ts`: keep blob re-validate + `validateInsightsOutput` + `503 BLOB_UNREACHABLE` path (P-4); filter caller `analyzedJobIds` to currently-eligible Claude sessions (marker-poisoning defense, P-4); if the filtered set is empty → transition FAILED `'No readable Claude sessions available'` (no markers); else in one `prisma.$transaction` guarded by `status='RUNNING'` (P-1/P-3): `updateMany` set COMPLETED + `sessionsCount = marked.length` + `ticketsCount` + `expectedSessionsCount` + artifact fields, `insightsAnalyzedSession.createMany({ skipDuplicates: true })` for the marked jobIds, cascade linked Job→COMPLETED (try/catch log-and-continue); `count===0` → idempotent no-op `200`; FAILED branch writes no markers (depends on T004, T012)
-- [ ] T014 [P] [US2] Update `app/lib/insights/preflight.ts`: count via `countEligibleUnanalyzedSessions()`; rename refusal codes `NO_CLAUDE_JOBS→NO_CLAUDE_SESSIONS` and `NO_NEW_SHIPPED→NO_NEW_SESSIONS`; rename field `shippedSincePreviousRun→eligibleSessionsSincePreviousRun`; keep `getLastCompletedRunEnd` for `previousRunEnd` display (D-7, FR-012) (depends on T006)
-- [ ] T015 [US2] Update `app/api/admin/insights/trigger/route.ts`: marker-based pre-flight + renamed refusals; `periodStart = getEarliestEligibleSessionTimestamp() ?? now`, `periodEnd = now` (display only); preserve single-tx insert + dispatch-then-rollback + `ALREADY_RUNNING` (P-3/P-5) **unchanged**; keep `reconcileOrphanedRunningReports` at entry (P-7) (depends on T006, T014)
+- [X] T012 ✅ DONE [US2] Extend `StatusPatchSchema` in `app/api/admin/insights/reports/[id]/status/route.ts`: add `analyzedJobIds: z.array(z.number().int().positive())` and `expectedSessionsCount: z.number().int().nonnegative()`, make `sessionsCount` optional/ignored (server-derived), and extend the `.refine` so COMPLETED requires `analyzedJobIds` + `expectedSessionsCount` + `ticketsCount` + `artifactKey` + `artifactSize` (P-6, contracts/admin-api.md)
+- [X] T013 ✅ DONE [US2] In the COMPLETED branch of `applyTerminalTransition` in `app/api/admin/insights/reports/[id]/status/route.ts`: keep blob re-validate + `validateInsightsOutput` + `503 BLOB_UNREACHABLE` path (P-4); filter caller `analyzedJobIds` to currently-eligible Claude sessions (marker-poisoning defense, P-4); if the filtered set is empty → transition FAILED `'No readable Claude sessions available'` (no markers); else in one `prisma.$transaction` guarded by `status='RUNNING'` (P-1/P-3): `updateMany` set COMPLETED + `sessionsCount = marked.length` + `ticketsCount` + `expectedSessionsCount` + artifact fields, `insightsAnalyzedSession.createMany({ skipDuplicates: true })` for the marked jobIds, cascade linked Job→COMPLETED (try/catch log-and-continue); `count===0` → idempotent no-op `200`; FAILED branch writes no markers (depends on T004, T012)
+- [X] T014 ✅ DONE [P] [US2] Update `app/lib/insights/preflight.ts`: count via `countEligibleUnanalyzedSessions()`; rename refusal codes `NO_CLAUDE_JOBS→NO_CLAUDE_SESSIONS` and `NO_NEW_SHIPPED→NO_NEW_SESSIONS`; rename field `shippedSincePreviousRun→eligibleSessionsSincePreviousRun`; keep `getLastCompletedRunEnd` for `previousRunEnd` display (D-7, FR-012) (depends on T006)
+- [X] T015 ✅ DONE [US2] Update `app/api/admin/insights/trigger/route.ts`: marker-based pre-flight + renamed refusals; `periodStart = getEarliestEligibleSessionTimestamp() ?? now`, `periodEnd = now` (display only); preserve single-tx insert + dispatch-then-rollback + `ALREADY_RUNNING` (P-3/P-5) **unchanged**; keep `reconcileOrphanedRunningReports` at entry (P-7) (depends on T006, T014)
 
 **Checkpoint**: Markers written exactly once on success, never on failure; gate driven by unanalyzed sessions — US2 independently testable.
 
@@ -102,7 +102,7 @@ description: "Task list for AIB-856 — Insights Analysis Covers All Agent Sessi
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Remove the shipped-outcome gate (`if (!job.ticket.outcome) return 404`, ~lines 69-76) from `app/api/admin/insights/jobs/[jobId]/raw-native/route.ts`; retain the `jobId` valid, job exists, `ticketId != null`, effective-agent CLAUDE, `rawArtifactKey` present, and canonical-key-match gates plus `502 BLOB_UNREACHABLE` on outage (D-8, FR-007; the FR-008 admin-facing scope note is delivered by T024)
+- [X] T018 ✅ DONE [US3] Remove the shipped-outcome gate (`if (!job.ticket.outcome) return 404`, ~lines 69-76) from `app/api/admin/insights/jobs/[jobId]/raw-native/route.ts`; retain the `jobId` valid, job exists, `ticketId != null`, effective-agent CLAUDE, `rawArtifactKey` present, and canonical-key-match gates plus `502 BLOB_UNREACHABLE` on outage (D-8, FR-007; the FR-008 admin-facing scope note is delivered by T024)
 
 **Checkpoint**: Non-shipped sessions are both enumerated (US1) and downloadable (US3) — US3 independently testable.
 
@@ -122,12 +122,12 @@ description: "Task list for AIB-856 — Insights Analysis Covers All Agent Sessi
 
 ### Implementation for User Story 4
 
-- [ ] T021 [P] [US4] Add `expectedSessionsCount: number | null` to the `ReportListEntry` type and the `toListEntry` serializer in `app/lib/insights/repository.ts` (FR-010)
-- [ ] T022 [P] [US4] Add `expectedSessionsCount` to the reports list type in `app/lib/hooks/queries/use-insights-reports.ts`
-- [ ] T023 [P] [US4] Update `app/lib/hooks/queries/use-insights-preflight.ts`: rename field `shippedSincePreviousRun→eligibleSessionsSincePreviousRun` and the refusal-code enum to `'NO_CLAUDE_SESSIONS' | 'NO_NEW_SESSIONS' | 'ALREADY_RUNNING'` (must match T014)
-- [ ] T024 [US4] In `components/admin/insights/insights-report-view.tsx`: rewrite `formatMetadataPhrasing` to "Analyzed X of Y Claude Code sessions across Z tickets …"; render a gap-warning `Badge` when `sessionsCount < expectedSessionsCount` (FR-011); add a static scope note ("all Claude sessions across all projects, regardless of ticket outcome", FR-008); reword the header counter — no hardcoded colors, shadcn/ui only (depends on T021)
-- [ ] T025 [US4] Update refusal-code references in `components/admin/insights/run-analysis-button.tsx` to the renamed codes (depends on T023)
-- [ ] T026 [US4] Update `.github/workflows/insights-analyze.yml` per `specs/AIB-856-copy-of-insights/workflows/insights-analyze-workflow.md`: marker-driven `enumerate` step (`expected_count = .jobs | length`); 404-tolerant per-job `raw-native` download collecting `analyzed_job_ids` (200→extract+append; 404→skip, do not abort; other non-200→set `INSIGHTS_FAILURE_REASON` + `exit 1`; all-pruned→fail `'No readable Claude sessions available'`); `counts` step (`analyzed_count`, `ticket_count` over readable jobs); COMPLETED PATCH sends `analyzedJobIds` + `expectedSessionsCount` + `ticketsCount` + `artifactKey` + `artifactSize` (depends on T013; realizes US2 marking + US4 counts end-to-end)
+- [X] T021 ✅ DONE [P] [US4] Add `expectedSessionsCount: number | null` to the `ReportListEntry` type and the `toListEntry` serializer in `app/lib/insights/repository.ts` (FR-010)
+- [X] T022 ✅ DONE [P] [US4] Add `expectedSessionsCount` to the reports list type in `app/lib/hooks/queries/use-insights-reports.ts`
+- [X] T023 ✅ DONE [P] [US4] Update `app/lib/hooks/queries/use-insights-preflight.ts`: rename field `shippedSincePreviousRun→eligibleSessionsSincePreviousRun` and the refusal-code enum to `'NO_CLAUDE_SESSIONS' | 'NO_NEW_SESSIONS' | 'ALREADY_RUNNING'` (must match T014)
+- [X] T024 ✅ DONE [US4] In `components/admin/insights/insights-report-view.tsx`: rewrite `formatMetadataPhrasing` to "Analyzed X of Y Claude Code sessions across Z tickets …"; render a gap-warning `Badge` when `sessionsCount < expectedSessionsCount` (FR-011); add a static scope note ("all Claude sessions across all projects, regardless of ticket outcome", FR-008); reword the header counter — no hardcoded colors, shadcn/ui only (depends on T021)
+- [X] T025 ✅ DONE [US4] Update refusal-code references in `components/admin/insights/run-analysis-button.tsx` to the renamed codes (depends on T023)
+- [X] T026 ✅ DONE [US4] Update `.github/workflows/insights-analyze.yml` per `specs/AIB-856-copy-of-insights/workflows/insights-analyze-workflow.md`: marker-driven `enumerate` step (`expected_count = .jobs | length`); 404-tolerant per-job `raw-native` download collecting `analyzed_job_ids` (200→extract+append; 404→skip, do not abort; other non-200→set `INSIGHTS_FAILURE_REASON` + `exit 1`; all-pruned→fail `'No readable Claude sessions available'`); `counts` step (`analyzed_count`, `ticket_count` over readable jobs); COMPLETED PATCH sends `analyzedJobIds` + `expectedSessionsCount` + `ticketsCount` + `artifactKey` + `artifactSize` (depends on T013; realizes US2 marking + US4 counts end-to-end)
 
 **Checkpoint**: Reports show analyzed-vs-expected with gap signalling and scope note — US4 independently testable.
 

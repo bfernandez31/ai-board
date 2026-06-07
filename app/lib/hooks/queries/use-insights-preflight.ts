@@ -4,11 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 
 export interface InsightsPreflight {
   canTrigger: boolean;
-  shippedSincePreviousRun: number;
+  eligibleSessionsSincePreviousRun: number;
   previousRunEnd: string | null;
   runningSince: string | null;
   refusal: {
-    refusalCode: 'NO_CLAUDE_JOBS' | 'NO_NEW_SHIPPED' | 'ALREADY_RUNNING';
+    refusalCode: 'NO_CLAUDE_SESSIONS' | 'NO_NEW_SESSIONS' | 'ALREADY_RUNNING';
     message: string;
   } | null;
 }
@@ -19,7 +19,7 @@ const QUERY_KEY = ['admin', 'insights', 'preflight'] as const;
  * Live preflight gate for the "Run new analysis" button. Polls every 15s
  * while a RUNNING report is visible (the same cadence as the report list
  * polling) so the button re-enables automatically once a run finishes and
- * the `shippedSincePreviousRun` counter rolls forward. SSR provides the
+ * the `eligibleSessionsSincePreviousRun` counter rolls forward. SSR provides the
  * first value via `initialData`.
  */
 export function useInsightsPreflight(

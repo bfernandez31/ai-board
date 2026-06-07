@@ -48,15 +48,19 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"status":"RUNNING","workflowRunId":${{ github.run_id }}}'
 
-      - name: Enumerate Claude sessions in window
+      - name: Enumerate Claude sessions
         id: enumerate
         run: |
           set -euo pipefail
+          # AIB-856 (D-5): selection is marker-driven, not windowed. The
+          # endpoint returns ALL eligible-unanalyzed Claude sessions across all
+          # projects and all ticket outcomes; period params are ignored.
           curl -fsS \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
-            "${APP_URL}/api/admin/insights/jobs?periodStart=${{ inputs.period_start }}&periodEnd=${{ inputs.period_end }}" \
+            "${APP_URL}/api/admin/insights/jobs" \
             > jobs.json
-          echo "session_count=$(jq '.jobs | length' jobs.json)" >> "$GITHUB_OUTPUT"
+          # expected_count = sessions enumerated at run start (FR-010).
+          echo "expected_count=$(jq '.jobs | length' jobs.json)" >> "$GITHUB_OUTPUT"
 
       - name: Download raw native session JSONL artifacts
         run: |
@@ -69,15 +73,13 @@ jobs:
           ENCODED_CWD="$(echo "$PWD" | sed -e 's|/|-|g' -e 's|\.|-|g')"
           CLAUDE_SESSIONS_DIR="${HOME}/.claude/projects/${ENCODED_CWD}"
           mkdir -p "${CLAUDE_SESSIONS_DIR}"
-          # Refuse to proceed with an empty session set — running /insights
-          # against an empty directory would silently produce a vacuous
-          # COMPLETED report (sessionsCount=0). The pre-flight gate already
-          # rejects this case, so an empty enumeration here means a raw-log
-          # artifact was pruned between enumeration and download.
-          session_count=$(jq '.jobs | length' jobs.json)
-          if [ "$session_count" -eq 0 ]; then
-            echo "INSIGHTS_FAILURE_REASON=No Claude session artifacts available for the requested window" >> "$GITHUB_ENV"
-            echo "Aborting: no sessions in window"
+          # Abort only if enumeration is empty (unchanged guard). Pre-flight
+          # already rejects this case, so an empty set here means a full prune
+          # between trigger and enumeration.
+          expected_count=$(jq '.jobs | length' jobs.json)
+          if [ "$expected_count" -eq 0 ]; then
+            echo "INSIGHTS_FAILURE_REASON=No Claude session artifacts available" >> "$GITHUB_ENV"
+            echo "Aborting: no eligible sessions"
             exit 1
           fi
           # Two artifact formats live in Vercel Blob:
@@ -86,14 +88,34 @@ jobs:
           #   - jsonl.gz (legacy): concat of all sessions for a job. Decompress
           #     then split by internal sessionId via the Python helper.
           # Detect by trying `tar -tzf`; fall back to gunzip+split on failure.
+          #
+          # AIB-856 (404-tolerant): a transcript may be pruned between
+          # enumeration and download. We capture each curl's HTTP status (NOT
+          # `curl -fsS` which would abort the whole loop) and branch:
+          #   200 -> extract/split + record jobId as readable (analyzed)
+          #   404 -> pruned/unavailable: skip, do NOT abort, do NOT record
+          #   other -> genuine error: fail the run (marks nothing)
           DOWNLOAD_DIR="$(mktemp -d)"
-          jq -c '.jobs[]' jobs.json | while read -r row; do
+          : > analyzed_job_ids.txt
+          # Process substitution (not a pipe) so the loop runs in THIS shell —
+          # a piped `while` runs in a subshell where `exit 1` cannot abort the
+          # step on a genuine download error.
+          while read -r row; do
             jobId=$(echo "$row" | jq -r .jobId)
             archive="${DOWNLOAD_DIR}/${jobId}.gz"
-            curl -fsS \
+            http_code=$(curl -sS -w '%{http_code}' -o "${archive}" \
               -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
-              "${APP_URL}/api/admin/insights/jobs/${jobId}/raw-native" \
-              -o "${archive}"
+              "${APP_URL}/api/admin/insights/jobs/${jobId}/raw-native")
+            if [ "$http_code" = "404" ]; then
+              echo "Skipping jobId=${jobId}: transcript unavailable (404)"
+              rm -f "${archive}"
+              continue
+            fi
+            if [ "$http_code" != "200" ]; then
+              echo "INSIGHTS_FAILURE_REASON=Failed to download session ${jobId} (HTTP ${http_code})" >> "$GITHUB_ENV"
+              echo "Aborting: unexpected status ${http_code} for jobId=${jobId}"
+              exit 1
+            fi
             if tar -tzf "${archive}" >/dev/null 2>&1; then
               tar -xzf "${archive}" -C "${CLAUDE_SESSIONS_DIR}"
             else
@@ -101,9 +123,20 @@ jobs:
               # below can read it. Filename is non-UUID and will be split away.
               gunzip -c "${archive}" > "${CLAUDE_SESSIONS_DIR}/${jobId}.jsonl"
             fi
+            echo "${jobId}" >> analyzed_job_ids.txt
             rm -f "${archive}"
-          done
+          done < <(jq -c '.jobs[]' jobs.json)
           rmdir "${DOWNLOAD_DIR}" 2>/dev/null || true
+
+          # If every enumerated session was pruned, there is nothing to analyze.
+          if [ ! -s analyzed_job_ids.txt ]; then
+            echo "INSIGHTS_FAILURE_REASON=No readable Claude sessions available" >> "$GITHUB_ENV"
+            echo "Aborting: all enumerated sessions were pruned"
+            exit 1
+          fi
+          # Persist the readable set as a JSON array for the COMPLETED PATCH.
+          jq -R 'tonumber' analyzed_job_ids.txt | jq -s '.' > analyzed_job_ids.json
+          echo "Readable sessions: $(jq 'length' analyzed_job_ids.json) of ${expected_count}"
 
           # Legacy compat: any file that isn't already a `<sessionId>.jsonl`
           # (UUID basename) must be split by internal sessionId so /insights'
@@ -233,21 +266,33 @@ jobs:
         id: counts
         run: |
           set -euo pipefail
-          session_count=${{ steps.enumerate.outputs.session_count }}
-          ticket_count=$(jq '[.jobs[].ticketId] | unique | length' jobs.json)
-          echo "session_count=$session_count" >> "$GITHUB_OUTPUT"
+          # AIB-856: counts are derived over the READABLE (analyzed) set only.
+          #   analyzed_count = sessions actually marked (readable subset)
+          #   expected_count = sessions enumerated at run start (FR-010)
+          #   ticket_count   = distinct tickets among the readable sessions
+          analyzed_count=$(jq 'length' analyzed_job_ids.json)
+          expected_count=${{ steps.enumerate.outputs.expected_count }}
+          ticket_count=$(jq --slurpfile ids analyzed_job_ids.json \
+            '[ .jobs[] | select( .jobId as $j | ($ids[0] | index($j)) ) | .ticketId ] | unique | length' \
+            jobs.json)
+          echo "analyzed_count=$analyzed_count" >> "$GITHUB_OUTPUT"
+          echo "expected_count=$expected_count" >> "$GITHUB_OUTPUT"
           echo "ticket_count=$ticket_count" >> "$GITHUB_OUTPUT"
 
       - name: PATCH report status -> COMPLETED
         run: |
           set -euo pipefail
+          # Send the marker payload (admin-api.md): the API filters
+          # analyzedJobIds to eligible sessions, writes one
+          # InsightsAnalyzedSession per accepted job, and derives sessionsCount.
           payload=$(jq -n \
             --arg status 'COMPLETED' \
-            --argjson sc ${{ steps.counts.outputs.session_count }} \
+            --argjson aji "$(cat analyzed_job_ids.json)" \
+            --argjson esc ${{ steps.counts.outputs.expected_count }} \
             --argjson tc ${{ steps.counts.outputs.ticket_count }} \
             --arg ak "insights/reports/${{ inputs.report_id }}.html" \
             --argjson asz ${{ steps.finalize.outputs.artifact_size }} \
-            '{status:$status, sessionsCount:$sc, ticketsCount:$tc, artifactKey:$ak, artifactSize:$asz}')
+            '{status:$status, analyzedJobIds:$aji, expectedSessionsCount:$esc, ticketsCount:$tc, artifactKey:$ak, artifactSize:$asz}')
           curl -fsS -X PATCH \
             "${APP_URL}/api/admin/insights/reports/${{ inputs.report_id }}/status" \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \

@@ -57,6 +57,7 @@ function buildOptimisticEntry(
     periodStart: retryPeriod?.periodStart ?? iso,
     periodEnd: retryPeriod?.periodEnd ?? iso,
     sessionsCount: null,
+    expectedSessionsCount: null,
     ticketsCount: null,
     artifactSize: null,
     errorReason: null,

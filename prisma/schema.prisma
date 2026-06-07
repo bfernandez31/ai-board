@@ -78,6 +78,9 @@ model Job {
 
   insightsReport InsightsReport?
 
+  // AIB-856: per-session "analyzed" marker (absence = eligible for analysis).
+  insightsAnalyzedSession InsightsAnalyzedSession?
+
   @@index([projectId])
   @@index([startedAt])
   @@index([status])
@@ -939,6 +942,10 @@ model InsightsReport {
   periodEnd     DateTime
   sessionsCount Int?
   ticketsCount  Int?
+  // AIB-856: eligible-unanalyzed sessions the run enumerated at start. `null`
+  // for legacy rows. `sessionsCount` now holds the actually-analyzed subset;
+  // gap = expectedSessionsCount - sessionsCount (pruned/unreadable transcripts).
+  expectedSessionsCount Int?
   artifactKey   String?           @db.VarChar(300)
   artifactSize  Int?
   errorReason   String?           @db.VarChar(500)
@@ -948,9 +955,27 @@ model InsightsReport {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
+  // AIB-856: per-session "analyzed" markers written by this run.
+  analyzedSessions InsightsAnalyzedSession[]
+
   @@index([status, createdAt])
   @@index([generatedAt])
   @@index([periodEnd])
+}
+
+// AIB-856: per-session "analyzed" marker. A row exists iff the session (one
+// Job) was successfully analyzed by a COMPLETED run; absence = eligible. The
+// `@unique` on jobId is the once-and-only-once guarantee (insert-only, written
+// only inside the guarded COMPLETED transition, never on FAILED).
+model InsightsAnalyzedSession {
+  id         Int            @id @default(autoincrement())
+  jobId      Int            @unique
+  job        Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  reportId   Int
+  report     InsightsReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  analyzedAt DateTime       @default(now())
+
+  @@index([reportId])
 }
 
 enum InsightsRunStatus {
