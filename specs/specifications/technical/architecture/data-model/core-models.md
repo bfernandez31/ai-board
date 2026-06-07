@@ -402,6 +402,7 @@ model Job {
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   log         JobLog?
   insightsReport InsightsReport?
+  insightsAnalyzedSession InsightsAnalyzedSession?
 
   @@index([ticketId])
   @@index([projectId])
@@ -448,6 +449,7 @@ model Job {
 - Belongs to Ticket (optional, cascade delete) — null for `insights-analyze` jobs
 - Belongs to Project (required, cascade delete)
 - One-to-one with `InsightsReport` (this side null for every command except `insights-analyze`)
+- Optional one-to-one with `InsightsAnalyzedSession` (present once the job's Claude session has been analyzed by a COMPLETED Insights run; absence = the session is still eligible for analysis)
 
 **Constraints**:
 - Index on ticketId for job history queries
@@ -598,6 +600,7 @@ model InsightsReport {
   periodStart   DateTime
   periodEnd     DateTime
   sessionsCount Int?
+  expectedSessionsCount Int?
   ticketsCount  Int?
   artifactKey   String?           @db.VarChar(300)
   artifactSize  Int?
@@ -607,6 +610,8 @@ model InsightsReport {
   completedAt   DateTime?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
+
+  analyzedSessions InsightsAnalyzedSession[]
 
   @@index([status, createdAt])
   @@index([generatedAt])
@@ -620,10 +625,11 @@ model InsightsReport {
 - `id`: Auto-incrementing primary key — also the report's identity in URL paths and the deterministic blob key
 - `status`: Lifecycle state (`RUNNING`, `COMPLETED`, `FAILED`); always inserted as `RUNNING`
 - `generatedAt`: Trigger timestamp — fixed at insert, used in the canonical metadata header
-- `periodStart`: Half-open window start (inclusive). First-ever run: earliest Claude job's `startedAt`. Subsequent runs: previous COMPLETED row's `periodEnd`
-- `periodEnd`: Half-open window end (exclusive). Equal to `generatedAt` at insert
-- `sessionsCount`: Count of Claude Code sessions fed into `/insights` (populated only on COMPLETED, `>= 0`)
-- `ticketsCount`: Count of distinct tickets the sessions belonged to (populated only on COMPLETED, `>= 0`)
+- `periodStart`: Display-only window start. First-ever run: earliest eligible session's `startedAt`. Subsequent runs: earliest still-unanalyzed eligible session's `startedAt`. Does not drive selection — coverage is decided by the per-session marker, not the window
+- `periodEnd`: Display-only window end. Equal to `generatedAt` at insert
+- `sessionsCount`: Count of Claude Code sessions **actually analyzed** by this run — derived server-side from the per-session markers written, not from a per-ticket dedup (populated only on COMPLETED, `>= 0`)
+- `expectedSessionsCount`: Count of eligible-unanalyzed sessions the run enumerated at start. `null` for legacy rows that predate per-session tracking. A coverage gap exists when `expectedSessionsCount > sessionsCount` (transcripts pruned before they could be read) (populated only on COMPLETED, `>= 0`)
+- `ticketsCount`: Count of distinct tickets among the **analyzed** sessions (populated only on COMPLETED, `>= 0`)
 - `artifactKey`: Blob key (`insights/reports/<id>.html`) — deterministic from `id`; stored explicitly so a future key-shape change does not break old rows. Populated only on COMPLETED
 - `artifactSize`: HTML body size in bytes (populated only on COMPLETED, `> 0`)
 - `errorReason`: Non-secret, operator-actionable failure reason (populated only on FAILED, ≤ 500 chars)
@@ -633,6 +639,7 @@ model InsightsReport {
 
 **Relationships**:
 - Optional one-to-one with `Job` via `jobId` — the companion `Job` row has `command = 'insights-analyze'`, `ticketId = null`, and `projectId` set to the ai-board host project
+- One-to-many with `InsightsAnalyzedSession` via `analyzedSessions` — the per-session markers this run wrote (one per analyzed Claude session)
 - No relationship to `Project` or `Ticket` — reports are application-wide by design
 
 **Constraints**:
@@ -660,12 +667,51 @@ A late workflow callback for a row already auto-FAILED finds no row matching the
 
 **Business Rules**:
 - Row is inserted in `RUNNING` BEFORE workflow dispatch so dispatch failures still leave an auditable record
-- A FAILED run does **not** advance the previous-successful-run high-water mark — the next attempt re-covers the same window
-- A COMPLETED row requires all of: `artifactKey`, `artifactSize`, `sessionsCount`, `ticketsCount`, `completedAt`
+- A FAILED run writes **no** session markers, so all sessions it touched remain eligible for the next run (coverage is tracked per session, not by an advancing time cursor)
+- A COMPLETED row requires all of: `artifactKey`, `artifactSize`, `sessionsCount`, `expectedSessionsCount`, `ticketsCount`, `completedAt`, plus one `InsightsAnalyzedSession` marker per analyzed session — all written in a single guarded transaction
 - A FAILED row requires a non-empty `errorReason` (examples: `"Workflow dispatch failed: 404 …"`, `"Insights output validation failed"`, `"Artifact upload rejected by storage"`, `"Run timed out — workflow did not report terminal status"`)
 - `artifactKey`, when present, equals `buildInsightsReportKey(id)`; a mismatch is treated as a missing-blob (FR-024 placeholder) at serve time
 - Orphan reconciliation auto-transitions any RUNNING row whose `createdAt < now() - INSIGHTS_RUN_TIMEOUT_MINUTES` (default 60 minutes) to FAILED with reason `"Run timed out — workflow did not report terminal status"`; this runs lazily on every list-endpoint and trigger-endpoint call
 - Reports are read-only after creation — no edit, delete, annotate, or rename surface; retention is operator-managed at the storage layer
+
+### InsightsAnalyzedSession
+
+Per-session "analyzed" marker. One row exists iff a given Claude agent session (one `Job`) has been successfully analyzed by a COMPLETED Insights run; absence of a row means the session is still eligible. This marker — not a time window — is what makes coverage once-and-only-once.
+
+```prisma
+model InsightsAnalyzedSession {
+  id         Int            @id @default(autoincrement())
+  jobId      Int            @unique
+  job        Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  reportId   Int
+  report     InsightsReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  analyzedAt DateTime       @default(now())
+
+  @@index([reportId])
+}
+```
+
+**Purpose**: Track, per session, whether it has been covered by an analysis so consecutive runs neither re-analyze a covered session nor skip an uncovered one. The eligibility query is an anti-join: a session is selectable when no `InsightsAnalyzedSession` row references its `Job`.
+
+**Fields**:
+- `id`: Auto-incrementing primary key
+- `jobId`: The analyzed session's `Job`. **Unique** — a session can be marked at most once, which is the once-and-only-once guarantee
+- `reportId`: The COMPLETED run that covered the session (audit / coverage debugging)
+- `analyzedAt`: When the covering run completed (defaults to insert time)
+
+**Relationships**:
+- One-to-one with `Job` via the unique `jobId` (cascade delete with the job)
+- Many-to-one with `InsightsReport` via `reportId` (cascade delete with the report)
+
+**Constraints**:
+- `@unique(jobId)` doubles as the dedup index and the once-and-only-once guard; a duplicate terminal callback inserting the same `jobId` is absorbed by `createMany({ skipDuplicates: true })`
+- `@@index([reportId])` lists the sessions a given run covered
+- Both foreign keys are `onDelete: Cascade`
+
+**Business Rules**:
+- Rows are created **only** inside the guarded COMPLETED transition of `PATCH /api/admin/insights/reports/:id/status`, via `createMany({ skipDuplicates: true })` over the workflow-reported `analyzedJobIds` after server-side eligibility filtering. Never created on enumeration, never on a FAILED transition
+- A marker is written only for sessions actually read and analyzed — a session whose transcript was pruned before it could be read gets no marker and stays eligible
+- No backfill on first deployment: the first post-migration run re-establishes coverage over the full eligible corpus (bounded by `LOG_RETENTION_DAYS` via the transcript-availability gate)
 
 ### Comment
 
