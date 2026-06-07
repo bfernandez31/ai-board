@@ -2,8 +2,9 @@ import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JobStatus, WorkflowType } from '@prisma/client';
 import {
-  countShippedClaudeTicketsSince,
-  listShippedClaudeJobsForWindow,
+  countAnalyzableClaudeSessions,
+  countExpectedClaudeSessions,
+  listAnalyzableClaudeSessions,
 } from '@/app/lib/insights/predicate';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
@@ -19,18 +20,19 @@ vi.mock('@/app/lib/auth/workflow-auth', async (orig) => {
 
 import { GET } from '@/app/api/admin/insights/jobs/route';
 
-describe('FR-025: pre-flight count and workflow enumeration agree (US3)', () => {
+describe('FR-016/SC-006: pre-flight session count and workflow enumeration agree (US5 guardrail)', () => {
   let ctx: TestContext;
   const prisma = getPrismaClient();
 
   beforeEach(async () => {
     ctx = await getTestContext();
     await ctx.cleanup();
+    await prisma.insightsReport.deleteMany({});
     validateWorkflowAuth.mockReset();
     validateWorkflowAuth.mockReturnValue({ isValid: true });
   });
 
-  it('mixed-agent window: count and enumeration agree on the Claude tickets', async () => {
+  it('mixed-agent window: count and enumeration agree on the Claude sessions', async () => {
     const start = new Date('2026-04-01T00:00:00Z');
     const end = new Date('2026-06-01T00:00:00Z');
 
@@ -81,10 +83,13 @@ describe('FR-025: pre-flight count and workflow enumeration agree (US3)', () => 
       });
     }
 
-    const count = await countShippedClaudeTicketsSince(start);
+    const window = { start, end };
+    const count = await countAnalyzableClaudeSessions(window);
     expect(count).toBe(2);
+    // Expected == analyzable here (all transcripts present).
+    expect(await countExpectedClaudeSessions(window)).toBe(2);
 
-    const direct = await listShippedClaudeJobsForWindow(start, end);
+    const direct = await listAnalyzableClaudeSessions(window);
     expect(new Set(direct.map((j) => j.ticketId))).toEqual(new Set([tCla.id, tInh.id]));
 
     const req = new NextRequest(
@@ -92,9 +97,16 @@ describe('FR-025: pre-flight count and workflow enumeration agree (US3)', () => 
       { headers: { Authorization: 'Bearer test-token' } }
     );
     const res = await GET(req);
-    const body = (await res.json()) as { jobs: { ticketId: number }[] };
+    const body = (await res.json()) as {
+      jobs: { ticketId: number }[];
+      expectedCount: number;
+    };
     expect(new Set(body.jobs.map((j) => j.ticketId))).toEqual(
       new Set([tCla.id, tInh.id])
     );
+    // FR-016/SC-006: the enumerated session count equals the pre-flight count
+    // and the reported expectedCount, for the same window (no drift).
+    expect(body.jobs.length).toBe(count);
+    expect(body.expectedCount).toBe(2);
   });
 });

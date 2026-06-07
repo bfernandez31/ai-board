@@ -6,6 +6,7 @@ import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
 import { streamInsightsReportArtifact } from '@/app/lib/blob/client';
 import { validateInsightsOutput } from '@/app/lib/insights/output-validation';
 import { buildInsightsReportKey } from '@/app/lib/insights/blob-keys';
+import { advanceCoverage } from '@/app/lib/insights/repository';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,9 @@ const StatusPatchSchema = z
   .object({
     status: z.enum(['COMPLETED', 'FAILED']),
     sessionsCount: z.number().int().nonnegative().optional(),
+    expectedSessionsCount: z.number().int().nonnegative().optional(),
     ticketsCount: z.number().int().nonnegative().optional(),
+    analyzedJobIds: z.array(z.number().int().positive()).optional(),
     artifactKey: z
       .string()
       .regex(/^insights\/reports\/\d+\.html$/)
@@ -25,10 +28,31 @@ const StatusPatchSchema = z
     (data) =>
       data.status !== 'COMPLETED' ||
       (data.sessionsCount !== undefined &&
+        data.expectedSessionsCount !== undefined &&
         data.ticketsCount !== undefined &&
+        data.analyzedJobIds !== undefined &&
         data.artifactKey !== undefined &&
         data.artifactSize !== undefined),
-    { message: 'COMPLETED transitions require all artifact fields' }
+    { message: 'COMPLETED transitions require all artifact + coverage fields' }
+  )
+  .refine(
+    // AIB-852/D5: coverage rows are keyed on the exact jobs the workflow
+    // analyzed, one per session.
+    (data) =>
+      data.status !== 'COMPLETED' ||
+      (data.analyzedJobIds !== undefined &&
+        data.analyzedJobIds.length > 0 &&
+        data.analyzedJobIds.length === data.sessionsCount),
+    { message: 'analyzedJobIds must be non-empty and length === sessionsCount' }
+  )
+  .refine(
+    // AIB-852/FR-011: expected can never be below analyzed.
+    (data) =>
+      data.status !== 'COMPLETED' ||
+      (data.expectedSessionsCount !== undefined &&
+        data.sessionsCount !== undefined &&
+        data.expectedSessionsCount >= data.sessionsCount),
+    { message: 'expectedSessionsCount must be >= sessionsCount' }
   )
   .refine(
     (data) => data.status !== 'FAILED' || data.errorReason !== undefined,
@@ -39,61 +63,120 @@ type TerminalTransitionData =
   | {
       status: 'COMPLETED';
       sessionsCount: number;
+      expectedSessionsCount: number;
       ticketsCount: number;
       artifactKey: string;
       artifactSize: number;
+      analyzedJobIds: number[];
     }
   | { status: 'FAILED'; errorReason: string };
 
 /**
+ * Idempotent no-op response for a callback that arrived after the row was
+ * already terminal (`updateMany` matched zero RUNNING rows, SC-012).
+ */
+async function idempotentNoOp(id: number): Promise<Response> {
+  const current = await prisma.insightsReport.findUnique({ where: { id } });
+  return NextResponse.json(
+    {
+      id: current!.id,
+      status: current!.status,
+      completedAt: current!.completedAt?.toISOString() ?? null,
+    },
+    { status: 200 }
+  );
+}
+
+/**
  * Atomic conditional transition of a RUNNING row to COMPLETED or FAILED,
- * cascading to the linked Job and returning the canonical JSON shape. If
- * the row is already terminal, returns its current state (idempotent no-op,
- * SC-012). The Job is updated directly to suppress notification side effects
- * (FR-022).
+ * cascading to the linked Job and returning the canonical JSON shape.
+ *
+ * AIB-852: on COMPLETED the row flip, the per-session coverage advance
+ * (FR-007/D5) and the Job cascade all run in ONE `$transaction` gated on
+ * `WHERE status='RUNNING'` (P3/P6) — so a late/duplicate callback neither
+ * double-writes coverage nor flips a terminal row, and a row that lost the
+ * flip race writes no coverage. FAILED advances no coverage (the sessions
+ * stay eligible). The Job is updated directly to suppress notification side
+ * effects (FR-022/P6).
  */
 async function applyTerminalTransition(
   id: number,
   data: TerminalTransitionData,
   now: Date
 ): Promise<Response> {
-  const result = await prisma.insightsReport.updateMany({
-    where: { id, status: 'RUNNING' },
-    data: { ...data, completedAt: now },
-  });
-  if (result.count === 0) {
-    const current = await prisma.insightsReport.findUnique({ where: { id } });
+  if (data.status === 'COMPLETED') {
+    const {
+      analyzedJobIds,
+      sessionsCount,
+      expectedSessionsCount,
+      ticketsCount,
+      artifactKey,
+      artifactSize,
+    } = data;
+    // FR-012: flag a gap iff fewer sessions were analyzed than expected.
+    const coverageGapReason =
+      expectedSessionsCount > sessionsCount ? 'TRANSCRIPT_NOT_AVAILABLE' : null;
+
+    const flipped = await prisma.$transaction(async (tx) => {
+      const result = await tx.insightsReport.updateMany({
+        where: { id, status: 'RUNNING' },
+        data: {
+          status: 'COMPLETED',
+          sessionsCount,
+          expectedSessionsCount,
+          coverageGapReason,
+          ticketsCount,
+          artifactKey,
+          artifactSize,
+          completedAt: now,
+        },
+      });
+      if (result.count === 0) return false;
+      await advanceCoverage(tx, id, analyzedJobIds);
+      await tx.job.updateMany({
+        where: {
+          insightsReport: { id },
+          status: { in: ['PENDING', 'RUNNING'] },
+        },
+        data: { status: 'COMPLETED', completedAt: now },
+      });
+      return true;
+    });
+
+    if (!flipped) return idempotentNoOp(id);
     return NextResponse.json(
-      {
-        id: current!.id,
-        status: current!.status,
-        completedAt: current!.completedAt?.toISOString() ?? null,
-      },
+      { id, status: 'COMPLETED', completedAt: now.toISOString() },
       { status: 200 }
     );
   }
-  // Cascade to the linked Job row. The InsightsReport transition has
-  // already been committed; if the cascade fails we log and continue so the
-  // workflow callback still gets a deterministic response (and the orphan
-  // Job is picked up by reconciliation). Constitution §IV: surface the
-  // failure, do not silently swallow.
+
+  // FAILED branch — no coverage advanced.
+  const result = await prisma.insightsReport.updateMany({
+    where: { id, status: 'RUNNING' },
+    data: { status: 'FAILED', errorReason: data.errorReason, completedAt: now },
+  });
+  if (result.count === 0) return idempotentNoOp(id);
+  // The InsightsReport transition is committed; if the Job cascade fails we
+  // log and continue so the workflow callback still gets a deterministic
+  // response (the orphan Job is picked up by reconciliation). Constitution
+  // §IV: surface the failure, do not silently swallow.
   try {
     await prisma.job.updateMany({
       where: {
         insightsReport: { id },
         status: { in: ['PENDING', 'RUNNING'] },
       },
-      data: { status: data.status, completedAt: now },
+      data: { status: 'FAILED', completedAt: now },
     });
   } catch (error) {
     console.error(
       '[applyTerminalTransition] cascade job update failed',
-      { reportId: id, status: data.status },
+      { reportId: id, status: 'FAILED' },
       error
     );
   }
   return NextResponse.json(
-    { id, status: data.status, completedAt: now.toISOString() },
+    { id, status: 'FAILED', completedAt: now.toISOString() },
     { status: 200 }
   );
 }
@@ -214,9 +297,11 @@ export async function PATCH(
       {
         status: 'COMPLETED',
         sessionsCount: parsed.data.sessionsCount!,
+        expectedSessionsCount: parsed.data.expectedSessionsCount!,
         ticketsCount: parsed.data.ticketsCount!,
         artifactKey: parsed.data.artifactKey!,
         artifactSize: parsed.data.artifactSize!,
+        analyzedJobIds: parsed.data.analyzedJobIds!,
       },
       now
     );

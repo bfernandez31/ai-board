@@ -22,7 +22,7 @@ description: "Task list for AIB-852 — Insights: analyze every agent session of
 
 **Purpose**: Establish a clean baseline before TDD on an existing codebase (no project init needed).
 
-- [ ] T001 Install dependencies and confirm a green baseline by running `bun install`, then `bun run type-check` and `bun run lint` from the repository root; record any pre-existing failures so new failures are attributable.
+- [X] T001 ✅ DONE Install dependencies and confirm a green baseline by running `bun install`, then `bun run type-check` and `bun run lint` from the repository root; record any pre-existing failures so new failures are attributable. (baseline type-check green)
 
 ---
 
@@ -32,9 +32,9 @@ description: "Task list for AIB-852 — Insights: analyze every agent session of
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T002 Add the AIB-852 schema delta to `prisma/schema.prisma`: new model `InsightsSessionCoverage` (`jobId Int @unique` → `Job` cascade, `reportId Int` → `InsightsReport` cascade, `coveredAt DateTime @default(now())`, `@@index([reportId])`); enum `InsightsCoverageGapReason { TRANSCRIPT_NOT_AVAILABLE }`; on `InsightsReport` add `expectedSessionsCount Int?`, `coverageGapReason InsightsCoverageGapReason?`, and back-relation `coveredSessions InsightsSessionCoverage[]`; on `Job` add back-relation `insightsCoverage InsightsSessionCoverage?` (per data-model.md).
-- [ ] T003 Generate the migration `prisma/migrations/<timestamp>_insights_session_coverage/migration.sql` (CREATE TYPE enum, ALTER TABLE `InsightsReport` ADD COLUMNs, CREATE TABLE `InsightsSessionCoverage` with `UNIQUE("jobId")`, both cascading FKs, `INDEX("reportId")`; no backfill) and run `bunx prisma generate` to regenerate the client. Depends on T002.
-- [ ] T004 [P] Add data-access helpers and serialization fields to `app/lib/insights/repository.ts`: `advanceCoverage(tx, reportId, jobIds)` using `createMany({ skipDuplicates: true })`; `derivePeriodStart()` returning max covered `completedAt` ?? oldest available session completion ?? now (D7/FR-014); extend `ReportListEntry` and `toListEntry` with `expectedSessionsCount` and `coverageGapReason` (clarify `sessionsCount` = analyzed). Follow the `$transaction` + `WHERE status='RUNNING'` pattern at `repository.ts:79-138` (P3). Depends on T003 (generated client).
+- [X] T002 ✅ DONE Add the AIB-852 schema delta to `prisma/schema.prisma`: new model `InsightsSessionCoverage` (`jobId Int @unique` → `Job` cascade, `reportId Int` → `InsightsReport` cascade, `coveredAt DateTime @default(now())`, `@@index([reportId])`); enum `InsightsCoverageGapReason { TRANSCRIPT_NOT_AVAILABLE }`; on `InsightsReport` add `expectedSessionsCount Int?`, `coverageGapReason InsightsCoverageGapReason?`, and back-relation `coveredSessions InsightsSessionCoverage[]`; on `Job` add back-relation `insightsCoverage InsightsSessionCoverage?` (per data-model.md).
+- [X] T003 ✅ DONE Generate the migration `prisma/migrations/<timestamp>_insights_session_coverage/migration.sql` (CREATE TYPE enum, ALTER TABLE `InsightsReport` ADD COLUMNs, CREATE TABLE `InsightsSessionCoverage` with `UNIQUE("jobId")`, both cascading FKs, `INDEX("reportId")`; no backfill) and run `bunx prisma generate` to regenerate the client. Depends on T002.
+- [X] T004 ✅ DONE [P] Add data-access helpers and serialization fields to `app/lib/insights/repository.ts`: `advanceCoverage(tx, reportId, jobIds)` using `createMany({ skipDuplicates: true })`; `derivePeriodStart()` returning max covered `completedAt` ?? oldest available session completion ?? now (D7/FR-014); extend `ReportListEntry` and `toListEntry` with `expectedSessionsCount` and `coverageGapReason` (clarify `sessionsCount` = analyzed). Follow the `$transaction` + `WHERE status='RUNNING'` pattern at `repository.ts:79-138` (P3). Depends on T003 (generated client).
 
 **Checkpoint**: Schema migrated, client generated, coverage/period helpers available — user stories can begin.
 
@@ -50,19 +50,19 @@ description: "Task list for AIB-852 — Insights: analyze every agent session of
 
 **NOTE: Write these tests FIRST and ensure they FAIL before implementation.**
 
-- [ ] T005 [P] [US1] Rewrite/extend `tests/unit/lib/insights/predicate.test.ts` to cover the new selection engine: all sessions per ticket included (US1 AC1/AC2), completion-timestamp boundary placement using `completedAt ?? updatedAt ?? startedAt` (D3), coverage-exclusion filter, `count == enumeration` parity (FR-016/SC-006), non-shipped ticket inclusion (US3 selection, no `TicketOutcome`), and no `projectId` filter applied (US5 selection). Mock `@/lib/db/client` (P8).
-- [ ] T006 [P] [US1] Extend `tests/integration/api/admin/insights/preflight.test.ts` for the session-based snapshot: `analyzableSessions`/`expectedSessions` fields, and refusal codes `NO_CLAUDE_SESSIONS` (empty corpus) and `NO_NEW_SESSIONS` (no uncovered analyzable sessions).
-- [ ] T007 [P] [US1] Extend `tests/integration/api/admin/insights/trigger.test.ts` for session-based pre-flight gating, derived `periodStart` (max covered completion ?? oldest available ?? now), and the first-run bound (FR-014).
-- [ ] T008 [P] [US1] Extend `tests/unit/components/admin/insights/run-analysis-button.test.tsx` to assert the new refusal-code copy (`NO_CLAUDE_SESSIONS`/`NO_NEW_SESSIONS`).
+- [X] T005 ✅ DONE [P] [US1] Rewrite/extend `tests/unit/lib/insights/predicate.test.ts` to cover the new selection engine: all sessions per ticket included (US1 AC1/AC2), completion-timestamp boundary placement using `completedAt ?? updatedAt ?? startedAt` (D3), coverage-exclusion filter, `count == enumeration` parity (FR-016/SC-006), non-shipped ticket inclusion (US3 selection, no `TicketOutcome`), and no `projectId` filter applied (US5 selection). Mock `@/lib/db/client` (P8).
+- [X] T006 ✅ DONE [P] [US1] Extend `tests/integration/api/admin/insights/preflight.test.ts` for the session-based snapshot: `analyzableSessions`/`expectedSessions` fields, and refusal codes `NO_CLAUDE_SESSIONS` (empty corpus) and `NO_NEW_SESSIONS` (no uncovered analyzable sessions).
+- [X] T007 ✅ DONE [P] [US1] Extend `tests/integration/api/admin/insights/trigger.test.ts` for session-based pre-flight gating, derived `periodStart` (max covered completion ?? oldest available ?? now), and the first-run bound (FR-014).
+- [X] T008 ✅ DONE [P] [US1] Extend `tests/unit/components/admin/insights/run-analysis-button.test.tsx` to assert the new refusal-code copy (`NO_CLAUDE_SESSIONS`/`NO_NEW_SESSIONS`).
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Rewrite `app/lib/insights/predicate.ts` around ONE private inner query joining `Job → Ticket → Project` (no `TicketOutcome`, no project filter), applying effective-agent (`ticket.agent ?? project.defaultAgent ?? 'CLAUDE'`, P2/FR-009), terminal status, `JobLog` presence, completion timestamp (D3), and coverage exclusion. Export `countAnalyzableClaudeSessions()`, `listAnalyzableClaudeSessions(window, { ignoreCoverage })`, `countExpectedClaudeSessions(window)`, and `getEarliestClaudeSessionCompletion()`; keep the single-inner-query discipline so count == enumeration (P1, FR-001/002/003/016). Depends on T003.
-- [ ] T010 [US1] Update `app/api/admin/insights/jobs/route.ts` to return ALL analyzable Claude sessions in the window (multiple per ticket, no SHIP filter) plus `expectedCount`, using the same predicate as pre-flight (contract admin-insights-api.md GET /jobs). Depends on T009.
-- [ ] T011 [US1] Update `app/lib/insights/preflight.ts` to compute the snapshot from `countAnalyzableClaudeSessions()`/`countExpectedClaudeSessions()`, emit `analyzableSessions`/`expectedSessions`, and use refusal codes `NO_CLAUDE_SESSIONS`/`NO_NEW_SESSIONS` (gate keyed on `analyzableSessions > 0`). Depends on T009.
-- [ ] T012 [US1] Update `app/api/admin/insights/preflight/route.ts` to pass through the new `PreflightSnapshot` shape (contract). Depends on T011.
-- [ ] T013 [US1] Update `app/api/admin/insights/trigger/route.ts` to run the session-based pre-flight, map the new refusal codes to 409, and set `periodEnd = now` with `periodStart = derivePeriodStart()`; preserve the DB-insert-then-dispatch ordering with `markFailed` + Job delete on dispatch failure (P5) and the `ALREADY_RUNNING` mapping (P4). Depends on T011, T004.
-- [ ] T014 [P] [US1] Update `app/lib/hooks/queries/use-insights-preflight.ts` (`InsightsPreflight` type fields: `analyzableSessions`, `expectedSessions`) and `components/admin/insights/run-analysis-button.tsx` refusal-code copy to match the new codes.
+- [X] T009 ✅ DONE [US1] Rewrite `app/lib/insights/predicate.ts` around ONE private inner query joining `Job → Ticket → Project` (no `TicketOutcome`, no project filter), applying effective-agent (`ticket.agent ?? project.defaultAgent ?? 'CLAUDE'`, P2/FR-009), terminal status, `JobLog` presence, completion timestamp (D3), and coverage exclusion. Export `countAnalyzableClaudeSessions()`, `listAnalyzableClaudeSessions(window, { ignoreCoverage })`, `countExpectedClaudeSessions(window)`, and `getEarliestClaudeSessionCompletion()`; keep the single-inner-query discipline so count == enumeration (P1, FR-001/002/003/016). Depends on T003.
+- [X] T010 ✅ DONE [US1] Update `app/api/admin/insights/jobs/route.ts` to return ALL analyzable Claude sessions in the window (multiple per ticket, no SHIP filter) plus `expectedCount`, using the same predicate as pre-flight (contract admin-insights-api.md GET /jobs). Depends on T009.
+- [X] T011 ✅ DONE [US1] Update `app/lib/insights/preflight.ts` to compute the snapshot from `countAnalyzableClaudeSessions()`/`countExpectedClaudeSessions()`, emit `analyzableSessions`/`expectedSessions`, and use refusal codes `NO_CLAUDE_SESSIONS`/`NO_NEW_SESSIONS` (gate keyed on `analyzableSessions > 0`). Depends on T009.
+- [X] T012 ✅ DONE [US1] Update `app/api/admin/insights/preflight/route.ts` to pass through the new `PreflightSnapshot` shape (contract). Depends on T011.
+- [X] T013 ✅ DONE [US1] Update `app/api/admin/insights/trigger/route.ts` to run the session-based pre-flight, map the new refusal codes to 409, and set `periodEnd = now` with `periodStart = derivePeriodStart()`; preserve the DB-insert-then-dispatch ordering with `markFailed` + Job delete on dispatch failure (P5) and the `ALREADY_RUNNING` mapping (P4). Depends on T011, T004.
+- [X] T014 ✅ DONE [P] [US1] Update `app/lib/hooks/queries/use-insights-preflight.ts` (`InsightsPreflight` type fields: `analyzableSessions`, `expectedSessions`) and `components/admin/insights/run-analysis-button.tsx` refusal-code copy to match the new codes.
 
 **Checkpoint**: An analysis run enumerates every captured Claude session of each ticket across all projects; pre-flight counts sessions. MVP is functional and independently testable.
 
@@ -76,14 +76,14 @@ description: "Task list for AIB-852 — Insights: analyze every agent session of
 
 ### Tests for User Story 2
 
-- [ ] T015 [P] [US2] Extend `tests/integration/api/admin/insights/status-patch.test.ts`: COMPLETED writes one `InsightsSessionCoverage` row per `analyzedJobIds` entry; FAILED writes none (FR-007); a re-delivered COMPLETED PATCH is idempotent (no duplicate rows); `coverageGapReason = TRANSCRIPT_NOT_AVAILABLE` set iff `expectedSessionsCount > sessionsCount` (FR-012).
-- [ ] T016 [P] [US2] Create `tests/integration/api/admin/insights/coverage.test.ts` (NEW): run A then B over consecutive windows — a boundary session appears in exactly one (US2 AC1/SC-002); a covered session is not re-selected (US2 AC2); after a FAILED run the intended sessions are picked up by the next run (US2 AC3/SC-003).
-- [ ] T017 [P] [US2] Extend `tests/unit/lib/insights/reconcile.test.ts` to assert the timeout auto-FAIL of an orphaned RUNNING report writes no `InsightsSessionCoverage` rows (FR-007).
+- [X] T015 ✅ DONE [P] [US2] Extend `tests/integration/api/admin/insights/status-patch.test.ts`: COMPLETED writes one `InsightsSessionCoverage` row per `analyzedJobIds` entry; FAILED writes none (FR-007); a re-delivered COMPLETED PATCH is idempotent (no duplicate rows); `coverageGapReason = TRANSCRIPT_NOT_AVAILABLE` set iff `expectedSessionsCount > sessionsCount` (FR-012).
+- [X] T016 ✅ DONE [P] [US2] Create `tests/integration/api/admin/insights/coverage.test.ts` (NEW): run A then B over consecutive windows — a boundary session appears in exactly one (US2 AC1/SC-002); a covered session is not re-selected (US2 AC2); after a FAILED run the intended sessions are picked up by the next run (US2 AC3/SC-003).
+- [X] T017 ✅ DONE [P] [US2] Extend `tests/unit/lib/insights/reconcile.test.ts` to assert the timeout auto-FAIL of an orphaned RUNNING report writes no `InsightsSessionCoverage` rows (FR-007).
 
 ### Implementation for User Story 2
 
-- [ ] T018 [US2] Update `app/api/admin/insights/reports/[id]/status/route.ts`: extend the COMPLETED Zod schema with `analyzedJobIds` (non-empty positive `number[]`, `length === sessionsCount`) and `expectedSessionsCount` (`>= sessionsCount`); inside the existing COMPLETED `$transaction` (atomic `updateMany WHERE id=? AND status='RUNNING'`, P3) set `expectedSessionsCount`, compute `coverageGapReason`, call `advanceCoverage(tx, id, analyzedJobIds)`, and cascade the linked Job via direct `updateMany` (P6); FAILED branch and the `count===0` idempotent no-op unchanged. Depends on T004.
-- [ ] T019 [US2] Update `.github/workflows/insights-analyze.yml`: capture `expected_count` from `/jobs`, compute `analyzed_job_ids = jq -c '[.jobs[].jobId]' jobs.json`, and extend the COMPLETED PATCH payload with `expectedSessionsCount` and `analyzedJobIds` (workflows/insights-analyze-workflow.md); FAILED PATCH unchanged (no `analyzedJobIds`). Depends on T010, T018.
+- [X] T018 ✅ DONE [US2] Update `app/api/admin/insights/reports/[id]/status/route.ts`: extend the COMPLETED Zod schema with `analyzedJobIds` (non-empty positive `number[]`, `length === sessionsCount`) and `expectedSessionsCount` (`>= sessionsCount`); inside the existing COMPLETED `$transaction` (atomic `updateMany WHERE id=? AND status='RUNNING'`, P3) set `expectedSessionsCount`, compute `coverageGapReason`, call `advanceCoverage(tx, id, analyzedJobIds)`, and cascade the linked Job via direct `updateMany` (P6); FAILED branch and the `count===0` idempotent no-op unchanged. Depends on T004.
+- [X] T019 ✅ DONE [US2] Update `.github/workflows/insights-analyze.yml`: capture `expected_count` from `/jobs`, compute `analyzed_job_ids = jq -c '[.jobs[].jobId]' jobs.json`, and extend the COMPLETED PATCH payload with `expectedSessionsCount` and `analyzedJobIds` (workflows/insights-analyze-workflow.md); FAILED PATCH unchanged (no `analyzedJobIds`). Depends on T010, T018.
 
 **Checkpoint**: Coverage is per-session, advances only on success, and survives failures — exactly-once across consecutive runs.
 
@@ -97,7 +97,7 @@ description: "Task list for AIB-852 — Insights: analyze every agent session of
 
 ### Tests for User Story 5
 
-- [ ] T020 [P] [US5] Extend `tests/integration/api/admin/insights/effective-agent.test.ts` to assert: sessions from multiple projects are all enumerated by `/jobs` (no project scoping), and the pre-flight session count equals the enumerated session count for the same window (FR-016/SC-006). (No implementation task — guardrail is satisfied by the T009 single-inner-query predicate with no `projectId` filter.)
+- [X] T020 ✅ DONE [P] [US5] Extend `tests/integration/api/admin/insights/effective-agent.test.ts` to assert: sessions from multiple projects are all enumerated by `/jobs` (no project scoping), and the pre-flight session count equals the enumerated session count for the same window (FR-016/SC-006). (No implementation task — guardrail is satisfied by the T009 single-inner-query predicate with no `projectId` filter.)
 
 **Checkpoint**: Platform-wide global scope verified; no per-project regression.
 
@@ -111,11 +111,11 @@ description: "Task list for AIB-852 — Insights: analyze every agent session of
 
 ### Tests for User Story 3
 
-- [ ] T021 [P] [US3] Extend `tests/integration/api/admin/insights/jobs-raw-native.test.ts`: a Claude, unshipped ticket with a captured artifact now returns 200 (was 404); a non-Claude effective agent still returns 404; missing `rawArtifactKey` still 404 (US3 AC1).
+- [X] T021 ✅ DONE [P] [US3] Extend `tests/integration/api/admin/insights/jobs-raw-native.test.ts`: a Claude, unshipped ticket with a captured artifact now returns 200 (was 404); a non-Claude effective agent still returns 404; missing `rawArtifactKey` still 404 (US3 AC1).
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Update `app/api/admin/insights/jobs/[jobId]/raw-native/route.ts` to remove the `if (!job.ticket.outcome) → 404` gate (current `route.ts:74-76`, FR-008) while keeping the Claude effective-agent check (P2) and `canonicalizeRawArtifactKey` path-traversal defense (P7). Selection-side non-shipped inclusion is already delivered by the T009 predicate.
+- [X] T022 ✅ DONE [US3] Update `app/api/admin/insights/jobs/[jobId]/raw-native/route.ts` to remove the `if (!job.ticket.outcome) → 404` gate (current `route.ts:74-76`, FR-008) while keeping the Claude effective-agent check (P2) and `canonicalizeRawArtifactKey` path-traversal defense (P7). Selection-side non-shipped inclusion is already delivered by the T009 predicate.
 
 **Checkpoint**: Unshipped/abandoned/rolled-back Claude sessions are selectable and retrievable.
 
@@ -129,13 +129,13 @@ description: "Task list for AIB-852 — Insights: analyze every agent session of
 
 ### Tests for User Story 4
 
-- [ ] T023 [P] [US4] Extend `tests/unit/components/admin/insights/insights-report-view.test.tsx`: header renders "Analyzed N of M Claude Code sessions" (US4 AC1); gap badge shown iff `coverageGapReason` is set (US4 AC2); full-coverage wording when `sessionsCount === expectedSessionsCount` (US4 AC3). Use `getByRole`/`getByText` + `renderWithProviders`.
-- [ ] T024 [P] [US4] Extend `tests/integration/api/admin/insights/reports-list.test.ts` to assert `expectedSessionsCount` and `coverageGapReason` are serialized in the list/detail responses.
+- [X] T023 ✅ DONE [P] [US4] Extend `tests/unit/components/admin/insights/insights-report-view.test.tsx`: header renders "Analyzed N of M Claude Code sessions" (US4 AC1); gap badge shown iff `coverageGapReason` is set (US4 AC2); full-coverage wording when `sessionsCount === expectedSessionsCount` (US4 AC3). Use `getByRole`/`getByText` + `renderWithProviders`.
+- [X] T024 ✅ DONE [P] [US4] Extend `tests/integration/api/admin/insights/reports-list.test.ts` to assert `expectedSessionsCount` and `coverageGapReason` are serialized in the list/detail responses.
 
 ### Implementation for User Story 4
 
-- [ ] T025 [US4] Update `components/admin/insights/insights-report-view.tsx`: rework `formatMetadataPhrasing` (`:45-57`) to "Analyzed N of M Claude Code sessions…", render a gap badge (existing shadcn `Badge`) when `coverageGapReason` is set, and change the "since previous run" header line to sessions wording (`:233-242`, FR-011/012/013).
-- [ ] T026 [US4] Verify/extend `app/api/admin/insights/reports/route.ts` and `app/api/admin/insights/reports/[id]/route.ts` so `expectedSessionsCount` and `coverageGapReason` flow through to clients (the `toListEntry` field additions from T004 should propagate; add explicit mapping if the route shapes the payload directly). Depends on T004.
+- [X] T025 ✅ DONE [US4] Update `components/admin/insights/insights-report-view.tsx`: rework `formatMetadataPhrasing` (`:45-57`) to "Analyzed N of M Claude Code sessions…", render a gap badge (existing shadcn `Badge`) when `coverageGapReason` is set, and change the "since previous run" header line to sessions wording (`:233-242`, FR-011/012/013).
+- [X] T026 ✅ DONE [US4] Verify/extend `app/api/admin/insights/reports/route.ts` and `app/api/admin/insights/reports/[id]/route.ts` so `expectedSessionsCount` and `coverageGapReason` flow through to clients (the `toListEntry` field additions from T004 should propagate; add explicit mapping if the route shapes the payload directly). Depends on T004.
 
 **Checkpoint**: Coverage gaps are visible and explainable in the UI; list/detail responses carry the new fields.
 
@@ -145,10 +145,10 @@ description: "Task list for AIB-852 — Insights: analyze every agent session of
 
 **Purpose**: Final verification and consistency across stories.
 
-- [ ] T027 [P] Update `tests/e2e/admin/insights-flow.spec.ts` ONLY if header copy assertions changed (analyzed-vs-expected wording); no new E2E added (expensive — no new behavior needs a browser).
-- [ ] T028 Run `bun run type-check` and `bun run lint` from the repository root and fix ALL errors before any commit (CLAUDE.md commit rules; never `--no-verify`).
-- [ ] T029 Run `bun run test:unit tests/unit/lib/insights tests/unit/components/admin/insights` and `bun run test:integration tests/integration/api/admin/insights` to confirm the full insights suite (including the new `coverage.test.ts`) passes.
-- [ ] T030 [P] If selection/coverage behavior changed any consolidated documentation, run `/ai-board.sync-specifications` to update `specs/specifications/`; otherwise note no sync needed.
+- [X] T027 ✅ DONE [P] Update `tests/e2e/admin/insights-flow.spec.ts` ONLY if header copy assertions changed (analyzed-vs-expected wording); no new E2E added (expensive — no new behavior needs a browser).
+- [X] T028 ✅ DONE Run `bun run type-check` and `bun run lint` from the repository root and fix ALL errors before any commit (CLAUDE.md commit rules; never `--no-verify`).
+- [X] T029 ✅ DONE Run `bun run test:unit tests/unit/lib/insights tests/unit/components/admin/insights` and `bun run test:integration tests/integration/api/admin/insights` to confirm the full insights suite (including the new `coverage.test.ts`) passes.
+- [X] T030 ✅ DONE [P] If selection/coverage behavior changed any consolidated documentation, run `/ai-board.sync-specifications` to update `specs/specifications/`; otherwise note no sync needed.
 
 ---
 

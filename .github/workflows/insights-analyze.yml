@@ -56,7 +56,10 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
             "${APP_URL}/api/admin/insights/jobs?periodStart=${{ inputs.period_start }}&periodEnd=${{ inputs.period_end }}" \
             > jobs.json
+          # AIB-852: session_count = analyzed (transcript-present) sessions;
+          # expected_count = in-scope sessions incl. transcript-pending (FR-011).
           echo "session_count=$(jq '.jobs | length' jobs.json)" >> "$GITHUB_OUTPUT"
+          echo "expected_count=$(jq '.expectedCount' jobs.json)" >> "$GITHUB_OUTPUT"
 
       - name: Download raw native session JSONL artifacts
         run: |
@@ -234,9 +237,15 @@ jobs:
         run: |
           set -euo pipefail
           session_count=${{ steps.enumerate.outputs.session_count }}
+          expected_count=${{ steps.enumerate.outputs.expected_count }}
           ticket_count=$(jq '[.jobs[].ticketId] | unique | length' jobs.json)
+          # AIB-852/D5: the exact jobs analyzed → server writes one coverage row
+          # each inside the COMPLETED transaction (FR-007, only on success).
+          analyzed_job_ids=$(jq -c '[.jobs[].jobId]' jobs.json)
           echo "session_count=$session_count" >> "$GITHUB_OUTPUT"
+          echo "expected_count=$expected_count" >> "$GITHUB_OUTPUT"
           echo "ticket_count=$ticket_count" >> "$GITHUB_OUTPUT"
+          echo "analyzed_job_ids=$analyzed_job_ids" >> "$GITHUB_OUTPUT"
 
       - name: PATCH report status -> COMPLETED
         run: |
@@ -244,10 +253,12 @@ jobs:
           payload=$(jq -n \
             --arg status 'COMPLETED' \
             --argjson sc ${{ steps.counts.outputs.session_count }} \
+            --argjson ec ${{ steps.counts.outputs.expected_count }} \
             --argjson tc ${{ steps.counts.outputs.ticket_count }} \
+            --argjson ids '${{ steps.counts.outputs.analyzed_job_ids }}' \
             --arg ak "insights/reports/${{ inputs.report_id }}.html" \
             --argjson asz ${{ steps.finalize.outputs.artifact_size }} \
-            '{status:$status, sessionsCount:$sc, ticketsCount:$tc, artifactKey:$ak, artifactSize:$asz}')
+            '{status:$status, sessionsCount:$sc, expectedSessionsCount:$ec, ticketsCount:$tc, analyzedJobIds:$ids, artifactKey:$ak, artifactSize:$asz}')
           curl -fsS -X PATCH \
             "${APP_URL}/api/admin/insights/reports/${{ inputs.report_id }}/status" \
             -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \

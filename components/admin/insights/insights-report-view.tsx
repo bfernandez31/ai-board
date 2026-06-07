@@ -47,13 +47,22 @@ function formatMetadataPhrasing(report: ReportListEntry): string {
   const end = formatDate(report.periodEnd);
   if (report.status !== 'COMPLETED' || report.sessionsCount === null) {
     if (report.status === 'RUNNING') {
-      return `Analyzing Claude Code sessions for tickets shipped between ${start} and ${end}…`;
+      return `Analyzing Claude Code sessions between ${start} and ${end}…`;
     }
     return `Run window: ${start} to ${end} (counts unavailable)`;
   }
-  return `Analyzed ${report.sessionsCount} Claude Code sessions across ${
-    report.ticketsCount ?? 0
-  } tickets shipped between ${start} and ${end}`;
+  // AIB-852 (FR-011/012): analyzed-vs-expected sessions. When the expected
+  // count is unknown (legacy COMPLETED rows predating this feature) fall back
+  // to the analyzed count alone.
+  const analyzed = report.sessionsCount;
+  const expected = report.expectedSessionsCount;
+  const tickets = report.ticketsCount ?? 0;
+  if (expected === null || expected === analyzed) {
+    return `Analyzed ${analyzed} of ${
+      expected ?? analyzed
+    } Claude Code sessions across ${tickets} tickets between ${start} and ${end}`;
+  }
+  return `Analyzed ${analyzed} of ${expected} Claude Code sessions across ${tickets} tickets between ${start} and ${end}`;
 }
 
 function statusBadgeVariant(
@@ -130,16 +139,16 @@ export function InsightsReportView({
         message: `A run is already in progress (started ${formatDate(preflight.runningSince)}).`,
       };
     }
-    if (refusalCode === 'NO_NEW_SHIPPED' && preflight.previousRunEnd) {
+    if (refusalCode === 'NO_NEW_SESSIONS' && preflight.previousRunEnd) {
       return {
         refusalCode,
-        message: `No new shipped tickets since last run on ${formatDate(preflight.previousRunEnd)}.`,
+        message: `No new Claude sessions since last run on ${formatDate(preflight.previousRunEnd)}.`,
       };
     }
     return preflight.refusal;
   }, [preflight.refusal, preflight.previousRunEnd, preflight.runningSince]);
 
-  // Retries bypass NO_CLAUDE_JOBS / NO_NEW_SHIPPED on the server (the
+  // Retries bypass NO_CLAUDE_SESSIONS / NO_NEW_SESSIONS on the server (the
   // original run already proved eligibility for that window). Only the
   // concurrency gate and the latestIsRunning short-circuit apply here, so
   // the retry button stays enabled even when the header is gated by
@@ -162,9 +171,9 @@ export function InsightsReportView({
     <div className="flex flex-col gap-4">
       <header className="flex items-start justify-between gap-4">
         <p className="text-sm text-muted-foreground">
-          Shipped Claude tickets since previous run:{' '}
+          Analyzable Claude sessions since previous run:{' '}
           <strong className="text-foreground">
-            {preflight.shippedSincePreviousRun}
+            {preflight.analyzableSessions}
           </strong>
           {preflight.previousRunEnd
             ? ` (last analyzed up to ${formatDate(preflight.previousRunEnd)})`
@@ -232,9 +241,19 @@ export function InsightsReportView({
             <div className="flex flex-col gap-4">
               <Card className="aurora-bg-card-blue">
                 <CardContent className="p-5">
-                  <p className="text-sm text-foreground">
-                    {formatMetadataPhrasing(display)}
-                  </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm text-foreground">
+                      {formatMetadataPhrasing(display)}
+                    </p>
+                    {display.coverageGapReason && (
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 border-amber-500/50 text-amber-600 dark:text-amber-400"
+                      >
+                        Coverage gap
+                      </Badge>
+                    )}
+                  </div>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Report #{display.id} — generated {formatDate(display.generatedAt)}
                   </p>

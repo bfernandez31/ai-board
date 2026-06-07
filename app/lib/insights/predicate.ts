@@ -1,21 +1,26 @@
 import { prisma } from '@/lib/db/client';
 
 /**
- * Single source of truth for "is this Job a Claude session worth analyzing?"
- * (AIB-791, D-6, D-7, FR-010, FR-025).
+ * Single source of truth for "which Claude agent sessions should Insights
+ * analyze?" (AIB-852, supersedes the AIB-791 shipped-ticket predicate).
  *
- * The effective-agent rule mirrors the production predicate already used at
- * `app/api/jobs/[id]/logs/raw-artifact/route.ts:60-62`:
- *     effectiveAgent = ticket.agent ?? ticket.project.defaultAgent ?? 'CLAUDE'
- * A job is "Claude" iff this resolves to 'CLAUDE'.
+ * AIB-852 reworks selection in three ways:
+ *   1. Decoupled from SHIP — selection joins `Job → Ticket → Project`
+ *      directly, NOT through `TicketOutcome`. In-progress / abandoned /
+ *      rolled-back tickets are now in scope (D2, FR-008).
+ *   2. Every captured session — no per-ticket dedup. A ticket with an
+ *      implement + iterate + verify session contributes all three (FR-001/2).
+ *   3. Coverage-driven — a session is "already analyzed" iff an
+ *      `InsightsSessionCoverage` row exists for its job (D1, FR-004/6),
+ *      replacing the single global `periodEnd` cursor.
  *
- * Both exported functions (`countShippedClaudeTicketsSince` and
- * `listShippedClaudeJobsForWindow`) call the same private query so the
- * pre-flight count cannot drift from the workflow's enumeration — exactly
- * the AIB-787-class regression the spec forbids (FR-025, SC-006).
+ * The effective-agent rule (P2, FR-009) is:
+ *     effectiveAgent = ticket.agent ?? project.defaultAgent ?? 'CLAUDE'
+ * A session is "Claude" iff this resolves to 'CLAUDE'.
  *
- * "Shipped" is determined by `TicketOutcome.shippedAt`, the canonical
- * audit-row for ticket SHIP transitions.
+ * Every count/enumeration export funnels through the single private
+ * `querySessionRows` so the pre-flight count cannot drift from the workflow's
+ * enumeration (P1, FR-016, SC-006).
  */
 
 export interface JobRef {
@@ -25,175 +30,180 @@ export interface JobRef {
   rawArtifactKey: string;
 }
 
-interface RawJobRow {
+/**
+ * Half-open selection window. Both bounds optional:
+ *   - `end === null` → no upper bound (pre-flight unbounded probe)
+ *   - `start === null` → no lower bound
+ * Bounds are applied to a session's *completion* timestamp (see
+ * `completionOf`). The lower bound is only honored for explicit re-analysis
+ * (`ignoreCoverage`); fresh selection relies on the coverage marker plus the
+ * half-open upper bound for exactly-once placement (D7).
+ */
+export interface SessionWindow {
+  start: Date | null;
+  end: Date | null;
+}
+
+const TERMINAL_STATUSES = ['COMPLETED', 'FAILED', 'CANCELLED'] as const;
+
+interface SessionRow {
   jobId: number;
   projectId: number;
   ticketId: number;
-  ticketAgent: string | null;
-  projectDefaultAgent: string | null;
-  shippedAt: Date;
-  jobStartedAt: Date;
-  rawArtifactKey: string;
+  completion: Date;
+  /** capture was attempted and the raw transcript is fetchable */
+  analyzable: boolean;
+  rawArtifactKey: string | null;
 }
 
 /**
- * Inner query that loads every Job belonging to a Ticket whose SHIP outcome
- * falls inside the requested window, with the agent fields needed to apply
- * the effective-agent predicate.
- *
- * Window semantics:
- *   - `start === null` → no lower bound (used by first-ever pre-flight)
- *   - half-open: shippedAt >= start, shippedAt < end (or no upper bound when
- *     end === null — used by pre-flight's "since X" probe)
- *
- * Jobs without an uploaded raw-native artifact (`JobLog.rawArtifactKey IS
- * NULL`) are excluded — the analyzer corpus is the set of sessions the
- * workflow can actually fetch via `/api/admin/insights/jobs/:jobId/raw-native`.
- * Including unfetchable jobs would let pre-flight promise sessions the
- * download step cannot retrieve, killing the workflow on the first 404.
+ * A session's completion instant for window placement: `completedAt`, falling
+ * back to `updatedAt` then `startedAt` for legacy terminal rows where
+ * `completedAt` is null (D3). `startedAt` is always set.
  */
-async function queryShippedJobs(
-  start: Date | null,
-  end: Date | null
-): Promise<RawJobRow[]> {
-  const shippedAtFilter: { gte?: Date; lt?: Date } = {};
-  if (start !== null) shippedAtFilter.gte = start;
-  if (end !== null) shippedAtFilter.lt = end;
+function completionOf(job: {
+  completedAt: Date | null;
+  updatedAt: Date;
+  startedAt: Date;
+}): Date {
+  return job.completedAt ?? job.updatedAt ?? job.startedAt;
+}
 
-  const outcomes = await prisma.ticketOutcome.findMany({
-    where:
-      Object.keys(shippedAtFilter).length > 0
-        ? { shippedAt: shippedAtFilter }
-        : {},
+function isClaude(ticketAgent: string | null, projectDefaultAgent: string | null): boolean {
+  const effective = ticketAgent ?? projectDefaultAgent ?? 'CLAUDE';
+  return effective === 'CLAUDE';
+}
+
+/**
+ * The one inner query. Loads every terminal Claude session belonging to a
+ * ticket that has a `JobLog` row (capture was attempted), applies the
+ * effective-agent rule and window bounds in JS (the completion fallback chain
+ * cannot be expressed in a single Prisma `where`), and reports per-row whether
+ * the raw transcript is actually fetchable (`analyzable`).
+ *
+ * `ignoreCoverage`:
+ *   - false (fresh, default): exclude sessions that already have a coverage
+ *     row; honor only the half-open upper bound (`completion < end`). The
+ *     lower bound is NOT applied — correctness comes from the coverage marker,
+ *     so a gap session that was uncovered in an earlier run is re-picked up
+ *     regardless of when it completed (FR-010, D7).
+ *   - true (explicit re-analysis): include covered sessions and honor the
+ *     full `[start, end)` window (D8, FR-006 exception).
+ */
+async function querySessionRows(
+  window: SessionWindow,
+  ignoreCoverage: boolean
+): Promise<SessionRow[]> {
+  const jobs = await prisma.job.findMany({
+    where: {
+      status: { in: [...TERMINAL_STATUSES] },
+      ticketId: { not: null },
+      log: { isNot: null },
+      ...(ignoreCoverage ? {} : { insightsCoverage: { is: null } }),
+    },
     select: {
-      ticketId: true,
+      id: true,
       projectId: true,
-      shippedAt: true,
+      ticketId: true,
+      completedAt: true,
+      updatedAt: true,
+      startedAt: true,
       ticket: {
         select: {
           agent: true,
           project: { select: { defaultAgent: true } },
         },
       },
+      log: { select: { captureStatus: true, rawArtifactKey: true } },
     },
   });
 
-  if (outcomes.length === 0) return [];
-
-  const ticketIds = outcomes.map((o) => o.ticketId);
-  const jobs = await prisma.job.findMany({
-    where: {
-      ticketId: { in: ticketIds },
-      status: 'COMPLETED',
-      log: { rawArtifactKey: { not: null } },
-    },
-    select: {
-      id: true,
-      projectId: true,
-      ticketId: true,
-      startedAt: true,
-      log: { select: { rawArtifactKey: true } },
-    },
-  });
-
-  const outcomeByTicket = new Map(outcomes.map((o) => [o.ticketId, o]));
-
-  const result: RawJobRow[] = [];
+  const rows: SessionRow[] = [];
   for (const job of jobs) {
-    if (job.ticketId === null) continue;
-    const outcome = outcomeByTicket.get(job.ticketId);
-    if (!outcome) continue;
-    if (!job.log?.rawArtifactKey) continue;
-    result.push({
+    if (job.ticketId === null || !job.ticket || !job.log) continue;
+    if (!isClaude(job.ticket.agent, job.ticket.project.defaultAgent)) continue;
+
+    const completion = completionOf(job);
+    if (window.end !== null && completion >= window.end) continue;
+    if (ignoreCoverage && window.start !== null && completion < window.start) {
+      continue;
+    }
+
+    const analyzable =
+      job.log.captureStatus === 'CAPTURED' && job.log.rawArtifactKey !== null;
+
+    rows.push({
       jobId: job.id,
       projectId: job.projectId,
       ticketId: job.ticketId,
-      ticketAgent: outcome.ticket.agent ?? null,
-      projectDefaultAgent: outcome.ticket.project.defaultAgent ?? null,
-      shippedAt: outcome.shippedAt,
-      jobStartedAt: job.startedAt,
+      completion,
+      analyzable,
       rawArtifactKey: job.log.rawArtifactKey,
     });
   }
-
-  return result;
-}
-
-function isClaudeRow(row: RawJobRow): boolean {
-  const effective =
-    row.ticketAgent ?? row.projectDefaultAgent ?? 'CLAUDE';
-  return effective === 'CLAUDE';
+  return rows;
 }
 
 /**
- * Distinct count of Claude-agent tickets shipped at or after `since`
- * (half-open lower bound: `shippedAt >= since` when `since` is non-null;
- * no lower bound otherwise). Used by the trigger endpoint's pre-flight
- * gate and the `/preflight` UI endpoint.
- *
- * The period semantic in `data-model.md` is "[prevEnd, now)" — passing the
- * previous run's `periodEnd` as `since` counts new ships at or after that
- * boundary.
+ * Count of analyzable (transcript-present, uncovered) Claude sessions. Drives
+ * the pre-flight gate (`analyzableSessions > 0`) and the workflow's
+ * reconciliation count. With no window this counts every uncovered analyzable
+ * session (periodEnd === now means all terminal sessions qualify).
  */
-export async function countShippedClaudeTicketsSince(
-  since: Date | null
+export async function countAnalyzableClaudeSessions(
+  window: SessionWindow = { start: null, end: null }
 ): Promise<number> {
-  const rows = await queryShippedJobs(since, null);
-  const claudeTicketIds = new Set<number>();
-  for (const row of rows) {
-    if (isClaudeRow(row)) claudeTicketIds.add(row.ticketId);
-  }
-  return claudeTicketIds.size;
+  const rows = await querySessionRows(window, false);
+  return rows.filter((r) => r.analyzable).length;
 }
 
 /**
- * List of Claude Jobs whose Ticket shipped in [start, end). Used by the
- * insights workflow's enumeration step (T052) so the analyzer sees exactly
- * the same set of sessions the pre-flight counted.
- *
- * De-duplicated by `ticketId` so the workflow's session_count cannot
- * exceed the pre-flight's distinct-ticket count (FR-025). When a ticket has
- * multiple COMPLETED Claude jobs (e.g. an `implement` plus a later
- * `iterate`), we keep the earliest job by `startedAt` — the foundational
- * session that produced the shipped outcome.
+ * Count of *expected* Claude sessions = uncovered terminal sessions with a
+ * `JobLog` row, INCLUDING those whose transcript is not (yet) fetchable
+ * (FR-011). `expectedSessions >= analyzableSessions` always.
  */
-export async function listShippedClaudeJobsForWindow(
-  start: Date,
-  end: Date
+export async function countExpectedClaudeSessions(
+  window: SessionWindow = { start: null, end: null }
+): Promise<number> {
+  const rows = await querySessionRows(window, false);
+  return rows.length;
+}
+
+/**
+ * Every analyzable Claude session in the window (multiple per ticket allowed,
+ * no SHIP filter, no project filter). Used by the workflow's `/jobs`
+ * enumeration so the analyzer sees exactly the same set the pre-flight
+ * counted (FR-001/2/16). Pass `{ ignoreCoverage: true }` for explicit
+ * re-analysis of a chosen window (D8).
+ */
+export async function listAnalyzableClaudeSessions(
+  window: SessionWindow,
+  opts: { ignoreCoverage?: boolean } = {}
 ): Promise<JobRef[]> {
-  const rows = await queryShippedJobs(start, end);
-  const claudeRows = rows.filter(isClaudeRow);
-  const earliestByTicket = new Map<number, RawJobRow>();
-  for (const row of claudeRows) {
-    const prior = earliestByTicket.get(row.ticketId);
-    if (!prior || row.jobStartedAt < prior.jobStartedAt) {
-      earliestByTicket.set(row.ticketId, row);
-    }
-  }
-  return Array.from(earliestByTicket.values()).map((row) => ({
-    jobId: row.jobId,
-    projectId: row.projectId,
-    ticketId: row.ticketId,
-    rawArtifactKey: row.rawArtifactKey,
-  }));
+  const rows = await querySessionRows(window, opts.ignoreCoverage ?? false);
+  return rows
+    .filter((r) => r.analyzable && r.rawArtifactKey !== null)
+    .map((r) => ({
+      jobId: r.jobId,
+      projectId: r.projectId,
+      ticketId: r.ticketId,
+      rawArtifactKey: r.rawArtifactKey as string,
+    }));
 }
 
 /**
- * Earliest `Job.startedAt` across Claude jobs of shipped tickets — the
- * timestamp of the oldest available Claude Code session (FR-009 / US3 AC1).
- * Used by the trigger endpoint as the first-run `periodStart` floor.
- *
- * Returns the session/job timestamp (not `shippedAt`), so the first-run
- * window covers every session whose raw artifact exists in storage.
+ * Earliest completion across all terminal Claude sessions with a `JobLog`
+ * row — the timestamp of the oldest available Claude Code session. Used as
+ * the first-run `periodStart` floor (FR-014) when no coverage exists yet.
+ * Ignores the coverage marker so the floor reflects the whole corpus.
  */
-export async function getEarliestClaudeJobTimestamp(): Promise<Date | null> {
-  const rows = await queryShippedJobs(null, null);
-  const claudeRows = rows.filter(isClaudeRow);
-  const first = claudeRows[0];
-  if (!first) return null;
-  let earliest = first.jobStartedAt;
-  for (const row of claudeRows) {
-    if (row.jobStartedAt < earliest) earliest = row.jobStartedAt;
+export async function getEarliestClaudeSessionCompletion(): Promise<Date | null> {
+  const rows = await querySessionRows({ start: null, end: null }, true);
+  let earliest: Date | null = null;
+  for (const row of rows) {
+    if (earliest === null || row.completion < earliest) {
+      earliest = row.completion;
+    }
   }
   return earliest;
 }

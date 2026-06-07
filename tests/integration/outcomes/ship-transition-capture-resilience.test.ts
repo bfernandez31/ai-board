@@ -192,13 +192,15 @@ describe('SHIP transition is resilient to capture failure (T019, FR-019)', () =>
   });
 });
 
-// AIB-791 T021: predicate count vs list agreement across a mixed-agent window.
+// AIB-852: predicate count vs list agreement across a mixed-agent window
+// (supersedes the AIB-791 T021 shipped-ticket parity test — selection is now
+// session-based and decoupled from SHIP).
 import {
-  countShippedClaudeTicketsSince,
-  listShippedClaudeJobsForWindow,
+  countAnalyzableClaudeSessions,
+  listAnalyzableClaudeSessions,
 } from '@/app/lib/insights/predicate';
 
-describe('insights predicate: count vs list agreement (AIB-791 T021)', () => {
+describe('insights predicate: count vs list agreement (AIB-852)', () => {
   let ctx: TestContext;
   const prisma = getPrismaClient();
 
@@ -207,7 +209,7 @@ describe('insights predicate: count vs list agreement (AIB-791 T021)', () => {
     await ctx.cleanup();
   });
 
-  it('countShippedClaudeTicketsSince agrees with listShippedClaudeJobsForWindow for a mixed-agent window', async () => {
+  it('countAnalyzableClaudeSessions agrees with listAnalyzableClaudeSessions for a mixed-agent window', async () => {
     const windowStart = new Date('2026-05-01T00:00:00Z');
     const windowEnd = new Date('2026-05-12T00:00:00Z');
 
@@ -258,10 +260,12 @@ describe('insights predicate: count vs list agreement (AIB-791 T021)', () => {
       });
     }
 
-    const count = await countShippedClaudeTicketsSince(windowStart);
-    const list = await listShippedClaudeJobsForWindow(windowStart, windowEnd);
+    const window = { start: windowStart, end: windowEnd };
+    const count = await countAnalyzableClaudeSessions(window);
+    const list = await listAnalyzableClaudeSessions(window);
 
     expect(count).toBe(2);
+    expect(count).toBe(list.length);
     expect(new Set(list.map((j) => j.ticketId))).toEqual(new Set([tCla.id, tInh.id]));
     expect(list.every((j) => j.rawArtifactKey.startsWith('raw-logs/'))).toBe(true);
   });

@@ -19,7 +19,10 @@ describe('RunAnalysisButton (US3, AIB-791)', () => {
       <RunAnalysisButton
         preflight={{
           canTrigger: false,
-          refusal: { refusalCode: 'NO_NEW_SHIPPED', message: 'No new shipped tickets' },
+          refusal: {
+            refusalCode: 'NO_NEW_SESSIONS',
+            message: 'No new Claude sessions since last run',
+          },
         }}
         latestIsRunning={false}
       />
@@ -27,7 +30,7 @@ describe('RunAnalysisButton (US3, AIB-791)', () => {
 
     const button = screen.getByRole('button', { name: /run new analysis/i });
     expect(button).toBeDisabled();
-    expect(screen.getByText(/No new shipped tickets/)).toBeInTheDocument();
+    expect(screen.getByText(/No new Claude sessions/)).toBeInTheDocument();
   });
 
   it('is disabled when latestIsRunning', () => {

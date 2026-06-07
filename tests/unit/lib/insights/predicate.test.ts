@@ -2,305 +2,242 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/lib/db/client', () => ({
   prisma: {
-    ticketOutcome: { findMany: vi.fn() },
     job: { findMany: vi.fn() },
   },
 }));
 
 import {
-  countShippedClaudeTicketsSince,
-  listShippedClaudeJobsForWindow,
-  getEarliestClaudeJobTimestamp,
+  countAnalyzableClaudeSessions,
+  countExpectedClaudeSessions,
+  listAnalyzableClaudeSessions,
+  getEarliestClaudeSessionCompletion,
 } from '@/app/lib/insights/predicate';
 import { prisma } from '@/lib/db/client';
 
 type MockedPrisma = {
-  ticketOutcome: { findMany: ReturnType<typeof vi.fn> };
   job: { findMany: ReturnType<typeof vi.fn> };
 };
 
 const mockedPrisma = prisma as unknown as MockedPrisma;
 
-function makeOutcome(args: {
-  ticketId: number;
-  projectId: number;
-  ticketAgent: string | null;
-  projectDefaultAgent: string | null;
-  shippedAt: Date;
-}) {
-  return {
-    ticketId: args.ticketId,
-    projectId: args.projectId,
-    shippedAt: args.shippedAt,
-    ticket: {
-      agent: args.ticketAgent,
-      project: { defaultAgent: args.projectDefaultAgent },
-    },
-  };
+interface JobOpts {
+  id: number;
+  ticketId?: number | null;
+  projectId?: number;
+  ticketAgent?: string | null;
+  projectDefaultAgent?: string | null;
+  completedAt?: Date | null;
+  updatedAt?: Date;
+  startedAt?: Date;
+  captureStatus?: 'CAPTURED' | 'UNAVAILABLE' | 'PRUNED';
+  rawArtifactKey?: string | null;
+  hasLog?: boolean;
 }
 
-function makeJob(
-  jobId: number,
-  ticketId: number | null,
-  projectId: number,
-  startedAt: Date = new Date('2026-05-10T00:00:00Z'),
-  rawArtifactKey: string | null = ticketId !== null
-    ? `raw-logs/${projectId}/${ticketId}/${jobId}.jsonl.gz`
-    : null,
-) {
+const DEFAULT_AT = new Date('2026-05-10T00:00:00Z');
+
+function makeJob(opts: JobOpts) {
+  const projectId = opts.projectId ?? 10;
+  const ticketId = opts.ticketId === undefined ? 1 : opts.ticketId;
+  const hasLog = opts.hasLog ?? true;
+  const rawArtifactKey =
+    opts.rawArtifactKey === undefined
+      ? `raw-logs/${projectId}/${ticketId}/${opts.id}.jsonl.gz`
+      : opts.rawArtifactKey;
   return {
-    id: jobId,
+    id: opts.id,
     projectId,
     ticketId,
-    startedAt,
-    log: rawArtifactKey ? { rawArtifactKey } : null,
+    completedAt: opts.completedAt === undefined ? DEFAULT_AT : opts.completedAt,
+    updatedAt: opts.updatedAt ?? DEFAULT_AT,
+    startedAt: opts.startedAt ?? DEFAULT_AT,
+    ticket: {
+      agent: opts.ticketAgent ?? null,
+      project: { defaultAgent: opts.projectDefaultAgent ?? null },
+    },
+    log: hasLog
+      ? {
+          captureStatus: opts.captureStatus ?? 'CAPTURED',
+          rawArtifactKey,
+        }
+      : null,
   };
 }
 
-describe('insights predicate (AIB-791)', () => {
+const FULL = { start: null, end: null };
+
+describe('insights predicate (AIB-852)', () => {
   beforeEach(() => {
-    mockedPrisma.ticketOutcome.findMany.mockReset();
     mockedPrisma.job.findMany.mockReset();
   });
 
-  describe('effective-agent grid', () => {
-    it('treats (ticket=CLAUDE, project=CODEX) as Claude', async () => {
-      mockedPrisma.ticketOutcome.findMany.mockResolvedValue([
-        makeOutcome({
-          ticketId: 1,
-          projectId: 10,
-          ticketAgent: 'CLAUDE',
-          projectDefaultAgent: 'CODEX',
-          shippedAt: new Date('2026-05-10T00:00:00Z'),
-        }),
+  describe('effective-agent grid (P2/FR-009)', () => {
+    it.each([
+      ['ticket=CLAUDE, project=CODEX', 'CLAUDE', 'CODEX', 1],
+      ['ticket=null, project=CLAUDE', null, 'CLAUDE', 1],
+      ['ticket=CODEX, project=CLAUDE', 'CODEX', 'CLAUDE', 0],
+      ['ticket=null, project=null (legacy)', null, null, 1],
+    ])('%s', async (_label, ticketAgent, projectDefaultAgent, expected) => {
+      mockedPrisma.job.findMany.mockResolvedValue([
+        makeJob({ id: 101, ticketAgent, projectDefaultAgent }),
       ]);
-      mockedPrisma.job.findMany.mockResolvedValue([makeJob(101, 1, 10)]);
-
-      expect(await countShippedClaudeTicketsSince(null)).toBe(1);
-    });
-
-    it('treats (ticket=null, project=CLAUDE) as Claude', async () => {
-      mockedPrisma.ticketOutcome.findMany.mockResolvedValue([
-        makeOutcome({
-          ticketId: 2,
-          projectId: 10,
-          ticketAgent: null,
-          projectDefaultAgent: 'CLAUDE',
-          shippedAt: new Date('2026-05-10T00:00:00Z'),
-        }),
-      ]);
-      mockedPrisma.job.findMany.mockResolvedValue([makeJob(102, 2, 10)]);
-
-      expect(await countShippedClaudeTicketsSince(null)).toBe(1);
-    });
-
-    it('treats (ticket=CODEX, project=CLAUDE) as not Claude', async () => {
-      mockedPrisma.ticketOutcome.findMany.mockResolvedValue([
-        makeOutcome({
-          ticketId: 3,
-          projectId: 10,
-          ticketAgent: 'CODEX',
-          projectDefaultAgent: 'CLAUDE',
-          shippedAt: new Date('2026-05-10T00:00:00Z'),
-        }),
-      ]);
-      mockedPrisma.job.findMany.mockResolvedValue([makeJob(103, 3, 10)]);
-
-      expect(await countShippedClaudeTicketsSince(null)).toBe(0);
-    });
-
-    it('treats (ticket=null, project=null) as Claude (legacy fallback)', async () => {
-      mockedPrisma.ticketOutcome.findMany.mockResolvedValue([
-        makeOutcome({
-          ticketId: 4,
-          projectId: 10,
-          ticketAgent: null,
-          projectDefaultAgent: null,
-          shippedAt: new Date('2026-05-10T00:00:00Z'),
-        }),
-      ]);
-      mockedPrisma.job.findMany.mockResolvedValue([makeJob(104, 4, 10)]);
-
-      expect(await countShippedClaudeTicketsSince(null)).toBe(1);
+      expect(await countAnalyzableClaudeSessions(FULL)).toBe(expected);
     });
   });
 
-  describe('count vs list agreement (FR-025)', () => {
-    it('returns the same Claude ticket set from count and list for one window', async () => {
-      const outcomes = [
-        makeOutcome({
-          ticketId: 1,
-          projectId: 10,
-          ticketAgent: 'CLAUDE',
-          projectDefaultAgent: 'CODEX',
-          shippedAt: new Date('2026-05-09T00:00:00Z'),
-        }),
-        makeOutcome({
-          ticketId: 2,
-          projectId: 10,
-          ticketAgent: null,
-          projectDefaultAgent: 'CLAUDE',
-          shippedAt: new Date('2026-05-09T01:00:00Z'),
-        }),
-        makeOutcome({
-          ticketId: 3,
-          projectId: 10,
-          ticketAgent: 'CODEX',
-          projectDefaultAgent: 'CLAUDE',
-          shippedAt: new Date('2026-05-09T02:00:00Z'),
-        }),
+  describe('all sessions per ticket (US1 AC1/AC2, FR-001/002)', () => {
+    it('includes EVERY captured Claude session of a ticket, not just the earliest', async () => {
+      // One ticket with three Claude sessions (implement, iterate, verify).
+      mockedPrisma.job.findMany.mockResolvedValue([
+        makeJob({ id: 201, ticketId: 1, startedAt: new Date('2026-05-01T00:00:00Z') }),
+        makeJob({ id: 202, ticketId: 1, startedAt: new Date('2026-05-03T00:00:00Z') }),
+        makeJob({ id: 203, ticketId: 1, startedAt: new Date('2026-05-05T00:00:00Z') }),
+      ]);
+      const list = await listAnalyzableClaudeSessions(FULL);
+      expect(list.map((j) => j.jobId).sort()).toEqual([201, 202, 203]);
+    });
+  });
+
+  describe('count == enumeration parity (FR-016/SC-006)', () => {
+    it('countAnalyzable equals listAnalyzable length for the same corpus', async () => {
+      const corpus = [
+        makeJob({ id: 1, ticketId: 1, ticketAgent: 'CLAUDE' }),
+        makeJob({ id: 2, ticketId: 2, ticketAgent: null, projectDefaultAgent: 'CLAUDE' }),
+        makeJob({ id: 3, ticketId: 3, ticketAgent: 'CODEX', projectDefaultAgent: 'CLAUDE' }),
       ];
-      const jobs = [
-        makeJob(101, 1, 10),
-        makeJob(102, 2, 10),
-        makeJob(103, 3, 10),
-      ];
-
-      mockedPrisma.ticketOutcome.findMany.mockResolvedValue(outcomes);
-      mockedPrisma.job.findMany.mockResolvedValue(jobs);
-
-      const count = await countShippedClaudeTicketsSince(
-        new Date('2026-05-01T00:00:00Z')
-      );
-
-      mockedPrisma.ticketOutcome.findMany.mockResolvedValue(outcomes);
-      mockedPrisma.job.findMany.mockResolvedValue(jobs);
-      const list = await listShippedClaudeJobsForWindow(
-        new Date('2026-05-01T00:00:00Z'),
-        new Date('2026-05-11T00:00:00Z')
-      );
-
+      mockedPrisma.job.findMany.mockResolvedValue(corpus);
+      const count = await countAnalyzableClaudeSessions(FULL);
+      mockedPrisma.job.findMany.mockResolvedValue(corpus);
+      const list = await listAnalyzableClaudeSessions(FULL);
       expect(count).toBe(2);
-      expect(list.map((j) => j.ticketId).sort()).toEqual([1, 2]);
-      expect(list.map((j) => j.rawArtifactKey)).toContain('raw-logs/10/1/101.jsonl.gz');
-      expect(list.map((j) => j.rawArtifactKey)).toContain('raw-logs/10/2/102.jsonl.gz');
-    });
-
-    it('de-duplicates multiple Claude jobs per ticket by earliest startedAt', async () => {
-      const outcomes = [
-        makeOutcome({
-          ticketId: 1,
-          projectId: 10,
-          ticketAgent: 'CLAUDE',
-          projectDefaultAgent: 'CODEX',
-          shippedAt: new Date('2026-05-09T00:00:00Z'),
-        }),
-      ];
-      mockedPrisma.ticketOutcome.findMany.mockResolvedValue(outcomes);
-      // Ticket 1 has three Claude jobs (implement, iterate, fix). The earliest
-      // by startedAt is jobId=201; that's the one the enumerator should keep
-      // so session_count matches pre-flight's distinct-ticket count.
-      mockedPrisma.job.findMany.mockResolvedValue([
-        makeJob(202, 1, 10, new Date('2026-05-03T00:00:00Z')),
-        makeJob(201, 1, 10, new Date('2026-05-01T00:00:00Z')),
-        makeJob(203, 1, 10, new Date('2026-05-05T00:00:00Z')),
-      ]);
-
-      const list = await listShippedClaudeJobsForWindow(
-        new Date('2026-05-01T00:00:00Z'),
-        new Date('2026-05-11T00:00:00Z')
-      );
-
-      expect(list).toHaveLength(1);
-      expect(list[0].jobId).toBe(201);
-      expect(list[0].ticketId).toBe(1);
+      expect(list).toHaveLength(2);
     });
   });
 
-  describe('getEarliestClaudeJobTimestamp', () => {
-    it('returns the earliest Claude job startedAt (not shippedAt)', async () => {
-      const outcomes = [
-        makeOutcome({
+  describe('completion-timestamp boundary placement (D3)', () => {
+    it('uses completedAt and places it half-open: completion < end', async () => {
+      const end = new Date('2026-05-10T00:00:00Z');
+      mockedPrisma.job.findMany.mockResolvedValue([
+        makeJob({ id: 1, ticketId: 1, completedAt: new Date('2026-05-09T23:59:59Z') }),
+        makeJob({ id: 2, ticketId: 2, completedAt: end }), // exactly on the boundary → excluded
+      ]);
+      const list = await listAnalyzableClaudeSessions({ start: null, end });
+      expect(list.map((j) => j.jobId)).toEqual([1]);
+    });
+
+    it('falls back completedAt ?? updatedAt ?? startedAt for legacy rows', async () => {
+      const end = new Date('2026-05-10T00:00:00Z');
+      mockedPrisma.job.findMany.mockResolvedValue([
+        // completedAt null → uses updatedAt (before end) → included
+        makeJob({
+          id: 1,
           ticketId: 1,
-          projectId: 10,
-          ticketAgent: 'CLAUDE',
-          projectDefaultAgent: 'CODEX',
-          shippedAt: new Date('2026-05-09T00:00:00Z'),
+          completedAt: null,
+          updatedAt: new Date('2026-05-09T00:00:00Z'),
         }),
-        makeOutcome({
+        // completedAt null + updatedAt after end → excluded
+        makeJob({
+          id: 2,
           ticketId: 2,
-          projectId: 10,
-          ticketAgent: 'CLAUDE',
-          projectDefaultAgent: 'CODEX',
-          shippedAt: new Date('2026-05-08T00:00:00Z'),
+          completedAt: null,
+          updatedAt: new Date('2026-05-11T00:00:00Z'),
         }),
-      ];
-      mockedPrisma.ticketOutcome.findMany.mockResolvedValue(outcomes);
-      mockedPrisma.job.findMany.mockResolvedValue([
-        makeJob(101, 1, 10, new Date('2026-05-03T00:00:00Z')),
-        makeJob(102, 2, 10, new Date('2026-05-01T00:00:00Z')),
       ]);
-      const earliest = await getEarliestClaudeJobTimestamp();
-      expect(earliest?.toISOString()).toBe('2026-05-01T00:00:00.000Z');
-    });
-
-    it('returns null when there are no Claude shipped tickets', async () => {
-      mockedPrisma.ticketOutcome.findMany.mockResolvedValue([]);
-      mockedPrisma.job.findMany.mockResolvedValue([]);
-      expect(await getEarliestClaudeJobTimestamp()).toBeNull();
+      const list = await listAnalyzableClaudeSessions({ start: null, end });
+      expect(list.map((j) => j.jobId)).toEqual([1]);
     });
   });
 
-  describe('raw-artifact gating (workflow corpus alignment)', () => {
-    it('passes log.rawArtifactKey not-null filter to job.findMany', async () => {
-      mockedPrisma.ticketOutcome.findMany.mockResolvedValue([
-        makeOutcome({
-          ticketId: 1,
-          projectId: 10,
-          ticketAgent: 'CLAUDE',
-          projectDefaultAgent: 'CODEX',
-          shippedAt: new Date('2026-05-09T00:00:00Z'),
-        }),
-      ]);
+  describe('coverage-exclusion filter (D1/FR-006)', () => {
+    it('passes insightsCoverage: { is: null } to findMany for fresh selection', async () => {
       mockedPrisma.job.findMany.mockResolvedValue([]);
-
-      await listShippedClaudeJobsForWindow(
-        new Date('2026-05-01T00:00:00Z'),
-        new Date('2026-05-11T00:00:00Z')
-      );
-
+      await listAnalyzableClaudeSessions(FULL);
       expect(mockedPrisma.job.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            log: { rawArtifactKey: { not: null } },
+            insightsCoverage: { is: null },
           }),
         })
       );
     });
 
-    it('excludes shipped Claude tickets whose only job lacks a raw artifact', async () => {
-      // The DB-level filter on `log.rawArtifactKey` causes job.findMany to
-      // return only jobs with an uploaded artifact. A ticket whose sole job
-      // had no artifact is therefore absent from the enumeration even though
-      // its outcome row still satisfies the window.
-      mockedPrisma.ticketOutcome.findMany.mockResolvedValue([
-        makeOutcome({
-          ticketId: 1,
-          projectId: 10,
-          ticketAgent: 'CLAUDE',
-          projectDefaultAgent: 'CODEX',
-          shippedAt: new Date('2026-05-09T00:00:00Z'),
-        }),
-      ]);
+    it('omits the coverage filter when ignoreCoverage is set (retry, D8)', async () => {
       mockedPrisma.job.findMany.mockResolvedValue([]);
+      await listAnalyzableClaudeSessions(FULL, { ignoreCoverage: true });
+      const where = mockedPrisma.job.findMany.mock.calls[0][0].where;
+      expect(where.insightsCoverage).toBeUndefined();
+    });
+  });
 
-      const list = await listShippedClaudeJobsForWindow(
-        new Date('2026-05-01T00:00:00Z'),
-        new Date('2026-05-11T00:00:00Z')
+  describe('no SHIP / no project filter (US3 + US5 selection guardrail)', () => {
+    it('selects sessions of a non-shipped ticket (no TicketOutcome join)', async () => {
+      // The query never references TicketOutcome; a ticket that never shipped
+      // is still selected as long as it has a captured Claude session.
+      mockedPrisma.job.findMany.mockResolvedValue([
+        makeJob({ id: 301, ticketId: 99 }),
+      ]);
+      const list = await listAnalyzableClaudeSessions(FULL);
+      expect(list).toHaveLength(1);
+      expect(list[0].ticketId).toBe(99);
+    });
+
+    it('applies no projectId filter (spans all projects)', async () => {
+      mockedPrisma.job.findMany.mockResolvedValue([]);
+      await listAnalyzableClaudeSessions(FULL);
+      const where = mockedPrisma.job.findMany.mock.calls[0][0].where;
+      expect(where.projectId).toBeUndefined();
+      expect(JSON.stringify(where)).not.toContain('projectId');
+    });
+  });
+
+  describe('expected vs analyzable split (D4/FR-011)', () => {
+    it('counts transcript-pending sessions as expected but not analyzable', async () => {
+      mockedPrisma.job.findMany.mockResolvedValue([
+        makeJob({ id: 1, ticketId: 1, captureStatus: 'CAPTURED' }),
+        // transcript not uploaded yet → expected but not analyzable
+        makeJob({ id: 2, ticketId: 2, captureStatus: 'UNAVAILABLE', rawArtifactKey: null }),
+        // pruned → expected but not analyzable
+        makeJob({ id: 3, ticketId: 3, captureStatus: 'PRUNED', rawArtifactKey: null }),
+      ]);
+      const expected = await countExpectedClaudeSessions(FULL);
+      mockedPrisma.job.findMany.mockResolvedValue([
+        makeJob({ id: 1, ticketId: 1, captureStatus: 'CAPTURED' }),
+        makeJob({ id: 2, ticketId: 2, captureStatus: 'UNAVAILABLE', rawArtifactKey: null }),
+        makeJob({ id: 3, ticketId: 3, captureStatus: 'PRUNED', rawArtifactKey: null }),
+      ]);
+      const analyzable = await countAnalyzableClaudeSessions(FULL);
+      expect(expected).toBe(3);
+      expect(analyzable).toBe(1);
+    });
+
+    it('requires a JobLog row (hasLog) at the query level', async () => {
+      mockedPrisma.job.findMany.mockResolvedValue([]);
+      await countExpectedClaudeSessions(FULL);
+      expect(mockedPrisma.job.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            log: { isNot: null },
+            ticketId: { not: null },
+            status: { in: ['COMPLETED', 'FAILED', 'CANCELLED'] },
+          }),
+        })
       );
-      expect(list).toHaveLength(0);
+    });
+  });
 
-      mockedPrisma.ticketOutcome.findMany.mockResolvedValue([
-        makeOutcome({
-          ticketId: 1,
-          projectId: 10,
-          ticketAgent: 'CLAUDE',
-          projectDefaultAgent: 'CODEX',
-          shippedAt: new Date('2026-05-09T00:00:00Z'),
-        }),
+  describe('getEarliestClaudeSessionCompletion', () => {
+    it('returns the earliest completion across Claude sessions', async () => {
+      mockedPrisma.job.findMany.mockResolvedValue([
+        makeJob({ id: 1, ticketId: 1, completedAt: new Date('2026-05-03T00:00:00Z') }),
+        makeJob({ id: 2, ticketId: 2, completedAt: new Date('2026-05-01T00:00:00Z') }),
       ]);
+      const earliest = await getEarliestClaudeSessionCompletion();
+      expect(earliest?.toISOString()).toBe('2026-05-01T00:00:00.000Z');
+    });
+
+    it('returns null when there are no Claude sessions', async () => {
       mockedPrisma.job.findMany.mockResolvedValue([]);
-      expect(await countShippedClaudeTicketsSince(null)).toBe(0);
+      expect(await getEarliestClaudeSessionCompletion()).toBeNull();
     });
   });
 });
