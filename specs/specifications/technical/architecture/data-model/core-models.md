@@ -402,6 +402,7 @@ model Job {
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   log         JobLog?
   insightsReport InsightsReport?
+  insightsCoverage InsightsSessionCoverage?
 
   @@index([ticketId])
   @@index([projectId])
@@ -448,6 +449,7 @@ model Job {
 - Belongs to Ticket (optional, cascade delete) — null for `insights-analyze` jobs
 - Belongs to Project (required, cascade delete)
 - One-to-one with `InsightsReport` (this side null for every command except `insights-analyze`)
+- Optional one-to-one with `InsightsSessionCoverage` — present once the session has been included in a COMPLETED Insights run
 
 **Constraints**:
 - Index on ticketId for job history queries
@@ -608,6 +610,11 @@ model InsightsReport {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
+  expectedSessionsCount Int?
+  coverageGapReason     InsightsCoverageGapReason?
+
+  coveredSessions InsightsSessionCoverage[]
+
   @@index([status, createdAt])
   @@index([generatedAt])
   @@index([periodEnd])
@@ -620,10 +627,12 @@ model InsightsReport {
 - `id`: Auto-incrementing primary key — also the report's identity in URL paths and the deterministic blob key
 - `status`: Lifecycle state (`RUNNING`, `COMPLETED`, `FAILED`); always inserted as `RUNNING`
 - `generatedAt`: Trigger timestamp — fixed at insert, used in the canonical metadata header
-- `periodStart`: Half-open window start (inclusive). First-ever run: earliest Claude job's `startedAt`. Subsequent runs: previous COMPLETED row's `periodEnd`
-- `periodEnd`: Half-open window end (exclusive). Equal to `generatedAt` at insert
-- `sessionsCount`: Count of Claude Code sessions fed into `/insights` (populated only on COMPLETED, `>= 0`)
-- `ticketsCount`: Count of distinct tickets the sessions belonged to (populated only on COMPLETED, `>= 0`)
+- `periodStart`: Half-open window start, descriptive only — selection correctness comes from the per-session coverage marker, not this value. First-ever run: oldest available Claude session's completion timestamp. Subsequent runs: latest completion among already-covered sessions (`derivePeriodStart`)
+- `periodEnd`: Half-open window end (exclusive). Equal to `generatedAt` at insert. A session is placed in the run whose window contains its completion timestamp, giving exactly-once boundary placement
+- `sessionsCount`: Count of sessions actually **analyzed** (transcript fetched) — equals `analyzedJobIds.length` (populated only on COMPLETED, `>= 0`)
+- `expectedSessionsCount`: Count of in-scope sessions for the period including those whose transcript was not yet available — `>= sessionsCount` (populated only on COMPLETED)
+- `coverageGapReason`: Set to `TRANSCRIPT_NOT_AVAILABLE` exactly when `sessionsCount < expectedSessionsCount`, else null; drives the report-view "Coverage gap" badge
+- `ticketsCount`: Count of distinct tickets among the **analyzed** sessions (populated only on COMPLETED, `>= 0`)
 - `artifactKey`: Blob key (`insights/reports/<id>.html`) — deterministic from `id`; stored explicitly so a future key-shape change does not break old rows. Populated only on COMPLETED
 - `artifactSize`: HTML body size in bytes (populated only on COMPLETED, `> 0`)
 - `errorReason`: Non-secret, operator-actionable failure reason (populated only on FAILED, ≤ 500 chars)
@@ -633,6 +642,7 @@ model InsightsReport {
 
 **Relationships**:
 - Optional one-to-one with `Job` via `jobId` — the companion `Job` row has `command = 'insights-analyze'`, `ticketId = null`, and `projectId` set to the ai-board host project
+- One-to-many with `InsightsSessionCoverage` (`coveredSessions`) — the per-session coverage rows this COMPLETED run wrote
 - No relationship to `Project` or `Ticket` — reports are application-wide by design
 
 **Constraints**:
@@ -660,12 +670,45 @@ A late workflow callback for a row already auto-FAILED finds no row matching the
 
 **Business Rules**:
 - Row is inserted in `RUNNING` BEFORE workflow dispatch so dispatch failures still leave an auditable record
-- A FAILED run does **not** advance the previous-successful-run high-water mark — the next attempt re-covers the same window
-- A COMPLETED row requires all of: `artifactKey`, `artifactSize`, `sessionsCount`, `ticketsCount`, `completedAt`
+- Only a COMPLETED run advances coverage — it writes one `InsightsSessionCoverage` row per analyzed session inside the same transaction as the status flip. A FAILED run writes no coverage, so its intended sessions stay eligible for the next run
+- A COMPLETED row requires all of: `artifactKey`, `artifactSize`, `sessionsCount`, `expectedSessionsCount`, `ticketsCount`, `completedAt`, and a non-empty `analyzedJobIds` payload (`length === sessionsCount`)
 - A FAILED row requires a non-empty `errorReason` (examples: `"Workflow dispatch failed: 404 …"`, `"Insights output validation failed"`, `"Artifact upload rejected by storage"`, `"Run timed out — workflow did not report terminal status"`)
 - `artifactKey`, when present, equals `buildInsightsReportKey(id)`; a mismatch is treated as a missing-blob (FR-024 placeholder) at serve time
 - Orphan reconciliation auto-transitions any RUNNING row whose `createdAt < now() - INSIGHTS_RUN_TIMEOUT_MINUTES` (default 60 minutes) to FAILED with reason `"Run timed out — workflow did not report terminal status"`; this runs lazily on every list-endpoint and trigger-endpoint call
 - Reports are read-only after creation — no edit, delete, annotate, or rename surface; retention is operator-managed at the storage layer
+
+### InsightsSessionCoverage
+
+Per-session "already analyzed" marker. One row per Claude agent session (`Job`) that has been included in a COMPLETED Insights run. This is the source of truth for whether a session has been covered, replacing the single global `periodEnd` cursor for selection decisions.
+
+```prisma
+model InsightsSessionCoverage {
+  id        Int            @id @default(autoincrement())
+  jobId     Int            @unique
+  job       Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  reportId  Int
+  report    InsightsReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  coveredAt DateTime       @default(now())
+
+  @@index([reportId])
+}
+```
+
+**Purpose**: Track per-session coverage so each session is analyzed at most once across the lifetime of all runs, with no boundary loss and no double-counting. A session is "already analyzed" iff a coverage row exists for its job; fresh selection excludes covered sessions.
+
+**Fields**:
+- `jobId`: The covered session (`Job`). `@unique` enforces analyze-at-most-once at the database layer
+- `reportId`: The COMPLETED report that covered the session (attribution)
+- `coveredAt`: When coverage was recorded (the completion-transaction time)
+
+**Relationships**:
+- Many-to-one with `Job` via `jobId` (`onDelete: Cascade`) — a pruned/deleted job drops its coverage row (the session is no longer selectable anyway)
+- Many-to-one with `InsightsReport` via `reportId` (`onDelete: Cascade`) — only relevant in test cleanup; production never deletes COMPLETED reports
+
+**Business Rules**:
+- Rows are written **only** inside the RUNNING→COMPLETED transaction, one per analyzed session — never for an expected-but-unavailable session, and never by a FAILED run
+- Insertion uses `createMany({ skipDuplicates: true })` so re-delivered COMPLETED callbacks and explicit re-analysis are idempotent
+- No migration backfill: existing COMPLETED reports have no coverage rows, so their sessions become eligible on the first post-migration run (a one-time re-coverage of already-analyzed sessions, accepted by design)
 
 ### Comment
 

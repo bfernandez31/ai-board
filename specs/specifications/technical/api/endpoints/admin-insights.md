@@ -39,14 +39,18 @@ Mirror the trigger endpoint's pre-flight logic without mutating any state. Used 
 ```json
 {
   "canTrigger": true,
-  "shippedSincePreviousRun": 4,
+  "analyzableSessions": 14,
+  "expectedSessions": 16,
   "previousRunEnd": "2026-05-04T09:00:00.000Z",
   "runningSince": null,
   "refusal": null
 }
 ```
 
-When `canTrigger` is `false`, `refusal` carries `{ refusalCode, message }` matching the trigger refusal body so the UI can render the message verbatim without firing a POST.
+- `analyzableSessions`: uncovered Claude sessions whose transcript is fetchable. The trigger gate is keyed on `analyzableSessions > 0`.
+- `expectedSessions`: in-scope sessions including those whose transcript is not yet available (`expectedSessions >= analyzableSessions`).
+
+When `canTrigger` is `false`, `refusal` carries `{ refusalCode, message }` matching the trigger refusal body so the UI can render the message verbatim without firing a POST. Refusal codes: `NO_CLAUDE_SESSIONS` (no analyzable session exists at all), `NO_NEW_SESSIONS` (a prior run exists; every analyzable session is already covered), `ALREADY_RUNNING`. The snapshot is computed by `computePreflightSnapshot()`, shared with the SSR page render so both surfaces stay in lockstep.
 
 **Non-admin response**: Byte-equivalent 404.
 
@@ -54,7 +58,7 @@ When `canTrigger` is `false`, `refusal` carries `{ refusalCode, message }` match
 
 ## POST /api/admin/insights/trigger
 
-Start a new Insights analysis run. Subject to the pre-flight (shipped Claude tickets) and concurrency (no RUNNING row) gates.
+Start a new Insights analysis run. Subject to the pre-flight (analyzable Claude sessions) and concurrency (no RUNNING row) gates.
 
 **Authentication**: A-ADMIN
 
@@ -74,17 +78,17 @@ Validated with Zod: both fields must be present together or both absent; `period
 1. `requireAdminOrNotFound(request)` → admin email.
 2. `reconcileOrphanedRunningReports(new Date())` — lazy reconciliation auto-FAILs any RUNNING row older than `INSIGHTS_RUN_TIMEOUT_MINUTES`.
 3. Parse and validate request body via `triggerBodySchema`.
-4. **Fresh run** (no period params): Pre-flight: compute `prevEnd = getLastCompletedRunEnd()` and `count = countShippedClaudeTicketsSince(prevEnd)`. If `count === 0`:
-   - When `prevEnd === null` → refuse with `NO_CLAUDE_JOBS` (no Claude tickets have shipped yet).
-   - Otherwise → refuse with `NO_NEW_SHIPPED` with the prior run's `periodEnd` as the boundary; never synthesize `new Date()` as a fabricated "last run" timestamp.
-   **Retry** (period params present): Skip the pre-flight shipped-tickets check (the original run proved eligibility for that window).
+4. **Fresh run** (no period params): Pre-flight: compute `count = countAnalyzableClaudeSessions()` (uncovered Claude sessions with a fetchable transcript, all stages, all projects). If `count === 0`:
+   - When no COMPLETED report has ever existed → refuse with `NO_CLAUDE_SESSIONS`.
+   - Otherwise → refuse with `NO_NEW_SESSIONS`.
+   **Retry** (period params present): Skip the pre-flight session check (the original run proved eligibility for that window). Selection ignores the coverage marker for the explicit window, so already-covered sessions are re-analyzed (the one exception to analyze-at-most-once).
 5. Concurrency gate (always enforced): if a RUNNING row exists, refuse with `ALREADY_RUNNING`.
-6. Compute period bounds — **fresh run**: `periodStart = prevEnd ?? getEarliestClaudeJobTimestamp()`; `periodEnd = now`. **Retry**: use the provided `periodStart` and `periodEnd` directly.
+6. Compute period bounds — **fresh run**: `periodStart = derivePeriodStart(now)` (latest completion among already-covered sessions ?? oldest available Claude session's completion ?? `now`); `periodEnd = now`. **Retry**: use the provided `periodStart` and `periodEnd` directly. The stored bounds are descriptive — selection correctness comes from the per-session coverage marker plus the half-open `periodEnd` upper bound, not from `periodStart`.
 7. In a single transaction:
    - Insert `InsightsReport` with `status='RUNNING'`, `generatedAt=now`, `periodStart`, `periodEnd`.
    - Insert companion `Job` with `command='insights-analyze'`, `status='PENDING'`, `ticketId=null`, `projectId=<host project id>` (the ai-board host project — used so existing project-scoped log queries resolve).
-   - Link the report to the job via `jobId`.
-8. Dispatch `.github/workflows/insights-analyze.yml` on the ai-board repository with inputs `report_id`, `job_id`, `period_start`, `period_end`, `app_url`.
+   - Link the report to the job via `jobId`. A concurrent insert that collides on the partial-unique RUNNING index is mapped to an `ALREADY_RUNNING` refusal (atomic gate, no TOCTOU).
+8. Dispatch `.github/workflows/insights-analyze.yml` on the ai-board repository with inputs `report_id`, `job_id`, `project_id`, `period_start`, `period_end`.
 9. On Octokit `RequestError`, atomically transition the report to FAILED with `errorReason="Workflow dispatch failed: <status> <message>"`, delete the job row, and return 502 with `DISPATCH_FAILED`.
 
 **Success response** (201):
@@ -98,10 +102,10 @@ Validated with Zod: both fields must be present together or both absent; `period
 
 **Refusal responses** (409):
 ```json
-{ "refusalCode": "NO_NEW_SHIPPED", "message": "No new shipped tickets since last run on 2026-05-04T09:00:00.000Z" }
+{ "refusalCode": "NO_NEW_SESSIONS", "message": "No new Claude sessions since the last completed run" }
 ```
 ```json
-{ "refusalCode": "NO_CLAUDE_JOBS", "message": "No shipped Claude tickets to analyze yet" }
+{ "refusalCode": "NO_CLAUDE_SESSIONS", "message": "No analyzable Claude sessions to analyze yet" }
 ```
 ```json
 { "refusalCode": "ALREADY_RUNNING", "message": "Already running since 2026-05-11T12:30:00.000Z" }
@@ -140,6 +144,8 @@ The 200-row cap is enforced at the database query level, not only at response se
       "periodStart": "2026-05-04T09:00:00.000Z",
       "periodEnd": "2026-05-11T12:34:56.789Z",
       "sessionsCount": 123,
+      "expectedSessionsCount": 130,
+      "coverageGapReason": "TRANSCRIPT_NOT_AVAILABLE",
       "ticketsCount": 17,
       "errorReason": null,
       "completedAt": "2026-05-11T12:39:12.345Z",
@@ -150,6 +156,8 @@ The 200-row cap is enforced at the database query level, not only at response se
   ]
 }
 ```
+
+`sessionsCount` is the count of sessions actually **analyzed** (transcript fetched); `expectedSessionsCount` is the count of in-scope sessions for the period including those whose transcript was not yet available; `coverageGapReason` is non-null (currently only `TRANSCRIPT_NOT_AVAILABLE`) exactly when `sessionsCount < expectedSessionsCount`, and powers the report-view "Coverage gap" badge. `ticketsCount` is the number of distinct tickets among the analyzed sessions. All three count fields are null on non-COMPLETED rows.
 
 `workflowRunId` is the Job's BigInt workflow run ID serialized as a string, or `null` when the linked job has no run ID. `githubActionsUrl` is the full GitHub Actions URL constructed from the `workflowRunId` and the repository coordinates, or `null` when either the run ID or the repository environment variables are missing.
 
@@ -218,15 +226,25 @@ Workflow-driven terminal status transition. All transitions use an atomic condit
 ```ts
 {
   status: 'COMPLETED' | 'FAILED',
-  sessionsCount?: number,    // required when status === 'COMPLETED'
-  ticketsCount?: number,     // required when status === 'COMPLETED'
-  artifactKey?: string,      // required when status === 'COMPLETED'; matches /^insights\/reports\/\d+\.html$/
-  artifactSize?: number,     // required when status === 'COMPLETED'
-  errorReason?: string,      // required when status === 'FAILED'; 1–500 chars
+  sessionsCount?: number,           // required when COMPLETED; sessions analyzed
+  expectedSessionsCount?: number,   // required when COMPLETED; in-scope incl. transcript-pending
+  ticketsCount?: number,            // required when COMPLETED; distinct tickets among analyzed
+  analyzedJobIds?: number[],        // required when COMPLETED; the exact jobs analyzed → coverage rows
+  artifactKey?: string,             // required when COMPLETED; matches /^insights\/reports\/\d+\.html$/
+  artifactSize?: number,            // required when COMPLETED
+  errorReason?: string,             // required when FAILED; 1–500 chars
 }
 ```
 
-On `status === 'COMPLETED'`, the endpoint re-fetches the uploaded blob and re-runs `validateInsightsOutput` server-side as defense in depth. If validation fails, the COMPLETED transition is overridden into FAILED with `errorReason = "Insights output validation failed"`.
+COMPLETED validation requires all of `sessionsCount`, `expectedSessionsCount`, `ticketsCount`, `analyzedJobIds`, `artifactKey`, `artifactSize`. Additional refinements: `analyzedJobIds` is a non-empty array of positive ints with `length === sessionsCount`; `expectedSessionsCount >= sessionsCount`; `artifactKey` must equal `insights/reports/<id>.html`.
+
+On `status === 'COMPLETED'`, the endpoint re-fetches the uploaded blob and re-runs `validateInsightsOutput` server-side as defense in depth. If validation fails, the COMPLETED transition is overridden into FAILED with `errorReason = "Insights output validation failed"` and **no coverage is written**. If the blob fetch itself fails (backend outage), the endpoint returns `503 BLOB_UNREACHABLE` and leaves the RUNNING row untouched so the workflow can retry.
+
+**Coverage advance** — on a successful COMPLETED flip, inside the same `$transaction`:
+- `coverageGapReason` is set to `TRANSCRIPT_NOT_AVAILABLE` when `expectedSessionsCount > sessionsCount`, else null.
+- One `InsightsSessionCoverage` row is inserted per `analyzedJobIds` entry via `createMany({ skipDuplicates: true })`, marking those exact sessions as analyzed so subsequent runs exclude them.
+
+A **FAILED** transition writes no coverage — the sessions stay uncovered and eligible for the next run. The coverage advance and Job cascade share the COMPLETED `$transaction` gated on `WHERE status='RUNNING'`, so a late/duplicate callback that loses the flip race writes neither a status change nor coverage (idempotent no-op).
 
 **Response** (200 OK):
 ```json
@@ -281,7 +299,7 @@ Workflow-driven artifact upload. The workflow streams the produced HTML body to 
 
 ## GET /api/admin/insights/jobs
 
-Enumerate Claude jobs whose ticket has shipped within the given half-open window. The workflow calls this immediately after dispatch to determine which raw native session artifacts to download.
+Enumerate **every analyzable Claude session** in the given half-open window. The workflow calls this immediately after dispatch to determine which raw native session artifacts to download.
 
 **Authentication**: A-WORKFLOW
 
@@ -291,11 +309,11 @@ Enumerate Claude jobs whose ticket has shipped within the given half-open window
 
 Validation rejects `periodStart >= periodEnd` with 400.
 
-**Server flow**: Calls `listShippedClaudeJobsForWindow(periodStart, periodEnd)` — the **same** predicate the trigger's pre-flight uses, so the pre-flight count and the workflow's analysis-input enumeration cannot drift.
+**Server flow**: Calls `listAnalyzableClaudeSessions(window)` and `countExpectedClaudeSessions(window)` from `app/lib/insights/predicate.ts` — the **same** predicate the trigger's pre-flight and the `/preflight` endpoint use, so the pre-flight count and the workflow's analysis-input enumeration cannot drift.
 
-A job is treated as Claude when its **effective agent** is Claude — the ticket-level `agent` if set, otherwise the project-level `defaultAgent`. Non-Claude jobs are silently filtered out at enumeration time.
+A session is treated as Claude when its **effective agent** is Claude — the ticket-level `agent` if set, otherwise the project-level `defaultAgent`. Non-Claude sessions are silently filtered out at enumeration time.
 
-The list is de-duplicated by `ticketId` (earliest job by `startedAt` wins) so the workflow's session count can never exceed the pre-flight's distinct-ticket count for the same window.
+There is **no per-ticket dedup**, **no SHIP filter**, and **no project filter**: a ticket with implement, iterate, and verify sessions contributes all three, and sessions from in-progress / abandoned / rolled-back tickets across every project are included. The returned `jobs` are exactly the analyzable sessions (transcript fetchable); `expectedCount` additionally counts in-scope sessions whose transcript is not yet available, so the workflow can report the analyzed-vs-expected gap (`expectedCount >= jobs.length`).
 
 **Response** (200 OK):
 ```json
@@ -307,7 +325,8 @@ The list is de-duplicated by `ticketId` (earliest job by `startedAt` wins) so th
       "ticketId": 89,
       "rawArtifactKey": "raw-logs/7/89/1234.jsonl.gz"
     }
-  ]
+  ],
+  "expectedCount": 16
 }
 ```
 
@@ -321,19 +340,27 @@ Stream a single raw native Claude Code session JSONL artifact for a Claude job. 
 
 **Server flow**:
 1. `validateWorkflowAuth(request)` → 401 on failure.
-2. Look up the job and verify, via the shared predicate, that it is a Claude job whose ticket has shipped. If not (non-Claude job, no ticket, ticket not shipped) → 404. This prevents a compromised `WORKFLOW_API_TOKEN` from enumerating non-Claude artifacts.
-3. Stream the artifact at `raw-logs/<projectId>/<ticketId>/<jobId>.jsonl.gz` from Vercel Blob.
+2. Look up the job; 404 if it has no ticket. Apply the shared **effective-agent** check — a non-Claude session returns 404, exactly as the workflow's enumeration would skip it. This prevents a compromised `WORKFLOW_API_TOKEN` from enumerating non-Claude artifacts. There is **no SHIP gate**: sessions of unshipped (in-progress / abandoned / rolled-back) Claude tickets stream normally (FR-008).
+3. Resolve the job's `rawArtifactKey` and run `canonicalizeRawArtifactKey` to reject any key pointing outside this job's canonical path (path-traversal defense); 404 on mismatch or when no key exists.
+4. Stream the artifact at `raw-logs/<projectId>/<ticketId>/<jobId>.<ext>` (current `.tar.gz` or legacy `.jsonl.gz`) from Vercel Blob.
 
 **Response** (200 OK):
 - `Content-Type: application/gzip`
-- Body: the gzipped native JSONL stream
+- Body: the gzipped native session stream
+
+| jobId state | Status |
+|-------------|--------|
+| Claude, shipped, has artifact | 200 |
+| Claude, **unshipped**, has artifact | 200 |
+| Non-Claude effective agent | 404 |
+| No ticket / no artifact / key mismatch | 404 |
 
 **Errors**:
 - `401`: Invalid or missing workflow token
-- `404`: Job is not a Claude job, ticket has not shipped, or artifact missing
+- `404`: Job is not a Claude session, has no ticket, or artifact missing / key mismatch
 - `502`: Blob backend unreachable
 
-**Security note**: Compromising `WORKFLOW_API_TOKEN` already grants write access to log artifacts across the platform; adding read access for shipped Claude raw artifacts only does not meaningfully expand the trust boundary. The predicate check before streaming is a defense-in-depth filter to prevent token misuse beyond the intended scope.
+**Security note**: Compromising `WORKFLOW_API_TOKEN` already grants write access to log artifacts across the platform; adding read access for Claude raw artifacts only does not meaningfully expand the trust boundary. The effective-agent check and key canonicalization before streaming are defense-in-depth filters to prevent token misuse beyond the intended scope.
 
 ---
 
@@ -355,7 +382,7 @@ Non-admin requests to any `/admin/...` path — including paths that don't resol
 
 ## Workflow
 
-`.github/workflows/insights-analyze.yml` is dispatched on the ai-board repository (not on the external target). It downloads the raw native session JSONL for each enumerated job, runs `bunx @anthropic-ai/claude-code /insights --sessions ./sessions --output ./report.html` (the genuine slash command — never a free-text prompt), validates the produced HTML contains the analyzer's characteristic markers (`Suggested CLAUDE.md additions`, `Big wins`, `Horizon`), uploads via `PUT /finalize`, and PATCHes the report and job to terminal status. The job has a 50-minute timeout — 10 minutes below the default 60-minute `INSIGHTS_RUN_TIMEOUT_MINUTES` — so the workflow's own failure path runs before reconciliation auto-FAILs the row.
+`.github/workflows/insights-analyze.yml` is dispatched on the ai-board repository (not on the external target). It enumerates every analyzable Claude session in the window (capturing both `session_count` = `jobs.length` and `expected_count`), downloads the raw native session JSONL for each enumerated job, runs `bunx @anthropic-ai/claude-code /insights --sessions ./sessions --output ./report.html` (the genuine slash command — never a free-text prompt), validates the produced HTML contains the analyzer's characteristic markers (`Suggested CLAUDE.md additions`, `Big wins`, `Horizon`), uploads via `PUT /finalize`, and PATCHes the report and job to terminal status. The COMPLETED PATCH carries `sessionsCount` (= `session_count`), `expectedSessionsCount`, `ticketsCount`, and `analyzedJobIds` (= `[.jobs[].jobId]`) so the server can advance per-session coverage; the FAILED PATCH carries only `errorReason` and advances no coverage. Count/enumeration parity is guaranteed because `sessionsCount`, `jobs.length`, and `analyzedJobIds.length` all derive from the same `jobs.json`. The job has a 50-minute timeout — 10 minutes below the default 60-minute `INSIGHTS_RUN_TIMEOUT_MINUTES` — so the workflow's own failure path runs before reconciliation auto-FAILs the row.
 
 ```mermaid
 sequenceDiagram
@@ -373,7 +400,7 @@ sequenceDiagram
     Web-->>Admin: 201 { id, status: RUNNING }
 
     GH->>Web: GET /api/admin/insights/jobs?periodStart&periodEnd
-    Web-->>GH: { jobs: [{ jobId, projectId, ticketId, rawArtifactKey }] }
+    Web-->>GH: { jobs: [all sessions], expectedCount }
     GH->>Web: GET /api/admin/insights/jobs/:jobId/raw-native (per job)
     Web-->>GH: gzipped native JSONL
     GH->>Claude: bunx claude-code /insights --sessions --output
@@ -381,7 +408,7 @@ sequenceDiagram
     GH->>Web: PUT /api/admin/insights/reports/:id/finalize (HTML body)
     Web->>Blob: upload insights/reports/:id.html
     Web-->>GH: { artifactKey, artifactSize }
-    GH->>Web: PATCH /api/admin/insights/reports/:id/status (COMPLETED + counts)
-    Web->>DB: atomic UPDATE WHERE status='RUNNING'
+    GH->>Web: PATCH status (COMPLETED, counts, analyzedJobIds)
+    Web->>DB: flip RUNNING + write session coverage (in-txn)
     Web-->>GH: { id, status, completedAt }
 ```
