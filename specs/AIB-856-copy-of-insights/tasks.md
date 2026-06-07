@@ -74,9 +74,9 @@ description: "Task list for AIB-856 — Insights Analysis Covers All Agent Sessi
 ### Tests for User Story 2
 **NOTE: Write these FIRST and ensure they FAIL before implementing T012–T015.**
 
-- [ ] T009 [P] [US2] Extend `tests/integration/admin/analysis-workflow.test.ts`: status PATCH COMPLETED writes one `InsightsAnalyzedSession` per accepted job and derives `sessionsCount` from the marked set; FAILED writes no markers; a late duplicate terminal PATCH is an idempotent no-op (no duplicate markers) — covers US2-AC1/AC3, FR-005/006
-- [ ] T010 [P] [US2] Create NEW `tests/integration/admin/insights-session-coverage.test.ts`: two consecutive runs analyze every session exactly once (no gap, no overlap), a boundary session lands in exactly one run, a failed run leaves sessions eligible, and expected-vs-analyzed reflects a pruned-transcript gap — covers US2-AC2, US4, SC-002/005/006, FR-009/011 (justified NEW file, research.md §"New test file")
-- [ ] T011 [P] [US2] Extend `tests/integration/admin/insights-api.test.ts`: marker-driven pre-flight returns renamed refusal codes (`NO_CLAUDE_SESSIONS` / `NO_NEW_SESSIONS`) and enumeration lists all eligible-unanalyzed sessions across all outcomes — covers FR-002/007/012
+- [X] T009 ✅ DONE [P] [US2] Extend `tests/integration/admin/analysis-workflow.test.ts`: status PATCH COMPLETED writes one `InsightsAnalyzedSession` per accepted job and derives `sessionsCount` from the marked set; FAILED writes no markers; a late duplicate terminal PATCH is an idempotent no-op (no duplicate markers) — covers US2-AC1/AC3, FR-005/006
+- [X] T010 ✅ DONE [P] [US2] Create NEW `tests/integration/admin/insights-session-coverage.test.ts`: two consecutive runs analyze every session exactly once (no gap, no overlap), a boundary session lands in exactly one run, a failed run leaves sessions eligible, and expected-vs-analyzed reflects a pruned-transcript gap — covers US2-AC2, US4, SC-002/005/006, FR-009/011 (justified NEW file, research.md §"New test file")
+- [X] T011 ✅ DONE [P] [US2] Extend `tests/integration/admin/insights-api.test.ts`: marker-driven pre-flight returns renamed refusal codes (`NO_CLAUDE_SESSIONS` / `NO_NEW_SESSIONS`) and enumeration lists all eligible-unanalyzed sessions across all outcomes — covers FR-002/007/012
 
 ### Implementation for User Story 2
 
@@ -97,8 +97,8 @@ description: "Task list for AIB-856 — Insights Analysis Covers All Agent Sessi
 
 ### Tests for User Story 3
 
-- [ ] T016 [P] [US3] Extend/verify `tests/integration/api/admin/insights/effective-agent.test.ts`: the effective-agent CLAUDE gate still selects correctly under the new any-outcome eligibility (no `TicketOutcome` dependency) — covers the agent gate
-- [ ] T017 [P] [US3] Modify `tests/integration/outcomes/ship-transition-capture-resilience.test.ts`: count/list parity now holds over the eligible-session set across all outcomes with no per-ticket dedup (P-2 no-drift) — covers FR-002/003/007
+- [X] T016 ✅ DONE [P] [US3] Extend/verify `tests/integration/api/admin/insights/effective-agent.test.ts`: the effective-agent CLAUDE gate still selects correctly under the new any-outcome eligibility (no `TicketOutcome` dependency) — covers the agent gate
+- [X] T017 ✅ DONE [P] [US3] Modify `tests/integration/outcomes/ship-transition-capture-resilience.test.ts`: count/list parity now holds over the eligible-session set across all outcomes with no per-ticket dedup (P-2 no-drift) — covers FR-002/003/007
 
 ### Implementation for User Story 3
 
@@ -117,8 +117,8 @@ description: "Task list for AIB-856 — Insights Analysis Covers All Agent Sessi
 ### Tests for User Story 4
 **NOTE: Write these FIRST and ensure they FAIL before implementing T024–T025.**
 
-- [ ] T019 [P] [US4] Extend `tests/unit/components/admin/insights/insights-report-view.test.tsx`: "Analyzed X of Y Claude Code sessions across Z tickets" phrasing, gap-warning Badge when `sessionsCount < expectedSessionsCount`, static scope note rendered, header rewording — covers FR-008/010/011, US4
-- [ ] T020 [P] [US4] Extend `tests/unit/components/admin/insights/run-analysis-button.test.tsx`: renamed refusal codes (`NO_CLAUDE_SESSIONS` / `NO_NEW_SESSIONS` / `ALREADY_RUNNING`) display correctly — covers FR-012
+- [X] T019 ✅ DONE [P] [US4] Extend `tests/unit/components/admin/insights/insights-report-view.test.tsx`: "Analyzed X of Y Claude Code sessions across Z tickets" phrasing, gap-warning Badge when `sessionsCount < expectedSessionsCount`, static scope note rendered, header rewording — covers FR-008/010/011, US4
+- [X] T020 ✅ DONE [P] [US4] Extend `tests/unit/components/admin/insights/run-analysis-button.test.tsx`: renamed refusal codes (`NO_CLAUDE_SESSIONS` / `NO_NEW_SESSIONS` / `ALREADY_RUNNING`) display correctly — covers FR-012
 
 ### Implementation for User Story 4
 
@@ -137,9 +137,9 @@ description: "Task list for AIB-856 — Insights Analysis Covers All Agent Sessi
 
 **Purpose**: Quality gates across all stories.
 
-- [ ] T027 Run `bun run type-check` and `bun run lint`; fix ALL errors including any pre-existing ones (CLAUDE.md commit rule — never `--no-verify`)
-- [ ] T028 [P] Run targeted suites and confirm green: `bun run test:unit tests/unit/lib/insights/predicate.test.ts`, the two component tests under `tests/unit/components/admin/insights/`, and `bun run test:integration` for `analysis-workflow.test.ts`, `insights-api.test.ts`, `insights-session-coverage.test.ts`, `effective-agent.test.ts`, `ship-transition-capture-resilience.test.ts`
-- [ ] T029 Extend `tests/e2e/admin/insights-flow.spec.ts` **only** if the gap-warning badge needs browser verification; otherwise rely on the integration/component coverage above (E2E ~5s each; Constitution §III)
+- [X] T027 ✅ DONE Run `bun run type-check` and `bun run lint`; fix ALL errors including any pre-existing ones (CLAUDE.md commit rule — never `--no-verify`)
+- [~] T028 ⚠️ PARTIAL (unit/component green; integration written + type-checks, could not execute in sandbox: dev server blocked by pre-existing .env parse recursion) [P] Run targeted suites and confirm green: `bun run test:unit tests/unit/lib/insights/predicate.test.ts`, the two component tests under `tests/unit/components/admin/insights/`, and `bun run test:integration` for `analysis-workflow.test.ts`, `insights-api.test.ts`, `insights-session-coverage.test.ts`, `effective-agent.test.ts`, `ship-transition-capture-resilience.test.ts`
+- [X] T029 ✅ DONE Extend `tests/e2e/admin/insights-flow.spec.ts` **only** if the gap-warning badge needs browser verification; otherwise rely on the integration/component coverage above (E2E ~5s each; Constitution §III)
 
 ---
 

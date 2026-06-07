@@ -192,13 +192,14 @@ describe('SHIP transition is resilient to capture failure (T019, FR-019)', () =>
   });
 });
 
-// AIB-791 T021: predicate count vs list agreement across a mixed-agent window.
+// AIB-856 T017: predicate count vs list parity over the eligible-session set
+// (no per-ticket dedup, all outcomes).
 import {
-  countShippedClaudeTicketsSince,
-  listShippedClaudeJobsForWindow,
+  countEligibleUnanalyzedSessions,
+  listEligibleUnanalyzedSessions,
 } from '@/app/lib/insights/predicate';
 
-describe('insights predicate: count vs list agreement (AIB-791 T021)', () => {
+describe('insights predicate: count/list parity over eligible sessions (AIB-856 T017)', () => {
   let ctx: TestContext;
   const prisma = getPrismaClient();
 
@@ -207,12 +208,10 @@ describe('insights predicate: count vs list agreement (AIB-791 T021)', () => {
     await ctx.cleanup();
   });
 
-  it('countShippedClaudeTicketsSince agrees with listShippedClaudeJobsForWindow for a mixed-agent window', async () => {
-    const windowStart = new Date('2026-05-01T00:00:00Z');
-    const windowEnd = new Date('2026-05-12T00:00:00Z');
-
-    // Three tickets: (Claude+ticket-agent), (Claude+project-default),
-    // (Codex+ticket-agent) shipped inside the window.
+  it('count equals list length over all eligible Claude sessions — no per-ticket dedup, any outcome', async () => {
+    // Two Claude tickets (one ticket-agent, one project-default) and one Codex
+    // ticket. NO TicketOutcome rows are created — eligibility is decoupled from
+    // shippedAt (D-3), so sessions of never-shipped tickets count too.
     const tCla = await ctx.createTicket({ title: '[e2e] claude-ticket-agent', description: 'x' });
     const tInh = await ctx.createTicket({ title: '[e2e] claude-project-default', description: 'x' });
     const tCod = await ctx.createTicket({ title: '[e2e] codex-ticket-agent', description: 'x' });
@@ -222,47 +221,49 @@ describe('insights predicate: count vs list agreement (AIB-791 T021)', () => {
     await prisma.ticket.update({ where: { id: tCod.id }, data: { agent: 'CODEX' } });
     await prisma.project.update({ where: { id: ctx.projectId }, data: { defaultAgent: 'CLAUDE' } });
 
-    const baseOutcome = {
-      workflowType: WorkflowType.FULL,
-      ruleSetVersion: 1,
-      projectId: ctx.projectId,
-    };
-    for (const ticket of [tCla, tInh, tCod]) {
+    // tCla gets THREE distinct sessions (specify/implement/iterate) — all three
+    // must be enumerated (no earliest-per-ticket dedup, FR-002/FR-003). tInh
+    // gets one. tCod's session is excluded by the effective-agent gate.
+    const sessions: Array<{ ticketId: number; offsetH: number }> = [
+      { ticketId: tCla.id, offsetH: 0 },
+      { ticketId: tCla.id, offsetH: 1 },
+      { ticketId: tCla.id, offsetH: 2 },
+      { ticketId: tInh.id, offsetH: 0 },
+      { ticketId: tCod.id, offsetH: 0 },
+    ];
+    for (const s of sessions) {
+      const started = new Date(2026, 4, 5, s.offsetH);
       const job = await prisma.job.create({
         data: {
-          ticketId: ticket.id,
+          ticketId: s.ticketId,
           projectId: ctx.projectId,
           command: 'implement',
           status: JobStatus.COMPLETED,
-          startedAt: new Date('2026-05-05T00:00:00Z'),
-          completedAt: new Date('2026-05-05T00:30:00Z'),
-          updatedAt: new Date('2026-05-05T00:30:00Z'),
+          startedAt: started,
+          completedAt: started,
+          updatedAt: started,
         },
       });
-      // Predicate gates on JobLog.rawArtifactKey presence.
       await prisma.jobLog.create({
         data: {
           jobId: job.id,
           captureStatus: 'CAPTURED',
           preview: '',
-          rawArtifactKey: `raw-logs/${ctx.projectId}/${ticket.id}/${job.id}.jsonl.gz`,
+          rawArtifactKey: `raw-logs/${ctx.projectId}/${s.ticketId}/${job.id}.jsonl.gz`,
           rawArtifactSize: 1,
-        },
-      });
-      await prisma.ticketOutcome.create({
-        data: {
-          ...baseOutcome,
-          ticketId: ticket.id,
-          shippedAt: new Date('2026-05-05T01:00:00Z'),
         },
       });
     }
 
-    const count = await countShippedClaudeTicketsSince(windowStart);
-    const list = await listShippedClaudeJobsForWindow(windowStart, windowEnd);
+    const count = await countEligibleUnanalyzedSessions();
+    const list = await listEligibleUnanalyzedSessions();
 
-    expect(count).toBe(2);
-    expect(new Set(list.map((j) => j.ticketId))).toEqual(new Set([tCla.id, tInh.id]));
+    // 3 Claude sessions on tCla + 1 on tInh = 4; Codex excluded. Parity holds
+    // and there is NO per-ticket dedup (tCla contributes all 3).
+    expect(count).toBe(4);
+    expect(list).toHaveLength(count);
+    expect(list.filter((j) => j.ticketId === tCla.id)).toHaveLength(3);
+    expect(list.some((j) => j.ticketId === tCod.id)).toBe(false);
     expect(list.every((j) => j.rawArtifactKey.startsWith('raw-logs/'))).toBe(true);
   });
 });

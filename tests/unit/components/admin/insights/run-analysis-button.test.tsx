@@ -13,13 +13,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('RunAnalysisButton (US3, AIB-791)', () => {
+describe('RunAnalysisButton (AIB-856)', () => {
   it('is disabled when canTrigger=false and shows the refusal message', () => {
     renderWithProviders(
       <RunAnalysisButton
         preflight={{
           canTrigger: false,
-          refusal: { refusalCode: 'NO_NEW_SHIPPED', message: 'No new shipped tickets' },
+          refusal: { refusalCode: 'NO_NEW_SESSIONS', message: 'No new sessions since last run' },
         }}
         latestIsRunning={false}
       />
@@ -27,7 +27,22 @@ describe('RunAnalysisButton (US3, AIB-791)', () => {
 
     const button = screen.getByRole('button', { name: /run new analysis/i });
     expect(button).toBeDisabled();
-    expect(screen.getByText(/No new shipped tickets/)).toBeInTheDocument();
+    expect(screen.getByText(/No new sessions since last run/)).toBeInTheDocument();
+  });
+
+  it.each([
+    ['NO_CLAUDE_SESSIONS', 'No Claude sessions to analyze yet'],
+    ['NO_NEW_SESSIONS', 'No new sessions since last run on 2026-06-01'],
+    ['ALREADY_RUNNING', 'A run is already in progress (started 2026-06-01)'],
+  ])('renders the renamed refusal code %s message (FR-012)', (refusalCode, message) => {
+    renderWithProviders(
+      <RunAnalysisButton
+        preflight={{ canTrigger: false, refusal: { refusalCode, message } }}
+        latestIsRunning={false}
+      />
+    );
+    expect(screen.getByText(message)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /run new analysis/i })).toBeDisabled();
   });
 
   it('is disabled when latestIsRunning', () => {

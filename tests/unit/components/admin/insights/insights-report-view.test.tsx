@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
 import { InsightsReportView } from '@/components/admin/insights/insights-report-view';
 import type { ReportListEntry } from '@/app/lib/insights/repository';
+import type { InsightsPreflight } from '@/app/lib/hooks/queries/use-insights-preflight';
 
 function makeReport(overrides: Partial<ReportListEntry>): ReportListEntry {
   return {
@@ -11,6 +12,7 @@ function makeReport(overrides: Partial<ReportListEntry>): ReportListEntry {
     periodStart: '2026-05-04T09:00:00.000Z',
     periodEnd: '2026-05-11T12:00:00.000Z',
     sessionsCount: 12,
+    expectedSessionsCount: 12,
     ticketsCount: 4,
     artifactSize: 5000,
     errorReason: null,
@@ -22,23 +24,28 @@ function makeReport(overrides: Partial<ReportListEntry>): ReportListEntry {
   };
 }
 
-describe('InsightsReportView (US1, AIB-791)', () => {
+function makePreflight(overrides: Partial<InsightsPreflight> = {}): InsightsPreflight {
+  return {
+    canTrigger: false,
+    eligibleSessionsSincePreviousRun: 0,
+    previousRunEnd: null,
+    runningSince: null,
+    refusal: {
+      refusalCode: 'NO_NEW_SESSIONS',
+      message: 'No new sessions since last run',
+    },
+    ...overrides,
+  };
+}
+
+describe('InsightsReportView (AIB-856)', () => {
   it('renders the sandboxed iframe with src pointing at the html endpoint', () => {
     const latest = makeReport({ id: 42 });
     renderWithProviders(
       <InsightsReportView
         reports={[latest]}
         latest={latest}
-        preflight={{
-          canTrigger: false,
-          shippedSincePreviousRun: 0,
-          previousRunEnd: latest.periodEnd,
-          runningSince: null,
-          refusal: {
-            refusalCode: 'NO_NEW_SHIPPED',
-            message: `No new shipped tickets since last run on ${latest.periodEnd}`,
-          },
-        }}
+        preflight={makePreflight({ previousRunEnd: latest.periodEnd })}
       />
     );
 
@@ -47,29 +54,78 @@ describe('InsightsReportView (US1, AIB-791)', () => {
     expect(iframe.getAttribute('sandbox')).toBe('allow-scripts');
   });
 
-  it('renders the canonical metadata phrasing from the row counts', () => {
-    const latest = makeReport({ sessionsCount: 12, ticketsCount: 4 });
+  it('renders the analyzed-of-expected phrasing across tickets (FR-008/FR-010)', () => {
+    const latest = makeReport({ sessionsCount: 12, expectedSessionsCount: 12, ticketsCount: 4 });
     renderWithProviders(
       <InsightsReportView
         reports={[latest]}
         latest={latest}
-        preflight={{
-          canTrigger: false,
-          shippedSincePreviousRun: 0,
-          previousRunEnd: latest.periodEnd,
-          runningSince: null,
-          refusal: {
-            refusalCode: 'NO_NEW_SHIPPED',
-            message: `No new shipped tickets since last run on ${latest.periodEnd}`,
-          },
-        }}
+        preflight={makePreflight({ previousRunEnd: latest.periodEnd })}
       />
     );
     expect(
       screen.getByText(
-        /Analyzed 12 Claude Code sessions across 4 tickets shipped between 2026-05-04 and 2026-05-11/
+        /Analyzed 12 of 12 Claude Code sessions across 4 tickets/
       )
     ).toBeInTheDocument();
+  });
+
+  it('renders a gap-warning badge when analyzed < expected (FR-011)', () => {
+    const latest = makeReport({ sessionsCount: 10, expectedSessionsCount: 12, ticketsCount: 4 });
+    renderWithProviders(
+      <InsightsReportView
+        reports={[latest]}
+        latest={latest}
+        preflight={makePreflight({ previousRunEnd: latest.periodEnd })}
+      />
+    );
+    expect(
+      screen.getByText(/Analyzed 10 of 12 Claude Code sessions across 4 tickets/)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/2 sessions unavailable/)).toBeInTheDocument();
+  });
+
+  it('does NOT render a gap-warning badge when analyzed == expected (SC-006)', () => {
+    const latest = makeReport({ sessionsCount: 12, expectedSessionsCount: 12 });
+    renderWithProviders(
+      <InsightsReportView
+        reports={[latest]}
+        latest={latest}
+        preflight={makePreflight({ previousRunEnd: latest.periodEnd })}
+      />
+    );
+    expect(screen.queryByText(/unavailable/)).not.toBeInTheDocument();
+  });
+
+  it('renders the static scope note (FR-008)', () => {
+    const latest = makeReport({ id: 7 });
+    renderWithProviders(
+      <InsightsReportView
+        reports={[latest]}
+        latest={latest}
+        preflight={makePreflight({ previousRunEnd: latest.periodEnd })}
+      />
+    );
+    expect(
+      screen.getByText(/all Claude sessions across all projects, regardless of ticket outcome/i)
+    ).toBeInTheDocument();
+  });
+
+  it('header shows sessions awaiting analysis from the renamed preflight field', () => {
+    const failed = makeReport({ id: 5, status: 'FAILED', errorReason: 'x' });
+    renderWithProviders(
+      <InsightsReportView
+        reports={[failed]}
+        latest={failed}
+        preflight={makePreflight({
+          canTrigger: true,
+          eligibleSessionsSincePreviousRun: 7,
+          refusal: null,
+        })}
+      />
+    );
+    expect(screen.getByText(/Claude sessions awaiting analysis:/i)).toBeInTheDocument();
+    expect(screen.getByText('7')).toBeInTheDocument();
   });
 
   it('renders the empty-state placeholder when no reports exist', () => {
@@ -77,16 +133,12 @@ describe('InsightsReportView (US1, AIB-791)', () => {
       <InsightsReportView
         reports={[]}
         latest={null}
-        preflight={{
-          canTrigger: false,
-          shippedSincePreviousRun: 0,
-          previousRunEnd: null,
-          runningSince: null,
+        preflight={makePreflight({
           refusal: {
-            refusalCode: 'NO_CLAUDE_JOBS',
-            message: 'No shipped Claude tickets to analyze yet',
+            refusalCode: 'NO_CLAUDE_SESSIONS',
+            message: 'No Claude sessions to analyze yet',
           },
-        }}
+        })}
       />
     );
     expect(screen.getByText(/No Insights reports yet/i)).toBeInTheDocument();
@@ -101,16 +153,12 @@ describe('InsightsReportView (US1, AIB-791)', () => {
       <InsightsReportView
         reports={[failed]}
         latest={failed}
-        preflight={{
-          canTrigger: false,
-          shippedSincePreviousRun: 0,
-          previousRunEnd: null,
-          runningSince: null,
+        preflight={makePreflight({
           refusal: {
-            refusalCode: 'NO_CLAUDE_JOBS',
-            message: 'No shipped Claude tickets to analyze yet',
+            refusalCode: 'NO_CLAUDE_SESSIONS',
+            message: 'No Claude sessions to analyze yet',
           },
-        }}
+        })}
       />
     );
     expect(screen.getByText(/This run failed/i)).toBeInTheDocument();
@@ -123,16 +171,7 @@ describe('InsightsReportView (US1, AIB-791)', () => {
       <InsightsReportView
         reports={[latest]}
         latest={latest}
-        preflight={{
-          canTrigger: false,
-          shippedSincePreviousRun: 0,
-          previousRunEnd: latest.periodEnd,
-          runningSince: null,
-          refusal: {
-            refusalCode: 'NO_NEW_SHIPPED',
-            message: 'No new shipped tickets',
-          },
-        }}
+        preflight={makePreflight({ previousRunEnd: latest.periodEnd })}
       />
     );
 
@@ -148,16 +187,7 @@ describe('InsightsReportView (US1, AIB-791)', () => {
       <InsightsReportView
         reports={[latest]}
         latest={latest}
-        preflight={{
-          canTrigger: false,
-          shippedSincePreviousRun: 0,
-          previousRunEnd: latest.periodEnd,
-          runningSince: null,
-          refusal: {
-            refusalCode: 'NO_NEW_SHIPPED',
-            message: 'No new shipped tickets',
-          },
-        }}
+        preflight={makePreflight({ previousRunEnd: latest.periodEnd })}
       />
     );
     expect(document.querySelector('h1')).not.toBeInTheDocument();
@@ -173,16 +203,7 @@ describe('InsightsReportView (US1, AIB-791)', () => {
       <InsightsReportView
         reports={[latest]}
         latest={latest}
-        preflight={{
-          canTrigger: false,
-          shippedSincePreviousRun: 0,
-          previousRunEnd: latest.periodEnd,
-          runningSince: null,
-          refusal: {
-            refusalCode: 'NO_NEW_SHIPPED',
-            message: 'No new shipped tickets',
-          },
-        }}
+        preflight={makePreflight({ previousRunEnd: latest.periodEnd })}
       />
     );
     expect(screen.getByText('3m 30s')).toBeInTheDocument();
@@ -194,22 +215,17 @@ describe('InsightsReportView (US1, AIB-791)', () => {
       status: 'RUNNING',
       completedAt: null,
       sessionsCount: null,
+      expectedSessionsCount: null,
       ticketsCount: null,
     });
     renderWithProviders(
       <InsightsReportView
         reports={[running]}
         latest={running}
-        preflight={{
-          canTrigger: false,
-          shippedSincePreviousRun: 0,
-          previousRunEnd: null,
+        preflight={makePreflight({
           runningSince: running.createdAt,
-          refusal: {
-            refusalCode: 'ALREADY_RUNNING',
-            message: 'Already running',
-          },
-        }}
+          refusal: { refusalCode: 'ALREADY_RUNNING', message: 'Already running' },
+        })}
       />
     );
     expect(screen.queryByText(/\d+m \d+s/)).not.toBeInTheDocument();
@@ -227,13 +243,11 @@ describe('InsightsReportView (US1, AIB-791)', () => {
       <InsightsReportView
         reports={[failed]}
         latest={failed}
-        preflight={{
+        preflight={makePreflight({
           canTrigger: true,
-          shippedSincePreviousRun: 3,
-          previousRunEnd: null,
-          runningSince: null,
+          eligibleSessionsSincePreviousRun: 3,
           refusal: null,
-        }}
+        })}
       />
     );
     const link = screen.getByText('View GitHub Actions run');
@@ -257,13 +271,11 @@ describe('InsightsReportView (US1, AIB-791)', () => {
       <InsightsReportView
         reports={[failed]}
         latest={failed}
-        preflight={{
+        preflight={makePreflight({
           canTrigger: true,
-          shippedSincePreviousRun: 3,
-          previousRunEnd: null,
-          runningSince: null,
+          eligibleSessionsSincePreviousRun: 3,
           refusal: null,
-        }}
+        })}
       />
     );
     expect(screen.queryByText('View GitHub Actions run')).not.toBeInTheDocument();
@@ -279,13 +291,11 @@ describe('InsightsReportView (US1, AIB-791)', () => {
       <InsightsReportView
         reports={[failed]}
         latest={failed}
-        preflight={{
+        preflight={makePreflight({
           canTrigger: true,
-          shippedSincePreviousRun: 3,
-          previousRunEnd: null,
-          runningSince: null,
+          eligibleSessionsSincePreviousRun: 3,
           refusal: null,
-        }}
+        })}
       />
     );
     expect(screen.getByRole('button', { name: /retry analysis/i })).toBeInTheDocument();
