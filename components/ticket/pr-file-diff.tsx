@@ -92,6 +92,63 @@ function CommentRow({ comment }: { comment: InlineComment }) {
 }
 
 /**
+ * File body: binary/oversized/empty placeholders, or the rendered patch with
+ * inline comments anchored to their new-file line number.
+ */
+function FileBody({ file }: { file: FileChange }) {
+  if (file.binary) {
+    return (
+      <div className="p-4 text-sm text-zinc-500 text-center">
+        <p>Binary file — no line content to display</p>
+      </div>
+    );
+  }
+  if (file.patchTruncated) {
+    return (
+      <div className="p-4 text-sm text-ctp-yellow text-center" data-testid="patch-truncated">
+        <p>Diff too large to display — view it on GitHub</p>
+      </div>
+    );
+  }
+  if (!file.patch) {
+    return (
+      <div className="p-4 text-sm text-zinc-500 text-center">
+        <p>No diff available</p>
+      </div>
+    );
+  }
+
+  const patchLines = parsePatchLines(file.patch);
+  const anchoredByLine = new Map<number, InlineComment[]>();
+  for (const comment of file.comments) {
+    if (comment.outdated || comment.line == null) continue;
+    const list = anchoredByLine.get(comment.line) ?? [];
+    list.push(comment);
+    anchoredByLine.set(comment.line, list);
+  }
+
+  return (
+    <div className="bg-zinc-900">
+      <pre className="text-xs font-mono p-4 whitespace-pre-wrap break-words">
+        {patchLines.map((line, index) => {
+          const comments = line.newLineNo != null ? anchoredByLine.get(line.newLineNo) : undefined;
+          return (
+            <div key={index}>
+              <div className={`${line.className} px-2 -mx-2`} data-testid={line.testId || undefined}>
+                {line.text}
+              </div>
+              {comments?.map((comment) => (
+                <CommentRow key={comment.id} comment={comment} />
+              ))}
+            </div>
+          );
+        })}
+      </pre>
+    </div>
+  );
+}
+
+/**
  * PrFileDiff — renders a single PR file change in the existing `DiffViewer` visual
  * style (zinc card, green/red lines, +/- counters), collapsible, with read-only
  * inline comments anchored to their line and outdated comments surfaced at the
@@ -101,15 +158,6 @@ export function PrFileDiff({ file, defaultOpen = true }: PrFileDiffProps) {
   const [open, setOpen] = useState(defaultOpen);
 
   const outdatedComments = file.comments.filter((c) => c.outdated);
-  const anchoredByLine = new Map<number, InlineComment[]>();
-  for (const comment of file.comments) {
-    if (comment.outdated || comment.line == null) continue;
-    const list = anchoredByLine.get(comment.line) ?? [];
-    list.push(comment);
-    anchoredByLine.set(comment.line, list);
-  }
-
-  const patchLines = file.patch ? parsePatchLines(file.patch) : [];
 
   return (
     <div className="border border-zinc-700 rounded-lg overflow-hidden" data-testid="pr-file-diff">
@@ -160,41 +208,7 @@ export function PrFileDiff({ file, defaultOpen = true }: PrFileDiffProps) {
         </div>
       )}
 
-      {open && (
-        <>
-          {file.binary ? (
-            <div className="p-4 text-sm text-zinc-500 text-center">
-              <p>Binary file — no line content to display</p>
-            </div>
-          ) : file.patchTruncated ? (
-            <div className="p-4 text-sm text-ctp-yellow text-center" data-testid="patch-truncated">
-              <p>Diff too large to display — view it on GitHub</p>
-            </div>
-          ) : file.patch ? (
-            <div className="bg-zinc-900">
-              <pre className="text-xs font-mono p-4 whitespace-pre-wrap break-words">
-                {patchLines.map((line, index) => {
-                  const comments = line.newLineNo != null ? anchoredByLine.get(line.newLineNo) : undefined;
-                  return (
-                    <div key={index}>
-                      <div className={`${line.className} px-2 -mx-2`} data-testid={line.testId || undefined}>
-                        {line.text}
-                      </div>
-                      {comments?.map((comment) => (
-                        <CommentRow key={comment.id} comment={comment} />
-                      ))}
-                    </div>
-                  );
-                })}
-              </pre>
-            </div>
-          ) : (
-            <div className="p-4 text-sm text-zinc-500 text-center">
-              <p>No diff available</p>
-            </div>
-          )}
-        </>
-      )}
+      {open && <FileBody file={file} />}
     </div>
   );
 }

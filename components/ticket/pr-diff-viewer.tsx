@@ -40,6 +40,29 @@ function FileList({ files }: { files: FileChange[] }) {
   );
 }
 
+/**
+ * Resolve the main-panel content from the current rail state: Overview takes
+ * precedence, then Files mode shows the flat list, otherwise the selected layer's
+ * files (falling back to the flat list when no layer is selected).
+ */
+function MainPanel({
+  showOverview,
+  overview,
+  mode,
+  files,
+  selectedLayer,
+}: {
+  showOverview: boolean;
+  overview: PrOverview;
+  mode: RailMode;
+  files: FileChange[];
+  selectedLayer: ResolvedLayer | null;
+}) {
+  if (showOverview) return <OverviewPanel overview={overview} />;
+  if (mode === 'files') return <FileList files={files} />;
+  return <FileList files={selectedLayer?.files ?? files} />;
+}
+
 function OverviewPanel({ overview }: { overview: PrOverview }) {
   const score = overview.qualityScore;
   const colors = score != null ? getScoreColor(score) : null;
@@ -270,15 +293,13 @@ export function PrDiffViewer({ projectId, ticketId, ticketTitle, open, onOpenCha
                   </div>
                 )}
 
-                {showOverview ? (
-                  <OverviewPanel overview={data.overview} />
-                ) : mode === 'files' ? (
-                  <FileList files={data.files} />
-                ) : selectedLayer ? (
-                  <FileList files={selectedLayer.files} />
-                ) : (
-                  <FileList files={data.files} />
-                )}
+                <MainPanel
+                  showOverview={showOverview}
+                  overview={data.overview}
+                  mode={mode}
+                  files={data.files}
+                  selectedLayer={selectedLayer}
+                />
               </div>
             </ScrollArea>
           </div>
