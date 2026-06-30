@@ -254,6 +254,7 @@ export async function PATCH(
       completedAt?: Date;
       qualityScore?: number;
       qualityScoreDetails?: string;
+      layerDecomposition?: string;
       workflowRunId?: bigint;
       pluginVersion?: string;
       agentCliVersion?: string;
@@ -285,6 +286,12 @@ export async function PATCH(
       if (validationResult.data.qualityScoreDetails) {
         updateData.qualityScoreDetails = validationResult.data.qualityScoreDetails;
       }
+    }
+
+    // AIB-879: persist the layer-decomposition snapshot only on COMPLETED,
+    // mirroring the qualityScore guard (absent field → no write).
+    if (requestedStatus === 'COMPLETED' && validationResult.data.layerDecomposition != null) {
+      updateData.layerDecomposition = validationResult.data.layerDecomposition;
     }
 
     // Atomic conditional update: only transition when source status matches.

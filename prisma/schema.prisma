@@ -64,6 +64,11 @@ model Job {
   // JSON string containing dimension sub-scores, weights, and threshold label
   qualityScoreDetails String?
 
+  // AIB-879: layer-decomposition snapshot emitted by the VERIFY code-review.
+  // JSON string (see LayerDecompositionArtifact). Only populated for COMPLETED
+  // verify jobs; null = never reviewed / decomposition failed → flat Files mode.
+  layerDecomposition String?
+
   // Runtime versions captured by the runner at job start (AIB-779).
   // Both nullable: jobs predating this feature, or runs where capture failed,
   // remain unannotated.

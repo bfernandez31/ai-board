@@ -97,6 +97,7 @@ export function toBoardSnapshotJobs(
       toolsUsed: job.toolsUsed,
       qualityScore: job.qualityScore,
       qualityScoreDetails: job.qualityScoreDetails,
+      layerDecomposition: job.layerDecomposition,
       peakContextTokens: job.peakContextTokens,
       avgContextTokens: job.avgContextTokens,
       turnCount: job.turnCount,

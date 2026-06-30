@@ -41,6 +41,7 @@ export function createSnapshotJob(polledJob: JobStatusDto, projectId: number): J
     toolsUsed: [],
     qualityScore: null,
     qualityScoreDetails: null,
+    layerDecomposition: null,
     peakContextTokens: null,
     avgContextTokens: null,
     turnCount: null,

@@ -337,6 +337,71 @@ describe('Jobs Status', () => {
     });
   });
 
+  describe('Layer decomposition on COMPLETED status (AIB-879)', () => {
+    const layerDecomposition = JSON.stringify({
+      version: 1,
+      computedAt: '2026-06-30T10:00:00Z',
+      layers: [
+        { id: 'foundations', title: 'Foundations', summary: 'schema', order: 1, files: ['prisma/schema.prisma'] },
+      ],
+    });
+
+    it('persists layerDecomposition when COMPLETED', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'COMPLETED', layerDecomposition }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.status).toBe('COMPLETED');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.layerDecomposition).toBe(layerDecomposition);
+    });
+
+    it('ignores layerDecomposition when status is RUNNING', async () => {
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'RUNNING', layerDecomposition }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.status).toBe('RUNNING');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.layerDecomposition).toBeNull();
+    });
+
+    it('is idempotent under a duplicate terminal COMPLETED callback', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'COMPLETED', layerDecomposition });
+
+      // Duplicate terminal callback (e.g. GitHub Actions retry) must not error
+      // or clobber the persisted snapshot.
+      const second = await workflowApi.patch<{ status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'COMPLETED', layerDecomposition }
+      );
+
+      expect(second.status).toBe(200);
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.layerDecomposition).toBe(layerDecomposition);
+    });
+
+    it('rejects a non-JSON-parseable layerDecomposition', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const response = await workflowApi.patch<{ error: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'COMPLETED', layerDecomposition: '{not json' }
+      );
+
+      expect(response.status).toBe(400);
+    });
+  });
+
   describe('Runtime versions on RUNNING status (AIB-779)', () => {
     it('persists pluginVersion and agentCliVersion on the initial RUNNING transition', async () => {
       const response = await workflowApi.patch<{ id: number; status: string }>(

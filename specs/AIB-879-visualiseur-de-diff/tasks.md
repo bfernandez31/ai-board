@@ -25,7 +25,7 @@ Next.js App Router monolith (per plan.md): API routes under `app/api/`, Zod sche
 
 **Purpose**: Confirm prerequisites; no new runtime dependencies are introduced (plan.md "no new dependencies").
 
-- [ ] T001 [P] Confirm required dependencies are already present (no install needed): `@octokit/rest` ^22, `zod`, `@tanstack/react-query` v5, and shadcn primitives `dialog`/`tabs`/`scroll-area`/`badge`/`skeleton`/`button` in `components/ui/`. Record in this file if any are missing (none expected).
+- [X] T001 [P] Confirm required dependencies are already present (no install needed): `@octokit/rest` ^22, `zod`, `@tanstack/react-query` v5, and shadcn primitives `dialog`/`tabs`/`scroll-area`/`badge`/`skeleton`/`button` in `components/ui/`. Record in this file if any are missing (none expected).
 
 ---
 
@@ -35,11 +35,11 @@ Next.js App Router monolith (per plan.md): API routes under `app/api/`, Zod sche
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T002 Add `layerDecomposition String?` nullable column to the `Job` model in `prisma/schema.prisma` (beside `qualityScore`/`qualityScoreDetails`), with the comment documenting "COMPLETED verify jobs only; null = never reviewed / failed → flat Files mode" per data-model.md §1.
-- [ ] T003 Run `bunx prisma migrate dev` (additive, nullable, no backfill) then `bunx prisma generate` to regenerate the client.
-- [ ] T004 [P] Add `layerDecomposition: string | null` to `TicketJobWithTelemetry` in `lib/types/job-types.ts` (alongside `qualityScore`/`qualityScoreDetails`).
-- [ ] T005 [P] Add `layerDecomposition: true` to the job `select` clause in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts` so the PR-diff route can read the artifact.
-- [ ] T006 [P] Create Zod schemas + inferred types in `app/lib/schemas/pr-diff.ts`: `PrSummary`, `PrOverview`, `InlineComment`, `FileChange`, `ResolvedLayer`, `PrDiffResponse`, and `LayerDecompositionArtifact` (file shape mirrors `app/lib/schemas/documentation.ts` `{ filename, status, additions, deletions, patch? }`, extended with `binary`/`patchTruncated`/`comments`) per data-model.md §2 and contracts/.
+- [X] T002 Add `layerDecomposition String?` nullable column to the `Job` model in `prisma/schema.prisma` (beside `qualityScore`/`qualityScoreDetails`), with the comment documenting "COMPLETED verify jobs only; null = never reviewed / failed → flat Files mode" per data-model.md §1.
+- [X] T003 Run `bunx prisma migrate dev` (additive, nullable, no backfill) then `bunx prisma generate` to regenerate the client.
+- [X] T004 [P] Add `layerDecomposition: string | null` to `TicketJobWithTelemetry` in `lib/types/job-types.ts` (alongside `qualityScore`/`qualityScoreDetails`).
+- [X] T005 [P] Add `layerDecomposition: true` to the job `select` clause in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts` so the PR-diff route can read the artifact.
+- [X] T006 [P] Create Zod schemas + inferred types in `app/lib/schemas/pr-diff.ts`: `PrSummary`, `PrOverview`, `InlineComment`, `FileChange`, `ResolvedLayer`, `PrDiffResponse`, and `LayerDecompositionArtifact` (file shape mirrors `app/lib/schemas/documentation.ts` `{ filename, status, additions, deletions, patch? }`, extended with `binary`/`patchTruncated`/`comments`) per data-model.md §2 and contracts/.
 
 **Checkpoint**: DB column, types, and response schemas exist — user-story implementation can begin.
 
@@ -55,24 +55,24 @@ Next.js App Router monolith (per plan.md): API routes under `app/api/`, Zod sche
 
 **NOTE: Write these tests FIRST and ensure they FAIL before implementation. Extend existing files where the domain already exists (per research.md inventory).**
 
-- [ ] T007 [P] [US1] Create parse + reconcile tests (sibling to `tests/unit/quality-score.test.ts`) in `tests/unit/pr-layers.test.ts`: tolerant `parseLayerDecomposition` of malformed/null artifact, `reconcileLayers` ordering by `order`, empty-layer omission, post-merge `fileCount`/`commentCount` counters.
-- [ ] T008 [P] [US1] Create API route happy-path tests in `tests/integration/api/projects/pr-diff.test.ts`: reviewed PR returns ordered `layers` with files + flat `files`, using `x-test-user-id` + the test-mode fixture.
-- [ ] T009 [P] [US1] Extend `tests/integration/jobs/status.test.ts`: `layerDecomposition` persisted on `COMPLETED`, ignored on non-COMPLETED, idempotent under a duplicate terminal callback.
-- [ ] T010 [P] [US1] Extend `tests/unit/components/ticket-detail-modal.test.tsx`: "PR Diff" button visible only when `stage ∈ {VERIFY, SHIP}`, hidden elsewhere.
-- [ ] T011 [P] [US1] Create viewer component tests in `tests/unit/components/pr-diff-viewer.test.tsx`: Layers ↔ Files toggle, selecting a layer renders its files, per-file diff blocks collapsible with counters (accessibility-first queries, `renderWithProviders`).
+- [X] T007 [P] [US1] Create parse + reconcile tests (sibling to `tests/unit/quality-score.test.ts`) in `tests/unit/pr-layers.test.ts`: tolerant `parseLayerDecomposition` of malformed/null artifact, `reconcileLayers` ordering by `order`, empty-layer omission, post-merge `fileCount`/`commentCount` counters.
+- [X] T008 [P] [US1] Create API route happy-path tests in `tests/integration/api/projects/pr-diff.test.ts`: reviewed PR returns ordered `layers` with files + flat `files`, using `x-test-user-id` + the test-mode fixture.
+- [X] T009 [P] [US1] Extend `tests/integration/jobs/status.test.ts`: `layerDecomposition` persisted on `COMPLETED`, ignored on non-COMPLETED, idempotent under a duplicate terminal callback.
+- [X] T010 [P] [US1] Extend `tests/unit/components/ticket-detail-modal.test.tsx`: "PR Diff" button visible only when `stage ∈ {VERIFY, SHIP}`, hidden elsewhere.
+- [X] T011 [P] [US1] Create viewer component tests in `tests/unit/components/pr-diff-viewer.test.tsx`: Layers ↔ Files toggle, selecting a layer renders its files, per-file diff blocks collapsible with counters (accessibility-first queries, `renderWithProviders`).
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Extend `.claude-plugin/commands/ai-board.code-review.md` to emit a `LAYER_DECOMPOSITION_JSON:` line (artifact per contracts/layer-decomposition-artifact.md) on its own line **before** the absolute-last `QUALITY_SCORE_JSON:` line.
-- [ ] T013 [P] [US1] Extend the "Read Quality Score" step in `.github/workflows/verify.yml` (~L702-751) to independently grep `LAYER_DECOMPOSITION_JSON:` (NOT `tail -1`), base64-encode it, and add `layerDecomposition` to the COMPLETED PATCH payload.
-- [ ] T014 [US1] Extend `app/api/jobs/[id]/status/route.ts` to accept optional `layerDecomposition` (Zod string, JSON-parseable) and persist it **only** on `COMPLETED` inside the existing atomic `updateMany` (mirror the `qualityScore` guard ~L282-288); re-read `updatedJob` after mutation. (Depends on T002, T006.)
-- [ ] T015 [P] [US1] Implement `lib/pr-layers.ts`: `parseLayerDecomposition()` (tolerant, like `parseQualityScoreDetails`) and `reconcileLayers(artifact, files)` → `ResolvedLayer[]` — intersect each `LayerDescriptor.files` with current filenames, omit empty layers without breaking `order`, route unclassified files to the synthetic "Additional changes" layer (`id='additional-changes'`, `synthetic=true`, appended last), derive `fileCount`/`commentCount` after reconciliation (data-model.md §3). (Depends on T006.)
-- [ ] T016 [P] [US1] Implement `lib/github/pr-state.ts` `resolvePr` + `listPrFiles` + `FileChange` mapping: resolve PR via `pulls.list({ head: "owner:branch", state: 'all', per_page: 50 })` (prefer open, else most recent by `updated_at`), `pulls.listFiles` paginated, wrap in `callWithRetry`, apply `GITHUB_FILES_CAP` + per-patch size cap (follow `lib/outcomes/github-files.ts:203-296`), set `binary`/`patchTruncated`/`truncated`. Reuse `createUserGitHubClient`. (Depends on T006.)
-- [ ] T017 [US1] Implement the GET route `app/api/projects/[projectId]/tickets/[id]/pr-diff/route.ts`: `verifyTicketAccess` → require `ticket.branch` → `createUserGitHubClient` + `requireRepoScope` → resolve PR (or 200 `pr:null`) → files → load latest COMPLETED verify job (`getLatestScoredVerifyJob` pattern) → `parseLayerDecomposition` + `reconcileLayers` → assemble `PrDiffResponse`. Typed error envelope `{ error, code }` mirroring `app/api/projects/[projectId]/docs/diff/route.ts:194-225` plus `AUTH_REQUIRED`/`BRANCH_NOT_FOUND`/`GITHUB_FORBIDDEN`/`GITHUB_API_ERROR`; test-mode fixture short-circuit per contracts/pr-diff-api.md. (Depends on T005, T006, T015, T016.)
-- [ ] T018 [US1] Add a PR-diff query key to `app/lib/query-keys.ts` and implement `lib/hooks/use-pr-diff.ts` (`usePrDiff(projectId, ticketId, { enabled })`, lazy `enabled` on open, fresh fetch) following `useDocumentationDiff` in `lib/hooks/use-documentation-history.ts`. (Depends on T006, T017.)
-- [ ] T019 [P] [US1] Implement `components/ticket/pr-file-diff.tsx`: render one `FileChange` patch in the exact `components/ticket/diff-viewer.tsx` visual style (zinc card, green/red lines, `+/-` counters, `FileCode/Plus/Minus` icons, binary fallback) with a collapsible per-file block. Comment rendering is added in US2. (Depends on T006.)
-- [ ] T020 [US1] Implement `components/ticket/pr-diff-viewer.tsx`: shadcn `Dialog` sized like `components/board/documentation-viewer.tsx`, side rail with Overview / Layers ↔ Files toggle (FR-002), Layers list (title/summary/file+comment counters in dependency order, FR-004), layer selection renders its files via `PrFileDiff` (FR-005), Files mode renders the flat list (FR-006), loading skeletons. (Depends on T018, T019.)
-- [ ] T021 [US1] Extend the footer of `components/board/ticket-detail-modal.tsx` (~L1276-1351) with a "PR Diff" button visible only when `stage ∈ {VERIFY, SHIP}`, opening `PrDiffViewer` via local state (mirror the `docViewerOpen` pattern), styled consistently with the existing aurora buttons. (Depends on T020.)
+- [X] T012 [P] [US1] Extend `.claude-plugin/commands/ai-board.code-review.md` to emit a `LAYER_DECOMPOSITION_JSON:` line (artifact per contracts/layer-decomposition-artifact.md) on its own line **before** the absolute-last `QUALITY_SCORE_JSON:` line.
+- [X] T013 [P] [US1] Extend the "Read Quality Score" step in `.github/workflows/verify.yml` (~L702-751) to independently grep `LAYER_DECOMPOSITION_JSON:` (NOT `tail -1`), base64-encode it, and add `layerDecomposition` to the COMPLETED PATCH payload.
+- [X] T014 [US1] Extend `app/api/jobs/[id]/status/route.ts` to accept optional `layerDecomposition` (Zod string, JSON-parseable) and persist it **only** on `COMPLETED` inside the existing atomic `updateMany` (mirror the `qualityScore` guard ~L282-288); re-read `updatedJob` after mutation. (Depends on T002, T006.)
+- [X] T015 [P] [US1] Implement `lib/pr-layers.ts`: `parseLayerDecomposition()` (tolerant, like `parseQualityScoreDetails`) and `reconcileLayers(artifact, files)` → `ResolvedLayer[]` — intersect each `LayerDescriptor.files` with current filenames, omit empty layers without breaking `order`, route unclassified files to the synthetic "Additional changes" layer (`id='additional-changes'`, `synthetic=true`, appended last), derive `fileCount`/`commentCount` after reconciliation (data-model.md §3). (Depends on T006.)
+- [X] T016 [P] [US1] Implement `lib/github/pr-state.ts` `resolvePr` + `listPrFiles` + `FileChange` mapping: resolve PR via `pulls.list({ head: "owner:branch", state: 'all', per_page: 50 })` (prefer open, else most recent by `updated_at`), `pulls.listFiles` paginated, wrap in `callWithRetry`, apply `GITHUB_FILES_CAP` + per-patch size cap (follow `lib/outcomes/github-files.ts:203-296`), set `binary`/`patchTruncated`/`truncated`. Reuse `createUserGitHubClient`. (Depends on T006.)
+- [X] T017 [US1] Implement the GET route `app/api/projects/[projectId]/tickets/[id]/pr-diff/route.ts`: `verifyTicketAccess` → require `ticket.branch` → `createUserGitHubClient` + `requireRepoScope` → resolve PR (or 200 `pr:null`) → files → load latest COMPLETED verify job (`getLatestScoredVerifyJob` pattern) → `parseLayerDecomposition` + `reconcileLayers` → assemble `PrDiffResponse`. Typed error envelope `{ error, code }` mirroring `app/api/projects/[projectId]/docs/diff/route.ts:194-225` plus `AUTH_REQUIRED`/`BRANCH_NOT_FOUND`/`GITHUB_FORBIDDEN`/`GITHUB_API_ERROR`; test-mode fixture short-circuit per contracts/pr-diff-api.md. (Depends on T005, T006, T015, T016.)
+- [X] T018 [US1] Add a PR-diff query key to `app/lib/query-keys.ts` and implement `lib/hooks/use-pr-diff.ts` (`usePrDiff(projectId, ticketId, { enabled })`, lazy `enabled` on open, fresh fetch) following `useDocumentationDiff` in `lib/hooks/use-documentation-history.ts`. (Depends on T006, T017.)
+- [X] T019 [P] [US1] Implement `components/ticket/pr-file-diff.tsx`: render one `FileChange` patch in the exact `components/ticket/diff-viewer.tsx` visual style (zinc card, green/red lines, `+/-` counters, `FileCode/Plus/Minus` icons, binary fallback) with a collapsible per-file block. Comment rendering is added in US2. (Depends on T006.)
+- [X] T020 [US1] Implement `components/ticket/pr-diff-viewer.tsx`: shadcn `Dialog` sized like `components/board/documentation-viewer.tsx`, side rail with Overview / Layers ↔ Files toggle (FR-002), Layers list (title/summary/file+comment counters in dependency order, FR-004), layer selection renders its files via `PrFileDiff` (FR-005), Files mode renders the flat list (FR-006), loading skeletons. (Depends on T018, T019.)
+- [X] T021 [US1] Extend the footer of `components/board/ticket-detail-modal.tsx` (~L1276-1351) with a "PR Diff" button visible only when `stage ∈ {VERIFY, SHIP}`, opening `PrDiffViewer` via local state (mirror the `docViewerOpen` pattern), styled consistently with the existing aurora buttons. (Depends on T020.)
 
 **Checkpoint**: A reviewed PR opens in a full-screen viewer with ordered layers and per-file diffs — MVP is independently functional and testable.
 
@@ -86,14 +86,14 @@ Next.js App Router monolith (per plan.md): API routes under `app/api/`, Zod sche
 
 ### Tests for User Story 2
 
-- [ ] T022 [P] [US2] Extend `tests/integration/api/projects/pr-diff.test.ts`: comments from `ai-board[bot]`, a third-party bot, and a human are mapped with correct `source`/`author`, attached to files by `path`+line, and one comment with no current anchor is returned with `outdated: true`.
-- [ ] T023 [P] [US2] Extend `tests/unit/components/pr-diff-viewer.test.tsx`: comments render anchored to their lines with attribution, an outdated comment surfaces at the file header, and NO posting/replying/editing/resolving controls are present (read-only, FR-011).
+- [X] T022 [P] [US2] Extend `tests/integration/api/projects/pr-diff.test.ts`: comments from `ai-board[bot]`, a third-party bot, and a human are mapped with correct `source`/`author`, attached to files by `path`+line, and one comment with no current anchor is returned with `outdated: true`.
+- [X] T023 [P] [US2] Extend `tests/unit/components/pr-diff-viewer.test.tsx`: comments render anchored to their lines with attribution, an outdated comment surfaces at the file header, and NO posting/replying/editing/resolving controls are present (read-only, FR-011).
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] Extend `lib/github/pr-state.ts` with `listPrReviewComments` (paginated, `callWithRetry`) and `InlineComment` mapping: derive `source` (`ai-board[bot]`→`'ai-board'`, `user.type==='Bot'`→`'bot'`, else `'human'`), set `outdated=true` when `line==null` or the target line is absent from the current patch hunks, and anchor to the current line otherwise (data-model.md §2). (Depends on T016.)
-- [ ] T025 [US2] Extend `app/api/projects/[projectId]/tickets/[id]/pr-diff/route.ts` to fetch comments and attach them to each `FileChange.comments`, and update `lib/pr-layers.ts` `commentCount` to reflect attached (displayed) comments after reconciliation. (Depends on T017, T024.)
-- [ ] T026 [US2] Extend `components/ticket/pr-file-diff.tsx` to render read-only inline comments anchored to their target line (author/source attribution) and surface outdated comments at the file header. No compose/reply/resolve affordances (FR-009/FR-010/FR-011/FR-016). (Depends on T019, T025.)
+- [X] T024 [US2] Extend `lib/github/pr-state.ts` with `listPrReviewComments` (paginated, `callWithRetry`) and `InlineComment` mapping: derive `source` (`ai-board[bot]`→`'ai-board'`, `user.type==='Bot'`→`'bot'`, else `'human'`), set `outdated=true` when `line==null` or the target line is absent from the current patch hunks, and anchor to the current line otherwise (data-model.md §2). (Depends on T016.)
+- [X] T025 [US2] Extend `app/api/projects/[projectId]/tickets/[id]/pr-diff/route.ts` to fetch comments and attach them to each `FileChange.comments`, and update `lib/pr-layers.ts` `commentCount` to reflect attached (displayed) comments after reconciliation. (Depends on T017, T024.)
+- [X] T026 [US2] Extend `components/ticket/pr-file-diff.tsx` to render read-only inline comments anchored to their target line (author/source attribution) and surface outdated comments at the file header. No compose/reply/resolve affordances (FR-009/FR-010/FR-011/FR-016). (Depends on T019, T025.)
 
 **Checkpoint**: US1 and US2 both work — diffs render with their full inline discussion, read-only, with outdated comments preserved.
 
@@ -107,13 +107,13 @@ Next.js App Router monolith (per plan.md): API routes under `app/api/`, Zod sche
 
 ### Tests for User Story 3
 
-- [ ] T027 [P] [US3] Extend `tests/integration/api/projects/pr-diff.test.ts`: `pr:null` empty state (200), never-reviewed PR → `layers:[]`, a post-review file routed to the "Additional changes" synthetic layer, missing repo scope → `AUTH_REQUIRED` (403), forbidden user → `FORBIDDEN` (403).
-- [ ] T028 [P] [US3] Extend `tests/unit/components/pr-diff-viewer.test.tsx`: Overview renders title/status/synthesis/quality score; no-PR, auth-required, and never-reviewed (defaults to Files mode) fallback states render without error.
+- [X] T027 [P] [US3] Extend `tests/integration/api/projects/pr-diff.test.ts`: `pr:null` empty state (200), never-reviewed PR → `layers:[]`, a post-review file routed to the "Additional changes" synthetic layer, missing repo scope → `AUTH_REQUIRED` (403), forbidden user → `FORBIDDEN` (403).
+- [X] T028 [P] [US3] Extend `tests/unit/components/pr-diff-viewer.test.tsx`: Overview renders title/status/synthesis/quality score; no-PR, auth-required, and never-reviewed (defaults to Files mode) fallback states render without error.
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Extend `app/api/projects/[projectId]/tickets/[id]/pr-diff/route.ts` to assemble `PrOverview` (`reviewSynthesis`, `qualityScore`, `qualityThreshold`) from the latest COMPLETED verify job, reusing the threshold/color helpers in `lib/quality-score.ts` (FR-003). (Depends on T017.)
-- [ ] T030 [US3] Extend `components/ticket/pr-diff-viewer.tsx` with the Overview entry (title/status/synthesis/quality score) and the empty-state branches: no-PR ("no PR available"), `AUTH_REQUIRED` (actionable message), and never-reviewed → default to Files mode (FR-003/FR-014/FR-017). (Depends on T020, T029.)
+- [X] T029 [US3] Extend `app/api/projects/[projectId]/tickets/[id]/pr-diff/route.ts` to assemble `PrOverview` (`reviewSynthesis`, `qualityScore`, `qualityThreshold`) from the latest COMPLETED verify job, reusing the threshold/color helpers in `lib/quality-score.ts` (FR-003). (Depends on T017.)
+- [X] T030 [US3] Extend `components/ticket/pr-diff-viewer.tsx` with the Overview entry (title/status/synthesis/quality score) and the empty-state branches: no-PR ("no PR available"), `AUTH_REQUIRED` (actionable message), and never-reviewed → default to Files mode (FR-003/FR-014/FR-017). (Depends on T020, T029.)
 
 **Checkpoint**: All three user stories are independently functional; the viewer is robust on un-reviewed, drifted, no-PR, and unauthorized cases.
 
@@ -123,9 +123,9 @@ Next.js App Router monolith (per plan.md): API routes under `app/api/`, Zod sche
 
 **Purpose**: Quality gates and edge-case finishing affecting multiple stories.
 
-- [ ] T031 Run `bun run type-check` and `bun run lint`; fix ALL errors (including any pre-existing) before commit per CLAUDE.md.
-- [ ] T032 [P] Verify SC-006 visual consistency: `components/ticket/pr-file-diff.tsx` matches `components/ticket/diff-viewer.tsx` tokens (zinc card, green/red, `+/-` counters); no hardcoded hex/rgb colors.
-- [ ] T033 Surface large-PR/binary edge cases in `components/ticket/pr-diff-viewer.tsx`: render `truncated` and `patchTruncated` indicators and the binary "status-only" file entry so large PRs stay responsive (spec Edge Cases).
+- [X] T031 Run `bun run type-check` and `bun run lint`; fix ALL errors (including any pre-existing) before commit per CLAUDE.md.
+- [X] T032 [P] Verify SC-006 visual consistency: `components/ticket/pr-file-diff.tsx` matches `components/ticket/diff-viewer.tsx` tokens (zinc card, green/red, `+/-` counters); no hardcoded hex/rgb colors.
+- [X] T033 Surface large-PR/binary edge cases in `components/ticket/pr-diff-viewer.tsx`: render `truncated` and `patchTruncated` indicators and the binary "status-only" file entry so large PRs stay responsive (spec Edge Cases).
 
 ---
 

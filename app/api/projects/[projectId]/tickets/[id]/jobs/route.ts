@@ -145,6 +145,7 @@ export async function GET(
         toolsUsed: true,
         qualityScore: true,
         qualityScoreDetails: true,
+        layerDecomposition: true,
         peakContextTokens: true,
         avgContextTokens: true,
         turnCount: true,
