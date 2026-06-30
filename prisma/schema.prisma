@@ -78,6 +78,10 @@ model Job {
 
   insightsReport InsightsReport?
 
+  // AIB-852: per-session "already analyzed" marker (one row per Claude
+  // session included in a COMPLETED Insights run).
+  insightsCoverage InsightsSessionCoverage?
+
   @@index([projectId])
   @@index([startedAt])
   @@index([status])
@@ -948,6 +952,13 @@ model InsightsReport {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
+  // AIB-852: in-scope sessions for the period incl. those lacking a
+  // transcript (FR-011); gap reason set when analyzed < expected (FR-012).
+  expectedSessionsCount Int?
+  coverageGapReason     InsightsCoverageGapReason?
+
+  coveredSessions InsightsSessionCoverage[]
+
   @@index([status, createdAt])
   @@index([generatedAt])
   @@index([periodEnd])
@@ -957,4 +968,25 @@ enum InsightsRunStatus {
   RUNNING
   COMPLETED
   FAILED
+}
+
+/// AIB-852: per-session coverage marker. One row per Claude agent session
+/// (Job) included in a COMPLETED Insights run. `jobId @unique` enforces
+/// "analyzed at most once" (FR-006) at the DB layer; rows are written only
+/// inside the RUNNING→COMPLETED transaction (FR-007 — a FAILED run writes
+/// nothing).
+model InsightsSessionCoverage {
+  id        Int            @id @default(autoincrement())
+  jobId     Int            @unique
+  job       Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  reportId  Int
+  report    InsightsReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  coveredAt DateTime       @default(now())
+
+  @@index([reportId])
+}
+
+/// AIB-852: why analyzed < expected. Extensible enum.
+enum InsightsCoverageGapReason {
+  TRANSCRIPT_NOT_AVAILABLE // raw transcript not yet uploaded / pruned
 }

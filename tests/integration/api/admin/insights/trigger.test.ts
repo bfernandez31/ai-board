@@ -64,7 +64,7 @@ async function seedShippedClaudeTicket(ctx: TestContext, when: Date) {
       shippedAt: when,
     },
   });
-  return ticket;
+  return { ticket, job };
 }
 
 describe('POST /api/admin/insights/trigger (US3, AIB-791)', () => {
@@ -93,40 +93,59 @@ describe('POST /api/admin/insights/trigger (US3, AIB-791)', () => {
     expect(await res.text()).toBe('');
   });
 
-  it('refuses with NO_CLAUDE_JOBS when no Claude jobs have ever shipped', async () => {
+  it('refuses with NO_CLAUDE_SESSIONS when no Claude sessions exist at all', async () => {
     requireAdminOrNotFound.mockResolvedValue({ ok: true, email: 'admin@e2e.local' });
     const res = await POST(makeRequest());
     expect(res.status).toBe(409);
     const body = (await res.json()) as { refusalCode: string; message: string };
-    expect(body.refusalCode).toBe('NO_CLAUDE_JOBS');
+    expect(body.refusalCode).toBe('NO_CLAUDE_SESSIONS');
   });
 
-  it('refuses with NO_NEW_SHIPPED when last run already covered everything', async () => {
+  it('refuses with NO_NEW_SESSIONS when every analyzable session is already covered', async () => {
     requireAdminOrNotFound.mockResolvedValue({ ok: true, email: 'admin@e2e.local' });
 
     const earlier = new Date('2026-05-01T00:00:00Z');
-    await seedShippedClaudeTicket(ctx, earlier);
+    const { job } = await seedShippedClaudeTicket(ctx, earlier);
 
-    // Last completed run already covered through "now" — periodEnd > shippedAt
+    // A prior COMPLETED run covered the only analyzable session — no new
+    // sessions remain uncovered (FR-006).
     const later = new Date('2026-05-02T00:00:00Z');
-    await prisma.insightsReport.create({
+    const prior = await prisma.insightsReport.create({
       data: {
         status: 'COMPLETED',
         generatedAt: later,
         periodStart: new Date('2026-04-01T00:00:00Z'),
         periodEnd: later,
         sessionsCount: 1,
+        expectedSessionsCount: 1,
         ticketsCount: 1,
         artifactKey: 'insights/reports/seed.html',
         artifactSize: 1,
         completedAt: later,
       },
     });
+    await prisma.insightsSessionCoverage.create({
+      data: { jobId: job.id, reportId: prior.id },
+    });
 
     const res = await POST(makeRequest());
     expect(res.status).toBe(409);
     const body = (await res.json()) as { refusalCode: string; message: string };
-    expect(body.refusalCode).toBe('NO_NEW_SHIPPED');
+    expect(body.refusalCode).toBe('NO_NEW_SESSIONS');
+  });
+
+  it('derives periodStart from the oldest available session on the first run (FR-014)', async () => {
+    requireAdminOrNotFound.mockResolvedValue({ ok: true, email: 'admin@e2e.local' });
+
+    const oldest = new Date('2026-05-01T00:00:00Z');
+    await seedShippedClaudeTicket(ctx, oldest);
+
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { id: number };
+    const row = await prisma.insightsReport.findUnique({ where: { id: body.id } });
+    // No coverage yet → periodStart floors at the oldest session completion.
+    expect(row?.periodStart.toISOString()).toBe(oldest.toISOString());
   });
 
   it('refuses with ALREADY_RUNNING when a RUNNING row already exists', async () => {

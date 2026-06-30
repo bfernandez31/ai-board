@@ -146,8 +146,10 @@ Describes the `/admin/insights` page, which hosts a manually triggered, archived
 - Allowlist-based admin access with byte-equivalent 404 parity for non-admins
 - Hidden navigation (no link or hint of `/admin` for any user)
 - Inline sandboxed iframe rendering with canonical metadata header phrasing
-- Pre-flight (shipped Claude tickets since last run) and single-flight concurrency gates
-- Period semantics (first-run full coverage; subsequent half-open windows)
+- Per-session coverage of every captured Claude session (all stages, all projects, decoupled from SHIP), analyzed exactly once
+- Analyzed-vs-expected session counts with a coverage-gap flag for transcript-pending sessions
+- Pre-flight (analyzable Claude sessions remaining) and single-flight concurrency gates
+- Period semantics driven by the per-session coverage marker (first-run bounded by the oldest session; subsequent half-open windows)
 - Past-reports list (reverse-chronological, capped at 200)
 - Orphan-row reconciliation and atomic state transitions
 - Read-only reports — no edit, delete, or notification surfaces

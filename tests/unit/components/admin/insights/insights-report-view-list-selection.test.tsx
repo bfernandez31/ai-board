@@ -15,6 +15,8 @@ function makeReport(overrides: Partial<ReportListEntry>): ReportListEntry {
     periodStart: '2026-05-03T00:00:00.000Z',
     periodEnd: '2026-05-10T12:00:00.000Z',
     sessionsCount: 5,
+    expectedSessionsCount: 5,
+    coverageGapReason: null,
     ticketsCount: 2,
     artifactSize: 1234,
     errorReason: null,
@@ -47,12 +49,13 @@ describe('InsightsReportView list selection (US4, AIB-791)', () => {
         latest={reports[2]}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: null,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_CLAUDE_JOBS',
-            message: 'No shipped Claude tickets to analyze yet',
+            refusalCode: 'NO_CLAUDE_SESSIONS',
+            message: 'No analyzable Claude sessions to analyze yet',
           },
         }}
       />
@@ -70,12 +73,13 @@ describe('InsightsReportView list selection (US4, AIB-791)', () => {
         latest={reports[2]}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: null,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_CLAUDE_JOBS',
-            message: 'No shipped Claude tickets to analyze yet',
+            refusalCode: 'NO_CLAUDE_SESSIONS',
+            message: 'No analyzable Claude sessions to analyze yet',
           },
         }}
       />
@@ -95,12 +99,13 @@ describe('InsightsReportView list selection (US4, AIB-791)', () => {
         latest={reports[2]}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: null,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_CLAUDE_JOBS',
-            message: 'No shipped Claude tickets to analyze yet',
+            refusalCode: 'NO_CLAUDE_SESSIONS',
+            message: 'No analyzable Claude sessions to analyze yet',
           },
         }}
       />
@@ -118,12 +123,13 @@ describe('InsightsReportView list selection (US4, AIB-791)', () => {
         latest={reports[2]}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: null,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_CLAUDE_JOBS',
-            message: 'No shipped Claude tickets to analyze yet',
+            refusalCode: 'NO_CLAUDE_SESSIONS',
+            message: 'No analyzable Claude sessions to analyze yet',
           },
         }}
       />
@@ -156,12 +162,13 @@ describe('InsightsReportView list selection (US4, AIB-791)', () => {
         latest={denseReports[0]}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: null,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_CLAUDE_JOBS',
-            message: 'No shipped Claude tickets to analyze yet',
+            refusalCode: 'NO_CLAUDE_SESSIONS',
+            message: 'No analyzable Claude sessions to analyze yet',
           },
         }}
       />
@@ -179,12 +186,13 @@ describe('InsightsReportView list selection (US4, AIB-791)', () => {
         latest={reports[2]}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: null,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_CLAUDE_JOBS',
-            message: 'No shipped Claude tickets to analyze yet',
+            refusalCode: 'NO_CLAUDE_SESSIONS',
+            message: 'No analyzable Claude sessions to analyze yet',
           },
         }}
       />
@@ -203,12 +211,13 @@ describe('InsightsReportView list selection (US4, AIB-791)', () => {
         latest={reports[2]}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: null,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_CLAUDE_JOBS',
-            message: 'No shipped Claude tickets to analyze yet',
+            refusalCode: 'NO_CLAUDE_SESSIONS',
+            message: 'No analyzable Claude sessions to analyze yet',
           },
         }}
       />

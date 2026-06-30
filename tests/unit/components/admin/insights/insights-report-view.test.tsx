@@ -11,6 +11,8 @@ function makeReport(overrides: Partial<ReportListEntry>): ReportListEntry {
     periodStart: '2026-05-04T09:00:00.000Z',
     periodEnd: '2026-05-11T12:00:00.000Z',
     sessionsCount: 12,
+    expectedSessionsCount: 12,
+    coverageGapReason: null,
     ticketsCount: 4,
     artifactSize: 5000,
     errorReason: null,
@@ -31,11 +33,12 @@ describe('InsightsReportView (US1, AIB-791)', () => {
         latest={latest}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: latest.periodEnd,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_NEW_SHIPPED',
+            refusalCode: 'NO_NEW_SESSIONS',
             message: `No new shipped tickets since last run on ${latest.periodEnd}`,
           },
         }}
@@ -47,27 +50,108 @@ describe('InsightsReportView (US1, AIB-791)', () => {
     expect(iframe.getAttribute('sandbox')).toBe('allow-scripts');
   });
 
-  it('renders the canonical metadata phrasing from the row counts', () => {
-    const latest = makeReport({ sessionsCount: 12, ticketsCount: 4 });
+  it('renders analyzed-of-expected metadata phrasing (US4 AC1)', () => {
+    const latest = makeReport({
+      sessionsCount: 12,
+      expectedSessionsCount: 16,
+      coverageGapReason: 'TRANSCRIPT_NOT_AVAILABLE',
+      ticketsCount: 4,
+    });
     renderWithProviders(
       <InsightsReportView
         reports={[latest]}
         latest={latest}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: latest.periodEnd,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_NEW_SHIPPED',
-            message: `No new shipped tickets since last run on ${latest.periodEnd}`,
+            refusalCode: 'NO_NEW_SESSIONS',
+            message: `No new Claude sessions since last run on ${latest.periodEnd}`,
           },
         }}
       />
     );
     expect(
       screen.getByText(
-        /Analyzed 12 Claude Code sessions across 4 tickets shipped between 2026-05-04 and 2026-05-11/
+        /Analyzed 12 of 16 Claude Code sessions across 4 tickets between 2026-05-04 and 2026-05-11/
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('shows a coverage-gap badge iff coverageGapReason is set (US4 AC2)', () => {
+    const gapped = makeReport({
+      id: 7,
+      sessionsCount: 12,
+      expectedSessionsCount: 16,
+      coverageGapReason: 'TRANSCRIPT_NOT_AVAILABLE',
+    });
+    const { unmount } = renderWithProviders(
+      <InsightsReportView
+        reports={[gapped]}
+        latest={gapped}
+        preflight={{
+          canTrigger: false,
+          analyzableSessions: 0,
+          expectedSessions: 0,
+          previousRunEnd: gapped.periodEnd,
+          runningSince: null,
+          refusal: null,
+        }}
+      />
+    );
+    expect(screen.getByText(/Coverage gap/i)).toBeInTheDocument();
+    unmount();
+
+    const full = makeReport({
+      id: 8,
+      sessionsCount: 16,
+      expectedSessionsCount: 16,
+      coverageGapReason: null,
+    });
+    renderWithProviders(
+      <InsightsReportView
+        reports={[full]}
+        latest={full}
+        preflight={{
+          canTrigger: false,
+          analyzableSessions: 0,
+          expectedSessions: 0,
+          previousRunEnd: full.periodEnd,
+          runningSince: null,
+          refusal: null,
+        }}
+      />
+    );
+    expect(screen.queryByText(/Coverage gap/i)).not.toBeInTheDocument();
+  });
+
+  it('renders full-coverage wording when sessionsCount === expectedSessionsCount (US4 AC3)', () => {
+    const latest = makeReport({
+      sessionsCount: 16,
+      expectedSessionsCount: 16,
+      coverageGapReason: null,
+      ticketsCount: 5,
+    });
+    renderWithProviders(
+      <InsightsReportView
+        reports={[latest]}
+        latest={latest}
+        preflight={{
+          canTrigger: false,
+          analyzableSessions: 0,
+          expectedSessions: 0,
+          previousRunEnd: latest.periodEnd,
+          runningSince: null,
+          refusal: null,
+        }}
+      />
+    );
+    expect(
+      screen.getByText(
+        /Analyzed 16 of 16 Claude Code sessions across 5 tickets between 2026-05-04 and 2026-05-11/
       )
     ).toBeInTheDocument();
   });
@@ -79,11 +163,12 @@ describe('InsightsReportView (US1, AIB-791)', () => {
         latest={null}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: null,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_CLAUDE_JOBS',
+            refusalCode: 'NO_CLAUDE_SESSIONS',
             message: 'No shipped Claude tickets to analyze yet',
           },
         }}
@@ -103,11 +188,12 @@ describe('InsightsReportView (US1, AIB-791)', () => {
         latest={failed}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: null,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_CLAUDE_JOBS',
+            refusalCode: 'NO_CLAUDE_SESSIONS',
             message: 'No shipped Claude tickets to analyze yet',
           },
         }}
@@ -125,11 +211,12 @@ describe('InsightsReportView (US1, AIB-791)', () => {
         latest={latest}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: latest.periodEnd,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_NEW_SHIPPED',
+            refusalCode: 'NO_NEW_SESSIONS',
             message: 'No new shipped tickets',
           },
         }}
@@ -150,11 +237,12 @@ describe('InsightsReportView (US1, AIB-791)', () => {
         latest={latest}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: latest.periodEnd,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_NEW_SHIPPED',
+            refusalCode: 'NO_NEW_SESSIONS',
             message: 'No new shipped tickets',
           },
         }}
@@ -175,11 +263,12 @@ describe('InsightsReportView (US1, AIB-791)', () => {
         latest={latest}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: latest.periodEnd,
           runningSince: null,
           refusal: {
-            refusalCode: 'NO_NEW_SHIPPED',
+            refusalCode: 'NO_NEW_SESSIONS',
             message: 'No new shipped tickets',
           },
         }}
@@ -202,7 +291,8 @@ describe('InsightsReportView (US1, AIB-791)', () => {
         latest={running}
         preflight={{
           canTrigger: false,
-          shippedSincePreviousRun: 0,
+          analyzableSessions: 0,
+          expectedSessions: 0,
           previousRunEnd: null,
           runningSince: running.createdAt,
           refusal: {
@@ -229,7 +319,8 @@ describe('InsightsReportView (US1, AIB-791)', () => {
         latest={failed}
         preflight={{
           canTrigger: true,
-          shippedSincePreviousRun: 3,
+          analyzableSessions: 3,
+          expectedSessions: 3,
           previousRunEnd: null,
           runningSince: null,
           refusal: null,
@@ -259,7 +350,8 @@ describe('InsightsReportView (US1, AIB-791)', () => {
         latest={failed}
         preflight={{
           canTrigger: true,
-          shippedSincePreviousRun: 3,
+          analyzableSessions: 3,
+          expectedSessions: 3,
           previousRunEnd: null,
           runningSince: null,
           refusal: null,
@@ -281,7 +373,8 @@ describe('InsightsReportView (US1, AIB-791)', () => {
         latest={failed}
         preflight={{
           canTrigger: true,
-          shippedSincePreviousRun: 3,
+          analyzableSessions: 3,
+          expectedSessions: 3,
           previousRunEnd: null,
           runningSince: null,
           refusal: null,

@@ -6,14 +6,11 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { requireAdminOrNotFound } from '@/app/lib/auth/admin';
 import { reconcileOrphanedRunningReports } from '@/app/lib/insights/reconcile';
-import {
-  countShippedClaudeTicketsSince,
-  getEarliestClaudeJobTimestamp,
-} from '@/app/lib/insights/predicate';
+import { countAnalyzableClaudeSessions } from '@/app/lib/insights/predicate';
 import {
   InsightsAlreadyRunningError,
   createRunningReportAndJob,
-  getLastCompletedRunEnd,
+  derivePeriodStart,
   getRunningReport,
   markFailed,
   toListEntry,
@@ -47,7 +44,7 @@ interface TriggerSuccessBody {
   createdAt: string;
 }
 
-type RefusalCode = 'NO_CLAUDE_JOBS' | 'NO_NEW_SHIPPED' | 'ALREADY_RUNNING';
+type RefusalCode = 'NO_CLAUDE_SESSIONS' | 'NO_NEW_SESSIONS' | 'ALREADY_RUNNING';
 
 interface RefusalBody {
   refusalCode: RefusalCode;
@@ -63,15 +60,15 @@ function refusal(code: RefusalCode, message: string): NextResponse {
  * POST /api/admin/insights/trigger — start an Insights analysis (AIB-791
  * US3, D-5, FR-006..FR-015, FR-022).
  *
- * Flow (contracts/admin-api.md):
+ * Flow (contracts/admin-insights-api.md):
  *   1. requireAdminOrNotFound
  *   2. reconcileOrphanedRunningReports
- *   3. pre-flight: NO_CLAUDE_JOBS vs NO_NEW_SHIPPED
+ *   3. pre-flight (AIB-852, session-based): NO_CLAUDE_SESSIONS vs NO_NEW_SESSIONS
  *   4. concurrency gate: ALREADY_RUNNING
- *   5. compute periodStart/periodEnd
+ *   5. compute periodStart (derivePeriodStart) / periodEnd (now)
  *   6. single-transaction insert of InsightsReport + Job
  *   7. workflow dispatch
- *   8. on dispatch failure: atomic transition to FAILED + delete Job (D-5)
+ *   8. on dispatch failure: atomic transition to FAILED + delete Job (P5)
  */
 export async function POST(request: NextRequest): Promise<Response> {
   const auth = await requireAdminOrNotFound(request);
@@ -104,21 +101,26 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
   const isRetry = parsed.data.periodStart != null && parsed.data.periodEnd != null;
 
-  let prevEnd: Date | null = null;
   if (!isRetry) {
-    prevEnd = await getLastCompletedRunEnd();
-    const shippedSince = await countShippedClaudeTicketsSince(prevEnd);
-
-    if (shippedSince === 0) {
-      if (prevEnd === null) {
+    // AIB-852: gate on analyzable *sessions* (uncovered, transcript-present),
+    // using the same predicate the workflow enumerates (FR-015/16). A
+    // never-run platform with no analyzable sessions refuses with
+    // NO_CLAUDE_SESSIONS; an exhausted corpus refuses with NO_NEW_SESSIONS.
+    const analyzableSessions = await countAnalyzableClaudeSessions();
+    if (analyzableSessions === 0) {
+      const hasPriorRun =
+        (await prisma.insightsReport.count({
+          where: { status: 'COMPLETED' },
+        })) > 0;
+      if (!hasPriorRun) {
         return refusal(
-          'NO_CLAUDE_JOBS',
-          'No shipped Claude tickets to analyze yet'
+          'NO_CLAUDE_SESSIONS',
+          'No analyzable Claude sessions to analyze yet'
         );
       }
       return refusal(
-        'NO_NEW_SHIPPED',
-        `No new shipped tickets since last run on ${prevEnd.toISOString()}`
+        'NO_NEW_SESSIONS',
+        'No new Claude sessions since the last completed run'
       );
     }
   }
@@ -138,7 +140,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     periodStart = new Date(parsed.data.periodStart!);
     periodEnd = new Date(parsed.data.periodEnd!);
   } else {
-    periodStart = prevEnd ?? (await getEarliestClaudeJobTimestamp()) ?? now;
+    periodStart = await derivePeriodStart(now);
     periodEnd = now;
   }
 

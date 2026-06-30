@@ -1,4 +1,7 @@
-import { countShippedClaudeTicketsSince } from '@/app/lib/insights/predicate';
+import {
+  countAnalyzableClaudeSessions,
+  countExpectedClaudeSessions,
+} from '@/app/lib/insights/predicate';
 import {
   getLastCompletedRunEnd,
   getRunningReport,
@@ -6,11 +9,14 @@ import {
 
 export interface PreflightSnapshot {
   canTrigger: boolean;
-  shippedSincePreviousRun: number;
+  /** AIB-852: uncovered Claude sessions with a fetchable transcript. */
+  analyzableSessions: number;
+  /** AIB-852: in-scope sessions incl. those whose transcript isn't available. */
+  expectedSessions: number;
   previousRunEnd: string | null;
   runningSince: string | null;
   refusal: {
-    refusalCode: 'NO_CLAUDE_JOBS' | 'NO_NEW_SHIPPED' | 'ALREADY_RUNNING';
+    refusalCode: 'NO_CLAUDE_SESSIONS' | 'NO_NEW_SESSIONS' | 'ALREADY_RUNNING';
     message: string;
   } | null;
 }
@@ -20,10 +26,15 @@ export interface PreflightSnapshot {
  * `/api/admin/insights/preflight` polling endpoint. Co-locating the logic
  * prevents the two surfaces from drifting on refusal phrasing or branch
  * semantics — the UI consumes the same shape regardless of source.
+ *
+ * AIB-852: the gate is keyed on **sessions** (FR-015) from the same predicate
+ * the workflow enumerates (FR-016/SC-006). A period with only
+ * transcript-pending sessions (analyzable === 0) cannot be analyzed yet.
  */
 export async function computePreflightSnapshot(): Promise<PreflightSnapshot> {
   const prevEnd = await getLastCompletedRunEnd();
-  const shippedSince = await countShippedClaudeTicketsSince(prevEnd);
+  const analyzableSessions = await countAnalyzableClaudeSessions();
+  const expectedSessions = await countExpectedClaudeSessions();
   const running = await getRunningReport();
 
   let refusal: PreflightSnapshot['refusal'] = null;
@@ -32,23 +43,24 @@ export async function computePreflightSnapshot(): Promise<PreflightSnapshot> {
       refusalCode: 'ALREADY_RUNNING',
       message: `Already running since ${running.createdAt.toISOString()}`,
     };
-  } else if (shippedSince === 0) {
+  } else if (analyzableSessions === 0) {
     if (prevEnd === null) {
       refusal = {
-        refusalCode: 'NO_CLAUDE_JOBS',
-        message: 'No shipped Claude tickets to analyze yet',
+        refusalCode: 'NO_CLAUDE_SESSIONS',
+        message: 'No analyzable Claude sessions to analyze yet',
       };
     } else {
       refusal = {
-        refusalCode: 'NO_NEW_SHIPPED',
-        message: `No new shipped tickets since last run on ${prevEnd.toISOString()}`,
+        refusalCode: 'NO_NEW_SESSIONS',
+        message: `No new Claude sessions since last run on ${prevEnd.toISOString()}`,
       };
     }
   }
 
   return {
     canTrigger: refusal === null,
-    shippedSincePreviousRun: shippedSince,
+    analyzableSessions,
+    expectedSessions,
     previousRunEnd: prevEnd?.toISOString() ?? null,
     runningSince: running?.createdAt.toISOString() ?? null,
     refusal,

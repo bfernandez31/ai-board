@@ -490,12 +490,12 @@ No `githubRepository` input — the workflow does not operate on an external pro
 
 **Step outline**:
 1. PATCH `/api/jobs/:job_id/status` to RUNNING
-2. GET `/api/admin/insights/jobs?periodStart&periodEnd` — enumerate Claude jobs in the window via the shared predicate
-3. GET `/api/admin/insights/jobs/:jobId/raw-native` for each enumerated job — download the gzipped native session JSONL
+2. GET `/api/admin/insights/jobs?periodStart&periodEnd` — enumerate every analyzable Claude session in the window via the shared predicate (multiple sessions per ticket, all stages, all projects, no SHIP filter); capture both `session_count` (= `jobs.length`) and `expected_count`
+3. GET `/api/admin/insights/jobs/:jobId/raw-native` for each enumerated session — download the gzipped native session JSONL
 4. Run `bunx @anthropic-ai/claude-code /insights --sessions ./sessions --output ./report.html` — the genuine slash command, never a free-text prompt
 5. Validate the HTML contains the analyzer's characteristic markers (`Suggested CLAUDE.md additions`, `Big wins`, `Horizon`); fail with `Insights output validation failed` otherwise
 6. PUT `/api/admin/insights/reports/:report_id/finalize` with the raw HTML body — the server re-runs validation as defense in depth and rejects with 422 on failure
-7. PATCH `/api/admin/insights/reports/:report_id/status` with `COMPLETED` plus counts and artifact pointer (or `FAILED` with a non-secret reason if any prior step failed)
+7. PATCH `/api/admin/insights/reports/:report_id/status` with `COMPLETED` plus `sessionsCount`, `expectedSessionsCount`, `ticketsCount`, `analyzedJobIds` (= `[.jobs[].jobId]`), and the artifact pointer — the server writes one coverage row per analyzed session inside the transition transaction (or `FAILED` with a non-secret reason and no coverage advance if any prior step failed)
 8. PATCH `/api/jobs/:job_id/status` with the matching terminal status (direct atomic update — insights jobs intentionally bypass push notifications)
 
 **Timeout**: 50 minutes — 10 minutes below the default `INSIGHTS_RUN_TIMEOUT_MINUTES=60` so the workflow's own failure path runs before lazy reconciliation auto-FAILs the row. Operators can raise the timeout via configuration if needed; the workflow timeout should track below it.

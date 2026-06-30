@@ -366,7 +366,23 @@ enum InsightsRunStatus {
 | `COMPLETED` | Workflow PATCHed success AND server-side output validation passed | Yes | — |
 | `FAILED` | Workflow PATCHed failure, server-side output validation rejected the artifact, dispatch failed (rollback), or orphan reconciliation timed the row out | Yes | — |
 
-Terminal rows are immutable. All transitions use the atomic guard `WHERE id = ? AND status = 'RUNNING'`; late callbacks against an already-terminal row are no-ops. A FAILED run does not advance the previous-successful-run high-water mark used by period semantics.
+Terminal rows are immutable. All transitions use the atomic guard `WHERE id = ? AND status = 'RUNNING'`; late callbacks against an already-terminal row are no-ops. Only a COMPLETED run advances per-session coverage (writing `InsightsSessionCoverage` rows inside the transition transaction); a FAILED run advances no coverage, so its intended sessions stay eligible for the next run.
+
+### InsightsCoverageGapReason
+
+Why a COMPLETED `InsightsReport` analyzed fewer sessions than were expected for its period. Extensible.
+
+```prisma
+enum InsightsCoverageGapReason {
+  TRANSCRIPT_NOT_AVAILABLE
+}
+```
+
+| Value | Description |
+|-------|-------------|
+| `TRANSCRIPT_NOT_AVAILABLE` | One or more in-scope sessions had no fetchable raw transcript at analysis time (upload still pending or artifact pruned). They count toward `expectedSessionsCount` but not `sessionsCount`, and become eligible again on a later run once their transcript lands. |
+
+Set on the report exactly when `sessionsCount < expectedSessionsCount`; null otherwise. Drives the admin report-view "Coverage gap" badge.
 
 ### WebhookOutcomeStatus
 

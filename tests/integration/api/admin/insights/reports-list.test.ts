@@ -66,6 +66,34 @@ describe('GET /api/admin/insights/reports (US1, AIB-791)', () => {
     }
   });
 
+  it('serializes expectedSessionsCount and coverageGapReason (AIB-852 FR-011/012)', async () => {
+    requireAdminOrNotFound.mockResolvedValue({ ok: true, email: 'admin@e2e.local' });
+
+    const now = new Date('2026-06-01T00:00:00Z');
+    await prisma.insightsReport.create({
+      data: {
+        status: 'COMPLETED',
+        generatedAt: now,
+        periodStart: new Date(now.getTime() - 86_400_000),
+        periodEnd: now,
+        sessionsCount: 12,
+        expectedSessionsCount: 16,
+        coverageGapReason: 'TRANSCRIPT_NOT_AVAILABLE',
+        ticketsCount: 9,
+        artifactKey: 'insights/reports/gap.html',
+        artifactSize: 100,
+        completedAt: now,
+      },
+    });
+
+    const res = await GET(makeRequest());
+    const body = (await res.json()) as { reports: ReportListEntry[] };
+    const entry = body.reports.find((r) => r.sessionsCount === 12);
+    expect(entry).toBeDefined();
+    expect(entry?.expectedSessionsCount).toBe(16);
+    expect(entry?.coverageGapReason).toBe('TRANSCRIPT_NOT_AVAILABLE');
+  });
+
   it('surfaces errorReason on FAILED entries; null on RUNNING', async () => {
     requireAdminOrNotFound.mockResolvedValue({ ok: true, email: 'admin@e2e.local' });
 

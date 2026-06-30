@@ -126,11 +126,43 @@ describe('GET /api/admin/insights/jobs/:jobId/raw-native (US3)', () => {
     expect(res.status).toBe(404);
   });
 
-  it('returns 404 for a Claude job whose ticket has not shipped', async () => {
+  it('returns 200 for a Claude job whose ticket has NOT shipped (AIB-852 FR-008)', async () => {
+    // Selection is decoupled from SHIP — unshipped/rolled-back tickets are in
+    // scope, so their captured transcripts must now be downloadable (was 404).
     const jobId = await makeJobForAgent(ctx, 'CLAUDE', { shipped: false });
+    const bytes = new TextEncoder().encode('gzipped-bytes');
+    streamJobLogArtifact.mockResolvedValueOnce({
+      stream: streamFromBytes(bytes),
+      size: bytes.byteLength,
+    });
     const res = await GET(
       new NextRequest(`http://localhost/api/admin/insights/jobs/${jobId}/raw-native`),
       { params: Promise.resolve({ jobId: String(jobId) }) }
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it('still returns 404 when the job has no rawArtifactKey', async () => {
+    const prisma = getPrismaClient();
+    const ticket = await ctx.createTicket({ title: '[e2e] rn-nokey' });
+    await prisma.ticket.update({ where: { id: ticket.id }, data: { agent: 'CLAUDE' } });
+    const job = await prisma.job.create({
+      data: {
+        ticketId: ticket.id,
+        projectId: ctx.projectId,
+        command: 'implement',
+        status: JobStatus.COMPLETED,
+        startedAt: new Date(),
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    await prisma.jobLog.create({
+      data: { jobId: job.id, captureStatus: 'UNAVAILABLE', preview: 'p', rawArtifactKey: null },
+    });
+    const res = await GET(
+      new NextRequest(`http://localhost/api/admin/insights/jobs/${job.id}/raw-native`),
+      { params: Promise.resolve({ jobId: String(job.id) }) }
     );
     expect(res.status).toBe(404);
   });

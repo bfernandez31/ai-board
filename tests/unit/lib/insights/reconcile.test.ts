@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('@/lib/db/client', () => ({
   prisma: {
     insightsReport: { updateMany: vi.fn() },
+    insightsSessionCoverage: { createMany: vi.fn() },
   },
 }));
 
@@ -11,6 +12,7 @@ import { prisma } from '@/lib/db/client';
 
 type MockedPrisma = {
   insightsReport: { updateMany: ReturnType<typeof vi.fn> };
+  insightsSessionCoverage: { createMany: ReturnType<typeof vi.fn> };
 };
 const mockedPrisma = prisma as unknown as MockedPrisma;
 
@@ -19,6 +21,7 @@ describe('reconcileOrphanedRunningReports (AIB-791)', () => {
 
   beforeEach(() => {
     mockedPrisma.insightsReport.updateMany.mockReset();
+    mockedPrisma.insightsSessionCoverage.createMany.mockReset();
     delete process.env.INSIGHTS_RUN_TIMEOUT_MINUTES;
   });
 
@@ -45,6 +48,15 @@ describe('reconcileOrphanedRunningReports (AIB-791)', () => {
     expect(call.data.status).toBe('FAILED');
     expect(call.data.errorReason).toMatch(/timed out/i);
     expect(call.data.completedAt).toEqual(now);
+  });
+
+  it('writes no InsightsSessionCoverage rows when auto-FAILing an orphan (FR-007)', async () => {
+    mockedPrisma.insightsReport.updateMany.mockResolvedValue({ count: 1 });
+
+    await reconcileOrphanedRunningReports(new Date('2026-05-11T12:00:00Z'));
+
+    // A timed-out run is a FAILED run — it must never advance coverage.
+    expect(mockedPrisma.insightsSessionCoverage.createMany).not.toHaveBeenCalled();
   });
 
   it('honors INSIGHTS_RUN_TIMEOUT_MINUTES override (fresh read each call)', async () => {

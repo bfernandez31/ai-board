@@ -1,22 +1,81 @@
-import type { InsightsReport, InsightsRunStatus } from '@prisma/client';
+import type {
+  InsightsCoverageGapReason,
+  InsightsReport,
+  InsightsRunStatus,
+} from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
-import { getEarliestClaudeJobTimestamp } from '@/app/lib/insights/predicate';
+import {
+  completionOf,
+  getEarliestClaudeSessionCompletion,
+} from '@/app/lib/insights/predicate';
 
 /**
  * Data-access helpers for `InsightsReport`. Status transitions ALWAYS go
  * through atomic `updateMany` with a `WHERE status='RUNNING'` guard (P-1) so
  * late workflow callbacks cannot flip a row backwards (FR-014, SC-012).
  *
- * `getLastCompletedRunEnd` and `getEarliestClaudeJobTimestamp` are the two
- * sources for the trigger endpoint's `periodStart` decision (D-13). The
- * earliest-Claude-timestamp source comes from the shared predicate file
- * (D-6) so its definition cannot drift from the workflow's enumeration.
+ * AIB-852: `derivePeriodStart` (max covered completion ?? oldest available
+ * session completion ?? now — D7/FR-014) supersedes the global-cursor
+ * `periodStart` decision; `advanceCoverage` records the per-session coverage
+ * marker inside the COMPLETED transaction (FR-007). The earliest-session
+ * source comes from the shared predicate file (P1) so it cannot drift from
+ * the workflow's enumeration.
  */
 
 const LIST_DEFAULT_LIMIT = 200;
 
-export { getEarliestClaudeJobTimestamp };
+export { getEarliestClaudeSessionCompletion };
+
+/**
+ * Insert one `InsightsSessionCoverage` row per analyzed job, idempotently
+ * (`skipDuplicates` on the unique `jobId`). Called ONLY inside the
+ * RUNNING→COMPLETED transaction (FR-007); a FAILED run never calls this.
+ * A re-delivered COMPLETED callback or explicit re-analysis is a no-op.
+ */
+export async function advanceCoverage(
+  tx: Prisma.TransactionClient,
+  reportId: number,
+  jobIds: number[]
+): Promise<void> {
+  if (jobIds.length === 0) return;
+  await tx.insightsSessionCoverage.createMany({
+    data: jobIds.map((jobId) => ({ jobId, reportId })),
+    skipDuplicates: true,
+  });
+}
+
+/**
+ * Derived (descriptive) `periodStart` for a fresh run (D7, FR-014):
+ *   1. the max completion among already-covered sessions, else
+ *   2. the oldest available Claude session's completion (first run), else
+ *   3. `now`.
+ *
+ * This value is stored for display and explicit-period re-analysis only;
+ * selection correctness comes from the coverage marker + half-open `periodEnd`
+ * upper bound, NOT from `periodStart`.
+ */
+export async function derivePeriodStart(now: Date = new Date()): Promise<Date> {
+  const covered = await prisma.insightsSessionCoverage.findMany({
+    select: {
+      job: {
+        select: { completedAt: true, updatedAt: true, startedAt: true },
+      },
+    },
+  });
+  if (covered.length > 0) {
+    let max: Date | null = null;
+    for (const row of covered) {
+      const job = row.job;
+      if (!job) continue;
+      const completion = completionOf(job);
+      if (max === null || completion > max) max = completion;
+    }
+    if (max !== null) return max;
+  }
+  const earliest = await getEarliestClaudeSessionCompletion();
+  return earliest ?? now;
+}
 
 /**
  * Sentinel thrown by `createRunningReportAndJob` when the partial-unique
@@ -148,7 +207,12 @@ export interface ReportListEntry {
   generatedAt: string;
   periodStart: string;
   periodEnd: string;
+  /** AIB-852: count of *analyzed* sessions (transcript fetched). */
   sessionsCount: number | null;
+  /** AIB-852: in-scope sessions incl. those lacking a transcript (FR-011). */
+  expectedSessionsCount: number | null;
+  /** AIB-852: set when analyzed < expected (FR-012). */
+  coverageGapReason: InsightsCoverageGapReason | null;
   ticketsCount: number | null;
   artifactSize: number | null;
   errorReason: string | null;
@@ -184,6 +248,8 @@ export function toListEntry(
     periodStart: row.periodStart.toISOString(),
     periodEnd: row.periodEnd.toISOString(),
     sessionsCount: row.sessionsCount,
+    expectedSessionsCount: row.expectedSessionsCount,
+    coverageGapReason: row.coverageGapReason,
     ticketsCount: row.ticketsCount,
     artifactSize: row.artifactSize,
     errorReason: row.errorReason,
