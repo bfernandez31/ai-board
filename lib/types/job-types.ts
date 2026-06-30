@@ -69,6 +69,7 @@ export interface TicketJobWithTelemetry {
   toolsUsed: string[];
   qualityScore: number | null;
   qualityScoreDetails: string | null;
+  layerDecomposition: string | null;
   peakContextTokens: number | null;
   avgContextTokens: number | null;
   turnCount: number | null;

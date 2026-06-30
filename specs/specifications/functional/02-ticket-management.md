@@ -249,6 +249,49 @@ The ticket detail modal provides quick access to workflow documentation files:
 - Error messages displayed if file cannot be fetched
 - Modal can be closed via close button, Escape key, or clicking outside
 
+### PR Diff Viewer
+
+For tickets in the VERIFY or SHIP stage, a "PR Diff" button in the ticket detail modal opens a full-screen, read-only viewer for the pull request associated with the ticket's branch. Reviewers consult the diff and its discussion in-app without navigating to GitHub. The button is hidden in every other stage.
+
+**Visibility**:
+- The "PR Diff" button appears only when the ticket is in VERIFY or SHIP
+- The PR is identified from the ticket's branch and the project's repository
+
+**Layout**:
+- A side rail offers an **Overview** entry plus a toggle between **Layers** and **Files** modes
+- The main panel renders unified (single-column) diffs in the same visual style as the spec-file-history diff viewer — syntax highlighting, collapsible per-file blocks, and per-file addition/deletion counters
+- Binary or generated files (no textual diff) appear as a file entry with their change status (added/modified/removed) but no line content; very large patches are bounded or collapsed so the view stays responsive
+
+**Overview**:
+- Shows the PR title, status (open/closed/merged), and the existing quality score; the review synthesis is shown when one is available (no synthesis is persisted today, so it is currently omitted)
+- The quality score reuses the threshold labels and colors from the Stats tab (Excellent / Good / Fair / Poor)
+
+**Layers mode**:
+- Files are grouped into the semantic layers produced by the VERIFY review (e.g. foundations → business logic → call sites → front-end → tests), presented in dependency order
+- Each layer shows a title, a short summary, and counters for its files and comments
+- Selecting a layer renders the diff of every file in that layer
+- Files changed after the review that belong to no stored layer are grouped into a synthetic "Additional changes" layer; layers whose files were all removed since the review are omitted without breaking ordering
+
+**Files mode**:
+- Presents a flat list of the PR's changed files with their diffs
+- Toggling between Layers and Files shows the same underlying diffs reorganized; the viewer opens in Files mode when no layer decomposition exists
+
+**Inline comments**:
+- Comments from all sources — our own review, third-party review bots, and human reviewers — are displayed read-only, anchored to the line they target, each attributed to its author/source
+- A comment whose target line no longer exists in the current diff is surfaced as outdated (shown at the file header) rather than omitted — no comment is silently dropped
+- No control to post, reply to, edit, or resolve comments is offered (read-only consultation only)
+- Comment counters reflect what is currently shown after any drift
+
+**Freshness and cost**:
+- The diff and comments always reflect the current state of the PR, fetched live when the viewer opens
+- Only the layer grouping comes from a snapshot persisted by the VERIFY review; opening the viewer triggers no new review computation
+
+**Fallbacks**:
+- A PR that has never been reviewed opens in flat Files mode with diffs and no error
+- When the ticket's branch has no associated PR, the viewer reports that no PR is available rather than erroring
+- A merged or closed PR (SHIP stage) remains consultable
+- When the user lacks GitHub authorization to read the repository, the viewer shows an actionable authorization message instead of a broken state
+
 ### Modal Behavior
 
 The detail modal:

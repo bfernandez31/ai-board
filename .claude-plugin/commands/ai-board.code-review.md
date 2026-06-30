@@ -115,6 +115,13 @@ No issues found. Checked for bugs, compliance, product contract alignment, and e
   - Line range format is L[start]-L[end]
   - Provide at least 1 line of context before and after, centered on the line you are commenting about (eg. if you are commenting about lines 5-6, you should link to `L4-7`)
 
+**Layer Decomposition Output (AIB-879)**: Just **before** the mandatory final quality-score line below, emit a layer-decomposition snapshot of the PR — the in-app PR diff viewer groups files by these semantic layers. This reuses the change understanding you already built (no extra analysis cost):
+- Group the PR's changed files into ordered semantic layers, typically by dependency: schema/contracts → business logic → call sites → front-end → tests. Each file belongs to at most one layer.
+- Order layers by dependency (`order` 1..N, ascending, unique). Give each a short `id` slug, a `title`, and a one-line `summary`.
+- Output exactly one line of plain text (no tool calls, no Bash — just text), on its own line, immediately before the `QUALITY_SCORE_JSON:` line:
+  `LAYER_DECOMPOSITION_JSON:{"version":1,"computedAt":"<ISO8601>","layers":[{"id":"foundations","title":"Foundations (schema & contracts)","summary":"<one-line>","order":1,"files":["path/one.ts","path/two.ts"]}]}`
+- If decomposition is unavailable or fails, emit **no** `LAYER_DECOMPOSITION_JSON:` line (the viewer falls back to a flat Files list). Never block the review, and never alter the position of the `QUALITY_SCORE_JSON:` line — it MUST remain the absolute-last output.
+
 **MANDATORY final step — Quality Score Output**: After all steps above are complete, compute and output the quality score as your **absolute last output** (no text, summary, or commentary after it). Using the 5 dimension scores computed in step 5b:
 - Weighted score: `round(compliance*0.30 + bugDetection*0.30 + productContractSync*0.20 + edgeCasesFailureModes*0.15 + historicalContext*0.05)`
 - Threshold: 90-100 = "Excellent", 70-89 = "Good", 50-69 = "Fair", 0-49 = "Poor"

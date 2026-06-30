@@ -49,6 +49,7 @@ import { queryKeys } from '@/app/lib/query-keys';
 import type { TicketWithVersion } from '@/app/lib/types/query-types';
 import { useComparisonCheck } from '@/hooks/use-comparisons';
 import { ComparisonViewer } from '@/components/comparison/comparison-viewer';
+import { PrDiffViewer } from '@/components/ticket/pr-diff-viewer';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -188,6 +189,7 @@ export function TicketDetailModal({
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [comparisonViewerOpen, setComparisonViewerOpen] = useState(false);
+  const [prDiffOpen, setPrDiffOpen] = useState(false);
 
   // Fetch comment count for badge
   const { data: comments } = useComments({
@@ -277,6 +279,9 @@ export function TicketDetailModal({
   const showPlanButton = localTicket?.workflowType === 'FULL' && completedJobs.plan;
   const showTasksButton = showPlanButton;
   const showSummaryButton = localTicket?.workflowType === 'FULL' && completedJobs.implement;
+  // AIB-879: PR Diff viewer is available once a PR exists for review — VERIFY/SHIP.
+  const currentStage = localTicket?.stage ?? ticket?.stage;
+  const showPrDiffButton = currentStage === 'VERIFY' || currentStage === 'SHIP';
 
   // Full clone option visibility: Only for stages with branch (SPECIFY, PLAN, BUILD, VERIFY)
   const showFullClone = localTicket?.stage && ['SPECIFY', 'PLAN', 'BUILD', 'VERIFY'].includes(localTicket.stage);
@@ -1273,7 +1278,7 @@ export function TicketDetailModal({
             <div className="flex-shrink-0 pt-4 space-y-4">
               {/* Action buttons section - compact horizontal layout */}
               {/* Show section when any button should be visible (documents OR comparisons) */}
-              {(completedJobs.specify || comparisonCheck?.hasComparisons) && (
+              {(completedJobs.specify || comparisonCheck?.hasComparisons || showPrDiffButton) && (
                 <div className="border-t border-ctp-mauve/15 pt-4">
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Document buttons - only for FULL workflow with completed specify job */}
@@ -1344,6 +1349,19 @@ export function TicketDetailModal({
                       >
                         <GitCompare className="w-3.5 h-3.5" />
                         Compare ({comparisonCheck.count})
+                      </Button>
+                    )}
+                    {/* PR Diff button - visible only in VERIFY/SHIP (AIB-879) */}
+                    {showPrDiffButton && (
+                      <Button
+                        onClick={() => setPrDiffOpen(true)}
+                        size="sm"
+                        className="border font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5 border-ctp-sapphire/25 text-ctp-sapphire hover:text-ctp-sapphire bg-transparent aurora-btn-blue"
+                        title="View pull request diff"
+                        data-testid="pr-diff-button"
+                      >
+                        <GitBranch className="w-3.5 h-3.5" />
+                        PR Diff
                       </Button>
                     )}
                   </div>
@@ -1475,6 +1493,17 @@ export function TicketDetailModal({
             setLocalTicket(updated);
             if (onUpdate) onUpdate(updated);
           }}
+        />
+      )}
+
+      {/* PrDiffViewer modal - only render when parent dialog is open (AIB-879) */}
+      {ticket && open && (
+        <PrDiffViewer
+          projectId={projectId}
+          ticketId={ticket.id}
+          ticketTitle={ticket.title}
+          open={prDiffOpen}
+          onOpenChange={setPrDiffOpen}
         />
       )}
 

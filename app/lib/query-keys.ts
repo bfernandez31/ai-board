@@ -44,6 +44,8 @@ export const queryKeys = {
       ['projects', projectId, 'tickets', ticketId, 'jobs', jobId, 'log', 'raw'] as const,
     analysis: (projectId: number, ticketId: number) =>
       ['projects', projectId, 'tickets', ticketId, 'analysis'] as const,
+    prDiff: (projectId: number, ticketId: number) =>
+      ['projects', projectId, 'tickets', ticketId, 'pr-diff'] as const,
   },
 
   comments: {

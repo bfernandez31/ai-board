@@ -417,8 +417,8 @@ export const AGENT_PROVIDER_MAP: Record<Agent, CredentialProvider> = {
 
 **Owner GitHub OAuth Token** (Per-user):
 - Stored in `Account.access_token` via NextAuth GitHub OAuth
-- **Purpose**: Clone/push to repositories owned by the project owner
-- **Required Scope**: `repo` (enforced during project import via `requireRepoScope`)
+- **Purpose**: Clone/push to repositories owned by the project owner; also drives the in-app PR Diff Viewer's live read, where the acting user's own OAuth client (`createUserGitHubClient`) fetches the PR, its changed files, and its inline review comments synchronously from the API route (missing token/scope returns an actionable `AUTH_REQUIRED`)
+- **Required Scope**: `repo` (enforced during project import and on the PR-diff read via `requireRepoScope`)
 - **Fetched at runtime**: Workflows call `GET /api/internal/github-token?projectId=X` to retrieve the owner's token
 - **Security**: Token is stored as a GitHub Actions step output (NOT `GITHUB_ENV`), so it is never exposed to LLM/agent steps. Credentials are stripped from git remote URLs after clone and only re-injected momentarily for push.
 

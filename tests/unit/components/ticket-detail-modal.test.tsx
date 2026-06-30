@@ -90,6 +90,7 @@ function createMockJob(
     toolsUsed: ['Read', 'Edit'],
     qualityScore: null,
     qualityScoreDetails: null,
+    layerDecomposition: null,
     peakContextTokens: null,
     avgContextTokens: null,
     turnCount: null,
@@ -325,6 +326,62 @@ describe('TicketDetailModal', () => {
       expect(screen.getByRole('button', { name: /^plan$/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^tasks$/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^summary$/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('AIB-879: PR Diff button visibility', () => {
+    it('shows the PR Diff button when stage is VERIFY', () => {
+      const ticket = createMockTicket({ branch: 'feature/test', stage: 'VERIFY' });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /pr diff/i })).toBeInTheDocument();
+    });
+
+    it('shows the PR Diff button when stage is SHIP', () => {
+      const ticket = createMockTicket({ branch: 'feature/test', stage: 'SHIP' });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /pr diff/i })).toBeInTheDocument();
+    });
+
+    it('hides the PR Diff button outside VERIFY/SHIP (e.g. SPECIFY)', () => {
+      const ticket = createMockTicket({ branch: 'feature/test', stage: 'SPECIFY' });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: /pr diff/i })).not.toBeInTheDocument();
     });
 
     it('should show View Specification button after job completes and branch is added', async () => {

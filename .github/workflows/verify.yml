@@ -728,20 +728,45 @@ jobs:
             echo "has_score=false" >> "$GITHUB_OUTPUT"
           fi
 
+          # AIB-879: independently parse the layer-decomposition marker (NOT tail -1 —
+          # it is emitted on its own line BEFORE the absolute-last QUALITY_SCORE_JSON line).
+          if grep -q "LAYER_DECOMPOSITION_JSON:" code-review-output.log 2>/dev/null; then
+            echo "🧱 Layer decomposition found in agent output"
+            LAYER_JSON=$(grep "LAYER_DECOMPOSITION_JSON:" code-review-output.log | tail -1 | sed 's/.*LAYER_DECOMPOSITION_JSON://' | sed 's/[^}]*$//' | sed 's/^[^{]*//')
+            echo "has_layers=true" >> "$GITHUB_OUTPUT"
+            echo "layer_decomposition_b64=$(echo "$LAYER_JSON" | base64 -w0)" >> "$GITHUB_OUTPUT"
+          else
+            echo "ℹ️ No layer decomposition found (viewer falls back to flat Files mode)"
+            echo "has_layers=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
         run: |
-          # Build JSON payload with optional quality score
+          # Build JSON payload with optional quality score + layer decomposition.
+          # AIB-879: layerDecomposition is independent of the quality score — it may
+          # be present even when has_score is false.
+          if [ "${{ steps.quality-score.outputs.has_layers }}" = "true" ]; then
+            LAYER_JSON=$(echo "${{ steps.quality-score.outputs.layer_decomposition_b64 }}" | base64 -d)
+            ESCAPED_LAYERS=$(echo "$LAYER_JSON" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))")
+            LAYER_FIELD=", \"layerDecomposition\": ${ESCAPED_LAYERS}"
+          else
+            LAYER_FIELD=""
+          fi
+
           if [ "${{ steps.quality-score.outputs.has_score }}" = "true" ]; then
             QUALITY_DETAILS=$(echo "${{ steps.quality-score.outputs.quality_details_b64 }}" | base64 -d)
             # Escape the JSON string for embedding
             ESCAPED_DETAILS=$(echo "$QUALITY_DETAILS" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))")
             PAYLOAD=$(cat <<EOFPAYLOAD
-          {"status": "COMPLETED", "qualityScore": ${{ steps.quality-score.outputs.quality_score }}, "qualityScoreDetails": ${ESCAPED_DETAILS}}
+          {"status": "COMPLETED", "qualityScore": ${{ steps.quality-score.outputs.quality_score }}, "qualityScoreDetails": ${ESCAPED_DETAILS}${LAYER_FIELD}}
           EOFPAYLOAD
           )
           else
-            PAYLOAD='{"status": "COMPLETED"}'
+            PAYLOAD=$(cat <<EOFPAYLOAD
+          {"status": "COMPLETED"${LAYER_FIELD}}
+          EOFPAYLOAD
+          )
           fi
 
           curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \

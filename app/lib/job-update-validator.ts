@@ -21,6 +21,23 @@ export const jobStatusUpdateSchema = z.object({
   status: z.enum(['RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED']),
   qualityScore: z.number().int().min(0).max(100).optional(),
   qualityScoreDetails: z.string().optional(),
+  // AIB-879: layer-decomposition snapshot (JSON string, JSON-parseable) emitted by
+  // the VERIFY code-review. Persisted only on COMPLETED, beside qualityScore.
+  layerDecomposition: z
+    .string()
+    .optional()
+    .refine(
+      (v) => {
+        if (v === undefined) return true;
+        try {
+          JSON.parse(v);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: 'layerDecomposition must be a JSON-parseable string' }
+    ),
   workflowRunId: z.number().int().positive().optional(),
   // AIB-779: runtime versions captured by the runner at job start.
   // Both fields are optional — failure to capture leaves the job unannotated.
