@@ -271,8 +271,12 @@ export function PrDiffViewer({ projectId, ticketId, ticketTitle, open, onOpenCha
                         </div>
                         <p className="text-xs text-muted-foreground truncate">{layer.summary}</p>
                         <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground">
-                          <span>{layer.fileCount} files</span>
-                          <span>{layer.commentCount} comments</span>
+                          <span>
+                            {layer.fileCount} {layer.fileCount === 1 ? 'file' : 'files'}
+                          </span>
+                          <span>
+                            {layer.commentCount} {layer.commentCount === 1 ? 'comment' : 'comments'}
+                          </span>
                         </div>
                       </button>
                     ))}

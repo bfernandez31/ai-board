@@ -166,7 +166,7 @@ export function PrFileDiff({ file, defaultOpen = true }: PrFileDiffProps) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="w-full bg-zinc-800 px-4 py-3 border-b border-zinc-700 flex items-center justify-between gap-2 text-left hover:bg-zinc-750"
+        className="w-full bg-zinc-800 px-4 py-3 border-b border-zinc-700 flex items-center justify-between gap-2 text-left hover:bg-zinc-700"
       >
         <div className="flex items-center gap-2 min-w-0">
           {open ? (

@@ -35,15 +35,22 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** A 403 carrying a rate-limit message is a transient throttle, not an auth failure. */
+function isRateLimitMessage(msg: string | undefined): boolean {
+  if (!msg) return false;
+  return /rate limit/i.test(msg) || /secondary rate limit/i.test(msg);
+}
+
 interface OctokitErrorLike {
   status?: number;
   message?: string;
 }
 
 /**
- * Invoke a GitHub call with retry/backoff for transient (5xx/network) failures.
- * 404 resolves to `null`; 401/403 throws `GITHUB_FORBIDDEN`; exhausted retries or
- * unknown failures throw `GITHUB_API_ERROR`.
+ * Invoke a GitHub call with retry/backoff for transient (5xx/network/rate-limit)
+ * failures. 404 resolves to `null`; rate-limit 403s back off and retry; other
+ * 401/403 throw `GITHUB_FORBIDDEN`; exhausted retries or unknown failures throw
+ * `GITHUB_API_ERROR`.
  */
 async function callWithRetry<T>(fn: () => Promise<{ data: T }>): Promise<T | null> {
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
@@ -55,6 +62,12 @@ async function callWithRetry<T>(fn: () => Promise<{ data: T }>): Promise<T | nul
       const status = e.status ?? 0;
 
       if (status === 404) return null;
+      // Secondary/abuse rate limits surface as 403 with a rate-limit message; back
+      // off and retry rather than mistaking them for an auth/scope failure.
+      if (status === 403 && isRateLimitMessage(e.message) && attempt < RETRY_DELAYS_MS.length) {
+        await sleep(RETRY_DELAYS_MS[attempt]!);
+        continue;
+      }
       if (status === 401 || status === 403) {
         throw new PrStateError('GITHUB_FORBIDDEN', e.message ?? 'GitHub access forbidden');
       }
@@ -245,7 +258,8 @@ function patchLineSet(patch: string | undefined): Set<number> {
 /**
  * Map raw review comments and attach them to their file (by `path`), anchored to
  * the current line. A comment is `outdated` when GitHub reports no current `line`
- * or the target line is absent from the file's current patch hunks — outdated
+ * or (for patched files) the target line is absent from the file's current patch
+ * hunks; binary/oversized files with no patch trust GitHub's own `line`. Outdated
  * comments are kept (surfaced at the file header), never dropped. Pure: mutates
  * the passed files' `comments` arrays.
  */
@@ -261,7 +275,11 @@ export function attachReviewComments(files: FileChange[], rawComments: RawReview
     if (!file) continue; // comment on a file no longer in the diff → not surfaced here
 
     const presentLines = lineSets.get(raw.path)!;
-    const hasAnchor = raw.line != null && presentLines.has(raw.line);
+    // Binary files and oversized (dropped) patches have no hunks to anchor against,
+    // so we fall back to GitHub's own current `line`: a comment GitHub still anchors
+    // is current, not outdated. Patched files verify against the hunk line set.
+    const hasPatch = file.patch !== undefined;
+    const hasAnchor = raw.line != null && (hasPatch ? presentLines.has(raw.line) : true);
 
     const comment: InlineComment = {
       id: raw.id,

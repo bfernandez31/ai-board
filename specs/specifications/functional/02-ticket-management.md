@@ -263,7 +263,7 @@ For tickets in the VERIFY or SHIP stage, a "PR Diff" button in the ticket detail
 - Binary or generated files (no textual diff) appear as a file entry with their change status (added/modified/removed) but no line content; very large patches are bounded or collapsed so the view stays responsive
 
 **Overview**:
-- Shows the PR title, status (open/closed/merged), the review synthesis, and the existing quality score
+- Shows the PR title, status (open/closed/merged), and the existing quality score; the review synthesis is shown when one is available (no synthesis is persisted today, so it is currently omitted)
 - The quality score reuses the threshold labels and colors from the Stats tab (Excellent / Good / Fair / Poor)
 
 **Layers mode**:

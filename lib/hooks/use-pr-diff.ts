@@ -49,8 +49,13 @@ export function usePrDiff(
     staleTime: 0, // live GitHub state — always refetch on open
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-    // Don't retry typed client errors (AUTH_REQUIRED, FORBIDDEN, etc.) — only
-    // transient/unknown failures get one retry.
-    retry: (failureCount, error) => !(error instanceof PrDiffError) && failureCount < 1,
+    // Don't retry deterministic client errors (AUTH_REQUIRED, FORBIDDEN, etc.) —
+    // but transient server failures (GITHUB_API_ERROR) and unknown errors get one
+    // retry so a single hiccup doesn't make the viewer feel flaky.
+    retry: (failureCount, error) => {
+      if (failureCount >= 1) return false;
+      if (error instanceof PrDiffError) return error.code === 'GITHUB_API_ERROR';
+      return true;
+    },
   });
 }

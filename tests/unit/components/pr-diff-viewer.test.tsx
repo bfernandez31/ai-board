@@ -260,7 +260,7 @@ describe('PrDiffViewer', () => {
 
       // Files mode active → flat list visible; Layers list absent.
       expect(await screen.findByText('prisma/schema.prisma')).toBeInTheDocument();
-      expect(screen.queryByRole('list', { name: /layers/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('listbox', { name: /layers/i })).not.toBeInTheDocument();
     });
   });
 });

@@ -426,9 +426,11 @@ jobs:
                 fi
                 rm -f "$CODE_REVIEW_LOG" || true
 
-                # Strip the QUALITY_SCORE_JSON marker line from the user-facing comment
-                # (it is a machine-readable line consumed by the backfill step above).
-                OUTPUT=$(echo "$OUTPUT" | grep -v "QUALITY_SCORE_JSON:" || true)
+                # Strip the machine-readable marker lines from the user-facing comment
+                # (QUALITY_SCORE_JSON is consumed by the backfill step above;
+                # LAYER_DECOMPOSITION_JSON is only consumed by verify.yml — neither
+                # should leak into the manual /review comment).
+                OUTPUT=$(echo "$OUTPUT" | grep -v "QUALITY_SCORE_JSON:" | grep -v "LAYER_DECOMPOSITION_JSON:" || true)
 
                 # Add user mention and summary wrapper if code-review succeeded
                 if [ -n "$OUTPUT" ]; then
