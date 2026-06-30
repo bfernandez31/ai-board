@@ -396,6 +396,7 @@ sequenceDiagram
 - Scans for obvious bugs in changed code
 - Checks historical git context and code comments
 - Posts review findings as PR comment (issues scored 80+ confidence only)
+- Emits a structured layer decomposition — the PR's changed files grouped into ordered, titled, summarized semantic layers (foundations → business logic → call sites → front-end → tests) — persisted on the verify job alongside the quality score. This snapshot powers the in-app PR Diff Viewer's Layers mode and is computed once during review, never recomputed when the viewer opens
 
 ### Test Failure Categories
 

@@ -390,6 +390,7 @@ model Job {
   // Quality score (FULL workflow verify jobs only)
   qualityScore        Int?      // Final weighted quality score (0-100)
   qualityScoreDetails String?   @db.Text  // JSON with dimension sub-scores and weights
+  layerDecomposition  String?   // JSON layer-decomposition snapshot from the VERIFY code-review
 
   // Runtime versions captured by the runner at job start
   pluginVersion       String?   @db.VarChar(50)   // ai-board plugin version (.claude-plugin/plugin.json)
@@ -441,6 +442,7 @@ model Job {
 - `workflowRunId`: GitHub Actions workflow run ID as BigInt (nullable, populated by the workflow's first RUNNING status callback; enables job cancellation via GitHub API)
 - `qualityScore`: Final weighted code quality score 0-100 (nullable, FULL workflow verify jobs only)
 - `qualityScoreDetails`: JSON string containing all five dimension sub-scores, weights, and computed final score (nullable, populated alongside `qualityScore`)
+- `layerDecomposition`: JSON string snapshot of the PR's changed files grouped into ordered, titled, summarized semantic layers, emitted by the VERIFY code-review (nullable, FULL workflow verify jobs only). Consumed read-only by the in-app PR Diff Viewer to render Layers mode without recomputation; `null` when the job predates the feature or decomposition failed (viewer falls back to flat Files mode)
 - `pluginVersion`: ai-board plugin version active at job start (max 50 chars, nullable). Sourced from `.claude-plugin/plugin.json`. Null for jobs predating runtime version capture or runs where the runner could not resolve the file.
 - `agentCliVersion`: Underlying agent CLI version active at job start (max 100 chars, nullable). Captured by parsing the first line of `<cli> --version` (claude/codex/vibe/gemini); leading binary name and `v` prefix are stripped. Null for jobs predating runtime version capture or runs where the CLI did not report a version.
 - `tokenSavingOutcome`: Whether RTK output compression was active during the run (enum `TokenSavingOutcome`: ACTIVE/INACTIVE/FELL_BACK, nullable). Reported by the runner on the RUNNING status PATCH and used (alongside the existing token telemetry) to interpret token savings. Null for legacy/PENDING jobs that never reported.
@@ -504,6 +506,7 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 
 **Quality Score Data**:
 - `qualityScore` populated only when: `command = "verify"` and `status = "COMPLETED"` (all workflow types)
+- `layerDecomposition` follows the same lifecycle as `qualityScore`: the VERIFY code-review emits it, and it is persisted only on the COMPLETED status PATCH for a verify job. It is a snapshot of the PR's files at review time; files changed afterward are reconciled into a synthetic "Additional changes" layer at view time rather than rewriting the column. The artifact shape is `{ version, computedAt, layers: [{ id, title, summary, order, files }] }`
 - `qualityScoreDetails` JSON structure:
   ```json
   {

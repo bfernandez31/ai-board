@@ -152,7 +152,8 @@ Update job status (workflow-only endpoint).
   "agentCliVersion": "1.2.3",
   "tokenSavingOutcome": "ACTIVE",
   "qualityScore": 83,
-  "qualityScoreDetails": "{\"dimensions\":{\"bugDetection\":{\"score\":90,\"weight\":0.30},\"compliance\":{\"score\":80,\"weight\":0.40},\"codeComments\":{\"score\":70,\"weight\":0.20},\"historicalContext\":{\"score\":85,\"weight\":0.10},\"specSync\":{\"score\":95,\"weight\":0.00}},\"finalScore\":83}"
+  "qualityScoreDetails": "{\"dimensions\":{\"bugDetection\":{\"score\":90,\"weight\":0.30},\"compliance\":{\"score\":80,\"weight\":0.40},\"codeComments\":{\"score\":70,\"weight\":0.20},\"historicalContext\":{\"score\":85,\"weight\":0.10},\"specSync\":{\"score\":95,\"weight\":0.00}},\"finalScore\":83}",
+  "layerDecomposition": "{\"version\":1,\"computedAt\":\"2026-06-30T10:00:00Z\",\"layers\":[{\"id\":\"foundations\",\"title\":\"Foundations\",\"summary\":\"schema & contracts\",\"order\":1,\"files\":[\"prisma/schema.prisma\"]}]}"
 }
 ```
 
@@ -164,6 +165,7 @@ Update job status (workflow-only endpoint).
 - `tokenSavingOutcome`: Optional, enum (`ACTIVE|INACTIVE|FELL_BACK`); the per-job RTK output-compression outcome. Reported on the RUNNING status channel and persisted first-write-wins; later PATCH calls never overwrite an already-populated value.
 - `qualityScore`: Optional, integer 0-100 inclusive; only accepted when `status = "COMPLETED"` for verify jobs; ignored otherwise
 - `qualityScoreDetails`: Optional, JSON string with dimension sub-scores; stored alongside `qualityScore`
+- `layerDecomposition`: Optional string, must be JSON-parseable; the layer-decomposition snapshot emitted by the VERIFY code-review. Persisted only when `status = "COMPLETED"` (beside `qualityScore`); ignored on any other status
 - State machine transitions enforced
 
 **Response** (200 OK):

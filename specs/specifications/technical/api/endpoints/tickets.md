@@ -1381,6 +1381,79 @@ Fetch the immutable delivery outcome record for a shipped ticket.
 - Read-only — no `PUT`, `PATCH`, or `DELETE` is exposed; outcome immutability is enforced at the HTTP layer in addition to the unique constraint on `TicketOutcome.ticketId`
 - Capture is asynchronous after the SHIP transition; consumers may receive `OUTCOME_NOT_FOUND` for a ticket that just transitioned and should retry within a few minutes
 
+### GET /api/projects/:projectId/tickets/:id/pr-diff
+
+Single live read powering the in-app PR Diff Viewer. Resolves the ticket's pull request, fetches its current changed files and inline review comments from GitHub, merges the persisted layer-decomposition snapshot, and assembles the Overview. Read-only — performs no mutation and triggers no review computation.
+
+**Authentication**: Required (session) plus the acting user's GitHub OAuth token
+**Authorization**: `verifyProjectAccess` — owner or member; the live read additionally requires the acting user's GitHub OAuth token with `repo` scope (`requireRepoScope`)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID, validated with `ProjectIdSchema`
+- `id` (number or string, required): Ticket ID or ticket key, resolved with `resolveTicket`
+
+**Behavior** (PR State Retrieval):
+1. Authorize project access and resolve the ticket; the ticket must have a `branch`
+2. Require the acting user's GitHub client + `repo` scope (missing → `AUTH_REQUIRED`)
+3. Resolve the PR for `head = "{owner}:{branch}"` over `state: 'all'`, preferring an open PR, else the most recently updated. None → 200 with `pr: null` empty state (not an error)
+4. Fetch changed files (`pulls.listFiles`, paginated, capped at 300 files); files without a `patch` are marked `binary`, oversized patches are dropped and marked `patchTruncated` — either condition sets the top-level `truncated: true`
+5. Fetch inline review comments (`pulls.listReviewComments`, paginated) from all sources; each is attributed (`ai-board` / `bot` / `human`) and anchored to its current line, or flagged `outdated` when its target line is no longer present
+6. Load the latest COMPLETED verify job; parse `layerDecomposition` and read `qualityScore` for the Overview
+7. Reconcile the stored layers against the current file set, routing unclassified files to a synthetic "Additional changes" layer and omitting empty layers
+
+All GitHub calls are wrapped with retry/backoff for transient failures.
+
+**Response** (200 OK — reviewed PR):
+```json
+{
+  "pr": { "number": 542, "title": "AIB-879 diff viewer", "state": "open", "url": "https://github.com/o/r/pull/542" },
+  "overview": { "pr": { "number": 542, "title": "AIB-879 diff viewer", "state": "open", "url": "..." }, "reviewSynthesis": null, "qualityScore": 84, "qualityThreshold": "Good" },
+  "layers": [
+    {
+      "id": "foundations", "title": "Foundations", "summary": "schema & contracts",
+      "order": 1, "synthetic": false, "fileCount": 1, "commentCount": 1,
+      "files": [
+        {
+          "filename": "prisma/schema.prisma", "status": "modified",
+          "additions": 3, "deletions": 0, "patch": "@@ ...",
+          "binary": false, "patchTruncated": false,
+          "comments": [
+            { "id": 1, "source": "ai-board", "author": "ai-board[bot]", "line": 64, "body": "...", "outdated": false, "createdAt": "2026-06-30T10:00:00Z" }
+          ]
+        }
+      ]
+    }
+  ],
+  "files": [ { "filename": "prisma/schema.prisma", "status": "modified", "additions": 3, "deletions": 0, "patch": "@@ ...", "binary": false, "patchTruncated": false, "comments": [] } ],
+  "truncated": false
+}
+```
+
+`pr.state` is one of `open`, `closed`, or `merged`. Each inline comment's `source` is one of `ai-board`, `bot`, or `human`. `layers` is empty when no decomposition is stored (client renders flat Files mode). `reviewSynthesis` is currently always `null` (no synthesis is persisted).
+
+**Response** (200 OK — no PR for the branch):
+```json
+{ "pr": null, "overview": { "pr": null, "reviewSynthesis": null, "qualityScore": null, "qualityThreshold": null }, "layers": [], "files": [], "truncated": false }
+```
+
+**Errors**:
+
+| Status | `code` | When |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Invalid `projectId` or ticket identifier |
+| 401 | `UNAUTHORIZED` | Not signed in |
+| 403 | `FORBIDDEN` | Not project owner or member |
+| 403 | `AUTH_REQUIRED` | No GitHub token, or missing `repo` scope (actionable message) |
+| 403 | `GITHUB_FORBIDDEN` | GitHub returned 403 reading the repository |
+| 404 | `TICKET_NOT_FOUND` | Ticket not in project |
+| 404 | `BRANCH_NOT_FOUND` | Ticket has no branch |
+| 500/502 | `GITHUB_API_ERROR` | Transient or unknown GitHub failure |
+
+**Notes**:
+- The diff and comments always reflect the current PR state; only the layer grouping comes from the stored review snapshot
+- A merged or closed PR (SHIP stage) remains consultable
+- A deterministic test-mode fixture (driven by the ticket branch) short-circuits the GitHub calls under `NODE_ENV=test`, `TEST_MODE`, or `TEST_USER_ID`
+
 ## Ticket Analysis Endpoints
 
 ### GET /api/projects/:projectId/tickets/:id/analysis
