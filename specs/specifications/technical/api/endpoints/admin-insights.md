@@ -330,6 +330,11 @@ There is **no per-ticket dedup**, **no SHIP filter**, and **no project filter**:
 }
 ```
 
+**Errors**:
+- `400`: Missing/invalid `periodStart`/`periodEnd`, or `periodStart >= periodEnd`
+- `401`: Invalid or missing workflow token
+- `500`: Session enumeration failed — the predicate DB queries (`listAnalyzableClaudeSessions` / `countExpectedClaudeSessions`) are wrapped in try-catch so a database failure surfaces as the structured envelope `{ "error": "Failed to enumerate analyzable Claude sessions" }` (logged server-side) rather than an unguarded 500.
+
 ---
 
 ## GET /api/admin/insights/jobs/:jobId/raw-native
