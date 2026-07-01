@@ -941,7 +941,7 @@ export function useTransitionTicket(projectId: number, ticketId: number) {
 
 ### Duplicate Ticket Mutation
 
-**Implementation** (`components/board/ticket-detail-modal.tsx`):
+**Implementation** (`components/board/use-ticket-detail-modal.ts`):
 
 ```typescript
 const handleDuplicate = async () => {
