@@ -18,6 +18,29 @@ interface UseTicketDetailModalParams {
 }
 
 /**
+ * Normalizes a ticket PATCH/GET response into {@link TicketData}: revives the
+ * date fields and re-attaches the client-only `project` relation (and, for
+ * update responses, the `attachments`) that the API omits from its payload.
+ */
+function normalizeTicketResponse(
+  raw: TicketData,
+  local: TicketData,
+  preserveAttachments: boolean
+): TicketData {
+  return {
+    ...raw,
+    createdAt: new Date(raw.createdAt),
+    updatedAt: new Date(raw.updatedAt),
+    // Preserve fields the API doesn't return on updates
+    ...(local.project ? { project: local.project } : {}),
+    ...(preserveAttachments ? { attachments: local.attachments } : {}),
+    // Ensure ticket number and key are preserved (from response or fallback to current)
+    ticketNumber: raw.ticketNumber ?? local.ticketNumber,
+    ticketKey: raw.ticketKey ?? local.ticketKey,
+  };
+}
+
+/**
  * Encapsulates the local ticket state, optimistic mutation handlers, and inline
  * edit hooks for {@link TicketDetailModal}. Extracted so the modal component
  * stays presentational and within the Component-Driven Architecture size budget.
@@ -164,16 +187,7 @@ export function useTicketDetailModal({
       );
       if (response.ok) {
         const serverTicket = await response.json();
-        const normalizedTicket: TicketData = {
-          ...serverTicket,
-          createdAt: new Date(serverTicket.createdAt),
-          updatedAt: new Date(serverTicket.updatedAt),
-          // Preserve project field (API doesn't return it)
-          project: localTicket.project,
-          // Ensure ticket number and key are included from server response (with fallback)
-          ticketNumber: serverTicket.ticketNumber ?? localTicket.ticketNumber,
-          ticketKey: serverTicket.ticketKey ?? localTicket.ticketKey,
-        };
+        const normalizedTicket = normalizeTicketResponse(serverTicket, localTicket, false);
         setLocalTicket(normalizedTicket);
         if (onUpdate) {
           onUpdate(normalizedTicket);
@@ -233,15 +247,7 @@ export function useTicketDetailModal({
       }
 
       const updatedTicket = await response.json();
-      const normalizedTicket: TicketData = {
-        ...updatedTicket,
-        createdAt: new Date(updatedTicket.createdAt),
-        updatedAt: new Date(updatedTicket.updatedAt),
-        project: localTicket.project,
-        attachments: localTicket.attachments,
-        ticketNumber: updatedTicket.ticketNumber ?? localTicket.ticketNumber,
-        ticketKey: updatedTicket.ticketKey ?? localTicket.ticketKey,
-      };
+      const normalizedTicket = normalizeTicketResponse(updatedTicket, localTicket, true);
 
       setLocalTicket(normalizedTicket);
       toast({ title: 'Success', description: successMessage });
@@ -329,17 +335,7 @@ export function useTicketDetailModal({
 
       const updatedTicket = await response.json();
 
-      const normalizedTicket: TicketData = {
-        ...updatedTicket,
-        createdAt: new Date(updatedTicket.createdAt),
-        updatedAt: new Date(updatedTicket.updatedAt),
-        // Preserve fields that API doesn't return on updates
-        project: localTicket.project,
-        attachments: localTicket.attachments,
-        // Ensure ticket number and key are preserved (from response or fallback to current)
-        ticketNumber: updatedTicket.ticketNumber ?? localTicket.ticketNumber,
-        ticketKey: updatedTicket.ticketKey ?? localTicket.ticketKey,
-      };
+      const normalizedTicket = normalizeTicketResponse(updatedTicket, localTicket, true);
 
       // Update local ticket with all fields including new version
       setLocalTicket(normalizedTicket);
@@ -427,15 +423,7 @@ export function useTicketDetailModal({
 
       const updatedTicket = await response.json();
 
-      const normalizedTicket: TicketData = {
-        ...updatedTicket,
-        createdAt: new Date(updatedTicket.createdAt),
-        updatedAt: new Date(updatedTicket.updatedAt),
-        project: localTicket.project,
-        attachments: localTicket.attachments,
-        ticketNumber: updatedTicket.ticketNumber ?? localTicket.ticketNumber,
-        ticketKey: updatedTicket.ticketKey ?? localTicket.ticketKey,
-      };
+      const normalizedTicket = normalizeTicketResponse(updatedTicket, localTicket, true);
 
       setLocalTicket(normalizedTicket);
 

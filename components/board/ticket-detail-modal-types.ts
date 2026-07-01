@@ -52,6 +52,11 @@ export interface TicketJob {
 }
 
 /**
+ * Selectable tabs in the ticket detail modal.
+ */
+export type TicketModalTab = 'details' | 'comments' | 'files' | 'stats';
+
+/**
  * Props interface for TicketDetailModal component
  */
 export interface TicketDetailModalProps {
@@ -71,7 +76,7 @@ export interface TicketDetailModalProps {
   projectId: number;
 
   /** Optional initial tab to display when modal opens. Defaults to 'details'. */
-  initialTab?: 'details' | 'comments' | 'files' | 'stats';
+  initialTab?: TicketModalTab;
 
   /** Jobs for this ticket, passed from parent for real-time polling updates */
   jobs?: TicketJob[];

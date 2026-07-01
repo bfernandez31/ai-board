@@ -23,7 +23,7 @@ import { TicketDetailsTab } from './ticket-details-tab';
 import { TicketModalSecondaryTabs } from './ticket-modal-secondary-tabs';
 import { TicketModalDialogs } from './ticket-modal-dialogs';
 import { useTicketDetailModal } from './use-ticket-detail-modal';
-import type { TicketDetailModalProps } from './ticket-detail-modal-types';
+import type { TicketDetailModalProps, TicketModalTab } from './ticket-detail-modal-types';
 
 export type { TicketData, TicketJob } from './ticket-detail-modal-types';
 
@@ -40,7 +40,7 @@ export function TicketDetailModal({
   const [runSettingsOpen, setRunSettingsOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
-  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
+  const [activeTab, setActiveTab] = useState<TicketModalTab>(initialTab);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const [comparisonViewerOpen, setComparisonViewerOpen] = useState(false);
   const [prDiffOpen, setPrDiffOpen] = useState(false);
@@ -197,7 +197,7 @@ export function TicketDetailModal({
         />
 
         {/* Tabs for organizing modal content */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'comments' | 'files' | 'stats')} className="w-full flex-1 flex flex-col -mt-2 sm:mt-0 sm:block sm:flex-initial overflow-hidden">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TicketModalTab)} className="w-full flex-1 flex flex-col -mt-2 sm:mt-0 sm:block sm:flex-initial overflow-hidden">
           <TabsList className={`flex-shrink-0 grid w-full ${hasJobs ? 'grid-cols-4' : 'grid-cols-3'} mb-0 sm:mb-4`}>
             <TabsTrigger value="details" className="text-sm">
               Details
