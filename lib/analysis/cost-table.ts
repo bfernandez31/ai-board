@@ -24,6 +24,7 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
   'claude-opus-4-8':           { inputUsdPerM: 15,   outputUsdPerM: 75 },
   'claude-opus-4-7':           { inputUsdPerM: 15,   outputUsdPerM: 75 },
   'claude-opus-4-6':           { inputUsdPerM: 15,   outputUsdPerM: 75 },
+  'claude-sonnet-5':           { inputUsdPerM: 3,    outputUsdPerM: 15 },
   'claude-sonnet-4-6':         { inputUsdPerM: 3,    outputUsdPerM: 15 },
   'claude-haiku-4-5-20251001': { inputUsdPerM: 1,    outputUsdPerM: 5 },
   // OpenAI / Codex

@@ -27,6 +27,12 @@ describe('estimateAnalysisCostUsd', () => {
     }
   });
 
+  it('prices Sonnet 5 at the Sonnet tier', () => {
+    const sonnet5 = estimateAnalysisCostUsd('CLAUDE', 'claude-sonnet-5');
+    const sonnet46 = estimateAnalysisCostUsd('CLAUDE', 'claude-sonnet-4-6');
+    expect(sonnet5).toEqual(sonnet46);
+  });
+
   it('returns the same value for the default-model and explicit-default', () => {
     const a = estimateAnalysisCostUsd('CLAUDE', null);
     const b = estimateAnalysisCostUsd('CLAUDE', 'claude-sonnet-4-6');
