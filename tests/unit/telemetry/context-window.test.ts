@@ -14,6 +14,10 @@ describe('MODEL_CONTEXT_WINDOWS', () => {
     expect(MODEL_CONTEXT_WINDOWS['claude-haiku-4-5']).toBe(200_000);
   });
 
+  it('seeds Sonnet 5 at 1M', () => {
+    expect(MODEL_CONTEXT_WINDOWS['claude-sonnet-5']).toBe(1_000_000);
+  });
+
   it('seeds GPT-5 family at 400k', () => {
     expect(MODEL_CONTEXT_WINDOWS['gpt-5']).toBe(400_000);
     expect(MODEL_CONTEXT_WINDOWS['gpt-5.4']).toBe(400_000);
