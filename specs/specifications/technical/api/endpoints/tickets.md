@@ -1478,7 +1478,7 @@ Returns the latest persisted analysis for the ticket plus pre-click eligibility 
     "status": "success",
     "ruleSetVersion": 1,
     "agent": "CLAUDE",
-    "modelId": "claude-sonnet-4-6",
+    "modelId": "claude-sonnet-5-5",
     "startedAt": "2026-04-27T11:32:08.231Z",
     "endedAt": "2026-04-27T11:32:23.119Z",
     "titleSnapshot": "Add export-to-CSV button",
@@ -1578,7 +1578,7 @@ Creates a new `running` analysis row, dispatches the workflow, and returns 202 w
 4. Resolve project config and extract the bounded stack snapshot
 5. Compute the candidate anchor set (up to 50 ticketIds) from the project's outcome dataset
 6. Resolve the project owner's `ANTHROPIC` credential. If missing, reject with 412 — no row is created in this case
-7. INSERT a new `TicketAnalysis` row with `status='running'`, frozen input snapshots, stack snapshot, candidate anchor IDs, `agent='CLAUDE'`, `modelId='claude-sonnet-4-6'`, and rule-set version. The analysis agent and model are forced to Claude/Sonnet 4.6 regardless of the project's `defaultAgent` — same pattern as code review (a different agent reviewing the implementation)
+7. INSERT a new `TicketAnalysis` row with `status='running'`, frozen input snapshots, stack snapshot, candidate anchor IDs, `agent='CLAUDE'`, `modelId='claude-sonnet-5-5'`, and rule-set version. The analysis agent and model are forced to Claude/Sonnet 5.5 regardless of the project's `defaultAgent` — same pattern as code review (a different agent reviewing the implementation)
 8. Dispatch the `inbox-analysis.yml` workflow with the forced agent and model. On dispatch failure, transition the row to `failed` with `errorReason='dispatch_failed'` and return 500
 
 **Response** (202 Accepted):

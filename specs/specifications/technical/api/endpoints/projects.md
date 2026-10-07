@@ -125,11 +125,11 @@ Fetch project details including clarification policy.
   },
   "configSyncedAt": "2026-04-02T12:00:00.000Z",
   "defaultBranch": "main",
-  "specifyModel": "claude-opus-4-8",
-  "planModel": "claude-opus-4-8",
-  "implementModel": "claude-sonnet-4-6",
-  "quickImplModel": "claude-sonnet-4-6",
-  "verifyModel": "claude-sonnet-4-6",
+  "specifyModel": "claude-opus-5-5",
+  "planModel": "claude-opus-5-5",
+  "implementModel": "claude-sonnet-5-5",
+  "quickImplModel": "claude-sonnet-5-5",
+  "verifyModel": "claude-sonnet-5-5",
   "codexSpecifyModel": "gpt-5.5",
   "codexPlanModel": "gpt-5.5",
   "codexImplementModel": "gpt-5.4",
@@ -138,7 +138,7 @@ Fetch project details including clarification policy.
 }
 ```
 
-`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync. Per-stage model fields are `null` for pre-existing projects without explicit configuration (Claude fields resolve to `claude-opus-4-8` and Codex fields resolve to `gpt-5.5` at dispatch time). Both column sets are always returned regardless of `defaultAgent` — the inactive agent's stored values stay durable for later switching.
+`config` and `configSyncedAt` are `null` when no config has been synced. `defaultBranch` defaults to `"main"` and is auto-updated during config sync. Per-stage model fields are `null` for pre-existing projects without explicit configuration (Claude fields resolve to `claude-opus-5-5` and Codex fields resolve to `gpt-5.5` at dispatch time). Both column sets are always returned regardless of `defaultAgent` — the inactive agent's stored values stay durable for later switching.
 
 **Errors**:
 - `401`: Not authenticated
@@ -200,11 +200,11 @@ Update project details including clarification policy.
   "deploymentUrl": "https://my-app.vercel.app",
   "clarificationPolicy": "CONSERVATIVE",
   "tokenSaving": true,
-  "specifyModel": "claude-opus-4-8",
-  "planModel": "claude-opus-4-8",
-  "implementModel": "claude-sonnet-4-6",
-  "quickImplModel": "claude-sonnet-4-6",
-  "verifyModel": "claude-sonnet-4-6",
+  "specifyModel": "claude-opus-5-5",
+  "planModel": "claude-opus-5-5",
+  "implementModel": "claude-sonnet-5-5",
+  "quickImplModel": "claude-sonnet-5-5",
+  "verifyModel": "claude-sonnet-5-5",
   "codexSpecifyModel": "gpt-5.5",
   "codexPlanModel": "gpt-5.5",
   "codexImplementModel": "gpt-5.4",
@@ -220,7 +220,7 @@ Update project details including clarification policy.
 - `deploymentUrl`: Optional, string or null (valid URL format)
 - `clarificationPolicy`: Optional, enum (AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE)
 - `tokenSaving`: Optional, boolean — the project's Token Saving default; applied only when present in the body (matches the other optional-field conditional pattern). Owner-only, like every other field on this route
-- `specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`: Optional, nullable — must be one of the whitelisted Claude model IDs (`claude-opus-4-8`, `claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise
+- `specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`: Optional, nullable — must be one of the whitelisted Claude model IDs (`claude-opus-5-5`, `claude-sonnet-5-5`, `claude-opus-4-8`, `claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise
 - `codexSpecifyModel`, `codexPlanModel`, `codexImplementModel`, `codexQuickImplModel`, `codexVerifyModel`: Optional, nullable — must be one of the whitelisted Codex model IDs (`gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex`, `gpt-5.2`) or `null` to clear; rejected with `INVALID_MODEL_ID` otherwise
 - Claude and Codex column sets are independent: writing one never touches the other
 
@@ -260,20 +260,20 @@ Apply the cost-conscious smart default model set for the project's active agent 
 
 | Stage | Claude | Codex |
 |-------|--------|-------|
-| SPECIFY | `claude-opus-4-8` | `gpt-5.5` |
-| PLAN | `claude-opus-4-8` | `gpt-5.5` |
-| IMPLEMENT | `claude-sonnet-4-6` | `gpt-5.4` |
-| QUICK-IMPL | `claude-sonnet-4-6` | `gpt-5.4-mini` |
-| VERIFY | `claude-sonnet-4-6` | `gpt-5.4-mini` |
+| SPECIFY | `claude-opus-5-5` | `gpt-5.5` |
+| PLAN | `claude-opus-5-5` | `gpt-5.5` |
+| IMPLEMENT | `claude-sonnet-5-5` | `gpt-5.4` |
+| QUICK-IMPL | `claude-sonnet-5-5` | `gpt-5.4-mini` |
+| VERIFY | `claude-sonnet-5-5` | `gpt-5.4-mini` |
 
 **Response** (200 OK) — Claude project:
 ```json
 {
-  "specifyModel": "claude-opus-4-8",
-  "planModel": "claude-opus-4-8",
-  "implementModel": "claude-sonnet-4-6",
-  "quickImplModel": "claude-sonnet-4-6",
-  "verifyModel": "claude-sonnet-4-6"
+  "specifyModel": "claude-opus-5-5",
+  "planModel": "claude-opus-5-5",
+  "implementModel": "claude-sonnet-5-5",
+  "quickImplModel": "claude-sonnet-5-5",
+  "verifyModel": "claude-sonnet-5-5"
 }
 ```
 
