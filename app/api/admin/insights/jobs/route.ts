@@ -53,7 +53,17 @@ export async function GET(request: NextRequest): Promise<Response> {
   }
 
   const window = { start, end };
-  const jobs = await listAnalyzableClaudeSessions(window);
-  const expectedCount = await countExpectedClaudeSessions(window);
-  return NextResponse.json({ jobs, expectedCount });
+  try {
+    const jobs = await listAnalyzableClaudeSessions(window);
+    const expectedCount = await countExpectedClaudeSessions(window);
+    return NextResponse.json({ jobs, expectedCount });
+  } catch (error) {
+    // A DB failure in the predicate queries must surface as the structured
+    // error envelope (constitution: Error Handling), not an unguarded 500.
+    console.error('[GET /admin/insights/jobs] session enumeration failed', error);
+    return NextResponse.json(
+      { error: 'Failed to enumerate analyzable Claude sessions' },
+      { status: 500 }
+    );
+  }
 }
