@@ -29,7 +29,15 @@ describe('estimateAnalysisCostUsd', () => {
 
   it('returns the same value for the default-model and explicit-default', () => {
     const a = estimateAnalysisCostUsd('CLAUDE', null);
-    const b = estimateAnalysisCostUsd('CLAUDE', 'claude-sonnet-4-6');
+    const b = estimateAnalysisCostUsd('CLAUDE', 'claude-sonnet-5-5');
     expect(a).toEqual(b);
+  });
+
+  it('prices the Claude 5.5 models', () => {
+    const opus = estimateAnalysisCostUsd('CLAUDE', 'claude-opus-5-5');
+    const sonnet = estimateAnalysisCostUsd('CLAUDE', 'claude-sonnet-5-5');
+    // Opus is the premium tier, so it costs strictly more than Sonnet.
+    expect(opus.lowerUsd).toBeGreaterThan(sonnet.lowerUsd);
+    expect(opus.upperUsd).toBeGreaterThan(sonnet.upperUsd);
   });
 });

@@ -1,4 +1,6 @@
 export const CLAUDE_MODEL_IDS = [
+  'claude-opus-5-5',
+  'claude-sonnet-5-5',
   'claude-opus-4-8',
   'claude-opus-4-7',
   'claude-opus-4-6',
@@ -9,6 +11,8 @@ export const CLAUDE_MODEL_IDS = [
 export type ClaudeModelId = (typeof CLAUDE_MODEL_IDS)[number];
 
 export const CLAUDE_MODEL_LABELS: Record<ClaudeModelId, string> = {
+  'claude-opus-5-5': 'Claude Opus 5.5',
+  'claude-sonnet-5-5': 'Claude Sonnet 5.5',
   'claude-opus-4-8': 'Claude Opus 4.8',
   'claude-opus-4-7': 'Claude Opus 4.7',
   'claude-opus-4-6': 'Claude Opus 4.6',
@@ -16,7 +20,7 @@ export const CLAUDE_MODEL_LABELS: Record<ClaudeModelId, string> = {
   'claude-haiku-4-5-20251001': 'Claude Haiku 4.5',
 };
 
-export const CLAUDE_GLOBAL_FALLBACK_MODEL: ClaudeModelId = 'claude-opus-4-8';
+export const CLAUDE_GLOBAL_FALLBACK_MODEL: ClaudeModelId = 'claude-opus-5-5';
 
 export type StageModelKey =
   | 'specifyModel'
@@ -42,11 +46,11 @@ export const STAGE_MODEL_LABELS: Record<StageModelKey, string> = {
 };
 
 export const SMART_DEFAULTS: Record<StageModelKey, ClaudeModelId> = {
-  specifyModel: 'claude-opus-4-8',
-  planModel: 'claude-opus-4-8',
-  implementModel: 'claude-sonnet-4-6',
-  quickImplModel: 'claude-sonnet-4-6',
-  verifyModel: 'claude-sonnet-4-6',
+  specifyModel: 'claude-opus-5-5',
+  planModel: 'claude-opus-5-5',
+  implementModel: 'claude-sonnet-5-5',
+  quickImplModel: 'claude-sonnet-5-5',
+  verifyModel: 'claude-sonnet-5-5',
 };
 
 export function isClaudeModelId(value: unknown): value is ClaudeModelId {

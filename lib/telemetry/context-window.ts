@@ -13,7 +13,7 @@
 export type PeakContextState = 'healthy' | 'warning' | 'danger' | 'unknown';
 
 const CLAUDE_CONTEXT_WINDOW = 200_000;
-const CLAUDE_OPUS_4_8_CONTEXT_WINDOW = 1_000_000;
+const CLAUDE_1M_CONTEXT_WINDOW = 1_000_000;
 const OPENAI_CONTEXT_WINDOW = 400_000;
 const GEMINI_CONTEXT_WINDOW = 1_048_576;
 
@@ -24,8 +24,12 @@ const GEMINI_CONTEXT_WINDOW = 1_048_576;
  * peak tracked today (FR-004), so they never need a context window resolved.
  */
 export const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
+  // Anthropic Claude 5.5 family
+  'claude-opus-5-5': CLAUDE_1M_CONTEXT_WINDOW,
+  'claude-sonnet-5-5': CLAUDE_CONTEXT_WINDOW,
+
   // Anthropic Claude 4.x family
-  'claude-opus-4-8': CLAUDE_OPUS_4_8_CONTEXT_WINDOW,
+  'claude-opus-4-8': CLAUDE_1M_CONTEXT_WINDOW,
   'claude-opus-4-7': CLAUDE_CONTEXT_WINDOW,
   'claude-opus-4-6': CLAUDE_CONTEXT_WINDOW,
   'claude-sonnet-4-6': CLAUDE_CONTEXT_WINDOW,

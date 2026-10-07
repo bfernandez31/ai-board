@@ -7,6 +7,11 @@ import {
 } from '@/lib/telemetry/context-window';
 
 describe('MODEL_CONTEXT_WINDOWS', () => {
+  it('seeds Claude Opus 5.5 at 1M and Sonnet 5.5 at 200k', () => {
+    expect(MODEL_CONTEXT_WINDOWS['claude-opus-5-5']).toBe(1_000_000);
+    expect(MODEL_CONTEXT_WINDOWS['claude-sonnet-5-5']).toBe(200_000);
+  });
+
   it('seeds Claude 4.x family at 200k', () => {
     expect(MODEL_CONTEXT_WINDOWS['claude-opus-4-7']).toBe(200_000);
     expect(MODEL_CONTEXT_WINDOWS['claude-opus-4-6']).toBe(200_000);

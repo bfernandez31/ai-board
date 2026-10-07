@@ -22,7 +22,7 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
 // where a different agent reviewing the implementation is preferred over the
 // project's primary work agent. Independent of project.defaultAgent.
 const ANALYSIS_AGENT: Agent = 'CLAUDE';
-const ANALYSIS_MODEL = 'claude-sonnet-4-6';
+const ANALYSIS_MODEL = 'claude-sonnet-5-5';
 
 function noStore(json: unknown, init: ResponseInit = {}): NextResponse {
   const res = NextResponse.json(json, init);
