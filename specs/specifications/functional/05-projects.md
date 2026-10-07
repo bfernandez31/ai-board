@@ -354,6 +354,8 @@ Claude:
 
 | ID | Display Name |
 |----|-------------|
+| `claude-opus-5-5` | Claude Opus 5.5 |
+| `claude-sonnet-5-5` | Claude Sonnet 5.5 |
 | `claude-opus-4-8` | Claude Opus 4.8 |
 | `claude-opus-4-7` | Claude Opus 4.7 |
 | `claude-opus-4-6` | Claude Opus 4.6 |
@@ -374,11 +376,11 @@ Codex:
 
 | Stage | Claude default | Codex default |
 |-------|----------------|---------------|
-| SPECIFY | Claude Opus 4.8 | GPT-5.5 |
-| PLAN | Claude Opus 4.8 | GPT-5.5 |
-| IMPLEMENT | Claude Sonnet 4.6 | GPT-5.4 |
-| QUICK-IMPL | Claude Sonnet 4.6 | GPT-5.4 mini |
-| VERIFY | Claude Sonnet 4.6 | GPT-5.4 mini |
+| SPECIFY | Claude Opus 5.5 | GPT-5.5 |
+| PLAN | Claude Opus 5.5 | GPT-5.5 |
+| IMPLEMENT | Claude Sonnet 5.5 | GPT-5.4 |
+| QUICK-IMPL | Claude Sonnet 5.5 | GPT-5.4 mini |
+| VERIFY | Claude Sonnet 5.5 | GPT-5.4 mini |
 
 **Configuration UI**:
 - Accessible from project Settings page as an "AI Models" card
@@ -396,7 +398,7 @@ Codex:
 - Switching back restores the originally-configured selections for that agent
 
 **Resolution at dispatch**:
-- When the effective agent for a workflow job is Claude, the model resolves as: ticket override → project default → global fallback `claude-opus-4-8`
+- When the effective agent for a workflow job is Claude, the model resolves as: ticket override → project default → global fallback `claude-opus-5-5`
 - When the effective agent is Codex, the model resolves as: ticket override → project default → global fallback `gpt-5.5`
 - A stored model identifier that is no longer in the active agent's whitelist (e.g., deprecated by the provider) is treated as "not set" and falls through to the next resolver layer
 - Only the 5 configurable stages are affected; other job types (`iterate`, `comment-*`, `health-scan`, etc.) always use the active agent's CLI default

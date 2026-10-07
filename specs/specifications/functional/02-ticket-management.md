@@ -419,7 +419,7 @@ The panel is presented as a single-line strip by default in every state, so the 
 **Trigger Button**:
 - Compact `Run analysis` button with a sparkles icon — the visible label never includes the cost
 - Estimated USD cost range is exposed only on hover/focus (tooltip) and via the button's accessible label so screen readers can announce it
-- Cost estimate derived before the click from token estimates × per-million pricing of the analysis model. The analysis always runs on Claude Sonnet 4.6, regardless of the project's declared agent — same pattern as code review (a different agent reviewing the implementation, lower cost than Opus, adequate reasoning for this task)
+- Cost estimate derived before the click from token estimates × per-million pricing of the analysis model. The analysis always runs on Claude Sonnet 5.5, regardless of the project's declared agent — same pattern as code review (a different agent reviewing the implementation, lower cost than Opus, adequate reasoning for this task)
 - Disabled with an explanatory tooltip when the user has reached the hourly rate limit (tooltip includes the next reset time)
 
 **Tooltips for Clarity**:
@@ -1106,7 +1106,7 @@ Timestamps display in user-friendly formats:
 - **Per-Stage Model Overrides**: Optional per-ticket model overrides for each of the 5 configurable job types, available independently for the Claude and Codex agents
   - 5 nullable Claude fields (`specifyModel`, `planModel`, `implementModel`, `quickImplModel`, `verifyModel`)
   - 5 nullable Codex fields (`codexSpecifyModel`, `codexPlanModel`, `codexImplementModel`, `codexQuickImplModel`, `codexVerifyModel`)
-  - `null` means inherit from the project's per-stage default for that agent (which itself falls back to `claude-opus-4-8` or `gpt-5.5`)
+  - `null` means inherit from the project's per-stage default for that agent (which itself falls back to `claude-opus-5-5` or `gpt-5.5`)
   - Editable via the per-stage model override dialog accessible from the ticket detail modal
   - Both column sets are preserved independently: switching the ticket's agent never overwrites the other agent's stored overrides
 

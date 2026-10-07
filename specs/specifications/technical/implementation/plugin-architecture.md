@@ -89,7 +89,7 @@ Each command is designed to run at a specific workflow stage. Commands are invok
 | `ai-board.assist` | Any (SPECIFY/PLAN/BUILD/VERIFY) | `ai-board-assist.yml` | AI assistance via @ai-board mentions |
 | `ai-board.compare` | Any | `ai-board-assist.yml` | Compare tickets (telemetry + specs) |
 | `ai-board.fix` | VERIFY | `ai-board-assist.yml` | Fix PR review findings from all sources (ai-board, Codex, Copilot) via `/fix` command |
-| `ai-board.inbox-analysis` | INBOX | `inbox-analysis.yml` | Two-stage friction-risk analysis on an INBOX ticket (always Claude/Sonnet 4.6) |
+| `ai-board.inbox-analysis` | INBOX | `inbox-analysis.yml` | Two-stage friction-risk analysis on an INBOX ticket (always Claude/Sonnet 5.5) |
 | `ai-board.analyze` | Local only | — | Cross-artifact consistency analysis |
 | `ai-board.constitution` | Local only | — | Create/update project constitution |
 | `ai-board.health-security` | Health scan | `health-scan.yml` | OWASP Top 10 security analysis; outputs `SecurityReport` JSON |

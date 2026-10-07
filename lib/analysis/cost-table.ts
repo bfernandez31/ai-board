@@ -21,6 +21,8 @@ interface ModelPricing {
 // lib/telemetry/otlp-processor.ts (single source maintained for telemetry cost).
 const MODEL_PRICING: Record<string, ModelPricing> = {
   // Anthropic (public pricing)
+  'claude-opus-5-5':           { inputUsdPerM: 4,    outputUsdPerM: 20 },
+  'claude-sonnet-5-5':         { inputUsdPerM: 2,    outputUsdPerM: 10 },
   'claude-opus-4-8':           { inputUsdPerM: 15,   outputUsdPerM: 75 },
   'claude-opus-4-7':           { inputUsdPerM: 15,   outputUsdPerM: 75 },
   'claude-opus-4-6':           { inputUsdPerM: 15,   outputUsdPerM: 75 },
@@ -44,7 +46,7 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
 };
 
 const DEFAULT_MODEL_BY_AGENT: Record<Agent, string> = {
-  CLAUDE: 'claude-sonnet-4-6',
+  CLAUDE: 'claude-sonnet-5-5',
   CODEX: 'gpt-5.4',
   MISTRAL: 'mistral-large-latest',
   GEMINI: 'gemini-2.5-pro',
