@@ -8,11 +8,6 @@ import {
 } from '@/lib/models/claude-models';
 
 describe('claude-models', () => {
-  it('includes the Claude 5.5 Opus and Sonnet model ids', () => {
-    expect(CLAUDE_MODEL_IDS).toContain('claude-opus-5-5');
-    expect(CLAUDE_MODEL_IDS).toContain('claude-sonnet-5-5');
-  });
-
   it('exposes the Claude 5.5 models as the newest (first) options', () => {
     expect(CLAUDE_MODEL_IDS[0]).toBe('claude-opus-5-5');
     expect(CLAUDE_MODEL_IDS[1]).toBe('claude-sonnet-5-5');
