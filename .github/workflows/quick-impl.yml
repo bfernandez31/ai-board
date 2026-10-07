@@ -174,7 +174,7 @@ jobs:
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       # Claude model: per-stage override from dispatch input, fallback to Opus 4.8
-      ANTHROPIC_MODEL: ${{ inputs.model != '' && inputs.model || 'claude-opus-4-8' }}
+      ANTHROPIC_MODEL: ${{ inputs.model != '' && inputs.model || 'claude-opus-5-5' }}
       # Codex model: per-stage override from dispatch input, fallback to GPT-5.4.
       # Set for every dispatch — only consumed when the selected agent is Codex.
       CODEX_MODEL: ${{ inputs.model != '' && inputs.model || 'gpt-5.4' }}

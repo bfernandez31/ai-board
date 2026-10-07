@@ -59,7 +59,7 @@ jobs:
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
       # Use Opus model for Claude Code
-      ANTHROPIC_MODEL: "claude-opus-4-8"
+      ANTHROPIC_MODEL: "claude-opus-5-5"
       # AIB-849: RTK token-saving toggle, consumed by run-agent.sh (Claude only).
       TOKEN_SAVING: ${{ inputs.tokenSaving }}
       # Claude Code telemetry - send to OTLP endpoint
