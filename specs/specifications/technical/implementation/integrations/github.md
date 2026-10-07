@@ -500,7 +500,7 @@ sequenceDiagram
     alt AGENT_TYPE = CLAUDE
         RS->>CLI: bun add -g @anthropic-ai/claude-code
         RS->>RS: ensure_claude_commands() — symlink .claude/commands if missing
-        RS->>CLI: claude --dangerously-skip-permissions "/COMMAND ARGS"
+        RS->>CLI: claude -p --dangerously-skip-permissions --output-format stream-json --verbose "/COMMAND ARGS" (stdout reduced to every turn result)
     else AGENT_TYPE = CODEX
         RS->>CLI: bun add -g @openai/codex
         alt CODEX_AUTH_JSON set
@@ -535,7 +535,7 @@ sequenceDiagram
 |---------|--------|-------|---------|--------|
 | Package | `@anthropic-ai/claude-code` | `@openai/codex` | `vibe-cli` (Python pip) | `@google/gemini-cli` |
 | Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` | `MISTRAL_API_KEY` | `GEMINI_API_KEY` or `GEMINI_OAUTH_JSON` |
-| Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt from command markdown plus structured invocation context | `vibe --prompt "..." --agent auto-approve` | `gemini --prompt="..." --approval-mode=yolo` |
+| Command invocation | `claude -p --dangerously-skip-permissions --output-format stream-json --verbose "/COMMAND ARGS"` piped through `emit_claude_results` (prints every turn `result`, so a background-task wake-up turn cannot replace the answer) | Prompt from command markdown plus structured invocation context | `vibe --prompt "..." --agent auto-approve` | `gemini --prompt="..." --approval-mode=yolo` |
 | Command discovery | Native slash command from `.claude/commands/` in cwd — guaranteed by `ensure_claude_commands()` (no-op if the symlink already exists, e.g. from `setup-environment.sh`; otherwise links `SCRIPT_DIR/../../.claude-plugin/commands`, covering no-clone workflows like `inbox-analysis.yml`) | Command markdown inlined into prompt (`resolve_command_file` + `build_non_claude_prompt`) | Same as Codex | Same as Codex |
 | Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section | Post-execution batch JSON via `collect_mistral_telemetry()`; datalake disabled | Native OTLP logs configured via standard `OTEL_*` env vars |
 | Project context | `CLAUDE.md` (native) | `AGENTS.md` at project root, read automatically by Codex | `AGENTS.md` at project root, read via native filesystem walk | `AGENTS.md` at project root, read via native filesystem walk |

@@ -509,9 +509,29 @@ ensure_claude_commands() {
   fi
 }
 
+# Reduce a Claude `--output-format stream-json` stream to the text of EVERY
+# `result` event, in order. Lines that are not JSON objects pass through as-is.
+#
+# Plain print mode only writes the LAST result. Since the CLI gained background
+# tasks (Monitor, run_in_background, …), a task finishing after the agent's
+# answer wakes it for an extra turn, and that wake-up reply ("the monitor just
+# expired, nothing to do") replaces the real answer on stdout — which silently
+# dropped the QUALITY_SCORE_JSON / LAYER_DECOMPOSITION_JSON markers in verify.yml.
+emit_claude_results() {
+  jq -rR --unbuffered '
+    . as $line
+    | (try fromjson catch null) as $event
+    | if ($event | type) != "object" then $line
+      elif $event.type == "result" then ($event.result // empty)
+      else empty
+      end
+  '
+}
+
 invoke_claude() {
   log_info "Invoking Claude: /$COMMAND $ORIGINAL_ARGS_STRING"
-  claude --dangerously-skip-permissions "/$COMMAND $ORIGINAL_ARGS_STRING"
+  claude -p --dangerously-skip-permissions --output-format stream-json --verbose \
+    "/$COMMAND $ORIGINAL_ARGS_STRING" | emit_claude_results
 }
 
 # --- Token saving (RTK) — AIB-849 ---
