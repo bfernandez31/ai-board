@@ -91,6 +91,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     GitHub({
       clientId: process.env.GITHUB_ID!,
       clientSecret: process.env.GITHUB_SECRET!,
+      // GitHub now sends an RFC 9207 `iss` on OAuth callbacks; without a declared
+      // issuer Auth.js compares it to its "https://authjs.dev" placeholder and
+      // rejects every sign-in. Same value @auth/core >= 0.41.3 ships upstream.
+      issuer: 'https://github.com/login/oauth',
       authorization: {
         params: {
           scope: 'read:user user:email',
