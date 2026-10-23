@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { signIn } from 'next-auth/react';
 import { Layers, Files, GitPullRequest, AlertCircle, ExternalLink } from 'lucide-react';
 import {
   Dialog,
@@ -15,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { usePrDiff, PrDiffError } from '@/lib/hooks/use-pr-diff';
 import { getScoreColor } from '@/lib/quality-score';
 import { PrFileDiff } from '@/components/ticket/pr-file-diff';
+import { GITHUB_REPO_SCOPES } from '@/components/projects/reauth-prompt';
 import type { FileChange, PrOverview, ResolvedLayer } from '@/app/lib/schemas/pr-diff';
 
 interface PrDiffViewerProps {
@@ -173,6 +175,14 @@ export function PrDiffViewer({ projectId, ticketId, ticketTitle, open, onOpenCha
                 <p className="text-sm text-muted-foreground mt-1">
                   Reconnect your GitHub account with repository access to view this PR diff.
                 </p>
+                <Button
+                  className="mt-4"
+                  onClick={() =>
+                    signIn('github', { callbackUrl: window.location.href }, { scope: GITHUB_REPO_SCOPES })
+                  }
+                >
+                  Reconnect GitHub
+                </Button>
               </>
             ) : (
               <>

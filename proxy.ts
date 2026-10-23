@@ -21,6 +21,7 @@ const PUBLIC_PATTERNS = [
   /^\/api\/jobs\/\d+\/logs\/artifact$/,
   /^\/api\/jobs\/\d+\/logs\/raw-artifact$/,
   /^\/api\/maintenance\/prune-logs$/,
+  /^\/api\/maintenance\/cron-heartbeat$/,
   /^\/api\/projects\/\d+\/jobs$/,
   /^\/api\/projects\/\d+\/tickets\/[^/]+\/comments\/ai-board$/,
   /^\/api\/projects\/\d+\/tickets\/[^/]+\/comparisons$/,

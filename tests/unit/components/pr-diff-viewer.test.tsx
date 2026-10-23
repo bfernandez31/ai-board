@@ -10,8 +10,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderWithProviders, screen, waitFor, within } from '@/tests/utils/component-test-utils';
 import userEvent from '@testing-library/user-event';
+import { signIn } from 'next-auth/react';
 import { PrDiffViewer } from '@/components/ticket/pr-diff-viewer';
+import { GITHUB_REPO_SCOPES } from '@/components/projects/reauth-prompt';
 import type { FileChange, InlineComment, PrDiffResponse } from '@/app/lib/schemas/pr-diff';
+
+vi.mock('next-auth/react', () => ({ signIn: vi.fn() }));
 
 function file(filename: string, comments: InlineComment[] = []): FileChange {
   return {
@@ -250,6 +254,19 @@ describe('PrDiffViewer', () => {
 
       expect(await screen.findByTestId('pr-diff-error')).toBeInTheDocument();
       expect(screen.getByText(/github authorization required/i)).toBeInTheDocument();
+    });
+
+    it('re-authorizes GitHub with repo scope from the AUTH_REQUIRED state', async () => {
+      mockFetchError(403, 'AUTH_REQUIRED');
+      renderViewer();
+
+      await userEvent.click(await screen.findByRole('button', { name: /reconnect github/i }));
+
+      expect(signIn).toHaveBeenCalledWith(
+        'github',
+        expect.objectContaining({ callbackUrl: expect.any(String) }),
+        { scope: GITHUB_REPO_SCOPES }
+      );
     });
 
     it('defaults a never-reviewed PR to Files mode (no layers)', async () => {

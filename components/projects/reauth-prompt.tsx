@@ -4,13 +4,16 @@ import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck } from 'lucide-react';
 
+/** OAuth scopes granting repository access (import, PR diff viewer). */
+export const GITHUB_REPO_SCOPES = 'read:user user:email repo workflow';
+
 interface ReauthPromptProps {
   onDismiss: () => void;
 }
 
 export function ReauthPrompt({ onDismiss }: ReauthPromptProps) {
   const handleReauthorize = () => {
-    signIn('github', { callbackUrl: window.location.href }, { scope: 'read:user user:email repo workflow' });
+    signIn('github', { callbackUrl: window.location.href }, { scope: GITHUB_REPO_SCOPES });
   };
 
   return (
