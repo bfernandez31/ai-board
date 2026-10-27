@@ -51,9 +51,13 @@ export function Board({
 
   const { data: ticketsByStage = initialTicketsByStage } = useTicketsByStage(projectId);
 
-  // SHIP stage "Load More" pagination
+  // SHIP stage infinite scroll pagination
   const { data: shipTotal = initialShipTotal } = useShipTotal(projectId);
-  const { loadMore: loadMoreShip, isLoading: isLoadingMoreShip } = useLoadMoreShipTickets(projectId);
+  const {
+    loadMore: loadMoreShip,
+    isLoading: isLoadingMoreShip,
+    error: loadMoreShipError,
+  } = useLoadMoreShipTickets(projectId);
   const shipTicketCount = ticketsByStage[Stage.SHIP]?.length ?? 0;
   const hasMoreShipTickets = shipTicketCount < shipTotal;
   const handleLoadMoreShip = useCallback(() => loadMoreShip(shipTicketCount), [loadMoreShip, shipTicketCount]);
@@ -342,6 +346,7 @@ export function Board({
         shipTotal={shipTotal}
         onLoadMoreShip={handleLoadMoreShip}
         isLoadingMoreShip={isLoadingMoreShip}
+        hasLoadMoreShipError={loadMoreShipError !== null}
         activeTicket={drag.activeTicket}
         isDragging={drag.isDragging}
         dragSource={drag.dragSource}

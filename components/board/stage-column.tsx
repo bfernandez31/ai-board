@@ -10,7 +10,7 @@ import { TicketCard, type TicketCardSelection } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
 import { MobileScrollButton } from './mobile-scroll-button';
 import { TicketWithVersion } from '@/lib/types';
-import { Ban, Inbox, Loader2, ChevronDown } from 'lucide-react';
+import { AlertCircle, Ban, Inbox, Loader2, RotateCw } from 'lucide-react';
 import type { DualJobState } from '@/lib/types/job-types';
 
 export interface BulkSelectionContext {
@@ -32,11 +32,16 @@ interface StageColumnProps {
   activePreviewTicket?: { ticketKey: string } | null;
   activeDeploymentTicket?: number | null;
   totalCount?: number; // Total tickets for this stage (for pagination)
-  onLoadMore?: () => void; // Callback to load more tickets
+  onLoadMore?: () => void; // Loads the next batch; presence enables infinite scroll
   isLoadingMore?: boolean; // Whether more tickets are being loaded
+  hasLoadMoreError?: boolean; // Last batch failed — wait for an explicit retry
+  isLoadMorePaused?: boolean; // Suspend auto-loading (e.g. during drag & drop)
   /** Bulk-selection context, only honored when stage === 'INBOX' (AIB-821) */
   bulkSelection?: BulkSelectionContext;
 }
+
+/** Distance (px) below the viewport at which the next batch starts loading. */
+const LOAD_MORE_THRESHOLD_PX = 300;
 
 // Stage configuration matching original design
 const STAGE_CONFIG: Record<
@@ -158,6 +163,8 @@ export const StageColumn = React.memo(
     totalCount,
     onLoadMore,
     isLoadingMore = false,
+    hasLoadMoreError = false,
+    isLoadMorePaused = false,
     bulkSelection,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
@@ -235,6 +242,48 @@ export const StageColumn = React.memo(
       };
     }, [checkScrollPosition]);
 
+    // Infinite scroll (paginated SHIP column): a sentinel after the last card is
+    // observed inside the column's own scroll viewport, so it works with touch
+    // scrolling and is unaffected by horizontal scrolling between columns.
+    const hasMore = onLoadMore !== undefined;
+    const sentinelRef = React.useRef<HTMLDivElement>(null);
+    const [isSentinelNear, setIsSentinelNear] = React.useState(false);
+
+    React.useEffect(() => {
+      const root = scrollViewportRef.current;
+      const sentinel = sentinelRef.current;
+      if (!hasMore || !root || !sentinel || typeof IntersectionObserver === 'undefined') {
+        setIsSentinelNear(false);
+        return;
+      }
+
+      const observer = new IntersectionObserver(
+        (entries) => setIsSentinelNear(entries.some((entry) => entry.isIntersecting)),
+        { root, rootMargin: `0px 0px ${LOAD_MORE_THRESHOLD_PX}px 0px` }
+      );
+      observer.observe(sentinel);
+      return () => observer.disconnect();
+    }, [hasMore]);
+
+    const canAutoLoad = hasMore && !isLoadingMore && !hasLoadMoreError && !isLoadMorePaused;
+
+    // Re-evaluated after each appended batch: the observer only reports changes,
+    // so if the column is still not filled (tall screens) keep loading.
+    React.useEffect(() => {
+      if (!isSentinelNear || !canAutoLoad) return;
+
+      // The observer state can lag a frame behind a just-appended batch; confirm
+      // against current layout to avoid fetching a batch nobody scrolled to.
+      const root = scrollViewportRef.current;
+      const sentinel = sentinelRef.current;
+      if (!root || !sentinel) return;
+      const distance =
+        sentinel.getBoundingClientRect().top - root.getBoundingClientRect().bottom;
+      if (distance > LOAD_MORE_THRESHOLD_PX) return;
+
+      onLoadMore?.();
+    }, [isSentinelNear, canAutoLoad, onLoadMore, ticketCount]);
+
     return (
       <div
         ref={setNodeRef}
@@ -307,24 +356,35 @@ export const StageColumn = React.memo(
                   );
                 })}
 
-                {/* Load More button for paginated stages */}
-                {onLoadMore && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onLoadMore}
-                    disabled={isLoadingMore}
-                    className="w-full text-xs text-muted-foreground"
+                {/* Infinite scroll footer for paginated stages (fixed height: no jump on append) */}
+                {hasMore && (
+                  <div
+                    ref={sentinelRef}
+                    data-testid="ship-load-more-sentinel"
+                    className="flex min-h-8 items-center justify-center text-xs text-muted-foreground"
                   >
-                    {isLoadingMore ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    {hasLoadMoreError ? (
+                      <div className="flex items-center gap-2" role="alert">
+                        <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                        <span>Couldn&apos;t load more tickets</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={onLoadMore}
+                          className="h-7 px-2 text-xs"
+                        >
+                          <RotateCw className="h-3 w-3 mr-1" />
+                          Retry
+                        </Button>
+                      </div>
                     ) : (
-                      <ChevronDown className="h-3 w-3 mr-1" />
+                      isLoadingMore && (
+                        <span role="status" aria-label="Loading more tickets">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        </span>
+                      )
                     )}
-                    {isLoadingMore
-                      ? 'Loading...'
-                      : `Load more (${(totalCount ?? ticketCount) - ticketCount} remaining)`}
-                  </Button>
+                  </div>
                 )}
               </>
             ) : (
