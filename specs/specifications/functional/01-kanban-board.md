@@ -112,6 +112,20 @@ Tickets are ordered differently depending on their stage:
   - Helps teams focus on active work
   - Provides visibility into stale tickets at the bottom
 
+### SHIP Column Infinite Scroll
+
+The SHIP column loads shipped tickets in batches of 50 and fetches further batches automatically as the user scrolls. Other columns always show all their tickets.
+
+- **Header counter**: Shows `loaded/total` (e.g., "50/248") while more shipped tickets remain; shows the plain count once everything is loaded
+- **Automatic loading**: When the bottom of the list comes within roughly one column-height of the visible area, the next batch is requested and appended below the existing tickets. There is no "Load more" button
+- **Loading indicator**: A discreet spinner appears at the bottom of the column while a batch is loading
+- **One request at a time**: Continued or rapid scrolling never issues a second concurrent request, and a ticket never appears twice in the list
+- **End of list**: Once all shipped tickets are loaded, no further requests are made on scroll
+- **Tall screens and resizes**: If the loaded tickets do not fill the column (tall viewport, rotation, window resize), batches keep loading until the column is filled or no tickets remain
+- **Error and retry**: If a batch fails to load, the bottom of the column shows "Couldn't load more tickets" with a **Retry** button. Automatic loading pauses until the user clicks Retry; on success the error disappears and the tickets are appended
+- **Board refresh**: Periodic board refreshes keep every SHIP ticket already loaded, so the list does not shrink back to the first batch
+- **Mobile**: Loading triggers from touch scrolling inside the column, from the floating scroll up/down buttons, and does not interfere with horizontal swiping between columns. Appending tickets does not shift the visible scroll position
+
 ### Auto-Transition Mode
 
 Users can enable a per-ticket "auto mode" that automatically chains the SPECIFY → PLAN → BUILD workflow after each successful job, removing the need to drag the card between stages manually.
