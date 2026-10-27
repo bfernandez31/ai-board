@@ -276,7 +276,7 @@ jobs:
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         uses: actions/setup-node@v4
         with:
-          node-version: '22.20.0'
+          node-version: '22.23.4'
 
       # 3. Setup environment (full for verify stage which may need test infra, lightweight otherwise)
       - name: Setup Environment (full)

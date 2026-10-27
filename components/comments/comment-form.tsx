@@ -47,6 +47,14 @@ export function CommentForm({ projectId, ticketId, onAutocompleteOpenChange }: C
     },
   });
 
+  const handleSubmit = () => {
+    if (!content.trim() || content.length > MAX_LENGTH || isPending) {
+      return;
+    }
+
+    createComment({ content: content.trim() });
+  };
+
   // Keyboard shortcut: Cmd/Ctrl+Enter to submit
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -62,14 +70,6 @@ export function CommentForm({ projectId, ticketId, onAutocompleteOpenChange }: C
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content]);
-
-  const handleSubmit = () => {
-    if (!content.trim() || content.length > MAX_LENGTH || isPending) {
-      return;
-    }
-
-    createComment({ content: content.trim() });
-  };
 
   const isValid = content.trim().length > 0 && content.length <= MAX_LENGTH;
   const characterCount = content.length;
