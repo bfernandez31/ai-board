@@ -2,7 +2,7 @@
  * Integration Tests: SHIP Stage Pagination
  *
  * Verifies that the tickets endpoint returns _shipTotal metadata
- * and that the SHIP "Load More" pagination works correctly.
+ * and that the SHIP column infinite scroll pagination works correctly.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -85,7 +85,7 @@ describe('SHIP Stage Pagination', () => {
     expect((response.data.INBOX as unknown[]).length).toBe(3);
   });
 
-  describe('Load More endpoint (?stage=SHIP&offset=N)', () => {
+  describe('Infinite scroll batch endpoint (?stage=SHIP&offset=N)', () => {
     it('should return additional SHIP tickets with offset', async () => {
       const ids = await createShipTickets(5);
 

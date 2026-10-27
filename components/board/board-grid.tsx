@@ -30,6 +30,8 @@ interface BoardGridProps {
   shipTotal: number;
   onLoadMoreShip: () => void;
   isLoadingMoreShip: boolean;
+  loadMoreShipError: boolean;
+  onRetryLoadMoreShip: () => void;
 
   // Drag state
   activeTicket: TicketWithVersion | null;
@@ -68,6 +70,8 @@ export function BoardGrid({
   shipTotal,
   onLoadMoreShip,
   isLoadingMoreShip,
+  loadMoreShipError,
+  onRetryLoadMoreShip,
   activeTicket,
   isDragging,
   dragSource,
@@ -135,10 +139,14 @@ export function BoardGrid({
                 activePreviewTicket={activePreviewTicket}
                 activeDeploymentTicket={activeDeploymentTicket}
                 {...(stage === Stage.INBOX && bulkSelection && { bulkSelection })}
-                {...(stage === Stage.SHIP && hasMoreShipTickets && {
+                {...(stage === Stage.SHIP && {
                   totalCount: shipTotal,
+                  hasMore: hasMoreShipTickets,
                   onLoadMore: onLoadMoreShip,
                   isLoadingMore: isLoadingMoreShip,
+                  loadMoreError: loadMoreShipError,
+                  onRetryLoadMore: onRetryLoadMoreShip,
+                  isLoadMorePaused: isDragging,
                 })}
               />
             );

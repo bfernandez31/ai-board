@@ -62,7 +62,7 @@ export async function GET(
     }
     const { stage: stageParam, workflowType: workflowTypeParam, limit: limitParam, offset: offsetParam, updatedSince } = filtersParsed.data;
 
-    // SHIP "Load More" pagination: ?stage=SHIP&offset=50&limit=50
+    // SHIP infinite scroll pagination: ?stage=SHIP&offset=50&limit=50
     if (stageParam === 'SHIP' && offsetParam !== undefined) {
       const tickets = await getMoreShipTickets(projectId, offsetParam, limitParam ?? 50);
       return NextResponse.json({ tickets }, { status: 200 });

@@ -9,8 +9,9 @@ import { Stage } from '@/lib/stage-transitions';
 import { TicketCard, type TicketCardSelection } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
 import { MobileScrollButton } from './mobile-scroll-button';
+import { useInfiniteScrollTrigger } from './hooks/use-infinite-scroll-trigger';
 import { TicketWithVersion } from '@/lib/types';
-import { Ban, Inbox, Loader2, ChevronDown } from 'lucide-react';
+import { Ban, Inbox, Loader2 } from 'lucide-react';
 import type { DualJobState } from '@/lib/types/job-types';
 
 export interface BulkSelectionContext {
@@ -32,8 +33,12 @@ interface StageColumnProps {
   activePreviewTicket?: { ticketKey: string } | null;
   activeDeploymentTicket?: number | null;
   totalCount?: number; // Total tickets for this stage (for pagination)
-  onLoadMore?: () => void; // Callback to load more tickets
+  onLoadMore?: () => void; // Invoked by the infinite-scroll sentinel to load the next batch
   isLoadingMore?: boolean; // Whether more tickets are being loaded
+  hasMore?: boolean; // Whether more tickets remain on the server (enables the sentinel)
+  loadMoreError?: boolean; // Last batch failed — auto-loading paused until Retry
+  onRetryLoadMore?: () => void;
+  isLoadMorePaused?: boolean; // Pause auto-loading (e.g. while dragging)
   /** Bulk-selection context, only honored when stage === 'INBOX' (AIB-821) */
   bulkSelection?: BulkSelectionContext;
 }
@@ -140,6 +145,8 @@ const STAGE_CONFIG: Record<
   },
 };
 
+const noop = () => {};
+
 /**
  * StageColumn Component - Original Design with Drag-and-Drop
  */
@@ -158,6 +165,10 @@ export const StageColumn = React.memo(
     totalCount,
     onLoadMore,
     isLoadingMore = false,
+    hasMore = false,
+    loadMoreError = false,
+    onRetryLoadMore,
+    isLoadMorePaused = false,
     bulkSelection,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
@@ -185,6 +196,16 @@ export const StageColumn = React.memo(
     const [canScrollUp, setCanScrollUp] = React.useState(false);
     const [canScrollDown, setCanScrollDown] = React.useState(false);
     const scrollViewportRef = React.useRef<HTMLDivElement>(null);
+    const sentinelRef = React.useRef<HTMLDivElement>(null);
+
+    // Infinite scroll: load the next batch when the sentinel nears the column bottom
+    const showSentinel = !!onLoadMore && hasMore;
+    useInfiniteScrollTrigger({
+      rootRef: scrollViewportRef,
+      sentinelRef,
+      enabled: showSentinel && !isLoadingMore && !loadMoreError && !isLoadMorePaused,
+      onTrigger: onLoadMore ?? noop,
+    });
 
     // Check scroll position to determine button visibility
     const checkScrollPosition = React.useCallback(() => {
@@ -260,7 +281,7 @@ export const StageColumn = React.memo(
             <span
               className={`flex h-6 min-w-6 px-1.5 items-center justify-center rounded-full text-[0.58rem] font-semibold shadow-[0_0_8px_hsl(var(--ctp-crust)/0.5)] ring-1 ring-inset ring-border/20 ${stageConfig.badgeBgColor} ${stageConfig.badgeTextColor}`}
             >
-              {totalCount !== undefined && totalCount > ticketCount
+              {totalCount !== undefined
                 ? `${ticketCount}/${totalCount}`
                 : ticketCount}
             </span>
@@ -307,24 +328,24 @@ export const StageColumn = React.memo(
                   );
                 })}
 
-                {/* Load More button for paginated stages */}
-                {onLoadMore && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onLoadMore}
-                    disabled={isLoadingMore}
-                    className="w-full text-xs text-muted-foreground"
-                  >
-                    {isLoadingMore ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <ChevronDown className="h-3 w-3 mr-1" />
-                    )}
-                    {isLoadingMore
-                      ? 'Loading...'
-                      : `Load more (${(totalCount ?? ticketCount) - ticketCount} remaining)`}
-                  </Button>
+                {/* Infinite scroll sentinel + status rows */}
+                {showSentinel && (
+                  <div ref={sentinelRef} data-testid="ship-load-more-sentinel" aria-hidden="true" />
+                )}
+                {loadMoreError ? (
+                  <div role="alert" className="flex h-8 items-center justify-center gap-2">
+                    <span className="text-xs text-destructive">Couldn&apos;t load more tickets.</span>
+                    <Button size="sm" variant="ghost" onClick={onRetryLoadMore}>
+                      Retry
+                    </Button>
+                  </div>
+                ) : (
+                  isLoadingMore && (
+                    <div role="status" aria-live="polite" className="flex h-8 items-center justify-center">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <span className="sr-only">Loading more tickets</span>
+                    </div>
+                  )
                 )}
               </>
             ) : (

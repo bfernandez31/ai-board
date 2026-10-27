@@ -51,12 +51,22 @@ export function Board({
 
   const { data: ticketsByStage = initialTicketsByStage } = useTicketsByStage(projectId);
 
-  // SHIP stage "Load More" pagination
+  // SHIP stage infinite scroll
   const { data: shipTotal = initialShipTotal } = useShipTotal(projectId);
-  const { loadMore: loadMoreShip, isLoading: isLoadingMoreShip } = useLoadMoreShipTickets(projectId);
+  const {
+    loadMore: loadMoreShip,
+    retry: retryLoadMoreShip,
+    isLoading: isLoadingMoreShip,
+    isError: loadMoreShipError,
+    isExhausted: isShipExhausted,
+  } = useLoadMoreShipTickets(projectId, shipTotal);
   const shipTicketCount = ticketsByStage[Stage.SHIP]?.length ?? 0;
-  const hasMoreShipTickets = shipTicketCount < shipTotal;
+  const hasMoreShipTickets = shipTicketCount < shipTotal && !isShipExhausted;
   const handleLoadMoreShip = useCallback(() => loadMoreShip(shipTicketCount), [loadMoreShip, shipTicketCount]);
+  const handleRetryLoadMoreShip = useCallback(
+    () => retryLoadMoreShip(shipTicketCount),
+    [retryLoadMoreShip, shipTicketCount]
+  );
 
   const allTickets = useMemo(() => Object.values(ticketsByStage).flat(), [ticketsByStage]);
 
@@ -342,6 +352,8 @@ export function Board({
         shipTotal={shipTotal}
         onLoadMoreShip={handleLoadMoreShip}
         isLoadingMoreShip={isLoadingMoreShip}
+        loadMoreShipError={loadMoreShipError}
+        onRetryLoadMoreShip={handleRetryLoadMoreShip}
         activeTicket={drag.activeTicket}
         isDragging={drag.isDragging}
         dragSource={drag.dragSource}
