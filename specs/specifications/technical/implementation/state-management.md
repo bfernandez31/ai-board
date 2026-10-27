@@ -78,7 +78,7 @@ export const queryKeys = {
 
 **Hook** (`app/lib/hooks/queries/useTickets.ts`):
 
-The tickets API returns stage-grouped data with `_shipTotal` metadata. The hook flattens to `TicketWithVersion[]` (cache format stays flat for compatibility with optimistic mutations) and stores `shipTotal` in a separate cache key.
+The tickets API returns stage-grouped data with `_shipTotal` metadata. The hook flattens to `TicketWithVersion[]` (cache format stays flat for compatibility with optimistic mutations) and stores `shipTotal` in a separate cache key. Each refetch sends `?shipLimit=N`, where N is the number of SHIP tickets already in the cache. N is clamped to `[SHIP_BATCH_SIZE, SHIP_REFETCH_MAX]` (50–1000), so polling never drops batches loaded by infinite scroll.
 
 ```typescript
 export function useTicketsByStage(projectId: number) {
@@ -87,7 +87,8 @@ export function useTicketsByStage(projectId: number) {
   return useQuery({
     queryKey: queryKeys.projects.tickets(projectId),   // cache: TicketWithVersion[]
     queryFn: async () => {
-      const { tickets, shipTotal } = await fetchTicketsFromAPI(projectId);
+      const loaded = countShipTickets(queryClient.getQueryData(queryKeys.projects.tickets(projectId)));
+      const { tickets, shipTotal } = await fetchTicketsFromAPI(projectId, computeShipRefetchLimit(loaded));
       queryClient.setQueryData(queryKeys.projects.shipTotal(projectId), shipTotal);
       return tickets;
     },
@@ -110,16 +111,27 @@ export function useShipTotal(projectId: number) {
   });
 }
 
-// Mutation: load next page of SHIP tickets and append to cache
+// Mutation: load next SHIP batch (infinite scroll) and append to cache
 export function useLoadMoreShipTickets(projectId: number) {
-  // Fetches /api/projects/:id/tickets?stage=SHIP&offset=N&limit=50
-  // onSuccess: appends results to the flat TicketWithVersion[] cache
-  return { loadMore, isLoading };
+  // loadMore(): no-op while a request is in flight (synchronous inFlightRef guard —
+  //   mutation isPending lags a render, so it cannot block rapid observer callbacks)
+  // offset = count of SHIP tickets in the cache at call time
+  // Fetches /api/projects/:id/tickets?stage=SHIP&offset=N&limit=SHIP_BATCH_SIZE
+  // onSuccess: appendUniqueTickets() drops ids already in the cache (any stage);
+  //   if nothing was added, shipTotal is reconciled to the loaded SHIP count (stops loading)
+  return { loadMore, isLoading, error };
 }
 ```
 
+**SHIP pagination helpers** (`lib/tickets/ship-pagination.ts`): `SHIP_BATCH_SIZE` (50), `SHIP_REFETCH_MAX` (1000), `appendUniqueTickets(existing, incoming)` → `{ tickets, addedCount }`, `computeShipRefetchLimit(loadedShipCount)`, `countShipTickets(tickets)`. These helpers are shared by the hook, the tickets API route, and `lib/db/tickets.ts`.
+
+**SHIP infinite-scroll UI**: `board.tsx` builds `{ hasMore, isLoading, error, onLoadMore }`, where `hasMore` is loaded < total. `board-grid.tsx` adds `paused: isDragging` and passes the result as `shipInfiniteScroll` to the SHIP `StageColumn` only. `ShipInfiniteScrollFooter` (`components/board/ship-infinite-scroll-footer.tsx`) renders after the last SHIP card inside the ScrollArea viewport:
+- A sentinel `div` (`data-testid="ship-scroll-sentinel"`) observed by an `IntersectionObserver` with `root` set to the column viewport and `rootMargin: '0px 0px 300px 0px'`. It fires `onLoadMore` when `isIntersecting && hasMore && !isLoading && !error && !paused`
+- The observer is recreated when `hasMore | isLoading | error | paused | ticketCount` change. Re-observing a sentinel that is still visible therefore loads the next batch, which fills tall columns without timers
+- States: loading → `role="status"` with a `Loader2` spinner plus sr-only text; error → `role="alert"` with a Retry `Button` (calls `onLoadMore`); `!hasMore` → renders nothing
+
 **Cache Architecture**:
-- `queryKeys.projects.tickets(id)` → `TicketWithVersion[]` (flat, all stages combined, SHIP limited to 50 initially)
+- `queryKeys.projects.tickets(id)` → `TicketWithVersion[]` (flat, all stages combined; SHIP holds the first 50 initially, plus batches appended by infinite scroll)
 - `queryKeys.projects.shipTotal(id)` → `number` (total SHIP tickets for pagination)
 - Cache format is flat array to stay compatible with all optimistic mutation hooks (stage transitions, delete, create, update)
 - Board component seeds both caches with SSR data on mount
