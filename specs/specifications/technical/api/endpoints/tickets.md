@@ -16,12 +16,12 @@ Fetch tickets for a project, grouped by stage. SHIP stage is paginated (default 
 - `stage` (string, optional): Filter by stage — `INBOX|SPECIFY|PLAN|BUILD|VERIFY|SHIP|CLOSED`
 - `workflowType` (string, optional): Filter by workflow type — `FULL|QUICK|CLEAN`
 - `limit` (number, optional): Maximum number of tickets to return (min: 1). Only applies when at least one filter is provided. Results are sorted by `updatedAt` desc.
-- `offset` (number, optional): Skip N tickets (min: 0). Used for SHIP "Load More" pagination. When `stage=SHIP` and `offset` is provided, returns the next page of SHIP tickets.
+- `offset` (number, optional): Skip N tickets (min: 0). Used for SHIP column infinite scroll pagination. When `stage=SHIP` and `offset` is provided, returns the next page of SHIP tickets.
 - `updatedSince` (string, optional): ISO 8601 datetime. Only return tickets updated after this timestamp.
 
 **Response — no filters** (200 OK): Stage-grouped object with SHIP pagination metadata
 
-All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tickets (sorted by `updatedAt` desc). `_shipTotal` indicates the total number of SHIP tickets for "Load More" pagination.
+All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tickets (sorted by `updatedAt` desc). `_shipTotal` indicates the total number of SHIP tickets for SHIP infinite scroll pagination.
 
 ```json
 {
@@ -53,7 +53,7 @@ All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tic
 }
 ```
 
-**Response — SHIP Load More** (`?stage=SHIP&offset=50&limit=50`) (200 OK):
+**Response — SHIP next batch** (`?stage=SHIP&offset=50&limit=50`) (200 OK):
 ```json
 {
   "tickets": [
