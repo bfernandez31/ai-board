@@ -65,19 +65,20 @@ export function ShipInfiniteScrollFooter({
   return (
     <div aria-live="polite" className="min-h-8 flex flex-col items-center justify-center">
       <div ref={sentinelRef} data-testid="ship-scroll-sentinel" aria-hidden="true" className="h-px w-full" />
-      {isLoading ? (
+      {isLoading && (
         <div role="status" className="flex items-center justify-center">
           <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-muted-foreground" />
           <span className="sr-only">Loading more shipped tickets</span>
         </div>
-      ) : error ? (
+      )}
+      {!isLoading && error && (
         <div role="alert" className="flex items-center gap-2 text-xs text-destructive">
           Couldn&apos;t load more shipped tickets.
           <Button variant="ghost" size="sm" onClick={onLoadMore}>
             Retry
           </Button>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

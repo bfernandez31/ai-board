@@ -153,7 +153,7 @@ export function useLoadMoreShipTickets(projectId: number) {
   return {
     loadMore,
     isLoading: isPending,
-    error: error ?? null,
+    error,
   };
 }
 
