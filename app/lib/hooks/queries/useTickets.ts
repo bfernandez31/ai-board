@@ -173,7 +173,8 @@ export function useShipInfiniteLoad(
         return result.tickets;
       });
 
-      if (batch.length === 0 || addedCount === 0) {
+      // An empty or all-duplicate batch means the server has nothing new to offer
+      if (addedCount === 0) {
         hasMoreRef.current = false;
         setExhaustedAtTotal(totalAtRequest);
       }
