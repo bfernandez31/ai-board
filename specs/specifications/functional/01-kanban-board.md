@@ -112,6 +112,19 @@ Tickets are ordered differently depending on their stage:
   - Helps teams focus on active work
   - Provides visibility into stale tickets at the bottom
 
+### SHIP Column Infinite Scroll
+
+The SHIP column initially shows the 50 most recently updated shipped tickets; while more remain, its header shows the loaded count against the total (e.g., `50/180`). There is no "Load more" button — further tickets load automatically as the user scrolls, on desktop and mobile alike:
+
+- When the bottom of the SHIP list comes within about 300px of the visible area, the next batch of 50 tickets is fetched and appended below the existing ones
+- A spinner appears at the bottom of the column while a batch is loading
+- Only one batch loads at a time, and a ticket never appears twice in the column
+- When all shipped tickets are loaded (or the server returns no new tickets), loading stops and no indicator is shown
+- If a batch fails to load, the column shows "Couldn't load more tickets." with a **Retry** button; automatic loading stays paused until a retry succeeds (failed requests are never retried in a loop)
+- Automatic loading pauses while a ticket is being dragged
+- Background polling refreshes keep the tickets already loaded by scrolling, so the column does not collapse back to the first 50
+- Other columns are not paginated and load all their tickets at once
+
 ### Auto-Transition Mode
 
 Users can enable a per-ticket "auto mode" that automatically chains the SPECIFY → PLAN → BUILD workflow after each successful job, removing the need to drag the card between stages manually.
