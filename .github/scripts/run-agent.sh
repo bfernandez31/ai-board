@@ -538,22 +538,84 @@ invoke_claude() {
 
 # Install the pinned RTK release (FR-017). Returns non-zero on any failure; the
 # caller (activate_token_saving) swallows it. Never call this outside that wrapper.
+#
+# We download the EXACT versioned release asset directly instead of piping the
+# upstream install.sh to a shell. That installer unconditionally resolves
+# 'latest' and hardcodes the gnu target triple, so on releases that ship only a
+# musl x86_64 build (e.g. v0.42.3) its download 404s — which is exactly what made
+# every token-saving run fall back. A direct pinned download honours FR-017
+# ("never latest"), is deterministic, and is checksum-verified before use.
 install_rtk() {
   if command -v rtk &>/dev/null; then
     log_info "RTK already installed — skipping"
     return 0
   fi
   log_info "Installing RTK v${RTK_VERSION}..."
-  # Official installer, pinned to an exact release via RTK_VERSION (never 'latest').
-  # Bound the network wait so a stalled fetch falls back fast instead of stalling
+
+  # Map the runner arch to the pinned release's target triple. GH-hosted runners
+  # are linux; both gnu builds exist for v${RTK_VERSION}.
+  local arch target
+  arch="$(uname -m)"
+  case "$arch" in
+    x86_64 | amd64) target="x86_64-unknown-linux-gnu" ;;
+    aarch64 | arm64) target="aarch64-unknown-linux-gnu" ;;
+    *)
+      log_info "RTK: unsupported arch '${arch}' — skipping"
+      return 1
+      ;;
+  esac
+
+  local asset="rtk-${target}.tar.gz"
+  local base="https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}"
+  local tmp
+  tmp="$(mktemp -d)"
+
+  # Bound the network wait so a stalled fetch falls back fast rather than stalling
   # the run (FR-006/SC-003) — connect within 10s, whole transfer within 60s.
+  if ! curl -fsSL --connect-timeout 10 --max-time 60 "${base}/${asset}" -o "${tmp}/${asset}"; then
+    log_info "RTK: download failed (${base}/${asset})"
+    rm -rf "$tmp"
+    return 1
+  fi
+
+  # Verify the pinned asset against the published checksum — refuse to run an
+  # unverified binary. A missing/garbled checksums file falls back too.
+  if curl -fsSL --connect-timeout 10 --max-time 30 "${base}/checksums.txt" -o "${tmp}/checksums.txt"; then
+    local expected actual
+    expected="$(awk -v f="$asset" '$2 == f {print $1}' "${tmp}/checksums.txt")"
+    actual="$(sha256sum "${tmp}/${asset}" | awk '{print $1}')"
+    if [[ -z "$expected" || "$expected" != "$actual" ]]; then
+      log_info "RTK: checksum mismatch for ${asset} (expected '${expected}', got '${actual}')"
+      rm -rf "$tmp"
+      return 1
+    fi
+  else
+    log_info "RTK: could not fetch checksums.txt — refusing unverified binary"
+    rm -rf "$tmp"
+    return 1
+  fi
+
+  if ! tar -xzf "${tmp}/${asset}" -C "$tmp"; then
+    log_info "RTK: extraction failed"
+    rm -rf "$tmp"
+    return 1
+  fi
+
+  local bin
+  bin="$(find "$tmp" -type f -name rtk | head -n1)"
+  if [[ -z "$bin" ]]; then
+    log_info "RTK: 'rtk' binary not found in archive"
+    rm -rf "$tmp"
+    return 1
+  fi
+
   local install_rc=0
-  curl -fsSL --connect-timeout 10 --max-time 60 \
-    "https://raw.githubusercontent.com/rtk-ai/rtk/v${RTK_VERSION}/install.sh" \
-    | RTK_VERSION="${RTK_VERSION}" sh >&2 || install_rc=$?
-  # The installer runs in a subshell (piped to `sh`), so any PATH change it makes
-  # does not reach this shell. Mirror the Mistral path and add the default install
-  # dir so `rtk init` / `rtk --version` resolve when RTK lands in ~/.local/bin.
+  mkdir -p "${HOME}/.local/bin"
+  install -m 0755 "$bin" "${HOME}/.local/bin/rtk" || install_rc=$?
+  rm -rf "$tmp"
+
+  # RTK lands in ~/.local/bin; add it to PATH so `rtk init` / `rtk --version`
+  # resolve in the remainder of this shell.
   export PATH="${HOME}/.local/bin:${PATH}"
   return $install_rc
 }
@@ -567,7 +629,8 @@ activate_token_saving() {
     return 0
   fi
 
-  # Phases 2-3: install pinned RTK + register the PreToolUse hook; swallow ALL failures.
+  # Phases 2-3: install pinned RTK + inject rtk usage instructions via
+  # `rtk init --global` (writes to ~/CLAUDE.md); swallow ALL failures.
   local rc=0
   set +e
   install_rtk

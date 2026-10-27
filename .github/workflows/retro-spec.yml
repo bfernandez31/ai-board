@@ -218,7 +218,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.20.0'
+          node-version: '22.23.4'
 
       # Plugin command discovery is handled inside run-agent.sh
       # (ensure_claude_commands) — no inline symlink step needed.
