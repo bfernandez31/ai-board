@@ -145,7 +145,7 @@ const STAGE_CONFIG: Record<
   },
 };
 
-const noop = () => {};
+function noop(): void {}
 
 /**
  * StageColumn Component - Original Design with Drag-and-Drop
@@ -332,20 +332,19 @@ export const StageColumn = React.memo(
                 {showSentinel && (
                   <div ref={sentinelRef} data-testid="ship-load-more-sentinel" aria-hidden="true" />
                 )}
-                {loadMoreError ? (
+                {loadMoreError && (
                   <div role="alert" className="flex h-8 items-center justify-center gap-2">
                     <span className="text-xs text-destructive">Couldn&apos;t load more tickets.</span>
                     <Button size="sm" variant="ghost" onClick={onRetryLoadMore}>
                       Retry
                     </Button>
                   </div>
-                ) : (
-                  isLoadingMore && (
-                    <div role="status" aria-live="polite" className="flex h-8 items-center justify-center">
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                      <span className="sr-only">Loading more tickets</span>
-                    </div>
-                  )
+                )}
+                {isLoadingMore && !loadMoreError && (
+                  <div role="status" aria-live="polite" className="flex h-8 items-center justify-center">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <span className="sr-only">Loading more tickets</span>
+                  </div>
                 )}
               </>
             ) : (
