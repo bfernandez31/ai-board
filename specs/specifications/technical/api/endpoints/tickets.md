@@ -16,12 +16,13 @@ Fetch tickets for a project, grouped by stage. SHIP stage is paginated (default 
 - `stage` (string, optional): Filter by stage — `INBOX|SPECIFY|PLAN|BUILD|VERIFY|SHIP|CLOSED`
 - `workflowType` (string, optional): Filter by workflow type — `FULL|QUICK|CLEAN`
 - `limit` (number, optional): Maximum number of tickets to return (min: 1). Only applies when at least one filter is provided. Results are sorted by `updatedAt` desc.
-- `offset` (number, optional): Skip N tickets (min: 0). Used for SHIP "Load More" pagination. When `stage=SHIP` and `offset` is provided, returns the next page of SHIP tickets.
+- `offset` (number, optional): Skip N tickets (min: 0). Used for SHIP infinite-scroll pagination. When `stage=SHIP` and `offset` is provided, returns the next page of SHIP tickets (`limit` defaults to 50).
 - `updatedSince` (string, optional): ISO 8601 datetime. Only return tickets updated after this timestamp.
+- `shipLimit` (integer, optional): Number of SHIP tickets in the default grouped response (min: 1, max: 1000, default: 50). Only applies when no other filter is given. The board's background refetch sends the number of SHIP tickets already loaded, so polling keeps batches loaded by scrolling.
 
 **Response — no filters** (200 OK): Stage-grouped object with SHIP pagination metadata
 
-All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tickets (sorted by `updatedAt` desc). `_shipTotal` indicates the total number of SHIP tickets for "Load More" pagination.
+All non-SHIP stages return all tickets. SHIP stage returns only the first `shipLimit` tickets (default 50), sorted by `updatedAt` desc and then `id` desc. The `id` tie-breaker makes the order deterministic, so offset pages never overlap or leave gaps. `_shipTotal` indicates the total number of SHIP tickets for infinite-scroll pagination.
 
 ```json
 {
@@ -53,7 +54,7 @@ All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tic
 }
 ```
 
-**Response — SHIP Load More** (`?stage=SHIP&offset=50&limit=50`) (200 OK):
+**Response — SHIP next batch** (`?stage=SHIP&offset=50&limit=50`) (200 OK): Same ordering as the grouped SHIP slice (`updatedAt` desc, `id` desc)
 ```json
 {
   "tickets": [
@@ -84,7 +85,7 @@ All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tic
 
 **Sorting Behavior**:
 - **INBOX**: Tickets sorted by `ticketNumber` ascending (oldest first, newest last)
-- **All Other Stages**: Tickets sorted by `updatedAt` descending (most recently updated first)
+- **All Other Stages**: Tickets sorted by `updatedAt` descending (most recently updated first); SHIP adds `id` descending as a tie-breaker
 - Sorting applied per-stage after grouping
 
 **Filtering**:
@@ -92,6 +93,7 @@ All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tic
 - CLOSED tickets only accessible via search or direct URL
 
 **Errors**:
+- `400`: Invalid filter parameters (e.g. `shipLimit=0`, `shipLimit=1001`, `shipLimit=1.5`) → `{ "error": "Invalid filter parameters", "code": "VALIDATION_ERROR" }`
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 - `404`: Project not found

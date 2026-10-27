@@ -4,13 +4,13 @@ import * as React from 'react';
 
 import { useDroppable } from '@dnd-kit/core';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
 import { Stage } from '@/lib/stage-transitions';
 import { TicketCard, type TicketCardSelection } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
 import { MobileScrollButton } from './mobile-scroll-button';
 import { TicketWithVersion } from '@/lib/types';
-import { Ban, Inbox, Loader2, ChevronDown } from 'lucide-react';
+import { Ban, Inbox } from 'lucide-react';
+import { ShipInfiniteScrollFooter, type ShipInfiniteScrollState } from './ship-infinite-scroll-footer';
 import type { DualJobState } from '@/lib/types/job-types';
 
 export interface BulkSelectionContext {
@@ -32,8 +32,8 @@ interface StageColumnProps {
   activePreviewTicket?: { ticketKey: string } | null;
   activeDeploymentTicket?: number | null;
   totalCount?: number; // Total tickets for this stage (for pagination)
-  onLoadMore?: () => void; // Callback to load more tickets
-  isLoadingMore?: boolean; // Whether more tickets are being loaded
+  /** SHIP infinite-scroll state, only passed for the SHIP column (AIB-894) */
+  shipInfiniteScroll?: ShipInfiniteScrollState;
   /** Bulk-selection context, only honored when stage === 'INBOX' (AIB-821) */
   bulkSelection?: BulkSelectionContext;
 }
@@ -156,8 +156,7 @@ export const StageColumn = React.memo(
     activePreviewTicket,
     activeDeploymentTicket,
     totalCount,
-    onLoadMore,
-    isLoadingMore = false,
+    shipInfiniteScroll,
     bulkSelection,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
@@ -307,24 +306,13 @@ export const StageColumn = React.memo(
                   );
                 })}
 
-                {/* Load More button for paginated stages */}
-                {onLoadMore && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onLoadMore}
-                    disabled={isLoadingMore}
-                    className="w-full text-xs text-muted-foreground"
-                  >
-                    {isLoadingMore ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <ChevronDown className="h-3 w-3 mr-1" />
-                    )}
-                    {isLoadingMore
-                      ? 'Loading...'
-                      : `Load more (${(totalCount ?? ticketCount) - ticketCount} remaining)`}
-                  </Button>
+                {/* Infinite scroll sentinel + loading/error state (SHIP only) */}
+                {shipInfiniteScroll && (
+                  <ShipInfiniteScrollFooter
+                    rootRef={scrollViewportRef}
+                    ticketCount={ticketCount}
+                    {...shipInfiniteScroll}
+                  />
                 )}
               </>
             ) : (

@@ -111,6 +111,24 @@ Tickets are ordered differently depending on their stage:
   - Recently modified tickets appear at the top
   - Helps teams focus on active work
   - Provides visibility into stale tickets at the bottom
+  - SHIP tickets with the same update time are ordered by ticket ID descending so batches are stable
+
+### SHIP Column Infinite Scroll
+
+The SHIP column loads shipped tickets in batches of 50 and loads the next batch automatically as the user scrolls. There is no "Load more" button.
+
+- **Header counter**: The SHIP header shows `loaded/total`, and it updates as batches load
+- **Pre-loading**: The next batch starts loading when the end of the list comes within ~300px of the column's visible area, before the last card is reached. Loading follows the column's own scroll region (desktop wheel/trackpad, mobile touch swipe)
+- **Loading indicator**: A small spinner appears at the bottom of the column while a batch loads. Screen readers announce it ("Loading more shipped tickets")
+- **Single request**: Only one batch request runs at a time, however fast the user scrolls
+- **No duplicates**: Incoming tickets that are already on the board are discarded, so a ticket never appears twice even if SHIP content changed between batches
+- **Stop conditions**: Loading stops once every SHIP ticket is loaded, or when a batch returns no new tickets. In that case the total is reconciled to the loaded count
+- **Error and retry**: If a batch fails, the spinner disappears and an inline alert ("Couldn't load more shipped tickets.") with a **Retry** button appears. Scrolling alone never retries; automatic loading resumes after a successful retry
+- **Tall columns**: When the loaded tickets do not fill the column height, batches keep loading one at a time until the column scrolls, every ticket is loaded, or an error occurs
+- **Background refresh**: Polling refetches keep every SHIP ticket already loaded by scrolling, up to 1,000 tickets
+- **Drag & drop**: Auto-loading pauses during a drag and resumes after the drop
+- **Scroll stability**: New batches are appended below the existing cards without moving the user's scroll position. Mobile floating scroll-to-top/bottom buttons and horizontal swiping between columns work as usual
+- Other columns and the activity feed's "Load more" are not affected
 
 ### Auto-Transition Mode
 

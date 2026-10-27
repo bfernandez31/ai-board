@@ -51,12 +51,21 @@ export function Board({
 
   const { data: ticketsByStage = initialTicketsByStage } = useTicketsByStage(projectId);
 
-  // SHIP stage "Load More" pagination
+  // SHIP stage infinite scroll (AIB-894)
   const { data: shipTotal = initialShipTotal } = useShipTotal(projectId);
-  const { loadMore: loadMoreShip, isLoading: isLoadingMoreShip } = useLoadMoreShipTickets(projectId);
+  const { loadMore: loadNextShipBatch, isLoading: isShipBatchLoading, error: shipBatchError } =
+    useLoadMoreShipTickets(projectId);
   const shipTicketCount = ticketsByStage[Stage.SHIP]?.length ?? 0;
-  const hasMoreShipTickets = shipTicketCount < shipTotal;
-  const handleLoadMoreShip = useCallback(() => loadMoreShip(shipTicketCount), [loadMoreShip, shipTicketCount]);
+  const shipHasMore = shipTicketCount < shipTotal;
+  const shipLoadState = useMemo(
+    () => ({
+      hasMore: shipHasMore,
+      isLoading: isShipBatchLoading,
+      error: shipBatchError,
+      onLoadMore: loadNextShipBatch,
+    }),
+    [shipHasMore, isShipBatchLoading, shipBatchError, loadNextShipBatch]
+  );
 
   const allTickets = useMemo(() => Object.values(ticketsByStage).flat(), [ticketsByStage]);
 
@@ -338,10 +347,8 @@ export function Board({
         getDropZoneStyle={getDropZoneStyle}
         activePreviewTicket={activePreviewTicket}
         activeDeploymentTicket={activeDeploymentTicket}
-        hasMoreShipTickets={hasMoreShipTickets}
         shipTotal={shipTotal}
-        onLoadMoreShip={handleLoadMoreShip}
-        isLoadingMoreShip={isLoadingMoreShip}
+        shipLoadState={shipLoadState}
         activeTicket={drag.activeTicket}
         isDragging={drag.isDragging}
         dragSource={drag.dragSource}

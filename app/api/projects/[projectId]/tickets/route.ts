@@ -16,6 +16,7 @@ import { Readable } from 'stream';
 import { requireAuth } from '@/lib/db/users';
 import { getUserSubscription } from '@/lib/billing/subscription';
 import { validateWorkflowAuth } from '@/app/lib/auth/workflow-auth';
+import { SHIP_BATCH_SIZE, SHIP_REFETCH_MAX } from '@/lib/tickets/ship-pagination';
 
 export async function GET(
   request: NextRequest,
@@ -42,6 +43,7 @@ export async function GET(
     }
 
     // Optional filters: ?stage=SHIP&workflowType=FULL&limit=50&offset=0&updatedSince=2025-01-01T00:00:00Z
+    // Default grouped response accepts ?shipLimit=N to return the first N SHIP tickets (background refetch)
     const { searchParams } = new URL(request.url);
     const ticketFiltersSchema = z.object({
       stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP', 'CLOSED']).optional(),
@@ -49,6 +51,7 @@ export async function GET(
       limit: z.coerce.number().int().min(1).optional(),
       offset: z.coerce.number().int().min(0).optional(),
       updatedSince: z.string().datetime().optional(),
+      shipLimit: z.coerce.number().int().min(1).max(SHIP_REFETCH_MAX).optional(),
     });
     const filtersParsed = ticketFiltersSchema.safeParse({
       stage: searchParams.get('stage') || undefined,
@@ -56,15 +59,16 @@ export async function GET(
       limit: searchParams.get('limit') || undefined,
       offset: searchParams.get('offset') || undefined,
       updatedSince: searchParams.get('updatedSince') || undefined,
+      shipLimit: searchParams.get('shipLimit') ?? undefined,
     });
     if (!filtersParsed.success) {
       return NextResponse.json({ error: 'Invalid filter parameters', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
-    const { stage: stageParam, workflowType: workflowTypeParam, limit: limitParam, offset: offsetParam, updatedSince } = filtersParsed.data;
+    const { stage: stageParam, workflowType: workflowTypeParam, limit: limitParam, offset: offsetParam, updatedSince, shipLimit } = filtersParsed.data;
 
-    // SHIP "Load More" pagination: ?stage=SHIP&offset=50&limit=50
+    // SHIP infinite-scroll pagination: ?stage=SHIP&offset=50&limit=50
     if (stageParam === 'SHIP' && offsetParam !== undefined) {
-      const tickets = await getMoreShipTickets(projectId, offsetParam, limitParam ?? 50);
+      const tickets = await getMoreShipTickets(projectId, offsetParam, limitParam ?? SHIP_BATCH_SIZE);
       return NextResponse.json({ tickets }, { status: 200 });
     }
 
@@ -79,8 +83,8 @@ export async function GET(
       return NextResponse.json(filtered, { status: 200 });
     }
 
-    // Default: return all tickets grouped by stage, with SHIP limited to 50
-    const { ticketsByStage, shipTotal } = await getTicketsByStage(projectId);
+    // Default: return all tickets grouped by stage, with SHIP limited to shipLimit (default 50)
+    const { ticketsByStage, shipTotal } = await getTicketsByStage(projectId, shipLimit ?? SHIP_BATCH_SIZE);
     return NextResponse.json({ ...ticketsByStage, _shipTotal: shipTotal }, { status: 200 });
   } catch (error) {
     if (error instanceof Error) {
