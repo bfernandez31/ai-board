@@ -71,4 +71,18 @@ test.describe('Responsive Board Layout', () => {
     await expect(boardGrid).toBeVisible();
     await expect(page.locator('[data-testid="column-INBOX"]').first()).toBeVisible();
   });
+
+  test('SHIP column has no Load more button on mobile (infinite scroll)', async ({ page, projectId }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
+
+    await expect(page.locator('[data-testid="column-SHIP"]').first()).toBeAttached();
+    await expect(page.getByRole('button', { name: /load more/i })).toHaveCount(0);
+
+    // Horizontal column navigation still works
+    const boardGrid = page.locator('[data-testid="board-grid"]').first();
+    await boardGrid.evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
+    const scrollLeft = await boardGrid.evaluate((el) => el.scrollLeft);
+    expect(scrollLeft).toBeGreaterThan(0);
+  });
 });

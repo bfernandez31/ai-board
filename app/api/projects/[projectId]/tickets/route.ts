@@ -49,6 +49,7 @@ export async function GET(
       limit: z.coerce.number().int().min(1).optional(),
       offset: z.coerce.number().int().min(0).optional(),
       updatedSince: z.string().datetime().optional(),
+      shipLimit: z.coerce.number().int().min(1).max(500).optional(),
     });
     const filtersParsed = ticketFiltersSchema.safeParse({
       stage: searchParams.get('stage') || undefined,
@@ -56,11 +57,12 @@ export async function GET(
       limit: searchParams.get('limit') || undefined,
       offset: searchParams.get('offset') || undefined,
       updatedSince: searchParams.get('updatedSince') || undefined,
+      shipLimit: searchParams.get('shipLimit') || undefined,
     });
     if (!filtersParsed.success) {
       return NextResponse.json({ error: 'Invalid filter parameters', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
-    const { stage: stageParam, workflowType: workflowTypeParam, limit: limitParam, offset: offsetParam, updatedSince } = filtersParsed.data;
+    const { stage: stageParam, workflowType: workflowTypeParam, limit: limitParam, offset: offsetParam, updatedSince, shipLimit } = filtersParsed.data;
 
     // SHIP "Load More" pagination: ?stage=SHIP&offset=50&limit=50
     if (stageParam === 'SHIP' && offsetParam !== undefined) {
@@ -80,7 +82,7 @@ export async function GET(
     }
 
     // Default: return all tickets grouped by stage, with SHIP limited to 50
-    const { ticketsByStage, shipTotal } = await getTicketsByStage(projectId);
+    const { ticketsByStage, shipTotal } = await getTicketsByStage(projectId, shipLimit);
     return NextResponse.json({ ...ticketsByStage, _shipTotal: shipTotal }, { status: 200 });
   } catch (error) {
     if (error instanceof Error) {

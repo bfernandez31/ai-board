@@ -10,7 +10,7 @@ import { TicketCard, type TicketCardSelection } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
 import { MobileScrollButton } from './mobile-scroll-button';
 import { TicketWithVersion } from '@/lib/types';
-import { Ban, Inbox, Loader2, ChevronDown } from 'lucide-react';
+import { Ban, Inbox, Loader2 } from 'lucide-react';
 import type { DualJobState } from '@/lib/types/job-types';
 
 export interface BulkSelectionContext {
@@ -34,6 +34,7 @@ interface StageColumnProps {
   totalCount?: number; // Total tickets for this stage (for pagination)
   onLoadMore?: () => void; // Callback to load more tickets
   isLoadingMore?: boolean; // Whether more tickets are being loaded
+  loadMoreError?: boolean; // Whether the last load-more request failed
   /** Bulk-selection context, only honored when stage === 'INBOX' (AIB-821) */
   bulkSelection?: BulkSelectionContext;
 }
@@ -158,6 +159,7 @@ export const StageColumn = React.memo(
     totalCount,
     onLoadMore,
     isLoadingMore = false,
+    loadMoreError = false,
     bulkSelection,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
@@ -185,6 +187,24 @@ export const StageColumn = React.memo(
     const [canScrollUp, setCanScrollUp] = React.useState(false);
     const [canScrollDown, setCanScrollDown] = React.useState(false);
     const scrollViewportRef = React.useRef<HTMLDivElement>(null);
+    const sentinelRef = React.useRef<HTMLDivElement>(null);
+
+    // Infinite scroll: load next batch when the sentinel nears the viewport bottom
+    React.useEffect(() => {
+      const sentinel = sentinelRef.current;
+      if (!onLoadMore || !sentinel || typeof IntersectionObserver === 'undefined') return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting) && !isLoadingMore && !loadMoreError) {
+            onLoadMore();
+          }
+        },
+        { root: scrollViewportRef.current, rootMargin: '0px 0px 100% 0px' }
+      );
+      observer.observe(sentinel);
+      return () => observer.disconnect();
+    }, [onLoadMore, isLoadingMore, loadMoreError, tickets.length]);
 
     // Check scroll position to determine button visibility
     const checkScrollPosition = React.useCallback(() => {
@@ -307,24 +327,37 @@ export const StageColumn = React.memo(
                   );
                 })}
 
-                {/* Load More button for paginated stages */}
+                {/* Infinite scroll sentinel + footer for paginated stages */}
                 {onLoadMore && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onLoadMore}
-                    disabled={isLoadingMore}
-                    className="w-full text-xs text-muted-foreground"
-                  >
-                    {isLoadingMore ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <ChevronDown className="h-3 w-3 mr-1" />
+                  <>
+                    {!loadMoreError && (
+                      <div
+                        ref={sentinelRef}
+                        data-testid="ship-load-sentinel"
+                        aria-hidden="true"
+                        className="h-px w-full"
+                      />
                     )}
-                    {isLoadingMore
-                      ? 'Loading...'
-                      : `Load more (${(totalCount ?? ticketCount) - ticketCount} remaining)`}
-                  </Button>
+                    <div className="flex min-h-10 items-center justify-center">
+                      {isLoadingMore && (
+                        <div
+                          role="status"
+                          aria-label="Loading more tickets"
+                          className="flex items-center text-muted-foreground"
+                        >
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        </div>
+                      )}
+                      {loadMoreError && !isLoadingMore && (
+                        <div role="alert" className="flex items-center gap-2 text-xs text-destructive">
+                          <span>Couldn&apos;t load more tickets</span>
+                          <Button variant="outline" size="sm" onClick={onLoadMore}>
+                            Retry
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </>
             ) : (

@@ -53,10 +53,18 @@ export function Board({
 
   // SHIP stage "Load More" pagination
   const { data: shipTotal = initialShipTotal } = useShipTotal(projectId);
-  const { loadMore: loadMoreShip, isLoading: isLoadingMoreShip } = useLoadMoreShipTickets(projectId);
+  const {
+    loadMore: loadMoreShip,
+    isLoading: isLoadingMoreShip,
+    isError: loadMoreShipError,
+    reset: resetLoadMoreShip,
+  } = useLoadMoreShipTickets(projectId);
   const shipTicketCount = ticketsByStage[Stage.SHIP]?.length ?? 0;
   const hasMoreShipTickets = shipTicketCount < shipTotal;
-  const handleLoadMoreShip = useCallback(() => loadMoreShip(shipTicketCount), [loadMoreShip, shipTicketCount]);
+  const handleLoadMoreShip = useCallback(() => {
+    resetLoadMoreShip();
+    loadMoreShip(shipTicketCount);
+  }, [resetLoadMoreShip, loadMoreShip, shipTicketCount]);
 
   const allTickets = useMemo(() => Object.values(ticketsByStage).flat(), [ticketsByStage]);
 
@@ -341,6 +349,7 @@ export function Board({
         hasMoreShipTickets={hasMoreShipTickets}
         shipTotal={shipTotal}
         onLoadMoreShip={handleLoadMoreShip}
+        loadMoreShipError={loadMoreShipError}
         isLoadingMoreShip={isLoadingMoreShip}
         activeTicket={drag.activeTicket}
         isDragging={drag.isDragging}

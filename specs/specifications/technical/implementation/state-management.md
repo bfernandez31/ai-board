@@ -87,7 +87,11 @@ export function useTicketsByStage(projectId: number) {
   return useQuery({
     queryKey: queryKeys.projects.tickets(projectId),   // cache: TicketWithVersion[]
     queryFn: async () => {
-      const { tickets, shipTotal } = await fetchTicketsFromAPI(projectId);
+      // Preserve already-loaded SHIP tickets across refetches
+      const cached = queryClient.getQueryData<TicketWithVersion[]>(queryKeys.projects.tickets(projectId));
+      const cachedShipCount = cached?.filter((t) => t.stage === Stage.SHIP).length ?? 0;
+      // Appends ?shipLimit=N only when N > 50
+      const { tickets, shipTotal } = await fetchTicketsFromAPI(projectId, Math.max(50, cachedShipCount));
       queryClient.setQueryData(queryKeys.projects.shipTotal(projectId), shipTotal);
       return tickets;
     },
@@ -113,13 +117,20 @@ export function useShipTotal(projectId: number) {
 // Mutation: load next page of SHIP tickets and append to cache
 export function useLoadMoreShipTickets(projectId: number) {
   // Fetches /api/projects/:id/tickets?stage=SHIP&offset=N&limit=50
-  // onSuccess: appends results to the flat TicketWithVersion[] cache
-  return { loadMore, isLoading };
+  // loadMore(currentShipCount): no-op while a request is in flight (ref guard, reset onSettled)
+  // onSuccess: appends results to the flat TicketWithVersion[] cache, deduped by id
+  return { loadMore, isLoading, isError, reset };
 }
 ```
 
+**SHIP Infinite Scroll** (`components/board/stage-column.tsx`):
+- `StageColumn` receives `onLoadMore`, `isLoadingMore`, `loadMoreError`, and `totalCount` from `BoardGrid`/`Board` only for SHIP while `hasMoreShipTickets` is true (omitting `onLoadMore` once exhausted disables loading)
+- A 1px sentinel (`data-testid="ship-load-sentinel"`) after the last card is watched by a native `IntersectionObserver` rooted on the column's Radix scroll viewport with `rootMargin: '0px 0px 100% 0px'` (≈one viewport pre-load)
+- On intersection, `onLoadMore()` fires unless `isLoadingMore` or `loadMoreError`; the effect re-subscribes when `tickets.length` changes, so a still-visible sentinel triggers the next batch until the column is filled
+- Footer row (fixed `min-h-10` to avoid layout jump): spinner with `role="status"` while loading; on error the sentinel is removed and a `role="alert"` row shows "Couldn't load more tickets" plus a Retry button that calls `onLoadMore` (Board resets the mutation, then loads)
+
 **Cache Architecture**:
-- `queryKeys.projects.tickets(id)` → `TicketWithVersion[]` (flat, all stages combined, SHIP limited to 50 initially)
+- `queryKeys.projects.tickets(id)` → `TicketWithVersion[]` (flat, all stages combined; SHIP limited to 50 initially, refetches request `max(50, loaded SHIP count)`)
 - `queryKeys.projects.shipTotal(id)` → `number` (total SHIP tickets for pagination)
 - Cache format is flat array to stay compatible with all optimistic mutation hooks (stage transitions, delete, create, update)
 - Board component seeds both caches with SSR data on mount
