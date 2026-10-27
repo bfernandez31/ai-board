@@ -85,6 +85,36 @@ describe('SHIP Stage Pagination', () => {
     expect((response.data.INBOX as unknown[]).length).toBe(3);
   });
 
+  describe('shipLimit parameter', () => {
+    it('should return up to shipLimit SHIP tickets with accurate _shipTotal', async () => {
+      await createShipTickets(5);
+
+      const response = await ctx.api.get<Record<string, unknown>>(
+        `/api/projects/${ctx.projectId}/tickets?shipLimit=3`
+      );
+
+      expect(response.status).toBe(200);
+      expect((response.data.SHIP as unknown[]).length).toBe(3);
+      expect(response.data._shipTotal).toBe(5);
+    });
+
+    it('should return 400 for shipLimit=0', async () => {
+      const response = await ctx.api.get<{ code: string }>(
+        `/api/projects/${ctx.projectId}/tickets?shipLimit=0`
+      );
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 400 for shipLimit=501', async () => {
+      const response = await ctx.api.get<{ code: string }>(
+        `/api/projects/${ctx.projectId}/tickets?shipLimit=501`
+      );
+
+      expect(response.status).toBe(400);
+    });
+  });
+
   describe('Load More endpoint (?stage=SHIP&offset=N)', () => {
     it('should return additional SHIP tickets with offset', async () => {
       const ids = await createShipTickets(5);
@@ -111,6 +141,23 @@ describe('SHIP Stage Pagination', () => {
 
       expect(response.status).toBe(200);
       expect(response.data.tickets).toHaveLength(0);
+    });
+
+    it('should return non-overlapping consecutive pages', async () => {
+      await createShipTickets(5);
+
+      const first = await ctx.api.get<{ tickets: TicketWithVersion[] }>(
+        `/api/projects/${ctx.projectId}/tickets?stage=SHIP&offset=0&limit=3`
+      );
+      const second = await ctx.api.get<{ tickets: TicketWithVersion[] }>(
+        `/api/projects/${ctx.projectId}/tickets?stage=SHIP&offset=3&limit=3`
+      );
+
+      const firstIds = first.data.tickets.map((t) => t.id);
+      const secondIds = second.data.tickets.map((t) => t.id);
+      expect(firstIds).toHaveLength(3);
+      expect(secondIds).toHaveLength(2);
+      expect(secondIds.filter((id) => firstIds.includes(id))).toHaveLength(0);
     });
 
     it('should return remaining tickets when offset + limit exceeds total', async () => {

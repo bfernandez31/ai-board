@@ -1,13 +1,19 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { queryKeys } from '@/app/lib/query-keys';
 import type { TicketWithVersion, TicketsByStage } from '@/app/lib/types/query-types';
 import { Stage } from '@prisma/client';
 
-async function fetchTicketsFromAPI(projectId: number): Promise<{ tickets: TicketWithVersion[]; shipTotal: number }> {
-  const response = await fetch(`/api/projects/${projectId}/tickets`);
+const DEFAULT_SHIP_LIMIT = 50;
+
+async function fetchTicketsFromAPI(
+  projectId: number,
+  shipLimit: number = DEFAULT_SHIP_LIMIT
+): Promise<{ tickets: TicketWithVersion[]; shipTotal: number }> {
+  const query = shipLimit > DEFAULT_SHIP_LIMIT ? `?shipLimit=${shipLimit}` : '';
+  const response = await fetch(`/api/projects/${projectId}/tickets${query}`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch tickets: HTTP ${response.status}`);
@@ -21,7 +27,13 @@ async function fetchTicketsFromAPI(projectId: number): Promise<{ tickets: Ticket
 
 function makeTicketsQueryFn(projectId: number, queryClient: ReturnType<typeof useQueryClient>) {
   return async (): Promise<TicketWithVersion[]> => {
-    const { tickets, shipTotal } = await fetchTicketsFromAPI(projectId);
+    // Preserve already-loaded SHIP tickets across refetches
+    const cached = queryClient.getQueryData<TicketWithVersion[]>(queryKeys.projects.tickets(projectId));
+    const cachedShipCount = cached?.filter((t) => t.stage === Stage.SHIP).length ?? 0;
+    const { tickets, shipTotal } = await fetchTicketsFromAPI(
+      projectId,
+      Math.max(DEFAULT_SHIP_LIMIT, cachedShipCount)
+    );
     queryClient.setQueryData(queryKeys.projects.shipTotal(projectId), shipTotal);
     return tickets;
   };
@@ -86,6 +98,7 @@ export function useShipTotal(projectId: number) {
  */
 export function useLoadMoreShipTickets(projectId: number) {
   const queryClient = useQueryClient();
+  const inFlightRef = useRef(false);
 
   const mutation = useMutation({
     mutationFn: async ({ offset, limit = 50 }: { offset: number; limit?: number }) => {
@@ -105,22 +118,33 @@ export function useLoadMoreShipTickets(projectId: number) {
         queryKeys.projects.tickets(projectId),
         (old) => {
           if (!old) return newTickets;
-          return [...old, ...newTickets];
+          const existingIds = new Set(old.map((t) => t.id));
+          const fresh = newTickets.filter((t) => !existingIds.has(t.id));
+          return fresh.length === 0 ? old : [...old, ...fresh];
         }
       );
     },
+    onSettled: () => {
+      inFlightRef.current = false;
+    },
   });
+
+  const { mutate, reset } = mutation;
 
   const loadMore = useCallback(
     (currentShipCount: number) => {
-      mutation.mutate({ offset: currentShipCount });
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
+      mutate({ offset: currentShipCount });
     },
-    [mutation]
+    [mutate]
   );
 
   return {
     loadMore,
     isLoading: mutation.isPending,
+    isError: mutation.isError,
+    reset,
   };
 }
 

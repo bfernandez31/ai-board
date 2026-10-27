@@ -29,6 +29,7 @@ interface BoardGridProps {
   hasMoreShipTickets: boolean;
   shipTotal: number;
   onLoadMoreShip: () => void;
+  loadMoreShipError?: boolean;
   isLoadingMoreShip: boolean;
 
   // Drag state
@@ -67,6 +68,7 @@ export function BoardGrid({
   hasMoreShipTickets,
   shipTotal,
   onLoadMoreShip,
+  loadMoreShipError = false,
   isLoadingMoreShip,
   activeTicket,
   isDragging,
@@ -139,6 +141,7 @@ export function BoardGrid({
                   totalCount: shipTotal,
                   onLoadMore: onLoadMoreShip,
                   isLoadingMore: isLoadingMoreShip,
+                  loadMoreError: loadMoreShipError,
                 })}
               />
             );
