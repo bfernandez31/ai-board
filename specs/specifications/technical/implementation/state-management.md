@@ -110,13 +110,27 @@ export function useShipTotal(projectId: number) {
   });
 }
 
-// Mutation: load next page of SHIP tickets and append to cache
-export function useLoadMoreShipTickets(projectId: number) {
-  // Fetches /api/projects/:id/tickets?stage=SHIP&offset=N&limit=50
-  // onSuccess: appends results to the flat TicketWithVersion[] cache
-  return { loadMore, isLoading };
+// Infinite loading: fetch next SHIP batch and append to cache
+export function useShipInfiniteLoad(
+  projectId: number,
+  loadedShipCount: number,
+  shipTotal: number
+): { status: 'idle' | 'loading' | 'error'; hasMore: boolean; loadMore: () => void; retry: () => void } {
+  // Fetches /api/projects/:id/tickets?stage=SHIP&offset=N&limit=SHIP_BATCH_SIZE (50)
+  // offset = SHIP count read from the tickets cache at request time
+  // Appends via appendShipBatch() (id dedupe); empty/all-duplicate batch → hasMore=false for current shipTotal
+  // Errors set status='error' and are never auto-retried; loadMore() is a no-op until retry()
 }
 ```
+
+**SHIP Infinite Scroll Rules**:
+- At most one batch request in flight (synchronous ref guard)
+- `hasMore` is `loadedShipCount < shipTotal`, unless the server already returned an empty/all-duplicate batch at the same `shipTotal`; a changed total re-enables loading
+- `StageColumn` (SHIP only) renders a bottom sentinel observed with `useIntersectionObserver` (root = column scroll viewport, `rootMargin: '0px 0px 300px 0px'`) and calls `onLoadMore` when visible, `hasMore`, status is `idle`, and not paused
+- `BoardGrid` passes `isLoadPaused={isDragging}` so no batch loads during drag & drop
+- Bottom region states: sentinel (idle), `role="status"` spinner (loading), `role="alert"` message + Retry button (error), nothing (no more tickets)
+- Pure helpers in `lib/tickets/ship-pagination.ts`: `SHIP_BATCH_SIZE`, `appendShipBatch(current, batch)`, `mergeRefreshedTickets(previous, fresh, shipTotal)`
+- Background refreshes of the tickets query pass through `mergeRefreshedTickets`: fresh data wins per id, and previously scrolled-in SHIP tickets absent from the fresh first page are retained (in order) until the SHIP count reaches `_shipTotal`
 
 **Cache Architecture**:
 - `queryKeys.projects.tickets(id)` → `TicketWithVersion[]` (flat, all stages combined, SHIP limited to 50 initially)

@@ -2,7 +2,7 @@
  * Integration Tests: SHIP Stage Pagination
  *
  * Verifies that the tickets endpoint returns _shipTotal metadata
- * and that the SHIP "Load More" pagination works correctly.
+ * and that the SHIP infinite-scroll pagination works correctly.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -123,6 +123,47 @@ describe('SHIP Stage Pagination', () => {
 
       expect(response.status).toBe(200);
       expect(response.data.tickets.length).toBeLessThanOrEqual(2);
+    });
+
+    it('should return an empty batch when offset equals an exact multiple of the limit', async () => {
+      await createShipTickets(4);
+
+      const page2 = await ctx.api.get<{ tickets: TicketWithVersion[] }>(
+        `/api/projects/${ctx.projectId}/tickets?stage=SHIP&offset=2&limit=2`
+      );
+      expect(page2.status).toBe(200);
+      expect(page2.data.tickets).toHaveLength(2);
+
+      const page3 = await ctx.api.get<{ tickets: TicketWithVersion[] }>(
+        `/api/projects/${ctx.projectId}/tickets?stage=SHIP&offset=4&limit=2`
+      );
+      expect(page3.status).toBe(200);
+      expect(page3.data.tickets).toEqual([]);
+    });
+
+    it('should shift offsets when a ticket enters SHIP between pages (client dedupes by id)', async () => {
+      await createShipTickets(4);
+      const inbox = await ctx.api.post<{ id: number }>(`/api/projects/${ctx.projectId}/tickets`, {
+        title: '[e2e] Ship Pagination Late Arrival',
+        description: 'Moves into SHIP between page requests',
+      });
+
+      const page1 = await ctx.api.get<{ tickets: TicketWithVersion[] }>(
+        `/api/projects/${ctx.projectId}/tickets?stage=SHIP&offset=0&limit=2`
+      );
+      expect(page1.status).toBe(200);
+      const page1Ids = page1.data.tickets.map((t) => t.id);
+
+      await prisma.ticket.update({
+        where: { id: inbox.data.id },
+        data: { stage: 'SHIP', updatedAt: new Date(Date.now() + 60_000) },
+      });
+
+      const page2 = await ctx.api.get<{ tickets: TicketWithVersion[] }>(
+        `/api/projects/${ctx.projectId}/tickets?stage=SHIP&offset=2&limit=2`
+      );
+      expect(page2.status).toBe(200);
+      expect(page2.data.tickets.some((t) => page1Ids.includes(t.id))).toBe(true);
     });
 
     it('should return tickets sorted by updatedAt desc', async () => {
