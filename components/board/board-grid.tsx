@@ -12,6 +12,7 @@ import { Stage, getAllStages } from '@/lib/stage-transitions';
 import { TicketWithVersion } from '@/lib/types';
 import type { DualJobState } from '@/lib/types/job-types';
 import { StageColumn, type BulkSelectionContext } from './stage-column';
+import type { ShipInfiniteScrollState } from './ship-infinite-scroll-footer';
 import { DragOverlay } from './drag-overlay';
 import { TrashZone } from './trash-zone';
 import { CloseZone } from './close-zone';
@@ -26,10 +27,8 @@ interface BoardGridProps {
   getDropZoneStyle: (stage: Stage) => string;
   activePreviewTicket: { ticketKey: string } | null;
   activeDeploymentTicket: number | null;
-  hasMoreShipTickets: boolean;
   shipTotal: number;
-  onLoadMoreShip: () => void;
-  isLoadingMoreShip: boolean;
+  shipLoadState: Omit<ShipInfiniteScrollState, 'paused'>;
 
   // Drag state
   activeTicket: TicketWithVersion | null;
@@ -64,10 +63,8 @@ export function BoardGrid({
   getDropZoneStyle,
   activePreviewTicket,
   activeDeploymentTicket,
-  hasMoreShipTickets,
   shipTotal,
-  onLoadMoreShip,
-  isLoadingMoreShip,
+  shipLoadState,
   activeTicket,
   isDragging,
   dragSource,
@@ -135,10 +132,9 @@ export function BoardGrid({
                 activePreviewTicket={activePreviewTicket}
                 activeDeploymentTicket={activeDeploymentTicket}
                 {...(stage === Stage.INBOX && bulkSelection && { bulkSelection })}
-                {...(stage === Stage.SHIP && hasMoreShipTickets && {
+                {...(stage === Stage.SHIP && {
                   totalCount: shipTotal,
-                  onLoadMore: onLoadMoreShip,
-                  isLoadingMore: isLoadingMoreShip,
+                  shipInfiniteScroll: { ...shipLoadState, paused: isDragging },
                 })}
               />
             );

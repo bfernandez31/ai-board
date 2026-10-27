@@ -1,13 +1,22 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { queryKeys } from '@/app/lib/query-keys';
 import type { TicketWithVersion, TicketsByStage } from '@/app/lib/types/query-types';
 import { Stage } from '@prisma/client';
+import {
+  SHIP_BATCH_SIZE,
+  appendUniqueTickets,
+  computeShipRefetchLimit,
+  countShipTickets,
+} from '@/lib/tickets/ship-pagination';
 
-async function fetchTicketsFromAPI(projectId: number): Promise<{ tickets: TicketWithVersion[]; shipTotal: number }> {
-  const response = await fetch(`/api/projects/${projectId}/tickets`);
+async function fetchTicketsFromAPI(
+  projectId: number,
+  shipLimit: number
+): Promise<{ tickets: TicketWithVersion[]; shipTotal: number }> {
+  const response = await fetch(`/api/projects/${projectId}/tickets?shipLimit=${shipLimit}`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch tickets: HTTP ${response.status}`);
@@ -21,7 +30,15 @@ async function fetchTicketsFromAPI(projectId: number): Promise<{ tickets: Ticket
 
 function makeTicketsQueryFn(projectId: number, queryClient: ReturnType<typeof useQueryClient>) {
   return async (): Promise<TicketWithVersion[]> => {
-    const { tickets, shipTotal } = await fetchTicketsFromAPI(projectId);
+    // Request at least as many SHIP tickets as are already loaded so a refetch
+    // never drops batches loaded by infinite scroll.
+    const loadedShipCount = countShipTickets(
+      queryClient.getQueryData<TicketWithVersion[]>(queryKeys.projects.tickets(projectId))
+    );
+    const { tickets, shipTotal } = await fetchTicketsFromAPI(
+      projectId,
+      computeShipRefetchLimit(loadedShipCount)
+    );
     queryClient.setQueryData(queryKeys.projects.shipTotal(projectId), shipTotal);
     return tickets;
   };
@@ -81,16 +98,20 @@ export function useShipTotal(projectId: number) {
 }
 
 /**
- * Load more SHIP tickets (offset-based pagination).
- * Appends results to the flat tickets cache array.
+ * Load the next batch of SHIP tickets (offset-based infinite scroll).
+ * - At most one request in flight (synchronous ref guard).
+ * - Offset is the number of SHIP tickets in the cache at call time.
+ * - Appends only tickets not already in the cache (any stage).
+ * - An empty/duplicate-only batch reconciles the SHIP total to the loaded count.
  */
 export function useLoadMoreShipTickets(projectId: number) {
   const queryClient = useQueryClient();
+  const inFlightRef = useRef(false);
 
-  const mutation = useMutation({
-    mutationFn: async ({ offset, limit = 50 }: { offset: number; limit?: number }) => {
+  const { mutate, isPending, error } = useMutation({
+    mutationFn: async ({ offset }: { offset: number }) => {
       const response = await fetch(
-        `/api/projects/${projectId}/tickets?stage=SHIP&offset=${offset}&limit=${limit}`
+        `/api/projects/${projectId}/tickets?stage=SHIP&offset=${offset}&limit=${SHIP_BATCH_SIZE}`
       );
       if (!response.ok) {
         throw new Error(`Failed to fetch more SHIP tickets: HTTP ${response.status}`);
@@ -99,28 +120,40 @@ export function useLoadMoreShipTickets(projectId: number) {
       return data.tickets as TicketWithVersion[];
     },
     onSuccess: (newTickets) => {
-      if (newTickets.length === 0) return;
+      const ticketsKey = queryKeys.projects.tickets(projectId);
+      let addedCount = 0;
 
-      queryClient.setQueryData<TicketWithVersion[]>(
-        queryKeys.projects.tickets(projectId),
-        (old) => {
-          if (!old) return newTickets;
-          return [...old, ...newTickets];
-        }
-      );
+      const updated = queryClient.setQueryData<TicketWithVersion[]>(ticketsKey, (old) => {
+        const result = appendUniqueTickets(old ?? [], newTickets);
+        addedCount = result.addedCount;
+        return result.tickets;
+      });
+
+      if (addedCount === 0) {
+        queryClient.setQueryData(
+          queryKeys.projects.shipTotal(projectId),
+          countShipTickets(updated)
+        );
+      }
+    },
+    onSettled: () => {
+      inFlightRef.current = false;
     },
   });
 
-  const loadMore = useCallback(
-    (currentShipCount: number) => {
-      mutation.mutate({ offset: currentShipCount });
-    },
-    [mutation]
-  );
+  const loadMore = useCallback(() => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    const offset = countShipTickets(
+      queryClient.getQueryData<TicketWithVersion[]>(queryKeys.projects.tickets(projectId))
+    );
+    mutate({ offset });
+  }, [mutate, queryClient, projectId]);
 
   return {
     loadMore,
-    isLoading: mutation.isPending,
+    isLoading: isPending,
+    error: error ?? null,
   };
 }
 

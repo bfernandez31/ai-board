@@ -2,7 +2,7 @@
  * Integration Tests: SHIP Stage Pagination
  *
  * Verifies that the tickets endpoint returns _shipTotal metadata
- * and that the SHIP "Load More" pagination works correctly.
+ * and that SHIP infinite-scroll pagination works correctly.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -38,6 +38,34 @@ describe('SHIP Stage Pagination', () => {
       });
     }
     return ids;
+  }
+
+  /**
+   * Bulk-create SHIP tickets directly in the DB (fast path for large sets).
+   * All tickets share the same `updatedAt` unless one is provided.
+   */
+  async function bulkCreateShipTickets(count: number, updatedAt = new Date('2026-01-01T00:00:00Z')): Promise<number[]> {
+    const project = await prisma.project.findUniqueOrThrow({
+      where: { id: ctx.projectId },
+      select: { key: true },
+    });
+    const base = 90000;
+    await prisma.ticket.createMany({
+      data: Array.from({ length: count }, (_, i) => ({
+        title: `[e2e] Ship Bulk Ticket ${i + 1}`,
+        description: 'Bulk SHIP ticket for pagination tests',
+        stage: 'SHIP' as const,
+        projectId: ctx.projectId,
+        ticketNumber: base + i,
+        ticketKey: `${project.key}-${base + i}`,
+        updatedAt,
+      })),
+    });
+    const tickets = await prisma.ticket.findMany({
+      where: { projectId: ctx.projectId, ticketNumber: { gte: base } },
+      select: { id: true },
+    });
+    return tickets.map((t) => t.id);
   }
 
   it('should return _shipTotal in default response', async () => {
@@ -193,5 +221,82 @@ describe('SHIP Stage Pagination', () => {
       expect(byId.get(withScore)?.qualityScore).toBe(92);
       expect(byId.get(withoutScore)?.qualityScore).toBeNull();
     });
+  });
+
+  describe('Deterministic order with updatedAt ties (contract §2)', () => {
+    it('pages through tied tickets without duplicates or gaps', async () => {
+      const ids = await bulkCreateShipTickets(60);
+
+      const page1 = await ctx.api.get<{ tickets: TicketWithVersion[] }>(
+        `/api/projects/${ctx.projectId}/tickets?stage=SHIP&offset=0&limit=50`
+      );
+      const page2 = await ctx.api.get<{ tickets: TicketWithVersion[] }>(
+        `/api/projects/${ctx.projectId}/tickets?stage=SHIP&offset=50&limit=50`
+      );
+
+      expect(page1.status).toBe(200);
+      expect(page2.status).toBe(200);
+      expect(page1.data.tickets).toHaveLength(50);
+      expect(page2.data.tickets).toHaveLength(10);
+
+      const seen = [...page1.data.tickets, ...page2.data.tickets].map((t) => t.id);
+      expect(new Set(seen).size).toBe(seen.length);
+      expect([...seen].sort((a, b) => a - b)).toEqual([...ids].sort((a, b) => a - b));
+
+      // Same timestamps → id DESC tie-breaker
+      expect(seen).toEqual([...ids].sort((a, b) => b - a));
+    });
+
+    it('orders the default response SHIP slice by updatedAt desc, id desc', async () => {
+      const ids = await bulkCreateShipTickets(5);
+
+      const response = await ctx.api.get<Record<string, unknown>>(
+        `/api/projects/${ctx.projectId}/tickets`
+      );
+
+      expect(response.status).toBe(200);
+      const shipIds = (response.data.SHIP as TicketWithVersion[]).map((t) => t.id);
+      expect(shipIds).toEqual([...ids].sort((a, b) => b - a));
+    });
+  });
+
+  describe('shipLimit on default response (contract §1)', () => {
+    it('returns shipLimit SHIP tickets with the correct _shipTotal', async () => {
+      await bulkCreateShipTickets(80);
+
+      const response = await ctx.api.get<Record<string, unknown>>(
+        `/api/projects/${ctx.projectId}/tickets?shipLimit=75`
+      );
+
+      expect(response.status).toBe(200);
+      expect((response.data.SHIP as unknown[]).length).toBe(75);
+      expect(response.data._shipTotal).toBe(80);
+      // Still the grouped shape, not the filtered branch
+      expect(Array.isArray(response.data.INBOX)).toBe(true);
+    });
+
+    it('defaults to 50 SHIP tickets without shipLimit', async () => {
+      await bulkCreateShipTickets(80);
+
+      const response = await ctx.api.get<Record<string, unknown>>(
+        `/api/projects/${ctx.projectId}/tickets`
+      );
+
+      expect(response.status).toBe(200);
+      expect((response.data.SHIP as unknown[]).length).toBe(50);
+      expect(response.data._shipTotal).toBe(80);
+    });
+
+    it.each(['0', '-1', '1001', '1.5', 'abc'])(
+      'rejects shipLimit=%s with VALIDATION_ERROR',
+      async (value) => {
+        const response = await ctx.api.get<{ error: string; code: string }>(
+          `/api/projects/${ctx.projectId}/tickets?shipLimit=${value}`
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.data.code).toBe('VALIDATION_ERROR');
+      }
+    );
   });
 });

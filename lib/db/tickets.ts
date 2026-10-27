@@ -6,6 +6,10 @@ import type { CreateTicketInput } from '../validations/ticket';
 import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
 import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
 import type { Ticket, Job, Prisma, ClarificationPolicy, Agent } from '@prisma/client';
+import { SHIP_BATCH_SIZE } from '@/lib/tickets/ship-pagination';
+
+/** Deterministic SHIP order: `id` breaks `updatedAt` ties so offset pages never overlap or skip. */
+const SHIP_ORDER_BY: Prisma.TicketOrderByWithRelationInput[] = [{ updatedAt: 'desc' }, { id: 'desc' }];
 
 type TicketRow = {
   id: number;
@@ -203,7 +207,7 @@ export interface TicketsByStageResult {
  */
 export async function getTicketsByStage(
   projectId: number,
-  shipLimit: number = 50
+  shipLimit: number = SHIP_BATCH_SIZE
 ): Promise<TicketsByStageResult> {
   // Fetch non-SHIP/non-CLOSED tickets + limited SHIP tickets in parallel.
   // CLOSED tickets are excluded — they are not displayed on the board.
@@ -215,7 +219,7 @@ export async function getTicketsByStage(
     prisma.ticket.findMany({
       where: { projectId, stage: 'SHIP' },
       select: TICKET_SELECT,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: SHIP_ORDER_BY,
       take: shipLimit,
     }),
     prisma.ticket.count({
@@ -253,12 +257,12 @@ export async function getTicketsByStage(
 export async function getMoreShipTickets(
   projectId: number,
   offset: number,
-  limit: number = 50
+  limit: number = SHIP_BATCH_SIZE
 ): Promise<TicketWithVersion[]> {
   const tickets = await prisma.ticket.findMany({
     where: { projectId, stage: 'SHIP' },
     select: TICKET_SELECT,
-    orderBy: { updatedAt: 'desc' },
+    orderBy: SHIP_ORDER_BY,
     skip: offset,
     take: limit,
   });
@@ -654,7 +658,7 @@ export async function createTicket(
  * Fetch tickets for a project with jobs included (single query, no N+1).
  * SHIP stage is paginated: only the first `shipLimit` tickets are returned.
  */
-export async function getTicketsWithJobs(projectId: number, shipLimit: number = 50) {
+export async function getTicketsWithJobs(projectId: number, shipLimit: number = SHIP_BATCH_SIZE) {
   // Include log relation so the SSR-seeded React Query cache for `ticketJobs`
   // has the same shape as the API (`GET /api/projects/:id/tickets/:id/jobs`),
   // which selects `log: { captureStatus, preview }`. Without this, the Stats
@@ -674,7 +678,7 @@ export async function getTicketsWithJobs(projectId: number, shipLimit: number = 
     prisma.ticket.findMany({
       where: { projectId, stage: 'SHIP' },
       select: { ...TICKET_SELECT, ...jobsInclude },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: SHIP_ORDER_BY,
       take: shipLimit,
     }),
     prisma.ticket.count({
