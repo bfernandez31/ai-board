@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { queryKeys } from '@/app/lib/query-keys';
 import type { TicketWithVersion, TicketsByStage } from '@/app/lib/types/query-types';
 import { Stage } from '@prisma/client';
@@ -19,11 +19,41 @@ async function fetchTicketsFromAPI(projectId: number): Promise<{ tickets: Ticket
   return { tickets, shipTotal };
 }
 
+/**
+ * Re-attach SHIP tickets loaded via infinite scroll to a fresh board fetch.
+ *
+ * The default tickets endpoint only returns the first SHIP batch, so a plain
+ * refetch (polling, invalidation) would drop every batch loaded afterwards.
+ * Previously loaded SHIP tickets absent from the fresh response are appended
+ * (in their existing order), capped so the SHIP count never exceeds `shipTotal`.
+ */
+export function mergeLoadedShipTickets(
+  fresh: TicketWithVersion[],
+  previous: TicketWithVersion[] | undefined,
+  shipTotal: number
+): TicketWithVersion[] {
+  if (!previous || previous.length === 0) return fresh;
+
+  const freshIds = new Set(fresh.map((t) => t.id));
+  const freshShipCount = fresh.filter((t) => t.stage === Stage.SHIP).length;
+  const room = Math.max(0, shipTotal - freshShipCount);
+  if (room === 0) return fresh;
+
+  const retained = previous
+    .filter((t) => t.stage === Stage.SHIP && !freshIds.has(t.id))
+    .slice(0, room);
+
+  return retained.length > 0 ? [...fresh, ...retained] : fresh;
+}
+
 function makeTicketsQueryFn(projectId: number, queryClient: ReturnType<typeof useQueryClient>) {
   return async (): Promise<TicketWithVersion[]> => {
     const { tickets, shipTotal } = await fetchTicketsFromAPI(projectId);
     queryClient.setQueryData(queryKeys.projects.shipTotal(projectId), shipTotal);
-    return tickets;
+    const previous = queryClient.getQueryData<TicketWithVersion[]>(
+      queryKeys.projects.tickets(projectId)
+    );
+    return mergeLoadedShipTickets(tickets, previous, shipTotal);
   };
 }
 
@@ -81,11 +111,18 @@ export function useShipTotal(projectId: number) {
 }
 
 /**
- * Load more SHIP tickets (offset-based pagination).
- * Appends results to the flat tickets cache array.
+ * Load the next batch of SHIP tickets (offset-based pagination, used by the
+ * SHIP column infinite scroll). Appends results to the flat tickets cache.
+ *
+ * - Only one request in flight at a time (extra calls are ignored).
+ * - Tickets already in the cache are never appended twice.
+ * - Failures are exposed via `error`; callers retry explicitly with `loadMore`.
  */
 export function useLoadMoreShipTickets(projectId: number) {
   const queryClient = useQueryClient();
+  // Synchronous guard: mutation state only updates on the next render, so rapid
+  // scroll events could otherwise fire several requests in the same tick.
+  const inFlightRef = useRef(false);
 
   const mutation = useMutation({
     mutationFn: async ({ offset, limit = 50 }: { offset: number; limit?: number }) => {
@@ -105,22 +142,31 @@ export function useLoadMoreShipTickets(projectId: number) {
         queryKeys.projects.tickets(projectId),
         (old) => {
           if (!old) return newTickets;
-          return [...old, ...newTickets];
+          const existingIds = new Set(old.map((t) => t.id));
+          const unique = newTickets.filter((t) => !existingIds.has(t.id));
+          return unique.length > 0 ? [...old, ...unique] : old;
         }
       );
     },
+    onSettled: () => {
+      inFlightRef.current = false;
+    },
   });
 
+  const { mutate } = mutation;
   const loadMore = useCallback(
     (currentShipCount: number) => {
-      mutation.mutate({ offset: currentShipCount });
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
+      mutate({ offset: currentShipCount });
     },
-    [mutation]
+    [mutate]
   );
 
   return {
     loadMore,
     isLoading: mutation.isPending,
+    error: mutation.error,
   };
 }
 
