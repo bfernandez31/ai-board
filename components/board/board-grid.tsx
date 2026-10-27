@@ -16,6 +16,7 @@ import { DragOverlay } from './drag-overlay';
 import { TrashZone } from './trash-zone';
 import { CloseZone } from './close-zone';
 import type { ZoneState } from './hooks/use-zone-states';
+import type { ShipInfiniteLoad } from '@/app/lib/hooks/queries/useTickets';
 
 interface BoardGridProps {
   projectId: number;
@@ -26,10 +27,8 @@ interface BoardGridProps {
   getDropZoneStyle: (stage: Stage) => string;
   activePreviewTicket: { ticketKey: string } | null;
   activeDeploymentTicket: number | null;
-  hasMoreShipTickets: boolean;
   shipTotal: number;
-  onLoadMoreShip: () => void;
-  isLoadingMoreShip: boolean;
+  shipLoad: ShipInfiniteLoad;
 
   // Drag state
   activeTicket: TicketWithVersion | null;
@@ -64,10 +63,8 @@ export function BoardGrid({
   getDropZoneStyle,
   activePreviewTicket,
   activeDeploymentTicket,
-  hasMoreShipTickets,
   shipTotal,
-  onLoadMoreShip,
-  isLoadingMoreShip,
+  shipLoad,
   activeTicket,
   isDragging,
   dragSource,
@@ -135,10 +132,13 @@ export function BoardGrid({
                 activePreviewTicket={activePreviewTicket}
                 activeDeploymentTicket={activeDeploymentTicket}
                 {...(stage === Stage.INBOX && bulkSelection && { bulkSelection })}
-                {...(stage === Stage.SHIP && hasMoreShipTickets && {
+                {...(stage === Stage.SHIP && {
                   totalCount: shipTotal,
-                  onLoadMore: onLoadMoreShip,
-                  isLoadingMore: isLoadingMoreShip,
+                  hasMore: shipLoad.hasMore,
+                  loadStatus: shipLoad.status,
+                  onLoadMore: shipLoad.loadMore,
+                  onRetryLoad: shipLoad.retry,
+                  isLoadPaused: isDragging,
                 })}
               />
             );

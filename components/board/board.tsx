@@ -12,7 +12,7 @@ import { BulkMergePreviewModal } from './bulk-merge-preview-modal';
 import { Stage } from '@/lib/stage-transitions';
 import { TicketWithVersion } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useTicketsByStage, useLoadMoreShipTickets, useShipTotal } from '@/app/lib/hooks/queries/useTickets';
+import { useTicketsByStage, useShipInfiniteLoad, useShipTotal } from '@/app/lib/hooks/queries/useTickets';
 import { useRetroSpecState } from './hooks/use-retro-spec-state';
 import { useJobSnapshots } from './hooks/use-job-snapshots';
 import { useUrlTicketModal } from './hooks/use-url-ticket-modal';
@@ -51,12 +51,10 @@ export function Board({
 
   const { data: ticketsByStage = initialTicketsByStage } = useTicketsByStage(projectId);
 
-  // SHIP stage "Load More" pagination
+  // SHIP stage infinite-scroll pagination
   const { data: shipTotal = initialShipTotal } = useShipTotal(projectId);
-  const { loadMore: loadMoreShip, isLoading: isLoadingMoreShip } = useLoadMoreShipTickets(projectId);
   const shipTicketCount = ticketsByStage[Stage.SHIP]?.length ?? 0;
-  const hasMoreShipTickets = shipTicketCount < shipTotal;
-  const handleLoadMoreShip = useCallback(() => loadMoreShip(shipTicketCount), [loadMoreShip, shipTicketCount]);
+  const shipLoad = useShipInfiniteLoad(projectId, shipTicketCount, shipTotal);
 
   const allTickets = useMemo(() => Object.values(ticketsByStage).flat(), [ticketsByStage]);
 
@@ -338,10 +336,8 @@ export function Board({
         getDropZoneStyle={getDropZoneStyle}
         activePreviewTicket={activePreviewTicket}
         activeDeploymentTicket={activeDeploymentTicket}
-        hasMoreShipTickets={hasMoreShipTickets}
-        shipTotal={shipTotal}
-        onLoadMoreShip={handleLoadMoreShip}
-        isLoadingMoreShip={isLoadingMoreShip}
+        shipTotal={Math.max(shipTotal, shipTicketCount)}
+        shipLoad={shipLoad}
         activeTicket={drag.activeTicket}
         isDragging={drag.isDragging}
         dragSource={drag.dragSource}

@@ -10,8 +10,10 @@ import { TicketCard, type TicketCardSelection } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
 import { MobileScrollButton } from './mobile-scroll-button';
 import { TicketWithVersion } from '@/lib/types';
-import { Ban, Inbox, Loader2, ChevronDown } from 'lucide-react';
+import { Ban, Inbox, Loader2 } from 'lucide-react';
 import type { DualJobState } from '@/lib/types/job-types';
+import { useIntersectionObserver } from '@/lib/hooks/use-intersection-observer';
+import type { ShipLoadStatus } from '@/app/lib/hooks/queries/useTickets';
 
 export interface BulkSelectionContext {
   selectedIds: Set<number>;
@@ -32,8 +34,16 @@ interface StageColumnProps {
   activePreviewTicket?: { ticketKey: string } | null;
   activeDeploymentTicket?: number | null;
   totalCount?: number; // Total tickets for this stage (for pagination)
-  onLoadMore?: () => void; // Callback to load more tickets
-  isLoadingMore?: boolean; // Whether more tickets are being loaded
+  /** Infinite scroll (SHIP only): whether more tickets remain on the server */
+  hasMore?: boolean;
+  /** Infinite scroll (SHIP only): current batch load state */
+  loadStatus?: ShipLoadStatus;
+  /** Infinite scroll (SHIP only): called when the bottom sentinel nears the viewport */
+  onLoadMore?: () => void;
+  /** Infinite scroll (SHIP only): re-request the failed batch */
+  onRetryLoad?: () => void;
+  /** Infinite scroll (SHIP only): suspend auto-loading (e.g. during a drag) */
+  isLoadPaused?: boolean;
   /** Bulk-selection context, only honored when stage === 'INBOX' (AIB-821) */
   bulkSelection?: BulkSelectionContext;
 }
@@ -156,8 +166,11 @@ export const StageColumn = React.memo(
     activePreviewTicket,
     activeDeploymentTicket,
     totalCount,
+    hasMore = false,
+    loadStatus = 'idle',
     onLoadMore,
-    isLoadingMore = false,
+    onRetryLoad,
+    isLoadPaused = false,
     bulkSelection,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
@@ -218,6 +231,28 @@ export const StageColumn = React.memo(
         behavior: 'smooth',
       });
     }, []);
+
+    // Infinite scroll: observe a bottom sentinel relative to the column's own viewport
+    const [viewportEl, setViewportEl] = React.useState<HTMLDivElement | null>(null);
+    // Sentinel tracked via state so the observer re-attaches when it unmounts/remounts
+    const [sentinelEl, setSentinelEl] = React.useState<HTMLDivElement | null>(null);
+    const sentinelRef = React.useMemo(() => ({ current: sentinelEl }), [sentinelEl]);
+
+    React.useEffect(() => {
+      setViewportEl(scrollViewportRef.current);
+    }, []);
+
+    const isSentinelVisible = useIntersectionObserver(sentinelRef, {
+      root: viewportEl,
+      rootMargin: '0px 0px 300px 0px',
+    });
+
+    // Re-evaluated after each append so a still-visible sentinel keeps filling tall columns
+    React.useEffect(() => {
+      if (isSentinelVisible && hasMore && loadStatus === 'idle' && !isLoadPaused) {
+        onLoadMore?.();
+      }
+    }, [isSentinelVisible, hasMore, loadStatus, isLoadPaused, ticketCount, onLoadMore]);
 
     // Check scroll position on mount and when tickets change
     React.useEffect(() => {
@@ -307,24 +342,32 @@ export const StageColumn = React.memo(
                   );
                 })}
 
-                {/* Load More button for paginated stages */}
+                {/* Infinite scroll load region (SHIP) — fixed height avoids layout shift */}
                 {onLoadMore && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onLoadMore}
-                    disabled={isLoadingMore}
-                    className="w-full text-xs text-muted-foreground"
-                  >
-                    {isLoadingMore ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <ChevronDown className="h-3 w-3 mr-1" />
+                  <div className="min-h-10 flex flex-col items-center justify-center">
+                    {hasMore && loadStatus !== 'error' && (
+                      <div
+                        ref={setSentinelEl}
+                        data-testid="ship-load-sentinel"
+                        aria-hidden="true"
+                        className="h-px w-full"
+                      />
                     )}
-                    {isLoadingMore
-                      ? 'Loading...'
-                      : `Load more (${(totalCount ?? ticketCount) - ticketCount} remaining)`}
-                  </Button>
+                    {loadStatus === 'loading' && (
+                      <div role="status" aria-live="polite" className="flex items-center justify-center">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        <span className="sr-only">Loading more shipped tickets</span>
+                      </div>
+                    )}
+                    {loadStatus === 'error' && (
+                      <div role="alert" className="flex items-center gap-2 text-sm text-destructive">
+                        <span>Couldn&apos;t load more tickets.</span>
+                        <Button variant="ghost" size="sm" onClick={onRetryLoad}>
+                          Retry
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </>
             ) : (

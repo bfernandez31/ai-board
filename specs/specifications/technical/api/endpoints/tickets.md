@@ -16,12 +16,12 @@ Fetch tickets for a project, grouped by stage. SHIP stage is paginated (default 
 - `stage` (string, optional): Filter by stage — `INBOX|SPECIFY|PLAN|BUILD|VERIFY|SHIP|CLOSED`
 - `workflowType` (string, optional): Filter by workflow type — `FULL|QUICK|CLEAN`
 - `limit` (number, optional): Maximum number of tickets to return (min: 1). Only applies when at least one filter is provided. Results are sorted by `updatedAt` desc.
-- `offset` (number, optional): Skip N tickets (min: 0). Used for SHIP "Load More" pagination. When `stage=SHIP` and `offset` is provided, returns the next page of SHIP tickets.
+- `offset` (number, optional): Skip N tickets (min: 0). Used for SHIP infinite-scroll pagination. When `stage=SHIP` and `offset` is provided, returns the next page of SHIP tickets.
 - `updatedSince` (string, optional): ISO 8601 datetime. Only return tickets updated after this timestamp.
 
 **Response — no filters** (200 OK): Stage-grouped object with SHIP pagination metadata
 
-All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tickets (sorted by `updatedAt` desc). `_shipTotal` indicates the total number of SHIP tickets for "Load More" pagination.
+All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tickets (sorted by `updatedAt` desc). `_shipTotal` indicates the total number of SHIP tickets for infinite-scroll pagination.
 
 ```json
 {
@@ -53,7 +53,7 @@ All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tic
 }
 ```
 
-**Response — SHIP Load More** (`?stage=SHIP&offset=50&limit=50`) (200 OK):
+**Response — SHIP infinite-scroll batch** (`?stage=SHIP&offset=50&limit=50`) (200 OK):
 ```json
 {
   "tickets": [
@@ -67,6 +67,8 @@ All non-SHIP stages return all tickets. SHIP stage returns only the first 50 tic
   ]
 }
 ```
+
+**Client behavior (SHIP infinite scroll)**: The board has no "Load more" button. The SHIP column auto-requests the next batch (`offset` = loaded SHIP count, `limit=50`) when a bottom sentinel comes within 300px of the column's scroll viewport. Only one request is in flight at a time; returned tickets are deduplicated by `id` across the whole cache; an empty or all-duplicate batch stops loading. A failed request shows an error with a Retry action and pauses auto-loading until retried. Loading pauses while a drag is in progress, and background refreshes of the tickets list retain SHIP tickets already loaded by scrolling (capped at `_shipTotal`).
 
 **Response — with other filters** (200 OK): Flat array of matching tickets
 ```json
