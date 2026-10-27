@@ -83,6 +83,20 @@ Valid rollback transitions:
   - VERIFY: Orange
   - SHIP: Purple
 
+### SHIP Column Infinite Scroll
+
+The SHIP column loads its tickets in batches of 50 and shows a `loaded/total` counter in its header (e.g., `50/120`). There is no "Load more" button. Other columns always show all of their tickets.
+
+- **Automatic loading**: When the bottom of the SHIP list comes within about 300px of the visible part of the column's own scroll area, the next batch is appended. This works with mouse wheel, keyboard navigation, touch scrolling (iOS Safari, Chrome Android), and the mobile floating scroll-down button
+- **Loading indicator**: A small spinner appears at the bottom of the column while a batch loads. Screen readers announce it as "Loading more tickets"
+- **One request at a time**: Scroll events during a load are ignored. Each ticket appears only once, even if tickets move in or out of SHIP between batches
+- **Completion**: Loading stops when the loaded count reaches the total, or when a batch returns fewer than 50 tickets or only tickets that are already shown. If the SHIP total later grows, loading starts again
+- **Errors**: When a batch fails, automatic loading stops and an inline alert "Couldn't load more tickets." with a **Retry** button appears at the bottom of the column. Nothing is retried automatically. Retry requests the same batch again
+- **Tall screens**: If the loaded tickets do not fill the column, batches keep loading one at a time until the column can scroll, all tickets are loaded, or an error occurs
+- **Polling**: Periodic board refreshes keep SHIP tickets that were already loaded from later batches. A ticket that moves to another stage is shown only in that stage
+- **Drag & drop**: No batches load while a drag is in progress. Loading resumes when the drag ends
+- **Scroll stability**: New tickets are appended below the existing ones, so the tickets in view do not move
+
 ### Ticket Cards
 
 Each ticket appears as a card within its current stage column. Cards display:

@@ -110,16 +110,40 @@ export function useShipTotal(projectId: number) {
   });
 }
 
-// Mutation: load next page of SHIP tickets and append to cache
-export function useLoadMoreShipTickets(projectId: number) {
-  // Fetches /api/projects/:id/tickets?stage=SHIP&offset=N&limit=50
-  // onSuccess: appends results to the flat TicketWithVersion[] cache
-  return { loadMore, isLoading };
+export const SHIP_BATCH_SIZE = 50;
+
+// Mutation: load next page of SHIP tickets and append to cache (drives SHIP infinite scroll)
+export function useLoadMoreShipTickets(projectId: number, shipTotal: number): LoadMoreShipTickets {
+  // Fetches /api/projects/:id/tickets?stage=SHIP&offset=N&limit=SHIP_BATCH_SIZE (retry: 0)
+  // onSuccess: appends only ids not already in the flat TicketWithVersion[] cache
+  return { loadMore, retry, isLoading, isError, isExhausted };
 }
 ```
 
+`useLoadMoreShipTickets` behavior:
+- **Single flight**: An `inFlightRef` is set synchronously before `mutate` and cleared in `onSettled`. `loadMore(offset)` does nothing while a request is in flight, while `isError` is true, or while `isExhausted` is true
+- **Dedupe**: `onSuccess` uses a functional `setQueryData` and appends only tickets whose `id` is not already in the cache (across all stages)
+- **Exhaustion**: A batch shorter than `SHIP_BATCH_SIZE`, or one that adds no new tickets, records the current `shipTotal`. `isExhausted` stays true until `shipTotal` grows past that value
+- **Retry**: `retry(offset)` calls `mutation.reset()` and requests the same offset again, skipping the `isError` check. Errors are never retried automatically
+
+**Polling merge**: The board endpoint returns only the first SHIP batch, so `makeTicketsQueryFn` (shared by `useProjectTickets` and `useTicketsByStage`) merges each refetch with the previous cache through `mergeLoadedShipTickets`. When the fresh data has fewer SHIP tickets than `shipTotal`, previously loaded SHIP tickets whose ids are not in the fresh data are appended, up to `shipTotal - freshShipCount`. Fresh data wins for any id present in both, so a ticket that moved out of SHIP is not duplicated.
+
+**SHIP infinite-scroll trigger** (`components/board/hooks/use-infinite-scroll-trigger.ts`):
+
+```typescript
+useInfiniteScrollTrigger({
+  rootRef: scrollViewportRef,   // column ScrollArea viewport (IntersectionObserver root)
+  sentinelRef,                  // aria-hidden div after the last card
+  enabled: hasMore && !isLoadingMore && !loadMoreError && !isLoadMorePaused,
+  onTrigger: onLoadMore,
+  prefetchDistancePx: 300,      // rootMargin '0px 0px 300px 0px'
+});
+```
+
+The hook calls `onTrigger` again whenever `enabled` becomes true and the sentinel is still near the bottom. This fills tall screens without any scroll event. `Board` wires it as `hasMoreShipTickets = shipTicketCount < shipTotal && !isExhausted`, `onLoadMore = () => loadMore(shipTicketCount)`, and `onRetryLoadMore = () => retry(shipTicketCount)`. `BoardGrid` passes these props to the SHIP `StageColumn` only, with `isLoadMorePaused` set to `isDragging`. `StageColumn` renders the sentinel, a `role="status"` spinner row, and a `role="alert"` error row with a shadcn `Button` labeled Retry.
+
 **Cache Architecture**:
-- `queryKeys.projects.tickets(id)` → `TicketWithVersion[]` (flat, all stages combined, SHIP limited to 50 initially)
+- `queryKeys.projects.tickets(id)` → `TicketWithVersion[]` (flat, all stages combined; SHIP holds the first 50 plus any batches loaded by infinite scroll)
 - `queryKeys.projects.shipTotal(id)` → `number` (total SHIP tickets for pagination)
 - Cache format is flat array to stay compatible with all optimistic mutation hooks (stage transitions, delete, create, update)
 - Board component seeds both caches with SSR data on mount
