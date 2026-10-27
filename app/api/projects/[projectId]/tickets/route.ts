@@ -82,7 +82,7 @@ export async function GET(
     }
 
     // Default: return all tickets grouped by stage, with SHIP limited to 50
-    const { ticketsByStage, shipTotal } = await getTicketsByStage(projectId, shipLimit ?? 50);
+    const { ticketsByStage, shipTotal } = await getTicketsByStage(projectId, shipLimit);
     return NextResponse.json({ ...ticketsByStage, _shipTotal: shipTotal }, { status: 200 });
   } catch (error) {
     if (error instanceof Error) {

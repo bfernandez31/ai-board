@@ -53,7 +53,12 @@ export function Board({
 
   // SHIP stage "Load More" pagination
   const { data: shipTotal = initialShipTotal } = useShipTotal(projectId);
-  const { loadMore: loadMoreShip, isLoading: isLoadingMoreShip, isError: loadMoreShipError, reset: resetLoadMoreShip } = useLoadMoreShipTickets(projectId);
+  const {
+    loadMore: loadMoreShip,
+    isLoading: isLoadingMoreShip,
+    isError: loadMoreShipError,
+    reset: resetLoadMoreShip,
+  } = useLoadMoreShipTickets(projectId);
   const shipTicketCount = ticketsByStage[Stage.SHIP]?.length ?? 0;
   const hasMoreShipTickets = shipTicketCount < shipTotal;
   const handleLoadMoreShip = useCallback(() => {

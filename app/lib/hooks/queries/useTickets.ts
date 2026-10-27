@@ -101,7 +101,7 @@ export function useLoadMoreShipTickets(projectId: number) {
   const inFlightRef = useRef(false);
 
   const mutation = useMutation({
-    mutationFn: async ({ offset, limit = 50 }: { offset: number; limit?: number }) => {
+    mutationFn: async ({ offset, limit = DEFAULT_SHIP_LIMIT }: { offset: number; limit?: number }) => {
       const response = await fetch(
         `/api/projects/${projectId}/tickets?stage=SHIP&offset=${offset}&limit=${limit}`
       );

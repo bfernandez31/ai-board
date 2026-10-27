@@ -190,22 +190,21 @@ export const StageColumn = React.memo(
     const sentinelRef = React.useRef<HTMLDivElement>(null);
 
     // Infinite scroll: load next batch when the sentinel nears the viewport bottom
-    const hasLoadMore = !!onLoadMore;
     React.useEffect(() => {
       const sentinel = sentinelRef.current;
-      if (!hasLoadMore || !sentinel || typeof IntersectionObserver === 'undefined') return;
+      if (!onLoadMore || !sentinel || typeof IntersectionObserver === 'undefined') return;
 
       const observer = new IntersectionObserver(
         (entries) => {
           if (entries.some((entry) => entry.isIntersecting) && !isLoadingMore && !loadMoreError) {
-            onLoadMore?.();
+            onLoadMore();
           }
         },
         { root: scrollViewportRef.current, rootMargin: '0px 0px 100% 0px' }
       );
       observer.observe(sentinel);
       return () => observer.disconnect();
-    }, [hasLoadMore, onLoadMore, isLoadingMore, loadMoreError, tickets.length]);
+    }, [onLoadMore, isLoadingMore, loadMoreError, tickets.length]);
 
     // Check scroll position to determine button visibility
     const checkScrollPosition = React.useCallback(() => {
