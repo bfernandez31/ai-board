@@ -300,7 +300,7 @@ The response includes only the columns of the active agent. Operation is idempot
 Import a GitHub repository as a new ai-board project.
 
 **Authentication**: Required (session)
-**Authorization**: User must have `repo` scope on their GitHub token and admin access on the target repository
+**Authorization**: User must have `repo` scope on their GitHub token and admin access on the target repository. When `PROJECT_CREATION_DISABLED=true`, only `ADMIN_ALLOWLIST` emails may import; this check runs before the scope check (same guard applies to `POST /api/projects`)
 
 **Request Body**:
 ```json
@@ -352,6 +352,7 @@ Import a GitHub repository as a new ai-board project.
 **Errors**:
 - `400`: `{ "error": "Validation error", "code": "VALIDATION_ERROR" }`
 - `401`: Not authenticated
+- `403` (creation closed): `{ "error": "Project creation is currently invite-only.", "code": "PROJECT_CREATION_DISABLED" }`
 - `403` (quota): `{ "error": "Project limit reached...", "code": "PLAN_LIMIT" }`
 - `403` (no admin): `{ "error": "You need admin access to this repository to import it.", "code": "INSUFFICIENT_PERMISSIONS" }`
 - `403` (no scope): `{ "error": "GitHub token lacks repo scope", "code": "MISSING_SCOPE" }`

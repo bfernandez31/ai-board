@@ -92,6 +92,8 @@ When no projects exist:
 - Call-to-action encourages creating first project
 - Clear path to project creation
 
+When project creation is closed (`PROJECT_CREATION_DISABLED=true`) and the viewer is not in `ADMIN_ALLOWLIST`, the empty state reads "Project creation is currently invite-only." and shows no action buttons.
+
 ### Navigation
 
 **To Project Board**:
@@ -108,6 +110,7 @@ When no projects exist:
 **Action Buttons**:
 - "Import Project" button (with icon) — opens the Import Project modal; requires GitHub `repo` scope
 - "Create Project" button (with icon) — disabled (manual project creation is a future feature)
+- Both buttons are hidden when project creation is closed to the viewer (`PROJECT_CREATION_DISABLED=true` and the viewer is not in `ADMIN_ALLOWLIST`), e.g. during public demos where signup stays open
 
 **Responsive Layout**:
 - **Desktop** (≥640px): Page header displays title and action buttons in a horizontal row

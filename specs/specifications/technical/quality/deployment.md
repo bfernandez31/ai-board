@@ -559,6 +559,9 @@ WORKFLOW_API_TOKEN=<same-as-github-secret>
 # Admin Insights
 ADMIN_ALLOWLIST=alice@example.com,bob@example.com
 INSIGHTS_RUN_TIMEOUT_MINUTES=60
+
+# Optional: close project creation/import to non-admins (e.g. during demos)
+PROJECT_CREATION_DISABLED=true
 ```
 
 **Preview** (optional, different database):
