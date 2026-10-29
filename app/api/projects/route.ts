@@ -4,7 +4,8 @@ import { getUserProjects, createProject } from '@/lib/db/projects';
 import { toProjectWithCount } from '@/app/lib/types/project';
 import { generateProjectKey, isValidProjectKey, isProjectKeyAvailable } from '@/app/lib/utils/generate-project-key';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/db/users';
+import { getCurrentUser } from '@/lib/db/users';
+import { isProjectCreationAllowed, PROJECT_CREATION_DISABLED_ERROR } from '@/app/lib/auth/project-creation';
 import { getUserSubscription } from '@/lib/billing/subscription';
 import { prisma } from '@/lib/db/client';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
@@ -56,7 +57,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = createProjectSchema.parse(body);
 
-    const userId = await requireAuth();
+    const user = await getCurrentUser();
+    if (!isProjectCreationAllowed(user.email)) {
+      return NextResponse.json(PROJECT_CREATION_DISABLED_ERROR, { status: 403 });
+    }
+    const userId = user.id;
     const subscription = await getUserSubscription(userId);
 
     // Determine project key (custom or auto-generated)

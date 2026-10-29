@@ -7,6 +7,7 @@ import { ActivityHeatmap } from '@/components/projects/activity-heatmap';
 import { toProjectWithCount, type ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
 import { getCurrentUserOrNull } from '@/lib/db/users';
+import { isProjectCreationAllowed } from '@/app/lib/auth/project-creation';
 import { getHeatmapData } from '@/lib/analytics/heatmap-queries';
 import { isSupportedAgent } from '@/app/lib/utils/agent-resolution';
 import type {
@@ -62,6 +63,8 @@ export default async function ProjectsPage({
     getCurrentUserOrNull(),
   ]);
 
+  const canCreateProjects = isProjectCreationAllowed(user?.email);
+
   let initialHeatmap: HeatmapData | null = null;
   let initialHeatmapError: { message: string } | undefined;
 
@@ -78,7 +81,7 @@ export default async function ProjectsPage({
     <div className="container mx-auto py-8 px-4">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-3xl font-bold text-foreground">Projects</h1>
-        {projects.length > 0 && <ProjectsHeaderActions />}
+        {projects.length > 0 && canCreateProjects && <ProjectsHeaderActions />}
       </div>
 
       <UsageBanner />
@@ -86,7 +89,7 @@ export default async function ProjectsPage({
       <ProjectQuotaGate />
 
       <div className="mt-6">
-        <ProjectsContainer projects={projects} />
+        <ProjectsContainer projects={projects} canCreateProjects={canCreateProjects} />
       </div>
 
       {user && (

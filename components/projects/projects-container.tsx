@@ -4,11 +4,12 @@ import type { ProjectWithCount } from '@/app/lib/types/project';
 
 interface ProjectsContainerProps {
   projects: ProjectWithCount[];
+  canCreateProjects: boolean;
 }
 
-export function ProjectsContainer({ projects }: ProjectsContainerProps) {
+export function ProjectsContainer({ projects, canCreateProjects }: ProjectsContainerProps) {
   if (projects.length === 0) {
-    return <EmptyProjectsState />;
+    return <EmptyProjectsState canCreateProjects={canCreateProjects} />;
   }
 
   return (
