@@ -315,6 +315,12 @@ The `/admin/*` area uses a configuration-driven allowlist rather than a database
 | `requireAdminPageOrNotFound(request)` | Page-route variant. Calls Next.js `notFound()` for non-admins so the framework renders its default 404 page. Remains the canonical guard inside `app/admin/layout.tsx`; the new `getViewerIsAdmin` helper is for UI gating in the root layout only and does not replace this check |
 | `adminNotFoundResponse()` | Constructs the canonical 404 Response (empty body, `Content-Type: text/html; charset=utf-8`, no other headers) used by API routes |
 
+### Project Creation Gate
+
+**File**: `app/lib/auth/project-creation.ts`
+
+`isProjectCreationAllowed(email)` returns `true` unless `PROJECT_CREATION_DISABLED` is exactly `"true"`, in which case only `ADMIN_ALLOWLIST` emails are allowed. Read on every call. `POST /api/projects` and `POST /api/projects/import` return `403 { code: "PROJECT_CREATION_DISABLED" }` to everyone else, and `app/projects/page.tsx` hides the import/create actions. Unlike admin routes this is not a 404 — the projects page is public to signed-in users, so the restriction is shown openly.
+
 ### Byte-Equivalent 404 Parity
 
 Every admin route — page, API, asset, report-body — returns a response byte-equivalent to a genuinely missing path for any non-allowlisted caller (unauthenticated or authenticated). Status code, body bytes, and headers all match a control 404 against `/this-path-does-not-exist`. No JSON error body, no descriptive error string, no `Forbidden` status — a probe cannot distinguish "I exist but you can't see me" from "I do not exist". Tests in `tests/integration/api/admin/insights/parity-404.test.ts` assert byte equality across status, body, and headers for every admin path against an unauthenticated caller and an authenticated non-admin caller.

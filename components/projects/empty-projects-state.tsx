@@ -13,7 +13,11 @@ import {
 } from '@/components/ui/empty';
 import { ImportProjectModal } from './import-project-modal';
 
-export function EmptyProjectsState() {
+interface EmptyProjectsStateProps {
+  canCreateProjects: boolean;
+}
+
+export function EmptyProjectsState({ canCreateProjects }: EmptyProjectsStateProps) {
   const [importOpen, setImportOpen] = useState(false);
 
   return (
@@ -25,21 +29,25 @@ export function EmptyProjectsState() {
           </EmptyMedia>
           <EmptyTitle>No projects yet</EmptyTitle>
           <EmptyDescription>
-            Get started by creating a new project or importing an existing one
+            {canCreateProjects
+              ? 'Get started by creating a new project or importing an existing one'
+              : 'Project creation is currently invite-only.'}
           </EmptyDescription>
         </EmptyHeader>
-        <EmptyContent>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => setImportOpen(true)}>
-              <Upload className="mr-2 h-4 w-4" />
-              Import Project
-            </Button>
-            <Button disabled>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Project
-            </Button>
-          </div>
-        </EmptyContent>
+        {canCreateProjects && (
+          <EmptyContent>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import Project
+              </Button>
+              <Button disabled>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Project
+              </Button>
+            </div>
+          </EmptyContent>
+        )}
       </Empty>
 
       <ImportProjectModal open={importOpen} onOpenChange={setImportOpen} />

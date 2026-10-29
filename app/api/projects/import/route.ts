@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
-import { requireAuth } from '@/lib/db/users';
+import { getCurrentUser } from '@/lib/db/users';
+import { isProjectCreationAllowed, PROJECT_CREATION_DISABLED_ERROR } from '@/app/lib/auth/project-creation';
 import {
   createUserGitHubClient,
   getGitHubAccessToken,
@@ -16,7 +17,11 @@ import { Prisma } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const user = await getCurrentUser();
+    if (!isProjectCreationAllowed(user.email)) {
+      return NextResponse.json(PROJECT_CREATION_DISABLED_ERROR, { status: 403 });
+    }
+    const userId = user.id;
     await requireRepoScope(userId);
 
     const body = await request.json();
