@@ -170,7 +170,8 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
 
   try {
     // If projectId specified, only clean that project (worker-specific cleanup)
-    // Otherwise clean all worker test projects (1, 2, 4, 5, 6, 7) - SKIP project 3 (dev)
+    // Otherwise clean all worker test projects (1, 2, 4, 5, 6, 7, 8, 9, 10) - SKIP project 3 (dev)
+    const ALL_WORKER_PROJECTS = [1, 2, 4, 5, 6, 7, 8, 9, 10];
 
     // Delete notifications first (foreign key to tickets)
     await client.notification.deleteMany({
@@ -179,7 +180,7 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
         : {
             ticket: {
               projectId: {
-                in: [1, 2, 4, 5, 6, 7],
+                in: ALL_WORKER_PROJECTS,
               },
             },
           },
@@ -191,7 +192,7 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
         ? { projectId }
         : {
             projectId: {
-              in: [1, 2, 4, 5, 6, 7],
+              in: ALL_WORKER_PROJECTS,
             },
           },
     });
@@ -201,7 +202,19 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
         ? { projectId }
         : {
             projectId: {
-              in: [1, 2, 4, 5, 6, 7],
+              in: ALL_WORKER_PROJECTS,
+            },
+          },
+    });
+
+    // Explicitly delete jobs before tickets to handle ticketId=null orphans that
+    // cascade-delete via ticketId would miss.
+    await client.job.deleteMany({
+      where: projectId
+        ? { projectId }
+        : {
+            projectId: {
+              in: ALL_WORKER_PROJECTS,
             },
           },
     });
@@ -211,7 +224,7 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
         ? { projectId }
         : {
             projectId: {
-              in: [1, 2, 4, 5, 6, 7],
+              in: ALL_WORKER_PROJECTS,
             },
           },
     });
@@ -223,7 +236,7 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
         ? { projectId }
         : {
             projectId: {
-              in: [1, 2, 4, 5, 6, 7],
+              in: ALL_WORKER_PROJECTS,
             },
           },
     });
@@ -327,7 +340,7 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
       });
     } else {
       // Clean all worker project users when no specific project
-      for (const pid of [1, 2, 4, 5, 6, 7]) {
+      for (const pid of ALL_WORKER_PROJECTS) {
         await client.user.deleteMany({
           where: {
             email: {
@@ -338,13 +351,14 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
       }
     }
 
-    // Delete [e2e] tickets from projects 8+ (non-worker test projects)
+    // Delete [e2e] tickets from dynamic test projects (id >= 11, above the worker pool)
+    // Worker projects 8-10 are already handled above via ALL_WORKER_PROJECTS.
     await client.ticket.deleteMany({
       where: {
         AND: [
           {
             projectId: {
-              gte: 8,
+              gte: 11,
             },
           },
           {
@@ -356,15 +370,15 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
       },
     });
 
-    // Delete [e2e] projects (except 1, 2, 3, 4, 5, 6, 7)
-    // Projects 1-7 are protected (1,2,4,5,6,7 for workers, 3 for dev)
-    // This includes dynamic projects created by project-cascade.spec.ts tests
+    // Delete [e2e] projects (except 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+    // Projects 1-10 are protected (1,2,4-10 for workers, 3 for dev)
+    // This includes dynamic projects created by tests (e.g. project-cascade.spec.ts)
     await client.project.deleteMany({
       where: {
         AND: [
           {
             id: {
-              notIn: [1, 2, 3, 4, 5, 6, 7],
+              notIn: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             },
           },
           {
@@ -385,7 +399,7 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
         ? { id: projectId }
         : {
             id: {
-              in: [1, 2, 4, 5, 6, 7],
+              in: ALL_WORKER_PROJECTS,
             },
           },
       data: {
@@ -395,7 +409,7 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
 
     // Reset ticket number sequences for worker projects (or specific project if provided)
     // This prevents unique constraint violations on (projectId, ticketNumber)
-    const projectsToReset = projectId ? [projectId] : [1, 2, 4, 5, 6, 7];
+    const projectsToReset = projectId ? [projectId] : ALL_WORKER_PROJECTS;
     for (const pid of projectsToReset) {
       await client.$executeRawUnsafe(`
         DROP SEQUENCE IF EXISTS project_${pid}_ticket_seq CASCADE;

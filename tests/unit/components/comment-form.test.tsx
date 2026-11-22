@@ -128,12 +128,14 @@ describe('CommentForm', () => {
       expect(charCount).toHaveClass('text-red');
     });
 
-    it('should disable submit when content exceeds max length', async () => {
-      const user = userEvent.setup();
+    it('should disable submit when content exceeds max length', () => {
       renderWithProviders(<CommentForm {...defaultProps} />);
 
+      // Use fireEvent.change to avoid userEvent.type timeout with 2001 chars
       const longText = 'A'.repeat(2001);
-      await user.type(screen.getByPlaceholderText(/write a comment/i), longText);
+      fireEvent.change(screen.getByPlaceholderText(/write a comment/i), {
+        target: { value: longText },
+      });
 
       expect(screen.getByRole('button', { name: /comment/i })).toBeDisabled();
     });
