@@ -21,7 +21,7 @@ test.describe.configure({ mode: 'serial' });
 
 test.describe('First-Time User Creation', () => {
   const testEmail = 'new-user-test@e2e.local';
-  const testUserId = 'test-user-new-' + Date.now();
+  const testUserId = 'ftuc-user-new-' + Date.now();
 
   test.beforeEach(async ({ projectId }) => {
     // Clean up test user if exists
